@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_dir"
@@ -10,6 +10,19 @@ python3 ios/tools/generate_target.py
 sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 clang_path="$(xcrun --sdk iphonesimulator --find clang)"
 architecture="$(uname -m)"
+run_limited() {
+    local timeout_seconds="$1"
+    shift
+    python3 - "$timeout_seconds" "$@" <<'PY'
+import subprocess
+import sys
+try:
+    result = subprocess.run(sys.argv[2:], timeout=int(sys.argv[1]))
+except subprocess.TimeoutExpired:
+    raise SystemExit("Simulator command timed out: " + " ".join(sys.argv[2:]))
+raise SystemExit(result.returncode)
+PY
+}
 
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
@@ -66,19 +79,19 @@ phones = [t for t in inventory["devicetypes"] if t.get("productFamily") == "iPho
 preferred = [t for t in phones if t["name"] in ("iPhone 17", "iPhone 16", "iPhone 15")]
 print((preferred or phones)[-1]["identifier"])
 ')"
-device_id="$(xcrun simctl create 'PADCheaper GUI probe' "$device_type" "$runtime_id")"
+device_id="$(run_limited 45 xcrun simctl create 'PADCheaper GUI probe' "$device_type" "$runtime_id")"
 cleanup() {
-    xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
-    xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
+    run_limited 15 xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
+    run_limited 15 xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
-xcrun simctl boot "$device_id"
-xcrun simctl bootstatus "$device_id" -b
+run_limited 45 xcrun simctl boot "$device_id"
+run_limited 120 xcrun simctl bootstatus "$device_id" -b
 xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charged --batteryLevel 100
 run_probe() {
     local probe_app="$1" bundle_id="$2" prefix="$3"
-    xcrun simctl install "$device_id" "$probe_app"
-    xcrun simctl launch "$device_id" "$bundle_id"
+    run_limited 45 xcrun simctl install "$device_id" "$probe_app"
+    run_limited 30 xcrun simctl launch "$device_id" "$bundle_id"
     local container_dir report_path phase portrait_done=0 landscape_done=0
     container_dir="$(xcrun simctl get_app_container "$device_id" "$bundle_id" data)"
     report_path="$container_dir/Documents/overlay-probe.json"

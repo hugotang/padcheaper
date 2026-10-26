@@ -61,8 +61,20 @@ jobs:
           codesign --verify --strict build/ios/PADCheaper.dylib
           shasum -a 256 build/ios/PADCheaper.dylib
 
+      - name: Upload dylib and installation notes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-iOS-arm64-${{ github.run_number }}
+          path: build/ios/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Verify floating GUI in iOS Simulator
-        run: bash ios/gui-test.sh
+        timeout-minutes: 7
+        run: |
+          set -o pipefail
+          mkdir -p build/ios-ui-tests
+          bash ios/gui-test.sh 2>&1 | tee build/ios-ui-tests/gui-test.log
 
       - name: Upload GUI probe diagnostics
         if: always()
@@ -72,15 +84,8 @@ jobs:
           path: |
             build/ios-ui-tests/*.png
             build/ios-ui-tests/*.json
+            build/ios-ui-tests/*.log
           if-no-files-found: ignore
-          retention-days: 30
-
-      - name: Upload dylib and installation notes
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: PADCheaper-iOS-arm64-${{ github.run_number }}
-          path: build/ios/
-          if-no-files-found: error
           retention-days: 30
 
       - name: Build summary
