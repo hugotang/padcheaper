@@ -28,7 +28,7 @@ PY
     -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
     -Wno-unused-parameter -Wno-unused-const-variable -dynamiclib \
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
-    ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
+    ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"

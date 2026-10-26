@@ -16,7 +16,7 @@ min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
     -dynamiclib -install_name @rpath/PADCheaper.dylib \
     -Iios/src -Iios/generated \
-    ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
+    ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
@@ -31,6 +31,7 @@ cp ios/config.example.json "$build_dir/config.example.json"
 cp ios/README.md "$build_dir/README.md"
 cp ios/docs/feasibility.md "$build_dir/feasibility.md"
 cp ios/docs/runtime.md "$build_dir/runtime.md"
+cp ios/docs/device-testing.md "$build_dir/device-testing.md"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
 
@@ -52,7 +53,7 @@ metadata = {
     "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "architecture": "arm64",
     "dylib_version": version,
-    "gui": "draggable floating button; switches and load diagnostics",
+    "gui": "draggable floating button; switches, load and save/restore diagnostics",
     "platform": "iPhoneOS",
     "minimum_ios": "15.0",
     "signing": "ad-hoc; re-sign in LiveContainer",

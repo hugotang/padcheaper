@@ -20,3 +20,10 @@ clang_path="$(xcrun --sdk macosx --find clang)"
     -framework Foundation -framework CoreFoundation \
     -o "$build_dir/configuration-tests"
 "$build_dir/configuration-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks \
+    -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHSaveState.m ios/tests/save_state_tests.m \
+    -framework Foundation \
+    -o "$build_dir/save-state-tests"
+"$build_dir/save-state-tests"

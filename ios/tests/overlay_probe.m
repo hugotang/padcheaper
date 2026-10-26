@@ -122,6 +122,8 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck(config != nil && [config[@"experimentalWrites"] isEqual:@NO], @"Config must exist before UUID validation");
     NSDictionary *status = PHProbeJSON(@"status.json");
     PHProbeCheck([status[@"loaded"] isEqual:@YES] && [status[@"targetMatched"] isEqual:@NO], @"Loaded status must be independent of feature activation");
+    PHProbeCheck([status[@"saveState"][@"localSaveCount"] isEqual:@0] &&
+                 [status[@"saveState"][@"acceptedCount"] isEqual:@0], @"GUI must not invent successful saves before a real request");
     UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
     CGPoint point = [bubble convertPoint:CGPointMake(28, 28) toView:overlay];
     PHProbeCheck([overlay hitTest:point withEvent:nil] == bubble, @"Floating button must receive touches");
@@ -131,6 +133,9 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
     PHProbeCheck(panel != nil && !panel.hidden, @"Floating button must open the panel");
+    UILabel *persistence = (UILabel *)PHProbeFind(overlay, @"padcheaper.persistence");
+    PHProbeCheck([persistence.text containsString:@"尚未儲存隊伍"] &&
+                 [persistence.text containsString:@"伺服器接受：0"], @"Panel must separate load/feature status from actual save and response status");
     for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"timerFix"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, [@"Switch unavailable: " stringByAppendingString:key]);

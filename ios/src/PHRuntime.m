@@ -6,6 +6,7 @@
 #import "PHTarget.h"
 #import "PHConfiguration.h"
 #import "PHOverlay.h"
+#import "PHSaveState.h"
 #include "PHTargetGenerated.h"
 #include <mach-o/dyld.h>
 #include <math.h>
@@ -37,8 +38,7 @@ static BOOL PHOwnershipWriteFault;
 static atomic_bool PHFrameOffMain;
 static uint32_t PHPlayer;
 static NSUInteger PHAccountEpoch;
-static NSObject *PHLock;
-static NSMutableDictionary *PHPending;
+static PHSaveState *PHSaveStateTracker;
 static NSDictionary *PHConfig;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
@@ -56,8 +56,6 @@ static NSString *PHStorageMessage;
 static NSString *PHFeedback;
 static NSDictionary *PHObservedEndpoint;
 static uint32_t PHObservedEntries;
-static NSUInteger PHUploadCount;
-static NSUInteger PHRestoreCount;
 static NSUInteger PHTimerClearCount;
 
 static void PHBootstrap(NSUInteger attempt, NSUInteger generation);
@@ -182,12 +180,12 @@ static BOOL PHCurrentPlayer(uint32_t *player) {
 
 static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
     if (player != PHPlayer || loginSuccess) {
-        @synchronized (PHLock) { PHPending = nil; }
         PHPlayer = player;
         PHAccountEpoch++;
         PHAccountReady = loginSuccess && player != 0;
         PHStorageFault = NO;
         PHLastBanks = PHAccountReady ? PHLoadAccount(player) : @{};
+        [PHSaveStateTracker resetWithBanks:PHLastBanks accountReady:PHAccountReady];
         // Login replaced ownership words. Old bit snapshots must not be restored.
         memset(PHSkinAdded, 0, sizeof(PHSkinAdded));
         memset(PHBGMAdded, 0, sizeof(PHBGMAdded));
@@ -223,40 +221,55 @@ static NSArray<NSNumber *> *PHReadDeck(uintptr_t address, NSUInteger index) {
              @(badge), @(extra), @(packed), @(skin)];
 }
 
-static void PHRestoreBanks(NSDictionary *banks, PHFeatureMask mask) {
+static void PHRestoreBanks(NSDictionary *banks, PHFeatureMask mask, NSString *source) {
     uint8_t primary = 0, secondary = 0, editing = 0;
-    if (!mask || !PHBankCounts(&primary, &secondary) ||
-        !PHReadU8(PHSave() + PHEditDirtyOffset, &editing) || editing != 0) return;
-    NSUInteger restored = 0;
+    NSString *blocked = nil;
+    if (!mask) blocked = @"功能未啟用，已跳過回蓋";
+    else if (!PHBankCounts(&primary, &secondary) ||
+             !PHReadU8(PHSave() + PHEditDirtyOffset, &editing)) blocked = @"無法讀取隊伍資料，已跳過回蓋";
+    else if (editing != 0) blocked = @"正在編輯隊伍，已跳過回蓋";
+    if (blocked) {
+        [PHSaveStateTracker recordRestoreCount:0 reason:[NSString stringWithFormat:@"%@：%@", source, blocked]];
+        return;
+    }
+    NSUInteger restored = 0, mismatched = 0, writeFailures = 0, savedCount = 0;
     NSArray *keys = @[@"decksb", @"decksbs"];
     uintptr_t offsets[] = {PHPrimaryDecksOffset, PHSecondaryDecksOffset};
     NSUInteger counts[] = {primary, secondary};
     for (NSUInteger bank = 0; bank < 2; bank++) {
         NSArray *records = banks[keys[bank]];
-        if (![records isKindOfClass:NSArray.class] || records.count != counts[bank]) continue;
+        if (![records isKindOfClass:NSArray.class]) continue;
+        savedCount += records.count;
+        if (records.count != counts[bank]) { mismatched += records.count; continue; }
         for (NSUInteger index = 0; index < records.count; index++) {
             NSArray *saved = records[index];
             uintptr_t address = PHSave() + offsets[bank] + index * 96u;
             NSArray *current = PHReadDeck(address, index);
             if (!PHValidateDeckRecord(saved) || !current ||
-                ![PHDeckIdentity(saved) isEqual:PHDeckIdentity(current)]) continue;
+                ![PHDeckIdentity(saved) isEqual:PHDeckIdentity(current)]) { mismatched++; continue; }
             // Restore only a matching parser-produced default. A nondefault value
             // can be a newer user edit and is never overwritten.
             if ((mask & PHFeatureSkin) && [current[8] unsignedIntValue] == 0 &&
                 [saved[8] unsignedIntValue] != 0) {
                 uint16_t value = [saved[8] unsignedShortValue];
                 if (PHWriteData(address + 0x1c, &value, sizeof(value))) restored++;
+                else writeFailures++;
             }
             if ((mask & PHFeatureBGM) && [current[7] unsignedIntValue] == 0 &&
                 [saved[7] unsignedIntValue] != 0) {
                 uint32_t packed = [saved[7] unsignedIntValue];
                 uint16_t values[] = {(uint16_t)(packed % 100000u), (uint16_t)(packed / 100000u)};
                 if (PHWriteData(address + 0x18, values, sizeof(values))) restored++;
+                else writeFailures++;
             }
         }
     }
+    NSString *result = !savedCount ? @"沒有有效本地選擇，請先儲存隊伍" :
+        [NSString stringWithFormat:@"已回蓋 %lu 欄位；未匹配 %lu 隊；寫入失敗 %lu 欄位",
+         (unsigned long)restored, (unsigned long)mismatched, (unsigned long)writeFailures];
+    if (savedCount && !restored && !mismatched && !writeFailures) result = @"目前欄位無需回蓋；已保留現有選擇";
+    [PHSaveStateTracker recordRestoreCount:restored reason:[NSString stringWithFormat:@"%@：%@", source, result]];
     if (restored) {
-        PHRestoreCount += restored;
         PHLog([NSString stringWithFormat:@"Restored %lu selected fields after native parse",
                (unsigned long)restored]);
     }
@@ -379,28 +392,19 @@ static void PHAfterParse(PHParseObservation before) {
         currentContext != before.context ||
         !PHReadPointer(currentContext + PHAPIActiveRequestOffset, &active) ||
         active == before.requestBlock ||
-        !PHReadU32(currentContext + PHAPIErrorOffset, &nativeError) || nativeError != 0) return;
+        !PHReadU32(currentContext + PHAPIErrorOffset, &nativeError)) return;
     if (before.requestID == 33) {
         uint32_t player = 0;
-        if (PHCurrentPlayer(&player)) {
+        if (nativeError == 0 && PHCurrentPlayer(&player)) {
             PHResetAccount(player, YES);
-            PHRestoreBanks(PHLastBanks, PHActiveMask());
+            PHRestoreBanks(PHLastBanks, PHActiveMask(), @"登入後");
         }
         return;
     }
-    NSDictionary *transaction = nil;
-    @synchronized (PHLock) {
-        if ([PHPending[@"success"] isEqual:@YES] &&
-            [PHPending[@"restoreAllowed"] isEqual:@YES] &&
-            [PHPending[@"nativeContext"] unsignedLongLongValue] == before.context &&
-            [PHPending[@"nativeRequest"] unsignedLongLongValue] == before.requestBlock &&
-            [PHPending[@"epoch"] unsignedIntegerValue] == PHAccountEpoch) {
-            transaction = [PHPending copy];
-            PHPending = nil;
-        }
-    }
+    NSDictionary *transaction = [PHSaveStateTracker consumeForEpoch:PHAccountEpoch
+        context:before.context request:before.requestBlock nativeError:nativeError];
     if (transaction) PHRestoreBanks(transaction[@"banks"],
-                                   PHActiveMask() & [transaction[@"mask"] unsignedIntegerValue]);
+                                   PHActiveMask() & [transaction[@"mask"] unsignedIntegerValue], @"儲存後");
 }
 
 static void PHMaintenance(void) {
@@ -410,12 +414,7 @@ static void PHMaintenance(void) {
     PHFeatureMask mask = PHActiveMask();
     PHRevertDisabled(mask);
     PHApplyUnlocks(mask);
-    @synchronized (PHLock) {
-        if (PHPending && CFAbsoluteTimeGetCurrent() - [PHPending[@"time"] doubleValue] > 60) {
-            PHPending = nil;
-            PHLog(@"Pending restore expired; local snapshot remains on disk");
-        }
-    }
+    [PHSaveStateTracker expireAtTime:CFAbsoluteTimeGetCurrent()];
     uint32_t count = 0;
     uintptr_t pointer = 0;
     PHReadU32(PHSave() + PHEntryCountOffset, &count);
@@ -494,8 +493,15 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         !PHQueryMatches(request.URL, @"action", @"save_decks") || !request.HTTPBody) {
         return PHOriginalDataTask(self, command, request, completion);
     }
+    // A new save supersedes any older restore, including an explicit default,
+    // disabled-feature request or snapshot write failure. Never resurrect an
+    // older selection after the user has submitted a newer one.
+    BOOL hasPending = [PHSaveStateTracker beginSave];
     PHRewriteResult *probe = PHRewriteDeckBody(request.HTTPBody, 0, NULL);
-    if (!probe) return PHOriginalDataTask(self, command, request, completion);
+    if (!probe) {
+        [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
+        return PHOriginalDataTask(self, command, request, completion);
+    }
     static NSMutableSet *seen;
     if (!seen) seen = [NSMutableSet set];
     NSString *endpoint = [NSString stringWithFormat:@"%@%@", request.URL.host, request.URL.path];
@@ -516,20 +522,27 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         ![PHConfig[@"apiHosts"] containsObject:request.URL.host.lowercaseString] ||
         ![PHConfig[@"apiPaths"] containsObject:request.URL.path] ||
         !PHQueryMatches(request.URL, @"pid", [NSString stringWithFormat:@"%u", player])) {
+        [PHSaveStateTracker recordPassthrough:@"功能未啟用或請求未匹配設定；請求保持原樣"];
         return PHOriginalDataTask(self, command, request, completion);
     }
-    BOOL hasPending = NO;
-    @synchronized (PHLock) { hasPending = PHPending != nil; }
     PHRewriteResult *result = PHRewriteDeckBody(request.HTTPBody, mask, NULL);
-    if (!result) return PHOriginalDataTask(self, command, request, completion);
+    if (!result) {
+        [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
+        return PHOriginalDataTask(self, command, request, completion);
+    }
     NSDictionary *banks = PHMergeBanks(PHLastBanks ?: @{}, result.banks, mask);
     if (!PHStoreBanks(banks)) {
         PHStorageFault = YES;
+        [PHSaveStateTracker recordStorageFailure];
         PHLog(@"Local snapshot write failed; feature writes disabled");
         return PHOriginalDataTask(self, command, request, completion);
     }
     PHLastBanks = banks;
-    if (!result.changed) return PHOriginalDataTask(self, command, request, completion);
+    [PHSaveStateTracker recordLocalBanks:banks];
+    if (!result.changed) {
+        [PHSaveStateTracker recordPassthrough:@"本地選擇已保存；此請求無需預設化"];
+        return PHOriginalDataTask(self, command, request, completion);
+    }
     NSMutableURLRequest *copy = [request mutableCopy];
     copy.HTTPBody = result.body;
     [copy setValue:[NSString stringWithFormat:@"%lu", (unsigned long)result.body.length]
@@ -539,11 +552,9 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
     BOOL nativeMatch = PHReadPointer(PHSave() + PHAPIContextPointerOffset, &nativeContext) && nativeContext &&
                        PHReadPointer(nativeContext + PHAPIActiveRequestOffset, &nativeRequest) && nativeRequest &&
                        PHReadU32(nativeRequest + 8, &requestID) && requestID == 122;
-    NSMutableDictionary *transaction = [@{@"banks": banks, @"mask": @(mask),
-                       @"epoch": @(PHAccountEpoch), @"time": @(CFAbsoluteTimeGetCurrent()),
-                       @"nativeContext": @(nativeContext), @"nativeRequest": @(nativeRequest),
-                       @"restoreAllowed": @(nativeMatch && !hasPending)} mutableCopy];
-    @synchronized (PHLock) { PHPending = transaction; }
+    NSDictionary *transaction = [PHSaveStateTracker prepareTransactionWithBanks:banks mask:mask
+        epoch:PHAccountEpoch context:nativeContext request:nativeRequest
+        restoreAllowed:nativeMatch && !hasPending time:CFAbsoluteTimeGetCurrent()];
     NSURLSessionDataTask *task = PHOriginalDataTask(self, command, copy,
                 ^(NSData *data, NSURLResponse *response, NSError *error) {
         id object = (!error && data.length > 0 && data.length <= 4 * 1024 * 1024) ?
@@ -554,19 +565,12 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
                        [object[@"res"] isKindOfClass:NSNumber.class] &&
                        CFGetTypeID((__bridge CFTypeRef)object[@"res"]) != CFBooleanGetTypeID() &&
                        [object[@"res"] doubleValue] == 0;
-        @synchronized (PHLock) {
-            if (PHPending == transaction) {
-                transaction[@"success"] = @(success);
-                if (!success) PHPending = nil;
-            }
-        }
+        NSInteger status = [response isKindOfClass:NSHTTPURLResponse.class] ? [(NSHTTPURLResponse *)response statusCode] : 0;
+        [PHSaveStateTracker completeTransaction:transaction accepted:success httpStatus:status];
         completion(data, response, error);
     });
-    if (!task) {
-        @synchronized (PHLock) { if (PHPending == transaction) PHPending = nil; }
-    }
-    PHLog(@"Submitted copied save_decks body with selected fields defaulted");
-    PHUploadCount++;
+    [PHSaveStateTracker recordTaskCreated:task != nil transaction:transaction];
+    if (task) PHLog(@"Submitted copied save_decks body with selected fields defaulted");
     if (!nativeMatch || hasPending) PHLog(@"Restore correlation unavailable; latest local snapshot preserved for next login");
     return task;
 }
@@ -686,19 +690,24 @@ static NSDictionary *PHRuntimeSnapshot(void) {
                                  [NSString stringWithFormat:@"已啟用 · 已修正 %lu 次", (unsigned long)PHTimerClearCount];
     NSString *frameState = PHFrameMainThread ? @"主執行緒" :
                           atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ? @"非主執行緒" : @"等待 frame";
+    NSDictionary *saveState = [PHSaveStateTracker snapshot];
+    NSString *saveSummary = [NSString stringWithFormat:
+        @"儲存：%@\n本機保存：%@ 次 · 主要 %@ 隊／次要 %@ 隊\n伺服器接受：%@ 次 · 失敗：%@ 次\n%@",
+        saveState[@"message"], saveState[@"localSaveCount"], saveState[@"primaryDeckCount"], saveState[@"secondaryDeckCount"],
+        saveState[@"acceptedCount"], saveState[@"failedCount"], saveState[@"restoreMessage"]];
     NSString *checks = [NSString stringWithFormat:
         @"版本校驗：%@\nHooks：frame %@ · network %@ · background %@\nFrame：%@ · %lu 次\n登入：%@ · API：%@\n資源條目：%u\n上傳預設化：%lu 次 · 本地回蓋：%lu 欄位\n計時修正：%lu 次",
         PHValidated ? @"通過" : @"未通過", PHFrameInstalled ? @"✓" : @"×", PHNetworkInstalled ? @"✓" : @"×",
         PHLifecycleInstalled ? @"✓" : @"×", frameState, (unsigned long)PHFrameCount,
         PHAccountReady ? @"已觀察成功" : @"等待", PHFiltersConfigured() ? @"已設定" : @"未設定", PHObservedEntries,
-        (unsigned long)PHUploadCount, (unsigned long)PHRestoreCount, (unsigned long)PHTimerClearCount];
+        [saveState[@"submittedCount"] unsignedLongValue], [saveState[@"restoredFieldCount"] unsignedLongValue], (unsigned long)PHTimerClearCount];
     NSString *path = PHFolder.length ? [PHFolder stringByAppendingPathComponent:@"config.json"] : @"尚未建立";
     NSBundle *bundle = NSBundle.mainBundle;
     NSString *diagnostics = [NSString stringWithFormat:
-        @"PADCheaper %@\nLoaded: YES\nOverlay visible: %@\nBundle ID: %@\nOriginal ID: %@\nGame version: %@ / %@\nTarget UUID: %@\nValidation: %@\nStatus: %@\nReason: %@\n%@\nEndpoint: %@%@ (query omitted)\nConfig: %@\nStorage: %@\nDevice verified by CI: NO",
+        @"PADCheaper %@\nLoaded: YES\nOverlay visible: %@\nBundle ID: %@\nOriginal ID: %@\nGame version: %@ / %@\nTarget UUID: %@\nValidation: %@\nStatus: %@\nReason: %@\n%@\n%@\nEndpoint: %@%@ (query omitted)\nConfig: %@\nStorage: %@\nDevice verified by CI: NO",
         PH_RUNTIME_VERSION, PHOverlayVisible ? @"YES" : @"NO", bundle.bundleIdentifier ?: @"未取得", PHGuestBundleIdentifier(),
         bundle.infoDictionary[@"CFBundleShortVersionString"] ?: @"未取得", bundle.infoDictionary[@"CFBundleVersion"] ?: @"未取得",
-        @(PHTargetUUIDString), PHValidationMessage ?: @"初始化中", title, reason ?: @"", checks,
+        @(PHTargetUUIDString), PHValidationMessage ?: @"初始化中", title, reason ?: @"", checks, saveSummary,
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
     NSDictionary *snapshot = @{
@@ -712,6 +721,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"timerEnabled": @(timerActive), @"entryCount": @(PHObservedEntries), @"storageFault": @(PHStorageFault),
         @"configValid": @(PHConfigValid), @"canSaveConfig": @(PHStorageReady), @"config": PHConfig ?: PHDefaultConfiguration(),
         @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
+        @"saveState": saveState, @"saveSummary": saveSummary,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
         @"badgeImplemented": @NO, @"deviceVerified": @NO
     };
@@ -849,7 +859,7 @@ static void PHBootstrap(NSUInteger attempt, NSUInteger generation) {
 __attribute__((constructor))
 static void PADCheaperInitialize(void) {
     @autoreleasepool {
-        PHLock = [NSObject new];
+        PHSaveStateTracker = [PHSaveState new];
         PHFlagPatches = [NSMutableArray array];
         PHLastBanks = @{};
         PHConfig = PHDefaultConfiguration();

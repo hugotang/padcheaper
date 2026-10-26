@@ -4,7 +4,7 @@
 
 **結論：可做無 JIT 的 iOS 原型。** 已找到已簽署 dylib 的載入路徑、Objective-C 網路與生命週期攔截點，以及皮膚／BGM 的資料結構。皮膚／BGM、隊伍上傳預設化及背景回前台計時修正有明確實作路線；完整回蓋、多帳號與徽章仍有需要真機驗證的條件。不能把 Android 的 ELF GOT hook、偏移或存檔格式直接搬到 iOS。
 
-目前完成的是 IPA／IDA 靜態分析及 LiveContainer 原始碼核對。**尚未編譯 dylib、載入 iPhone，或驗證伺服器接受修改後請求。** 下列「已確認」均指這份二進位／原始碼的靜態證據。
+本文的位址與結構依 IPA／IDA 靜態分析及 LiveContainer 原始碼核對；下列「已確認」均指這份二進位／原始碼的靜態證據。後續已實作 dylib 並以 GitHub Actions 編譯及檢查 GUI。2026-10-27 使用者回報 `0.2.0-gui` 在 iOS 27、自訂 LiveContainer、無 JIT 下 GUI 及 Skin／BGM 生效；伺服器接受與完整回蓋仍待實測，見 [真機測試記錄](device-testing.md)。
 
 ## 1. 功能判定
 
@@ -221,7 +221,7 @@ GameMain resume 的 vtable slot 0x10114B880 指向 0x1005B8C14，但位於 __DAT
 
 ## 11. 建置、載入與驗收順序
 
-建置目標：arm64 iPhoneOS dylib，Objective-C／必要時 Objective-C++，使用 Foundation、UIKit 與 libobjc。replacement IMP 都預先編譯，避免 JIT、可執行 trampoline 或 __TEXT 寫入。目前 Windows PATH 沒有 clang、xcrun／Xcode 工具鏈；需 macOS／Xcode 或另外提供可用 iOS SDK 工具鏈，之後才可產出 dylib。
+建置目標：arm64 iPhoneOS dylib，Objective-C／必要時 Objective-C++，使用 Foundation、UIKit 與 libobjc。replacement IMP 都預先編譯，避免 JIT、可執行 trampoline 或 __TEXT 寫入。Windows 本機無 Xcode 工具鏈；本 repo 的 GitHub Actions 已使用 macOS／Xcode 產出 dylib。
 
 建置後將 dylib 直接放在 PAD 的 LCTweakFolder 所選資料夾，由可用憑證簽署並確認載入日誌。iOS 27 下「遊戲本身可運行」只證明既有 guest 路徑可用，新 dylib 的簽署／dlopen 仍要驗證。
 

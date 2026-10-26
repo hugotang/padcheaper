@@ -24,6 +24,7 @@
 @property(nonatomic, strong) UILabel *reasonLabel;
 @property(nonatomic, strong) UILabel *endpointLabel;
 @property(nonatomic, strong) UILabel *checksLabel;
+@property(nonatomic, strong) UILabel *saveLabel;
 @property(nonatomic, strong) UILabel *pathLabel;
 @property(nonatomic, strong) UILabel *feedbackLabel;
 @property(nonatomic, strong) UIButton *endpointButton;
@@ -168,6 +169,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.checksLabel = PHLabel(11, UIFontWeightRegular);
     self.checksLabel.font = [UIFont monospacedSystemFontOfSize:11 weight:UIFontWeightRegular];
     self.checksLabel.textColor = [UIColor colorWithWhite:1 alpha:0.72];
+    self.saveLabel = PHLabel(12, UIFontWeightRegular);
+    self.saveLabel.accessibilityIdentifier = @"padcheaper.persistence";
     self.pathLabel = PHLabel(10, UIFontWeightRegular);
     self.pathLabel.lineBreakMode = NSLineBreakByCharWrapping;
     self.pathLabel.textColor = [UIColor colorWithWhite:1 alpha:0.50];
@@ -187,7 +190,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self switchRow:@"功能總開關" key:@"experimentalWrites"],
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
-        self.endpointLabel, self.endpointButton, self.checksLabel, actions,
+        self.endpointLabel, self.endpointButton, self.saveLabel, self.checksLabel, actions,
         self.feedbackLabel, self.pathLabel, note
     ]];
     body.axis = UILayoutConstraintAxisVertical;
@@ -333,6 +336,10 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
                                          @"API 尚未偵測。請在遊戲內儲存一次隊伍，再按下方按鈕。";
     self.endpointButton.enabled = observed && canSave;
     self.checksLabel.text = state[@"checks"];
+    self.saveLabel.text = state[@"saveSummary"];
+    NSString *savePhase = state[@"saveState"][@"phase"];
+    self.saveLabel.textColor = [savePhase hasSuffix:@"failed"] ?
+        [UIColor colorWithRed:1 green:0.54 blue:0.54 alpha:1] : [UIColor colorWithWhite:1 alpha:0.80];
     self.pathLabel.text = [@"設定檔：\n" stringByAppendingString:(state[@"configPath"] ?: @"初始化中")];
     self.feedbackLabel.text = state[@"feedback"];
     self.feedbackLabel.hidden = self.feedbackLabel.text.length == 0;

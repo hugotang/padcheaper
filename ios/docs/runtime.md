@@ -1,6 +1,6 @@
 # 原型實作與待驗證項目
 
-此文件描述本 repo 的可編譯原型。靜態目標為 PAD 23.6.0／106878；所有真機驗證仍待完成。
+此文件描述本 repo 的可編譯原型，目標為 PAD 23.6.0／106878。2026-10-27 使用者回報 `0.2.0-gui` 在 iOS 27、自訂 LiveContainer、無 JIT 下 GUI 及 Skin／BGM 生效；儲存／重啟、伺服器接受、帳號隔離與計時未回報通過，詳見 [真機測試記錄](device-testing.md)。
 
 ## 已實作
 
@@ -16,6 +16,7 @@
 - 交易綁定 account epoch、原生 API context、request block、bank／slot 和隊伍摘要；網路 completion 不直接改遊戲記憶體。
 - frame 原方法返回後，觀察 native request 已移除且 native error 為 0，才回蓋 matching default 值。HTTP 200 及 JSON res=0 另外核對。
 - JSON 選擇保存為解碼值，按玩家候選 pid 分檔；同隊未啟用欄位保留、明確選擇 0 可更新。
+- `0.2.1-gui` 用同一同步交易狀態處理 save／completion／parse。每次新儲存先取消舊回蓋，包含無改寫、停用及本地保存失敗的分支；過期或被替代的 completion 不改最新狀態。面板及 status.json 顯示本地保存、已追蹤請求的 HTTP／res 成功、原生解析與回蓋結果，不輸出帳號或隊伍內容。
 - 計時實驗只清背景恢復 bit 5，保留 bit 1／6。
 
 ## 額外的靜態時序證據
@@ -48,4 +49,4 @@
 9. 徽章未實作，不能只填擁有位圖；參數表及編成 XOR bank mapping 未全部解決。
 10. timerFix 僅限目前靜態確認的 GameMain 背景恢復分支；其他計時／棄權／續關情境未驗證。
 
-CI 驗證包含 iPhoneOS 編譯、arm64／簽章／Mach-O 檢查、macOS Foundation protocol／身份／設定測試，以及載入相同 runtime 的 iOS 模擬器 GUI 檢查。模擬器刻意使用不匹配 UUID，確認 GUI 出現而 hooks／寫入保持停用，並驗證開關儲存、API 套用、複製診斷、觸控穿透和橫向畫面。真機載入、伺服器接受、回蓋正確性和帳號安全性不能由 CI 推論。
+CI 驗證包含 iPhoneOS 編譯、arm64／簽章／Mach-O 檢查、macOS Foundation protocol／身份／設定／儲存交易測試，以及載入相同 runtime 的 iOS 模擬器 GUI 檢查。交易測試涵蓋選擇改回 0、舊 completion、新儲存寫檔失敗、重疊請求、原生錯誤、逾時和帳號切換。模擬器刻意使用不匹配 UUID，確認 GUI 出現而 hooks／寫入保持停用，並驗證開關儲存、API 套用、複製診斷、儲存狀態、觸控穿透和橫向畫面。真機行為不能由 CI 推論；使用者已回報通過的範圍另記錄在真機測試文件。
