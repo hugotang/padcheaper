@@ -18,7 +18,7 @@ min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
     -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    -framework Foundation -framework CoreFoundation -framework UIKit \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
 # This ad-hoc signature is for artifact integrity, not an iPhone install identity.

@@ -17,11 +17,11 @@ architecture="$(uname -m)"
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    -framework Foundation -framework CoreFoundation -framework UIKit \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter \
-    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -o "$app_dir/OverlayProbe"
+    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -framework CoreGraphics -o "$app_dir/OverlayProbe"
 
 python3 - "$app_dir" <<'PY'
 from pathlib import Path
