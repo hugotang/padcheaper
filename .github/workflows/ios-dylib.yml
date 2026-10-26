@@ -1,0 +1,75 @@
+name: Build iOS LiveContainer dylib
+
+on:
+  push:
+    branches:
+      - main
+      - 'codex/**'
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-dylib.yml'
+      - 'LICENSE'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-dylib.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-dylib-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Show iOS SDK toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          xcrun --sdk iphoneos --find clang
+
+      - name: Validate target and run protocol tests
+        run: |
+          python3 ios/tools/generate_target.py
+          bash ios/test.sh
+
+      - name: Compile arm64 iPhoneOS dylib
+        run: bash ios/build.sh
+
+      - name: Inspect Mach-O and signature
+        run: |
+          file build/ios/PADCheaper.dylib
+          xcrun --sdk iphoneos otool -hv build/ios/PADCheaper.dylib
+          xcrun --sdk iphoneos otool -l build/ios/PADCheaper.dylib
+          codesign --verify --strict build/ios/PADCheaper.dylib
+          shasum -a 256 build/ios/PADCheaper.dylib
+
+      - name: Upload dylib and installation notes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-iOS-arm64-${{ github.run_number }}
+          path: build/ios/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          metadata = json.loads(Path('build/ios/build-info.json').read_text())
+          print('Built **PADCheaper.dylib** for arm64 iPhoneOS, minimum iOS 15.0.')
+          print()
+          print('Download the run artifact, then re-sign with LiveContainer before loading.')
+          print('The artifact starts in diagnostic mode. iPhone runtime behavior is not yet verified.')
+          print()
+          print('SHA-256: `' + metadata['sha256'] + '`')
+          PY

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "experimentalWrites": false,
+  "features": {
+    "skin": false,
+    "bgm": false,
+    "timerFix": false
+  },
+  "apiHosts": [],
+  "apiPaths": []
+}

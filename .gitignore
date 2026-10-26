@@ -1,0 +1,15 @@
+build/
+.build/
+DerivedData/
+__pycache__/
+*.pyc
+*.dylib
+*.ipa
+*.i64
+*.idb
+*.p12
+*.mobileprovision
+*.log
+.DS_Store
+Thumbs.db
+ios/generated/

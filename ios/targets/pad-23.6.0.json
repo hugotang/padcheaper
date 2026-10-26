@@ -1,0 +1,1311 @@
+{
+  "schema_version": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "purpose": "Static-analysis target description and implementation design. Not a runtime-verified offset pack.",
+  "analysis": {
+    "date": "2026-10-26",
+    "timezone": "Asia/Hong_Kong",
+    "scope": "IPA metadata, local IDA 9.4 decompilation/disassembly/xrefs, and custom LiveContainer source",
+    "dylib_compiled": false,
+    "device_tested": false,
+    "server_acceptance_verified": false
+  },
+  "target": {
+    "bundle_id": "jp.gungho.pad",
+    "executable": "pad",
+    "marketing_version": "23.6.0",
+    "ios_build": "106878",
+    "minimum_os": "15.0",
+    "architecture": "arm64",
+    "cpu_type": 16777228,
+    "cpu_subtype": 0,
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "preferred_image_base": "0x100000000",
+    "original_file_type": "MH_EXECUTE",
+    "original_executable_size_bytes": 21573888,
+    "cryptid": 0,
+    "original_executable_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec"
+  },
+  "environment": {
+    "reported_ios_version": "27",
+    "reported_jit_enabled": false,
+    "reported_unmodified_game_runs": true,
+    "livecontainer_source_root": "https://github.com/hugotang/lc",
+    "livecontainer_source_commit": "94eb52a296b13c80bb82fb4515d073294035fc96",
+    "installed_livecontainer_build_verified": false
+  },
+  "provenance": {
+    "ipa_name": "jp.gungho.pad_23.6.0_decrypted.ipa",
+    "analysis_artifacts": "local only; executable and IDA database are not in this repository",
+    "metadata": "macho-metadata.json (local)",
+    "ida_database": "pad.i64 (local)",
+    "report": "ios/docs/feasibility.md",
+    "binary_evidence_directory_is_local_only": true
+  },
+  "address_model": {
+    "va": "unslid IDA virtual address",
+    "rva": "va - preferred_image_base",
+    "runtime": "validated_guest_header + rva",
+    "file_offset": "segment.fileoff + (va - segment.vmaddr), only within file-backed range",
+    "guest_header_resolution": [
+      "optional dlsym getGuestAppHeader only when export exists",
+      "loaded-image UUID match, deduplicate headers, tolerate LiveContainer index/name translation"
+    ],
+    "image_index_zero_assumption": false
+  },
+  "runtime_gate": {
+    "required": [
+      "bundle_id",
+      "marketing_version",
+      "ios_build",
+      "arm64",
+      "uuid",
+      "all applicable __TEXT guards",
+      "mapped readable/writable target ranges",
+      "plausible initialized counts and pointer targets"
+    ],
+    "original_sha256_role": "input provenance only; LiveContainer patching and signing change whole-file bytes",
+    "allowed_header_file_types": [
+      "MH_DYLIB",
+      "MH_EXECUTE"
+    ],
+    "on_failure": "disable feature writes and log reason",
+    "runtime_verified": false,
+    "guards": [
+      {
+        "id": "skin_bgm_predicate",
+        "va": "0x10045b0b4",
+        "rva": "0x45b0b4",
+        "file_offset": "0x45b0b4",
+        "length_bytes": 64,
+        "bytes_hex": "e8e184122800080ba9b700d029c11e912ac554914a210b9129c55491292107910be284523f000b6b29b18a9a28b0881a0a7d00111f0100714ab1881a4a7d0513",
+        "sha256": "556491257af5b84d0d07e4ae72759d1207ff237a2f2f3f11516b8869845928fd"
+      },
+      {
+        "id": "network_submit",
+        "va": "0x10045b51c",
+        "rva": "0x45b51c",
+        "file_offset": "0x45b51c",
+        "length_bytes": 64,
+        "bytes_hex": "683401b008b13b91004105f8014500b900e6072f004100fc1f1500b91f4100391f1d007989008052090100b905c105f803310039e20800b4ff8301d1f65703a9",
+        "sha256": "ab4e2c3db9180f9b8ce6966af6859e86bfa80f23579b670d705fff4adc3ea43b"
+      },
+      {
+        "id": "deck_record_parser",
+        "va": "0x10069cc78",
+        "rva": "0x69cc78",
+        "file_offset": "0x69cc78",
+        "length_bytes": 64,
+        "bytes_hex": "ffc302d1fc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291f50302aaf30301aaf40300aaa85300d008b142f9080140f9e82700f9c3000034",
+        "sha256": "d5bc88a9a37f25db3742fefaf3b423a14d2401a29f3cdea637efcdd6a95a6f04"
+      },
+      {
+        "id": "scene_resume",
+        "va": "0x1005b8c14",
+        "rva": "0x5b8c14",
+        "file_offset": "0x5b8c14",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091f30300aa083840f909de9f524901a0720a6969384a011b320a6929388af5ff97683a40f90849429100413d91b7000294683a40f9",
+        "sha256": "3b00f92366e3510bf9df4b23e20bfcee9effe469129ff5b1c729ae216d3f953f"
+      },
+      {
+        "id": "view_draw_frame",
+        "va": "0x10021e808",
+        "rva": "0x21e808",
+        "file_offset": "0x21e808",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091f30300aa148300f0802a42f92081319480000034e00313aa3505329486970094288300f0081180b9606a68f8400000b4cf4e3194",
+        "sha256": "02379acbcfe1f91d8a6d5f93779b8da4357eb1918ab36b288c20e3b1f16a94dc"
+      }
+    ]
+  },
+  "macho": {
+    "segments": [
+      {
+        "name": "__TEXT",
+        "vmaddr": "0x100000000",
+        "vmsize": "0x1110000",
+        "fileoff": "0x0",
+        "filesize": "0x1110000",
+        "initprot": 5,
+        "maxprot": 5
+      },
+      {
+        "name": "__DATA_CONST",
+        "vmaddr": "0x101110000",
+        "vmsize": "0xdc000",
+        "fileoff": "0x1110000",
+        "filesize": "0xdc000",
+        "initprot": 3,
+        "maxprot": 3
+      },
+      {
+        "name": "__DATA",
+        "vmaddr": "0x1011ec000",
+        "vmsize": "0x1af0000",
+        "fileoff": "0x11ec000",
+        "filesize": "0x184000",
+        "initprot": 3,
+        "maxprot": 3
+      },
+      {
+        "name": "__LINKEDIT",
+        "vmaddr": "0x102cdc000",
+        "vmsize": "0x124000",
+        "fileoff": "0x1370000",
+        "filesize": "0x123100",
+        "initprot": 1,
+        "maxprot": 1
+      }
+    ],
+    "load_command_free_bytes": "0x1848",
+    "load_command_segment_count": 5,
+    "chained_fixup_segment_count": 5,
+    "chained_pointer_format": 6,
+    "chained_pointer_format_name": "DYLD_CHAINED_PTR_64_OFFSET",
+    "chained_page_size": "0x4000",
+    "data_const_runtime_writable_assumption": false,
+    "never_request_text_writable_for_primary_route": true
+  },
+  "globals": {
+    "save_object": {
+      "va": "0x101b517b0",
+      "rva": "0x1b517b0",
+      "kind": "static_object_not_pointer_slot",
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "game_main": {
+      "va": "0x102abcdf0",
+      "rva": "0x2abcdf0",
+      "kind": "static_object_not_pointer_slot",
+      "impl_pointer_offset": "0x70",
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "scene_table": {
+      "va": "0x1012f1f90",
+      "rva": "0x12f1f90",
+      "entry_stride": "0x10",
+      "name_pointer_offset": "0x0",
+      "object_pointer_offset": "0x8",
+      "game_main_scene_index": 1,
+      "scene_guard": {
+        "current_scene_save_offset": "0x0",
+        "requested_scene_save_offset": "0x1",
+        "type": "i8/u8; check nonnegative before indexing",
+        "requires_equal": true
+      },
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "save_fields": [
+      {
+        "name": "player_id_candidate",
+        "save_offset": "0x83d50",
+        "va": "0x101bd5500",
+        "rva": "0x1bd5500",
+        "type": "u32",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "used as pid in save_decks query; account stability and login timing need device verification"
+      },
+      {
+        "name": "badge_parameter_table_pointer",
+        "save_offset": "0xa0",
+        "va": "0x101b51850",
+        "rva": "0x1b51850",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "0xB4 stride; correlated parameter values; do not overwrite blindly"
+      },
+      {
+        "name": "badge_owned_bitmap",
+        "save_offset": "0x52f314",
+        "va": "0x102080ac4",
+        "rva": "0x2080ac4",
+        "type": "8*u32",
+        "verified_span_bytes": 32,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "decodedWord = rawWord XOR 0x9A69F65A; predicate ID must also have valid parameter"
+      },
+      {
+        "name": "max_decks",
+        "save_offset": "0x52f384",
+        "va": "0x102080b34",
+        "rva": "0x2080b34",
+        "type": "u16",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "parser clamps to 32; allocated capacity is not active count"
+      },
+      {
+        "name": "secondary_deck_count",
+        "save_offset": "0x52f38e",
+        "va": "0x102080b3e",
+        "rva": "0x2080b3e",
+        "type": "u8",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "parser stores count, at most 16"
+      },
+      {
+        "name": "primary_deck_count",
+        "save_offset": "0x52f38f",
+        "va": "0x102080b3f",
+        "rva": "0x2080b3f",
+        "type": "u8",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "serializer clamps primary count to 32"
+      },
+      {
+        "name": "primary_decks",
+        "save_offset": "0x52f394",
+        "va": "0x102080b44",
+        "rva": "0x2080b44",
+        "type": "record_array",
+        "verified_span_bytes": 3072,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "allocated 32*0x60, valid count must be checked"
+      },
+      {
+        "name": "secondary_decks",
+        "save_offset": "0x52ffac",
+        "va": "0x10208175c",
+        "rva": "0x208175c",
+        "type": "record_array",
+        "verified_span_bytes": 1536,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "allocated 16*0x60; bank-local badge encoding; do not add both capacities as active count"
+      },
+      {
+        "name": "editing_structure",
+        "save_offset": "0x5305ac",
+        "va": "0x102081d5c",
+        "rva": "0x2081d5c",
+        "type": "structure",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "record header +8 observed; badge +0x67 relative to structure; complete bank mapping pending"
+      },
+      {
+        "name": "skin_owned_bitmap",
+        "save_offset": "0x5311c8",
+        "va": "0x102082978",
+        "rva": "0x2082978",
+        "type": "bitmap_u32_words",
+        "verified_span_bytes": 128,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "ID < 10000; confirmed login-clear span 0x80; adjacent New region is separate"
+      },
+      {
+        "name": "skin_new_related_bitmap",
+        "save_offset": "0x531248",
+        "va": "0x1020829f8",
+        "rva": "0x20829f8",
+        "type": "bitmap",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "login explicitly clears skin default New bits; full semantics/span not independently established"
+      },
+      {
+        "name": "bgm_owned_bitmap",
+        "save_offset": "0x5312c8",
+        "va": "0x102082a78",
+        "rva": "0x2082a78",
+        "type": "bitmap_u32_words",
+        "verified_span_bytes": 128,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "ID >= 10000; index=id-10000; confirmed login-clear span 0x80"
+      },
+      {
+        "name": "skin_bgm_descriptor",
+        "save_offset": "0xc77390",
+        "va": "0x1027c8b40",
+        "rva": "0x27c8b40",
+        "type": "structure",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "entry lookup receives this descriptor"
+      },
+      {
+        "name": "skin_bgm_entry_count",
+        "save_offset": "0xc77394",
+        "va": "0x1027c8b44",
+        "rva": "0x27c8b44",
+        "type": "u32",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "descriptor +4"
+      },
+      {
+        "name": "skin_bgm_entry_pointer",
+        "save_offset": "0xc77398",
+        "va": "0x1027c8b48",
+        "rva": "0x27c8b48",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "descriptor +8; range-check count*0x34"
+      },
+      {
+        "name": "skin_bgm_string_table_pointer",
+        "save_offset": "0xc773a0",
+        "va": "0x1027c8b50",
+        "rva": "0x27c8b50",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "resource/name table"
+      }
+    ]
+  },
+  "structures": {
+    "skin_bgm_entry": {
+      "stride_bytes": 52,
+      "fields": {
+        "id": {
+          "offset": "0x0",
+          "type": "u16"
+        },
+        "eligibility_flags": {
+          "offset": "0xe",
+          "type": "u16"
+        }
+      },
+      "eligibility": "flags == 0 || (flags & 1) != 0",
+      "recommended_flag_update": "leave flags==0 alone; otherwise OR bit 0 without changing other bits",
+      "bitmap": {
+        "verified_owned_span_bytes": 128,
+        "conservative_max_index_exclusive": 1024,
+        "skin_id_rule": "0 <= id < 10000, index=id",
+        "bgm_id_rule": "id >= 10000, index=id-10000",
+        "set_only_existing_validated_entries": true,
+        "do_not_copy_android_256_byte_write": true
+      },
+      "evidence": [
+        {
+          "artifact": "decomp-10045abe0.c",
+          "note": "entry lookup"
+        },
+        {
+          "artifact": "decomp-10045b0b4.c",
+          "note": "ownership/eligibility"
+        },
+        {
+          "artifact": "decomp-10003a3a4.c",
+          "note": "descriptor and stride"
+        },
+        {
+          "artifact": "decomp-10069d1e0.c",
+          "note": "8*16-byte clear per ownership bitmap, skdr/skbgm"
+        }
+      ]
+    },
+    "persisted_deck_record": {
+      "stride_bytes": 96,
+      "primary_capacity": 32,
+      "secondary_capacity": 16,
+      "fields": {
+        "card_ids": {
+          "offset": "0x0",
+          "type": "5*u32"
+        },
+        "extra_u32": {
+          "offset": "0x14",
+          "type": "u32",
+          "semantics": "unresolved; preserve"
+        },
+        "bgm1": {
+          "offset": "0x18",
+          "type": "u16"
+        },
+        "bgm2": {
+          "offset": "0x1a",
+          "type": "u16"
+        },
+        "skin": {
+          "offset": "0x1c",
+          "type": "u16"
+        },
+        "badge_raw": {
+          "offset": "0x5f",
+          "type": "u8"
+        }
+      },
+      "badge_encoding": "decoded = raw XOR uint8(15*bank_local_index+0x61); re-encode if index changes",
+      "editing": {
+        "save_base_offset": "0x5305ac",
+        "record_header_offset": "0x8",
+        "badge_offset_from_structure": "0x67",
+        "complete_bank_mapping_verified": false
+      },
+      "evidence": [
+        {
+          "artifact": "decomp-10069cc78.c",
+          "note": "fmt=1 parse and record fields"
+        },
+        {
+          "artifact": "decomp-10069c5e0.c",
+          "note": "primary/secondary capacity, counts"
+        },
+        {
+          "artifact": "decomp-10003f5c0.c",
+          "note": "editing badge record +8 header observed"
+        }
+      ]
+    },
+    "request_deck_records": {
+      "request_pointer_offset": "0x20",
+      "record_header_bytes": 12,
+      "stride_bytes": 96,
+      "serializer_record_pointer": "*(request+0x20)+index*0x60+0x0c",
+      "fields_relative_to_array_record": {
+        "bgm1": "0x24",
+        "bgm2": "0x26",
+        "skin": "0x28",
+        "badge_raw": "0x6b"
+      },
+      "request_and_persisted_bank_mapping_verified": false
+    },
+    "badge_parameters": {
+      "pointer_save_offset": "0xa0",
+      "stride_bytes": 180,
+      "prerequisite_location": "table + id*0xb4 - 4, u16",
+      "value_lookup": "0x10056ca88; effective ID may change with prerequisite ownership",
+      "secure_decode": "0x10056c3b8; correlated XOR and rotate values",
+      "owned_bitmap_save_offset": "0x52f314",
+      "owned_word_count": 8,
+      "owned_word_xor": "0x9a69f65a",
+      "all_owned_raw_word": "0x659609a5",
+      "bitmap_alone_sufficient": false,
+      "evidence": [
+        {
+          "artifact": "decomp-100453cf4.c",
+          "note": "two-stage predicate"
+        },
+        {
+          "artifact": "decomp-10056ca88.c",
+          "note": "parameter table and prerequisite"
+        },
+        {
+          "artifact": "decomp-10056c3b8.c",
+          "note": "secure value decode"
+        }
+      ]
+    },
+    "timer": {
+      "game_main_impl_pointer_offset": "0x70",
+      "flags_impl_offset": "0xafef0",
+      "flags_type": "u8",
+      "resume_sets_mask": "0x20",
+      "render_invalid_mask": "0x22",
+      "primary_candidate_clear_mask": "0x20",
+      "do_not_copy_android_bit1_or_bit6_writes": true,
+      "other_render_conditions_exist": true,
+      "affected_timer_mode_guard_verified": false,
+      "vtable": {
+        "va": "0x10114b848",
+        "rva": "0x114b848",
+        "resume_slot_va": "0x10114b880",
+        "resume_slot_rva": "0x114b880",
+        "slot_offset": "0x38",
+        "target_va": "0x1005b8c14",
+        "primary_route_requires_vtable_write": false
+      }
+    }
+  },
+  "functions": [
+    {
+      "role": "skin_bgm_entry_lookup",
+      "va": "0x10045abe0",
+      "rva": "0x45abe0",
+      "ida_name": "sub_10045ABE0",
+      "end_va": "0x10045ac0c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10045abe0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "descriptor.count at +4; descriptor.entries pointer at +8; entry stride 0x34"
+    },
+    {
+      "role": "skin_bgm_ownership_and_eligibility",
+      "va": "0x10045b0b4",
+      "rva": "0x45b0b4",
+      "ida_name": "sub_10045B0B4",
+      "end_va": "0x10045b148",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10045b0b4.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ownership bit AND table entry AND (flags == 0 OR (flags & 1) != 0)"
+    },
+    {
+      "role": "random_bgm_selection",
+      "va": "0x10003a3a4",
+      "rva": "0x3a3a4",
+      "ida_name": "sub_10003A3A4",
+      "end_va": "0x10003a608",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10003a3a4.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "independent corroboration of descriptor, stride and flag semantics"
+    },
+    {
+      "role": "bgm_resource_lookup",
+      "va": "0x10045ad60",
+      "rva": "0x45ad60",
+      "ida_name": "sub_10045AD60",
+      "end_va": "0x10045af24",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10045ad60.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "resource names and availability are a separate condition"
+    },
+    {
+      "role": "av_audio_player_load",
+      "va": "0x10021d5c8",
+      "rva": "0x21d5c8",
+      "ida_name": "sub_10021D5C8",
+      "end_va": "0x10021d738",
+      "dispatch": "objective_c_boundary",
+      "evidence_file": "decomp-10021d5c8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "AVAudioPlayer initWithContentsOfURL:error:; resources must be available"
+    },
+    {
+      "role": "save_decks_serializer",
+      "va": "0x1006981d0",
+      "rva": "0x6981d0",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1006981d0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "body has decksb/decksbs JSON, URL query action save_decks; a2+0x20 is request-record pointer"
+    },
+    {
+      "role": "deck_record_serializer",
+      "va": "0x1006983f8",
+      "rva": "0x6983f8",
+      "ida_name": "sub_1006983F8",
+      "end_va": "0x100698580",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1006983f8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "9 JSON values; hasBadge predicate may already reduce badge to zero before network hook"
+    },
+    {
+      "role": "query_action_wrapper",
+      "va": "0x10059068c",
+      "rva": "0x59068c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10059068c.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "adds action, r and m to query"
+    },
+    {
+      "role": "request_url_and_key",
+      "va": "0x100590704",
+      "rva": "0x590704",
+      "ida_name": "sub_100590704",
+      "end_va": "0x100590810",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100590704.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "key input is query; body is passed separately; server acceptance unverified"
+    },
+    {
+      "role": "post_request_wrapper",
+      "va": "0x10045b8e8",
+      "rva": "0x45b8e8",
+      "ida_name": "sub_10045B8E8",
+      "end_va": "0x10045b8f8",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10045b8e8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "forwards body to native network submit"
+    },
+    {
+      "role": "network_submit",
+      "va": "0x10045b51c",
+      "rva": "0x45b51c",
+      "ida_name": "sub_10045B51C",
+      "end_va": "0x10045b778",
+      "dispatch": "objective_c_boundary",
+      "evidence_file": "decomp-10045b51c.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "NSMutableURLRequest HTTPBody; sharedSession dataTaskWithRequest:completionHandler:"
+    },
+    {
+      "role": "network_completion",
+      "va": "0x10045b778",
+      "rva": "0x45b778",
+      "ida_name": "sub_10045B778",
+      "end_va": "0x10045b8d8",
+      "dispatch": "block_invoke",
+      "evidence_file": "decomp-10045b778.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "copies NSData to native receive buffer; this precedes native response parsing"
+    },
+    {
+      "role": "response_json_parse",
+      "va": "0x1005903f0",
+      "rva": "0x5903f0",
+      "ida_name": "sub_1005903F0",
+      "end_va": "0x100590610",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1005903f0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "passes byte range to JSON parser 0x100591E20"
+    },
+    {
+      "role": "response_status_parse",
+      "va": "0x100687db0",
+      "rva": "0x687db0",
+      "ida_name": "sub_100687DB0",
+      "end_va": "0x100688064",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100687db0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "looks for res field; HTTP 200 alone is insufficient"
+    },
+    {
+      "role": "response_variant_decode",
+      "va": "0x100687844",
+      "rva": "0x687844",
+      "ida_name": "sub_100687844",
+      "end_va": "0x100687a08",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100687844.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "requires a parsed object variant, then copies it to caller"
+    },
+    {
+      "role": "response_deck_object_get",
+      "va": "0x10069bcfc",
+      "rva": "0x69bcfc",
+      "ida_name": "sub_10069BCFC",
+      "end_va": "0x10069be18",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10069bcfc.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "retrieves named object from decoded response"
+    },
+    {
+      "role": "deck_all_parse",
+      "va": "0x10069c5e0",
+      "rva": "0x69c5e0",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10069c5e0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "writes primary and secondary persisted records; called by login and save_decks handlers"
+    },
+    {
+      "role": "deck_record_parse",
+      "va": "0x10069cc78",
+      "rva": "0x69cc78",
+      "ida_name": "sub_10069CC78",
+      "end_va": "0x10069d07c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10069cc78.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "fmt=1 mapping; badge XOR uses parser bank-local index"
+    },
+    {
+      "role": "login_player_parse",
+      "va": "0x10069d1e0",
+      "rva": "0x69d1e0",
+      "ida_name": "sub_10069D1E0",
+      "end_va": "0x1006a04a4",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10069d1e0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "clears 0x80-byte ownership spans and reads skdr/skbgm"
+    },
+    {
+      "role": "save_decks_response_handler",
+      "va": "0x1006b3af0",
+      "rva": "0x6b3af0",
+      "ida_name": "sub_1006B3AF0",
+      "end_va": "0x1006b3e70",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1006b3af0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls deck_all_parse"
+    },
+    {
+      "role": "request_response_dispatch",
+      "va": "0x1006bb50c",
+      "rva": "0x6bb50c",
+      "ida_name": "sub_1006BB50C",
+      "end_va": "0x1006bc3e4",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1006bb50c.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "request IDs 33 (login/player parse) and 122 (save_decks)"
+    },
+    {
+      "role": "request_pump",
+      "va": "0x100591470",
+      "rva": "0x591470",
+      "ida_name": "sub_100591470",
+      "end_va": "0x100591930",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100591470.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "dispatches received request response synchronously"
+    },
+    {
+      "role": "game_frame_update",
+      "va": "0x100573d3c",
+      "rva": "0x573d3c",
+      "ida_name": "sub_100573D3C",
+      "end_va": "0x1005742dc",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100573d3c.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls request_pump before further scene processing"
+    },
+    {
+      "role": "game_frame_update_wrapper",
+      "va": "0x1005747f8",
+      "rva": "0x5747f8",
+      "ida_name": "sub_1005747F8",
+      "end_va": "0x10057481c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1005747f8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "passes static save/global object to game_frame_update"
+    },
+    {
+      "role": "frame_body",
+      "va": "0x1004ec5f0",
+      "rva": "0x4ec5f0",
+      "ida_name": "sub_1004EC5F0",
+      "end_va": "0x1004ec75c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004ec5f0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls game_frame_update_wrapper"
+    },
+    {
+      "role": "view_draw_frame",
+      "va": "0x10021e808",
+      "rva": "0x21e808",
+      "ida_name": "-[ViewController drawFrame]",
+      "end_va": "0x10021e898",
+      "dispatch": "objective_c_method",
+      "evidence_file": "decomp-10021e808.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ViewController.drawFrame; after-original observation point; thread and same-frame UI effects unverified"
+    },
+    {
+      "role": "view_metal_draw",
+      "va": "0x100221274",
+      "rva": "0x221274",
+      "ida_name": "-[ViewController drawInMTKView:]",
+      "end_va": "0x100221278",
+      "dispatch": "objective_c_method",
+      "evidence_file": "decomp-100221274.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ViewController.drawInMTKView: calls drawFrame"
+    },
+    {
+      "role": "badge_ownership",
+      "va": "0x100453cf4",
+      "rva": "0x453cf4",
+      "ida_name": "sub_100453CF4",
+      "end_va": "0x100453d7c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100453cf4.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "requires nonzero parameter before ownership bitmap; direct BL/B callers observed"
+    },
+    {
+      "role": "badge_parameter",
+      "va": "0x10056ca88",
+      "rva": "0x56ca88",
+      "ida_name": "sub_10056CA88",
+      "end_va": "0x10056cb1c",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10056ca88.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "parameter table +0xA0; 0xB4 stride; prerequisite handling"
+    },
+    {
+      "role": "badge_secure_value_decode",
+      "va": "0x10056c3b8",
+      "rva": "0x56c3b8",
+      "ida_name": "sub_10056C3B8",
+      "end_va": "0x10056c418",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10056c3b8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "multiple correlated XOR/rotate values"
+    },
+    {
+      "role": "badge_name_lookup",
+      "va": "0x10056cbc0",
+      "rva": "0x56cbc0",
+      "ida_name": "sub_10056CBC0",
+      "end_va": "0x10056cca4",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-10056cbc0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "name table lookup can depend on prerequisite ownership"
+    },
+    {
+      "role": "badge_byte_decode",
+      "va": "0x100445c34",
+      "rva": "0x445c34",
+      "ida_name": "sub_100445C34",
+      "end_va": "0x100445c50",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-100445c34.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "raw ^ uint8(15*index+0x61)"
+    },
+    {
+      "role": "scene_resume",
+      "va": "0x1005b8c14",
+      "rva": "0x5b8c14",
+      "ida_name": "sub_1005B8C14",
+      "end_va": "0x1005b8d0c",
+      "dispatch": "vtable_slot",
+      "evidence_file": "decomp-1005b8c14.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "sets impl timer flags bit 5 (0x20)"
+    },
+    {
+      "role": "view_restore_from_background",
+      "va": "0x10021e6c0",
+      "rva": "0x21e6c0",
+      "ida_name": "-[ViewController restoreFromBackground]",
+      "end_va": "0x10021e6f8",
+      "dispatch": "objective_c_method",
+      "evidence_file": "decomp-10021e6c0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "after-original candidate for conditional timer flag handling"
+    },
+    {
+      "role": "app_foreground",
+      "va": "0x1003af7e8",
+      "rva": "0x3af7e8",
+      "ida_name": "-[AppDelegate applicationWillEnterForeground:]",
+      "end_va": "0x1003af7fc",
+      "dispatch": "objective_c_method",
+      "evidence_file": "decomp-1003af7e8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls restoreFromBackground"
+    },
+    {
+      "role": "scene_resume_wrapper",
+      "va": "0x1005744c8",
+      "rva": "0x5744c8",
+      "ida_name": "sub_1005744C8",
+      "end_va": "0x100574510",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1005744c8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "only resumes confirmed scene if current/requested scene indices match"
+    },
+    {
+      "role": "timer_render_a",
+      "va": "0x1004a23d0",
+      "rva": "0x4a23d0",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004a23d0.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "checks flags mask 0x22 plus other conditions"
+    },
+    {
+      "role": "timer_render_b",
+      "va": "0x1004a25c4",
+      "rva": "0x4a25c4",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004a25c4.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "checks flags mask 0x22 plus other conditions"
+    },
+    {
+      "role": "timer_render_c",
+      "va": "0x1004a3580",
+      "rva": "0x4a3580",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004a3580.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "mask 0x22 displays ---.--"
+    },
+    {
+      "role": "credential_file_load",
+      "va": "0x1004438f8",
+      "rva": "0x4438f8",
+      "ida_name": "sub_1004438F8",
+      "end_va": "0x1004439b4",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004438f8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "data048.bin exists; actual iOS directory unverified"
+    },
+    {
+      "role": "credential_file_write",
+      "va": "0x1004439c8",
+      "rva": "0x4439c8",
+      "ida_name": "sub_1004439C8",
+      "end_va": "0x100443a64",
+      "dispatch": "native_direct",
+      "evidence_file": "decomp-1004439c8.c",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "writes through game helpers; credential-file hash stability unverified"
+    }
+  ],
+  "objective_c_hooks": [
+    {
+      "class": "NSURLSession sharedSession concrete runtime class",
+      "selector": "dataTaskWithRequest:completionHandler:",
+      "mode": "capture compatible original IMP and use compiled replacement; add class-local override for inherited method",
+      "filter": "validated target + POST + exact action=save_decks + verified API host/path + account epoch",
+      "concrete_class_name_verified": false,
+      "method_encoding_verified": false
+    },
+    {
+      "class": "ViewController",
+      "selector": "drawFrame",
+      "expected_original_va": "0x10021e808",
+      "expected_original_rva": "0x21e808",
+      "mode": "call original exactly once, then check pending restore/initialized data",
+      "source_class_image_must_match_target": true,
+      "callback_thread_verified": false
+    },
+    {
+      "class": "ViewController",
+      "selector": "restoreFromBackground",
+      "expected_original_va": "0x10021e6c0",
+      "expected_original_rva": "0x21e6c0",
+      "mode": "call original first, conditionally handle GameMain flags",
+      "source_class_image_must_match_target": true,
+      "callback_thread_verified": false
+    }
+  ],
+  "network": {
+    "action": "save_decks",
+    "transport": "NSMutableURLRequest.HTTPBody via NSURLSession sharedSession",
+    "observed_content_type": "application/x-www-form-urlencoded",
+    "body_value_encoding": "raw JSON objects inside decksb/decksbs body parameters; not Android custom base64",
+    "body_keys": [
+      "decksb",
+      "decksbs"
+    ],
+    "fmt": 1,
+    "record_length": 9,
+    "json_record": [
+      {
+        "index": 0,
+        "name": "card0",
+        "preserve": true
+      },
+      {
+        "index": 1,
+        "name": "card1",
+        "preserve": true
+      },
+      {
+        "index": 2,
+        "name": "card2",
+        "preserve": true
+      },
+      {
+        "index": 3,
+        "name": "card3",
+        "preserve": true
+      },
+      {
+        "index": 4,
+        "name": "card4",
+        "preserve": true
+      },
+      {
+        "index": 5,
+        "name": "badge",
+        "default_value": 0,
+        "feature": "badge"
+      },
+      {
+        "index": 6,
+        "name": "extra_u32",
+        "preserve": true,
+        "semantics_verified": false
+      },
+      {
+        "index": 7,
+        "name": "bgm1_plus_100000_times_bgm2",
+        "default_value": 0,
+        "feature": "bgm"
+      },
+      {
+        "index": 8,
+        "name": "skin",
+        "default_value": 0,
+        "feature": "skin"
+      }
+    ],
+    "query_key": {
+      "input_observed": "URL query; request body sent separately",
+      "body_mutation_server_acceptance_verified": false
+    },
+    "badge_json_loss_warning": "serializer may emit zero if native badge predicate fails; snapshot verified local record instead of learning zero as user selection",
+    "request_change": "mutableCopy; replace only target JSON values; preserve unknown body bytes; reset Content-Length; call original IMP once",
+    "account_id_candidate": {
+      "query_key": "pid",
+      "save_offset": "0x83d50",
+      "type": "u32",
+      "stable_account_identity_verified": false
+    },
+    "response": {
+      "observed_decoder": "native JSON byte-range parser, with deck object lookup",
+      "status_key": "res",
+      "raw_nsurlsession_json_runtime_verified": false,
+      "body_gzip_runtime_behavior_verified": false,
+      "http_200_proves_game_success": false
+    },
+    "other_actions_audited": false
+  },
+  "restore": {
+    "strategy": "transaction snapshot before send, observe native parse after original ViewController.drawFrame, then restore only enabled fields on the same verified game thread",
+    "static_frame_chain": [
+      "0x10021e808",
+      "0x1004ec5f0",
+      "0x1005747f8",
+      "0x100573d3c",
+      "0x100591470",
+      "0x1006bb50c"
+    ],
+    "static_parser_chain": [
+      "0x1006bb50c",
+      "0x100687db0",
+      "0x1005903f0",
+      "0x10069c5e0",
+      "0x10069cc78"
+    ],
+    "request_ids": {
+      "login_player_data": 33,
+      "save_decks": 122
+    },
+    "state_machine": [
+      "snapshotted",
+      "submitted",
+      "network_completed",
+      "native_parse_observed_success",
+      "restored"
+    ],
+    "requires": [
+      "verified account epoch and bank/slot mapping",
+      "game business success, not merely HTTP status",
+      "matching card/deck summary",
+      "preserve explicit user selection changes including zero",
+      "one restoration per matching transaction",
+      "handle restart/login/timeout/retry without learning defaults as local selection"
+    ],
+    "no_immediate_memory_restore_in_network_completion": true,
+    "native_parser_success_observer_implemented": false,
+    "runtime_verified": false,
+    "evidence": [
+      {
+        "artifact": "ida-query-frame.json",
+        "note": "Objective-C frame boundary"
+      },
+      {
+        "artifact": "ida-query-frame-path.json",
+        "note": "native frame calls request pump"
+      },
+      {
+        "artifact": "ida-query-frame-final.json",
+        "note": "static save/global frame wrapper"
+      },
+      {
+        "artifact": "ida-query-dispatch.json",
+        "note": "request IDs"
+      },
+      {
+        "artifact": "ida-query-delivery.json",
+        "note": "response parser and deck-all xrefs"
+      }
+    ]
+  },
+  "persistence": {
+    "directory": "NSHomeDirectory()/Library/Application Support/PADHelper",
+    "container_isolation_from_livecontainer": true,
+    "account_isolation_required_within_container": true,
+    "format": "own versioned format storing decoded selection fields, bank/slot and matching digest; atomic writes",
+    "credential_file": "data048.bin",
+    "credential_file_ios_path_verified": false,
+    "credential_file_hash_stability_verified": false,
+    "direct_game_save_file_write_recommended": false
+  },
+  "livecontainer": {
+    "primary_route": "signed arm64 dylib + Objective-C IMP replacement + verified writable data fields",
+    "runtime_text_modification_required": false,
+    "reference_root": "https://github.com/hugotang/lc",
+    "references": [
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 7,
+        "finding": "dlopen dylib/framework loader"
+      },
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 85,
+        "finding": "dontInjectTweakLoader can disable injection"
+      },
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 95,
+        "finding": "LCTweakFolder per-app folder selection; .disabled skipped"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Utilities/LCUtilsExtensions.swift",
+        "line": 13,
+        "finding": "signTweaks only gathers immediate dylib/framework children; requires certificatePassword"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Utilities/LCUtilsExtensions.swift",
+        "line": 73,
+        "finding": "signFilesWithZSign"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Models/LCAppModel.swift",
+        "line": 456,
+        "finding": "selected tweaks signing"
+      },
+      {
+        "file": "LiveContainer/LCMachOUtils.m",
+        "line": 112,
+        "finding": "MH_EXECUTE converted to MH_DYLIB; loader commands added"
+      },
+      {
+        "file": "LiveContainer/LCBootstrap.m",
+        "line": 472,
+        "finding": "guest HOME changed before app execution"
+      },
+      {
+        "file": "LiveContainer/Tweaks/Dyld.m",
+        "line": 396,
+        "finding": "getGuestAppHeader uses original dyld accessor; export visibility not yet verified"
+      }
+    ],
+    "substrate_load_does_not_prove_jitless_native_inline_hooks": true,
+    "recommended_dylib_placement": "direct child of selected LCTweakFolder",
+    "helper_export_verified": false
+  },
+  "feasibility": [
+    {
+      "feature": "skin",
+      "result": "strong_static_case_for_jitless_prototype",
+      "runtime_verified": false
+    },
+    {
+      "feature": "bgm",
+      "result": "strong_static_case_for_jitless_prototype_with_resource_availability_condition",
+      "runtime_verified": false
+    },
+    {
+      "feature": "upload_defaults",
+      "result": "strong_static_case_for_objc_json_rewrite; server acceptance pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "local_restore",
+      "result": "usable after-frame boundary; success observer and mapping must be validated",
+      "runtime_verified": false
+    },
+    {
+      "feature": "account_persistence",
+      "result": "container isolation confirmed; stable identity timing pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "timer_resume",
+      "result": "basic bit5 handling possible; mode and full timer semantics pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "badges",
+      "result": "conditional; parameter gate prevents bitmap-only completeness",
+      "runtime_verified": false
+    }
+  ],
+  "pending_runtime_validation": [
+    "signed dylib load without JIT on reported iOS27/custom LC",
+    "guest resolution under hidden LC mode and optional helper export",
+    "initialized memory permissions/ranges and table bounds",
+    "game frame/lifecycle thread",
+    "raw NSURLSession response shape and status semantics",
+    "API host/path filter",
+    "request/persisted/editing bank mapping and badge local index",
+    "native parse success signal",
+    "user changes to zero, retries, deck reorder and duplicate deck matching",
+    "stable account identity and A-B-A switching",
+    "resource download availability",
+    "timer mode/bit1/bit6 meanings and background elapsed time",
+    "badge valid parameters and gameplay effects",
+    "other network action coverage if claiming complete upload defaulting"
+  ],
+  "build": {
+    "recommended": "GitHub Actions macos-15 / Xcode iPhoneOS SDK; arm64 dylib",
+    "windows_path_ios_toolchain_found": false,
+    "dylib_built": false,
+    "release_ready": false,
+    "prototype_sources_added": true
+  },
+  "prototype": {
+    "runtime_notes": "ios/docs/runtime.md",
+    "default_mode": "diagnostic; experimental writes disabled",
+    "badge_implemented": false,
+    "runtime_verified": false
+  }
+}
