@@ -52,6 +52,20 @@ jobs:
           codesign --verify --strict build/ios/PADCheaper.dylib
           shasum -a 256 build/ios/PADCheaper.dylib
 
+      - name: Verify floating GUI in iOS Simulator
+        run: bash ios/gui-test.sh
+
+      - name: Upload GUI probe diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-GUI-probe-${{ github.run_number }}
+          path: |
+            build/ios-ui-tests/*.png
+            build/ios-ui-tests/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Upload dylib and installation notes
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -69,7 +83,8 @@ jobs:
           print('Built **PADCheaper.dylib** for arm64 iPhoneOS, minimum iOS 15.0.')
           print()
           print('Download the run artifact, then re-sign with LiveContainer before loading.')
-          print('The artifact starts in diagnostic mode. iPhone runtime behavior is not yet verified.')
+          print('A draggable **PC** button shows load status, feature switches and sanitized diagnostics.')
+          print('The artifact starts in diagnostic mode. Simulator UI checks passed; iPhone runtime behavior is not yet verified.')
           print()
           print('SHA-256: `' + metadata['sha256'] + '`')
           PY

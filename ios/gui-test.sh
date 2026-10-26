@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_dir"
+build_dir="$repo_dir/build/ios-ui-tests"
+app_dir="$build_dir/OverlayProbe.app"
+mkdir -p "$app_dir/Frameworks"
+python3 ios/tools/generate_target.py
+sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+clang_path="$(xcrun --sdk iphonesimulator --find clang)"
+architecture="$(uname -m)"
+
+"$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
+    -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
+    -Wno-unused-parameter -Wno-unused-const-variable -dynamiclib \
+    -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
+    ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
+    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
+    -framework Foundation -framework CoreFoundation -framework UIKit \
+    -o "$app_dir/Frameworks/PADCheaperTest.dylib"
+"$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
+    -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter \
+    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -o "$app_dir/OverlayProbe"
+
+python3 - "$app_dir" <<'PY'
+from pathlib import Path
+import plistlib
+import sys
+
+app = Path(sys.argv[1])
+info = {
+    "CFBundleIdentifier": "jp.gungho.pad",
+    "CFBundleName": "PADCheaper GUI Probe",
+    "CFBundleExecutable": "OverlayProbe",
+    "CFBundlePackageType": "APPL",
+    "CFBundleShortVersionString": "23.6.0",
+    "CFBundleVersion": "106878",
+    "MinimumOSVersion": "16.0",
+    "LSRequiresIPhoneOS": True,
+    "UIDeviceFamily": [1, 2],
+    "UILaunchScreen": {},
+    "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
+    "UIApplicationSceneManifest": {
+        "UIApplicationSupportsMultipleScenes": False,
+        "UISceneConfigurations": {"UIWindowSceneSessionRoleApplication": [{
+            "UISceneConfigurationName": "Default", "UISceneDelegateClassName": "PHProbeSceneDelegate",
+        }]},
+    },
+}
+(app / "Info.plist").write_bytes(plistlib.dumps(info))
+PY
+codesign --force --sign - --timestamp=none "$app_dir/Frameworks/PADCheaperTest.dylib"
+codesign --force --sign - --timestamp=none "$app_dir"
+
+runtime_id="$(xcrun simctl list runtimes --json | python3 -c '
+import json, sys
+available = [r for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")]
+available.sort(key=lambda r: tuple(map(int, r["version"].split("."))))
+print(available[-1]["identifier"])
+')"
+device_id="$(xcrun simctl create 'PADCheaper GUI probe' com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime_id")"
+cleanup() {
+    xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
+    xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+xcrun simctl boot "$device_id"
+xcrun simctl bootstatus "$device_id" -b
+xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charged --batteryLevel 100
+xcrun simctl install "$device_id" "$app_dir"
+xcrun simctl launch "$device_id" jp.gungho.pad
+container_dir="$(xcrun simctl get_app_container "$device_id" jp.gungho.pad data)"
+report_path="$container_dir/Documents/overlay-probe.json"
+portrait_done=0
+landscape_done=0
+for attempt in $(seq 1 90); do
+    if [ -f "$report_path" ]; then
+        phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"
+        if [ "$phase" = portrait ] && [ "$portrait_done" = 0 ]; then
+            xcrun simctl io "$device_id" screenshot "$build_dir/overlay-portrait.png"
+            portrait_done=1
+        fi
+        if [ "$phase" = landscape ] && [ "$landscape_done" = 0 ]; then
+            xcrun simctl io "$device_id" screenshot "$build_dir/overlay-landscape.png"
+            landscape_done=1
+        fi
+        if [ "$phase" = done ]; then
+            cp "$report_path" "$build_dir/overlay-probe.json"
+            cp "$container_dir/Library/Application Support/PADHelper/status.json" "$build_dir/status.json"
+            python3 - "$report_path" <<'PY'
+import json
+import sys
+report = json.load(open(sys.argv[1]))
+if not report["success"]:
+    raise SystemExit("Overlay probe failed:\n" + "\n".join(report["failures"]))
+print("Simulator overlay probe passed: early load, invalid target, persisted switches, API adoption, touch passthrough, rotation")
+PY
+            exit 0
+        fi
+    fi
+    sleep 1
+done
+if [ -f "$report_path" ]; then
+    cp "$report_path" "$build_dir/overlay-probe.json"
+    cat "$report_path"
+fi
+exit 1

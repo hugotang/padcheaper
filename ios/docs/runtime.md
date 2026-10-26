@@ -4,8 +4,11 @@
 
 ## 已實作
 
-- 建構子只排程初始化；通過 Bundle ID、版本、iOS build、arm64、UUID 及五組 64-byte __TEXT 校驗後安裝 hooks。
-- 先嘗試 LiveContainer 的 getGuestAppHeader，再用 dyld UUID 掃描；不假設影像 index 0。
+- 建構子只排程初始化；先在識別出 PAD guest 後建立 config／status 和浮動 GUI，通過 Bundle ID、版本、iOS build、arm64、UUID 及五組 64-byte __TEXT 校驗後才安裝 hooks。
+- 支援 LiveContainer 改寫 Bundle ID 的模式，僅在 `doUseLCBundleId` 為真時採用 `LCOrignalBundleIdentifier`；其他身份及程式校驗維持不變。
+- 先嘗試 LiveContainer 的 getGuestAppHeader，再用 dyld UUID 掃描及 Objective-C 方法 dladdr 後備辨識；不假設影像 index 0，所有路徑仍檢查 UUID。
+- UIKit 浮動按鈕與可捲動面板、功能開關、自動儲存、偵測 API 套用、重新檢查和複製診斷；GUI 更新獨立於遊戲 frame，校驗失敗仍可見。
+- 浮動 UIWindow 不成為 key；視窗外部 hitTest 穿透，等待可用 scene／guest 視窗並處理背景／旋轉。
 - 在 ViewController.drawFrame 及 restoreFromBackground 替換 IMP，保留並呼叫原方法；NSURLSession sharedSession 以實際 class 安裝本地覆寫。
 - 使用 Mach API 檢查及讀寫整個記憶體範圍，不改頁面權限，不寫可執行 mapping。
 - 128-byte 皮膚／BGM 擁有位圖只設定表中已存在、index < 1024 的 ID；條目 flags 保留其他 bits。
@@ -34,7 +37,7 @@
 
 ## 原型限制
 
-1. 首次檢查是診斷模式；啟用實驗寫入需設定精確 API host／path，且已觀察原生登入成功。沒有設定畫面。
+1. 首次檢查是診斷模式；面板總開關及個別功能需開啟。Skin／BGM 啟用需套用精確 API host／path，且已觀察原生登入成功；浮動按鈕出現不等同所有功能已啟用。
 2. 只處理 save_decks，未完整稽核 upload_data、戰鬥、多人或其他 action；不宣稱伺服器永遠只看到預設值。
 3. 皮膚／BGM 資源須已存在；dylib 不提供音訊或圖像，也不新增資源下載權限。
 4. 原型回蓋以相同 bank、隊伍數量、slot 及五個卡片 ID／extra u32 匹配。隊伍重排、重複隊伍及跨 bank 移動須真機測試，無法匹配就跳過。
@@ -45,4 +48,4 @@
 9. 徽章未實作，不能只填擁有位圖；參數表及編成 XOR bank mapping 未全部解決。
 10. timerFix 僅限目前靜態確認的 GameMain 背景恢復分支；其他計時／棄權／續關情境未驗證。
 
-CI 驗證包含 iPhoneOS 編譯、arm64／簽章／Mach-O 檢查，以及以 macOS Foundation 執行的 protocol 測試。真機載入、伺服器接受、回蓋正確性和帳號安全性不能由 CI 推論。
+CI 驗證包含 iPhoneOS 編譯、arm64／簽章／Mach-O 檢查、macOS Foundation protocol／身份／設定測試，以及載入相同 runtime 的 iOS 模擬器 GUI 檢查。模擬器刻意使用不匹配 UUID，確認 GUI 出現而 hooks／寫入保持停用，並驗證開關儲存、API 套用、複製診斷、觸控穿透和橫向畫面。真機載入、伺服器接受、回蓋正確性和帳號安全性不能由 CI 推論。

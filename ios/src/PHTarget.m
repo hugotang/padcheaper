@@ -1,9 +1,11 @@
 #import "PHTarget.h"
 #import "PHMemory.h"
+#import "PHIdentity.h"
 #include "PHTargetGenerated.h"
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
 #include <mach/machine.h>
+#include <objc/runtime.h>
 #include <string.h>
 
 static BOOL PHHeaderHasUUID(const struct mach_header_64 *header) {
@@ -54,7 +56,28 @@ const struct mach_header_64 *PHResolveGuestHeader(void) {
             found = header;
         }
     }
-    return found;
+    if (found) return found;
+    // Some LC modes hide dyld images. An Objective-C method can still identify
+    // its image through dladdr; it must pass the same UUID and text guards.
+    Class view = objc_getClass("ViewController");
+    Method method = view ? class_getInstanceMethod(view, sel_registerName("drawFrame")) : NULL;
+    Dl_info image = {0};
+    if (method && dladdr((const void *)method_getImplementation(method), &image)) {
+        const struct mach_header_64 *header = image.dli_fbase;
+        if (PHHeaderHasUUID(header)) return header;
+    }
+    return NULL;
+}
+
+static NSDictionary *PHLiveContainerMetadata(NSBundle *bundle) {
+    NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:
+                             [bundle.bundlePath stringByAppendingPathComponent:@"LCAppInfo.plist"]];
+    return metadata ?: @{};
+}
+
+NSString *PHGuestBundleIdentifier(void) {
+    NSBundle *bundle = NSBundle.mainBundle;
+    return PHResolvedBundleIdentifier(bundle.infoDictionary, PHLiveContainerMetadata(bundle));
 }
 
 BOOL PHAddressIsGuestCode(uintptr_t address, const struct mach_header_64 *header) {
@@ -66,17 +89,15 @@ BOOL PHAddressIsGuestCode(uintptr_t address, const struct mach_header_64 *header
 
 BOOL PHValidateGuest(const struct mach_header_64 *header, NSString **reason) {
     NSBundle *bundle = NSBundle.mainBundle;
-    if (![bundle.bundleIdentifier isEqualToString:@(PHTargetBundleID)] ||
-        ![bundle.infoDictionary[@"CFBundleShortVersionString"] isEqualToString:@(PHTargetVersion)] ||
-        ![bundle.infoDictionary[@"CFBundleVersion"] isEqualToString:@(PHTargetBuild)]) {
-        if (reason) *reason = @"Bundle identifier, version or iOS build does not match";
+    if (!PHBundleIdentityMatches(bundle.infoDictionary, PHLiveContainerMetadata(bundle),
+                                 @(PHTargetBundleID), @(PHTargetVersion), @(PHTargetBuild), reason)) {
         return NO;
     }
     struct mach_header_64 value;
     if (!PHHeaderHasUUID(header) || !PHReadMemory((uintptr_t)header, &value, sizeof(value)) ||
         (value.cpusubtype & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_ARM64_ALL ||
         (value.filetype != MH_EXECUTE && value.filetype != MH_DYLIB)) {
-        if (reason) *reason = @"Guest UUID or Mach-O architecture does not match";
+        if (reason) *reason = @"遊戲 UUID 或 Mach-O 架構不符";
         return NO;
     }
     for (size_t i = 0; i < PHTextGuardCount; i++) {
@@ -86,10 +107,11 @@ BOOL PHValidateGuest(const struct mach_header_64 *header, NSString **reason) {
         if (!PHAddressIsGuestCode(address, header) ||
             !PHReadMemory(address, bytes, guard->length) ||
             memcmp(bytes, guard->bytes, guard->length) != 0) {
-            if (reason) *reason = [NSString stringWithFormat:@"Text guard %zu does not match", i];
+            if (reason) *reason = [NSString stringWithFormat:@"程式校驗第 %zu 項不符（RVA 0x%lx）",
+                                  i + 1, (unsigned long)guard->rva];
             return NO;
         }
     }
-    if (reason) *reason = @"Target identity and text guards match";
+    if (reason) *reason = @"遊戲版本、UUID 及程式校驗通過";
     return YES;
 }

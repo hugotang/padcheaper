@@ -4,10 +4,14 @@
 #import "PHCodec.h"
 #import "PHMemory.h"
 #import "PHTarget.h"
+#import "PHConfiguration.h"
+#import "PHOverlay.h"
 #include "PHTargetGenerated.h"
 #include <mach-o/dyld.h>
 #include <math.h>
 #include <string.h>
+#include <stdatomic.h>
+#include <stdbool.h>
 
 typedef NSURLSessionDataTask *(*PHDataTaskIMP)(id, SEL, NSURLRequest *,
                             void (^)(NSData *, NSURLResponse *, NSError *));
@@ -19,10 +23,18 @@ static PHVoidIMP PHOriginalDraw;
 static PHVoidIMP PHOriginalBackground;
 static BOOL PHNetworkInstalled;
 static BOOL PHFrameInstalled;
+static BOOL PHLifecycleInstalled;
 static BOOL PHValidated;
 static BOOL PHFrameMainThread;
 static BOOL PHAccountReady;
 static BOOL PHStorageFault;
+static BOOL PHStorageReady;
+static BOOL PHConfigValid;
+static BOOL PHContextIdentified;
+static BOOL PHOverlayVisible;
+static BOOL PHUnlockDataReady;
+static BOOL PHOwnershipWriteFault;
+static atomic_bool PHFrameOffMain;
 static uint32_t PHPlayer;
 static NSUInteger PHAccountEpoch;
 static NSObject *PHLock;
@@ -37,6 +49,20 @@ static CFAbsoluteTime PHLastStatus;
 static NSUInteger PHFrameCount;
 static NSString *PHFolder;
 static BOOL PHProbeLogged;
+static NSUInteger PHBootstrapGeneration;
+static NSString *PHStartupState;
+static NSString *PHValidationMessage;
+static NSString *PHStorageMessage;
+static NSString *PHFeedback;
+static NSDictionary *PHObservedEndpoint;
+static uint32_t PHObservedEntries;
+static NSUInteger PHUploadCount;
+static NSUInteger PHRestoreCount;
+static NSUInteger PHTimerClearCount;
+
+static void PHBootstrap(NSUInteger attempt, NSUInteger generation);
+static NSDictionary *PHRuntimeSnapshot(void);
+static void PHHandleOverlayAction(NSString *action, id value);
 
 static uintptr_t PHSave(void) { return (uintptr_t)PHGuest + PHSaveRVA; }
 
@@ -45,6 +71,7 @@ static void PHLog(NSString *message) {
 }
 
 static BOOL PHWriteJSON(NSDictionary *object, NSString *name) {
+    if (!PHFolder.length || !object || !name.length) return NO;
     NSData *data = [NSJSONSerialization dataWithJSONObject:object
                     options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL];
     NSString *path = [PHFolder stringByAppendingPathComponent:name];
@@ -57,6 +84,7 @@ static BOOL PHWriteJSON(NSDictionary *object, NSString *name) {
 }
 
 static NSDictionary *PHReadJSON(NSString *name) {
+    if (!PHFolder.length) return nil;
     NSString *path = [PHFolder stringByAppendingPathComponent:name];
     NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL];
     if ([attributes[NSFileSize] unsignedLongLongValue] > 65536) return nil;
@@ -76,9 +104,18 @@ static BOOL PHFiltersConfigured(void) {
            [PHConfig[@"apiHosts"] count] > 0 && [PHConfig[@"apiPaths"] count] > 0;
 }
 
+static BOOL PHObservedEndpointConfigured(void) {
+    NSString *host = PHObservedEndpoint[@"host"], *path = PHObservedEndpoint[@"path"];
+    return [host isKindOfClass:NSString.class] && host.length > 0 &&
+           [path isKindOfClass:NSString.class] && [path hasPrefix:@"/"] &&
+           [PHConfig[@"apiHosts"] containsObject:host.lowercaseString] &&
+           [PHConfig[@"apiPaths"] containsObject:path];
+}
+
 static PHFeatureMask PHActiveMask(void) {
     if (!PHValidated || !PHFrameInstalled || !PHNetworkInstalled || !PHFrameMainThread ||
-        !PHAccountReady || PHStorageFault || !PHFiltersConfigured()) return 0;
+        !PHAccountReady || !PHStorageReady || !PHConfigValid || PHStorageFault || !PHFiltersConfigured() ||
+        (PHObservedEndpoint && !PHObservedEndpointConfigured())) return 0;
     uint32_t player = 0;
     if (!PHReadU32(PHSave() + PHPlayerIDOffset, &player) || player == 0 || player != PHPlayer) return 0;
     PHFeatureMask mask = 0;
@@ -115,18 +152,28 @@ static BOOL PHStoreBanks(NSDictionary *banks) {
 
 static void PHReloadConfig(void) {
     NSDictionary *next = PHReadJSON(@"config.json");
-    BOOL filtersValid = [next[@"apiHosts"] isKindOfClass:NSArray.class] &&
-                        [next[@"apiPaths"] isKindOfClass:NSArray.class];
-    if (filtersValid) {
-        for (id value in next[@"apiHosts"]) if (![value isKindOfClass:NSString.class]) filtersValid = NO;
-        for (id value in next[@"apiPaths"]) if (![value isKindOfClass:NSString.class]) filtersValid = NO;
+    PHConfigValid = PHConfigurationIsValid(next);
+    PHConfig = PHConfigValid ? next : PHDefaultConfiguration();
+}
+
+static void PHPrepareStorage(void) {
+    PHFolder = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
+    NSError *error = nil;
+    PHStorageReady = [NSFileManager.defaultManager createDirectoryAtPath:PHFolder withIntermediateDirectories:YES
+                     attributes:@{NSFilePosixPermissions: @0700} error:&error];
+    PHStorageMessage = PHStorageReady ? @"" : [NSString stringWithFormat:@"無法建立設定目錄：%@", error.localizedDescription ?: @"未知錯誤"];
+    NSString *configPath = [PHFolder stringByAppendingPathComponent:@"config.json"];
+    if (PHStorageReady && ![NSFileManager.defaultManager fileExistsAtPath:configPath] &&
+        !PHWriteJSON(PHDefaultConfiguration(), @"config.json")) {
+        PHStorageReady = NO;
+        PHStorageMessage = @"無法寫入 config.json；面板仍可顯示診斷。";
     }
-    if (![next[@"schema"] isEqual:@1] || ![next[@"features"] isKindOfClass:NSDictionary.class] || !filtersValid) {
-        next = @{@"schema": @1, @"experimentalWrites": @NO,
-                 @"features": @{@"skin": @NO, @"bgm": @NO, @"timerFix": @NO},
-                 @"apiHosts": @[], @"apiPaths": @[]};
+    PHReloadConfig();
+    if (!PHObservedEndpoint) {
+        NSDictionary *endpoint = PHReadJSON(@"endpoint.json");
+        if ([endpoint[@"host"] isKindOfClass:NSString.class] &&
+            [endpoint[@"path"] isKindOfClass:NSString.class]) PHObservedEndpoint = endpoint;
     }
-    PHConfig = next;
 }
 
 static BOOL PHCurrentPlayer(uint32_t *player) {
@@ -208,8 +255,11 @@ static void PHRestoreBanks(NSDictionary *banks, PHFeatureMask mask) {
             }
         }
     }
-    if (restored) PHLog([NSString stringWithFormat:@"Restored %lu selected fields after native parse",
-                         (unsigned long)restored]);
+    if (restored) {
+        PHRestoreCount += restored;
+        PHLog([NSString stringWithFormat:@"Restored %lu selected fields after native parse",
+               (unsigned long)restored]);
+    }
 }
 
 static void PHRevertDisabled(PHFeatureMask mask) {
@@ -254,6 +304,8 @@ static void PHRevertDisabled(PHFeatureMask mask) {
 }
 
 static void PHApplyUnlocks(PHFeatureMask mask) {
+    PHUnlockDataReady = NO;
+    PHOwnershipWriteFault = NO;
     if (!mask) return;
     uint32_t count = 0;
     uintptr_t table = 0;
@@ -267,6 +319,7 @@ static void PHApplyUnlocks(PHFeatureMask mask) {
     uint8_t *added[] = {PHSkinAdded, PHBGMAdded};
     if (!PHReadMemory(PHSave() + offsets[0], bitmaps[0], 128) ||
         !PHReadMemory(PHSave() + offsets[1], bitmaps[1], 128)) return;
+    PHUnlockDataReady = YES;
     memcpy(original, bitmaps, sizeof(original));
     const uint8_t *bytes = entries.bytes;
     for (NSUInteger index = 0; index < count; index++) {
@@ -284,13 +337,14 @@ static void PHApplyUnlocks(PHFeatureMask mask) {
             if (PHWriteData(address, &next, sizeof(next))) {
                 [PHFlagPatches addObject:@{@"address": @(address), @"id": @(identifier),
                                           @"table": @(table), @"original": @(flags), @"feature": @(feature)}];
-            }
+            } else PHOwnershipWriteFault = YES;
         }
     }
     for (NSUInteger bank = 0; bank < 2; bank++) {
-        if (memcmp(original[bank], bitmaps[bank], 128) != 0 &&
-            PHWriteData(PHSave() + offsets[bank], bitmaps[bank], 128)) {
-            for (NSUInteger j = 0; j < 128; j++) added[bank][j] |= bitmaps[bank][j] & ~original[bank][j];
+        if (memcmp(original[bank], bitmaps[bank], 128) != 0) {
+            if (PHWriteData(PHSave() + offsets[bank], bitmaps[bank], 128)) {
+                for (NSUInteger j = 0; j < 128; j++) added[bank][j] |= bitmaps[bank][j] & ~original[bank][j];
+            } else PHOwnershipWriteFault = YES;
         }
     }
 }
@@ -366,26 +420,22 @@ static void PHMaintenance(void) {
     uintptr_t pointer = 0;
     PHReadU32(PHSave() + PHEntryCountOffset, &count);
     PHReadPointer(PHSave() + PHEntryPointerOffset, &pointer);
+    PHObservedEntries = count <= 2048 ? count : 0;
     if (!PHProbeLogged && count > 0 && count <= 2048 && pointer) {
         PHLog([NSString stringWithFormat:@"Read-only entry probe: %u entries, pointer range %@",
                count, PHMemoryHasProtection(pointer, count * 52u, VM_PROT_READ, 0) ? @"valid" : @"invalid"]);
         PHProbeLogged = YES;
-    }
-    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-    if (now - PHLastStatus >= 5) {
-        PHLastStatus = now;
-        PHWriteJSON(@{@"schema": @1, @"targetMatched": @(PHValidated),
-                      @"version": @(PHTargetVersion), @"iosBuild": @(PHTargetBuild),
-                      @"frameOnMainThread": @(PHFrameMainThread), @"accountReady": @(PHAccountReady),
-                      @"apiFiltersConfigured": @(PHFiltersConfigured()), @"activeMask": @(mask),
-                      @"entryCount": @(count), @"storageFault": @(PHStorageFault),
-                      @"badgeImplemented": @NO, @"deviceVerified": @NO}, @"status.json");
     }
 }
 
 static void PHDrawFrame(id self, SEL command) {
     BOOL onMain = NSThread.isMainThread;
     if (!onMain) {
+        atomic_store_explicit(&PHFrameOffMain, true, memory_order_relaxed);
+        PHOriginalDraw(self, command);
+        return;
+    }
+    if (!PHValidated) {
         PHOriginalDraw(self, command);
         return;
     }
@@ -403,7 +453,8 @@ static void PHDrawFrame(id self, SEL command) {
 
 static void PHRestoreBackground(id self, SEL command) {
     PHOriginalBackground(self, command);
-    if (!NSThread.isMainThread || !PHValidated || !PHEnabled(@"timerFix")) return;
+    if (!NSThread.isMainThread || !PHValidated || !PHStorageReady || !PHConfigValid ||
+        !PHEnabled(@"timerFix")) return;
     uint8_t scene = 0, requested = 0;
     uintptr_t object = 0, impl = 0;
     uintptr_t game = (uintptr_t)PHGuest + PHGameMainRVA;
@@ -417,8 +468,10 @@ static void PHRestoreBackground(id self, SEL command) {
     // resume fix, not a claim of complete Android timer behavior.
     if ((flags & 0x22u) == 0x20u) {
         uint8_t next = flags & (uint8_t)~0x20u;
-        if (PHWriteData(impl + PHTimerFlagsOffset, &next, sizeof(next)))
+        if (PHWriteData(impl + PHTimerFlagsOffset, &next, sizeof(next))) {
+            PHTimerClearCount++;
             PHLog(@"Cleared background-resume bit 5; other timer flags preserved");
+        }
     }
 }
 
@@ -437,7 +490,7 @@ static BOOL PHQueryMatches(NSURL *url, NSString *key, NSString *expected) {
 
 static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *request,
                                       void (^completion)(NSData *, NSURLResponse *, NSError *)) {
-    if (!NSThread.isMainThread || ![request.HTTPMethod isEqualToString:@"POST"] ||
+    if (!NSThread.isMainThread || !PHValidated || ![request.HTTPMethod isEqualToString:@"POST"] ||
         !PHQueryMatches(request.URL, @"action", @"save_decks") || !request.HTTPBody) {
         return PHOriginalDataTask(self, command, request, completion);
     }
@@ -450,8 +503,12 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         [seen addObject:endpoint];
         PHLog([NSString stringWithFormat:@"PAD API candidate host=%@ path=%@ (query omitted)",
                 request.URL.host, request.URL.path]);
-        PHWriteJSON(@{@"schema": @1, @"host": request.URL.host ?: @"",
-                      @"path": request.URL.path ?: @"", @"queryIncluded": @NO}, @"endpoint.json");
+    }
+    NSDictionary *candidate = @{@"schema": @1, @"host": request.URL.host.lowercaseString ?: @"",
+                               @"path": request.URL.path ?: @"", @"queryIncluded": @NO};
+    if (![PHObservedEndpoint isEqual:candidate]) {
+        PHObservedEndpoint = candidate;
+        PHWriteJSON(candidate, @"endpoint.json");
     }
     PHFeatureMask mask = PHActiveMask();
     uint32_t player = 0;
@@ -509,6 +566,7 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         @synchronized (PHLock) { if (PHPending == transaction) PHPending = nil; }
     }
     PHLog(@"Submitted copied save_decks body with selected fields defaulted");
+    PHUploadCount++;
     if (!nativeMatch || hasPending) PHLog(@"Restore correlation unavailable; latest local snapshot preserved for next login");
     return task;
 }
@@ -548,43 +606,242 @@ static BOOL PHInstallNetwork(void) {
     return YES;
 }
 
-static void PHBootstrap(NSUInteger attempt) {
-    PHGuest = PHResolveGuestHeader();
-    if (!PHGuest && attempt < 20) {
+static NSString *PHUnlockBlockReason(void) {
+    if (!PHValidated) return PHValidationMessage ?: @"等待遊戲校驗";
+    if (!PHStorageReady) return PHStorageMessage ?: @"設定目錄無法寫入";
+    if (!PHConfigValid) return @"config.json 格式無效；切換開關可重新儲存設定。";
+    if (PHStorageFault) return @"本地選擇寫入失敗；請按「重新檢查」。";
+    if (!PHFrameInstalled) return @"drawFrame hook 未安裝；請按「重新檢查」。";
+    if (!PHNetworkInstalled) return @"網路 hook 未安裝；請按「重新檢查」。";
+    if (!PHFrameMainThread) return atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ?
+                                  @"drawFrame 在背景執行緒執行，Skin／BGM 已停用。" : @"等待第一個遊戲畫面更新";
+    if (!PHAccountReady) return @"等待原生登入成功；若已登入，請完整關閉遊戲再啟動。";
+    if (!PHFiltersConfigured()) return @"請先儲存一次隊伍，再按「套用偵測到的 API」。";
+    if (PHObservedEndpoint && !PHObservedEndpointConfigured()) return @"API 設定與偵測地址不符；請重新套用。";
+    uint32_t player = 0;
+    if (!PHCurrentPlayer(&player) || player != PHPlayer) return @"玩家資料未就緒，等待重新登入";
+    return nil;
+}
+
+static NSDictionary *PHRuntimeSnapshot(void) {
+    if (PHFolder.length) PHReloadConfig();
+    PHFeatureMask mask = PHActiveMask();
+    BOOL master = [PHConfig[@"experimentalWrites"] isEqual:@YES];
+    BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm");
+    BOOL timerActive = PHValidated && PHLifecycleInstalled && PHStorageReady && PHConfigValid && PHEnabled(@"timerFix");
+    BOOL unlockActive = mask != 0 && PHUnlockDataReady && !PHOwnershipWriteFault;
+    NSString *blocked = PHUnlockBlockReason();
+    NSString *tone = @"pending", *title = @"已載入 · 初始化中", *reason = PHValidationMessage ?: @"正在檢查遊戲";
+    if ([PHStartupState isEqualToString:@"checking"]) {
+        title = @"已載入 · 正在檢查遊戲";
+    } else if (!PHValidated) {
+        tone = @"error";
+        title = @"已載入 · 遊戲校驗未通過";
+    } else if (!PHStorageReady || !PHConfigValid || PHStorageFault) {
+        tone = @"error";
+        title = @"已載入 · 設定或儲存異常";
+        reason = blocked;
+    } else if (!PHFrameInstalled || !PHNetworkInstalled) {
+        tone = @"error";
+        title = @"已載入 · hooks 未完整安裝";
+        reason = blocked;
+    } else if (!master) {
+        tone = @"ready";
+        title = @"已載入 · 診斷模式";
+        reason = @"開啟總開關及要使用的功能；設定會自動儲存。";
+    } else if (PHOwnershipWriteFault && mask) {
+        tone = @"error";
+        title = @"已載入 · 遊戲資料寫入失敗";
+        reason = @"Skin／BGM 資料未完整套用，請複製診斷。";
+    } else if (unlockActive || timerActive) {
+        BOOL partial = ((wantsSkin || wantsBGM) && !unlockActive) || (PHEnabled(@"timerFix") && !timerActive);
+        tone = @"active";
+        title = partial ? @"已載入 · 部分功能啟用" : @"已載入 · 功能已啟用";
+        reason = partial ? (blocked ?: @"Skin／BGM 等待遊戲資源表初始化") :
+                           @"開關已套用；可在下方查看上傳、回蓋及計時修正次數。";
+    } else if (wantsSkin || wantsBGM) {
+        title = @"已載入 · 等待啟用條件";
+        reason = blocked ?: @"等待 Skin／BGM 資源表初始化";
+    } else if (PHEnabled(@"timerFix") && !PHLifecycleInstalled) {
+        tone = @"error";
+        title = @"已載入 · 背景 hook 未安裝";
+        reason = @"計時修正無法啟用，請按「重新檢查」。";
+    } else {
+        tone = @"ready";
+        title = @"已載入 · 尚未選擇功能";
+        reason = @"請開啟 Skin、BGM 或背景計時修正。";
+    }
+    NSMutableDictionary *featureStates = [NSMutableDictionary dictionary];
+    for (NSString *key in @[@"skin", @"bgm"]) {
+        PHFeatureMask feature = [key isEqualToString:@"skin"] ? PHFeatureSkin : PHFeatureBGM;
+        BOOL selected = [PHConfig[@"features"][key] isEqual:@YES];
+        featureStates[key] = !selected ? @"關閉" : !master ? @"等待總開關" :
+                             !(mask & feature) ? (blocked ?: @"等待啟用條件") :
+                             PHOwnershipWriteFault ? @"資料寫入失敗" :
+                             !PHUnlockDataReady ? @"等待遊戲資源表" : @"已套用";
+    }
+    featureStates[@"timerFix"] = ![PHConfig[@"features"][@"timerFix"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
+                                 !PHValidated ? @"等待遊戲校驗" : !PHLifecycleInstalled ? @"背景 hook 未安裝" :
+                                 !PHStorageReady || !PHConfigValid ? @"等待可用設定" :
+                                 [NSString stringWithFormat:@"已啟用 · 已修正 %lu 次", (unsigned long)PHTimerClearCount];
+    NSString *frameState = PHFrameMainThread ? @"主執行緒" :
+                          atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ? @"非主執行緒" : @"等待 frame";
+    NSString *checks = [NSString stringWithFormat:
+        @"版本校驗：%@\nHooks：frame %@ · network %@ · background %@\nFrame：%@ · %lu 次\n登入：%@ · API：%@\n資源條目：%u\n上傳預設化：%lu 次 · 本地回蓋：%lu 欄位\n計時修正：%lu 次",
+        PHValidated ? @"通過" : @"未通過", PHFrameInstalled ? @"✓" : @"×", PHNetworkInstalled ? @"✓" : @"×",
+        PHLifecycleInstalled ? @"✓" : @"×", frameState, (unsigned long)PHFrameCount,
+        PHAccountReady ? @"已觀察成功" : @"等待", PHFiltersConfigured() ? @"已設定" : @"未設定", PHObservedEntries,
+        (unsigned long)PHUploadCount, (unsigned long)PHRestoreCount, (unsigned long)PHTimerClearCount];
+    NSString *path = PHFolder.length ? [PHFolder stringByAppendingPathComponent:@"config.json"] : @"尚未建立";
+    NSBundle *bundle = NSBundle.mainBundle;
+    NSString *diagnostics = [NSString stringWithFormat:
+        @"PADCheaper %@\nLoaded: YES\nOverlay visible: %@\nBundle ID: %@\nOriginal ID: %@\nGame version: %@ / %@\nTarget UUID: %@\nValidation: %@\nStatus: %@\nReason: %@\n%@\nEndpoint: %@%@ (query omitted)\nConfig: %@\nStorage: %@\nDevice verified by CI: NO",
+        PH_RUNTIME_VERSION, PHOverlayVisible ? @"YES" : @"NO", bundle.bundleIdentifier ?: @"未取得", PHGuestBundleIdentifier(),
+        bundle.infoDictionary[@"CFBundleShortVersionString"] ?: @"未取得", bundle.infoDictionary[@"CFBundleVersion"] ?: @"未取得",
+        @(PHTargetUUIDString), PHValidationMessage ?: @"初始化中", title, reason ?: @"", checks,
+        PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
+        PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
+    NSDictionary *snapshot = @{
+        @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
+        @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
+        @"targetMatched": @(PHValidated), @"version": @(PHTargetVersion), @"iosBuild": @(PHTargetBuild),
+        @"frameHook": @(PHFrameInstalled), @"networkHook": @(PHNetworkInstalled), @"lifecycleHook": @(PHLifecycleInstalled),
+        @"frameOnMainThread": @(PHFrameMainThread), @"accountReady": @(PHAccountReady),
+        @"apiFiltersConfigured": @(PHFiltersConfigured()), @"endpointConfigured": @(PHObservedEndpointConfigured()),
+        @"activeMask": @(mask), @"unlockDataReady": @(PHUnlockDataReady), @"ownershipWriteFault": @(PHOwnershipWriteFault),
+        @"timerEnabled": @(timerActive), @"entryCount": @(PHObservedEntries), @"storageFault": @(PHStorageFault),
+        @"configValid": @(PHConfigValid), @"canSaveConfig": @(PHStorageReady), @"config": PHConfig ?: PHDefaultConfiguration(),
+        @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
+        @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
+        @"badgeImplemented": @NO, @"deviceVerified": @NO
+    };
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (PHContextIdentified && PHFolder.length && now - PHLastStatus >= 5) {
+        PHLastStatus = now;
+        PHWriteJSON(snapshot, @"status.json");
+    }
+    return snapshot;
+}
+
+static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqualToString:@"overlayVisible"]) {
+        PHOverlayVisible = [value boolValue];
+        PHLastStatus = 0;
+        return;
+    }
+    if ([action isEqualToString:@"copied"]) {
+        PHFeedback = @"已複製診斷（不含帳號、query 或隊伍內容）";
+        return;
+    }
+    if ([action isEqualToString:@"retry"]) {
+        PHPrepareStorage();
+        if (PHStorageReady && PHConfigValid) {
+            if (PHWriteJSON(PHConfig, @"config.json")) PHStorageFault = NO;
+            else {
+                PHStorageReady = NO;
+                PHStorageMessage = @"config.json 寫入失敗；請檢查遊戲容器的儲存空間。";
+            }
+        }
+        PHFeedback = @"正在重新檢查…";
+        PHStartupState = @"checking";
+        PHBootstrapGeneration++;
+        PHBootstrap(0, PHBootstrapGeneration);
+        return;
+    }
+    if (!PHStorageReady) {
+        PHFeedback = @"設定無法儲存，請按「重新檢查」。";
+        return;
+    }
+    PHReloadConfig();
+    NSMutableDictionary *next = [PHConfig mutableCopy];
+    if ([action isEqualToString:@"adoptEndpoint"]) {
+        NSString *host = PHObservedEndpoint[@"host"], *path = PHObservedEndpoint[@"path"];
+        if (![host isKindOfClass:NSString.class] || !host.length || ![path isKindOfClass:NSString.class] || ![path hasPrefix:@"/"]) {
+            PHFeedback = @"尚未偵測 API，請在遊戲內先儲存一次隊伍。";
+            return;
+        }
+        next[@"apiHosts"] = @[host.lowercaseString];
+        next[@"apiPaths"] = @[path];
+    } else if ([action isEqualToString:@"experimentalWrites"]) {
+        next[action] = @([value boolValue]);
+    } else if ([@[@"skin", @"bgm", @"timerFix"] containsObject:action]) {
+        NSMutableDictionary *features = [next[@"features"] mutableCopy];
+        features[action] = @([value boolValue]);
+        next[@"features"] = features;
+    } else {
+        return;
+    }
+    if (PHConfigurationIsValid(next) && PHWriteJSON(next, @"config.json")) {
+        PHConfig = next;
+        PHConfigValid = YES;
+        PHUnlockDataReady = NO;
+        PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
+    } else {
+        PHStorageReady = NO;
+        PHStorageMessage = @"config.json 寫入失敗；請按「重新檢查」。";
+        PHFeedback = PHStorageMessage;
+    }
+    PHLastStatus = 0;
+}
+
+static void PHBootstrap(NSUInteger attempt, NSUInteger generation) {
+    if (generation != PHBootstrapGeneration) return;
+    const struct mach_header_64 *header = PHResolveGuestHeader();
+    if (!PHContextIdentified) {
+        NSString *identifier = PHGuestBundleIdentifier();
+        NSString *executable = NSBundle.mainBundle.infoDictionary[@"CFBundleExecutable"];
+        BOOL looksLikePAD = [identifier isEqualToString:@(PHTargetBundleID)] || [executable isEqualToString:@"pad"];
+        if (looksLikePAD || header) {
+            PHContextIdentified = YES;
+            PHStartupState = @"checking";
+            PHValidationMessage = @"正在尋找遊戲影像及檢查版本";
+            // Create diagnostics and show UI before the strict feature gate.
+            PHPrepareStorage();
+            PHShowOverlay(^{ return PHRuntimeSnapshot(); }, ^(NSString *action, id value) {
+                PHHandleOverlayAction(action, value);
+            });
+        } else {
+            if (attempt < 20) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                    PHBootstrap(attempt + 1, generation);
+                });
+            } else PHLog(@"Not a PAD guest; overlay and hooks skipped");
+            return;
+        }
+    }
+    if (!header && attempt < 20) {
+        PHValidationMessage = @"正在尋找遊戲影像；GUI 已載入，尚未安裝 hooks。";
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            PHBootstrap(attempt + 1);
+            PHBootstrap(attempt + 1, generation);
         });
         return;
     }
     NSString *reason = nil;
-    if (!PHGuest || !PHValidateGuest(PHGuest, &reason)) {
-        PHLog(reason ?: @"Guest image not found; no hooks installed");
+    PHValidated = header && PHValidateGuest(header, &reason);
+    PHValidationMessage = reason ?: @"未找到匹配的遊戲 UUID；檢查是否使用日服 23.6.0／106878。";
+    PHLastStatus = 0;
+    if (!PHValidated) {
+        PHStartupState = @"failed";
+        PHFeedback = attempt == 0 ? @"校驗未通過，請查看診斷" : @"找尋遊戲影像已完成，請查看診斷";
+        PHLog(PHValidationMessage);
+        PHRuntimeSnapshot();
         return;
     }
-    PHFolder = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
-    [NSFileManager.defaultManager createDirectoryAtPath:PHFolder withIntermediateDirectories:YES
-                                            attributes:@{NSFilePosixPermissions: @0700} error:NULL];
-    if (!PHReadJSON(@"config.json")) {
-        PHWriteJSON(@{@"schema": @1, @"experimentalWrites": @NO,
-             @"features": @{@"skin": @NO, @"bgm": @NO, @"timerFix": @NO},
-             @"apiHosts": @[], @"apiPaths": @[]}, @"config.json");
-    }
-    PHReloadConfig();
-    PHValidated = YES;
-    PHLog([NSString stringWithFormat:@"Matched PAD %@ build %@ UUID %@; JIT-less prototype",
-           @(PHTargetVersion), @(PHTargetBuild), @(PHTargetUUIDString)]);
+    PHGuest = header;
+    PHLog([NSString stringWithFormat:@"Matched PAD %@ build %@ UUID %@; GUI %@",
+           @(PHTargetVersion), @(PHTargetBuild), @(PHTargetUUIDString), PH_RUNTIME_VERSION]);
     Class view = objc_getClass("ViewController");
-    PHFrameInstalled = view && PHVoidMethod(view, sel_registerName("drawFrame"), PHDrawFrameRVA,
-                                            (IMP)PHDrawFrame, &PHOriginalDraw);
-    BOOL lifecycle = view && PHVoidMethod(view, sel_registerName("restoreFromBackground"), PHRestoreBackgroundRVA,
-                                           (IMP)PHRestoreBackground, &PHOriginalBackground);
-    PHNetworkInstalled = PHInstallNetwork();
-    PHLog([NSString stringWithFormat:@"Hooks frame=%d lifecycle=%d network=%d; writes default to off",
-           PHFrameInstalled, lifecycle, PHNetworkInstalled]);
-    PHWriteJSON(@{@"schema": @1, @"targetMatched": @YES, @"version": @(PHTargetVersion),
-                  @"iosBuild": @(PHTargetBuild), @"frameHook": @(PHFrameInstalled),
-                  @"networkHook": @(PHNetworkInstalled), @"lifecycleHook": @(lifecycle),
-                  @"activeMask": @0, @"deviceVerified": @NO}, @"status.json");
+    // Retrying must never capture our own replacement as the original IMP.
+    if (!PHFrameInstalled) PHFrameInstalled = view && PHVoidMethod(view, sel_registerName("drawFrame"), PHDrawFrameRVA,
+                                                   (IMP)PHDrawFrame, &PHOriginalDraw);
+    if (!PHLifecycleInstalled) PHLifecycleInstalled = view && PHVoidMethod(view, sel_registerName("restoreFromBackground"),
+                                                        PHRestoreBackgroundRVA, (IMP)PHRestoreBackground, &PHOriginalBackground);
+    if (!PHNetworkInstalled) PHNetworkInstalled = PHInstallNetwork();
+    PHStartupState = @"ready";
+    if ([PHFeedback isEqualToString:@"正在重新檢查…"]) PHFeedback = @"重新檢查完成";
+    PHLog([NSString stringWithFormat:@"Hooks frame=%d lifecycle=%d network=%d; floating overlay initialized",
+           PHFrameInstalled, PHLifecycleInstalled, PHNetworkInstalled]);
+    PHRuntimeSnapshot();
 }
 
 __attribute__((constructor))
@@ -593,8 +850,12 @@ static void PADCheaperInitialize(void) {
         PHLock = [NSObject new];
         PHFlagPatches = [NSMutableArray array];
         PHLastBanks = @{};
+        PHConfig = PHDefaultConfiguration();
+        PHStartupState = @"checking";
+        PHBootstrapGeneration = 1;
+        PHLog([NSString stringWithFormat:@"dylib %@ constructor loaded", PH_RUNTIME_VERSION]);
         // Guest classes and image metadata must be available before hook setup.
         // Heavy initialization runs after dyld's constructor returns.
-        dispatch_async(dispatch_get_main_queue(), ^{ PHBootstrap(0); });
+        dispatch_async(dispatch_get_main_queue(), ^{ PHBootstrap(0, PHBootstrapGeneration); });
     }
 }

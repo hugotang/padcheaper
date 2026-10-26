@@ -16,8 +16,9 @@ min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
     -dynamiclib -install_name @rpath/PADCheaper.dylib \
     -Iios/src -Iios/generated \
-    ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHTarget.m ios/src/PHRuntime.m \
-    -framework Foundation -framework CoreFoundation \
+    ios/src/PHCodec.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
+    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
+    -framework Foundation -framework CoreFoundation -framework UIKit \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
 # This ad-hoc signature is for artifact integrity, not an iPhone install identity.
@@ -36,6 +37,7 @@ cp LICENSE "$build_dir/LICENSE"
 python3 - "$build_dir" <<'PY'
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -43,10 +45,14 @@ import sys
 directory = Path(sys.argv[1])
 binary = directory / "PADCheaper.dylib"
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
+version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
+                    Path("ios/src/PHOverlay.h").read_text()).group(1)
 metadata = {
     "schema": 1,
     "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "architecture": "arm64",
+    "dylib_version": version,
+    "gui": "draggable floating button; switches and load diagnostics",
     "platform": "iPhoneOS",
     "minimum_ios": "15.0",
     "signing": "ad-hoc; re-sign in LiveContainer",
