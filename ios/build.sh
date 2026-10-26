@@ -24,7 +24,7 @@ min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
 # LiveContainer must sign the dylib using its configured device certificate.
 codesign --force --sign - --timestamp=none "$build_dir/PADCheaper.dylib"
 codesign --verify --strict "$build_dir/PADCheaper.dylib"
-xcrun --sdk iphoneos lipo -verify_arch arm64 "$build_dir/PADCheaper.dylib"
+xcrun --sdk iphoneos lipo "$build_dir/PADCheaper.dylib" -verify_arch arm64
 
 cp ios/config.example.json "$build_dir/config.example.json"
 cp ios/README.md "$build_dir/README.md"
