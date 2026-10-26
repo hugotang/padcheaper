@@ -65,14 +65,14 @@ int main(void) {
             @"decksb={\"fmt\":1,\"decks\":[]}&decksbs=broken"
         ];
         for (NSString *text in invalid) {
-            Check(PHRewriteDeckBody(Body(text), PHFeatureSkin, nil) == nil,
+            Check(PHRewriteDeckBody(Body(text), PHFeatureSkin, NULL) == nil,
                   "invalid request rejected atomically");
         }
         NSMutableArray *many = [NSMutableArray array];
         for (NSUInteger i = 0; i < 33; i++) [many addObject:@[@1,@2,@3,@4,@5,@0,@0,@0,@0]];
         NSData *json = [NSJSONSerialization dataWithJSONObject:@{@"fmt":@1,@"decks":many} options:0 error:NULL];
         NSString *large = [@"decksb=" stringByAppendingString:[[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding]];
-        Check(PHRewriteDeckBody(Body(large), PHFeatureSkin, nil) == nil, "capacity bound");
+        Check(PHRewriteDeckBody(Body(large), PHFeatureSkin, NULL) == nil, "capacity bound");
 
         NSDictionary *previous = @{@"decksb": @[@[@1,@2,@3,@4,@5,@7,@42,@100020001,@9]]};
         NSDictionary *observed = @{@"decksb": @[@[@1,@2,@3,@4,@5,@0,@42,@0,@0]]};
