@@ -62,6 +62,7 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 
 @interface PHProbeSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property(nonatomic, strong) UIWindow *window;
+- (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
 - (void)verifyRejectedTarget;
 - (void)verifyLandscape;
@@ -69,6 +70,9 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 
 @implementation PHProbeSceneDelegate
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
+    [self startWithWindowScene:(UIWindowScene *)scene];
+}
+- (void)startWithWindowScene:(UIWindowScene * _Nullable)scene {
     self.window = scene ? [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene] :
                           [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 393, 852)];
     self.window.rootViewController = [PHProbeController new];
@@ -184,7 +188,7 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     if (PHProbeLegacy()) {
         self.legacyDelegate = [PHProbeSceneDelegate new];
-        [self.legacyDelegate scene:nil willConnectToSession:nil options:nil];
+        [self.legacyDelegate startWithWindowScene:nil];
         self.window = self.legacyDelegate.window;
     }
     return YES;
