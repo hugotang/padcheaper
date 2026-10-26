@@ -13,7 +13,7 @@
 - SHA256SUMS、build-info.json
 - 本文件、feasibility.md、runtime.md、target.json、LICENSE
 
-workflow 執行真正的 arm64 iPhoneOS 編譯，並檢查隊伍 JSON、LiveContainer 原始 Bundle ID、設定格式及 iOS 模擬器 GUI。模擬器檢查會載入相同 runtime，驗證校驗失敗時 GUI 仍顯示、設定開關儲存、API 套用、觸控穿透及橫向畫面。`PADCheaper-GUI-probe-<run number>` artifact 包含檢查報告和畫面；CI 綠燈不代表 iOS 27／你的自訂 LiveContainer 真機行為已驗證。
+workflow 執行真正的 arm64 iPhoneOS 編譯，並檢查隊伍 JSON、LiveContainer 原始 Bundle ID、設定格式及 iOS 模擬器 GUI。模擬器檢查會載入相同 runtime，驗證校驗失敗時 GUI 仍顯示、設定開關儲存、API 套用、觸控穿透及橫向畫面；另外檢查這份 PAD 使用的舊式 AppDelegate 視窗及 LiveContainer 改寫 Bundle ID 的模式。`PADCheaper-GUI-probe-<run number>` artifact 包含檢查報告和畫面；CI 綠燈不代表 iOS 27／你的自訂 LiveContainer 真機行為已驗證。
 
 ## 本機建置
 

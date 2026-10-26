@@ -68,41 +68,69 @@ trap cleanup EXIT
 xcrun simctl boot "$device_id"
 xcrun simctl bootstatus "$device_id" -b
 xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charged --batteryLevel 100
-xcrun simctl install "$device_id" "$app_dir"
-xcrun simctl launch "$device_id" jp.gungho.pad
-container_dir="$(xcrun simctl get_app_container "$device_id" jp.gungho.pad data)"
-report_path="$container_dir/Documents/overlay-probe.json"
-portrait_done=0
-landscape_done=0
-for attempt in $(seq 1 90); do
-    if [ -f "$report_path" ]; then
-        phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"
-        if [ "$phase" = portrait ] && [ "$portrait_done" = 0 ]; then
-            xcrun simctl io "$device_id" screenshot "$build_dir/overlay-portrait.png"
-            portrait_done=1
-        fi
-        if [ "$phase" = landscape ] && [ "$landscape_done" = 0 ]; then
-            xcrun simctl io "$device_id" screenshot "$build_dir/overlay-landscape.png"
-            landscape_done=1
-        fi
-        if [ "$phase" = done ]; then
-            cp "$report_path" "$build_dir/overlay-probe.json"
-            cp "$container_dir/Library/Application Support/PADHelper/status.json" "$build_dir/status.json"
-            python3 - "$report_path" <<'PY'
+run_probe() {
+    local probe_app="$1" bundle_id="$2" prefix="$3"
+    xcrun simctl install "$device_id" "$probe_app"
+    xcrun simctl launch "$device_id" "$bundle_id"
+    local container_dir report_path phase portrait_done=0 landscape_done=0
+    container_dir="$(xcrun simctl get_app_container "$device_id" "$bundle_id" data)"
+    report_path="$container_dir/Documents/overlay-probe.json"
+    for attempt in $(seq 1 90); do
+        if [ -f "$report_path" ]; then
+            phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"
+            if [ "$phase" = portrait ] && [ "$portrait_done" = 0 ]; then
+                xcrun simctl io "$device_id" screenshot "$build_dir/$prefix-portrait.png"
+                portrait_done=1
+            fi
+            if [ "$phase" = landscape ] && [ "$landscape_done" = 0 ]; then
+                xcrun simctl io "$device_id" screenshot "$build_dir/$prefix-landscape.png"
+                landscape_done=1
+            fi
+            if [ "$phase" = done ]; then
+                cp "$report_path" "$build_dir/$prefix-probe.json"
+                cp "$container_dir/Library/Application Support/PADHelper/status.json" "$build_dir/$prefix-status.json"
+                python3 - "$report_path" <<'PY'
 import json
 import sys
 report = json.load(open(sys.argv[1]))
 if not report["success"]:
     raise SystemExit("Overlay probe failed:\n" + "\n".join(report["failures"]))
-print("Simulator overlay probe passed: early load, invalid target, persisted switches, API adoption, touch passthrough, rotation")
+print("Simulator overlay probe passed: early load, invalid target, persisted switches, API adoption, touch passthrough")
 PY
-            exit 0
+                xcrun simctl terminate "$device_id" "$bundle_id"
+                return 0
+            fi
         fi
+        sleep 1
+    done
+    if [ -f "$report_path" ]; then
+        cp "$report_path" "$build_dir/$prefix-probe.json"
+        cat "$report_path"
     fi
-    sleep 1
-done
-if [ -f "$report_path" ]; then
-    cp "$report_path" "$build_dir/overlay-probe.json"
-    cat "$report_path"
-fi
-exit 1
+    return 1
+}
+
+run_probe "$app_dir" jp.gungho.pad overlay
+
+# PAD itself uses the legacy AppDelegate window. A second install also models
+# LC's rewritten bundle ID, while still exercising the exact same runtime.
+legacy_app="$build_dir/LegacyProbe.app"
+cp -R "$app_dir" "$legacy_app"
+python3 - "$legacy_app" <<'PY'
+from pathlib import Path
+import plistlib
+import sys
+
+app = Path(sys.argv[1])
+info = plistlib.loads((app / "Info.plist").read_bytes())
+info.pop("UIApplicationSceneManifest")
+info["CFBundleIdentifier"] = "com.example.PADCheaperLegacyProbe"
+info["CFBundleName"] = "PADCheaper legacy window probe"
+info["PHProbeLegacy"] = True
+(app / "Info.plist").write_bytes(plistlib.dumps(info))
+(app / "LCAppInfo.plist").write_bytes(plistlib.dumps({
+    "doUseLCBundleId": True, "LCOrignalBundleIdentifier": "jp.gungho.pad",
+}))
+PY
+codesign --force --sign - --timestamp=none "$legacy_app"
+run_probe "$legacy_app" com.example.PADCheaperLegacyProbe legacy

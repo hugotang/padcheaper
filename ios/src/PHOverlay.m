@@ -385,9 +385,10 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
             }
             if (host) break;
         }
-        if (!host && app.connectedScenes.count == 0 && [app.delegate respondsToSelector:@selector(window)]) {
+        if (!host && [app.delegate respondsToSelector:@selector(window)]) {
             host = app.delegate.window;
-            if (host.hidden || !host.rootViewController) host = nil;
+            if (host.hidden || !host.rootViewController || [host isKindOfClass:PHPassthroughWindow.class]) host = nil;
+            scene = host.windowScene;
         }
     }
     if (host) {

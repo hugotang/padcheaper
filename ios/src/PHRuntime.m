@@ -786,7 +786,9 @@ static void PHHandleOverlayAction(NSString *action, id value) {
 
 static void PHBootstrap(NSUInteger attempt, NSUInteger generation) {
     if (generation != PHBootstrapGeneration) return;
-    const struct mach_header_64 *header = PHResolveGuestHeader();
+    // If discovery used an original Objective-C IMP, keep its verified header
+    // when retrying: that IMP now belongs to our own dylib after replacement.
+    const struct mach_header_64 *header = PHGuest ?: PHResolveGuestHeader();
     if (!PHContextIdentified) {
         NSString *identifier = PHGuestBundleIdentifier();
         NSString *executable = NSBundle.mainBundle.infoDictionary[@"CFBundleExecutable"];

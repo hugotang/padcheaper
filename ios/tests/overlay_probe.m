@@ -4,10 +4,15 @@
 
 static NSString *PHProbeRoot;
 static NSMutableArray<NSString *> *PHProbeFailures;
+static UIWindow *PHProbeLegacyOverlay;
 
 static NSDictionary *PHProbeJSON(NSString *name) {
     NSData *data = [NSData dataWithContentsOfFile:[PHProbeRoot stringByAppendingPathComponent:name]];
     return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+}
+
+static BOOL PHProbeLegacy(void) {
+    return [NSBundle.mainBundle.infoDictionary[@"PHProbeLegacy"] boolValue];
 }
 
 static void PHProbeCheck(BOOL condition, NSString *message) {
@@ -30,6 +35,9 @@ static UIView *PHProbeFind(UIView *root, NSString *identifier) {
 }
 
 static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
+    if (PHProbeLegacy()) {
+        if (PHProbeFind(PHProbeLegacyOverlay, @"padcheaper.bubble")) return PHProbeLegacyOverlay;
+    }
     for (UIWindow *window in scene.windows) {
         if (PHProbeFind(window, @"padcheaper.bubble")) return window;
     }
@@ -61,9 +69,17 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 
 @implementation PHProbeSceneDelegate
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
-    self.window = [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene];
+    self.window = scene ? [[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene] :
+                          [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 393, 852)];
     self.window.rootViewController = [PHProbeController new];
     [self.window makeKeyAndVisible];
+    if (PHProbeLegacy()) {
+        [NSNotificationCenter.defaultCenter addObserverForName:UIWindowDidBecomeVisibleNotification object:nil
+            queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
+                UIWindow *window = notification.object;
+                if (window != self.window && window.windowLevel > UIWindowLevelNormal) PHProbeLegacyOverlay = window;
+            }];
+    }
     PHProbeRoot = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
     PHProbeFailures = [NSMutableArray array];
     [NSFileManager.defaultManager createDirectoryAtPath:PHProbeRoot withIntermediateDirectories:YES attributes:nil error:NULL];
@@ -131,7 +147,13 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     PHProbeCheck([label.text containsString:@"校驗未通過"], @"Panel must display the target failure reason");
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");
     PHProbeReport(@"portrait");
-    [self performSelector:@selector(verifyLandscape) withObject:nil afterDelay:8];
+    if (PHProbeLegacy()) {
+        UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.retry");
+        [retry sendActionsForControlEvents:UIControlEventTouchUpInside];
+        PHProbeCheck(self.window.isKeyWindow, @"Retry must leave the legacy guest window key");
+        PHProbeCheck([PHProbeJSON(@"status.json")[@"activeMask"] isEqual:@0], @"Retry cannot bypass the target gate");
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ PHProbeReport(@"done"); });
+    } else [self performSelector:@selector(verifyLandscape) withObject:nil afterDelay:8];
 }
 
 - (void)verifyLandscape {
@@ -155,8 +177,18 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 @end
 
 @interface PHProbeAppDelegate : UIResponder <UIApplicationDelegate>
+@property(nonatomic, strong) UIWindow *window;
+@property(nonatomic, strong) PHProbeSceneDelegate *legacyDelegate;
 @end
 @implementation PHProbeAppDelegate
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    if (PHProbeLegacy()) {
+        self.legacyDelegate = [PHProbeSceneDelegate new];
+        [self.legacyDelegate scene:nil willConnectToSession:nil options:nil];
+        self.window = self.legacyDelegate.window;
+    }
+    return YES;
+}
 - (UISceneConfiguration *)application:(UIApplication *)application configurationForConnectingSceneSession:(UISceneSession *)session
                              options:(UISceneConnectionOptions *)options {
     UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default" sessionRole:session.role];
