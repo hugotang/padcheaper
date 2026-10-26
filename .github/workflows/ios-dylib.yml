@@ -14,6 +14,15 @@ on:
       - 'ios/**'
       - '.github/workflows/ios-dylib.yml'
   workflow_dispatch:
+    inputs:
+      runner:
+        description: macOS runner
+        type: choice
+        default: macos-26
+        options:
+          - macos-26
+          - macos-15
+          - macos-15-intel
 
 permissions:
   contents: read
@@ -24,9 +33,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+    runs-on: ${{ inputs.runner || 'macos-26' }}
     timeout-minutes: 20
     steps:
       - name: Checkout

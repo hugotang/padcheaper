@@ -59,7 +59,14 @@ available = [r for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable")
 available.sort(key=lambda r: tuple(map(int, r["version"].split("."))))
 print(available[-1]["identifier"])
 ')"
-device_id="$(xcrun simctl create 'PADCheaper GUI probe' com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime_id")"
+device_type="$(xcrun simctl list --json | python3 -c '
+import json, sys
+inventory = json.load(sys.stdin)
+phones = [t for t in inventory["devicetypes"] if t.get("productFamily") == "iPhone"]
+preferred = [t for t in phones if t["name"] in ("iPhone 17", "iPhone 16", "iPhone 15")]
+print((preferred or phones)[-1]["identifier"])
+')"
+device_id="$(xcrun simctl create 'PADCheaper GUI probe' "$device_type" "$runtime_id")"
 cleanup() {
     xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
     xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
