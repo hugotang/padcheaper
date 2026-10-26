@@ -99,16 +99,17 @@ run_probe() {
         if [ -f "$report_path" ]; then
             phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"
             if [ "$phase" = portrait ] && [ "$portrait_done" = 0 ]; then
-                xcrun simctl io "$device_id" screenshot "$build_dir/$prefix-portrait.png"
+                cp "$container_dir/Documents/$prefix-portrait.png" "$build_dir/"
                 portrait_done=1
             fi
             if [ "$phase" = landscape ] && [ "$landscape_done" = 0 ]; then
-                xcrun simctl io "$device_id" screenshot "$build_dir/$prefix-landscape.png"
+                cp "$container_dir/Documents/$prefix-landscape.png" "$build_dir/"
                 landscape_done=1
             fi
             if [ "$phase" = done ]; then
                 cp "$report_path" "$build_dir/$prefix-probe.json"
                 cp "$container_dir/Library/Application Support/PADHelper/status.json" "$build_dir/$prefix-status.json"
+                cp "$container_dir"/Documents/*.png "$build_dir/"
                 python3 - "$report_path" <<'PY'
 import json
 import sys

@@ -44,6 +44,22 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     return nil;
 }
 
+static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
+    UIView *gameView = guest.rootViewController.view;
+    UIView *overlayView = overlay.rootViewController.view;
+    [gameView layoutIfNeeded];
+    [overlayView layoutIfNeeded];
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithBounds:gameView.bounds];
+    UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [gameView drawViewHierarchyInRect:gameView.bounds afterScreenUpdates:YES];
+        [overlayView drawViewHierarchyInRect:gameView.bounds afterScreenUpdates:YES];
+    }];
+    NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+    NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:
+                     [NSString stringWithFormat:@"Documents/%@-%@.png", prefix, name]];
+    [UIImagePNGRepresentation(image) writeToFile:path atomically:YES];
+}
+
 @interface PHProbeController : UIViewController
 @end
 @implementation PHProbeController
@@ -111,6 +127,7 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     PHProbeCheck([overlay hitTest:point withEvent:nil] == bubble, @"Floating button must receive touches");
     PHProbeCheck([overlay hitTest:CGPointMake(20, CGRectGetHeight(overlay.bounds) - 50) withEvent:nil] == nil,
                  @"Touches outside the button must pass through");
+    PHProbeRender(self.window, overlay, @"bubble");
     [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
     PHProbeCheck(panel != nil && !panel.hidden, @"Floating button must open the panel");
@@ -150,6 +167,7 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     UILabel *label = (UILabel *)PHProbeFind(overlay, @"padcheaper.status");
     PHProbeCheck([label.text containsString:@"校驗未通過"], @"Panel must display the target failure reason");
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");
+    PHProbeRender(self.window, overlay, @"portrait");
     PHProbeReport(@"portrait");
     if (PHProbeLegacy()) {
         UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.retry");
@@ -174,6 +192,7 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
         PHProbeCheck(panel != nil && !panel.hidden && CGRectContainsRect(overlay.bounds, panel.frame), @"Landscape panel must remain on-screen");
         PHProbeCheck([overlay hitTest:CGPointMake(CGRectGetWidth(overlay.bounds) - 3, 3) withEvent:nil] == nil,
                      @"Touches outside the expanded panel must pass through");
+        PHProbeRender(self.window, overlay, @"landscape");
         PHProbeReport(@"landscape");
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ PHProbeReport(@"done"); });
     });
@@ -181,18 +200,8 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 @end
 
 @interface PHProbeAppDelegate : UIResponder <UIApplicationDelegate>
-@property(nonatomic, strong) UIWindow *window;
-@property(nonatomic, strong) PHProbeSceneDelegate *legacyDelegate;
 @end
 @implementation PHProbeAppDelegate
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
-    if (PHProbeLegacy()) {
-        self.legacyDelegate = [PHProbeSceneDelegate new];
-        [self.legacyDelegate startWithWindowScene:nil];
-        self.window = self.legacyDelegate.window;
-    }
-    return YES;
-}
 - (UISceneConfiguration *)application:(UIApplication *)application configurationForConnectingSceneSession:(UISceneSession *)session
                              options:(UISceneConnectionOptions *)options {
     UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default" sessionRole:session.role];
@@ -201,6 +210,22 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
 }
 @end
 
+@interface PHProbeLegacyAppDelegate : UIResponder <UIApplicationDelegate>
+@property(nonatomic, strong) UIWindow *window;
+@property(nonatomic, strong) PHProbeSceneDelegate *legacyDelegate;
+@end
+@implementation PHProbeLegacyAppDelegate
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    self.legacyDelegate = [PHProbeSceneDelegate new];
+    [self.legacyDelegate startWithWindowScene:nil];
+    self.window = self.legacyDelegate.window;
+    return YES;
+}
+@end
+
 int main(int argc, char **argv) {
-    @autoreleasepool { return UIApplicationMain(argc, argv, nil, NSStringFromClass(PHProbeAppDelegate.class)); }
+    @autoreleasepool {
+        Class delegate = PHProbeLegacy() ? PHProbeLegacyAppDelegate.class : PHProbeAppDelegate.class;
+        return UIApplicationMain(argc, argv, nil, NSStringFromClass(delegate));
+    }
 }

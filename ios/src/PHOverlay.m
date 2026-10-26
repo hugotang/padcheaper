@@ -6,6 +6,7 @@
 @end
 
 @implementation PHPassthroughWindow
+- (BOOL)canBecomeKeyWindow { return NO; }
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     UIView *hit = [super hitTest:point withEvent:event];
     if (hit == self || hit == self.rootViewController.view) return nil;
