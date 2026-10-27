@@ -9,7 +9,7 @@ import re
 def generate(manifest):
     if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.0-106878":
         raise ValueError("Unsupported battle target")
-    if manifest["gate"] != {"mode": 0, "source_mode": 0, "multiplayer": 0, "player_input_phase": 2}:
+    if manifest["gate"] != {"entry_categories": [0, 1], "source_mode": 0, "multiplayer": 0, "player_input_phase": 2}:
         raise ValueError("Battle gate differs from the reviewed prototype")
     lines = ["// Generated from ios/targets/battle-23.6.0.json. Do not edit.", "#pragma once",
              "#include <stdint.h>", "#include <stddef.h>"]

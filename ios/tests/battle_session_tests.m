@@ -70,12 +70,14 @@ static PHBattleSession *Session(FakeBattleEngine *engine) {
 int main(void) {
     @autoreleasepool {
         FakeBattleEngine *engine = [FakeBattleEngine new];
+        // Reproduce the real-device report: mode 1 / source 0 / multi 0.
+        engine->live.mode = 1;
         PHBattleSession *session = Session(engine);
         [session queueApplySlot:0 targetText:@"200"];
         Check(engine->changes == 0 && engine->validations == 0, "UI only queues; validation/native writes stay in drawFrame");
         [session onFrame:Frame() atTime:100.1];
         Check(engine->changes == 1 && [session.snapshot[@"applied"] boolValue] && engine->live.members[0].catalogID == 200,
-              "queued replacement executes at a fresh frame");
+              "category 1 queued replacement executes at a fresh frame");
         Check(engine->live.members[1].catalogID == 101, "one-member scope preserves other members");
         [session onFrame:Frame() atTime:100.5];
         [session queueApplySlot:1 targetText:@"201"];

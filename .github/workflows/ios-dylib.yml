@@ -102,7 +102,8 @@ jobs:
           print('The artifact starts in diagnostic mode. Protocol, save-state, battle guard/session and simulator UI checks passed.')
           print('The user reported working GUI/Skin/BGM on iOS 27 with custom LiveContainer in 0.2.0-gui. Save/restart and account isolation still require device testing; see device-testing.md.')
           print('Battle replacement is a one-member native transformation prototype for the ordinary single-player entry; actual gameplay, resource loading and server settlement require device verification.')
-          print('Valid badge records support ownership and bank-local save/restore. Timer automation changes flags only; exit popup continuation requires the panel button. Both need device verification.')
+          print('The user reported badge unlock working in 0.3.0-battle. Badge save/restart and account boundary cases still need device verification. Timer automation changes flags only; exit popup continuation requires the panel button and device verification.')
+          print('0.3.1-battle corrects the solo entry-category gate for mode 1 / source 0 / multi 0. Whole-team, weapon and max-stat presets are documented analysis, not implemented controls.')
           print()
           print('SHA-256: `' + metadata['sha256'] + '`')
           PY

@@ -11,6 +11,8 @@ int main(void) {
         .countdown = 1, .dialog = 2, .limitSeconds = 3600, .phase = 2, .pending = 32};
     state.flags = 0x22;
     Check(PHTimerAutomaticFlags(&state) == 0x40, "paused restore signature clears pause/abandon and keeps alert latch");
+    state.mode = 1;
+    Check(PHTimerAutomaticFlags(&state) == 0x40, "reported category 1 uses the same solo timer policy");
     state.flags = 0x82;
     Check(PHTimerAutomaticFlags(&state) == 0xc2, "standalone abandonment and unrelated bits remain intact");
     for (unsigned phase = 0; phase <= 80; ++phase) {

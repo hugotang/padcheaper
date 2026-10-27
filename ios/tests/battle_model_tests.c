@@ -56,8 +56,15 @@ int main(void) {
     PHBattleState state = {.present = true, .protectedValuesValid = true, .inputQuiet = true,
                            .digestKnown = true, .digestMatches = true, .hpMatches = true, .phase = 2};
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "ordinary idle battle is eligible");
+    state.mode = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 1 solo entry is eligible");
     state.multiplayer = 2;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "disconnected multiplayer is not treated as single-player");
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow disconnected multiplayer");
+    state.multiplayer = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow active multiplayer");
+    state.multiplayer = 0; state.sourceMode = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow a scripted source");
+    state.sourceMode = 0;
     state.multiplayer = 0; state.mode = 7;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "special mode is refused");
     state.mode = 0; state.sourceMode = 1;

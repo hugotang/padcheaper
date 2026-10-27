@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.3.0-battle",
+  "prototype_version": "0.3.1-battle",
   "device_verified": false,
   "server_acceptance_verified": false,
   "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "gate": {
-    "mode": 0,
+    "entry_categories": [0, 1],
     "source_mode": 0,
     "multiplayer": 0,
     "player_input_phase": 2

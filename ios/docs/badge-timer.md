@@ -1,6 +1,6 @@
 # 徽章與計時原型
 
-2026-10-27；日服 iOS PAD 23.6.0／106878，無 JIT LiveContainer。這些功能已加入 `0.3.0-battle`，仍需真機驗收。
+2026-10-27；日服 iOS PAD 23.6.0／106878，無 JIT LiveContainer。這些功能已加入 `0.3.0-battle`；使用者回報徽章解鎖測試通過，保存／重啟與計時仍待真機驗收。`0.3.1-battle` 另修正關卡分類 1 的判斷。
 
 ## 徽章
 
@@ -26,7 +26,7 @@
 | 原生 phase setter | H+0x570B54，(address, u64 value) |
 | 原生撤窗 | H+0x61C610，(dialog in X0, float duration in S0) |
 
-自動處理限一般單人 mode 0、multiplayer 0、非 scene 0x80386 且 phase 2／30。設 bit 6；只有 bit 5 同時存在才清 bit 5／1，其他 bits 保留。它不呼叫 phase setter，也不撤窗。hook 在原 drawFrame 前檢查，背景 resume 後強制檢查一次。
+自動處理限已核對的單人關卡分類 mode 0／1、multiplayer 0、非 scene 0x80386 且 phase 2／30。設 bit 6；只有 bit 5 同時存在才清 bit 5／1，其他 bits 保留。它不呼叫 phase setter，也不撤窗。hook 在原 drawFrame 前檢查，背景 resume 後強制檢查一次。
 
 面板按鈕只排入一次手動命令，綁定帳號 epoch、地下城／入場 hash、戰鬥物件、倒數物件及彈窗指標。執行前重讀全部條件並檢查指令及記憶體範圍，限 3 秒內的同一個計時退出彈窗。原生關閉彈窗後清除指標／暫停標記，以原生 setter 將 pending 及 phase 設為 2。此選擇對應 `0x100589248` 的 pending=2 返回操作分支；一般提示窗的 pending=2 不會被按鈕提前關閉。
 

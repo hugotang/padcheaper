@@ -44,6 +44,7 @@ cp ios/docs/runtime.md "$build_dir/runtime.md"
 cp ios/docs/device-testing.md "$build_dir/device-testing.md"
 cp ios/docs/monster-replacement.md "$build_dir/monster-replacement.md"
 cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
+cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -58,6 +59,11 @@ import subprocess
 import sys
 
 directory = Path(sys.argv[1])
+readme = directory / "README.md"
+readme.write_text(readme.read_text(encoding="utf-8").replace(
+    "](docs/", "](").replace(
+    "](../.github/workflows/ios-dylib.yml)",
+    "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)"), encoding="utf-8")
 binary = directory / "PADCheaper.dylib"
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
@@ -68,8 +74,8 @@ metadata = {
     "architecture": "arm64",
     "dylib_version": version,
     "gui": "draggable floating button; switches, battle member selector and numeric keypad; apply/restore diagnostics",
-    "battle_replacement": "one member; ordinary single-player entry; native form rebuild and rollback; device verification pending",
-    "badge_unlock": "validated native parameter records; bank-local save/restore; device verification pending",
+    "battle_replacement": "one member; solo entry categories 0/1 with source 0; native form rebuild and rollback; device verification pending",
+    "badge_unlock": "user-reported unlock working in 0.3.0-battle; save/restart and account boundary checks pending",
     "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",
     "platform": "iPhoneOS",
     "minimum_ios": "15.0",

@@ -51,6 +51,12 @@ typedef enum {
     PHBattleMutationApplied, PHBattleMutationRolledBack, PHBattleMutationRejected, PHBattleMutationUncertain
 } PHBattleMutationResult;
 
+// Save +0x5c90c0 records the dungeon entry category. It is independent of
+// multiplayer and sourceMode; categories 0 and 1 share the reviewed solo path.
+static inline bool PHBattleSupportedEntryCategory(int16_t category) {
+    return category == 0 || category == 1;
+}
+
 bool PHBattleParseTarget(const char *text, uint16_t *value);
 bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2,
                             uint32_t salt, uint32_t *value);

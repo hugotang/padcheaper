@@ -2,7 +2,7 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.3.0-battle` 提供單名戰鬥隊員替換／還原、有效隊伍徽章解鎖，以及計時旗標修正和手動撤窗。新功能已加入無 JIT dylib 原型；實際遊戲效果及通關結算仍需真機驗證。設計見 [換怪分析](docs/monster-replacement.md) 與 [徽章／計時實作](docs/badge-timer.md)。
+`0.3.1-battle` 修正 `mode 1／source 0／multi 0` 的入口誤判，關卡分類 0／1 共用已核對的單人流程。此版提供單名戰鬥隊員替換／還原、有效隊伍徽章解鎖，以及計時旗標修正和手動撤窗。使用者已回報 `0.3.0-battle` 徽章解鎖通過；換怪、計時及通關結算仍需真機驗證。設計見 [換怪分析](docs/monster-replacement.md)、[徽章／計時實作](docs/badge-timer.md) 與 [整隊與滿狀態分析](docs/team-presets.md)。
 
 ## GitHub Actions
 
@@ -13,7 +13,7 @@
 - PADCheaper.dylib
 - config.example.json
 - SHA256SUMS、build-info.json
-- 本文件、feasibility.md、runtime.md、device-testing.md、monster-replacement.md、badge-timer.md、target.json、battle-target.json、LICENSE
+- 本文件、feasibility.md、runtime.md、device-testing.md、monster-replacement.md、badge-timer.md、team-presets.md、target.json、battle-target.json、LICENSE
 
 workflow 執行真正的 arm64 iPhoneOS 編譯，並檢查隊伍 JSON、LiveContainer 原始 Bundle ID、設定格式、儲存交易狀態及 iOS 模擬器 GUI。模擬器檢查會載入相同 runtime，驗證校驗失敗時 GUI 仍顯示、設定開關儲存、API 套用、觸控穿透及橫向畫面；另外檢查這份 PAD 使用的舊式 AppDelegate 視窗及 LiveContainer 改寫 Bundle ID 的模式。`PADCheaper-GUI-probe-<run number>` artifact 包含檢查報告和畫面。2026-10-27 使用者回報 `0.2.0-gui` 在 iOS 27／自訂 LiveContainer 無 JIT 下 GUI 正常、Skin／BGM 已生效；CI 不替代儲存／重啟等真機驗證，詳見 [真機測試記錄](docs/device-testing.md)。
 
@@ -34,7 +34,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭會顯示 `0.3.0-battle`，載入、功能及儲存狀態每秒更新，開關自動儲存。更新保留原有 config.json／account 檔；舊設定中的新功能預設關閉。
+5. 面板標頭會顯示 `0.3.1-battle`，載入、功能及儲存狀態每秒更新，開關自動儲存。更新保留原有 config.json／account 檔；舊設定中的新功能預設關閉。
 
 浮動按鈕的含義：
 
@@ -77,6 +77,6 @@ bash ios/build.sh
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.3.0-battle constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.3.1-battle constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

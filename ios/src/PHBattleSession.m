@@ -6,7 +6,7 @@ static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *sta
         case PHBattleGateReady: return @"單人操作階段，可替換一名隊員";
         case PHBattleGateAbsent: return @"等待進入地下城";
         case PHBattleGateProtected: return @"戰鬥保護值或隊員參數未通過檢查";
-        case PHBattleGateMode: return [NSString stringWithFormat:@"此入口尚未支援（mode %d／source %u／multi %u）",
+        case PHBattleGateMode: return [NSString stringWithFormat:@"此關卡分類或隊伍入口尚未支援（mode %d／source %u／multi %u）",
                                       state->mode, state->sourceMode, state->multiplayer];
         case PHBattleGateBusy: return [NSString stringWithFormat:@"等待玩家操作階段（phase %u）", state->phase];
         case PHBattleGateAudit: return @"遊戲已記錄戰鬥數值異常，停止替換";

@@ -45,9 +45,8 @@ bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
 PHBattleGate PHBattleStateGate(const PHBattleState *state) {
     if (!state || !state->present) return PHBattleGateAbsent;
     if (!state->protectedValuesValid) return PHBattleGateProtected;
-    // First prototype accepts only the ordinary entry path. A disconnected
-    // multiplayer state (2), special mode or scripted source is still refused.
-    if (state->mode != 0 || state->sourceMode != 0 || state->multiplayer != 0) return PHBattleGateMode;
+    if (!PHBattleSupportedEntryCategory(state->mode) || state->sourceMode != 0 || state->multiplayer != 0)
+        return PHBattleGateMode;
     if (state->phase != 2 || !state->inputQuiet) return PHBattleGateBusy;
     if (state->auditFlags & 0x1e000u) return PHBattleGateAudit;
     if (!state->hpMatches) return PHBattleGateHP;

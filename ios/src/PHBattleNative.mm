@@ -75,7 +75,7 @@ static BOOL CatalogValid(uint32_t target, const PHBattleState *state) {
 }
 
 static BOOL CanReadNative(const PHBattleState *state) {
-    return state->present && state->protectedValuesValid && state->mode == 0 &&
+    return state->present && state->protectedValuesValid && PHBattleSupportedEntryCategory(state->mode) &&
            state->sourceMode == 0 && state->multiplayer == 0 && state->phase == 2 && state->inputQuiet;
 }
 
