@@ -80,6 +80,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 @property(nonatomic, strong) UIWindow *window;
 @property(nonatomic) NSUInteger landscapeAttempts;
 @property(nonatomic, copy) NSString *landscapeError;
+@property(nonatomic) NSTimeInterval targetDeadline;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
 - (void)finishTargetEntry;
@@ -113,8 +114,8 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     void *handle = dlopen(library.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL);
     const char *error = handle ? NULL : dlerror();
     PHProbeCheck(handle != NULL, error ? @(error) : @"Simulator dylib could not be loaded");
+    self.targetDeadline = NSProcessInfo.processInfo.systemUptime + 90;
     [self performSelector:@selector(exerciseOverlay) withObject:nil afterDelay:3];
-    [self performSelector:@selector(verifyRejectedTarget) withObject:nil afterDelay:23];
 }
 
 - (void)exerciseOverlay {
@@ -217,14 +218,26 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
     PHProbeCheck(panel.hidden && !bubble.hidden, @"Close must restore the floating button");
     PHProbeReport(@"running");
+    [self performSelector:@selector(verifyRejectedTarget) withObject:nil afterDelay:1];
 }
 
 - (void)verifyRejectedTarget {
+    NSDictionary *status = PHProbeJSON(@"status.json");
+    // Bootstrap performs twenty scheduled discovery attempts. On a busy hosted
+    // simulator those callbacks take longer than twenty wall-clock seconds.
+    // Observe completion, while retaining a deadline and every gate assertion.
+    if ((!status || [status[@"tone"] isEqual:@"pending"]) &&
+        NSProcessInfo.processInfo.systemUptime < self.targetDeadline) {
+        PHProbeReport(@"waiting_target");
+        [self performSelector:@selector(verifyRejectedTarget) withObject:nil afterDelay:1];
+        return;
+    }
     UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
     UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
     [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
-    NSDictionary *status = PHProbeJSON(@"status.json");
+    status = PHProbeJSON(@"status.json");
     PHProbeCheck([status[@"tone"] isEqual:@"error"] && [status[@"targetMatched"] isEqual:@NO], @"Wrong UUID must show a visible error");
+    PHProbeCheck([status[@"validation"] containsString:@"UUID"], @"Target rejection must identify the UUID mismatch");
     PHProbeCheck([status[@"frameHook"] isEqual:@NO] && [status[@"networkHook"] isEqual:@NO] &&
                  [status[@"lifecycleHook"] isEqual:@NO] && [status[@"activeMask"] isEqual:@0],
                  @"GUI toggles must not bypass target validation");

@@ -112,7 +112,8 @@ run_probe() {
             run_limited 60 xcrun simctl launch "$device_id" "$bundle_id"
         fi
     fi
-    for attempt in $(seq 1 90); do
+    # Allow the probe's bounded target-discovery wait plus layout/rotation checks.
+    for attempt in $(seq 1 150); do
         if [ -f "$report_path" ]; then
             phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"
             if [ "$phase" = portrait ] && [ "$portrait_done" = 0 ]; then
