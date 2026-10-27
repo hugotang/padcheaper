@@ -195,6 +195,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 
     UIScrollView *scroll = [UIScrollView new];
     self.scroll = scroll;
+    scroll.accessibilityIdentifier = @"padcheaper.scroll";
     scroll.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     scroll.alwaysBounceVertical = YES;
     scroll.translatesAutoresizingMaskIntoConstraints = NO;
@@ -340,6 +341,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
     [self.view setNeedsLayout];
     [self.view layoutIfNeeded];
+    [self.scroll setContentOffset:CGPointZero animated:NO];
 }
 
 - (void)closePanel {
@@ -388,7 +390,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.view layoutIfNeeded];
     if (!self.keypad.hidden) {
         CGRect pad = [self.keypad convertRect:self.keypad.bounds toView:self.scroll];
-        [self.scroll scrollRectToVisible:pad animated:YES];
+        CGRect target = [self.battleTarget convertRect:self.battleTarget.bounds toView:self.scroll];
+        [self.scroll scrollRectToVisible:CGRectUnion(target, pad) animated:YES];
     }
 }
 

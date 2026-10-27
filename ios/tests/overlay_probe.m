@@ -82,6 +82,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 @property(nonatomic, copy) NSString *landscapeError;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
+- (void)finishTargetEntry;
 - (void)verifyRejectedTarget;
 - (void)verifyLandscape;
 @end
@@ -173,6 +174,16 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
                  @"Target entry is limited to five digits");
     [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.10") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([target.currentTitle containsString:@"1234"] && ![target.currentTitle containsString:@"12345"], @"Backspace removes one digit");
+    // Let UIKit finish title/segment transitions and scrolling before capturing
+    // the entered value and keypad as the user sees them.
+    [self performSelector:@selector(finishTargetEntry) withObject:nil afterDelay:0.6];
+}
+
+- (void)finishTargetEntry {
+    UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
+    UIButton *target = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleTarget");
+    UIButton *apply = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleApply");
+    UIButton *restore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
     PHProbeRender(self.window, overlay, @"keypad");
     [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.11") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([target.currentTitle containsString:@"輸入目標"], @"Clear resets target entry");
@@ -188,8 +199,18 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UIButton *copy = (UIButton *)PHProbeFind(overlay, @"padcheaper.copy");
     [copy sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Loaded: YES"], @"Copy diagnostics must work");
+    UIScrollView *scroll = (UIScrollView *)PHProbeFind(overlay, @"padcheaper.scroll");
+    UIView *badgeRow = PHProbeFind(overlay, @"padcheaper.badge").superview;
+    UIView *timerStatus = PHProbeFind(overlay, @"padcheaper.timerStatus");
+    [overlay layoutIfNeeded];
+    CGRect features = CGRectUnion([badgeRow convertRect:badgeRow.bounds toView:scroll],
+                                  [timerStatus convertRect:timerStatus.bounds toView:scroll]);
+    [scroll scrollRectToVisible:features animated:NO];
+    PHProbeRender(self.window, overlay, @"features");
     UIButton *close = (UIButton *)PHProbeFind(overlay, @"padcheaper.close");
     [close sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
+    UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
     PHProbeCheck(panel.hidden && !bubble.hidden, @"Close must restore the floating button");
     PHProbeReport(@"running");
 }
