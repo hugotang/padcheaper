@@ -30,7 +30,7 @@
         button.dataset.slot=index;button.dataset.kind=kind;
         button.setAttribute('aria-label',`位置 ${index+1} ${kind==='body'?'本體':'武裝'} ${c ? '#'+c.id+' '+c.name:'未設定'}`);
         button.append(portrait(v.id),text('number',v.id?'#'+v.id:'未設定'),text('name',c?.name || (kind==='body'?'選擇本體':'選擇武裝')),
-          text('stats',c?`Lv.${v.level||c.maxLevel} · +${v.plus.reduce((a,b)=>a+b,0)}`:'點擊選擇'));
+          text('stats',c?`Lv.${v.level||c.maxLevel}\n+${v.plus.reduce((a,b)=>a+b,0)}`:'點擊選擇'));
         if (kind==='body' && battle.members?.[index]?.leased) button.append(text('leased','已套用'));
         button.onclick=()=>{selected={slot:index,kind};$('search').value='';$('results').hidden=true;render();};
         grid.append(button);
