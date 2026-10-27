@@ -96,7 +96,8 @@ cleanup() {
 }
 trap cleanup EXIT
 run_limited 45 xcrun simctl boot "$device_id"
-run_limited 120 xcrun simctl bootstatus "$device_id" -b
+# Fresh hosted runners can spend over two minutes migrating simulator data.
+run_limited 240 xcrun simctl bootstatus "$device_id" -b
 xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charged --batteryLevel 100
 run_probe() {
     local probe_app="$1" bundle_id="$2" prefix="$3"
