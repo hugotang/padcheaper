@@ -173,7 +173,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     UILabel *title = PHLabel(20, UIFontWeightBold);
     title.text = @"PADCheaper";
     UILabel *version = PHLabel(11, UIFontWeightRegular);
-    version.text = [@"LiveContainer · " stringByAppendingString:PH_RUNTIME_VERSION];
+    version.text = PH_RUNTIME_VERSION;
     version.textColor = [UIColor colorWithWhite:1 alpha:0.60];
     UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[title, version]];
     heading.axis = UILayoutConstraintAxisVertical;
