@@ -12,10 +12,12 @@ sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
 min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
 
+for native in PHBattleNative PHTimer; do
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
     "-miphoneos-version-min=$min_version" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
-    -Iios/src -Iios/generated -c ios/src/PHBattleNative.mm -o "$build_dir/PHBattleNative.o"
+    -Iios/src -Iios/generated -c "ios/src/$native.mm" -o "$build_dir/$native.o"
+done
 
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
     "-miphoneos-version-min=$min_version" -std=gnu11 -fobjc-arc -fblocks \
@@ -24,7 +26,8 @@ min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
     -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHBattleModel.c ios/src/PHBattleSession.m "$build_dir/PHBattleNative.o" -lc++ \
+    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
@@ -40,10 +43,11 @@ cp ios/docs/feasibility.md "$build_dir/feasibility.md"
 cp ios/docs/runtime.md "$build_dir/runtime.md"
 cp ios/docs/device-testing.md "$build_dir/device-testing.md"
 cp ios/docs/monster-replacement.md "$build_dir/monster-replacement.md"
+cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
-rm "$build_dir/PHBattleNative.o"
+rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o"
 
 python3 - "$build_dir" <<'PY'
 import hashlib
@@ -65,6 +69,8 @@ metadata = {
     "dylib_version": version,
     "gui": "draggable floating button; switches, battle member selector and numeric keypad; apply/restore diagnostics",
     "battle_replacement": "one member; ordinary single-player entry; native form rebuild and rollback; device verification pending",
+    "badge_unlock": "validated native parameter records; bank-local save/restore; device verification pending",
+    "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",
     "platform": "iPhoneOS",
     "minimum_ios": "15.0",
     "signing": "ad-hoc; re-sign in LiveContainer",

@@ -138,7 +138,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UILabel *persistence = (UILabel *)PHProbeFind(overlay, @"padcheaper.persistence");
     PHProbeCheck([persistence.text containsString:@"尚未儲存隊伍"] &&
                  [persistence.text containsString:@"伺服器接受：0"], @"Panel must separate load/feature status from actual save and response status");
-    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"timerFix", @"battleSwap"]) {
+    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"badge", @"timerFix", @"battleSwap"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, [@"Switch unavailable: " stringByAppendingString:key]);
         toggle.on = YES;
@@ -150,7 +150,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     config = PHProbeJSON(@"config.json");
     PHProbeCheck([config[@"experimentalWrites"] isEqual:@YES] && [config[@"features"][@"skin"] isEqual:@YES] &&
                  [config[@"features"][@"bgm"] isEqual:@YES] && [config[@"features"][@"timerFix"] isEqual:@YES] &&
-                 [config[@"features"][@"battleSwap"] isEqual:@YES],
+                 [config[@"features"][@"battleSwap"] isEqual:@YES] && [config[@"features"][@"badge"] isEqual:@YES],
                  @"GUI switches must persist to config.json");
     PHProbeCheck([config[@"apiHosts"] isEqual:@[@"example.invalid"]] && [config[@"apiPaths"] isEqual:@[@"/api.php"]],
                  @"GUI must persist only the endpoint host and path");
@@ -182,6 +182,9 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck(!apply.enabled && !restore.enabled, @"Unmatched UUID must keep battle apply/restore unavailable");
     // Direct action dispatch also exercises the runtime guard behind disabled UI.
     [apply sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UIButton *timerDismiss = (UIButton *)PHProbeFind(overlay, @"padcheaper.timerDismiss");
+    PHProbeCheck(timerDismiss != nil && !timerDismiss.enabled, @"Manual timer control requires a verified timed exit popup");
+    [timerDismiss sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIButton *copy = (UIButton *)PHProbeFind(overlay, @"padcheaper.copy");
     [copy sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Loaded: YES"], @"Copy diagnostics must work");
@@ -204,6 +207,9 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
                  [status[@"battleState"][@"canApply"] isEqual:@NO] && [status[@"battleState"][@"applied"] isEqual:@NO] &&
                  [status[@"battleState"][@"applyCount"] isEqual:@0] && [status[@"battleState"][@"restoreCount"] isEqual:@0],
                  @"Battle GUI actions cannot bypass UUID validation or invent writes");
+    PHProbeCheck([status[@"badgeImplemented"] isEqual:@YES] && [status[@"badgeState"][@"ready"] isEqual:@NO] &&
+                 [status[@"timerState"][@"canDismiss"] isEqual:@NO] && [status[@"timerState"][@"flagWriteCount"] isEqual:@0] &&
+                 [status[@"timerState"][@"dismissCount"] isEqual:@0], @"Badge/timer controls cannot bypass validation or mutate an unmatched guest");
     UILabel *label = (UILabel *)PHProbeFind(overlay, @"padcheaper.status");
     PHProbeCheck([label.text containsString:@"校驗未通過"], @"Panel must display the target failure reason");
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");

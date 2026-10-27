@@ -8,6 +8,9 @@
 #import "PHOverlay.h"
 #import "PHSaveState.h"
 #import "PHBattleSession.h"
+#import "PHBadges.h"
+#import "PHTimer.h"
+#include "PHBadgeModel.h"
 #include "PHTargetGenerated.h"
 #include <mach-o/dyld.h>
 #include <math.h>
@@ -41,6 +44,8 @@ static uint32_t PHPlayer;
 static NSUInteger PHAccountEpoch;
 static PHSaveState *PHSaveStateTracker;
 static PHBattleSession *PHBattleTracker;
+static PHBadges *PHBadgeTracker;
+static PHTimer *PHTimerTracker;
 static NSDictionary *PHConfig;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
@@ -58,7 +63,6 @@ static NSString *PHStorageMessage;
 static NSString *PHFeedback;
 static NSDictionary *PHObservedEndpoint;
 static uint32_t PHObservedEntries;
-static NSUInteger PHTimerClearCount;
 
 static void PHBootstrap(NSUInteger attempt, NSUInteger generation);
 static NSDictionary *PHRuntimeSnapshot(void);
@@ -112,8 +116,9 @@ static BOOL PHObservedEndpointConfigured(void) {
            [PHConfig[@"apiPaths"] containsObject:path];
 }
 
-static PHFeatureMask PHActiveMask(void) {
+static PHFeatureMask PHRequestedMask(void) {
     if (!PHValidated || !PHFrameInstalled || !PHNetworkInstalled || !PHFrameMainThread ||
+        atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ||
         !PHAccountReady || !PHStorageReady || !PHConfigValid || PHStorageFault || !PHFiltersConfigured() ||
         (PHObservedEndpoint && !PHObservedEndpointConfigured())) return 0;
     uint32_t player = 0;
@@ -121,7 +126,13 @@ static PHFeatureMask PHActiveMask(void) {
     PHFeatureMask mask = 0;
     if (PHEnabled(@"skin")) mask |= PHFeatureSkin;
     if (PHEnabled(@"bgm")) mask |= PHFeatureBGM;
-    // Badge's parameter gate and editing-bank mapping are not implemented yet.
+    if (PHEnabled(@"badge")) mask |= PHFeatureBadge;
+    return mask;
+}
+
+static PHFeatureMask PHActiveMask(void) {
+    PHFeatureMask mask = PHRequestedMask();
+    if (!PHBadgeTracker.ready) mask &= ~PHFeatureBadge;
     return mask;
 }
 
@@ -189,6 +200,13 @@ static PHBattleFrame PHBattleFrameContext(void) {
         PHStorageReady && PHConfigValid && !PHStorageFault && PHEnabled(@"battleSwap")};
 }
 
+static PHBattleFrame PHTimerFrameContext(void) {
+    PHBattleFrame frame = PHBattleFrameContext();
+    frame.enabled = PHStorageReady && PHConfigValid && !PHStorageFault &&
+        PHLifecycleInstalled && PHEnabled(@"timerFix");
+    return frame;
+}
+
 static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
     if (player != PHPlayer || loginSuccess) {
         PHPlayer = player;
@@ -200,6 +218,7 @@ static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
         // Login replaced ownership words. Old bit snapshots must not be restored.
         memset(PHSkinAdded, 0, sizeof(PHSkinAdded));
         memset(PHBGMAdded, 0, sizeof(PHBGMAdded));
+        [PHBadgeTracker reset];
         PHProbeLogged = NO;
         PHLog(loginSuccess ? @"Native login parse observed; account epoch reset" :
                               @"Account changed; waiting for a successful native login parse");
@@ -225,7 +244,7 @@ static NSArray<NSNumber *> *PHReadDeck(uintptr_t address, NSUInteger index) {
     memcpy(&bgm1, bytes + 0x18, sizeof(bgm1));
     memcpy(&bgm2, bytes + 0x1a, sizeof(bgm2));
     memcpy(&skin, bytes + 0x1c, sizeof(skin));
-    uint8_t badge = bytes[0x5f] ^ (uint8_t)(15u * index + 0x61u);
+    uint8_t badge = PHBadgeEncode(bytes[0x5f], index);
     uint64_t packed = bgm1 + 100000ull * bgm2;
     if (packed > UINT32_MAX) return nil;
     return @[@(cards[0]), @(cards[1]), @(cards[2]), @(cards[3]), @(cards[4]),
@@ -271,6 +290,12 @@ static void PHRestoreBanks(NSDictionary *banks, PHFeatureMask mask, NSString *so
                 uint32_t packed = [saved[7] unsignedIntValue];
                 uint16_t values[] = {(uint16_t)(packed % 100000u), (uint16_t)(packed / 100000u)};
                 if (PHWriteData(address + 0x18, values, sizeof(values))) restored++;
+                else writeFailures++;
+            }
+            if ((mask & PHFeatureBadge) && [current[5] unsignedIntValue] == 0 &&
+                [saved[5] unsignedIntValue] != 0 && [PHBadgeTracker canUse:[saved[5] unsignedCharValue]]) {
+                uint8_t value = PHBadgeEncode([saved[5] unsignedCharValue], index);
+                if (PHWriteData(address + 0x5f, &value, sizeof(value))) restored++;
                 else writeFailures++;
             }
         }
@@ -408,6 +433,7 @@ static void PHAfterParse(PHParseObservation before) {
         uint32_t player = 0;
         if (nativeError == 0 && PHCurrentPlayer(&player)) {
             PHResetAccount(player, YES);
+            [PHBadgeTracker updateHeader:(uintptr_t)PHGuest enabled:(PHRequestedMask() & PHFeatureBadge) != 0];
             PHRestoreBanks(PHLastBanks, PHActiveMask(), @"登入後");
         }
         return;
@@ -422,9 +448,10 @@ static void PHMaintenance(void) {
     uint32_t player = 0;
     if (PHCurrentPlayer(&player) && player != PHPlayer) PHResetAccount(player, NO);
     PHReloadConfig();
-    PHFeatureMask mask = PHActiveMask();
+    PHFeatureMask mask = PHRequestedMask();
     PHRevertDisabled(mask);
-    PHApplyUnlocks(mask);
+    PHApplyUnlocks(mask & (PHFeatureSkin | PHFeatureBGM));
+    [PHBadgeTracker updateHeader:(uintptr_t)PHGuest enabled:(mask & PHFeatureBadge) != 0];
     [PHSaveStateTracker expireAtTime:CFAbsoluteTimeGetCurrent()];
     uint32_t count = 0;
     uintptr_t pointer = 0;
@@ -450,6 +477,7 @@ static void PHDrawFrame(id self, SEL command) {
         return;
     }
     PHFrameMainThread = YES;
+    [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:NO];
     PHParseObservation before = PHBeforeFrame();
     PHOriginalDraw(self, command);
     PHFrameCount++;
@@ -464,26 +492,8 @@ static void PHDrawFrame(id self, SEL command) {
 
 static void PHRestoreBackground(id self, SEL command) {
     PHOriginalBackground(self, command);
-    if (!NSThread.isMainThread || !PHValidated || !PHStorageReady || !PHConfigValid ||
-        !PHEnabled(@"timerFix")) return;
-    uint8_t scene = 0, requested = 0;
-    uintptr_t object = 0, impl = 0;
-    uintptr_t game = (uintptr_t)PHGuest + PHGameMainRVA;
-    uint8_t flags = 0;
-    if (!PHReadU8(PHSave(), &scene) || !PHReadU8(PHSave() + 1, &requested) ||
-        scene != 1 || requested != scene ||
-        !PHReadPointer((uintptr_t)PHGuest + PHSceneTableRVA + 16u + 8u, &object) || object != game ||
-        !PHReadPointer(game + PHTimerImplOffset, &impl) || !impl ||
-        !PHReadU8(impl + PHTimerFlagsOffset, &flags)) return;
-    // Preserve abandonment/alert bits. This remains an experimental background
-    // resume fix, not a claim of complete Android timer behavior.
-    if ((flags & 0x22u) == 0x20u) {
-        uint8_t next = flags & (uint8_t)~0x20u;
-        if (PHWriteData(impl + PHTimerFlagsOffset, &next, sizeof(next))) {
-            PHTimerClearCount++;
-            PHLog(@"Cleared background-resume bit 5; other timer flags preserved");
-        }
-    }
+    if (NSThread.isMainThread && PHValidated)
+        [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:YES];
 }
 
 static BOOL PHQueryMatches(NSURL *url, NSString *key, NSString *expected) {
@@ -541,6 +551,18 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
     if (!result) {
         [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
         return PHOriginalDataTask(self, command, request, completion);
+    }
+    if (mask & PHFeatureBadge) {
+        BOOL badgesValid = YES;
+        for (NSArray *records in result.banks.allValues) {
+            for (NSArray *record in records) if (![PHBadgeTracker canUse:[record[5] unsignedCharValue]]) badgesValid = NO;
+        }
+        if (!badgesValid) {
+            // A table/ownership change can invalidate the native predicate.
+            // Keep prior badge selections until a valid new save is observed.
+            mask &= ~PHFeatureBadge;
+            result = PHRewriteDeckBody(request.HTTPBody, mask, NULL);
+        }
     }
     NSDictionary *banks = PHMergeBanks(PHLastBanks ?: @{}, result.banks, mask);
     if (!PHStoreBanks(banks)) {
@@ -643,11 +665,18 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     if (PHFolder.length) PHReloadConfig();
     PHFeatureMask mask = PHActiveMask();
     BOOL master = [PHConfig[@"experimentalWrites"] isEqual:@YES];
-    BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm");
+    BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm"), wantsBadge = PHEnabled(@"badge");
+    NSDictionary *badge = [PHBadgeTracker snapshot];
+    NSDictionary *timer = [PHTimerTracker snapshot];
+    NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
+    NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
+        timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
     NSDictionary *battle = [PHBattleTracker snapshot];
     BOOL battleActive = PHEnabled(@"battleSwap") && ([battle[@"canApply"] boolValue] || [battle[@"applied"] boolValue]);
-    BOOL timerActive = PHValidated && PHLifecycleInstalled && PHStorageReady && PHConfigValid && PHEnabled(@"timerFix");
-    BOOL unlockActive = mask != 0 && PHUnlockDataReady && !PHOwnershipWriteFault;
+    BOOL timerActive = PHEnabled(@"timerFix") && [timer[@"active"] boolValue];
+    BOOL cosmeticActive = (mask & (PHFeatureSkin | PHFeatureBGM)) && PHUnlockDataReady && !PHOwnershipWriteFault;
+    BOOL badgeActive = (mask & PHFeatureBadge) && PHBadgeTracker.ready;
+    BOOL unlockActive = cosmeticActive || badgeActive;
     NSString *blocked = PHUnlockBlockReason();
     NSString *tone = @"pending", *title = @"已載入 · 初始化中", *reason = PHValidationMessage ?: @"正在檢查遊戲";
     if ([PHStartupState isEqualToString:@"checking"]) {
@@ -663,27 +692,38 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         tone = @"error";
         title = @"已載入 · hooks 未完整安裝";
         reason = blocked;
+    } else if ([battle[@"fault"] boolValue] || [timer[@"fault"] boolValue]) {
+        tone = @"error";
+        title = @"已載入 · 原生操作已停止";
+        reason = [battle[@"fault"] boolValue] ? battle[@"message"] : timer[@"message"];
     } else if (!master) {
         tone = @"ready";
         title = @"已載入 · 診斷模式";
         reason = @"開啟總開關及要使用的功能；設定會自動儲存。";
-    } else if (PHOwnershipWriteFault && mask) {
+    } else if ((PHOwnershipWriteFault && mask) || (wantsBadge && PHBadgeTracker.writeFault)) {
         tone = @"error";
         title = @"已載入 · 遊戲資料寫入失敗";
-        reason = @"Skin／BGM 資料未完整套用，請複製診斷。";
+        reason = @"解鎖資料未完整套用，請複製診斷。";
     } else if (unlockActive || timerActive || battleActive) {
-        BOOL partial = ((wantsSkin || wantsBGM) && !unlockActive) || (PHEnabled(@"timerFix") && !timerActive);
+        BOOL cosmeticWaiting = (wantsSkin || wantsBGM) && !cosmeticActive;
+        BOOL badgeWaiting = wantsBadge && !badgeActive;
+        BOOL timerWaiting = PHEnabled(@"timerFix") && !timerActive;
+        BOOL partial = cosmeticWaiting || badgeWaiting || timerWaiting || (PHEnabled(@"battleSwap") && !battleActive);
         tone = @"active";
         title = partial ? @"已載入 · 部分功能啟用" : @"已載入 · 功能已啟用";
-        reason = partial ? (blocked ?: @"Skin／BGM 等待遊戲資源表初始化") :
+        reason = partial ? (blocked ?: (badgeWaiting ? badge[@"message"] : cosmeticWaiting ? @"Skin／BGM 等待遊戲資源表初始化" :
+                                       timerWaiting ? timer[@"gate"] : battle[@"gate"])) :
                            @"開關已套用；可在下方查看上傳、回蓋及計時修正次數。";
-    } else if (wantsSkin || wantsBGM) {
+    } else if (wantsSkin || wantsBGM || wantsBadge) {
         title = @"已載入 · 等待啟用條件";
-        reason = blocked ?: @"等待 Skin／BGM 資源表初始化";
+        reason = blocked ?: (wantsBadge ? badge[@"message"] : @"等待 Skin／BGM 資源表初始化");
     } else if (PHEnabled(@"timerFix") && !PHLifecycleInstalled) {
         tone = @"error";
         title = @"已載入 · 背景 hook 未安裝";
         reason = @"計時修正無法啟用，請按「重新檢查」。";
+    } else if (PHEnabled(@"timerFix")) {
+        title = @"已載入 · 等待計時關卡";
+        reason = timer[@"gate"];
     } else if (PHEnabled(@"battleSwap")) {
         title = @"已載入 · 等待戰鬥替換條件";
         reason = battle[@"gate"] ?: @"等待戰鬥檢查";
@@ -704,7 +744,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     featureStates[@"timerFix"] = ![PHConfig[@"features"][@"timerFix"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
                                  !PHValidated ? @"等待遊戲校驗" : !PHLifecycleInstalled ? @"背景 hook 未安裝" :
                                  !PHStorageReady || !PHConfigValid ? @"等待可用設定" :
-                                 [NSString stringWithFormat:@"已啟用 · 已修正 %lu 次", (unsigned long)PHTimerClearCount];
+                                 timer[@"gate"];
+    featureStates[@"badge"] = ![PHConfig[@"features"][@"badge"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
+        (blocked ?: badge[@"message"]);
     featureStates[@"battleSwap"] = ![PHConfig[@"features"][@"battleSwap"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
         [battle[@"restorePending"] boolValue] ? @"等待還原" : [battle[@"applied"] boolValue] ? @"已替換一名隊員" :
         !PHValidated ? @"等待遊戲校驗" : battle[@"gate"] ?: @"等待戰鬥檢查";
@@ -729,7 +771,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         PHValidated ? @"通過" : @"未通過", PHFrameInstalled ? @"✓" : @"×", PHNetworkInstalled ? @"✓" : @"×",
         PHLifecycleInstalled ? @"✓" : @"×", frameState, (unsigned long)PHFrameCount,
         PHAccountReady ? @"已觀察成功" : @"等待", PHFiltersConfigured() ? @"已設定" : @"未設定", PHObservedEntries,
-        [saveState[@"submittedCount"] unsignedLongValue], [saveState[@"restoredFieldCount"] unsignedLongValue], (unsigned long)PHTimerClearCount];
+        [saveState[@"submittedCount"] unsignedLongValue], [saveState[@"restoredFieldCount"] unsignedLongValue], (unsigned long)timerClears];
     NSString *path = PHFolder.length ? [PHFolder stringByAppendingPathComponent:@"config.json"] : @"尚未建立";
     NSBundle *bundle = NSBundle.mainBundle;
     NSString *diagnostics = [NSString stringWithFormat:
@@ -741,6 +783,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"auditFlags"], battle[@"digestMatches"], battle[@"hpMatches"],
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nBadge: %@\nTimer: %@", badge[@"message"], timerSummary];
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
@@ -754,8 +797,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
         @"saveState": saveState, @"saveSummary": saveSummary,
         @"battleState": battle, @"battleSummary": battleSummary,
+        @"badgeState": badge,
+        @"timerState": timer, @"timerSummary": timerSummary,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
-        @"badgeImplemented": @NO, @"deviceVerified": @NO
+        @"badgeImplemented": @YES, @"deviceVerified": @NO
     };
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
     if (PHContextIdentified && PHFolder.length && now - PHLastStatus >= 5) {
@@ -785,6 +830,11 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     }
     if ([action isEqualToString:@"battleRestore"]) {
         [PHBattleTracker queueRestore];
+        PHLastStatus = 0;
+        return;
+    }
+    if ([action isEqualToString:@"timerDismiss"]) {
+        [PHTimerTracker queueDismiss];
         PHLastStatus = 0;
         return;
     }
@@ -819,7 +869,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"apiPaths"] = @[path];
     } else if ([action isEqualToString:@"experimentalWrites"]) {
         next[action] = @([value boolValue]);
-    } else if ([@[@"skin", @"bgm", @"timerFix", @"battleSwap"] containsObject:action]) {
+    } else if ([@[@"skin", @"bgm", @"badge", @"timerFix", @"battleSwap"] containsObject:action]) {
         NSMutableDictionary *features = [next[@"features"] mutableCopy];
         features[action] = @([value boolValue]);
         next[@"features"] = features;
@@ -906,6 +956,8 @@ static void PADCheaperInitialize(void) {
     @autoreleasepool {
         PHSaveStateTracker = [PHSaveState new];
         PHBattleTracker = [[PHBattleSession alloc] initWithEngine:PHCreateBattleEngine()];
+        PHBadgeTracker = [PHBadges new];
+        PHTimerTracker = [PHTimer new];
         PHFlagPatches = [NSMutableArray array];
         PHLastBanks = @{};
         PHConfig = PHDefaultConfiguration();

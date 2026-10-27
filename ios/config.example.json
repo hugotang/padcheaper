@@ -4,6 +4,7 @@
   "features": {
     "skin": false,
     "bgm": false,
+    "badge": false,
     "timerFix": false,
     "battleSwap": false
   },

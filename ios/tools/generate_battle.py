@@ -21,7 +21,8 @@ def generate(manifest):
             raise ValueError(f"Invalid field {name}")
         lines.append(f"static const uintptr_t {name} = 0x{number:x}u;")
     required = {"PHBattleSet16RVA", "PHBattleRebuildMemberRVA", "PHBattleRefreshTeamRVA",
-                "PHBattleDigestRVA", "PHBattleMaxChargeRVA", "PHBattleRadiusRVA", "PHBattleDecode32RVA"}
+                "PHBattleDigestRVA", "PHBattleMaxChargeRVA", "PHBattleRadiusRVA", "PHBattleDecode32RVA",
+                "PHBattleSet32RVA", "PHBattleDismissDialogRVA", "PHBattleWaitTimerRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

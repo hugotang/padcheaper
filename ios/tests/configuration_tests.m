@@ -48,6 +48,11 @@ int main(void) {
         config[@"apiPaths"] = @[@"/api.php"];
         Check(PHConfigurationIsValid(config), "GUI switches and observed endpoint produce a valid configuration");
         Check(![config[@"features"][@"battleSwap"] boolValue], "old schema 1 files keep battle replacement off");
+        Check(![config[@"features"][@"badge"] boolValue], "old schema 1 files keep badge unlock off");
+        config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"badge": @YES};
+        Check(PHConfigurationIsValid(config), "badge uses an optional Boolean switch");
+        config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"badge": @1};
+        Check(!PHConfigurationIsValid(config), "numeric badge switch is rejected");
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"battleSwap": @YES};
         Check(PHConfigurationIsValid(config), "battle replacement uses an optional Boolean switch");
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"battleSwap": @1};

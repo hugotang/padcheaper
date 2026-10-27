@@ -25,10 +25,12 @@ raise SystemExit(result.returncode)
 PY
 }
 
+for native in PHBattleNative PHTimer; do
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=c++17 -fobjc-arc -fblocks -fexceptions -O2 -Wall -Wextra -Werror \
     -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
-    -c ios/src/PHBattleNative.mm -o "$build_dir/PHBattleNative.o"
+    -c "ios/src/$native.mm" -o "$build_dir/$native.o"
+done
 
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
@@ -36,7 +38,8 @@ PY
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHBattleModel.c ios/src/PHBattleSession.m "$build_dir/PHBattleNative.o" -lc++ \
+    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
@@ -98,10 +101,16 @@ xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charg
 run_probe() {
     local probe_app="$1" bundle_id="$2" prefix="$3"
     run_limited 45 xcrun simctl install "$device_id" "$probe_app"
-    run_limited 30 xcrun simctl launch "$device_id" "$bundle_id"
     local container_dir report_path phase portrait_done=0 landscape_done=0
     container_dir="$(xcrun simctl get_app_container "$device_id" "$bundle_id" data)"
     report_path="$container_dir/Documents/overlay-probe.json"
+    if ! run_limited 90 xcrun simctl launch "$device_id" "$bundle_id"; then
+        # Cold simulator launch can outlive the client command. Keep a running
+        # probe if it already produced evidence; otherwise retry launch once.
+        if [ ! -f "$report_path" ]; then
+            run_limited 60 xcrun simctl launch "$device_id" "$bundle_id"
+        fi
+    fi
     for attempt in $(seq 1 90); do
         if [ -f "$report_path" ]; then
             phase="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["phase"])' "$report_path")"

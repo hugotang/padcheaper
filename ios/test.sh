@@ -13,6 +13,20 @@ python3 ios/tools/generate_battle.py
     ios/src/PHBattleModel.c ios/tests/battle_model_tests.c -o "$build_dir/battle-model-tests"
 "$build_dir/battle-model-tests"
 
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHBadgeModel.c ios/tests/badge_model_tests.c -o "$build_dir/badge-model-tests"
+"$build_dir/badge-model-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror \
+    -Wno-unused-const-variable -Iios/src -Iios/generated \
+    ios/src/PHBadgeModel.c ios/src/PHBattleModel.c ios/src/PHBadges.m ios/tests/badge_runtime_tests.m \
+    -framework Foundation -o "$build_dir/badge-runtime-tests"
+"$build_dir/badge-runtime-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHTimerModel.c ios/tests/timer_model_tests.c -o "$build_dir/timer-model-tests"
+"$build_dir/timer-model-tests"
+
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/tests/battle_session_tests.m \
     -framework Foundation -o "$build_dir/battle-session-tests"

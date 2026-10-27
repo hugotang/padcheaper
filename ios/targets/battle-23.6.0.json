@@ -100,6 +100,55 @@
       "length": 64,
       "bytes": "88ad00f008c11e9100102e1e29f291520969693869012037fd7bbfa9fd0300910821579100a11991c4ffff971f00007200102e1e01102d1e201c201efd7bc1a8",
       "sha256": "e94aad45cb66b8077361773c9044d9944020db345a1256a5147eafbcb7ab0ae7"
+    },
+    {
+      "name": "PHBattleSet32RVA",
+      "va": "0x100570b54",
+      "rva": "0x570b54",
+      "length": 64,
+      "bytes": "e83701d0081142b929b300b0290145b90801094a0801014a080800b9a8008052e90301aa297d891308050071c1ffff54a88d9f5288cdae722801084ae93701d0",
+      "sha256": "e6f8d54fa2060b460f760c0ac6c0a6b48cd258bfd42f0b8cd81e29882eac27ad"
+    },
+    {
+      "name": "PHBattleDismissDialogRVA",
+      "va": "0x10061c610",
+      "rva": "0x61c610",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd4300910140201ef30300aa085841b90879141208011f32085801b900b00591e003271ede91ef97685a41b908011e32685a01b9fd7b41a9",
+      "sha256": "93b27e41697a5a4fa0cfc545fd92c414d46a4ea24fe5c2a8de1498729c93a943"
+    },
+    {
+      "name": "PHBattleWaitTimerRVA",
+      "va": "0x100589248",
+      "rva": "0x589248",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa083840f909399d526901a072006969f83e590294a8b884521f00086bc1050054683a40f914399d527401a072006974f8",
+      "sha256": "675e072948bcc731c465ce20ae98aa2944841e8c13c2914c354d00ce29cfa99d"
     }
-  ]
+  ],
+  "badge": {
+    "table_save_offset": "0xa0",
+    "table_end_save_offset": "0xb0",
+    "count_save_offset": "0x24e8",
+    "record_bytes": 180,
+    "owned_save_offset": "0x52f314",
+    "owned_xor": "0x9a69f65a",
+    "device_verified": false
+  },
+  "timer": {
+    "phase_impl_offset": "0x92978",
+    "pending_impl_offset": "0x92a00",
+    "flags_impl_offset": "0xafef0",
+    "countdown_pointer_impl_offset": "0xb0f20",
+    "popup_pointer_impl_offset": "0xbe9c8",
+    "hold_impl_offset": "0xb3592",
+    "automatic_phases": [
+      2,
+      30
+    ],
+    "manual_popup_phase": 58,
+    "manual_popup_pending": 32,
+    "manual_resume_phase": 2,
+    "device_verified": false
+  }
 }

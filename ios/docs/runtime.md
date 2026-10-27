@@ -21,7 +21,8 @@
 - frame 原方法返回後，觀察 native request 已移除且 native error 為 0，才回蓋 matching default 值。HTTP 200 及 JSON res=0 另外核對。
 - JSON 選擇保存為解碼值，按玩家候選 pid 分檔；同隊未啟用欄位保留、明確選擇 0 可更新。
 - `0.2.1-gui` 用同一同步交易狀態處理 save／completion／parse。每次新儲存先取消舊回蓋，包含無改寫、停用及本地保存失敗的分支；過期或被替代的 completion 不改最新狀態。面板及 status.json 顯示本地保存、已追蹤請求的 HTTP／res 成功、原生解析與回蓋結果，不輸出帳號或隊伍內容。
-- 計時實驗只清背景恢復 bit 5，保留 bit 1／6。
+- 徽章驗證參數表長度、初始化終點、11 個保護欄位及相依鏈，再修改有效 ID 的 XOR 擁有位圖；關閉時只移除本模組新增的 bits，登入後重設追蹤。保存與回蓋沿用交易機制及 bank 內索引。
+- 計時自動路徑限一般單人、倒數上限大於 0、phase 2／30，設置 alert latch，僅在 paused bit 同時存在時清除 pause／abandon。原生 phase 跳轉只由面板手動撤窗觸發，限定 phase 58／pending 32，保留一般提示窗及正常結算。詳見 [徽章／計時](badge-timer.md)。
 
 ## 額外的靜態時序證據
 
@@ -50,7 +51,7 @@
 6. 同一 frame 的 UI／戰鬥快取可能已經讀過回應預設值。原型不呼叫尚未驗證的原生快取重建函式。
 7. 遊戲登入可覆寫位圖；登入後重設追蹤。條目表重載／合法 ownership 變化與功能關閉還原需驗證，不能聲稱完全等價 Android。
 8. pid 是 save_decks serializer 的玩家身分候選；帳號 A→B→A、重啟及容器隔離需真機驗證。
-9. 徽章未實作，不能只填擁有位圖；參數表及編成 XOR bank mapping 未全部解決。
-10. timerFix 僅限目前靜態確認的 GameMain 背景恢復分支；其他計時／棄權／續關情境未驗證。
+9. 徽章只開啟參數有效、相依鏈可讀且在 1–255 範圍內的條目；未實作替換無效參數或攔截原生徽章 predicate。編成畫面快取、實際效果、取得新徽章時的 ownership 更新與重啟保留仍須真機驗證。
+10. timerFix 的 countdown、phase 與彈窗限制依這份 iOS 二進位核對；不宣稱所有排行榜、固定五分鐘計時、多人、棄權或續關分支均支援。自動路徑不干預 phase，手動撤窗後流程與結算未驗證。
 
 CI 驗證包含 iPhoneOS 編譯、arm64／簽章／Mach-O 檢查、macOS Foundation protocol／身份／設定／儲存交易測試，以及載入相同 runtime 的 iOS 模擬器 GUI 檢查。交易測試涵蓋選擇改回 0、舊 completion、新儲存寫檔失敗、重疊請求、原生錯誤、逾時和帳號切換。模擬器刻意使用不匹配 UUID，確認 GUI 出現而 hooks／寫入保持停用，並驗證開關儲存、API 套用、複製診斷、儲存狀態、觸控穿透和橫向畫面。真機行為不能由 CI 推論；使用者已回報通過的範圍另記錄在真機測試文件。

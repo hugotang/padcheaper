@@ -35,6 +35,8 @@
 @property(nonatomic, strong) UIButton *battleApply;
 @property(nonatomic, strong) UIButton *battleRestore;
 @property(nonatomic, strong) UILabel *battleLabel;
+@property(nonatomic, strong) UIButton *timerDismiss;
+@property(nonatomic, strong) UILabel *timerLabel;
 @property(nonatomic, strong) UIStackView *keypad;
 @property(nonatomic, strong) UIStackView *bodyStack;
 @property(nonatomic, copy) NSString *targetText;
@@ -234,6 +236,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     UILabel *battleNote = PHLabel(11, UIFontWeightRegular);
     battleNote.text = @"原型限一般單人入口，一次替換一名。關閉後等待操作階段還原；通關結算與重啟恢復仍待真機驗證。";
     battleNote.textColor = [UIColor colorWithWhite:1 alpha:0.55];
+    self.timerDismiss = [self button:@"手動關閉計時退出彈窗" action:@selector(dismissTimer)
+        identifier:@"padcheaper.timerDismiss"];
+    self.timerLabel = PHLabel(11, UIFontWeightRegular);
+    self.timerLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
+    self.timerLabel.accessibilityIdentifier = @"padcheaper.timerStatus";
     self.pathLabel = PHLabel(10, UIFontWeightRegular);
     self.pathLabel.lineBreakMode = NSLineBreakByCharWrapping;
     self.pathLabel.textColor = [UIColor colorWithWhite:1 alpha:0.50];
@@ -254,7 +261,9 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
         battleTitle, self.battleSlot, self.battleTarget, battleActions, self.battleLabel, battleNote,
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
+        [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
+        self.timerDismiss, self.timerLabel,
         self.endpointLabel, self.endpointButton, self.saveLabel, self.checksLabel, actions,
         self.feedbackLabel, self.pathLabel, note
     ]];
@@ -405,6 +414,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
 }
 
+- (void)dismissTimer {
+    self.action(@"timerDismiss", nil);
+    [self updateWithSnapshot:self.snapshot()];
+}
+
 - (void)updateWithSnapshot:(NSDictionary *)state {
     self.state = state;
     if (!self.isViewLoaded) return;
@@ -457,6 +471,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.battleApply.enabled = [state[@"targetMatched"] boolValue] && [battle[@"canApply"] boolValue] && validTarget &&
         [selected[@"replaceable"] boolValue] && [selected[@"current"] unsignedIntValue] != target;
     self.battleRestore.enabled = [battle[@"canRestore"] boolValue];
+    self.timerDismiss.enabled = [state[@"targetMatched"] boolValue] && [state[@"timerState"][@"canDismiss"] boolValue];
+    self.timerLabel.text = state[@"timerSummary"];
     self.battleSlot.enabled = ![battle[@"applied"] boolValue] && ![battle[@"phase"] isEqualToString:@"apply_pending"];
     self.pathLabel.text = [@"設定檔：\n" stringByAppendingString:(state[@"configPath"] ?: @"初始化中")];
     self.feedbackLabel.text = state[@"feedback"];

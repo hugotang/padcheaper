@@ -1296,16 +1296,19 @@
     "other network action coverage if claiming complete upload defaulting"
   ],
   "build": {
-    "recommended": "GitHub Actions macos-15 / Xcode iPhoneOS SDK; arm64 dylib",
+    "recommended": "GitHub Actions macos-26 / Xcode iPhoneOS SDK; arm64 dylib",
     "windows_path_ios_toolchain_found": false,
-    "dylib_built": false,
+    "dylib_built": true,
     "release_ready": false,
     "prototype_sources_added": true
   },
   "prototype": {
     "runtime_notes": "ios/docs/runtime.md",
     "default_mode": "diagnostic; experimental writes disabled",
-    "badge_implemented": false,
-    "runtime_verified": false
+    "badge_implemented": true,
+    "runtime_verified": false,
+    "battle_replacement_implemented": true,
+    "manual_timer_popup_implemented": true,
+    "additional_target_manifest": "ios/targets/battle-23.6.0.json"
   }
 }
