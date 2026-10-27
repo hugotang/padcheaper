@@ -26,7 +26,7 @@ done
     -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
     ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
@@ -44,6 +44,7 @@ cp ios/docs/runtime.md "$build_dir/runtime.md"
 cp ios/docs/device-testing.md "$build_dir/device-testing.md"
 cp ios/docs/monster-replacement.md "$build_dir/monster-replacement.md"
 cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
+cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
@@ -75,6 +76,7 @@ metadata = {
     "dylib_version": version,
     "gui": "draggable floating button; switches, battle member selector and numeric keypad; apply/restore diagnostics",
     "battle_replacement": "one member; solo entry categories 0/1 with source 0; native form rebuild and rollback; device verification pending",
+    "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",
     "badge_unlock": "user-reported unlock working in 0.3.0-battle; save/restart and account boundary checks pending",
     "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",
     "platform": "iPhoneOS",

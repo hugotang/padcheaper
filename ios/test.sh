@@ -10,7 +10,16 @@ clang_path="$(xcrun --sdk macosx --find clang)"
 python3 ios/tools/generate_battle.py
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
-    ios/src/PHBattleModel.c ios/tests/battle_model_tests.c -o "$build_dir/battle-model-tests"
+    ios/src/PHInputModel.c ios/tests/input_model_tests.c -o "$build_dir/input-model-tests"
+"$build_dir/input-model-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror \
+    -Wno-unused-const-variable -Iios/src -Iios/generated \
+    ios/src/PHInputModel.c ios/tests/input_runtime_tests.m -framework Foundation -o "$build_dir/input-runtime-tests"
+"$build_dir/input-runtime-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/tests/battle_model_tests.c -o "$build_dir/battle-model-tests"
 "$build_dir/battle-model-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
@@ -19,16 +28,16 @@ python3 ios/tools/generate_battle.py
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror \
     -Wno-unused-const-variable -Iios/src -Iios/generated \
-    ios/src/PHBadgeModel.c ios/src/PHBattleModel.c ios/src/PHBadges.m ios/tests/badge_runtime_tests.m \
+    ios/src/PHBadgeModel.c ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBadges.m ios/tests/badge_runtime_tests.m \
     -framework Foundation -o "$build_dir/badge-runtime-tests"
 "$build_dir/badge-runtime-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
-    ios/src/PHTimerModel.c ios/tests/timer_model_tests.c -o "$build_dir/timer-model-tests"
+    ios/src/PHInputModel.c ios/src/PHTimerModel.c ios/tests/timer_model_tests.c -o "$build_dir/timer-model-tests"
 "$build_dir/timer-model-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
-    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/tests/battle_session_tests.m \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/tests/battle_session_tests.m \
     -framework Foundation -o "$build_dir/battle-session-tests"
 "$build_dir/battle-session-tests"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks \

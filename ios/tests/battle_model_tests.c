@@ -53,7 +53,7 @@ int main(void) {
     Check(PHBattleSameSource(&m, &n), "form change preserves source identity");
     n.sourceSlot = 1;
     Check(!PHBattleSameSource(&m, &n), "leader/member exchange changes source identity");
-    PHBattleState state = {.present = true, .protectedValuesValid = true, .inputQuiet = true,
+    PHBattleState state = {.present = true, .protectedValuesValid = true, .input = {.valid = true},
                            .digestKnown = true, .digestMatches = true, .hpMatches = true, .phase = 2};
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "ordinary idle battle is eligible");
     state.mode = 1;
@@ -70,10 +70,14 @@ int main(void) {
     state.mode = 0; state.sourceMode = 1;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "scripted source is refused");
     state.sourceMode = 0; state.phase = 43;
-    Check(PHBattleStateGate(&state) == PHBattleGateBusy, "animation phase is refused");
-    state.phase = 2; state.inputQuiet = false;
-    Check(PHBattleStateGate(&state) == PHBattleGateBusy, "active input is refused");
-    state.inputQuiet = true; state.auditFlags = 0x10000;
+    Check(PHBattleStateGate(&state) == PHBattleGatePhase, "animation phase is refused");
+    state.phase = 2; state.input.rawActiveMask = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateInput, "active input has its own gate when phase is already 2");
+    state.input.rawActiveMask = 0; state.input.valid = false;
+    Check(PHBattleStateGate(&state) == PHBattleGateInputUnavailable, "unreadable input cannot be mistaken for idle");
+    state.input.valid = true; state.dragActive = true;
+    Check(PHBattleStateGate(&state) == PHBattleGateDrag, "native orb drag blocks even between touch events");
+    state.dragActive = false; state.auditFlags = 0x10000;
     Check(PHBattleStateGate(&state) == PHBattleGateAudit, "existing audit failure is preserved and blocks writes");
     state.auditFlags = 0; state.hpMatches = false;
     Check(PHBattleStateGate(&state) == PHBattleGateHP, "HP shadow failure is refused");

@@ -1,5 +1,6 @@
 #import "PHTimer.h"
 #import "PHMemory.h"
+#import "PHInput.h"
 #import "PHTarget.h"
 #include "PHTimerModel.h"
 #include "PHTargetGenerated.h"
@@ -40,7 +41,7 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
         !PHMemoryHasProtection(impl + 0x92000, 0x2d000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return NO;
     state->identity = {header, game, impl, player, frame.epoch, 0, 0, {0}};
     uint16_t ids[2] = {}, mode = 0, limit = 0;
-    uint32_t key1 = 0, key2 = 0, phase[4], pending[4], input = 0;
+    uint32_t key1 = 0, key2 = 0, phase[4], pending[4];
     if (!PHReadPointer(impl + PHBattleDungeonPointerOffset, &state->countdown) || !state->countdown ||
         state->countdown > UINTPTR_MAX - 128 || !PHMemoryHasProtection(state->countdown, 128, VM_PROT_READ, 0) ||
         !PHReadU16(state->countdown + 12, &limit) ||
@@ -53,14 +54,14 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
         !PHReadMemory(impl + PHBattlePhaseOffset, phase, sizeof(phase)) ||
         !PHReadMemory(impl + Pending, pending, sizeof(pending)) ||
         !PHReadU8(impl + PHTimerFlagsOffset, &state->flags) ||
-        !PHReadPointer(impl + Dialog, &state->dialog) || !PHReadU32(game + 92, &input)) return NO;
+        !PHReadPointer(impl + Dialog, &state->dialog)) return NO;
     bool hashPresent = false;
     for (uint8_t byte : state->identity.entryHash) hashPresent |= byte != 0;
     state->present = hashPresent;
     state->identity.dungeon = ids[0]; state->identity.floor = ids[1];
     state->mode = static_cast<int16_t>(mode);
     state->limitSeconds = static_cast<int16_t>(limit);
-    state->inputQuiet = (input & 0xffffu) == 0;
+    PHReadGameInput(header, &state->input);
     BOOL phaseValid = PHBattleDecodeProtected(phase, key1, key2, 0x766cfc6du, &state->phase);
     BOOL pendingValid = PHBattleDecodeProtected(pending, key1, key2, 0x766cfc6du, &state->pending);
     // Pending can be unused until the first popup; only the popup path needs it.
@@ -144,6 +145,8 @@ static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString 
     _hasState = ReadTimer(&_state, frame);
     _gate = !_hasState ? @"計時資料未通過檢查" : !PHTimerEligible(&_state) ? @"等待一般單人計時關卡" :
         PHTimerCanDismiss(&_state) ? @"已偵測計時退出彈窗，可手動關閉" :
+        (_state.phase == 58 && _state.pending == 32 && _state.dialog && !_state.input.valid) ? @"觸控狀態未通過檢查，暫停撤窗" :
+        (_state.phase == 58 && _state.pending == 32 && _state.dialog && !PHInputIsQuiet(&_state.input)) ? @"等待放開觸控或輸入處理完成後撤窗" :
         [NSString stringWithFormat:@"計時上限 %d 秒 · phase %u · flags 0x%02x", _state.limitSeconds, _state.phase, _state.flags];
     if (_fault) { _gate = @"計時操作狀態不明，已停止後續寫入"; return; }
     if (!_hasState) {
@@ -209,6 +212,10 @@ static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString 
         @"canDismiss": @(_frame.ready && _frame.enabled && _hasState && !_fault && !_queued && PHTimerCanDismiss(&_state)),
         @"queued": @(_queued), @"fault": @(_fault), @"gate": _gate ?: @"", @"message": _message ?: @"",
         @"phase": @(_state.phase), @"pendingPhase": @(_state.pending), @"flags": @(_state.flags),
+        @"inputValid": @(_hasState && _state.input.valid), @"inputQuiet": @(_hasState && PHInputIsQuiet(&_state.input)),
+        @"rawInputCount": @(_state.input.rawCount), @"frameInputCount": @(_state.input.frameCount),
+        @"rawInputMask": @(_state.input.rawActiveMask), @"frameInputMask": @(_state.input.frameActiveMask),
+        @"rawInputFlags": @(_state.input.rawFlags), @"frameInputFlags": @(_state.input.frameFlags),
         @"limitSeconds": @(_state.limitSeconds), @"pauseClearCount": @(_pauseClears),
         @"flagWriteCount": @(_flagWrites), @"dismissCount": @(_dismissals), @"deviceVerified": @NO};
 }

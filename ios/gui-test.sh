@@ -38,7 +38,7 @@ done
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
     ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"

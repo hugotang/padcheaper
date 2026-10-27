@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.3.1-battle",
+  "prototype_version": "0.3.2-battle",
   "device_verified": false,
   "server_acceptance_verified": false,
   "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
@@ -12,6 +12,8 @@
     "player_input_phase": 2
   },
   "fields": {
+    "PHBattleInputRVA": "0x2ac6fd8",
+    "PHBattleDragPointerOffset": "0x988b8",
     "PHBattleImplRVA": "0x2abce60",
     "PHBattleModeRVA": "0x211a870",
     "PHBattleMultiplayerRVA": "0x1b4d24c",
@@ -126,6 +128,20 @@
       "sha256": "675e072948bcc731c465ce20ae98aa2944841e8c13c2914c354d00ce29cfa99d"
     }
   ],
+  "input": {
+    "manager_pointer_rva": "0x2ac6fd8",
+    "slots_per_bank": 5,
+    "record_bytes": 264,
+    "frame_bank_offset": 1320,
+    "snapshot_bytes": 2642,
+    "event_bytes_offset": 213,
+    "frame_tracking_offset": 219,
+    "raw_deferred_tap_offset": 220,
+    "raw_touch_pointer_offset": 248,
+    "raw_count_offset": 2640,
+    "frame_count_offset": 2641,
+    "drag_pointer_impl_offset": "0x988b8"
+  },
   "badge": {
     "table_save_offset": "0xa0",
     "table_end_save_offset": "0xb0",

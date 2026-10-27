@@ -8,7 +8,11 @@ static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *sta
         case PHBattleGateProtected: return @"戰鬥保護值或隊員參數未通過檢查";
         case PHBattleGateMode: return [NSString stringWithFormat:@"此關卡分類或隊伍入口尚未支援（mode %d／source %u／multi %u）",
                                       state->mode, state->sourceMode, state->multiplayer];
-        case PHBattleGateBusy: return [NSString stringWithFormat:@"等待玩家操作階段（phase %u）", state->phase];
+        case PHBattleGatePhase: return [NSString stringWithFormat:@"等待玩家操作階段（phase %u）", state->phase];
+        case PHBattleGateInputUnavailable: return @"觸控狀態未通過檢查，暫停替換";
+        case PHBattleGateInput: return [NSString stringWithFormat:@"等待放開觸控或輸入處理完成（raw 0x%02x／frame 0x%02x）",
+                                       state->input.rawActiveMask, state->input.frameActiveMask];
+        case PHBattleGateDrag: return @"等待本次拖珠結束（phase 2）";
         case PHBattleGateAudit: return @"遊戲已記錄戰鬥數值異常，停止替換";
         case PHBattleGateHP: return @"HP 與原生校驗值不符，停止替換";
         case PHBattleGateDigest: return @"隊員摘要未通過原生校驗";
@@ -206,6 +210,11 @@ static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *sta
         @"gate": _gateMessage ?: @"", @"members": members,
         @"mode": @(_state.mode), @"sourceMode": @(_state.sourceMode), @"multiplayer": @(_state.multiplayer),
         @"battlePhase": @(_state.phase), @"auditFlags": @(_state.auditFlags),
+        @"inputValid": @(_hasState && _state.input.valid), @"inputQuiet": @(_hasState && PHInputIsQuiet(&_state.input)),
+        @"rawInputCount": @(_state.input.rawCount), @"frameInputCount": @(_state.input.frameCount),
+        @"rawInputMask": @(_state.input.rawActiveMask), @"frameInputMask": @(_state.input.frameActiveMask),
+        @"rawInputFlags": @(_state.input.rawFlags), @"frameInputFlags": @(_state.input.frameFlags),
+        @"dragActive": @(_hasState && _state.dragActive),
         @"digestKnown": @(_hasState && _state.digestKnown), @"digestMatches": @(_hasState && _state.digestMatches),
         @"hpMatches": @(_hasState && _state.hpMatches), @"applyCount": @(_applyCount),
         @"restoreCount": @(_restoreCount), @"rollbackCount": @(_rollbackCount), @"deviceVerified": @NO};

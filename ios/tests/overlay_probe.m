@@ -199,6 +199,10 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UIButton *copy = (UIButton *)PHProbeFind(overlay, @"padcheaper.copy");
     [copy sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Loaded: YES"], @"Copy diagnostics must work");
+    PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Battle input:"] &&
+                 [UIPasteboard.generalPasteboard.string containsString:@"Timer input:"] &&
+                 [UIPasteboard.generalPasteboard.string containsString:@"Battle drag active:"],
+                 @"Copied diagnostics must include native input and drag state");
     UIScrollView *scroll = (UIScrollView *)PHProbeFind(overlay, @"padcheaper.scroll");
     UIView *badgeRow = PHProbeFind(overlay, @"padcheaper.badge").superview;
     UIView *timerStatus = PHProbeFind(overlay, @"padcheaper.timerStatus");

@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "PHInputModel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +27,8 @@ typedef struct {
 
 typedef struct {
     PHBattleIdentity identity;
-    bool present, protectedValuesValid, inputQuiet, digestKnown, digestMatches, hpMatches;
+    bool present, protectedValuesValid, dragActive, digestKnown, digestMatches, hpMatches;
+    PHInputState input;
     int16_t mode;
     uint16_t sourceMode;
     uint32_t multiplayer, phase, auditFlags, catalogCount, hp;
@@ -43,7 +45,8 @@ typedef struct {
 
 typedef enum {
     PHBattleGateReady, PHBattleGateAbsent, PHBattleGateProtected,
-    PHBattleGateMode, PHBattleGateBusy, PHBattleGateAudit,
+    PHBattleGateMode, PHBattleGatePhase, PHBattleGateInputUnavailable, PHBattleGateInput,
+    PHBattleGateDrag, PHBattleGateAudit,
     PHBattleGateHP, PHBattleGateDigest
 } PHBattleGate;
 

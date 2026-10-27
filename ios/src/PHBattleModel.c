@@ -47,7 +47,10 @@ PHBattleGate PHBattleStateGate(const PHBattleState *state) {
     if (!state->protectedValuesValid) return PHBattleGateProtected;
     if (!PHBattleSupportedEntryCategory(state->mode) || state->sourceMode != 0 || state->multiplayer != 0)
         return PHBattleGateMode;
-    if (state->phase != 2 || !state->inputQuiet) return PHBattleGateBusy;
+    if (state->phase != 2) return PHBattleGatePhase;
+    if (!state->input.valid) return PHBattleGateInputUnavailable;
+    if (!PHInputIsQuiet(&state->input)) return PHBattleGateInput;
+    if (state->dragActive) return PHBattleGateDrag;
     if (state->auditFlags & 0x1e000u) return PHBattleGateAudit;
     if (!state->hpMatches) return PHBattleGateHP;
     if (!state->digestKnown || !state->digestMatches) return PHBattleGateDigest;

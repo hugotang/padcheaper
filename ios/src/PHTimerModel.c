@@ -16,6 +16,6 @@ uint8_t PHTimerAutomaticFlags(const PHTimerState *state) {
 }
 
 bool PHTimerCanDismiss(const PHTimerState *state) {
-    return PHTimerEligible(state) && state->inputQuiet && state->phase == 58 &&
+    return PHTimerEligible(state) && PHInputIsQuiet(&state->input) && state->phase == 58 &&
         state->pending == 32 && state->dialog;
 }

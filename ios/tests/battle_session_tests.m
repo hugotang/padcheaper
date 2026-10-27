@@ -20,7 +20,7 @@ static void Check(BOOL condition, const char *message) {
     if ((self = [super init])) {
         live = (PHBattleState){.identity = {.header = 0x100000000, .game = 1, .impl = 2, .player = 42,
             .epoch = 1, .dungeon = 3, .floor = 4, .entryHash = {1}}, .present = true, .protectedValuesValid = true,
-            .inputQuiet = true, .digestKnown = true, .digestMatches = true, .hpMatches = true,
+            .input = {.valid = true}, .digestKnown = true, .digestMatches = true, .hpMatches = true,
             .phase = 2, .catalogCount = 1000, .catalog = 3};
         for (NSUInteger i = 0; i < 6; ++i) live.members[i] = (PHBattleMember){.active = true, .readable = true,
             .sourceSlot = (int8_t)i, .baseID = (uint16_t)(100 + i), .catalogID = (uint32_t)(100 + i), .charge = 4, .radius = 20};
@@ -119,23 +119,60 @@ int main(void) {
             Check(engine->changes == 0 && ![session.snapshot[@"phase"] isEqual:@"apply_pending"],
                   "disabled or stale account/battle/member request is cancelled before writes");
         }
-        for (NSUInteger scenario = 0; scenario < 7; ++scenario) {
+        for (NSUInteger scenario = 0; scenario < 9; ++scenario) {
             engine = [FakeBattleEngine new]; session = Session(engine);
             [session queueApplySlot:0 targetText:@"200"];
             switch (scenario) {
                 case 0: engine->live.phase = 43; break;
                 case 1: engine->live.multiplayer = 1; break;
                 case 2: engine->live.mode = 7; break;
-                case 3: engine->live.inputQuiet = false; break;
+                case 3: engine->live.input.rawActiveMask = 1; break;
                 case 4: engine->live.hpMatches = false; break;
                 case 5: engine->live.digestMatches = false; break;
                 case 6: engine->live.auditFlags = 0x10000; break;
+                case 7: engine->live.input.valid = false; break;
+                case 8: engine->live.dragActive = true; break;
             }
             [session onFrame:Frame() atTime:100.1];
             [session onFrame:Frame() atTime:104];
             Check(engine->changes == 0 && ![session.snapshot[@"phase"] isEqual:@"apply_pending"],
                   "busy/multiplayer/corrupt states cannot execute and expire after three seconds");
         }
+        engine = [FakeBattleEngine new]; engine->live.mode = 1; session = Session(engine);
+        [session queueApplySlot:0 targetText:@"200"];
+        uint8_t inputBytes[PHInputDataSize] = {0};
+        inputBytes[215] = 1; inputBytes[1320 + 215] = 1;
+        Check(PHInputDecode(inputBytes, sizeof(inputBytes), &engine->live.input), "native release fixture decodes");
+        [session onFrame:Frame() atTime:100.1];
+        NSDictionary *waiting = session.snapshot;
+        Check(engine->changes == 0 && [waiting[@"phase"] isEqual:@"apply_pending"] &&
+              [waiting[@"gate"] containsString:@"等待放開觸控或輸入處理完成"] &&
+              ![waiting[@"gate"] containsString:@"等待玩家操作階段"] && [waiting[@"battlePhase"] isEqual:@2],
+              "phase 2 release waits for input with the correct explanation and no native write");
+        Check([waiting[@"inputValid"] boolValue] && ![waiting[@"inputQuiet"] boolValue] &&
+              [waiting[@"rawInputFlags"] unsignedIntValue] == 0x10000u &&
+              [waiting[@"frameInputFlags"] unsignedIntValue] == 0x10000u && [waiting[@"frameInputMask"] isEqual:@1],
+              "diagnostics expose the actual native event bytes and active slots");
+        inputBytes[1320 + 215] = 0;
+        PHInputDecode(inputBytes, sizeof(inputBytes), &engine->live.input);
+        [session onFrame:Frame() atTime:100.2];
+        Check(engine->changes == 1 && [session.snapshot[@"applied"] boolValue],
+              "queued apply runs after release consumption without needing raw ended to reset");
+        engine->live.input.frameActiveMask = 1;
+        [session queueRestore]; [session onFrame:Frame() atTime:100.3];
+        Check(engine->changes == 1 && [session.snapshot[@"restorePending"] boolValue], "restoration also waits for native input");
+        engine->live.input.frameActiveMask = 0;
+        [session onFrame:Frame() atTime:100.4];
+        Check(engine->changes == 2 && ![session.snapshot[@"applied"] boolValue], "restoration resumes once input is quiet");
+
+        engine = [FakeBattleEngine new]; engine->live.phase = 43; session = Session(engine);
+        Check([session.snapshot[@"gate"] containsString:@"等待玩家操作階段（phase 43）"], "non-player phase keeps a phase-specific explanation");
+        engine = [FakeBattleEngine new]; engine->live.dragActive = true; session = Session(engine);
+        Check(![session.snapshot[@"canApply"] boolValue] && [session.snapshot[@"gate"] containsString:@"等待本次拖珠結束"],
+              "drag waiting differs from phase and touch waiting");
+        engine = [FakeBattleEngine new]; engine->live.input.valid = false; session = Session(engine);
+        Check(![session.snapshot[@"canApply"] boolValue] && [session.snapshot[@"gate"] containsString:@"觸控狀態未通過檢查"],
+              "failed input read has a separate explanation");
         engine = [FakeBattleEngine new]; session = Session(engine);
         [session queueApplySlot:0 targetText:@"200"];
         PHBattleFrame frame = Frame(); frame.ready = false;

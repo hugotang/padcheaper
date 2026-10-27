@@ -784,6 +784,16 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBadge: %@\nTimer: %@", badge[@"message"], timerSummary];
+    for (NSString *inputName in @[@"Battle", @"Timer"]) {
+        NSDictionary *inputState = [inputName isEqualToString:@"Battle"] ? battle : timer;
+        diagnostics = [diagnostics stringByAppendingFormat:
+            @"\n%@ input: valid %@ / quiet %@\nRaw input: count %@ / mask 0x%02x / events 0x%08x\nFrame input: count %@ / mask 0x%02x / events 0x%08x",
+            inputName, inputState[@"inputValid"], inputState[@"inputQuiet"], inputState[@"rawInputCount"],
+            [inputState[@"rawInputMask"] unsignedIntValue], [inputState[@"rawInputFlags"] unsignedIntValue],
+            inputState[@"frameInputCount"], [inputState[@"frameInputMask"] unsignedIntValue],
+            [inputState[@"frameInputFlags"] unsignedIntValue]];
+    }
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle drag active: %@", battle[@"dragActive"]];
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",

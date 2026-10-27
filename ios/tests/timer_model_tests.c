@@ -7,7 +7,7 @@ static void Check(bool condition, const char *message) {
 }
 
 int main(void) {
-    PHTimerState state = {.present = true, .valuesValid = true, .inputQuiet = true,
+    PHTimerState state = {.present = true, .valuesValid = true, .input = {.valid = true},
         .countdown = 1, .dialog = 2, .limitSeconds = 3600, .phase = 2, .pending = 32};
     state.flags = 0x22;
     Check(PHTimerAutomaticFlags(&state) == 0x40, "paused restore signature clears pause/abandon and keeps alert latch");
@@ -27,9 +27,20 @@ int main(void) {
     Check(!PHTimerCanDismiss(&state), "time tutorial/notice popup is not an exit popup");
     state.pending = 32; state.dialog = 0;
     Check(!PHTimerCanDismiss(&state), "a popup object must exist");
-    state.dialog = 2; state.inputQuiet = false;
+    state.dialog = 2; state.input.rawActiveMask = 1;
     Check(!PHTimerCanDismiss(&state), "active native input prevents manual continuation");
-    state.inputQuiet = true;
+    uint8_t inputBytes[PHInputDataSize] = {0};
+    inputBytes[215] = 1; inputBytes[1320 + 215] = 1;
+    Check(PHInputDecode(inputBytes, sizeof(inputBytes), &state.input) && !PHTimerCanDismiss(&state),
+          "manual continuation waits for the native release frame");
+    inputBytes[1320 + 215] = 0;
+    Check(PHInputDecode(inputBytes, sizeof(inputBytes), &state.input) && PHTimerCanDismiss(&state),
+          "persistent raw ended flag does not permanently block manual continuation");
+    state.input.valid = false;
+    Check(!PHTimerCanDismiss(&state), "missing input prevents manual continuation");
+    state.phase = 2; state.flags = 0x22;
+    Check(PHTimerAutomaticFlags(&state) == 0x40, "input guard does not change automatic flag-only policy");
+    state.phase = 58; state.input.valid = true;
     for (unsigned scenario = 0; scenario < 5; ++scenario) {
         PHTimerState invalid = state;
         if (scenario == 0) invalid.limitSeconds = 0;

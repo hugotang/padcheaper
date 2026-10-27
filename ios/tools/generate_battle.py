@@ -11,6 +11,14 @@ def generate(manifest):
         raise ValueError("Unsupported battle target")
     if manifest["gate"] != {"entry_categories": [0, 1], "source_mode": 0, "multiplayer": 0, "player_input_phase": 2}:
         raise ValueError("Battle gate differs from the reviewed prototype")
+    if manifest["input"] != {
+        "manager_pointer_rva": "0x2ac6fd8", "slots_per_bank": 5, "record_bytes": 264,
+        "frame_bank_offset": 1320, "snapshot_bytes": 2642, "event_bytes_offset": 213,
+        "frame_tracking_offset": 219, "raw_deferred_tap_offset": 220, "raw_touch_pointer_offset": 248,
+        "raw_count_offset": 2640, "frame_count_offset": 2641, "drag_pointer_impl_offset": "0x988b8"
+    } or manifest["fields"]["PHBattleInputRVA"] != manifest["input"]["manager_pointer_rva"] or \
+            manifest["fields"]["PHBattleDragPointerOffset"] != manifest["input"]["drag_pointer_impl_offset"]:
+        raise ValueError("Input layout differs from the reviewed native handlers")
     lines = ["// Generated from ios/targets/battle-23.6.0.json. Do not edit.", "#pragma once",
              "#include <stdint.h>", "#include <stddef.h>"]
     for name, value in manifest["fields"].items():

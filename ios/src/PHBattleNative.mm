@@ -1,5 +1,6 @@
 #import "PHBattleSession.h"
 #import "PHMemory.h"
+#import "PHInput.h"
 #import "PHTarget.h"
 #include "PHTargetGenerated.h"
 #include "PHBattleGenerated.h"
@@ -76,7 +77,8 @@ static BOOL CatalogValid(uint32_t target, const PHBattleState *state) {
 
 static BOOL CanReadNative(const PHBattleState *state) {
     return state->present && state->protectedValuesValid && PHBattleSupportedEntryCategory(state->mode) &&
-           state->sourceMode == 0 && state->multiplayer == 0 && state->phase == 2 && state->inputQuiet;
+           state->sourceMode == 0 && state->multiplayer == 0 && state->phase == 2 &&
+           PHInputIsQuiet(&state->input) && !state->dragActive;
 }
 
 static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reason) {
@@ -110,7 +112,8 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->present = true;
     state->identity.game = game;
     state->identity.impl = impl;
-    uint32_t key1 = 0, key2 = 0, phase = 0, hp = 0, shadow = 0, touch = 0;
+    uint32_t key1 = 0, key2 = 0, phase = 0, hp = 0, shadow = 0;
+    uintptr_t draggedOrb = 0;
     uint16_t mode = 0, ids[2] = {};
     if (!PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) || !ids[0] || !ids[1] ||
         !PHReadMemory(frame.header + PHBattleEntryHashRVA, state->identity.entryHash, sizeof(state->identity.entryHash)) ||
@@ -123,9 +126,12 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
         !PHReadPointer(save + PHBattleCatalogPointerOffset, &state->catalog) || !state->catalog ||
         state->catalog > UINTPTR_MAX - state->catalogCount * PHBattleCatalogStride ||
         !PHMemoryHasProtection(state->catalog, state->catalogCount * PHBattleCatalogStride, VM_PROT_READ, 0) ||
-        !PHReadU32(frame.header + PHBattleKey1RVA, &key1) || !PHReadU32(frame.header + PHBattleKey2RVA, &key2) ||
-        !PHReadU32(game + 92, &touch)) {
+        !PHReadU32(frame.header + PHBattleKey1RVA, &key1) || !PHReadU32(frame.header + PHBattleKey2RVA, &key2)) {
         if (reason) *reason = @"戰鬥身分、圖鑑或保護值金鑰無法讀取";
+        return NO;
+    }
+    if (!PHReadPointer(impl + PHBattleDragPointerOffset, &draggedOrb)) {
+        if (reason) *reason = @"拖珠狀態無法讀取，暫停替換";
         return NO;
     }
     bool hasHash = false;
@@ -134,9 +140,8 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->identity.dungeon = ids[0];
     state->identity.floor = ids[1];
     state->mode = static_cast<int16_t>(mode);
-    // GameMain +93 is the input trigger used by the player-input handler.
-    // Refuse either input byte while an operation is about to be processed.
-    state->inputQuiet = (touch & 0xffffu) == 0;
+    PHReadGameInput(frame.header, &state->input);
+    state->dragActive = draggedOrb != 0;
     state->protectedValuesValid = DecodeAt(impl + PHBattlePhaseOffset, key1, key2, 0x766cfc6du, &phase) &&
         DecodeAt(impl + PHBattleHPOffset, key1, key2, 0x766cfc6du, &hp);
     state->phase = phase;
