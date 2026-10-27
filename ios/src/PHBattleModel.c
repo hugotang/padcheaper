@@ -1,6 +1,20 @@
 #include "PHBattleModel.h"
 #include <string.h>
 
+bool PHBattleCatalogIDForNumber(uint32_t number, uint16_t *catalogID) {
+    // PAD 23.6.0 numeric search: 0x1004CADFC adds 100 above No.9899.
+    if (!catalogID || !number || number > UINT16_MAX - 100u) return false;
+    *catalogID = (uint16_t)(number >= 9900u ? number + 100u : number);
+    return true;
+}
+
+bool PHBattleNumberForCatalogID(uint32_t catalogID, uint16_t *number) {
+    if (!number || !catalogID || catalogID > UINT16_MAX ||
+        (catalogID >= 9900u && catalogID <= 9999u)) return false;
+    *number = (uint16_t)(catalogID >= 10000u ? catalogID - 100u : catalogID);
+    return true;
+}
+
 bool PHBattleParseTarget(const char *text, uint16_t *value) {
     if (!text || !value || !*text) return false;
     uint32_t result = 0;
@@ -9,7 +23,8 @@ bool PHBattleParseTarget(const char *text, uint16_t *value) {
         if (++length > 5 || *p < '0' || *p > '9') return false;
         result = result * 10 + *p - '0';
     }
-    if (!result || result > UINT16_MAX || (result >= 9900 && result <= 9999)) return false;
+    uint16_t catalogID;
+    if (!PHBattleCatalogIDForNumber(result, &catalogID)) return false;
     *value = (uint16_t)result;
     return true;
 }
@@ -33,7 +48,8 @@ bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2
 bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b) {
     return a && b && a->header == b->header && a->game == b->game && a->impl == b->impl &&
            a->player == b->player && a->epoch == b->epoch && a->dungeon == b->dungeon &&
-           a->floor == b->floor && memcmp(a->entryHash, b->entryHash, sizeof(a->entryHash)) == 0;
+           a->floor == b->floor && a->sourceMode == b->sourceMode &&
+           a->multiplayer == b->multiplayer && memcmp(a->entryHash, b->entryHash, sizeof(a->entryHash)) == 0;
 }
 
 bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
@@ -45,8 +61,9 @@ bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
 PHBattleGate PHBattleStateGate(const PHBattleState *state) {
     if (!state || !state->present) return PHBattleGateAbsent;
     if (!state->protectedValuesValid) return PHBattleGateProtected;
-    if (!PHBattleSupportedEntryCategory(state->mode) || state->sourceMode != 0 || state->multiplayer != 0)
+    if (!PHBattlePolicyAllows(&state->policy, state->mode, state->sourceMode, state->multiplayer))
         return PHBattleGateMode;
+    if (!PHBattleUsesPrimaryTeam(state->multiplayer)) return PHBattleGateLayout;
     if (state->phase != 2) return PHBattleGatePhase;
     if (!state->input.valid) return PHBattleGateInputUnavailable;
     if (!PHInputIsQuiet(&state->input)) return PHBattleGateInput;

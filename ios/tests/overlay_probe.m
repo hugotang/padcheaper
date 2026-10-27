@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <WebKit/WebKit.h>
 #import "PHOverlay.h"
 #include <dlfcn.h>
 
@@ -81,11 +82,16 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 @property(nonatomic) NSUInteger landscapeAttempts;
 @property(nonatomic, copy) NSString *landscapeError;
 @property(nonatomic) NSTimeInterval targetDeadline;
+@property(nonatomic) NSUInteger formationAttempts;
+@property(nonatomic, strong) WKWebView *formationWeb;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
 - (void)finishTargetEntry;
 - (void)verifyRejectedTarget;
 - (void)verifyLandscape;
+- (void)checkFormation;
+- (void)verifyFormation;
+- (void)finishPortrait;
 @end
 
 @implementation PHProbeSceneDelegate
@@ -212,6 +218,25 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
                                   [timerStatus convertRect:timerStatus.bounds toView:scroll]);
     [scroll scrollRectToVisible:features animated:NO];
     PHProbeRender(self.window, overlay, @"features");
+    UIButton *filters = (UIButton *)PHProbeFind(overlay, @"padcheaper.filtersOpen");
+    [filters sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(!PHProbeFind(overlay, @"padcheaper.filters").hidden, @"mode/source/multi settings must open from the GUI");
+    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti"]) {
+        UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
+        PHProbeCheck(toggle != nil && toggle.enabled, @"eligibility filters must have editable GUI switches");
+        for (NSNumber *value in @[@NO,@YES]) {
+            toggle.on = value.boolValue; [toggle sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck([PHProbeJSON(@"config.json")[@"battle"][key] isEqual:value], @"filter toggles must save to the same config immediately");
+        }
+    }
+    config = PHProbeJSON(@"config.json");
+    PHProbeCheck([config[@"battle"][@"entryModes"] isEqual:@[@0,@1,@12]] &&
+                 [config[@"battle"][@"sourceModes"] isEqual:@[@0]] && [config[@"battle"][@"multiModes"] isEqual:@[@0]],
+                 @"allow-all switches preserve each user's optional list");
+    UIView *filterView = PHProbeFind(overlay, @"padcheaper.filters");
+    [overlay layoutIfNeeded]; [scroll scrollRectToVisible:[filterView convertRect:filterView.bounds toView:scroll] animated:NO];
+    PHProbeRender(self.window, overlay, @"filters");
+    [filters sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIButton *close = (UIButton *)PHProbeFind(overlay, @"padcheaper.close");
     [close sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
@@ -253,6 +278,57 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");
     PHProbeRender(self.window, overlay, @"portrait");
     PHProbeReport(@"portrait");
+    UIButton *formation = (UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen");
+    [formation sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UIWindow *formationWindow = [overlay.rootViewController valueForKey:@"formationWindow"];
+    self.formationWeb = (WKWebView *)PHProbeFind(formationWindow, @"padcheaper.formationWeb");
+    PHProbeCheck(formationWindow.isKeyWindow && self.formationWeb != nil, @"formation editor has an editable web view and keyboard-capable window");
+    [self checkFormation];
+}
+
+- (void)checkFormation {
+    self.formationAttempts++;
+    if (!self.formationWeb) { [self finishPortrait]; return; }
+    [self.formationWeb evaluateJavaScript:@"Boolean(window.PHFormationUI && window.PHFormationUI.initialized)" completionHandler:^(id result, NSError *error) {
+        if (error || ![result boolValue]) {
+            if (self.formationAttempts < 60) [self performSelector:@selector(checkFormation) withObject:nil afterDelay:0.5];
+            else { PHProbeCheck(NO, @"Offline formation editor did not finish its native bridge handshake"); [self finishPortrait]; }
+            return;
+        }
+        NSString *script = @"(()=>{const m=PHFormation.createModel(PH_CATALOG);let t=m.empty();"
+            "const ids=[[14238,14132,153],[14246,13334,142],[14240,8484,111],[14244,13711,142],[14234,13535,142],[14234,12460,142]];"
+            "ids.forEach(([b,a,s],i)=>{t=m.selectCard(t,i,'body',b);t=m.selectCard(t,i,'assist',a);t.slots[i].body.superAwakening=s;});"
+            "PHFormationUI.receive({team:t});document.getElementById('save').click();"
+            "return {bodies:document.querySelectorAll('#body-grid .card').length,assists:document.querySelectorAll('#assist-grid .card').length,"
+            "name:document.getElementById('selected-name').textContent,applyDisabled:document.getElementById('apply-all').disabled,"
+            "fits:document.documentElement.scrollWidth<=innerWidth};})()";
+        [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *failure) {
+            PHProbeCheck(!failure && [value[@"bodies"] isEqual:@6] && [value[@"assists"] isEqual:@6], @"editor renders all six bodies and all six weapons");
+            PHProbeCheck([value[@"name"] containsString:@"14238 猫猫"] && [value[@"fits"] boolValue], @"portrait editor uses the correct encyclopedia identity and fits the viewport");
+            PHProbeCheck([value[@"applyDisabled"] boolValue], @"formation apply remains disabled for an unmatched target");
+            [self performSelector:@selector(verifyFormation) withObject:nil afterDelay:0.5];
+        }];
+    }];
+}
+
+- (void)verifyFormation {
+    NSDictionary *team = PHProbeJSON(@"formation.json");
+    PHProbeCheck([team[@"slots"] count] == 6 && [team[@"slots"][0][@"body"][@"id"] isEqual:@14238] &&
+        [team[@"slots"][5][@"assist"][@"skill"] isEqual:@1], @"formation save reaches the native validator and persists all six drafts");
+    [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *error) {
+        PHProbeCheck(snapshot != nil && !error, @"formation portrait snapshot must render");
+        NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+        NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
+        [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
+        [self.formationWeb evaluateJavaScript:@"document.getElementById('close').click()" completionHandler:^(id value, NSError *failure) {
+            self.formationWeb = nil;
+            PHProbeCheck(self.window.isKeyWindow, @"closing formation restores the original scene or legacy guest key window");
+            [self finishPortrait];
+        }];
+    }];
+}
+
+- (void)finishPortrait {
     if (PHProbeLegacy()) {
         UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.retry");
         [retry sendActionsForControlEvents:UIControlEventTouchUpInside];

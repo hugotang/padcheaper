@@ -9,8 +9,10 @@ typedef struct {
     PHBattleIdentity identity;
     uintptr_t countdown, dialog;
     bool present, valuesValid;
+    PHBattlePolicy policy;
     PHInputState input;
     int16_t mode, limitSeconds;
+    uint16_t sourceMode;
     uint32_t multiplayer, sceneID, phase, pending;
     uint8_t flags;
 } PHTimerState;

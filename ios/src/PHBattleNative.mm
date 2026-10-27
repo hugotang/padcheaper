@@ -17,17 +17,34 @@ struct NativeCalls {
     uint64_t (*digest)(uintptr_t);
     uint64_t (*maxCharge)(uintptr_t, uint64_t);
     float (*radius)(void);
+    uint64_t (*setByte)(uintptr_t, uint64_t);
+    uintptr_t (*allocate)(uint64_t, uint64_t, uint64_t);
+    void (*release)(uintptr_t, int, int);
 };
 
+#ifdef PH_BATTLE_NATIVE_TESTS
+// Only the standalone test translation unit supplies native call doubles.
+// Memory decoding, target fingerprints and transaction checks remain real.
+static NativeCalls PHTestNativeCalls;
+#endif
+
 static NativeCalls Calls(uintptr_t header) {
+#ifdef PH_BATTLE_NATIVE_TESTS
+    (void)header;
+    return PHTestNativeCalls;
+#else
     return {
         reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleSet16RVA),
         reinterpret_cast<uintptr_t (*)(uintptr_t, uintptr_t, uint64_t)>(header + PHBattleRebuildMemberRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleRefreshTeamRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleDigestRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleMaxChargeRVA),
-        reinterpret_cast<float (*)(void)>(header + PHBattleRadiusRVA)
+        reinterpret_cast<float (*)(void)>(header + PHBattleRadiusRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleSetByteRVA),
+        reinterpret_cast<uintptr_t (*)(uint64_t, uint64_t, uint64_t)>(header + PHBattleAllocateRVA),
+        reinterpret_cast<void (*)(uintptr_t, int, int)>(header + PHBattleReleaseRVA)
     };
+#endif
 }
 
 static BOOL CheckCode(uintptr_t header, NSString **reason) {
@@ -76,8 +93,9 @@ static BOOL CatalogValid(uint32_t target, const PHBattleState *state) {
 }
 
 static BOOL CanReadNative(const PHBattleState *state) {
-    return state->present && state->protectedValuesValid && PHBattleSupportedEntryCategory(state->mode) &&
-           state->sourceMode == 0 && state->multiplayer == 0 && state->phase == 2 &&
+    // Read-only diagnostics and immediate rollback remain available when a
+    // GUI filter is disabled. The mutation entry points enforce StateGate.
+    return state->present && state->protectedValuesValid && PHBattleUsesPrimaryTeam(state->multiplayer) && state->phase == 2 &&
            PHInputIsQuiet(&state->input) && !state->dragActive;
 }
 
@@ -86,6 +104,7 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->identity.header = frame.header;
     state->identity.player = frame.player;
     state->identity.epoch = frame.epoch;
+    state->policy = frame.policy;
     if (!frame.ready || !frame.header || frame.header > UINTPTR_MAX - 0x3000000u || !NSThread.isMainThread) {
         if (reason) *reason = @"戰鬥檢查需要已校驗的遊戲主執行緒";
         return NO;
@@ -140,6 +159,9 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->identity.dungeon = ids[0];
     state->identity.floor = ids[1];
     state->mode = static_cast<int16_t>(mode);
+    state->identity.entryMode = state->mode;
+    state->identity.sourceMode = state->sourceMode;
+    state->identity.multiplayer = state->multiplayer;
     PHReadGameInput(frame.header, &state->input);
     state->dragActive = draggedOrb != 0;
     state->protectedValuesValid = DecodeAt(impl + PHBattlePhaseOffset, key1, key2, 0x766cfc6du, &phase) &&
@@ -160,6 +182,10 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
         std::memcpy(&member.previousID, bytes + 64, sizeof(member.previousID));
         member.flags = bytes[56];
         member.radius = bytes[63];
+        std::memcpy(&member.level, bytes + 0x510, sizeof(member.level));
+        std::memcpy(&member.skillLevel, bytes + 0x512, sizeof(member.skillLevel));
+        std::memcpy(member.extra, bytes + 0x4f0, sizeof(member.extra));
+        std::memcpy(member.assist, bytes + 0x59e, sizeof(member.assist));
         uintptr_t parameter = 0;
         std::memcpy(&parameter, bytes + PHBattleCardParamOffset, sizeof(parameter));
         member.readable = DecodeByte(bytes, PHBattleSourceSlotOffset, key1, key2, &member.sourceSlot) &&
@@ -168,6 +194,7 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
             Decode16(bytes, PHBattleTempIDOffset, key1, key2, &member.temporaryID) &&
             Decode16(bytes, PHBattleTempTurnsOffset, key1, key2, &member.temporaryTurns) &&
             Decode16(bytes, PHBattleChargeOffset, key1, key2, &member.charge) &&
+            member.scriptSlot <= PHBattleParameterSlots &&
             CatalogValid(member.baseID, state) && CatalogValid(member.catalogID, state) &&
             (!member.assistID || CatalogValid(member.assistID, state)) &&
             (!member.formID || CatalogValid(member.formID, state)) &&
@@ -198,7 +225,8 @@ static void RequireWrite(uintptr_t address, const void *data, size_t length) {
 // It never restores resource pointers or clears the game's audit flags.
 static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, uint32_t catalog,
                     const PHBattleMember *presentation, uint16_t charge, BOOL capCharge,
-                    BOOL *didMutate, uint16_t *finalCharge, NSString **reason) {
+                    BOOL *didMutate, uint16_t *finalCharge, NSString **reason,
+                    const PHBattleMember *sourceExpected = nullptr) {
     uintptr_t header = state->identity.header, game = state->identity.game, impl = state->identity.impl;
     uintptr_t member = impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
     NativeCalls native = Calls(header);
@@ -240,19 +268,23 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
                 !DecodeAt(impl + PHBattleHPOffset, key1, key2, 0x766cfc6du, &hp)) throw std::runtime_error("HP decode failed");
             uint32_t hpShadow = hp ^ 0x8085a6beu;
             RequireWrite(impl + PHBattleHPShadowOffset, &hpShadow, sizeof(hpShadow));
-            PHBattleFrame frame = {header, state->identity.player, state->identity.epoch, true, true};
+            PHBattleFrame frame = {header, state->identity.player, state->identity.epoch, true, true, state->policy};
             PHBattleState after = {};
             if (!ReadLive(&after, frame, reason) || !CanReadNative(&after) || !after.hpMatches || !after.digestMatches ||
                 !PHBattleSameIdentity(&state->identity, &after.identity)) throw std::runtime_error("Post-mutation battle check failed");
             const PHBattleMember &changed = after.members[slot];
-            if (!PHBattleSameSource(&state->members[slot], &changed) || changed.formID != form || changed.catalogID != catalog ||
+            const PHBattleMember *source = sourceExpected ? sourceExpected : &state->members[slot];
+            if (!PHBattleSameSource(source, &changed) || changed.formID != form || changed.catalogID != catalog ||
                 changed.charge != nextCharge || changed.previousID != previous || changed.radius != radius ||
                 (changed.flags & 2u) != (flags & 2u)) throw std::runtime_error("Post-mutation member check failed");
             for (NSUInteger i = 0; i < 6; ++i) {
                 if (i == slot) continue;
                 const PHBattleMember &old = state->members[i], &current = after.members[i];
                 if (old.active != current.active || (old.active && (!PHBattleSameSource(&old, &current) ||
-                    old.formID != current.formID || old.catalogID != current.catalogID))) throw std::runtime_error("Other member changed");
+                    old.formID != current.formID || old.catalogID != current.catalogID || old.charge != current.charge ||
+                    old.level != current.level || old.skillLevel != current.skillLevel ||
+                    std::memcmp(old.extra, current.extra, sizeof(old.extra)) ||
+                    std::memcmp(old.assist, current.assist, sizeof(old.assist))))) throw std::runtime_error("Other member changed");
             }
             *finalCharge = nextCharge;
             return YES;
@@ -265,6 +297,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     }
     return NO;
 }
+#include "PHBattleProvider.inc"
 }
 
 @interface PHBattleNative : NSObject <PHBattleEngine>
@@ -273,6 +306,8 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 @implementation PHBattleNative {
     uintptr_t _verifiedHeader;
     BOOL _busy, _faulted;
+    BattleProvider _provider;
+    uint64_t _nextToken;
 }
 
 - (BOOL)readState:(PHBattleState *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -281,7 +316,34 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (!CheckCode(frame.header, reason)) return NO;
         _verifiedHeader = frame.header;
     }
-    return ReadLive(state, frame, reason);
+    if (!ReadLive(state, frame, reason)) return NO;
+    TagProviderMembers(&_provider, state);
+    return YES;
+}
+
+- (BOOL)validateLoadout:(const PHBattleLoadout *)loadout state:(const PHBattleState *)state reason:(NSString **)reason {
+    PHBattleProfile profile = {};
+    return PrepareProfile(loadout, state, &profile, reason) && ProviderAvailable(&_provider, state, reason);
+}
+
+- (PHBattleMutationResult)applyLoadout:(const PHBattleLoadout *)loadout state:(const PHBattleState *)expected
+    slot:(NSUInteger)slot member:(PHBattleMember *)member reason:(NSString **)reason {
+    if (_busy || _faulted || !expected || !member || slot >= 6 || !NSThread.isMainThread) return PHBattleMutationRejected;
+    _busy = YES;
+    PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, loadout, nullptr, member, reason);
+    _busy = NO;
+    _faulted |= result == PHBattleMutationUncertain;
+    return result;
+}
+
+- (PHBattleMutationResult)restoreLoadout:(const PHBattleMember *)original state:(const PHBattleState *)expected
+    slot:(NSUInteger)slot reason:(NSString **)reason {
+    if (_busy || _faulted || !expected || !original || slot >= 6 || !NSThread.isMainThread) return PHBattleMutationRejected;
+    _busy = YES;
+    PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, nullptr, original, nullptr, reason);
+    _busy = NO;
+    _faulted |= result == PHBattleMutationUncertain;
+    return result;
 }
 
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
@@ -297,7 +359,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (reason) *reason = @"原生戰鬥操作已停止或正在執行";
         return PHBattleMutationUncertain;
     }
-    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true};
+    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy};
     PHBattleState before = {};
     if (!CheckCode(frame.header, reason) || !ReadLive(&before, frame, reason) ||
         PHBattleStateGate(&before) != PHBattleGateReady || !PHBattleSameIdentity(&expected->identity, &before.identity) ||

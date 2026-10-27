@@ -7,6 +7,7 @@ build_dir="${BUILD_DIR:-$repo_dir/build/ios}"
 mkdir -p "$build_dir" ios/generated
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
+python3 ios/tools/generate_editor.py
 
 sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
@@ -25,10 +26,10 @@ done
     -dynamiclib -install_name @rpath/PADCheaper.dylib \
     -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
-    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
     ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
-    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
 # This ad-hoc signature is for artifact integrity, not an iPhone install identity.
@@ -46,6 +47,7 @@ cp ios/docs/monster-replacement.md "$build_dir/monster-replacement.md"
 cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
 cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
+cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -74,8 +76,9 @@ metadata = {
     "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "architecture": "arm64",
     "dylib_version": version,
-    "gui": "draggable floating button; switches, battle member selector and numeric keypad; apply/restore diagnostics",
-    "battle_replacement": "one member; solo entry categories 0/1 with source 0; native form rebuild and rollback; device verification pending",
+    "gui": "draggable floating button; six-slot body/weapon formation editor, search, PADDashFormation import/export; persisted mode/source/multi filters",
+    "battle_replacement": "six independent native parameter leases; body, weapon, training, super/latent awakening, capped charge and individual/all restore; device verification pending",
+    "battle_filters": "all entry modes by default; source/multi zero defaults; GUI/config allow-all switches and lists; banked multi 1/4 require a separate adapter",
     "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",
     "badge_unlock": "user-reported unlock working in 0.3.0-battle; save/restart and account boundary checks pending",
     "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",

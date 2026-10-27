@@ -13,6 +13,8 @@ int main(void) {
     Check(PHTimerAutomaticFlags(&state) == 0x40, "paused restore signature clears pause/abandon and keeps alert latch");
     state.mode = 1;
     Check(PHTimerAutomaticFlags(&state) == 0x40, "reported category 1 uses the same solo timer policy");
+    state.mode = 12;
+    Check(PHTimerAutomaticFlags(&state) == 0x40, "timer uses the same all-mode default as battle replacement");
     state.flags = 0x82;
     Check(PHTimerAutomaticFlags(&state) == 0xc2, "standalone abandonment and unrelated bits remain intact");
     for (unsigned phase = 0; phase <= 80; ++phase) {
@@ -45,13 +47,22 @@ int main(void) {
         PHTimerState invalid = state;
         if (scenario == 0) invalid.limitSeconds = 0;
         if (scenario == 1) invalid.multiplayer = 2;
-        if (scenario == 2) invalid.mode = 7;
+        if (scenario == 2) { invalid.mode = 7; invalid.policy.configured = true; }
         if (scenario == 3) invalid.valuesValid = false;
         if (scenario == 4) invalid.sceneID = 0x80386;
         Check(!PHTimerCanDismiss(&invalid), "unsupported countdown/mode/protected state prevents manual continuation");
         invalid.phase = 2;
         Check(PHTimerAutomaticFlags(&invalid) == invalid.flags, "unsupported state prevents automatic flag writes");
     }
+    state.mode = 7; state.phase = 58;
+    state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
+        .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
+    state.sourceMode = 3; state.multiplayer = 2;
+    Check(PHTimerCanDismiss(&state), "timer consumes the configured source/multi filters");
+    state.multiplayer = 1;
+    Check(!PHTimerCanDismiss(&state), "banked layout 1 is not enabled by an allow-all filter");
+    state.multiplayer = 4;
+    Check(!PHTimerCanDismiss(&state), "banked layout 4 is not enabled by an allow-all filter");
     printf("Timer policy tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

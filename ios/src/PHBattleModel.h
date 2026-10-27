@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "PHInputModel.h"
+#include "PHBattlePreset.h"
+#include "PHBattlePolicy.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +16,9 @@ typedef struct {
     uint64_t epoch;
     uint16_t dungeon, floor;
     uint8_t entryHash[32];
+    int16_t entryMode;
+    uint16_t sourceMode;
+    uint32_t multiplayer;
 } PHBattleIdentity;
 
 typedef struct {
@@ -23,6 +28,9 @@ typedef struct {
     uint32_t catalogID;
     uint8_t flags, radius;
     uint16_t previousID;
+    uint64_t providerToken;
+    uint16_t level, skillLevel;
+    uint8_t extra[20], assist[8];
 } PHBattleMember;
 
 typedef struct {
@@ -34,6 +42,7 @@ typedef struct {
     uint32_t multiplayer, phase, auditFlags, catalogCount, hp;
     uintptr_t catalog;
     PHBattleMember members[6];
+    PHBattlePolicy policy;
 } PHBattleState;
 
 typedef struct {
@@ -41,11 +50,12 @@ typedef struct {
     uint32_t player;
     uint64_t epoch;
     bool ready, enabled;
+    PHBattlePolicy policy;
 } PHBattleFrame;
 
 typedef enum {
     PHBattleGateReady, PHBattleGateAbsent, PHBattleGateProtected,
-    PHBattleGateMode, PHBattleGatePhase, PHBattleGateInputUnavailable, PHBattleGateInput,
+    PHBattleGateMode, PHBattleGateLayout, PHBattleGatePhase, PHBattleGateInputUnavailable, PHBattleGateInput,
     PHBattleGateDrag, PHBattleGateAudit,
     PHBattleGateHP, PHBattleGateDigest
 } PHBattleGate;
@@ -54,13 +64,11 @@ typedef enum {
     PHBattleMutationApplied, PHBattleMutationRolledBack, PHBattleMutationRejected, PHBattleMutationUncertain
 } PHBattleMutationResult;
 
-// Save +0x5c90c0 records the dungeon entry category. It is independent of
-// multiplayer and sourceMode; categories 0 and 1 share the reviewed solo path.
-static inline bool PHBattleSupportedEntryCategory(int16_t category) {
-    return category == 0 || category == 1;
-}
-
-bool PHBattleParseTarget(const char *text, uint16_t *value);
+// UI numbers follow the in-game encyclopedia. Member fields and engine calls
+// use native catalog IDs; native 9900..9999 are reserved and have no UI number.
+bool PHBattleParseTarget(const char *text, uint16_t *number);
+bool PHBattleCatalogIDForNumber(uint32_t number, uint16_t *catalogID);
+bool PHBattleNumberForCatalogID(uint32_t catalogID, uint16_t *number);
 bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2,
                             uint32_t salt, uint32_t *value);
 bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b);

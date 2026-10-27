@@ -72,6 +72,40 @@ int main(void) {
         Check(!PHConfigurationIsValid(config), "endpoint configuration cannot include a query");
         config[@"apiPaths"] = @[@"api.php"];
         Check(!PHConfigurationIsValid(config), "endpoint path must be absolute");
+        config = [defaults mutableCopy];
+        [config removeObjectForKey:@"battle"];
+        PHBattlePolicy policy = PHConfigurationBattlePolicy(config);
+        Check(PHConfigurationIsValid(config) && PHBattlePolicyAllows(&policy, 7, 0, 0) &&
+              !PHBattlePolicyAllows(&policy, 7, 1, 0), "old configs gain all-mode support while keeping source/multi zero defaults");
+        config[@"battle"] = @{@"allowAllModes": @NO, @"entryModes": @[@0, @12, @7],
+            @"sourceModes": @[@0, @3], @"multiModes": @[@0, @2]};
+        policy = PHConfigurationBattlePolicy(config);
+        Check(PHConfigurationIsValid(config) && PHBattlePolicyAllows(&policy, 7, 3, 2) &&
+              !PHBattlePolicyAllows(&policy, 1, 3, 2), "mode/source/multi filters have independent bounds and consume GUI-persisted values");
+        config[@"battle"] = @{@"entryModes": @[]};
+        Check(PHConfigurationIsValid(config), "empty lists are valid even when the all-mode switch is on");
+        for (id invalid in @[@[@YES], @[@1.5], @[@-1], @[@65536], @[@0,@0], @"0,1"]) {
+            config[@"battle"] = @{@"entryModes": invalid};
+            Check(!PHConfigurationIsValid(config), "malformed mode filters are rejected even while allow-all is on");
+        }
+        config[@"battle"] = @{@"allowAllSources": @1};
+        Check(!PHConfigurationIsValid(config), "filter switches must be JSON booleans");
+        config[@"battle"] = @{@"sourceModes": @[@65536]};
+        Check(!PHConfigurationIsValid(config), "source selector is bounded by its native u16 field");
+        config[@"battle"] = @{@"multiModes": @[@4294967295ULL]};
+        Check(PHConfigurationIsValid(config), "multi selector accepts its full u32 range");
+        config[@"battle"] = @{@"multiModes": @[@4294967296ULL]};
+        Check(!PHConfigurationIsValid(config), "overflowing multiplayer selectors are rejected");
+        NSMutableArray *tooMany = [NSMutableArray array];
+        for (NSUInteger i = 0; i < 33; ++i) [tooMany addObject:@(i)];
+        config[@"battle"] = @{@"entryModes": tooMany};
+        Check(!PHConfigurationIsValid(config), "filter lists are bounded at 32 entries");
+        Check([PHConfigurationReadFilterText(@"0, 1，12\n7", UINT16_MAX) isEqual:@[@0,@1,@12,@7]],
+              "GUI text accepts commas, full-width separators and whitespace");
+        Check([PHConfigurationReadFilterText(@" ", UINT16_MAX) isEqual:@[]], "GUI can intentionally clear a list");
+        for (NSString *invalid in @[@"0,0", @"-1", @"1.5", @"true", @"65536", @"4294967296"]) {
+            Check(!PHConfigurationReadFilterText(invalid, UINT16_MAX), "invalid GUI text cannot alter config");
+        }
         Check(!PHConfigurationIsValid(nil), "missing config is rejected");
         printf("Bundle identity and configuration tests: %s\n", failures ? "FAILED" : "passed");
     }

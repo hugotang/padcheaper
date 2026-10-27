@@ -28,6 +28,7 @@ static BOOL CheckTimerCode(uintptr_t header, NSString **reason) {
 
 static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
     *state = {};
+    state->policy = frame.policy;
     if (!frame.ready || !frame.header || !frame.player || !NSThread.isMainThread) return NO;
     uintptr_t header = frame.header, save = header + PHSaveRVA, game = header + PHGameMainRVA;
     uint8_t scene = 0, requested = 0;
@@ -39,7 +40,7 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
     if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game ||
         !PHReadPointer(game + 0x70, &impl) || !impl || (impl & 7u) || impl > UINTPTR_MAX - 0xc0000 ||
         !PHMemoryHasProtection(impl + 0x92000, 0x2d000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return NO;
-    state->identity = {header, game, impl, player, frame.epoch, 0, 0, {0}};
+    state->identity = {header, game, impl, player, frame.epoch, 0, 0, {0}, 0, 0, 0};
     uint16_t ids[2] = {}, mode = 0, limit = 0;
     uint32_t key1 = 0, key2 = 0, phase[4], pending[4];
     if (!PHReadPointer(impl + PHBattleDungeonPointerOffset, &state->countdown) || !state->countdown ||
@@ -49,6 +50,7 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
         !PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) || !ids[0] || !ids[1] ||
         !PHReadMemory(header + PHBattleEntryHashRVA, state->identity.entryHash, sizeof(state->identity.entryHash)) ||
         !PHReadU16(header + PHBattleModeRVA, &mode) ||
+        !PHReadU16(save + PHBattleSourceModeOffset, &state->sourceMode) ||
         !PHReadU32(header + PHBattleMultiplayerRVA, &state->multiplayer) ||
         !PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
         !PHReadMemory(impl + PHBattlePhaseOffset, phase, sizeof(phase)) ||
@@ -60,6 +62,9 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
     state->present = hashPresent;
     state->identity.dungeon = ids[0]; state->identity.floor = ids[1];
     state->mode = static_cast<int16_t>(mode);
+    state->identity.entryMode = state->mode;
+    state->identity.sourceMode = state->sourceMode;
+    state->identity.multiplayer = state->multiplayer;
     state->limitSeconds = static_cast<int16_t>(limit);
     PHReadGameInput(header, &state->input);
     BOOL phaseValid = PHBattleDecodeProtected(phase, key1, key2, 0x766cfc6du, &state->phase);

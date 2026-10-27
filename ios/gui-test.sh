@@ -8,6 +8,7 @@ app_dir="$build_dir/OverlayProbe.app"
 mkdir -p "$app_dir/Frameworks"
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
+python3 ios/tools/generate_editor.py
 sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 clang_path="$(xcrun --sdk iphonesimulator --find clang)"
 architecture="$(uname -m)"
@@ -37,14 +38,14 @@ done
     -Wno-unused-parameter -Wno-unused-const-variable -dynamiclib \
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
-    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
-    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
+    ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
     ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
-    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter \
-    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -framework CoreGraphics -o "$app_dir/OverlayProbe"
+    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -framework CoreGraphics -framework WebKit -o "$app_dir/OverlayProbe"
 
 python3 - "$app_dir" <<'PY'
 from pathlib import Path

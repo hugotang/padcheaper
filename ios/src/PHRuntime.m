@@ -8,6 +8,7 @@
 #import "PHOverlay.h"
 #import "PHSaveState.h"
 #import "PHBattleSession.h"
+#import "PHFormationModel.h"
 #import "PHBadges.h"
 #import "PHTimer.h"
 #include "PHBadgeModel.h"
@@ -47,6 +48,7 @@ static PHBattleSession *PHBattleTracker;
 static PHBadges *PHBadgeTracker;
 static PHTimer *PHTimerTracker;
 static NSDictionary *PHConfig;
+static NSDictionary *PHFormationDraft;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
 static uint8_t PHSkinAdded[128];
@@ -180,6 +182,8 @@ static void PHPrepareStorage(void) {
         PHStorageMessage = @"無法寫入 config.json；面板仍可顯示診斷。";
     }
     PHReloadConfig();
+    NSDictionary *formation = PHReadJSON(@"formation.json");
+    if (PHFormationReadTeam(formation, NULL, NULL)) PHFormationDraft = formation;
     if (!PHObservedEndpoint) {
         NSDictionary *endpoint = PHReadJSON(@"endpoint.json");
         if ([endpoint[@"host"] isKindOfClass:NSString.class] &&
@@ -196,8 +200,9 @@ static PHBattleFrame PHBattleFrameContext(void) {
     BOOL ready = PHValidated && PHFrameInstalled && PHFrameMainThread && PHAccountReady &&
         !atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) &&
         PHCurrentPlayer(&player) && player == PHPlayer;
-    return (PHBattleFrame){(uintptr_t)PHGuest, PHPlayer, PHAccountEpoch, ready,
-        PHStorageReady && PHConfigValid && !PHStorageFault && PHEnabled(@"battleSwap")};
+    return (PHBattleFrame){.header = (uintptr_t)PHGuest, .player = PHPlayer, .epoch = PHAccountEpoch, .ready = ready,
+        .enabled = PHStorageReady && PHConfigValid && !PHStorageFault && PHEnabled(@"battleSwap"),
+        .policy = PHConfigurationBattlePolicy(PHConfig)};
 }
 
 static PHBattleFrame PHTimerFrameContext(void) {
@@ -748,14 +753,15 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     featureStates[@"badge"] = ![PHConfig[@"features"][@"badge"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
         (blocked ?: badge[@"message"]);
     featureStates[@"battleSwap"] = ![PHConfig[@"features"][@"battleSwap"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
-        [battle[@"restorePending"] boolValue] ? @"等待還原" : [battle[@"applied"] boolValue] ? @"已替換一名隊員" :
+        [battle[@"restorePending"] boolValue] ? @"等待還原" : [battle[@"applied"] boolValue] ?
+        [NSString stringWithFormat:@"已替換 %@ 名隊員", battle[@"activeCount"]] :
         !PHValidated ? @"等待遊戲校驗" : battle[@"gate"] ?: @"等待戰鬥檢查";
     NSMutableArray<NSString *> *battleLines = [NSMutableArray arrayWithObjects:battle[@"message"] ?: @"尚未替換隊員",
         battle[@"gate"] ?: @"等待戰鬥檢查", nil];
     for (NSDictionary *member in battle[@"members"]) {
         [battleLines addObject:![member[@"active"] boolValue] ? [NSString stringWithFormat:@"位置 %@：空", member[@"slot"]] :
-            [NSString stringWithFormat:@"位置 %@：#%@ → #%@ · 充能 %@%@", member[@"slot"], member[@"source"], member[@"current"],
-                member[@"charge"], [member[@"temporary"] boolValue] ? @" · 暫時變身" : @""]];
+            [NSString stringWithFormat:@"位置 %@：#%@ · 武裝 #%@ · Lv.%@ · 充能 %@%@", member[@"slot"], member[@"current"],
+                member[@"assist"], member[@"level"], member[@"charge"], [member[@"temporary"] boolValue] ? @" · 暫時變身" : @""]];
     }
     [battleLines addObject:[NSString stringWithFormat:@"替換 %@ 次 · 還原 %@ 次 · 回復 %@ 次", battle[@"applyCount"], battle[@"restoreCount"], battle[@"rollbackCount"]]];
     NSString *battleSummary = [battleLines componentsJoinedByString:@"\n"];
@@ -783,7 +789,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"auditFlags"], battle[@"digestMatches"], battle[@"hpMatches"],
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
-    diagnostics = [diagnostics stringByAppendingFormat:@"\nBadge: %@\nTimer: %@", badge[@"message"], timerSummary];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle filters: %@\nBadge: %@\nTimer: %@",
+        PHConfigurationBattleFilters(PHConfig), badge[@"message"], timerSummary];
     for (NSString *inputName in @[@"Battle", @"Timer"]) {
         NSDictionary *inputState = [inputName isEqualToString:@"Battle"] ? battle : timer;
         diagnostics = [diagnostics stringByAppendingFormat:
@@ -806,7 +813,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"configValid": @(PHConfigValid), @"canSaveConfig": @(PHStorageReady), @"config": PHConfig ?: PHDefaultConfiguration(),
         @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
         @"saveState": saveState, @"saveSummary": saveSummary,
-        @"battleState": battle, @"battleSummary": battleSummary,
+        @"battleState": battle, @"battleSummary": battleSummary, @"formationDraft": PHFormationDraft ?: @{},
         @"badgeState": badge,
         @"timerState": timer, @"timerSummary": timerSummary,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
@@ -821,6 +828,32 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqualToString:@"formationSave"]) {
+        NSString *reason = nil;
+        if (PHFormationReadTeam(value, NULL, &reason)) {
+            PHFormationDraft = value;
+            PHFeedback = PHStorageReady && PHWriteJSON(value, @"formation.json") ?
+                @"編隊草稿已儲存" : @"編隊已保留於本次執行，但草稿檔儲存失敗";
+        } else PHFeedback = reason;
+        PHLastStatus = 0;
+        return;
+    }
+    if ([action isEqualToString:@"battleTeamApply"]) {
+        PHBattleLoadout loadouts[6] = {0};
+        NSString *reason = nil;
+        uint8_t mask = 0;
+        if (PHFormationReadApply(value, loadouts, &mask, &reason))
+            [PHBattleTracker queueLoadouts:loadouts mask:mask];
+        else PHFeedback = reason ?: @"要套用的位置無效";
+        PHLastStatus = 0;
+        return;
+    }
+    if ([action isEqualToString:@"battleRestoreSlot"]) {
+        NSUInteger slot = 0;
+        if (PHFormationReadRestoreSlot(value, &slot)) [PHBattleTracker queueRestoreSlot:slot];
+        PHLastStatus = 0;
+        return;
+    }
     if ([action isEqualToString:@"overlayVisible"]) {
         PHOverlayVisible = [value boolValue];
         PHLastStatus = 0;
@@ -879,6 +912,15 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"apiPaths"] = @[path];
     } else if ([action isEqualToString:@"experimentalWrites"]) {
         next[action] = @([value boolValue]);
+    } else if ([@[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"entryModes", @"sourceModes", @"multiModes"] containsObject:action]) {
+        NSMutableDictionary *battle = [PHConfigurationBattleFilters(next) mutableCopy];
+        if ([action hasPrefix:@"allowAll"]) battle[action] = @([value boolValue]);
+        else {
+            NSArray *values = PHConfigurationReadFilterText(value, [action isEqualToString:@"multiModes"] ? UINT32_MAX : UINT16_MAX);
+            if (!values) { PHFeedback = @"清單需為不重複的非負整數，以逗號分隔，最多 32 個"; return; }
+            battle[action] = values;
+        }
+        next[@"battle"] = battle;
     } else if ([@[@"skin", @"bgm", @"badge", @"timerFix", @"battleSwap"] containsObject:action]) {
         NSMutableDictionary *features = [next[@"features"] mutableCopy];
         features[action] = @([value boolValue]);

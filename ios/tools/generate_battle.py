@@ -9,7 +9,8 @@ import re
 def generate(manifest):
     if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.0-106878":
         raise ValueError("Unsupported battle target")
-    if manifest["gate"] != {"entry_categories": [0, 1], "source_mode": 0, "multiplayer": 0, "player_input_phase": 2}:
+    if manifest["gate"] != {"entry_categories": "all", "source_modes_default": [0], "multiplayer_modes_default": [0],
+                            "unsupported_banked_multiplayer": [1, 4], "runtime_configuration": "battle", "player_input_phase": 2}:
         raise ValueError("Battle gate differs from the reviewed prototype")
     if manifest["input"] != {
         "manager_pointer_rva": "0x2ac6fd8", "slots_per_bank": 5, "record_bytes": 264,
@@ -30,7 +31,8 @@ def generate(manifest):
         lines.append(f"static const uintptr_t {name} = 0x{number:x}u;")
     required = {"PHBattleSet16RVA", "PHBattleRebuildMemberRVA", "PHBattleRefreshTeamRVA",
                 "PHBattleDigestRVA", "PHBattleMaxChargeRVA", "PHBattleRadiusRVA", "PHBattleDecode32RVA",
-                "PHBattleSet32RVA", "PHBattleDismissDialogRVA", "PHBattleWaitTimerRVA"}
+                "PHBattleSet32RVA", "PHBattleDismissDialogRVA", "PHBattleWaitTimerRVA",
+                "PHBattleSetByteRVA", "PHBattleAllocateRVA", "PHBattleReleaseRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

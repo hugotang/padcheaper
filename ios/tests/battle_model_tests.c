@@ -12,14 +12,36 @@ static uint32_t rol32(uint32_t value, unsigned shift) { return (value << shift) 
 int main(void) {
     uint16_t target = 0;
     Check(PHBattleParseTarget("12345", &target) && target == 12345, "ordinary ID parses");
-    Check(PHBattleParseTarget("65535", &target) && target == 65535, "u16 bound parses");
+    Check(PHBattleParseTarget("65435", &target) && target == 65435, "highest representable encyclopedia number parses");
     Check(PHBattleParseTarget("00001", &target) && target == 1, "leading zeroes are deterministic");
-    const char *invalid[] = {"", "0", "65536", "9900", "9999", "-1", "+2", "1.0", " 1", "1 ", "1e2", "123456", "１２３"};
+    Check(PHBattleParseTarget("9900", &target) && target == 9900, "encyclopedia No.9900 is not a reserved native ID");
+    const char *invalid[] = {"", "0", "65436", "65535", "65536", "-1", "+2", "1.0", " 1", "1 ", "1e2", "123456", "１２３"};
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i) {
         target = 77;
-        Check(!PHBattleParseTarget(invalid[i], &target) && target == 77, "malformed/reserved ID cannot change output");
+        Check(!PHBattleParseTarget(invalid[i], &target) && target == 77, "malformed or overflowing number cannot change output");
     }
     Check(!PHBattleParseTarget(NULL, &target), "null input is rejected");
+    const uint16_t numberPairs[][2] = {
+        {1, 1}, {9899, 9899}, {9900, 10000}, {9999, 10099}, {10000, 10100},
+        {14138, 14238}, {14238, 14338}, {65435, 65535}
+    };
+    for (size_t i = 0; i < sizeof(numberPairs) / sizeof(numberPairs[0]); ++i) {
+        uint16_t nativeID = 0, number = 0;
+        Check(PHBattleCatalogIDForNumber(numberPairs[i][0], &nativeID) && nativeID == numberPairs[i][1],
+              "encyclopedia numbers map to native IDs at the reserved gap and reported high numbers");
+        Check(PHBattleNumberForCatalogID(numberPairs[i][1], &number) && number == numberPairs[i][0],
+              "member presentation uses the inverse encyclopedia mapping");
+    }
+    const uint32_t invalidNative[] = {0, 9900, 9950, 9999, 65536, 10000000, UINT32_MAX};
+    for (size_t i = 0; i < sizeof(invalidNative) / sizeof(invalidNative[0]); ++i) {
+        target = 77;
+        Check(!PHBattleNumberForCatalogID(invalidNative[i], &target) && target == 77,
+              "reserved or encoded native IDs never produce a misleading encyclopedia number");
+    }
+    target = 77;
+    Check(!PHBattleCatalogIDForNumber(UINT32_MAX, &target) && target == 77 &&
+          !PHBattleCatalogIDForNumber(1, NULL) && !PHBattleNumberForCatalogID(1, NULL),
+          "mapping rejects overflow and missing output without writes");
     uint32_t key1 = 0x11223344u, key2 = 0x55667788u, value = 0;
     const uint32_t samples[] = {0, 2, 255, 65535, 0x8085a6beu, UINT32_MAX};
     const uint32_t salts[] = {0x6a875a8bu, 0x766cfc6du};
@@ -47,6 +69,10 @@ int main(void) {
     Check(!PHBattleSameIdentity(&a, &b), "different entry hash is a new battle");
     b = a; ++b.epoch;
     Check(!PHBattleSameIdentity(&a, &b), "relogin invalidates battle identity");
+    b = a; ++b.sourceMode;
+    Check(!PHBattleSameIdentity(&a, &b), "source changes invalidate the native transaction identity");
+    b = a; ++b.multiplayer;
+    Check(!PHBattleSameIdentity(&a, &b), "multiplayer changes invalidate the native transaction identity");
     PHBattleMember m = {.active = true, .readable = true, .sourceSlot = 0, .baseID = 100, .assistID = 200};
     PHBattleMember n = m;
     n.formID = 300;
@@ -56,6 +82,14 @@ int main(void) {
     PHBattleState state = {.present = true, .protectedValuesValid = true, .input = {.valid = true},
                            .digestKnown = true, .digestMatches = true, .hpMatches = true, .phase = 2};
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "ordinary idle battle is eligible");
+    state.mode = 12;
+    Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 12 solo entry is eligible");
+    state.sourceMode = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 12 still requires ordinary sources");
+    state.sourceMode = 0;
+    state.multiplayer = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 12 still requires solo");
+    state.multiplayer = 0;
     state.mode = 1;
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 1 solo entry is eligible");
     state.multiplayer = 2;
@@ -66,7 +100,26 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow a scripted source");
     state.sourceMode = 0;
     state.multiplayer = 0; state.mode = 7;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "special mode is refused");
+    for (uint32_t mode = 0; mode <= UINT16_MAX; ++mode) {
+        state.mode = (int16_t)mode;
+        Check(PHBattleStateGate(&state) == PHBattleGateReady, "all entry modes are eligible by default without changing native selectors");
+    }
+    state.mode = 7;
+    state.policy = (PHBattlePolicy){.configured = true, .modes = {.count = 3, .values = {0,1,12}},
+        .sources = {.count = 1, .values = {0}}, .multiplayer = {.count = 1, .values = {0}}};
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "an optional configured mode list limits new writes");
+    state.policy.modes.allowAll = true; state.sourceMode = 3; state.multiplayer = 2;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "source/multi lists are independent of the all-mode switch");
+    state.policy.sources.values[0] = 3; state.policy.multiplayer.values[0] = 2;
+    Check(PHBattleStateGate(&state) == PHBattleGateReady, "explicit source/multi values reach the primary-team structural checks");
+    state.policy.multiplayer.allowAll = true;
+    state.multiplayer = 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "an allow-all filter cannot adapt banked multiplayer layout 1");
+    state.multiplayer = 4;
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "an allow-all filter cannot adapt banked multiplayer layout 4");
+    state.policy.sources.count = PHBattleFilterCapacity + 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "invalid filter capacity fails closed");
+    state.policy = (PHBattlePolicy){0}; state.multiplayer = 0;
     state.mode = 0; state.sourceMode = 1;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "scripted source is refused");
     state.sourceMode = 0; state.phase = 43;

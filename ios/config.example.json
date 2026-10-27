@@ -8,6 +8,14 @@
     "timerFix": false,
     "battleSwap": false
   },
+  "battle": {
+    "allowAllModes": true,
+    "entryModes": [0, 1, 12],
+    "allowAllSources": false,
+    "sourceModes": [0],
+    "allowAllMulti": false,
+    "multiModes": [0]
+  },
   "apiHosts": [],
   "apiPaths": []
 }

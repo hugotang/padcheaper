@@ -1,4 +1,6 @@
 #import "PHOverlay.h"
+#import "PHFormationController.h"
+#import "PHConfiguration.h"
 #import <UIKit/UIKit.h>
 #include "PHBattleModel.h"
 #include <math.h>
@@ -44,6 +46,16 @@
 @property(nonatomic, strong) NSMutableDictionary<NSString *, UILabel *> *captions;
 @property(nonatomic) CGPoint position;
 @property(nonatomic) BOOL expanded;
+@property(nonatomic, strong) UIWindow *formationWindow;
+@property(nonatomic, weak) UIWindow *guestWindow;
+@property(nonatomic, strong) PHFormationController *formationController;
+@property(nonatomic, strong) UIStackView *filterSettings;
+@property(nonatomic, strong) UIButton *filterToggle;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, UIButton *> *filterButtons;
+@property(nonatomic, strong) UIWindow *filterWindow;
+@property(nonatomic, weak) UIWindow *filterPreviousWindow;
+@property(nonatomic, strong) UIAlertController *filterAlert;
+@property(nonatomic, copy) NSString *editingFilter;
 - (void)updateWithSnapshot:(NSDictionary *)state;
 @end
 
@@ -126,6 +138,12 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     return pad;
 }
 
+- (UIButton *)filterButton:(NSString *)title key:(NSString *)key {
+    UIButton *button = [self button:title action:@selector(editFilter:) identifier:[@"padcheaper." stringByAppendingString:key]];
+    self.filterButtons[key] = button;
+    return button;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = UIColor.clearColor;
@@ -133,6 +151,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.position = CGPointMake(1, 0.20);
     self.switches = [NSMutableDictionary dictionary];
     self.captions = [NSMutableDictionary dictionary];
+    self.filterButtons = [NSMutableDictionary dictionary];
 
     self.bubble = [UIButton buttonWithType:UIButtonTypeCustom];
     self.bubble.backgroundColor = [UIColor colorWithRed:0.08 green:0.11 blue:0.16 alpha:0.97];
@@ -215,7 +234,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.saveLabel.accessibilityIdentifier = @"padcheaper.persistence";
     self.targetText = @"";
     UILabel *battleTitle = PHLabel(13, UIFontWeightMedium);
-    battleTitle.text = @"隊員位置（1 為隊長，6 為助人）";
+    battleTitle.text = @"快速替換本體（保留原有培養與武裝）";
     self.battleSlot = [[UISegmentedControl alloc] initWithItems:@[@"1", @"2", @"3", @"4", @"5", @"6"]];
     self.battleSlot.selectedSegmentIndex = 0;
     self.battleSlot.selectedSegmentTintColor = [UIColor colorWithRed:0.12 green:0.57 blue:0.44 alpha:1];
@@ -235,13 +254,24 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.battleLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
     self.battleLabel.accessibilityIdentifier = @"padcheaper.battleStatus";
     UILabel *battleNote = PHLabel(11, UIFontWeightRegular);
-    battleNote.text = @"原型限一般單人入口，一次替換一名。關閉後等待操作階段還原；通關結算與重啟恢復仍待真機驗證。";
+    battleNote.text = @"完整編隊請用上方編輯器；此處只切換角色形態。關閉後會逐格還原。";
     battleNote.textColor = [UIColor colorWithWhite:1 alpha:0.55];
     self.timerDismiss = [self button:@"手動關閉計時退出彈窗" action:@selector(dismissTimer)
         identifier:@"padcheaper.timerDismiss"];
     self.timerLabel = PHLabel(11, UIFontWeightRegular);
     self.timerLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
     self.timerLabel.accessibilityIdentifier = @"padcheaper.timerStatus";
+    self.filterToggle = [self button:@"入口設定 · mode／source／multi" action:@selector(toggleFilters)
+        identifier:@"padcheaper.filtersOpen"];
+    self.filterSettings = [[UIStackView alloc] initWithArrangedSubviews:@[
+        [self switchRow:@"允許所有 mode" key:@"allowAllModes"], [self filterButton:@"編輯 mode 清單" key:@"entryModes"],
+        [self switchRow:@"允許所有 source" key:@"allowAllSources"], [self filterButton:@"編輯 source 清單" key:@"sourceModes"],
+        [self switchRow:@"允許所有 multi" key:@"allowAllMulti"], [self filterButton:@"編輯 multi 清單" key:@"multiModes"]
+    ]];
+    self.filterSettings.axis = UILayoutConstraintAxisVertical;
+    self.filterSettings.spacing = 8;
+    self.filterSettings.hidden = YES;
+    self.filterSettings.accessibilityIdentifier = @"padcheaper.filters";
     self.pathLabel = PHLabel(10, UIFontWeightRegular);
     self.pathLabel.lineBreakMode = NSLineBreakByCharWrapping;
     self.pathLabel.textColor = [UIColor colorWithWhite:1 alpha:0.50];
@@ -260,11 +290,12 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         self.statusLabel, self.reasonLabel,
         [self switchRow:@"功能總開關" key:@"experimentalWrites"],
         [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
-        battleTitle, self.battleSlot, self.battleTarget, battleActions, self.battleLabel, battleNote,
+        [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
+        self.battleLabel, battleTitle, self.battleSlot, self.battleTarget, battleActions, battleNote,
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
         [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
-        self.timerDismiss, self.timerLabel,
+        self.timerDismiss, self.timerLabel, self.filterToggle, self.filterSettings,
         self.endpointLabel, self.endpointButton, self.saveLabel, self.checksLabel, actions,
         self.feedbackLabel, self.pathLabel, note
     ]];
@@ -360,6 +391,69 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
 }
 
+- (void)toggleFilters {
+    self.filterSettings.hidden = !self.filterSettings.hidden;
+    [self.bodyStack layoutIfNeeded];
+}
+
+- (void)closeFilterEditor {
+    [self.filterWindow endEditing:YES];
+    [self.filterAlert dismissViewControllerAnimated:NO completion:nil];
+    self.filterWindow.hidden = YES;
+    self.filterWindow.rootViewController = nil;
+    self.filterWindow = nil;
+    self.filterAlert = nil;
+    self.editingFilter = nil;
+    [self.filterPreviousWindow makeKeyAndVisible];
+    self.filterPreviousWindow = nil;
+    [self updateWithSnapshot:self.snapshot()];
+}
+
+- (void)filterTextChanged:(UITextField *)field {
+    uint32_t maximum = [self.editingFilter isEqualToString:@"multiModes"] ? UINT32_MAX : UINT16_MAX;
+    self.filterAlert.actions.lastObject.enabled = PHConfigurationReadFilterText(field.text, maximum) != nil;
+}
+
+- (void)editFilter:(UIButton *)button {
+    if (self.filterWindow || self.formationWindow) return;
+    NSString *key = nil;
+    for (NSString *candidate in self.filterButtons) if (self.filterButtons[candidate] == button) { key = candidate; break; }
+    if (!key) return;
+    NSDictionary *filters = PHConfigurationBattleFilters(self.state[@"config"]);
+    self.editingFilter = key;
+    NSString *name = [key isEqualToString:@"entryModes"] ? @"mode" : [key isEqualToString:@"sourceModes"] ? @"source" : @"multi";
+    NSString *message = @"以逗號分隔整數，例如 0,1,12。最多 32 個；留空會停止新操作，已套用位置會還原。";
+    if ([key isEqualToString:@"multiModes"]) message = [message stringByAppendingString:@" multi 1／4 的隊伍陣列尚未適配。"];
+    self.filterAlert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"允許的 %@", name]
+        message:message preferredStyle:UIAlertControllerStyleAlert];
+    [self.filterAlert addTextFieldWithConfigurationHandler:^(UITextField *field) {
+        field.text = [filters[key] componentsJoinedByString:@","];
+        field.keyboardType = UIKeyboardTypeNumbersAndPunctuation;
+        field.autocorrectionType = UITextAutocorrectionTypeNo;
+        field.accessibilityIdentifier = @"padcheaper.filterText";
+        [field addTarget:self action:@selector(filterTextChanged:) forControlEvents:UIControlEventEditingChanged];
+    }];
+    __weak PHOverlayController *weakSelf = self;
+    [self.filterAlert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+        [weakSelf closeFilterEditor];
+    }]];
+    [self.filterAlert addAction:[UIAlertAction actionWithTitle:@"儲存" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        PHOverlayController *controller = weakSelf;
+        if (!controller) return;
+        controller.action(key, controller.filterAlert.textFields.firstObject.text ?: @"");
+        [controller closeFilterEditor];
+    }]];
+    UIWindowScene *scene = self.view.window.windowScene;
+    for (UIWindow *window in scene.windows) if (window.isKeyWindow) self.filterPreviousWindow = window;
+    if (!self.filterPreviousWindow && [UIApplication.sharedApplication.delegate respondsToSelector:@selector(window)])
+        self.filterPreviousWindow = UIApplication.sharedApplication.delegate.window;
+    self.filterWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] : [[UIWindow alloc] initWithFrame:self.view.window.bounds];
+    self.filterWindow.windowLevel = UIWindowLevelAlert + 2;
+    self.filterWindow.rootViewController = [UIViewController new];
+    [self.filterWindow makeKeyAndVisible];
+    [self.filterWindow.rootViewController presentViewController:self.filterAlert animated:YES completion:nil];
+}
+
 - (void)adoptEndpoint {
     self.action(@"adoptEndpoint", nil);
     [self updateWithSnapshot:self.snapshot()];
@@ -417,6 +511,36 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
 }
 
+- (void)openFormation {
+    if (self.formationWindow) return;
+    UIWindowScene *scene = self.view.window.windowScene;
+    UIWindow *guest = nil;
+    for (UIWindow *candidate in scene.windows) if (candidate.isKeyWindow) { guest = candidate; break; }
+    if (!guest && [UIApplication.sharedApplication.delegate respondsToSelector:@selector(window)])
+        guest = UIApplication.sharedApplication.delegate.window;
+    self.guestWindow = guest;
+    __weak PHOverlayController *weakSelf = self;
+    self.formationController = [[PHFormationController alloc] initWithTeam:self.state[@"formationDraft"]
+        battle:self.state[@"battleState"] action:self.action close:^{ [weakSelf closeFormation]; }];
+    self.formationWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] :
+        [[UIWindow alloc] initWithFrame:self.view.window.bounds];
+    self.formationWindow.windowLevel = UIWindowLevelAlert + 2;
+    self.formationWindow.rootViewController = self.formationController;
+    // A dedicated editor window accepts search keyboard input. The floating
+    // passthrough window itself always leaves the game's key-window status alone.
+    [self.formationWindow makeKeyAndVisible];
+}
+
+- (void)closeFormation {
+    self.formationWindow.hidden = YES;
+    self.formationWindow.rootViewController = nil;
+    self.formationWindow = nil;
+    self.formationController = nil;
+    if (self.guestWindow && !self.guestWindow.hidden) [self.guestWindow makeKeyWindow];
+    self.guestWindow = nil;
+    [self updateWithSnapshot:self.snapshot()];
+}
+
 - (void)dismissTimer {
     self.action(@"timerDismiss", nil);
     [self updateWithSnapshot:self.snapshot()];
@@ -441,14 +565,27 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.statusLabel.textColor = color;
     self.reasonLabel.text = state[@"reason"];
     NSDictionary *config = state[@"config"];
+    NSDictionary *filters = PHConfigurationBattleFilters(config);
     BOOL canSave = [state[@"canSaveConfig"] boolValue];
     for (NSString *key in self.switches) {
         UISwitch *toggle = self.switches[key];
         toggle.on = [key isEqualToString:@"experimentalWrites"] ? [config[key] boolValue] :
-                                                                 [config[@"features"][key] boolValue];
+                    [key hasPrefix:@"allowAll"] ? [filters[key] boolValue] : [config[@"features"][key] boolValue];
         toggle.enabled = canSave;
         self.captions[key].text = [key isEqualToString:@"experimentalWrites"] ?
-                                 (canSave ? @"切換後自動儲存" : @"設定無法寫入，請重新檢查") : state[@"featureStates"][key];
+            (canSave ? @"切換後自動儲存" : @"設定無法寫入，請重新檢查") :
+            [key hasPrefix:@"allowAll"] ? (toggle.on ? @"不限制數值；仍檢查隊伍結構" : @"使用下方允許清單") : state[@"featureStates"][key];
+    }
+    NSArray *listKeys = @[@"entryModes", @"sourceModes", @"multiModes"];
+    NSArray *allKeys = @[@"allowAllModes", @"allowAllSources", @"allowAllMulti"];
+    NSArray *names = @[@"mode", @"source", @"multi"];
+    for (NSUInteger i = 0; i < 3; ++i) {
+        UIButton *button = self.filterButtons[listKeys[i]];
+        button.hidden = [filters[allKeys[i]] boolValue];
+        button.enabled = canSave;
+        NSString *values = [filters[listKeys[i]] count] ? [filters[listKeys[i]] componentsJoinedByString:@","] : @"無（停止新操作）";
+        [button setTitle:[NSString stringWithFormat:@"%@：%@ · 編輯", names[i], values] forState:UIControlStateNormal];
+        button.titleLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
     }
     NSDictionary *endpoint = state[@"endpoint"];
     NSString *host = endpoint[@"host"], *path = endpoint[@"path"];
@@ -463,6 +600,9 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.saveLabel.textColor = [savePhase hasSuffix:@"failed"] ?
         [UIColor colorWithRed:1 green:0.54 blue:0.54 alpha:1] : [UIColor colorWithWhite:1 alpha:0.80];
     NSDictionary *battle = state[@"battleState"];
+    [self.filterToggle setTitle:[NSString stringWithFormat:@"入口設定 · mode %@／source %@／multi %@",
+        battle[@"mode"] ?: @"—", battle[@"sourceMode"] ?: @"—", battle[@"multiplayer"] ?: @"—"] forState:UIControlStateNormal];
+    [self.formationController updateBattle:battle];
     self.battleLabel.text = state[@"battleSummary"];
     [self.battleTarget setTitle:self.targetText.length ? [NSString stringWithFormat:@"目標 #%@ · 點擊修改", self.targetText] :
                                                         @"輸入目標圖鑑 ID" forState:UIControlStateNormal];
@@ -476,7 +616,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.battleRestore.enabled = [battle[@"canRestore"] boolValue];
     self.timerDismiss.enabled = [state[@"targetMatched"] boolValue] && [state[@"timerState"][@"canDismiss"] boolValue];
     self.timerLabel.text = state[@"timerSummary"];
-    self.battleSlot.enabled = ![battle[@"applied"] boolValue] && ![battle[@"phase"] isEqualToString:@"apply_pending"];
+    self.battleSlot.enabled = ![battle[@"phase"] isEqualToString:@"apply_pending"];
     self.pathLabel.text = [@"設定檔：\n" stringByAppendingString:(state[@"configPath"] ?: @"初始化中")];
     self.feedbackLabel.text = state[@"feedback"];
     self.feedbackLabel.hidden = self.feedbackLabel.text.length == 0;

@@ -8,6 +8,8 @@ mkdir -p "$build_dir"
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 clang_path="$(xcrun --sdk macosx --find clang)"
 python3 ios/tools/generate_battle.py
+python3 ios/tools/generate_editor.py
+node ios/tests/formation_tests.js
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
     ios/src/PHInputModel.c ios/tests/input_model_tests.c -o "$build_dir/input-model-tests"
@@ -21,6 +23,25 @@ python3 ios/tools/generate_battle.py
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/tests/battle_model_tests.c -o "$build_dir/battle-model-tests"
 "$build_dir/battle-model-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/tests/battle_preset_tests.c -o "$build_dir/battle-preset-tests"
+"$build_dir/battle-preset-tests"
+
+for model in PHInputModel PHBattleModel PHBattlePreset; do
+    "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+        -c "ios/src/$model.c" -o "$build_dir/$model.o"
+done
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
+    -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
+    ios/tests/battle_native_tests.mm "$build_dir/PHInputModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHBattlePreset.o" \
+    -framework Foundation -o "$build_dir/battle-native-tests"
+"$build_dir/battle-native-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHFormationModel.m ios/tests/formation_model_tests.m \
+    -framework Foundation -framework CoreFoundation -o "$build_dir/formation-model-tests"
+"$build_dir/formation-model-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
     ios/src/PHBadgeModel.c ios/tests/badge_model_tests.c -o "$build_dir/badge-model-tests"
