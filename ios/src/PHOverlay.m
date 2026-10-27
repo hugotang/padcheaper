@@ -426,14 +426,14 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     if ([key isEqualToString:@"multiModes"]) message = [message stringByAppendingString:@" multi 1／4 的隊伍陣列尚未適配。"];
     self.filterAlert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"允許的 %@", name]
         message:message preferredStyle:UIAlertControllerStyleAlert];
+    __weak PHOverlayController *weakSelf = self;
     [self.filterAlert addTextFieldWithConfigurationHandler:^(UITextField *field) {
         field.text = [filters[key] componentsJoinedByString:@","];
         field.keyboardType = UIKeyboardTypeNumbersAndPunctuation;
         field.autocorrectionType = UITextAutocorrectionTypeNo;
         field.accessibilityIdentifier = @"padcheaper.filterText";
-        [field addTarget:self action:@selector(filterTextChanged:) forControlEvents:UIControlEventEditingChanged];
+        [field addTarget:weakSelf action:@selector(filterTextChanged:) forControlEvents:UIControlEventEditingChanged];
     }];
-    __weak PHOverlayController *weakSelf = self;
     [self.filterAlert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
         [weakSelf closeFilterEditor];
     }]];
