@@ -2,6 +2,8 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
+[地下城內替換未持有怪物的可行性](docs/monster-replacement.md)：已有無 JIT 的戰鬥變身候選路線，尚未加入 dylib；通關結算需另行驗證。
+
 ## GitHub Actions
 
 推送到 main／codex 分支會啟動 [.github/workflows/ios-dylib.yml](../.github/workflows/ios-dylib.yml)，也可在 Actions 選擇 **Build iOS LiveContainer dylib → Run workflow**。

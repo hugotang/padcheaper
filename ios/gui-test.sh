@@ -7,6 +7,7 @@ build_dir="$repo_dir/build/ios-ui-tests"
 app_dir="$build_dir/OverlayProbe.app"
 mkdir -p "$app_dir/Frameworks"
 python3 ios/tools/generate_target.py
+python3 ios/tools/generate_battle.py
 sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 clang_path="$(xcrun --sdk iphonesimulator --find clang)"
 architecture="$(uname -m)"
@@ -25,11 +26,17 @@ PY
 }
 
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
+    -std=c++17 -fobjc-arc -fblocks -fexceptions -O2 -Wall -Wextra -Werror \
+    -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
+    -c ios/src/PHBattleNative.mm -o "$build_dir/PHBattleNative.o"
+
+"$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
     -Wno-unused-parameter -Wno-unused-const-variable -dynamiclib \
     -install_name @rpath/PADCheaperTest.dylib -Iios/src -Iios/generated \
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m \
+    ios/src/PHBattleModel.c ios/src/PHBattleSession.m "$build_dir/PHBattleNative.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \

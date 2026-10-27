@@ -4,7 +4,8 @@
   "features": {
     "skin": false,
     "bgm": false,
-    "timerFix": false
+    "timerFix": false,
+    "battleSwap": false
   },
   "apiHosts": [],
   "apiPaths": []

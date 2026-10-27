@@ -7,6 +7,7 @@
 #import "PHConfiguration.h"
 #import "PHOverlay.h"
 #import "PHSaveState.h"
+#import "PHBattleSession.h"
 #include "PHTargetGenerated.h"
 #include <mach-o/dyld.h>
 #include <math.h>
@@ -39,6 +40,7 @@ static atomic_bool PHFrameOffMain;
 static uint32_t PHPlayer;
 static NSUInteger PHAccountEpoch;
 static PHSaveState *PHSaveStateTracker;
+static PHBattleSession *PHBattleTracker;
 static NSDictionary *PHConfig;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
@@ -176,6 +178,15 @@ static void PHPrepareStorage(void) {
 
 static BOOL PHCurrentPlayer(uint32_t *player) {
     return PHReadU32(PHSave() + PHPlayerIDOffset, player) && *player != 0;
+}
+
+static PHBattleFrame PHBattleFrameContext(void) {
+    uint32_t player = 0;
+    BOOL ready = PHValidated && PHFrameInstalled && PHFrameMainThread && PHAccountReady &&
+        !atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) &&
+        PHCurrentPlayer(&player) && player == PHPlayer;
+    return (PHBattleFrame){(uintptr_t)PHGuest, PHPlayer, PHAccountEpoch, ready,
+        PHStorageReady && PHConfigValid && !PHStorageFault && PHEnabled(@"battleSwap")};
 }
 
 static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
@@ -448,6 +459,7 @@ static void PHDrawFrame(id self, SEL command) {
         PHLastMaintenance = now;
         PHMaintenance();
     }
+    [PHBattleTracker onFrame:PHBattleFrameContext() atTime:now];
 }
 
 static void PHRestoreBackground(id self, SEL command) {
@@ -632,6 +644,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     PHFeatureMask mask = PHActiveMask();
     BOOL master = [PHConfig[@"experimentalWrites"] isEqual:@YES];
     BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm");
+    NSDictionary *battle = [PHBattleTracker snapshot];
+    BOOL battleActive = PHEnabled(@"battleSwap") && ([battle[@"canApply"] boolValue] || [battle[@"applied"] boolValue]);
     BOOL timerActive = PHValidated && PHLifecycleInstalled && PHStorageReady && PHConfigValid && PHEnabled(@"timerFix");
     BOOL unlockActive = mask != 0 && PHUnlockDataReady && !PHOwnershipWriteFault;
     NSString *blocked = PHUnlockBlockReason();
@@ -657,7 +671,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         tone = @"error";
         title = @"已載入 · 遊戲資料寫入失敗";
         reason = @"Skin／BGM 資料未完整套用，請複製診斷。";
-    } else if (unlockActive || timerActive) {
+    } else if (unlockActive || timerActive || battleActive) {
         BOOL partial = ((wantsSkin || wantsBGM) && !unlockActive) || (PHEnabled(@"timerFix") && !timerActive);
         tone = @"active";
         title = partial ? @"已載入 · 部分功能啟用" : @"已載入 · 功能已啟用";
@@ -670,10 +684,13 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         tone = @"error";
         title = @"已載入 · 背景 hook 未安裝";
         reason = @"計時修正無法啟用，請按「重新檢查」。";
+    } else if (PHEnabled(@"battleSwap")) {
+        title = @"已載入 · 等待戰鬥替換條件";
+        reason = battle[@"gate"] ?: @"等待戰鬥檢查";
     } else {
         tone = @"ready";
         title = @"已載入 · 尚未選擇功能";
-        reason = @"請開啟 Skin、BGM 或背景計時修正。";
+        reason = @"請開啟要使用的功能。";
     }
     NSMutableDictionary *featureStates = [NSMutableDictionary dictionary];
     for (NSString *key in @[@"skin", @"bgm"]) {
@@ -688,6 +705,18 @@ static NSDictionary *PHRuntimeSnapshot(void) {
                                  !PHValidated ? @"等待遊戲校驗" : !PHLifecycleInstalled ? @"背景 hook 未安裝" :
                                  !PHStorageReady || !PHConfigValid ? @"等待可用設定" :
                                  [NSString stringWithFormat:@"已啟用 · 已修正 %lu 次", (unsigned long)PHTimerClearCount];
+    featureStates[@"battleSwap"] = ![PHConfig[@"features"][@"battleSwap"] isEqual:@YES] ? @"關閉" : !master ? @"等待總開關" :
+        [battle[@"restorePending"] boolValue] ? @"等待還原" : [battle[@"applied"] boolValue] ? @"已替換一名隊員" :
+        !PHValidated ? @"等待遊戲校驗" : battle[@"gate"] ?: @"等待戰鬥檢查";
+    NSMutableArray<NSString *> *battleLines = [NSMutableArray arrayWithObjects:battle[@"message"] ?: @"尚未替換隊員",
+        battle[@"gate"] ?: @"等待戰鬥檢查", nil];
+    for (NSDictionary *member in battle[@"members"]) {
+        [battleLines addObject:![member[@"active"] boolValue] ? [NSString stringWithFormat:@"位置 %@：空", member[@"slot"]] :
+            [NSString stringWithFormat:@"位置 %@：#%@ → #%@ · 充能 %@%@", member[@"slot"], member[@"source"], member[@"current"],
+                member[@"charge"], [member[@"temporary"] boolValue] ? @" · 暫時變身" : @""]];
+    }
+    [battleLines addObject:[NSString stringWithFormat:@"替換 %@ 次 · 還原 %@ 次 · 回復 %@ 次", battle[@"applyCount"], battle[@"restoreCount"], battle[@"rollbackCount"]]];
+    NSString *battleSummary = [battleLines componentsJoinedByString:@"\n"];
     NSString *frameState = PHFrameMainThread ? @"主執行緒" :
                           atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ? @"非主執行緒" : @"等待 frame";
     NSDictionary *saveState = [PHSaveStateTracker snapshot];
@@ -704,10 +733,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     NSString *path = PHFolder.length ? [PHFolder stringByAppendingPathComponent:@"config.json"] : @"尚未建立";
     NSBundle *bundle = NSBundle.mainBundle;
     NSString *diagnostics = [NSString stringWithFormat:
-        @"PADCheaper %@\nLoaded: YES\nOverlay visible: %@\nBundle ID: %@\nOriginal ID: %@\nGame version: %@ / %@\nTarget UUID: %@\nValidation: %@\nStatus: %@\nReason: %@\n%@\n%@\nEndpoint: %@%@ (query omitted)\nConfig: %@\nStorage: %@\nDevice verified by CI: NO",
+        @"PADCheaper %@\nLoaded: YES\nOverlay visible: %@\nBundle ID: %@\nOriginal ID: %@\nGame version: %@ / %@\nTarget UUID: %@\nValidation: %@\nStatus: %@\nReason: %@\n%@\n%@\nBattle: %@\nBattle phase: %@ / mode %@ / source %@ / multi %@\nBattle audit: %@ / digest %@ / HP %@\nEndpoint: %@%@ (query omitted)\nConfig: %@\nStorage: %@\nDevice verified by CI: NO",
         PH_RUNTIME_VERSION, PHOverlayVisible ? @"YES" : @"NO", bundle.bundleIdentifier ?: @"未取得", PHGuestBundleIdentifier(),
         bundle.infoDictionary[@"CFBundleShortVersionString"] ?: @"未取得", bundle.infoDictionary[@"CFBundleVersion"] ?: @"未取得",
         @(PHTargetUUIDString), PHValidationMessage ?: @"初始化中", title, reason ?: @"", checks, saveSummary,
+        battleSummary, battle[@"battlePhase"], battle[@"mode"], battle[@"sourceMode"], battle[@"multiplayer"],
+        battle[@"auditFlags"], battle[@"digestMatches"], battle[@"hpMatches"],
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
     NSDictionary *snapshot = @{
@@ -722,6 +753,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"configValid": @(PHConfigValid), @"canSaveConfig": @(PHStorageReady), @"config": PHConfig ?: PHDefaultConfiguration(),
         @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
         @"saveState": saveState, @"saveSummary": saveSummary,
+        @"battleState": battle, @"battleSummary": battleSummary,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
         @"badgeImplemented": @NO, @"deviceVerified": @NO
     };
@@ -740,7 +772,20 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         return;
     }
     if ([action isEqualToString:@"copied"]) {
-        PHFeedback = @"已複製診斷（不含帳號、query 或隊伍內容）";
+        PHFeedback = @"已複製診斷（不含帳號、query 或憑證）";
+        return;
+    }
+    if ([action isEqualToString:@"battleApply"]) {
+        if ([value isKindOfClass:NSDictionary.class] && [value[@"slot"] isKindOfClass:NSNumber.class] &&
+            [value[@"target"] isKindOfClass:NSString.class]) {
+            [PHBattleTracker queueApplySlot:[value[@"slot"] unsignedIntegerValue] targetText:value[@"target"]];
+        }
+        PHLastStatus = 0;
+        return;
+    }
+    if ([action isEqualToString:@"battleRestore"]) {
+        [PHBattleTracker queueRestore];
+        PHLastStatus = 0;
         return;
     }
     if ([action isEqualToString:@"retry"]) {
@@ -774,7 +819,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"apiPaths"] = @[path];
     } else if ([action isEqualToString:@"experimentalWrites"]) {
         next[action] = @([value boolValue]);
-    } else if ([@[@"skin", @"bgm", @"timerFix"] containsObject:action]) {
+    } else if ([@[@"skin", @"bgm", @"timerFix", @"battleSwap"] containsObject:action]) {
         NSMutableDictionary *features = [next[@"features"] mutableCopy];
         features[action] = @([value boolValue]);
         next[@"features"] = features;
@@ -860,6 +905,7 @@ __attribute__((constructor))
 static void PADCheaperInitialize(void) {
     @autoreleasepool {
         PHSaveStateTracker = [PHSaveState new];
+        PHBattleTracker = [[PHBattleSession alloc] initWithEngine:PHCreateBattleEngine()];
         PHFlagPatches = [NSMutableArray array];
         PHLastBanks = @{};
         PHConfig = PHDefaultConfiguration();

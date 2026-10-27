@@ -78,6 +78,8 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 
 @interface PHProbeSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property(nonatomic, strong) UIWindow *window;
+@property(nonatomic) NSUInteger landscapeAttempts;
+@property(nonatomic, copy) NSString *landscapeError;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
 - (void)verifyRejectedTarget;
@@ -136,7 +138,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UILabel *persistence = (UILabel *)PHProbeFind(overlay, @"padcheaper.persistence");
     PHProbeCheck([persistence.text containsString:@"尚未儲存隊伍"] &&
                  [persistence.text containsString:@"伺服器接受：0"], @"Panel must separate load/feature status from actual save and response status");
-    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"timerFix"]) {
+    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"timerFix", @"battleSwap"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, [@"Switch unavailable: " stringByAppendingString:key]);
         toggle.on = YES;
@@ -147,10 +149,39 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [adopt sendActionsForControlEvents:UIControlEventTouchUpInside];
     config = PHProbeJSON(@"config.json");
     PHProbeCheck([config[@"experimentalWrites"] isEqual:@YES] && [config[@"features"][@"skin"] isEqual:@YES] &&
-                 [config[@"features"][@"bgm"] isEqual:@YES] && [config[@"features"][@"timerFix"] isEqual:@YES],
+                 [config[@"features"][@"bgm"] isEqual:@YES] && [config[@"features"][@"timerFix"] isEqual:@YES] &&
+                 [config[@"features"][@"battleSwap"] isEqual:@YES],
                  @"GUI switches must persist to config.json");
     PHProbeCheck([config[@"apiHosts"] isEqual:@[@"example.invalid"]] && [config[@"apiPaths"] isEqual:@[@"/api.php"]],
                  @"GUI must persist only the endpoint host and path");
+    UISegmentedControl *slot = (UISegmentedControl *)PHProbeFind(overlay, @"padcheaper.battleSlot");
+    UIButton *target = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleTarget");
+    UIButton *apply = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleApply");
+    UIButton *restore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+    PHProbeCheck(slot.numberOfSegments == 6 && target != nil && apply != nil && restore != nil,
+                 @"Battle GUI must provide six positions, target entry, apply and restore");
+    slot.selectedSegmentIndex = 5;
+    [slot sendActionsForControlEvents:UIControlEventValueChanged];
+    [target sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.keypad") != nil && self.window.isKeyWindow && !overlay.isKeyWindow,
+                 @"Numeric keypad must work without stealing the game key window");
+    for (NSString *digit in @[@"1", @"2", @"3", @"4", @"5", @"6"]) {
+        UIButton *key = (UIButton *)PHProbeFind(overlay, [@"padcheaper.digit." stringByAppendingString:digit]);
+        [key sendActionsForControlEvents:UIControlEventTouchUpInside];
+    }
+    PHProbeCheck([target.currentTitle containsString:@"12345"] && ![target.currentTitle containsString:@"123456"],
+                 @"Target entry is limited to five digits");
+    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.10") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck([target.currentTitle containsString:@"1234"] && ![target.currentTitle containsString:@"12345"], @"Backspace removes one digit");
+    PHProbeRender(self.window, overlay, @"keypad");
+    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.11") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck([target.currentTitle containsString:@"輸入目標"], @"Clear resets target entry");
+    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.2") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.done") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.keypad") == nil && self.window.isKeyWindow, @"Done removes the keypad and preserves guest focus");
+    PHProbeCheck(!apply.enabled && !restore.enabled, @"Unmatched UUID must keep battle apply/restore unavailable");
+    // Direct action dispatch also exercises the runtime guard behind disabled UI.
+    [apply sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIButton *copy = (UIButton *)PHProbeFind(overlay, @"padcheaper.copy");
     [copy sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Loaded: YES"], @"Copy diagnostics must work");
@@ -169,6 +200,10 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck([status[@"frameHook"] isEqual:@NO] && [status[@"networkHook"] isEqual:@NO] &&
                  [status[@"lifecycleHook"] isEqual:@NO] && [status[@"activeMask"] isEqual:@0],
                  @"GUI toggles must not bypass target validation");
+    PHProbeCheck([status[@"battleState"][@"implemented"] isEqual:@YES] &&
+                 [status[@"battleState"][@"canApply"] isEqual:@NO] && [status[@"battleState"][@"applied"] isEqual:@NO] &&
+                 [status[@"battleState"][@"applyCount"] isEqual:@0] && [status[@"battleState"][@"restoreCount"] isEqual:@0],
+                 @"Battle GUI actions cannot bypass UUID validation or invent writes");
     UILabel *label = (UILabel *)PHProbeFind(overlay, @"padcheaper.status");
     PHProbeCheck([label.text containsString:@"校驗未通過"], @"Panel must display the target failure reason");
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");
@@ -184,15 +219,27 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 }
 
 - (void)verifyLandscape {
+    self.landscapeAttempts++;
+    [self.window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
+    UIWindow *overlayWindow = PHProbeOverlay(self.window.windowScene);
+    [overlayWindow.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
     [self.window.windowScene requestGeometryUpdateWithPreferences:
      [[UIWindowSceneGeometryPreferencesIOS alloc] initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscapeLeft]
                                                     errorHandler:^(NSError *error) {
-        PHProbeCheck(NO, [@"Landscape geometry: " stringByAppendingString:error.localizedDescription]);
+        self.landscapeError = error.localizedDescription;
     }];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
         UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
         [overlay layoutIfNeeded];
+        if (CGRectGetWidth(overlay.bounds) <= CGRectGetHeight(overlay.bounds) && self.landscapeAttempts < 8) {
+            // Geometry requests can be transiently rejected during scene/SDK
+            // transitions. Retry finitely; keep the actual layout assertions.
+            [self verifyLandscape];
+            return;
+        }
+        PHProbeCheck(CGRectGetWidth(self.window.bounds) > CGRectGetHeight(self.window.bounds),
+                     [@"Guest landscape geometry did not settle: " stringByAppendingString:self.landscapeError ?: @"no reported error"]);
         PHProbeCheck(CGRectGetWidth(overlay.bounds) > CGRectGetHeight(overlay.bounds), @"Overlay must rotate with the guest scene");
         PHProbeCheck(panel != nil && !panel.hidden && CGRectContainsRect(overlay.bounds, panel.frame), @"Landscape panel must remain on-screen");
         PHProbeCheck([overlay hitTest:CGPointMake(CGRectGetWidth(overlay.bounds) - 3, 3) withEvent:nil] == nil,

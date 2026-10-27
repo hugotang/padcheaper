@@ -48,6 +48,7 @@ jobs:
       - name: Validate target and run protocol tests
         run: |
           python3 ios/tools/generate_target.py
+          python3 ios/tools/generate_battle.py
           bash ios/test.sh
 
       - name: Compile arm64 iPhoneOS dylib
@@ -97,9 +98,10 @@ jobs:
           print('Built **PADCheaper.dylib** for arm64 iPhoneOS, minimum iOS 15.0.')
           print()
           print('Download the run artifact, then re-sign with LiveContainer before loading.')
-          print('A draggable **PC** button shows load status, feature switches and sanitized diagnostics.')
-          print('The artifact starts in diagnostic mode. Protocol, save-state and simulator UI checks passed.')
+          print('A draggable **PC** button shows load status, feature switches, battle member selection, numeric target entry and diagnostics.')
+          print('The artifact starts in diagnostic mode. Protocol, save-state, battle guard/session and simulator UI checks passed.')
           print('The user reported working GUI/Skin/BGM on iOS 27 with custom LiveContainer in 0.2.0-gui. Save/restart and account isolation still require device testing; see device-testing.md.')
+          print('Battle replacement is a one-member native transformation prototype for the ordinary single-player entry; actual gameplay, resource loading and server settlement require device verification.')
           print()
           print('SHA-256: `' + metadata['sha256'] + '`')
           PY

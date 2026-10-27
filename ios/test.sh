@@ -7,6 +7,16 @@ build_dir="${BUILD_DIR:-$repo_dir/build/ios-tests}"
 mkdir -p "$build_dir"
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 clang_path="$(xcrun --sdk macosx --find clang)"
+python3 ios/tools/generate_battle.py
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHBattleModel.c ios/tests/battle_model_tests.c -o "$build_dir/battle-model-tests"
+"$build_dir/battle-model-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/tests/battle_session_tests.m \
+    -framework Foundation -o "$build_dir/battle-session-tests"
+"$build_dir/battle-session-tests"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks \
     -Wall -Wextra -Werror -Iios/src \
     ios/src/PHCodec.m ios/tests/codec_tests.m \

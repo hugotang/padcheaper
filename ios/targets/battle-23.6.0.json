@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "prototype_version": "0.3.0-battle",
+  "device_verified": false,
+  "server_acceptance_verified": false,
+  "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+  "gate": {
+    "mode": 0,
+    "source_mode": 0,
+    "multiplayer": 0,
+    "player_input_phase": 2
+  },
+  "fields": {
+    "PHBattleImplRVA": "0x2abce60",
+    "PHBattleModeRVA": "0x211a870",
+    "PHBattleMultiplayerRVA": "0x1b4d24c",
+    "PHBattleEntryHashRVA": "0x2119eda",
+    "PHBattleKey1RVA": "0x2c6e210",
+    "PHBattleKey2RVA": "0x1bd5500",
+    "PHBattlePRNGRVA": "0x2c6e214",
+    "PHBattleScaleRVA": "0x1b4ef58",
+    "PHBattleDungeonOffset": "0x5c876c",
+    "PHBattleSourceModeOffset": "0x5c8770",
+    "PHBattleAuditOffset": "0x5ca0bc",
+    "PHBattleCatalogCountOffset": "0x5ef158",
+    "PHBattleCatalogPointerOffset": "0x5ef168",
+    "PHBattleCatalogStride": "0x348",
+    "PHBattleMemberOffset": "0xb11f0",
+    "PHBattleMemberStride": "0x5f0",
+    "PHBattlePhaseOffset": "0x92978",
+    "PHBattleHPOffset": "0xb7e38",
+    "PHBattleHPShadowOffset": "0xb7ee4",
+    "PHBattleDigestShadowOffset": "0xb7ef0",
+    "PHBattleDungeonPointerOffset": "0xb0f20",
+    "PHBattleFormOffset": "0x118",
+    "PHBattleTempIDOffset": "0xf8",
+    "PHBattleTempTurnsOffset": "0x108",
+    "PHBattleSourceSlotOffset": "0xb8",
+    "PHBattleScriptSlotOffset": "0x128",
+    "PHBattleChargeOffset": "0x1c8",
+    "PHBattleCardParamOffset": "0x4e0",
+    "PHBattleCatalogIDOffset": "0x50c",
+    "PHBattleBaseIDOffset": "0x5b0",
+    "PHBattleAssistIDOffset": "0x5b2"
+  },
+  "guards": [
+    {
+      "name": "PHBattleSet16RVA",
+      "va": "0x10056c990",
+      "rva": "0x56c990",
+      "length": 64,
+      "bytes": "083801d0081142b949b300b0290145b90801094a0801014a080800b9a8008052e90301aa297d891308050071c1ffff5468518b52e850ad722801084a093801d0",
+      "sha256": "da5c5fe7f76a5f2853eb3c0d7a0fc646f8017815029768fb2ed617e6842748de"
+    },
+    {
+      "name": "PHBattleRebuildMemberRVA",
+      "va": "0x1005a12f0",
+      "rva": "0x5a12f0",
+      "length": 64,
+      "bytes": "ff0305d1fc6f0ea9fa670fa9f85f10a9f65711a9f44f12a9fd7b13a9fdc30491f50302aaf30301aaf40300aabf0319f80820a052a88318b8bfe318383f140039",
+      "sha256": "72617ce560d71427ec64858d7b2098f5de2ec8b3d26f56933e8c601e77176232"
+    },
+    {
+      "name": "PHBattleRefreshTeamRVA",
+      "va": "0x10006f798",
+      "rva": "0x6f798",
+      "length": 64,
+      "bytes": "e923ba6dfa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30301aaf40300aa55d600b0b5c2009188438a522800a072a86a68b81f1100710419417a",
+      "sha256": "e47f79d15f5d203f415b9924ae9c6b30d05588bbeb22741d6ef60984bb9a213e"
+    },
+    {
+      "name": "PHBattleDigestRVA",
+      "va": "0x1005a2b38",
+      "rva": "0x5a2b38",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aaa9ac00d029c1009188438a522800a072286968b81f0500712101005400008052",
+      "sha256": "2bd92891f5843898361a8f4d9989167b8d498b4a808723d23699085f49e89651"
+    },
+    {
+      "name": "PHBattleDecode32RVA",
+      "va": "0x100570af4",
+      "rva": "0x570af4",
+      "length": 64,
+      "bytes": "090840b9e83701d00a1142b928b300b00b0145b9080040b9ac8d9f528ccdae7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "8054aa63772190d3f494d9b52faeb87c0f36a3ed7e4d0e4dad9c4559a38afd5c"
+    },
+    {
+      "name": "PHBattleMaxChargeRVA",
+      "va": "0x10059f95c",
+      "rva": "0x59f95c",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801b008c13791003940f959000094f50300aa883ecb791f010071f6d79f1a80821391e10313aa",
+      "sha256": "e5bbdf3709cf2ef167d94cc6e48bcc1fe18160610750709edb26d878e04342c2"
+    },
+    {
+      "name": "PHBattleRadiusRVA",
+      "va": "0x10059edc8",
+      "rva": "0x59edc8",
+      "length": 64,
+      "bytes": "88ad00f008c11e9100102e1e29f291520969693869012037fd7bbfa9fd0300910821579100a11991c4ffff971f00007200102e1e01102d1e201c201efd7bc1a8",
+      "sha256": "e94aad45cb66b8077361773c9044d9944020db345a1256a5147eafbcb7ab0ae7"
+    }
+  ]
+}

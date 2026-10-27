@@ -3,7 +3,7 @@
 
 NSDictionary *PHDefaultConfiguration(void) {
     return @{@"schema": @1, @"experimentalWrites": @NO,
-             @"features": @{@"skin": @NO, @"bgm": @NO, @"timerFix": @NO},
+             @"features": @{@"skin": @NO, @"bgm": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[]};
 }
 
@@ -22,6 +22,8 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     for (NSString *key in @[@"skin", @"bgm", @"timerFix"]) {
         if (!PHIsBoolean(features[key])) return NO;
     }
+    // Schema 1 files created by older dylibs remain valid; absent means off.
+    if (features[@"battleSwap"] && !PHIsBoolean(features[@"battleSwap"])) return NO;
     for (NSString *key in @[@"apiHosts", @"apiPaths"]) {
         NSArray *values = configuration[key];
         if (![values isKindOfClass:NSArray.class] || values.count > 16) return NO;

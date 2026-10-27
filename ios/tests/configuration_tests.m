@@ -47,6 +47,11 @@ int main(void) {
         config[@"apiHosts"] = @[@"example.invalid"];
         config[@"apiPaths"] = @[@"/api.php"];
         Check(PHConfigurationIsValid(config), "GUI switches and observed endpoint produce a valid configuration");
+        Check(![config[@"features"][@"battleSwap"] boolValue], "old schema 1 files keep battle replacement off");
+        config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"battleSwap": @YES};
+        Check(PHConfigurationIsValid(config), "battle replacement uses an optional Boolean switch");
+        config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"battleSwap": @1};
+        Check(!PHConfigurationIsValid(config), "numeric battle replacement switch is rejected");
         config[@"features"] = @{@"skin": @1, @"bgm": @YES, @"timerFix": @NO};
         Check(!PHConfigurationIsValid(config), "numeric feature is rejected");
         config[@"features"] = @{@"skin": @YES};
