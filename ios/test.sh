@@ -35,7 +35,7 @@ done
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
     ios/tests/battle_native_tests.mm "$build_dir/PHInputModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHBattlePreset.o" \
-    -framework Foundation -o "$build_dir/battle-native-tests"
+    -lc++ -framework Foundation -o "$build_dir/battle-native-tests"
 "$build_dir/battle-native-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
