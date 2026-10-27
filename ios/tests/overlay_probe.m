@@ -229,7 +229,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
             PHProbeCheck([PHProbeJSON(@"config.json")[@"battle"][key] isEqual:value], @"filter toggles must save to the same config immediately");
         }
     }
-    config = PHProbeJSON(@"config.json");
+    NSDictionary *config = PHProbeJSON(@"config.json");
     PHProbeCheck([config[@"battle"][@"entryModes"] isEqual:@[@0,@1,@12]] &&
                  [config[@"battle"][@"sourceModes"] isEqual:@[@0]] && [config[@"battle"][@"multiModes"] isEqual:@[@0]],
                  @"allow-all switches preserve each user's optional list");
@@ -330,6 +330,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 
 - (void)finishPortrait {
     if (PHProbeLegacy()) {
+        UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
         UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.retry");
         [retry sendActionsForControlEvents:UIControlEventTouchUpInside];
         PHProbeCheck(self.window.isKeyWindow, @"Retry must leave the legacy guest window key");

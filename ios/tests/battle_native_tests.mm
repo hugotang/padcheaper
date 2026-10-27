@@ -25,7 +25,8 @@ struct Fixture {
     uintptr_t failWriteAddress = 0;
     size_t failWriteLength = 0, partialWrite = 0;
     unsigned failWriteOccurrence = 1;
-    static constexpr uint32_t Key1 = 0x12345678, Key2 = 0xabcdef01;
+    // The native second protection key shares the player's save field.
+    static constexpr uint32_t Key1 = 0x12345678, Key2 = 42;
 
     Fixture() : image(0x3000000), implementation(0xc4000), catalog(15000 * PHBattleCatalogStride),
                 input(PHInputDataSize), dungeon(128), skills(104) {
@@ -103,7 +104,10 @@ struct Fixture {
     PHBattleFrame frame() const { return {header(), 42, 1, true, true, {}}; }
     PHBattleState state(id<PHBattleEngine> engine) const {
         PHBattleState value = {};
-        Check([engine readState:&value frame:frame() reason:nullptr], "production reader accepts the fixture");
+        NSString *reason = nil;
+        BOOL read = [engine readState:&value frame:frame() reason:&reason];
+        if (!read) std::fprintf(stderr, "Native fixture read rejected: %s\n", reason.UTF8String ?: "no reason");
+        Check(read, "production reader accepts the fixture");
         return value;
     }
     void shadows() {
