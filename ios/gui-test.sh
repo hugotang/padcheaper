@@ -10,6 +10,7 @@ python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_editor.py
 sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
 clang_path="$(xcrun --sdk iphonesimulator --find clang)"
 architecture="$(uname -m)"
 run_limited() {
@@ -79,10 +80,16 @@ codesign --force --sign - --timestamp=none "$app_dir"
 
 runtime_id="$(xcrun simctl list runtimes --json | python3 -c '
 import json, sys
-available = [r for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")]
-available.sort(key=lambda r: tuple(map(int, r["version"].split("."))))
+def version(value):
+    parts = tuple(map(int, value.split(".")))
+    return parts + (0,) * (3 - len(parts))
+sdk = version(sys.argv[1])
+available = [r for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and version(r["version"]) <= sdk]
+if not available:
+    raise SystemExit("No available iOS Simulator runtime compatible with SDK " + sys.argv[1])
+available.sort(key=lambda r: version(r["version"]))
 print(available[-1]["identifier"])
-')"
+' "$sdk_version")"
 device_type="$(xcrun simctl list --json | python3 -c '
 import json, sys
 inventory = json.load(sys.stdin)
