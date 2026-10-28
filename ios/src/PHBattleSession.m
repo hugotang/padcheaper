@@ -495,6 +495,9 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         @"rawInputFlags": @(_state.input.rawFlags), @"frameInputFlags": @(_state.input.frameFlags),
         @"dragActive": @(_hasState && _state.dragActive), @"digestKnown": @(_hasState && _state.digestKnown),
         @"digestMatches": @(_hasState && _state.digestMatches), @"hpMatches": @(_hasState && _state.hpMatches),
+        @"currentHP": @(_state.hp), @"hpKnown": @(_hasState && _state.protectedValuesValid),
+        @"localTeamHP": @(PHBattleIsThreePlayer(&_state) && PHBattleTeamLayoutValid(&_state) ?
+            _state.teamHP[_state.playerTeam] : _state.hp),
         @"applyCount": @(_applyCount), @"restoreCount": @(_restoreCount), @"rollbackCount": @(_rollbackCount), @"deviceVerified": @NO,
         @"automaticEnabled": @(_frame.autoApplyTeam), @"automaticWaiting": @(_autoWaiting),
         @"automaticCount": @(_automaticCount), @"initialBoost": @(_initialBoost),

@@ -46,6 +46,7 @@ static BOOL RestoreReboundTeam(BattleProvider *provider, const PHBattleState &or
             native.set32(original.identity.impl + PHBattleHPOffset, original.hp);
             uint32_t hpShadow = original.hp ^ 0x8085a6beu;
             RequireWrite(original.identity.impl + PHBattleHPShadowOffset, &hpShadow, sizeof(hpShadow));
+            native.adjustHP(original.identity.impl + PHBattleHPControllerOffset, 0, 1);
             native.refreshTeam(original.identity.game, 0);
             uint32_t digestShadow = static_cast<uint32_t>(native.digest(original.identity.game)) ^ 0x689d8b5cu;
             RequireWrite(original.identity.impl + PHBattleDigestShadowOffset, &digestShadow, sizeof(digestShadow));
@@ -121,7 +122,28 @@ static PHBattleMutationResult RebindEntryTeam(BattleProvider *provider, uint8_t 
                     !ProfileMatchesMember(lease->installed, current.members[slot]))
                     throw std::runtime_error("Rebind ownership check failed");
             }
-            if (!SameEntryBanks(before, current, before.playerTeam) || !EntryViewMatchesBank(current))
+            // Per-member refresh can temporarily cap HP before all six
+            // profiles are rebuilt. Preserve the synchronized HP against the
+            // final team's effective cap, not those intermediate caps. No
+            // game frame or damage processing runs inside this transaction.
+            PHBattleState rebuilt = current;
+            NativeCalls native = Calls(frame.header);
+            uintptr_t controller = current.identity.impl + PHBattleHPControllerOffset;
+            uint64_t maximum = native.maximumHP(controller);
+            if (!maximum || maximum > INT32_MAX || before.hp > INT32_MAX || current.hp > INT32_MAX)
+                throw std::runtime_error("Invalid rebind HP bound");
+            uint32_t retainedHP = static_cast<uint32_t>(std::min<uint64_t>(before.hp, maximum));
+            if (current.hp != retainedHP) {
+                native.adjustHP(controller, static_cast<int32_t>(retainedHP) - static_cast<int32_t>(current.hp), 1);
+                native.refreshTeam(current.identity.game, 0);
+            }
+            if (!ReadLive(&current, frame, &failure)) throw std::runtime_error("Rebind HP unreadable");
+            TagProviderMembers(provider, &current);
+            if (!SameRebindContext(before, current) || !current.hpMatches || !current.digestMatches ||
+                !current.entryChargesValid || current.auditFlags != before.auditFlags || current.hp != retainedHP ||
+                native.maximumHP(controller) != maximum ||
+                !SameEntryMembers(rebuilt, current, YES) || !StoredTeamsUnchanged(&rebuilt, &current, nullptr, YES, YES) ||
+                !SameEntryBanks(before, current, before.playerTeam) || !EntryViewMatchesBank(current))
                 throw std::runtime_error("Rebind changed another team");
             std::memcpy(members, current.members, sizeof(current.members));
             return PHBattleMutationApplied;
@@ -132,7 +154,7 @@ static PHBattleMutationResult RebindEntryTeam(BattleProvider *provider, uint8_t 
         return PHBattleMutationRejected;
     }
     BOOL restored = RestoreReboundTeam(provider, before, touched, lastBefore, lastSlot);
-    if (reason) *reason = restored ? @"補回設定未通過校驗，已回復同步後的整隊與充能；自動補回已停止" :
+    if (reason) *reason = restored ? @"補回設定未通過校驗，已回復同步後的整隊、HP 與充能；自動補回已停止" :
         @"同步後的隊伍未能確認完整回復，已停止後續寫入；請複製診斷";
     return restored ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
 }

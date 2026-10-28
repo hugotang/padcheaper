@@ -841,6 +841,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"\nCurrent entry: applied %@ / lost mask 0x%02x / rebind waiting %@ / rebound members %@\nLast binding loss: phase %@ / serial %@",
         battle[@"entryApplied"], [battle[@"entryLostMask"] unsignedIntValue], battle[@"rebindPendingCount"],
         battle[@"entryRebindCount"], battle[@"lastLossPhase"], battle[@"lastLossSerial"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nCurrent HP: %@ / local team HP: %@ / valid %@",
+        battle[@"currentHP"], battle[@"localTeamHP"], battle[@"hpKnown"]];
     for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
         diagnostics = [diagnostics stringByAppendingFormat:@"\nMember %@ source: team %@ / slot %@ / script %@ / provider %@ / rebind %@",
             member[@"slot"], member[@"sourceTeam"], member[@"sourceSlot"], member[@"scriptSlot"],

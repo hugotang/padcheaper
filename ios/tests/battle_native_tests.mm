@@ -32,7 +32,7 @@ struct Fixture {
     uint16_t chargeCaps[6] = {6,6,6,6,6,6};
     bool awakeningsDisabled = false, chargingDisabled = false, invalidAwakeningCount = false;
     uint32_t newTeamHPCap = 0;
-    uint32_t newTeamMaximumHP = 0, entryRuleMaximumHP = 0, displayedHP = 100;
+    uint32_t newTeamMaximumHP = 0, entryRuleMaximumHP = 0, intermediateHPCap = 0, displayedHP = 100;
     unsigned hpInitializations = 0, failEntryHP = 0;
     bool invalidHPMaximum = false;
     int32_t badgeSkillBoost = 2;
@@ -297,6 +297,12 @@ struct Fixture {
                     std::min(f.newTeamHPCap,decode(f.impl() + PHBattleHPOffset,0x766cfc6du))); break;
             }
         }
+        if (f.intermediateHPCap) {
+            unsigned bound = 0;
+            for (unsigned slot = 0; slot < 6; ++slot) bound += (int8_t)decode(f.member(slot) + PHBattleScriptSlotOffset) > 0;
+            if (bound && bound < 6) Set32(f.impl() + PHBattleHPOffset,
+                std::min(f.intermediateHPCap,decode(f.impl() + PHBattleHPOffset,0x766cfc6du)));
+        }
         if (f.bankedTeams) {
             f.syncBanks();
             f.loadView(get<uint32_t>(f.impl() + PHBattleCurrentTeamOffset));
@@ -322,7 +328,9 @@ struct Fixture {
         Fixture &f = *fixture;
         Check(controller == f.impl() + PHBattleHPControllerOffset && suppressAnimation == 1,
             "entry HP uses the native controller and suppresses the refill animation");
-        if (amount > 0) {
+        uint32_t phase = decode(f.impl() + PHBattlePhaseOffset,0x766cfc6du);
+        bool entry = amount > 0 && (phase == 0 || phase == 46);
+        if (entry) {
             ++f.hpInitializations;
             if (f.failEntryHP == 1) return 0;
         }
@@ -331,7 +339,7 @@ struct Fixture {
         Set32(f.impl() + PHBattleHPOffset,hp);
         put<uint32_t>(f.impl() + PHBattleHPShadowOffset,hp ^ 0x8085a6beu);
         f.displayedHP = hp;
-        if (amount > 0) switch (f.failEntryHP) {
+        if (entry) switch (f.failEntryHP) {
             case 2: put<uint32_t>(f.header() + PHSaveRVA + PHBattleAuditOffset,0x10000); break;
             case 3: encode(f.bank(f.changedBank) + PHBattleTeamHPOffset,17,0x766cfc6du); break;
             case 4: put<uint32_t>(f.impl() + PHBattleHPShadowOffset,0); break;
@@ -822,7 +830,7 @@ int main() {
                 f.rebuilds == writes && f.allocated == 1,
                 "remote turns/views, changing snapshots, taken-over context, temporary forms and invalid shadows reject rebind before writes");
         }
-        for (unsigned scenario = 0; scenario < 5; ++scenario) {
+        for (unsigned scenario = 0; scenario < 6; ++scenario) {
             Fixture f; f.configureBanks(1,3,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
             PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
             PHBattleState original = f.state(engine); PHBattleMember output[6] = {}; uint16_t boost = 0;
@@ -835,8 +843,9 @@ int main() {
                 case 2: f.auditOnRefresh = true; break;
                 case 3: f.changeOtherBankOnRefresh = true; f.changedBank = 2; break;
                 case 4: f.failRebuild = f.rebuilds + 3; f.changeOtherViewOnFailedRebuild = true; break;
+                case 5: f.invalidHPMaximum = true; f.intermediateHPCap = 20; break;
             }
-            PHBattleMutationResult wanted = scenario < 3 ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
+            PHBattleMutationResult wanted = scenario < 3 || scenario == 5 ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
             NSString *reason = nil;
             PHBattleMutationResult result = [engine rebindEntryMembers:63 state:&before members:output reason:&reason];
             if (result != wanted) std::fprintf(stderr,"rebind rollback %u: got %d wanted %d %s\n",scenario,result,wanted,reason.UTF8String ?: "");
@@ -962,6 +971,26 @@ int main() {
                 Check(after.hp == 37 && after.teamHP[player] == 37,
                     "guest recovery retains synchronized damage even when the new team has a larger maximum");
             }
+        }
+        for (unsigned count : {2u, 3u}) for (unsigned player : {0u, 1u})
+        for (uint32_t maximum : {900u, 50u}) for (uint32_t syncedHP : {73u, 0u}) {
+            Fixture f; f.configureBanks(1,count,6,player); f.enter(); f.newTeamMaximumHP = maximum;
+            id<PHBattleEngine> engine = PHCreateBattleEngine(); PHBattleState before = f.state(engine);
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleMember output[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "intermediate HP cap test begins with a complete entry team");
+            f.intermediateHPCap = 20;
+            Fixture::encode(f.bank(player) + PHBattleTeamHPOffset,syncedHP,0x766cfc6du);
+            f.receivePeerTeam(player ? player : count,player);
+            PHBattleState synced = f.state(engine); unsigned advances = f.advances;
+            Check([engine rebindEntryMembers:63 state:&synced members:output reason:nullptr] == PHBattleMutationApplied,
+                "rebind reconciles HP only after the complete six-member batch");
+            PHBattleState after = f.state(engine);
+            Check(after.hp == std::min(syncedHP,maximum) && after.teamHP[player] == after.hp &&
+                f.displayedHP == after.hp && f.hpInitializations == 1 && f.advances == advances &&
+                SameEntryBanks(synced,after,player),
+                "intermediate caps do not consume synchronized HP; final caps apply without healing damage or reviving zero HP");
         }
         for (unsigned failure : {0u, 1u, 2u, 4u, 5u}) {
             Fixture f; f.enter(); f.newTeamMaximumHP = 900;
