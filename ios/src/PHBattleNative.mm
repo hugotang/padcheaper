@@ -32,6 +32,7 @@ struct NativeCalls {
     uint64_t (*soloRules)(uint64_t);
     uint64_t (*sharedHelper)(uintptr_t);
     uint64_t (*sharedLeader)(uintptr_t);
+    void (*switchTeam)(uintptr_t, uint32_t, int);
 };
 
 #ifdef PH_BATTLE_NATIVE_TESTS
@@ -66,7 +67,8 @@ static NativeCalls Calls(uintptr_t header) {
         reinterpret_cast<uint64_t (*)(void)>(header + PHBattleTeamSizeRVA),
         reinterpret_cast<uint64_t (*)(uint64_t)>(header + PHBattleSoloRulesRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedHelperRVA),
-        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedLeaderRVA)
+        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedLeaderRVA),
+        reinterpret_cast<void (*)(uintptr_t, uint32_t, int)>(header + PHBattleSwitchTeamRVA)
     };
 #endif
 }
@@ -234,9 +236,9 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     uint8_t intro = 0;
     uint32_t resume = UINT32_MAX, wave = UINT32_MAX, waveCopy = UINT32_MAX, waveBackup = UINT32_MAX;
     // The constructor has finished its initial SB pass, but its opening
-    // animation still blocks the enemy/player state machine. A resumed battle
-    // or any later wave must never receive a new initial skill charge.
-    state->entryWindow = state->protectedValuesValid && phase == 0 &&
+    // animation (or mode 7's phase-46 sync) still blocks the enemy/player state
+    // machine. Resumes and later waves must never get a new initial charge.
+    state->entryWindow = state->protectedValuesValid && PHBattleIsEntryPhase(state) &&
         PHReadU8(impl + PHBattleIntroOffset, &intro) && intro == 1 &&
         PHReadU32(save + PHBattleResumeFlagsOffset, &resume) && !(resume & 0x80000000u) &&
         DecodeAt(impl + PHBattleWaveOffset, key1, key2, 0x766cfc6du, &wave) && wave == 0 &&
@@ -250,6 +252,7 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
         state->entryChargesValid &= chargeValid;
     }
     if (!PHBattleUsesPrimaryTeam(state->multiplayer)) ReadTeamBanks(state, key1, key2);
+    if (PHBattleIsThreePlayer(state) && state->turnInfoValid && state->turnSerial != 0) state->entryWindow = false;
     uint32_t lastKey1 = 0, lastKey2 = 0;
     state->protectedValuesValid &= PHReadU32(frame.header + PHBattleKey1RVA, &lastKey1) && lastKey1 == key1 &&
                                   PHReadU32(frame.header + PHBattleKey2RVA, &lastKey2) && lastKey2 == key2;
@@ -416,7 +419,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     _busy = YES;
     _entryIdentity = expected->identity;
     _entryAttempted = YES;
-    PHBattleMutationResult result = ApplyEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
+    PHBattleMutationResult result = ApplyLocalEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
     return result;

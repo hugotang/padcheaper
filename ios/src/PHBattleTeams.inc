@@ -9,7 +9,7 @@ static BOOL SameMemberParameters(const PHBattleMember &a, const PHBattleMember &
 
 static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
     uintptr_t impl = state->identity.impl, header = state->identity.header;
-    uint32_t count = 0, current = 0, local = 0;
+    uint32_t count = 0, current = 0, shared = 0, player = 0, turn = 0;
     uint8_t busy = 0;
     if (!state->protectedValuesValid || !CheckCode(header, nullptr) ||
         !PHReadU8(impl + PHBattleTeamBusyOffset, &busy) || (busy & 8u) ||
@@ -17,6 +17,17 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
         !PHReadU32(impl + PHBattleCurrentTeamOffset, &current) || current >= count) return NO;
     state->teamCount = static_cast<uint8_t>(count);
     state->currentTeam = static_cast<uint8_t>(current);
+    if (PHBattleIsThreePlayer(state)) {
+        // 0xa3e4c is the local network seat. 0xa3e5c belongs to the shared
+        // leader/helper rules and must not be used to decide whose turn it is.
+        if (count < 2 || count > 3 ||
+            !PHReadU32(impl + PHBattlePlayerTeamOffset, &player) || player >= count ||
+            !PHReadU32(impl + PHBattleTurnSerialOffset, &turn) || turn > INT32_MAX) return NO;
+        state->playerTeam = static_cast<uint8_t>(player);
+        state->turnSerial = turn;
+        state->turnTeam = static_cast<uint8_t>(turn % count);
+        state->turnInfoValid = true;
+    }
     try {
         @try {
             NativeCalls native = Calls(header);
@@ -39,7 +50,7 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
                 sharedHelper = (native.sharedHelper(dungeon) & 1u) != 0;
                 sharedLeader = (native.sharedLeader(dungeon) & 1u) != 0;
                 if ((sharedHelper || sharedLeader) &&
-                    (!PHReadU32(impl + PHBattleLocalTeamOffset, &local) || local >= count)) return NO;
+                    (!PHReadU32(impl + PHBattleSharedTeamOffset, &shared) || shared >= count)) return NO;
             }
             for (unsigned team = 0; team < count; ++team) {
                 uintptr_t descriptor = impl + PHBattleTeamDescriptorOffset + team * PHBattleTeamDescriptorStride;
@@ -49,6 +60,8 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
                     !PHReadPointer(descriptor + PHBattleTeamPointerOffset, &address) || address != expected ||
                     !PHMemoryHasProtection(address, PHBattleTeamStorageStride, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return NO;
                 state->teamBanks[team] = address;
+                if (PHBattleIsThreePlayer(state) && (!(flags & 4u) ||
+                    !DecodeAt(address + PHBattleTeamHPOffset, key1, key2, 0x766cfc6du, &state->teamHP[team]))) return NO;
                 for (unsigned slot = 0; slot < 6; ++slot) {
                     PHBattleMember &m = state->storedMembers[team][slot];
                     BOOL chargeValid = NO;
@@ -63,8 +76,8 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
             // be mistaken for changing an unrelated player's member.
             if (ordinary && sharedLeader) for (unsigned team = 0; team < count; ++team) {
                 PHBattleMember &leader = state->storedMembers[team][0];
-                const PHBattleMember &owner = state->storedMembers[local][0];
-                leader.sourceTeam = static_cast<uint8_t>(local);
+                const PHBattleMember &owner = state->storedMembers[shared][0];
+                leader.sourceTeam = static_cast<uint8_t>(shared);
                 leader.sourceSlot = owner.sourceSlot;
                 if (!SameMemberParameters(leader, owner)) return NO;
             }
@@ -74,8 +87,8 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
                 unsigned team = slot < size ? current : current ^ 1u;
                 unsigned position = slot < size ? slot : 0;
                 if (ordinary) {
-                    if ((sharedHelper || sharedLeader) && slot >= size) { team = local; position = 5; }
-                    else if (sharedLeader && slot == 0) { team = local; position = 0; }
+                    if ((sharedHelper || sharedLeader) && slot >= size) { team = shared; position = 5; }
+                    else if (sharedLeader && slot == 0) { team = shared; position = 0; }
                 }
                 if (team >= count || view.sourceSlot < 0 || view.sourceSlot > 5) return NO;
                 const PHBattleMember &stored = state->storedMembers[team][position];
@@ -88,6 +101,11 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
             uint32_t lastCount = 0, lastCurrent = 0;
             state->teamBanksValid = PHReadU32(impl + PHBattleTeamCountOffset, &lastCount) && lastCount == count &&
                 PHReadU32(impl + PHBattleCurrentTeamOffset, &lastCurrent) && lastCurrent == current;
+            if (PHBattleIsThreePlayer(state)) {
+                uint32_t lastPlayer = 0, lastTurn = 0;
+                state->teamBanksValid &= PHReadU32(impl + PHBattlePlayerTeamOffset, &lastPlayer) && lastPlayer == player &&
+                    PHReadU32(impl + PHBattleTurnSerialOffset, &lastTurn) && lastTurn == turn;
+            }
             return state->teamBanksValid;
         } @catch (NSException *exception) { (void)exception; }
     } catch (...) { }
@@ -105,6 +123,8 @@ static BOOL ParameterReferenced(const PHBattleState *state, int scriptSlot) {
 static BOOL StoredTeamsUnchanged(const PHBattleState *before, const PHBattleState *after,
                                 const PHBattleMember *changed = nullptr, BOOL charges = YES) {
     if (!PHBattleSameTeamView(before, after)) return NO;
+    if (PHBattleIsThreePlayer(before)) for (unsigned team = 0; team < before->teamCount; ++team)
+        if ((!changed || changed->sourceTeam != team) && before->teamHP[team] != after->teamHP[team]) return NO;
     for (unsigned team = 0; team < before->teamCount; ++team) for (unsigned slot = 0; slot < 6; ++slot) {
         const PHBattleMember &stored = before->storedMembers[team][slot];
         if (changed && PHBattleSameOrigin(&stored, changed)) continue;

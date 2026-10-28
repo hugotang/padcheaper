@@ -48,6 +48,7 @@ cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
 cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
+cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -78,7 +79,9 @@ metadata = {
     "dylib_version": version,
     "gui": "floating controls; six-slot formation editor; up to 64 saved teams with selection, copy and delete; 16px input fonts; named awakenings; PADDashFormation import/export",
     "battle_replacement": "up to six native parameter leases; body/weapon/training/awakenings; individual/all restore across bank switches; offscreen restores wait for their team; device verification pending",
-    "automatic_entry": "opt-in selected saved team at fresh wave-zero opening; native Skill Boost recomputation; resumes and later waves excluded; device verification pending",
+    "automatic_entry": "opt-in selected saved team at fresh wave-zero opening; native Skill Boost recomputation; mode 7/multi 1 phase-46 sync selects the local network seat and restores the original view in-frame; resumes and later waves/turns excluded",
+    "three_player_turn_gate": "two or three six-member banks; current view and turnSerial % teamCount must match the local network seat for manual operations",
+    "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "all entry modes by default; source/multi zero defaults; live allow-all switches and lists; validated bank adapter for multi 1/4",
     "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",
     "badge_unlock": "user-reported unlock working in 0.3.0-battle; save/restart and account boundary checks pending",

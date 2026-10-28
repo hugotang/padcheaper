@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.4.1-entry",
+  "prototype_version": "0.4.2-entry",
   "device_verified": false,
   "server_acceptance_verified": false,
   "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
@@ -18,6 +18,8 @@
     "player_input_phase": 2,
     "automatic_entry_phase": 0,
     "automatic_entry_window": "fresh-wave-zero-intro",
+    "three_player_entry_phase": 46,
+    "three_player_turn_gate": "current == player == turnSerial % count",
     "supported_banked_multiplayer": [
       1,
       4
@@ -75,7 +77,10 @@
     "PHBattleChargeShadowOffset": "0x5e8",
     "PHBattleTeamCountOffset": "0xa3e54",
     "PHBattleCurrentTeamOffset": "0xa3e58",
-    "PHBattleLocalTeamOffset": "0xa3e5c",
+    "PHBattleSharedTeamOffset": "0xa3e5c",
+    "PHBattlePlayerTeamOffset": "0xa3e4c",
+    "PHBattleTurnSerialOffset": "0xa3e48",
+    "PHBattleTeamHPOffset": "0x6c48",
     "PHBattleTeamDescriptorOffset": "0xad270",
     "PHBattleTeamDescriptorStride": "0x70",
     "PHBattleTeamPointerOffset": "0x40",
@@ -87,6 +92,14 @@
     "PHBattleAwakeningStateOffset": "0xb465c"
   },
   "guards": [
+    {
+      "name": "PHBattleSwitchTeamRVA",
+      "va": "0x10000cee0",
+      "rva": "0xcee0",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f40302aaf50301aaf30300aa083840f909cb87524901a072166969b8016929b8",
+      "sha256": "1a1d698d3e11a994ccb7ab2c9b00b0322ba229d48ac205dba7b5c3ca98909f9e"
+    },
     {
       "name": "PHBattleSet16RVA",
       "va": "0x10056c990",

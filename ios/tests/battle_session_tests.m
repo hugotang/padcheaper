@@ -29,6 +29,7 @@ static void SyncFakeBanks(PHBattleState *state) {
     BOOL readFailure, rejectTarget;
 }
 - (void)makeBanked:(uint32_t)mode;
+- (void)makeThreePlayer:(NSUInteger)count player:(NSUInteger)player;
 - (void)showTeam:(NSUInteger)team;
 @end
 @implementation FakeBattleEngine
@@ -67,8 +68,20 @@ static void SyncFakeBanks(PHBattleState *state) {
 }
 - (void)showTeam:(NSUInteger)team {
     SyncFakeBanks(&live); live.currentTeam = (uint8_t)team;
-    for (NSUInteger slot = 0; slot < 5; ++slot) live.members[slot] = live.storedMembers[team][slot];
-    live.members[5] = live.storedMembers[team ^ 1][0];
+    for (NSUInteger slot = 0; slot < live.teamSize; ++slot) live.members[slot] = live.storedMembers[team][slot];
+    if (live.teamSize == 5) live.members[5] = live.storedMembers[team ^ 1][0];
+}
+- (void)makeThreePlayer:(NSUInteger)count player:(NSUInteger)player {
+    live.mode = 7; live.multiplayer = 1; live.teamSize = 6; live.teamCount = (uint8_t)count;
+    live.teamBanksValid = live.turnInfoValid = true; live.playerTeam = (uint8_t)player;
+    for (NSUInteger team = 0; team < count; ++team) {
+        live.teamBanks[team] = 10 * (team + 1);
+        for (NSUInteger slot = 0; slot < 6; ++slot) {
+            PHBattleMember m = live.members[slot];
+            m.sourceTeam = (uint8_t)team; m.baseID = (uint16_t)(100 + 1000 * team + slot); m.catalogID = m.baseID;
+            live.storedMembers[team][slot] = m;
+        }
+    }
 }
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
     validations++;
@@ -122,10 +135,17 @@ static void SyncFakeBanks(PHBattleState *state) {
     }
     for (NSUInteger i = 0; i < 6; ++i) if ((mask & (1u << i)) &&
         ![self validateLoadout:&loadouts[i] state:expected reason:reason]) return PHBattleMutationRejected;
+    NSUInteger originalView = live.currentTeam;
+    PHBattleState selected = *expected;
+    if (PHBattleIsThreePlayer(expected)) {
+        [self showTeam:expected->playerTeam];
+        selected = live;
+    }
     for (NSUInteger i = 0; i < 6; ++i) if (mask & (1u << i))
-        [self applyLoadout:&loadouts[i] state:expected slot:i member:&members[i] reason:reason];
+        [self applyLoadout:&loadouts[i] state:&selected slot:i member:&members[i] reason:reason];
     for (NSUInteger i = 0; i < 6; ++i) live.members[i].charge = live.members[i].baseID < 200 ? 6 : 8;
     memcpy(members,live.members,sizeof(live.members)); *boost = 8;
+    if (PHBattleIsThreePlayer(expected)) [self showTeam:originalView];
     return PHBattleMutationApplied;
 }
 - (PHBattleMutationResult)changeState:(const PHBattleState *)expected slot:(NSUInteger)slot
@@ -502,6 +522,67 @@ int main(void) {
             Check(bankEngine->entryCalls == 1 && bankEngine->fullApplies == 6 &&
                 [bankSession.snapshot[@"automaticCount"] isEqual:@1],
                 "a verified banked dungeon entry runs the same one-time automatic team transaction");
+        }
+
+        for (NSUInteger count = 2; count <= 3; ++count) for (NSUInteger player = 0; player < count; ++player) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:count player:player];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team);
+            [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:100];
+            FreshEntry(three); three->live.phase = 46; three->live.teamBanksValid = false;
+            [multiSession onFrame:multiFrame atTime:100.01];
+            [multiSession onFrame:multiFrame atTime:106];
+            Check(!three->entryCalls && [multiSession.snapshot[@"automaticWaiting"] boolValue],
+                "phase-46 bank initialization may wait beyond the manual timeout without cancelling automatic entry");
+            three->live.teamBanksValid = true; three->live.input.rawActiveMask = 1;
+            [multiSession onFrame:multiFrame atTime:106.01];
+            Check(!three->entryCalls && [multiSession.snapshot[@"automaticWaiting"] boolValue],
+                "multiplayer entry also waits for the selection touch to finish");
+            three->live.input.rawActiveMask = 0; [multiSession onFrame:multiFrame atTime:106.02];
+            Check(three->entryCalls == 1 && three->fullApplies == 6 && three->live.currentTeam == 0 &&
+                [multiSession.snapshot[@"automaticCount"] isEqual:@1] &&
+                [multiSession.snapshot[@"offscreenCount"] unsignedIntegerValue] == (player ? 6u : 0u),
+                "automatic entry installs leases for our network seat even while another team is displayed");
+            for (NSUInteger bank = 0; bank < count; ++bank) for (NSUInteger slot = 0; slot < 6; ++slot)
+                Check(three->live.storedMembers[bank][slot].baseID == (bank == player ? 200 + slot : 100 + 1000 * bank + slot),
+                    "only our six-member bank receives the captured team");
+            three->live.phase = 0; [multiSession onFrame:multiFrame atTime:107];
+            three->live.phase = 2; three->live.entryWindow = false;
+            three->live.turnSerial = three->live.turnTeam = (uint8_t)((player + 1) % count);
+            [three showTeam:player]; [multiSession onFrame:multiFrame atTime:108];
+            [multiSession queueRestore]; [multiSession onFrame:multiFrame atTime:108.1];
+            Check(!three->fullRestores && [multiSession.snapshot[@"restorePending"] boolValue],
+                "restoration waits for our actual turn even if our team is being previewed in phase 2");
+            [three showTeam:three->live.turnTeam]; [multiSession onFrame:multiFrame atTime:109];
+            Check([multiSession.snapshot[@"offscreenCount"] isEqual:@6] && !three->fullRestores,
+                "owned leases survive remote turns without restoring another player's members");
+            three->live.turnSerial = (uint32_t)(count + player); three->live.turnTeam = (uint8_t)player;
+            [three showTeam:player];
+            for (NSUInteger slot = 0; slot < 6; ++slot) three->live.members[slot].charge = 2;
+            for (NSUInteger slot = 0; slot < 6; ++slot) [multiSession onFrame:multiFrame atTime:110 + slot * 0.1];
+            Check(three->fullRestores == 6 && three->entryCalls == 1 && [multiSession.snapshot[@"activeCount"] isEqual:@0],
+                "first local turn restores all original local sources with no second automatic entry");
+            for (NSUInteger slot = 0; slot < 6; ++slot) Check(three->live.members[slot].baseID == 100 + 1000 * player + slot &&
+                three->live.members[slot].charge == 2, "later restoration preserves post-preemptive charge instead of resetting SB");
+        }
+        for (NSUInteger scenario = 0; scenario < 3; ++scenario) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:2 player:1];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team); [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            if (scenario != 0) { three->live.present = false; [multiSession onFrame:multiFrame atTime:100]; }
+            FreshEntry(three); three->live.phase = 46;
+            if (scenario == 1) three->live.entryWindow = false; // Resumed dungeon.
+            if (scenario == 2) { three->live.input.rawActiveMask = 1; }
+            [multiSession onFrame:multiFrame atTime:100.01];
+            if (scenario == 2) [multiSession queueRestore];
+            three->live.phase = 2; three->live.entryWindow = false; three->live.input.rawActiveMask = 0;
+            three->live.turnSerial = three->live.turnTeam = 1; [three showTeam:1];
+            [multiSession onFrame:multiFrame atTime:110];
+            Check(!three->entryCalls && !three->changes,
+                "mid-dungeon enable, resume and explicit cancellation cannot apply or recharge on the first local turn");
         }
 
         PHBattleLoadout automatic[6]; FullTeam(automatic);

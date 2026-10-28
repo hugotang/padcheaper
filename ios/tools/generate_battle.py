@@ -12,7 +12,9 @@ def generate(manifest):
     if manifest["gate"] != {"entry_categories": "all", "source_modes_default": [0], "multiplayer_modes_default": [0],
                             "unsupported_banked_multiplayer": [], "supported_banked_multiplayer": [1, 4],
                             "runtime_configuration": "battle", "player_input_phase": 2,
-                            "automatic_entry_phase": 0, "automatic_entry_window": "fresh-wave-zero-intro"}:
+                            "automatic_entry_phase": 0, "automatic_entry_window": "fresh-wave-zero-intro",
+                            "three_player_entry_phase": 46,
+                            "three_player_turn_gate": "current == player == turnSerial % count"}:
         raise ValueError("Battle gate differs from the reviewed prototype")
     if manifest["input"] != {
         "manager_pointer_rva": "0x2ac6fd8", "slots_per_bank": 5, "record_bytes": 264,
@@ -37,7 +39,8 @@ def generate(manifest):
                 "PHBattleSetByteRVA", "PHBattleAllocateRVA", "PHBattleReleaseRVA",
                 "PHBattleTeamAwakeningRVA", "PHBattleTeamLatentRVA", "PHBattleCurrentBadgeRVA",
                 "PHBattleBadgeBoostRVA", "PHBattleAdvanceTeamRVA", "PHBattleAdvanceMemberRVA", "PHBattleMemberHasSkillRVA",
-                "PHBattleTeamSizeRVA", "PHBattleSoloRulesRVA", "PHBattleSharedHelperRVA", "PHBattleSharedLeaderRVA"}
+                "PHBattleTeamSizeRVA", "PHBattleSoloRulesRVA", "PHBattleSharedHelperRVA", "PHBattleSharedLeaderRVA",
+                "PHBattleSwitchTeamRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

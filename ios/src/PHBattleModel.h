@@ -40,9 +40,11 @@ typedef struct {
     PHBattleIdentity identity;
     bool present, protectedValuesValid, dragActive, digestKnown, digestMatches, hpMatches;
     bool entryWindow, entryChargesValid;
-    bool teamBanksValid;
-    uint8_t teamCount, currentTeam, teamSize;
+    bool teamBanksValid, turnInfoValid;
+    uint8_t teamCount, currentTeam, teamSize, playerTeam, turnTeam;
+    uint32_t turnSerial;
     uintptr_t teamBanks[PHBattleTeamCapacity];
+    uint32_t teamHP[PHBattleTeamCapacity];
     PHBattleMember storedMembers[PHBattleTeamCapacity][6];
     PHInputState input;
     int16_t mode;
@@ -64,7 +66,7 @@ typedef struct {
 
 typedef enum {
     PHBattleGateReady, PHBattleGateAbsent, PHBattleGateProtected,
-    PHBattleGateMode, PHBattleGateLayout, PHBattleGatePhase, PHBattleGateInputUnavailable, PHBattleGateInput,
+    PHBattleGateMode, PHBattleGateLayout, PHBattleGatePhase, PHBattleGateTurn, PHBattleGateInputUnavailable, PHBattleGateInput,
     PHBattleGateDrag, PHBattleGateAudit,
     PHBattleGateHP, PHBattleGateDigest
 } PHBattleGate;
@@ -83,7 +85,10 @@ bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2
 bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b);
 bool PHBattleSameOrigin(const PHBattleMember *a, const PHBattleMember *b);
 bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b);
+bool PHBattleIsThreePlayer(const PHBattleState *state);
+bool PHBattleIsEntryPhase(const PHBattleState *state);
 bool PHBattleTeamLayoutValid(const PHBattleState *state);
+bool PHBattleSameTeamBanks(const PHBattleState *a, const PHBattleState *b);
 bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b);
 PHBattleGate PHBattleStateGate(const PHBattleState *state);
 PHBattleGate PHBattleEntryGate(const PHBattleState *state);

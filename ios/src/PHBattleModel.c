@@ -48,7 +48,7 @@ bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2
 bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b) {
     return a && b && a->header == b->header && a->game == b->game && a->impl == b->impl &&
            a->player == b->player && a->epoch == b->epoch && a->dungeon == b->dungeon &&
-           a->floor == b->floor && a->sourceMode == b->sourceMode &&
+           a->floor == b->floor && a->entryMode == b->entryMode && a->sourceMode == b->sourceMode &&
            a->multiplayer == b->multiplayer && memcmp(a->entryHash, b->entryHash, sizeof(a->entryHash)) == 0;
 }
 
@@ -62,19 +62,36 @@ bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
            a->baseID == b->baseID && a->assistID == b->assistID;
 }
 
+bool PHBattleIsThreePlayer(const PHBattleState *state) {
+    return state && state->mode == 7 && state->multiplayer == 1;
+}
+
+bool PHBattleIsEntryPhase(const PHBattleState *state) {
+    return state && (state->phase == 0 || (PHBattleIsThreePlayer(state) && state->phase == 46));
+}
+
 bool PHBattleTeamLayoutValid(const PHBattleState *state) {
     if (!state) return false;
     if (PHBattleUsesPrimaryTeam(state->multiplayer)) return true;
     if (!state->teamBanksValid || !state->teamCount || state->teamCount > PHBattleTeamCapacity ||
         state->currentTeam >= state->teamCount || (state->teamSize != 5 && state->teamSize != 6)) return false;
     for (unsigned i = 0; i < state->teamCount; ++i) if (!state->teamBanks[i]) return false;
+    if (PHBattleIsThreePlayer(state) && (!state->turnInfoValid || state->teamSize != 6 ||
+        state->teamCount < 2 || state->teamCount > 3 || state->playerTeam >= state->teamCount ||
+        state->turnSerial > INT32_MAX || state->turnTeam != state->turnSerial % state->teamCount)) return false;
     return true;
 }
 
-bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b) {
-    if (!a || !b || !PHBattleTeamLayoutValid(a) || !PHBattleTeamLayoutValid(b) || a->multiplayer != b->multiplayer) return false;
-    return PHBattleUsesPrimaryTeam(a->multiplayer) || (a->teamCount == b->teamCount && a->currentTeam == b->currentTeam &&
+bool PHBattleSameTeamBanks(const PHBattleState *a, const PHBattleState *b) {
+    if (!a || !b || !PHBattleTeamLayoutValid(a) || !PHBattleTeamLayoutValid(b) ||
+        a->multiplayer != b->multiplayer || a->mode != b->mode) return false;
+    if (PHBattleIsThreePlayer(a) && (a->playerTeam != b->playerTeam || a->turnSerial != b->turnSerial)) return false;
+    return PHBattleUsesPrimaryTeam(a->multiplayer) || (a->teamCount == b->teamCount &&
         a->teamSize == b->teamSize && !memcmp(a->teamBanks, b->teamBanks, sizeof(a->teamBanks)));
+}
+
+bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b) {
+    return PHBattleSameTeamBanks(a, b) && (PHBattleUsesPrimaryTeam(a->multiplayer) || a->currentTeam == b->currentTeam);
 }
 
 static PHBattleGate StateGate(const PHBattleState *state, bool entry) {
@@ -83,7 +100,13 @@ static PHBattleGate StateGate(const PHBattleState *state, bool entry) {
     if (!PHBattlePolicyAllows(&state->policy, state->mode, state->sourceMode, state->multiplayer))
         return PHBattleGateMode;
     if (!PHBattleTeamLayoutValid(state)) return PHBattleGateLayout;
-    if (entry ? state->phase != 0 || !state->entryWindow : state->phase != 2) return PHBattleGatePhase;
+    if (entry ? !PHBattleIsEntryPhase(state) || !state->entryWindow ||
+        (PHBattleIsThreePlayer(state) && state->turnSerial != 0) : state->phase != 2) return PHBattleGatePhase;
+    // Phase 2 is also used while replaying a remote player's turn. The native
+    // controller compares turnSerial % teamCount with the local network seat.
+    // Entry is a separate preemptive-free transaction that selects our bank.
+    if (!entry && PHBattleIsThreePlayer(state) &&
+        (state->currentTeam != state->playerTeam || state->turnTeam != state->playerTeam)) return PHBattleGateTurn;
     if (!state->input.valid) return PHBattleGateInputUnavailable;
     if (!PHInputIsQuiet(&state->input)) return PHBattleGateInput;
     if (state->dragActive) return PHBattleGateDrag;

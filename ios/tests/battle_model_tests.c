@@ -120,6 +120,7 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 1 requires a verified native layout");
     state.multiplayer = 4;
     Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 4 requires a verified native layout");
+    state.mode = 0;
     state.teamBanksValid = true; state.teamCount = 2; state.teamSize = 5;
     state.teamBanks[0] = 10; state.teamBanks[1] = 20;
     for (uint32_t multi = 1; multi <= 4; multi += 3) {
@@ -162,6 +163,36 @@ int main(void) {
     Check(PHBattleEntryGate(&state) == PHBattleGateInput, "entry waits for the dungeon selection touch to finish");
     state.input.rawActiveMask = 0; state.auditFlags = 0x10000;
     Check(PHBattleEntryGate(&state) == PHBattleGateAudit, "entry preserves all normal audit checks");
+    state.auditFlags = 0; state.mode = 7; state.multiplayer = 1;
+    state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
+        .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
+    state.teamSize = 6; state.teamCount = 2; state.teamBanks[2] = 30;
+    state.phase = 46;
+    Check(PHBattleEntryGate(&state) == PHBattleGateLayout, "mode 7 requires verified local seat and turn information");
+    state.turnInfoValid = true;
+    for (unsigned count = 2; count <= 3; ++count) for (unsigned player = 0; player < count; ++player) {
+        state.teamCount = (uint8_t)count; state.playerTeam = (uint8_t)player; state.currentTeam = 0;
+        state.turnSerial = state.turnTeam = 0; state.phase = 46; state.entryWindow = true;
+        Check(PHBattleEntryGate(&state) == PHBattleGateReady && PHBattleStateGate(&state) == PHBattleGatePhase,
+            "two or three participants can initialize their own six-member bank during phase 46");
+        state.phase = 2; state.entryWindow = false;
+        state.currentTeam = state.playerTeam;
+        state.turnSerial = state.turnTeam = (uint8_t)((player + 1) % count);
+        Check(PHBattleStateGate(&state) == PHBattleGateTurn && PHBattleEntryGate(&state) == PHBattleGatePhase,
+            "previewing our bank during another player's phase 2 permits neither manual writes nor an SB reset");
+        state.turnTeam = state.playerTeam; state.turnSerial = player + count;
+        Check(PHBattleStateGate(&state) == PHBattleGateReady, "native modulo turn ownership enables only our operational view");
+        PHBattleState later = state; later.turnSerial += count;
+        Check(!PHBattleSameTeamView(&state, &later), "a later turn cannot reuse a stale mutation snapshot");
+        later = state; later.playerTeam = (uint8_t)((player + 1) % count);
+        Check(!PHBattleSameTeamBanks(&state, &later), "changed local network seats invalidate the transaction");
+        state.currentTeam = (uint8_t)((player + 1) % count);
+        Check(PHBattleStateGate(&state) == PHBattleGateTurn, "our turn cannot mutate a remote preview");
+        state.phase = 46; state.entryWindow = true;
+        Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "a later turn cannot impersonate a new phase-46 entry");
+    }
+    state.multiplayer = 0; state.turnSerial = 0;
+    Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "phase 46 does not broaden single-player entry eligibility");
     printf("Battle model tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

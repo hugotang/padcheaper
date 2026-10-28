@@ -835,6 +835,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"automaticEnabled"], battle[@"automaticWaiting"], battle[@"automaticCount"], battle[@"initialBoost"],
         battle[@"entryWindow"], battle[@"entryChargesValid"], battle[@"automaticMessage"],
         battle[@"teamBanksValid"], battle[@"currentTeam"], battle[@"teamCount"], battle[@"offscreenCount"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nThree-player turn: valid %@ / player %@ / owner %@ / serial %@",
+        battle[@"turnInfoValid"], battle[@"playerTeam"], battle[@"turnTeam"], battle[@"turnSerial"]];
     for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
         diagnostics = [diagnostics stringByAppendingFormat:@"\nMember %@ source: team %@ / slot %@",
             member[@"slot"], member[@"sourceTeam"], member[@"sourceSlot"]];

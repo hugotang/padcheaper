@@ -274,7 +274,7 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
     BOOL phaseAllowed = entry && original ? before.entryWindow && CanReadNative(&before) &&
         before.hpMatches && before.digestKnown && before.digestMatches :
         (entry ? PHBattleEntryGate(&before) : PHBattleStateGate(&before)) == PHBattleGateReady;
-    if (!phaseAllowed ||
+    if (!phaseAllowed || (entry && PHBattleIsThreePlayer(&before) && before.currentTeam != before.playerTeam) ||
         !PHBattleSameIdentity(&expected->identity, &before.identity) || !PHBattleSameTeamView(expected, &before) ||
         expected->catalog != before.catalog || expected->catalogCount != before.catalogCount ||
         !PHBattleSameSource(&expected->members[slot], &old) || expected->members[slot].formID != old.formID ||

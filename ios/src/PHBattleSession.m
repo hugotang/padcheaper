@@ -4,6 +4,7 @@
 static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *state) {
     switch (gate) {
         case PHBattleGateReady: return state->entryWindow ? @"新地下城開場，可自動套用隊伍" :
+            PHBattleIsThreePlayer(state) ? @"自己的回合，可套用六個位置" :
             PHBattleUsesPrimaryTeam(state->multiplayer) ? @"操作階段，可套用六個位置" : @"操作階段，可套用目前隊伍與助人";
         case PHBattleGateAbsent: return @"等待進入地下城";
         case PHBattleGateProtected: return @"戰鬥保護值或隊員參數未通過檢查";
@@ -11,6 +12,8 @@ static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *sta
                                       state->mode, state->sourceMode, state->multiplayer];
         case PHBattleGateLayout: return @"隊伍陣列或隊員來源尚未通過檢查，暫停操作";
         case PHBattleGatePhase: return [NSString stringWithFormat:@"等待玩家操作階段（phase %u）", state->phase];
+        case PHBattleGateTurn: return [NSString stringWithFormat:@"等待自己的回合（本機隊伍 %u／回合隊伍 %u／目前畫面 %u）",
+            state->playerTeam + 1, state->turnTeam + 1, state->currentTeam + 1];
         case PHBattleGateInputUnavailable: return @"觸控狀態未通過檢查，暫停替換";
         case PHBattleGateInput: return [NSString stringWithFormat:@"等待放開觸控或輸入處理完成（raw 0x%02x／frame 0x%02x）",
                                        state->input.rawActiveMask, state->input.frameActiveMask];
@@ -216,14 +219,16 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
                 // original game can leave its intro and process preemptives.
                 _autoWaiting = NO;
                 PHBattleMember originals[6], applied[6] = {0};
-                memcpy(originals, _state.members, sizeof(originals));
+                BOOL localBank = PHBattleIsThreePlayer(&_state);
+                BOOL visible = !localBank || _state.currentTeam == _state.playerTeam;
+                memcpy(originals, localBank ? _state.storedMembers[_state.playerTeam] : _state.members, sizeof(originals));
                 uint16_t boost = 0;
                 PHBattleMutationResult result = [_engine applyEntryLoadouts:_entryLoadouts mask:_entryMask state:&_state
                     members:applied initialBoost:&boost reason:&reason];
                 if (result == PHBattleMutationApplied) {
                     NSUInteger count = 0;
                     for (NSUInteger i = 0; i < 6; ++i) if (_entryMask & (1u << i)) {
-                        _leases[i] = (PHBattleLease){.active = YES, .visible = YES, .slot = i, .identity = _state.identity,
+                        _leases[i] = (PHBattleLease){.active = YES, .visible = visible, .slot = visible ? i : 6, .identity = _state.identity,
                             .original = originals[i], .applied = applied[i], .policy = _state.policy};
                         ++count;
                     }
@@ -233,7 +238,7 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
                 _automaticMessage = _message;
                 [self didMutate]; return;
             }
-            if (entryGate == PHBattleGateMode || entryGate == PHBattleGateLayout || entryGate == PHBattleGateAudit ||
+            if (entryGate == PHBattleGateMode || (entryGate == PHBattleGateLayout && !PHBattleIsThreePlayer(&_state)) || entryGate == PHBattleGateAudit ||
                 entryGate == PHBattleGateHP || entryGate == PHBattleGateDigest) {
                 _autoWaiting = NO;
                 _automaticMessage = _message = [@"本次未自動套用：" stringByAppendingString:PHBattleGateMessage(entryGate, &_state)];
@@ -407,6 +412,9 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         @"message": _message ?: @"", @"gate": _gateMessage ?: @"", @"members": members,
         @"mode": @(_state.mode), @"sourceMode": @(_state.sourceMode), @"multiplayer": @(_state.multiplayer),
         @"teamCount": @(_state.teamCount), @"currentTeam": @(_state.currentTeam + 1),
+        @"turnInfoValid": @(_hasState && _state.turnInfoValid), @"turnSerial": @(_state.turnSerial),
+        @"playerTeam": @(_state.turnInfoValid ? _state.playerTeam + 1 : 0),
+        @"turnTeam": @(_state.turnInfoValid ? _state.turnTeam + 1 : 0),
         @"teamBanksValid": @(_state.teamBanksValid), @"offscreenCount": @(offscreenCount),
         @"battlePhase": @(_state.phase), @"auditFlags": @(_state.auditFlags),
         @"inputValid": @(_hasState && _state.input.valid), @"inputQuiet": @(_hasState && PHInputIsQuiet(&_state.input)),

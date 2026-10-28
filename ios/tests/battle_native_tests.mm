@@ -24,6 +24,7 @@ struct Fixture {
     unsigned nativeTeamSize = 5;
     bool changeOtherBankOnRefresh = false;
     unsigned rebuilds = 0, refreshes = 0, allocated = 0, released = 0;
+    unsigned switches = 0, failSwitch = 0, changedBank = 1;
     unsigned failRebuild = 0;
     bool auditOnRefresh = false;
     unsigned advances = 0, memberAdvances = 0, failAdvanceTick = 0, closeWindowAtTick = 0;
@@ -42,7 +43,7 @@ struct Fixture {
         fixture = this;
         PHTestNativeCalls = {Set16, Rebuild, Refresh, Digest, MaxCharge, Radius, SetByte, Allocate, Release,
             Set32, TeamAwakening, TeamLatent, CurrentBadge, BadgeBoost, AdvanceTeam, AdvanceMember, MemberHasSkill,
-            TeamSize, SoloRules, SharedHelper, SharedLeader};
+            TeamSize, SoloRules, SharedHelper, SharedLeader, SwitchTeam};
         for (size_t i = 0; i < PHBattleTextGuardCount; ++i)
             std::memcpy(image.data() + PHBattleTextGuards[i].rva, PHBattleTextGuards[i].bytes, 64);
         put<uint8_t>(header() + PHSaveRVA, 1); put<uint8_t>(header() + PHSaveRVA + 1, 1);
@@ -102,7 +103,7 @@ struct Fixture {
         unsigned team = slot < nativeTeamSize ? current : current ^ 1u;
         unsigned position = slot < nativeTeamSize ? slot : 0;
         if (get<uint16_t>(header() + PHBattleModeRVA) != 7 && !soloRule) {
-            unsigned local = get<uint32_t>(impl() + PHBattleLocalTeamOffset);
+            unsigned local = get<uint32_t>(impl() + PHBattleSharedTeamOffset);
             if ((sharedHelperRule || sharedLeaderRule) && slot >= nativeTeamSize) { team = local; position = 5; }
             else if (sharedLeaderRule && slot == 0) { team = local; position = 0; }
         }
@@ -116,14 +117,23 @@ struct Fixture {
             if (slot >= nativeTeamSize && get<uint16_t>(header() + PHBattleModeRVA) != 7 && !soloRule)
                 encode(member(slot) + PHBattleSourceSlotOffset, 5);
         }
+        if (threePlayer()) {
+            Set32(impl() + PHBattleHPOffset, decode(bank(team) + PHBattleTeamHPOffset, 0x766cfc6du));
+            put<uint32_t>(impl() + PHBattleHPShadowOffset, decode(impl() + PHBattleHPOffset, 0x766cfc6du) ^ 0x8085a6beu);
+        }
     }
-    void configureBanks(uint32_t mode, unsigned count = 2, unsigned size = 5) {
+    bool threePlayer() const {
+        return get<uint16_t>(header() + PHBattleModeRVA) == 7 && get<uint32_t>(header() + PHBattleMultiplayerRVA) == 1;
+    }
+    void configureBanks(uint32_t mode, unsigned count = 2, unsigned size = 5, unsigned player = 0) {
         bankedTeams = true; nativeTeamSize = size;
         put<uint32_t>(header() + PHBattleMultiplayerRVA, mode);
         if (size == 6 && !soloRule) put<uint16_t>(header() + PHBattleModeRVA, 7);
         put<uint32_t>(impl() + PHBattleTeamCountOffset, count);
         put<uint32_t>(impl() + PHBattleCurrentTeamOffset, 0);
-        put<uint32_t>(impl() + PHBattleLocalTeamOffset, 1);
+        put<uint32_t>(impl() + PHBattleSharedTeamOffset, 1);
+        put<uint32_t>(impl() + PHBattlePlayerTeamOffset, player);
+        put<uint32_t>(impl() + PHBattleTurnSerialOffset, 0);
         if (sharedHelperRule || sharedLeaderRule) {
             uintptr_t object = header() + 0x1600000;
             put<uint32_t>((uintptr_t)dungeon.data() + PHBattleDungeonRulesOffset, 1);
@@ -132,7 +142,8 @@ struct Fixture {
         }
         for (unsigned team = 0; team < count; ++team) {
             uintptr_t descriptor = impl() + PHBattleTeamDescriptorOffset + team * PHBattleTeamDescriptorStride;
-            put<uint8_t>(descriptor, 9); put<uintptr_t>(descriptor + PHBattleTeamPointerOffset, bank(team));
+            put<uint8_t>(descriptor, 13); put<uintptr_t>(descriptor + PHBattleTeamPointerOffset, bank(team));
+            encode(bank(team) + PHBattleTeamHPOffset, 100 + 50 * team, 0x766cfc6du);
             for (unsigned slot = 0; slot < 6; ++slot) {
                 uintptr_t m = bank(team,slot);
                 std::memcpy((void *)m, originals[slot], PHBattleMemberStride);
@@ -160,6 +171,7 @@ struct Fixture {
             if (sharedLeaderRule && slot == 0 && current != source.first)
                 std::memcpy((void *)bank(current), (void *)stored, PHBattleMemberStride);
         }
+        if (threePlayer()) encode(bank(current) + PHBattleTeamHPOffset, decode(impl() + PHBattleHPOffset, 0x766cfc6du), 0x766cfc6du);
     }
     template <typename T> static void put(uintptr_t address, T value) { std::memcpy((void *)address, &value, sizeof(value)); }
     template <typename T> static T get(uintptr_t address) { T value; std::memcpy(&value, (void *)address, sizeof(value)); return value; }
@@ -167,10 +179,10 @@ struct Fixture {
         uint32_t raw[4] = {((value << 5) | (value >> 27)) ^ salt, 0, value ^ Key1 ^ Key2, value};
         std::memcpy((void *)address, raw, sizeof(raw));
     }
-    static uint32_t decode(uintptr_t address) {
+    static uint32_t decode(uintptr_t address, uint32_t salt = 0x6a875a8bu) {
         uint32_t raw[4], value = UINT32_MAX;
         std::memcpy(raw, (void *)address, sizeof(raw));
-        Check(PHBattleDecodeProtected(raw, Key1, Key2, 0x6a875a8bu, &value), "native double sees unanimous protected data");
+        Check(PHBattleDecodeProtected(raw, Key1, Key2, salt, &value), "native double sees unanimous protected data");
         return value;
     }
     bool mapped(uintptr_t address, size_t length) const {
@@ -190,7 +202,7 @@ struct Fixture {
         return value;
     }
     void enter() {
-        encode(impl() + PHBattlePhaseOffset, 0, 0x766cfc6du);
+        encode(impl() + PHBattlePhaseOffset, threePlayer() ? 46 : 0, 0x766cfc6du);
         for (uintptr_t offset : {PHBattleWaveOffset, PHBattleWaveCopyOffset, PHBattleWaveBackupOffset})
             encode(impl() + offset, 0, 0x766cfc6du);
         put<uint8_t>(impl() + PHBattleIntroOffset, 1);
@@ -208,7 +220,7 @@ struct Fixture {
         return value;
     }
     void shadows() {
-        put<uint32_t>(impl() + PHBattleHPShadowOffset, 100 ^ 0x8085a6beu);
+        put<uint32_t>(impl() + PHBattleHPShadowOffset, decode(impl() + PHBattleHPOffset, 0x766cfc6du) ^ 0x8085a6beu);
         put<uint32_t>(impl() + PHBattleDigestShadowOffset, (uint32_t)Digest(game()) ^ 0x689d8b5cu);
     }
     static uint64_t Set16(uintptr_t address, uint64_t value) { encode(address, (uint16_t)value); return value; }
@@ -254,14 +266,14 @@ struct Fixture {
         Check(game == f.game() && value == 0, "refresh uses the normal team ABI");
         if (f.auditOnRefresh) put<uint32_t>(f.header() + PHSaveRVA + PHBattleAuditOffset, 0x10000);
         if (f.newTeamHPCap) {
-            for (unsigned i = 0; i < 6; ++i) if (get<uint16_t>(f.member(i) + PHBattleBaseIDOffset) >= 200) {
+            for (unsigned i = 0; i < 6; ++i) if ((int8_t)decode(f.member(i) + PHBattleScriptSlotOffset) > 0) {
                 Set32(f.impl() + PHBattleHPOffset, f.newTeamHPCap); break;
             }
         }
         if (f.bankedTeams) {
             f.syncBanks();
             f.loadView(get<uint32_t>(f.impl() + PHBattleCurrentTeamOffset));
-            if (f.changeOtherBankOnRefresh) put<uint16_t>(f.bank(1,2) + 0x510, 98);
+            if (f.changeOtherBankOnRefresh) put<uint16_t>(f.bank(f.changedBank,2) + 0x510, 98);
         }
         return 0;
     }
@@ -334,6 +346,13 @@ struct Fixture {
     static uint64_t SoloRules(uint64_t selector) { Check(selector == 0, "bank adapter reads ordinary solo rules"); return fixture->soloRule; }
     static uint64_t SharedHelper(uintptr_t d) { Check(d == (uintptr_t)fixture->dungeon.data(), "helper rule receives active dungeon"); return fixture->sharedHelperRule; }
     static uint64_t SharedLeader(uintptr_t d) { Check(d == (uintptr_t)fixture->dungeon.data(), "leader rule receives active dungeon"); return fixture->sharedLeaderRule; }
+    static void SwitchTeam(uintptr_t game, uint32_t team, int temporary) {
+        Fixture &f = *fixture;
+        Check(game == f.game() && temporary == 0 && team < get<uint32_t>(f.impl() + PHBattleTeamCountOffset),
+            "entry uses the native permanent-view loader ABI without changing turn ownership");
+        if (++f.switches == f.failSwitch) throw std::runtime_error("injected team loader failure");
+        f.loadView(team);
+    }
     static uint64_t AdvanceMember(uintptr_t m, int amount) {
         ++fixture->memberAdvances;
         uint16_t old = (uint16_t)decode(m + PHBattleChargeOffset), cap = (uint16_t)MaxCharge(m,0);
@@ -569,6 +588,125 @@ int main() {
             PHBattleLoadout loadout = Loadout(); PHBattleMember output = {}; f.changeOtherBankOnRefresh = true;
             Check([engine applyLoadout:&loadout state:&before slot:0 member:&output reason:nullptr] == PHBattleMutationUncertain,
                 "an unrelated bank mutation cannot be concealed by refreshing the digest or reported as a full rollback");
+        }
+        for (unsigned count : {2u, 3u}) for (unsigned player = 0; player < count; ++player) {
+            Fixture f; f.configureBanks(1,count,6,player); f.enter();
+            id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout team[6]; PHBattleMember output[6] = {}; uint16_t boost = 77;
+            for (unsigned slot = 0; slot < 6; ++slot) { team[slot] = Loadout(slot); f.awakening(200+slot,0,21); }
+            PHBattleState before = f.state(engine);
+            Check(before.phase == 46 && before.entryWindow && before.turnInfoValid && before.playerTeam == player &&
+                before.turnTeam == 0 && PHBattleEntryGate(&before) == PHBattleGateReady,
+                "real three-player entry starts in phase 46 and identifies our network seat for two or three participants");
+            NSString *reason = nil;
+            PHBattleMutationResult result = [engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:&reason];
+            if (result != PHBattleMutationApplied) std::fprintf(stderr,"mode7 entry result %d: %s\n",result,reason.UTF8String ?: "");
+            Check(result == PHBattleMutationApplied && boost == 8 && f.advances == 8 && f.switches == (player ? 2u : 0u),
+                "three-player automatic entry installs our entire bank and native SB in one frame");
+            PHBattleState after = f.state(engine);
+            Check(after.currentTeam == before.currentTeam && after.hp == before.hp && after.turnSerial == 0 &&
+                after.entryChargesValid && after.hpMatches && after.digestMatches,
+                "entry restores the original view, HP and turn owner before the game resumes");
+            for (unsigned bank = 0; bank < count; ++bank) {
+                Check(after.teamHP[bank] == before.teamHP[bank], "entry preserves each participant's HP");
+                for (unsigned slot = 0; slot < 6; ++slot) {
+                    const PHBattleMember &m = after.storedMembers[bank][slot];
+                    Check(m.sourceTeam == bank && m.baseID == (bank == player ? 200 + slot : 100 + 1000 * bank + slot) &&
+                        m.charge == (bank == player ? 6 : 4), "only the local network seat receives new members and skill boost");
+                    if (bank == player) Check(m.providerToken && m.providerToken == output[slot].providerToken,
+                        "entry returns local provider ownership even when its bank is offscreen");
+                }
+            }
+            // A preemptive delay occurs after the transaction. Loading the
+            // first local turn must neither reapply the team nor recharge it.
+            for (unsigned slot = 0; slot < 6; ++slot) {
+                Fixture::encode(f.bank(player,slot) + PHBattleChargeOffset,2);
+                Fixture::put<uint32_t>(f.bank(player,slot) + PHBattleChargeShadowOffset,2 ^ 0x68fb65ceu);
+            }
+            Fixture::put<uint32_t>(f.impl() + PHBattleTurnSerialOffset, player);
+            Fixture::Set32(f.impl() + PHBattlePhaseOffset,2); f.loadView(player);
+            PHBattleState firstTurn = f.state(engine); boost = 77;
+            Check(PHBattleStateGate(&firstTurn) == PHBattleGateReady &&
+                [engine applyEntryLoadouts:team mask:63 state:&firstTurn members:output initialBoost:&boost reason:nullptr] == PHBattleMutationRejected &&
+                boost == 77 && f.advances == 8, "the first local turn cannot reset preemptive delays or repeat initial SB");
+            for (unsigned slot = 0; slot < 6; ++slot) {
+                PHBattleState current = f.state(engine);
+                Check(current.members[slot].charge == 2 &&
+                    [engine restoreLoadout:&before.storedMembers[player][slot] state:&current slot:slot reason:nullptr] == PHBattleMutationApplied,
+                    "our original six members restore on our own turn with delayed charge intact");
+            }
+            Check(f.allocated == f.released, "local offscreen entry leases release after all six sources restore");
+        }
+        {
+            Fixture f; f.configureBanks(1,3,6,2); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout loadout = Loadout(); PHBattleMember output = {};
+            PHBattleState remote = f.state(engine);
+            Check(PHBattleStateGate(&remote) == PHBattleGateTurn &&
+                [engine applyLoadout:&loadout state:&remote slot:0 member:&output reason:nullptr] == PHBattleMutationRejected,
+                "phase 2 during a remote player's turn cannot replace the visible remote team");
+            f.loadView(2); PHBattleState preview = f.state(engine);
+            Check(PHBattleStateGate(&preview) == PHBattleGateTurn &&
+                [engine changeState:&preview slot:0 form:200 catalog:200 presentation:nullptr reason:nullptr] == PHBattleMutationRejected && !f.rebuilds,
+                "a local-team preview does not grant control while another player owns the turn");
+            Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,2); PHBattleState local = f.state(engine);
+            Check(PHBattleStateGate(&local) == PHBattleGateReady, "the modulo turn counter enables the matching local bank");
+            Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,5);
+            Check([engine applyLoadout:&loadout state:&local slot:0 member:&output reason:nullptr] == PHBattleMutationRejected && !f.rebuilds,
+                "even a later local turn rejects the previous turn's native transaction snapshot");
+        }
+        for (unsigned scenario = 0; scenario < 11; ++scenario) {
+            Fixture f; f.configureBanks(1,2,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleState before = f.state(engine); PHBattleLoadout team[6];
+            for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            switch (scenario) {
+                case 0: Fixture::put<uint32_t>(f.impl()+PHBattlePlayerTeamOffset,2); break;
+                case 1: Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,1); break;
+                case 2: Fixture::put<uint32_t>(f.impl()+PHBattleTeamCountOffset,1); break;
+                case 3: Fixture::put<uint8_t>(f.impl()+PHBattleTeamDescriptorOffset,9); break;
+                case 4: Fixture::put<uint32_t>(f.bank(1)+PHBattleTeamHPOffset+12,123); break;
+                case 5: Fixture::put<uint32_t>(f.header()+PHSaveRVA+PHBattleResumeFlagsOffset,0x80000000); break;
+                case 6: Fixture::Set32(f.impl()+PHBattleWaveOffset,1); break;
+                case 7: Fixture::Set32(f.impl()+PHBattlePhaseOffset,2); break;
+                case 8: f.image[PHBattleSwitchTeamRVA] ^= 1; break;
+                case 9: Fixture::put<uint32_t>(f.bank(0)+PHBattleChargeShadowOffset,0); break;
+                case 10: Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,UINT32_MAX); break;
+            }
+            PHBattleMember output[6] = {}; uint16_t boost = 77;
+            Check([engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:nullptr] == PHBattleMutationRejected &&
+                !f.switches && !f.rebuilds && !f.allocated && boost == 77,
+                "changed ownership, incomplete banks, resumes, later waves/turns and invalid code/charge/HP reject before selecting a team");
+        }
+        for (unsigned scenario = 0; scenario < 8; ++scenario) {
+            Fixture f; f.configureBanks(1,3,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleState before = f.state(engine); PHBattleLoadout team[6];
+            for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            switch (scenario) {
+                case 0: f.failRebuild = 3; f.newTeamHPCap = 60; break;
+                case 1: f.failAdvanceTick = 1; f.newTeamHPCap = 60; break;
+                case 2: team[5].level = 121; break;
+                case 3: f.failSwitch = 1; break;
+                case 4: f.failSwitch = 2; break;
+                case 5: f.changeOtherBankOnRefresh = true; f.changedBank = 0; break;
+                case 6: f.closeWindowAtTick = 1; break;
+                case 7: f.invalidAwakeningCount = true; break;
+            }
+            PHBattleMutationResult wanted = scenario == 2 || scenario == 3 ? PHBattleMutationRejected :
+                scenario >= 4 && scenario <= 6 ? PHBattleMutationUncertain : PHBattleMutationRolledBack;
+            PHBattleMember output[6] = {}; uint16_t boost = 77; NSString *reason = nil;
+            PHBattleMutationResult result = [engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:&reason];
+            if (result != wanted) std::fprintf(stderr,"mode7 rollback scenario %u got %d wanted %d: %s\n",scenario,result,wanted,reason.UTF8String ?: "");
+            Check(result == wanted && boost == 77, "mode-7 entry distinguishes complete recovery from an unconfirmed native transaction");
+            if (wanted != PHBattleMutationUncertain) {
+                PHBattleState after = f.state(engine);
+                Check(after.currentTeam == 0 && after.hp == before.hp && SameEntryBanks(before,after) &&
+                    SameEntryMembers(before,after,YES) && after.entryChargesValid && f.allocated == f.released,
+                    "recoverable mode-7 failure restores all banks, original HP/charges and the original visible team");
+                Check(after.auditFlags == (scenario == 1 ? 0x10000u : 0u), "multiplayer recovery preserves native audit flags");
+            } else {
+                unsigned writes = f.rebuilds, switches = f.switches;
+                Check([engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:nullptr] == PHBattleMutationRejected &&
+                    f.rebuilds == writes && f.switches == switches, "uncertain multiplayer entry latches off further native mutations");
+            }
         }
         for (uint32_t multi : {1u, 4u}) {
             Fixture f; f.configureBanks(multi); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
