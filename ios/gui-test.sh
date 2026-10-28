@@ -8,6 +8,7 @@ app_dir="$build_dir/OverlayProbe.app"
 mkdir -p "$app_dir/Frameworks"
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
+python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
 sdk_path="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"

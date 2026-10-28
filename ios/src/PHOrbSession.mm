@@ -121,6 +121,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if (![_engine finishInput:&reason]) {
         _inputFault = true;
         [self queueStop:reason ?: @"輸入恢復失敗，已停止"];
+        _phase = @"fault"; _ownedOrb = 0; _staged = false;
     }
 }
 - (void)beforeFrame:(PHBattleFrame)frame time:(NSTimeInterval)time {
@@ -134,7 +135,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         !PHOrbSameTurn(&_expected, &current) || current.phase != 2) {
         // The private manager has already been removed. Never inject stale
         // cleanup into a new scene/multiplayer; native input now owns release.
-        [self queueStop:reason ?: @"回合或場景已改變，已停止"];
+        [self queueStop:@"回合、場景或可操作狀態已改變，已停止"];
         _ownedOrb = 0; _phase = @"stopped";
         return;
     }
@@ -234,7 +235,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if ([_phase isEqual:@"preview"] || [_phase isEqual:@"solving"]) {
         if (!read || !PHOrbCanPreview(&current) || !SamePosition(current, _preview) ||
             ([_phase isEqual:@"preview"] && time - _previewAt > PreviewLifetime)) {
-            [self queueStop:reason ?: @"盤面已改變，請重新讀盤"];
+            [self queueStop:(!read || !PHOrbCanPreview(&current)) ? (reason ?: @"盤面已無法讀取，請重新讀盤") :
+                @"盤面、回合或預覽有效期已改變，請重新讀盤"];
         }
     }
     if (_readQueued) {

@@ -35,7 +35,7 @@ BOOL PHValidateGuest(const mach_header_64 *header, NSString **reason) { ++guardC
 BOOL PHAddressIsGuestCode(uintptr_t address, const mach_header_64 *header) { return address >= Header && address < Header + 0x1110000; }
 template<typename T> static void Put(uintptr_t address, T value) { std::memcpy(reinterpret_cast<void *>(address), &value, sizeof(value)); }
 static void Protected(uintptr_t address, uint32_t value, uint32_t salt) {
-    uint32_t raw[4] = {uint32_t((value << 5) | (value >> 27)) ^ salt, 0, value ^ 17u ^ 23u, value};
+    uint32_t raw[4] = {uint32_t((value << 5) | (value >> 27)) ^ salt, 0, value ^ 17u ^ 42u, value};
     std::memcpy(reinterpret_cast<void *>(address), raw, sizeof(raw));
 }
 static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = Header; frame.player = 42; frame.epoch = 1; frame.ready = frame.enabled = true; return frame; }
@@ -48,7 +48,8 @@ static void Reset() {
     Put<uintptr_t>(Header + PHBattleImplRVA, Impl); Put<uintptr_t>(Header + PHBattleInputRVA, Input);
     Put<uint16_t>(save + PHBattleDungeonOffset, 1); Put<uint16_t>(save + PHBattleDungeonOffset + 2, 2);
     Put<uint8_t>(Header + PHBattleEntryHashRVA, 1);
-    Put<uint32_t>(Header + PHBattleKey1RVA, 17); Put<uint32_t>(Header + PHBattleKey2RVA, 23);
+    // The second native key aliases the saved player ID.
+    Put<uint32_t>(Header + PHBattleKey1RVA, 17); Put<uint32_t>(Header + PHBattleKey2RVA, 42);
     Protected(Impl + PHBattlePhaseOffset, 2, 0x766cfc6d); Protected(Impl + PHBattleWaveOffset, 0, 0x766cfc6d);
     Protected(Impl + PHOrbFixedStartOffset, 255, 0x6a875a8b);
     Put<uint8_t>(game + 88, 6); Put<uint8_t>(game + 89, 5); Put<uint8_t>(game + 92, 3); Put<uint8_t>(game + 93, 1);
@@ -76,7 +77,9 @@ static void NativeInputFrame() {
 int main() {
     @autoreleasepool {
         Reset(); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
-        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state), "validated ordinary board readable");
+        BOOL initialRead = [engine read:&state frame:Frame() reason:&reason];
+        Check(initialRead && PHOrbCanPreview(&state), "validated ordinary board readable");
+        if (!initialRead || !state.valid) { std::fprintf(stderr, "Fixture read failed: %s\n", reason.UTF8String ?: "no reason"); return 1; }
         Check(state.board.tokens[0] == Impl + PHOrbPoolOffset + 64 * 172 && state.board.y[24] > state.board.y[0], "native bottom-first pointers become top-first cells");
         const auto original = realInput;
         Check([engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason], "first native input staged");

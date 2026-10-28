@@ -534,6 +534,7 @@ static void PHDrawFrame(id self, SEL command) {
         PHOriginalDraw(self, command);
         return;
     }
+    [PHOrbTracker finishNativeFrame];
     if (!PHValidated) {
         PHOriginalDraw(self, command);
         return;
@@ -559,7 +560,7 @@ static void PHDrawFrame(id self, SEL command) {
 }
 
 static void PHRestoreBackground(id self, SEL command) {
-    if (NSThread.isMainThread) [PHOrbTracker queueStop:@"遊戲進入背景，已停止自動轉珠"];
+    if (NSThread.isMainThread) [PHOrbTracker queueStop:@"遊戲從背景返回；先前的轉珠路徑已停止"];
     PHOriginalBackground(self, command);
     if (NSThread.isMainThread && PHValidated)
         [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:YES];
