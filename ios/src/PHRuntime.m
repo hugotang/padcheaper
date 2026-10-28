@@ -8,6 +8,8 @@
 #import "PHOverlay.h"
 #import "PHSaveState.h"
 #import "PHBattleSession.h"
+#import "PHOrbSession.h"
+#import <UIKit/UIKit.h>
 #import "PHFormationModel.h"
 #import "PHBadges.h"
 #import "PHTimer.h"
@@ -47,6 +49,7 @@ static PHSaveState *PHSaveStateTracker;
 static PHBattleSession *PHBattleTracker;
 static PHBadges *PHBadgeTracker;
 static PHTimer *PHTimerTracker;
+static PHOrbSession *PHOrbTracker;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
@@ -255,6 +258,14 @@ static PHBattleFrame PHTimerFrameContext(void) {
     PHBattleFrame frame = PHBattleFrameContext();
     frame.enabled = PHStorageReady && PHConfigValid && !PHStorageFault &&
         PHLifecycleInstalled && PHEnabled(@"timerFix");
+    return frame;
+}
+
+static PHBattleFrame PHOrbFrameContext(void) {
+    PHBattleFrame frame = PHBattleFrameContext();
+    frame.ready = frame.ready && UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
+    frame.enabled = PHStorageReady && PHConfigValid && !PHStorageFault &&
+        [PHConfig[@"experimentalWrites"] isEqual:@YES];
     return frame;
 }
 
@@ -530,7 +541,12 @@ static void PHDrawFrame(id self, SEL command) {
     PHFrameMainThread = YES;
     [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:NO];
     PHParseObservation before = PHBeforeFrame();
-    PHOriginalDraw(self, command);
+    [PHOrbTracker beforeFrame:PHOrbFrameContext() time:NSProcessInfo.processInfo.systemUptime];
+    @try {
+        PHOriginalDraw(self, command);
+    } @finally {
+        [PHOrbTracker finishNativeFrame];
+    }
     PHFrameCount++;
     PHAfterParse(before);
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
@@ -539,9 +555,11 @@ static void PHDrawFrame(id self, SEL command) {
         PHMaintenance();
     }
     [PHBattleTracker onFrame:PHBattleFrameContext() atTime:now];
+    [PHOrbTracker afterFrame:PHOrbFrameContext() time:NSProcessInfo.processInfo.systemUptime];
 }
 
 static void PHRestoreBackground(id self, SEL command) {
+    if (NSThread.isMainThread) [PHOrbTracker queueStop:@"遊戲進入背景，已停止自動轉珠"];
     PHOriginalBackground(self, command);
     if (NSThread.isMainThread && PHValidated)
         [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:YES];
@@ -719,6 +737,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm"), wantsBadge = PHEnabled(@"badge");
     NSDictionary *badge = [PHBadgeTracker snapshot];
     NSDictionary *timer = [PHTimerTracker snapshot];
+    NSDictionary *orbs = [PHOrbTracker snapshot];
     NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
@@ -875,6 +894,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             [inputState[@"frameInputFlags"] unsignedIntValue]];
     }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle drag active: %@", battle[@"dragActive"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nAuto orbs: %@ · %@\nOrb progress: %@/%@ · completed %@ · input frames %@ · input fault %@\nOrb board: settled %@ / ordinary %@ / phase %@ / wave %@ / moves %@ / time %@ frames at %@ fps\nOrb solver: %@ ms / %@ candidates / deadline %@\nOrb device verified: NO",
+        orbs[@"phase"], orbs[@"message"], orbs[@"confirmed"], orbs[@"steps"], orbs[@"completed"], orbs[@"inputFrames"],
+        orbs[@"inputFault"], orbs[@"settled"], orbs[@"ordinary"], orbs[@"nativePhase"], orbs[@"wave"], orbs[@"moves"],
+        orbs[@"remainingFrames"], orbs[@"fps"], orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"]];
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
@@ -893,6 +916,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"formationLibraryStored": @(PHFormationLibraryStored),
         @"badgeState": badge,
         @"timerState": timer, @"timerSummary": timerSummary,
+        @"orbState": orbs,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
         @"badgeImplemented": @YES, @"deviceVerified": @NO
     };
@@ -909,6 +933,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqual:@"orbsRead"]) { [PHOrbTracker queueRead]; return; }
+    if ([action isEqual:@"orbsExecute"]) {
+        if ([value isKindOfClass:NSNumber.class]) [PHOrbTracker queueExecute:[value unsignedIntegerValue]];
+        return;
+    }
+    if ([action isEqual:@"orbsStop"]) { [PHOrbTracker queueStop:@"已手動停止自動轉珠"]; return; }
     if ([action isEqualToString:@"formationLibrarySave"]) {
         BOOL request = [value isKindOfClass:NSDictionary.class] &&
             [value[@"requestID"] isKindOfClass:NSString.class];
@@ -1102,6 +1132,7 @@ static void PADCheaperInitialize(void) {
         PHBattleTracker = [[PHBattleSession alloc] initWithEngine:PHCreateBattleEngine()];
         PHBadgeTracker = [PHBadges new];
         PHTimerTracker = [PHTimer new];
+        PHOrbTracker = [[PHOrbSession alloc] initWithEngine:PHCreateOrbEngine()];
         PHFlagPatches = [NSMutableArray array];
         PHLastBanks = @{};
         PHConfig = PHDefaultConfiguration();
@@ -1110,6 +1141,12 @@ static void PADCheaperInitialize(void) {
         PHLog([NSString stringWithFormat:@"dylib %@ constructor loaded", PH_RUNTIME_VERSION]);
         // Guest classes and image metadata must be available before hook setup.
         // Heavy initialization runs after dyld's constructor returns.
-        dispatch_async(dispatch_get_main_queue(), ^{ PHBootstrap(0, PHBootstrapGeneration); });
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationWillResignActiveNotification object:nil
+                queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
+                    [PHOrbTracker queueStop:@"遊戲離開前景，已停止自動轉珠"];
+                }];
+            PHBootstrap(0, PHBootstrapGeneration);
+        });
     }
 }

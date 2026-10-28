@@ -7,18 +7,22 @@ build_dir="${BUILD_DIR:-$repo_dir/build/ios}"
 mkdir -p "$build_dir" ios/generated
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
+python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
 
 sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
 min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
 
-for native in PHBattleNative PHTimer; do
+for native in PHBattleNative PHTimer PHOrbNative PHOrbSession; do
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
     "-miphoneos-version-min=$min_version" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
     -Iios/src -Iios/generated -c "ios/src/$native.mm" -o "$build_dir/$native.o"
 done
+
+"$clang_path" -arch arm64 -isysroot "$sdk_path" "-miphoneos-version-min=$min_version" \
+    -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src -c ios/src/PHOrbSolver.cpp -o "$build_dir/PHOrbSolver.o"
 
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
     "-miphoneos-version-min=$min_version" -std=gnu11 -fobjc-arc -fblocks \
@@ -28,7 +32,9 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m \
+    "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
+    "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
@@ -51,12 +57,16 @@ cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
+cp ios/docs/auto-orbs.md "$build_dir/auto-orbs.md"
+cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
+mkdir -p "$build_dir/third_party/pazusoba"
+cp ios/third_party/pazusoba/LICENSE ios/third_party/pazusoba/NOTICE.md "$build_dir/third_party/pazusoba/"
 mkdir -p "$build_dir/research"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
-rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o"
+rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o"
 
 python3 - "$build_dir" <<'PY'
 import hashlib
@@ -86,7 +96,7 @@ metadata = {
     "dylib_version": version,
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
-    "automatic_orbs": "feasibility research only; no solver or automatic touch execution is included in this dylib",
+    "automatic_orbs": "single-player 6x5 memory snapshot, bounded background C++ beam search, native path preview and explicit execute-once/stop; per-frame private input with native swap acknowledgements; device verification pending",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",
     "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",
     "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",

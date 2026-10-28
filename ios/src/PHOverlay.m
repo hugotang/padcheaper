@@ -1,5 +1,6 @@
 #import "PHOverlay.h"
 #import "PHFormationController.h"
+#import "PHOrbController.h"
 #import "PHConfiguration.h"
 #import <UIKit/UIKit.h>
 #include "PHBattleModel.h"
@@ -44,6 +45,8 @@
 @property(nonatomic, strong) UIWindow *formationWindow;
 @property(nonatomic, weak) UIWindow *guestWindow;
 @property(nonatomic, strong) PHFormationController *formationController;
+@property(nonatomic, strong) UIWindow *orbWindow;
+@property(nonatomic, strong) PHOrbController *orbController;
 @property(nonatomic, strong) UIStackView *filterSettings;
 @property(nonatomic, strong) UIButton *filterToggle;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, UIButton *> *filterButtons;
@@ -243,6 +246,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
         [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
         self.battleRestore, self.battleLabel,
+        [self button:@"自動轉珠 · 讀盤／預覽" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"],
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
         [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
@@ -317,6 +321,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 }
 
 - (void)openPanel {
+    if ([self.snapshot()[@"orbState"][@"busy"] boolValue]) {
+        self.action(@"orbsStop", nil);
+        [self updateWithSnapshot:self.snapshot()];
+        return;
+    }
     self.expanded = YES;
     self.bubble.hidden = YES;
     self.panel.hidden = NO;
@@ -429,6 +438,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 
 - (void)openFormation {
     if (self.formationWindow) return;
+    self.action(@"orbsStop", nil);
     UIWindowScene *scene = self.view.window.windowScene;
     UIWindow *guest = nil;
     for (UIWindow *candidate in scene.windows) if (candidate.isKeyWindow) { guest = candidate; break; }
@@ -458,6 +468,27 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
 }
 
+- (void)openOrbs {
+    if (self.orbWindow || self.formationWindow || self.filterWindow) return;
+    UIWindowScene *scene = self.view.window.windowScene;
+    __weak PHOverlayController *weakSelf = self;
+    self.orbController = [[PHOrbController alloc] initWithSnapshot:self.snapshot action:self.action close:^{
+        [weakSelf closeOrbs];
+    }];
+    self.orbWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] : [[UIWindow alloc] initWithFrame:self.view.window.bounds];
+    self.orbWindow.windowLevel = UIWindowLevelAlert + 2;
+    self.orbWindow.rootViewController = self.orbController;
+    self.orbWindow.hidden = NO;
+}
+
+- (void)closeOrbs {
+    self.orbWindow.hidden = YES;
+    self.orbWindow.rootViewController = nil;
+    self.orbWindow = nil; self.orbController = nil;
+    [self closePanel];
+    [self updateWithSnapshot:self.snapshot()];
+}
+
 - (void)dismissTimer {
     self.action(@"timerDismiss", nil);
     [self updateWithSnapshot:self.snapshot()];
@@ -478,6 +509,12 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.bubble setTitleColor:color forState:UIControlStateNormal];
     self.bubble.layer.borderColor = color.CGColor;
     self.bubble.accessibilityLabel = [NSString stringWithFormat:@"PADCheaper 已載入，%@，點擊開啟面板", shortStatus];
+    if ([state[@"orbState"][@"busy"] boolValue]) {
+        [self.bubble setTitle:@"停止\n轉珠" forState:UIControlStateNormal];
+        [self.bubble setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];
+        self.bubble.layer.borderColor = UIColor.systemRedColor.CGColor;
+        self.bubble.accessibilityLabel = @"停止自動轉珠";
+    }
     self.statusLabel.text = state[@"title"];
     self.statusLabel.textColor = color;
     self.reasonLabel.text = state[@"reason"];

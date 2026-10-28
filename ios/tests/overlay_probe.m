@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 #import "PHOverlay.h"
+#import "PHOrbController.h"
 #include <dlfcn.h>
 #include <math.h>
 
@@ -290,6 +291,37 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck(self.window.isKeyWindow, @"Opening the panel must not steal key-window status");
     PHProbeRender(self.window, overlay, @"portrait");
     PHProbeReport(@"portrait");
+    UIButton *orbs = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsOpen");
+    PHProbeCheck(orbs != nil, @"Native auto-orb entry is visible");
+    [orbs sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UIWindow *orbWindow = [overlay.rootViewController valueForKey:@"orbWindow"];
+    PHOrbController *orbController = [overlay.rootViewController valueForKey:@"orbController"];
+    PHProbeCheck(orbWindow != nil && PHProbeFind(orbWindow, @"padcheaper.orbsBoard") != nil && self.window.isKeyWindow,
+        @"Orb preview uses native controls and preserves guest key window");
+    PHProbeCheck(![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
+        @"Unvalidated guest cannot execute automatic input");
+    NSMutableArray *orbTypes = [NSMutableArray array], *orbEnhanced = [NSMutableArray array];
+    for (unsigned i = 0; i < 30; ++i) { [orbTypes addObject:@(i % 6)]; [orbEnhanced addObject:@(i % 7 == 0)]; }
+    NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
+        @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
+        @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
+        @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
+    __block NSString *orbAction = nil; __block id orbValue = nil;
+    [orbController setValue:[^{ return orbFixture; } copy] forKey:@"snapshot"];
+    [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
+    [orbController refresh];
+    UISlider *orbSlider = (UISlider *)PHProbeFind(orbWindow, @"padcheaper.orbsStep");
+    PHProbeCheck(orbSlider.maximumValue == 6 && orbSlider.enabled, @"Native path slider covers every route step");
+    orbSlider.value = 3; [orbSlider sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck([PHProbeFind(orbWindow, @"padcheaper.orbsBoard").accessibilityLabel containsString:@"第 3／6 步"],
+        @"Native preview describes the selected step and starting cell");
+    PHProbeRender(self.window, orbWindow, @"orbs-preview");
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck([orbAction isEqual:@"orbsExecute"] && [orbValue isEqual:@19] &&
+        [overlay.rootViewController valueForKey:@"orbWindow"] == nil && self.window.isKeyWindow,
+        @"Execute passes the displayed preview generation and returns to game");
+    if (PHProbeLegacy()) PHProbeLegacyOverlay = overlay;
+    [(UIButton *)PHProbeFind(overlay, @"padcheaper.bubble") sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIButton *formation = (UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen");
     [formation sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIWindow *formationWindow = [overlay.rootViewController valueForKey:@"formationWindow"];

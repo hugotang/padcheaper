@@ -27,12 +27,15 @@ raise SystemExit(result.returncode)
 PY
 }
 
-for native in PHBattleNative PHTimer; do
+for native in PHBattleNative PHTimer PHOrbNative PHOrbSession; do
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=c++17 -fobjc-arc -fblocks -fexceptions -O2 -Wall -Wextra -Werror \
     -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
     -c "ios/src/$native.mm" -o "$build_dir/$native.o"
 done
+
+"$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
+    -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src -c ios/src/PHOrbSolver.cpp -o "$build_dir/PHOrbSolver.o"
 
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -O2 -Wall -Wextra -Werror \
@@ -41,7 +44,9 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m \
+    "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
+    "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \

@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "prototype_version": "0.5.0-orbs",
+  "device_verified": false,
+  "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+  "scope": {
+    "multiplayer": false,
+    "dimensions": [
+      6,
+      5
+    ],
+    "min_erase": 3,
+    "continuous": false,
+    "input": "scoped-private-manager"
+  },
+  "fields": {
+    "PHOrbPoolOffset": "0x988c0",
+    "PHOrbTableOffset": "0xa34c0",
+    "PHOrbMoveSerialOffset": "0x92e44",
+    "PHOrbRemainingOffset": "0x93390",
+    "PHOrbFixedStartOffset": "0xb4674",
+    "PHOrbSpecialDragOffset": "0xb7ea6",
+    "PHOrbDialogOffset": "0xbe9c8",
+    "PHOrbMoveBlockedOffset": "0x9299e",
+    "PHOrbTransformEnabledRVA": "0x1b4e842"
+  },
+  "guards": [
+    {
+      "name": "PHOrbInitRVA",
+      "va": "0x1005f3d54",
+      "rva": "0x5f3d54",
+      "length": 64,
+      "bytes": "ff0304d1e923096dfc6f0aa9fa670ba9f85f0ca9f6570da9f44f0ea9fd7b0fa9fdc30391f40300aae85800f008b142f9080140f9a80319f8083840f909494291",
+      "sha256": "674c3bebb5940a7ab9bb484f97211d1bac89d68b0c84cc6b681e54481b3b393f"
+    },
+    {
+      "name": "PHOrbGeometryRVA",
+      "va": "0x1005f46d8",
+      "rva": "0x5f46d8",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30303aaf50302aaf40301aaf60300aac84e8052080dc21a0801221e0041201ef54ce997800e0079bf1a0071",
+      "sha256": "160b459d49109a50dccc55a239b5612eec79b06579583ac6af32fbdebd6d1062"
+    },
+    {
+      "name": "PHOrbNearestRVA",
+      "va": "0x1005f70d0",
+      "rva": "0x5f70d0",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191086481391f0500f1ab110054f40300aa090080d2130080d20a6081390b00b0120c9886524c01a072",
+      "sha256": "69a0ba20d61b0ce9d4c23d321c4a29eac8ec91746720d95e6baf9ad224f6f82f"
+    },
+    {
+      "name": "PHOrbPlayerInputRVA",
+      "va": "0x10060d1f0",
+      "rva": "0x60d1f0",
+      "length": 64,
+      "bytes": "ffc302d1e923046dfc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291f30300aad97080521901a0729272e997f40300aae00313aa8ef8fe97",
+      "sha256": "1f5415b276da7b5910f5864bfb53a67fc33426117c42ab4b7a7aaa7b90af4802"
+    },
+    {
+      "name": "PHOrbSwapRVA",
+      "va": "0x100608738",
+      "rva": "0x608738",
+      "length": 64,
+      "bytes": "ff4301d1e923016df65702a9f44f03a9fd7b04a9fd030191f50302aaf30301aaf40300aa48384079493c407948400079494400792a3840794a3800792b3c4079",
+      "sha256": "4e7c111ed4e514a5cbaada11078f60ec09f22fdf9fbe57157b822031fbb6f97c"
+    },
+    {
+      "name": "PHOrbInputUpdateRVA",
+      "va": "0x100069cac",
+      "rva": "0x69cac",
+      "length": 64,
+      "bytes": "ff0302d1e923026dfa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc3019147df37940840601ef55201b0b3ee47f96842693968462939b40080527ff61739",
+      "sha256": "9095286dc14704d2a3da733bc8093f5c1be962d42e28a279a9acca47cfdfba8f"
+    },
+    {
+      "name": "PHOrbInputGetRVA",
+      "va": "0x100069c68",
+      "rva": "0x69c68",
+      "length": 64,
+      "bytes": "e85201b008ed47f90945a9393f0900f1eb00005400a114910a544339aa00003700200491290500f181ffff5400a11491c0035fd6e85201b008ed47f9004d2939",
+      "sha256": "e54067ff07c9c13d5a09ed147a15f4c1c5abec7c30e38828b8f16170926f8b9e"
+    },
+    {
+      "name": "PHOrbInputTransformRVA",
+      "va": "0x10006924c",
+      "rva": "0x6924c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa28d700b008a12091080140b91f050071200300541f090071800100541f0d0071c103005428d700b008f11c9100a5407d",
+      "sha256": "6d1cfe336930e4fa832a3bd087aa78e3d9d9f491d181e4681b14d3b2a90c6a29"
+    },
+    {
+      "name": "PHOrbInputHistoryRVA",
+      "va": "0x10006a0bc",
+      "rva": "0x6a0bc",
+      "length": 64,
+      "bytes": "ffc300d1f44f01a9fd7b02a9fd830091f30300aa017440fd0038611e0040621e00c000bd0084402d020c5c2d0438221e2238231e0488022d8340211e8820201e",
+      "sha256": "2f32dac13711afda4014f25d32dee7f0e150ee5d40df7ea025f5bf4bd4341ddf"
+    },
+    {
+      "name": "PHOrbFlagsRVA",
+      "va": "0x1005a0978",
+      "rva": "0x5a0978",
+      "length": 64,
+      "bytes": "ffc301d1e923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa193840f938d34291081b537908651a53083d00131f050071",
+      "sha256": "848804a442eb414fda1358cbd19c8a0d1a4dd2d008e6e17885b4f0cff6664eab"
+    }
+  ]
+}
