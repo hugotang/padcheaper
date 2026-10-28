@@ -1,7 +1,8 @@
 #include "PHTimerModel.h"
 
 bool PHTimerEligible(const PHTimerState *state) {
-    return state && state->present && state->valuesValid && PHBattleUsesPrimaryTeam(state->multiplayer) &&
+    return state && state->present && state->valuesValid && !state->multiplayerDisabled &&
+        PHBattleIsSinglePlayer(state->mode, state->multiplayer) &&
         PHBattlePolicyAllows(&state->policy, state->mode, state->sourceMode, state->multiplayer) &&
         state->limitSeconds > 0 && state->countdown && state->sceneID != 0x80386;
 }

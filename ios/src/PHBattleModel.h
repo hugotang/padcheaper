@@ -32,8 +32,7 @@ typedef struct {
     uint8_t flags, radius;
     uint16_t previousID;
     uint64_t providerToken;
-    // Owned entry profile whose native binding was removed by team sync.
-    // This reserves the profile; it does not claim the member is replaced.
+    // Legacy diagnostic field; multiplayer profiles are no longer retained.
     uint64_t rebindToken;
     uint16_t level, skillLevel;
     uint8_t extra[20], assist[8];
@@ -42,6 +41,8 @@ typedef struct {
 typedef struct {
     PHBattleIdentity identity;
     bool present, protectedValuesValid, dragActive, digestKnown, digestMatches, hpMatches;
+    // Once multiplayer is observed, writes stay disabled until leaving battle.
+    bool multiplayerDisabled;
     bool entryWindow, entryChargesValid;
     bool teamBanksValid, turnInfoValid;
     uint8_t teamCount, currentTeam, teamSize, playerTeam, turnTeam;
@@ -68,7 +69,7 @@ typedef struct {
 } PHBattleFrame;
 
 typedef enum {
-    PHBattleGateReady, PHBattleGateAbsent, PHBattleGateProtected,
+    PHBattleGateReady, PHBattleGateAbsent, PHBattleGateMultiplayer, PHBattleGateProtected,
     PHBattleGateMode, PHBattleGateLayout, PHBattleGatePhase, PHBattleGateTurn, PHBattleGateInputUnavailable, PHBattleGateInput,
     PHBattleGateDrag, PHBattleGateAudit,
     PHBattleGateHP, PHBattleGateDigest

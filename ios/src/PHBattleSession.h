@@ -9,14 +9,12 @@
     slot:(NSUInteger)slot member:(PHBattleMember *)member reason:(NSString **)reason;
 - (PHBattleMutationResult)restoreLoadout:(const PHBattleMember *)original state:(const PHBattleState *)expected
     slot:(NSUInteger)slot reason:(NSString **)reason;
-// A fresh wave-zero intro (or mode 7's phase-46 sync) permits one synchronous
-// local-team transaction and initial SB calculation, before preemptives. The
-// returned members belong to our network seat even if its bank is offscreen.
+// A fresh single-player wave-zero intro permits one synchronous team
+// transaction, native SB calculation and current HP initialization.
 - (PHBattleMutationResult)applyEntryLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask
     state:(const PHBattleState *)expected members:(PHBattleMember *)members initialBoost:(uint16_t *)boost
     reason:(NSString **)reason;
-// Reattach existing entry profiles on our own turn after multiplayer sync.
-// Keep synchronized forms/charges; never repeat entry SB or allocate profiles.
+// Retained for callers of the older engine API; always rejects without writes.
 - (PHBattleMutationResult)rebindEntryMembers:(uint8_t)mask state:(const PHBattleState *)expected
     members:(PHBattleMember *)members reason:(NSString **)reason;
 // The engine rechecks live identity, source, form, phase, fingerprints and

@@ -54,15 +54,19 @@ int main(void) {
         invalid.phase = 2;
         Check(PHTimerAutomaticFlags(&invalid) == invalid.flags, "unsupported state prevents automatic flag writes");
     }
-    state.mode = 7; state.phase = 58;
+    state.mode = 12; state.phase = 58;
     state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
         .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
-    state.sourceMode = 3; state.multiplayer = 2;
-    Check(PHTimerCanDismiss(&state), "timer consumes the configured source/multi filters");
-    state.multiplayer = 1;
-    Check(!PHTimerCanDismiss(&state), "banked layout 1 is not enabled by an allow-all filter");
-    state.multiplayer = 4;
-    Check(!PHTimerCanDismiss(&state), "banked layout 4 is not enabled by an allow-all filter");
+    state.sourceMode = 3;
+    Check(PHTimerCanDismiss(&state), "single-player timers still consume configured source filters");
+    for (uint32_t multi = 0; multi <= 5; ++multi) {
+        state.mode = multi ? 12 : 7; state.multiplayer = multi; state.phase = 58;
+        Check(!PHTimerCanDismiss(&state), "legacy allow-all filters never enable multiplayer popup writes");
+        state.phase = 2; state.flags = 0x22;
+        Check(PHTimerAutomaticFlags(&state) == 0x22, "multiplayer and mode-7 transition states preserve timer flags");
+    }
+    state.mode = 12; state.multiplayer = 0; state.multiplayerDisabled = true;
+    Check(PHTimerAutomaticFlags(&state) == 0x22, "a detected multiplayer timer remains disabled after selector reset");
     printf("Timer policy tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

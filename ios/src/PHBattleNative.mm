@@ -160,15 +160,25 @@ static BOOL ReadMember(uintptr_t address, const PHBattleState *state, uint32_t k
 #include "PHBattleTeams.inc"
 
 static BOOL CanReadNative(const PHBattleState *state) {
-    // Read-only diagnostics and immediate rollback remain available when a
-    // GUI filter is disabled. The mutation entry points enforce StateGate.
-    return state->present && state->protectedValuesValid && PHBattleTeamLayoutValid(state) &&
+    // Solo diagnostics and rollback remain available when a GUI filter is
+    // disabled. Multiplayer must never enter these native functions.
+    return state->present && !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->mode, state->multiplayer) &&
+           state->protectedValuesValid && PHBattleTeamLayoutValid(state) &&
            (state->phase == 2 || state->entryWindow) &&
            PHInputIsQuiet(&state->input) && !state->dragActive;
 }
 
+static BOOL SinglePlayerSelectorsMatch(const PHBattleState *state) {
+    uint16_t mode = 0;
+    uint32_t multiplayer = UINT32_MAX;
+    return state && !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->mode, state->multiplayer) &&
+        PHReadU16(state->identity.header + PHBattleModeRVA, &mode) &&
+        PHReadU32(state->identity.header + PHBattleMultiplayerRVA, &multiplayer) &&
+        mode == static_cast<uint16_t>(state->mode) && multiplayer == state->multiplayer;
+}
+
 static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reason,
-                     const PHBattleState *inFlight = nullptr, NSUInteger changingSlot = 6) {
+                     const PHBattleState *inFlight = nullptr, NSUInteger changingSlot = 6, BOOL metadataOnly = NO) {
     *state = {};
     state->identity.header = frame.header;
     state->identity.player = frame.player;
@@ -186,7 +196,11 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
         if (reason) *reason = @"玩家或場景資料未就緒";
         return NO;
     }
-    if (scene != 1 || requested != scene) return YES;
+    if (scene != 1) return YES;
+    if (requested != scene) {
+        if (reason) *reason = @"場景切換中，暫停戰鬥操作";
+        return NO;
+    }
     uintptr_t object = 0, impl = 0, activeImpl = 0, dungeon = 0;
     if (!PHReadPointer(frame.header + PHSceneTableRVA + 24, &object) || object != game ||
         !PHReadPointer(game + 0x70, &impl) || !impl || impl > UINTPTR_MAX - 0xc4000u || (impl & 7u) ||
@@ -209,11 +223,6 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
         !PHReadU16(save + PHBattleSourceModeOffset, &state->sourceMode) ||
         !PHReadU32(frame.header + PHBattleMultiplayerRVA, &state->multiplayer) ||
         !PHReadU32(save + PHBattleAuditOffset, &state->auditFlags) ||
-        !PHReadU32(save + PHBattleCatalogCountOffset, &state->catalogCount) ||
-        state->catalogCount < 2 || state->catalogCount > 100000 ||
-        !PHReadPointer(save + PHBattleCatalogPointerOffset, &state->catalog) || !state->catalog ||
-        state->catalog > UINTPTR_MAX - state->catalogCount * PHBattleCatalogStride ||
-        !PHMemoryHasProtection(state->catalog, state->catalogCount * PHBattleCatalogStride, VM_PROT_READ, 0) ||
         !PHReadU32(frame.header + PHBattleKey1RVA, &key1) || !PHReadU32(frame.header + PHBattleKey2RVA, &key2)) {
         if (reason) *reason = @"戰鬥身分、圖鑑或保護值金鑰無法讀取";
         return NO;
@@ -238,10 +247,22 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->phase = phase;
     state->hp = hp;
     state->hpMatches = PHReadU32(impl + PHBattleHPShadowOffset, &shadow) && (hp ^ shadow) == 0x8085a6beu;
+    state->multiplayerDisabled = metadataOnly || !PHBattleIsSinglePlayer(state->mode, state->multiplayer);
+    // Native bank getters and digest can update game state. In multiplayer,
+    // expose only metadata decoded from memory; do not call into the game.
+    if (state->multiplayerDisabled) return YES;
+    if (!PHReadU32(save + PHBattleCatalogCountOffset, &state->catalogCount) ||
+        state->catalogCount < 2 || state->catalogCount > 100000 ||
+        !PHReadPointer(save + PHBattleCatalogPointerOffset, &state->catalog) || !state->catalog ||
+        state->catalog > UINTPTR_MAX - state->catalogCount * PHBattleCatalogStride ||
+        !PHMemoryHasProtection(state->catalog, state->catalogCount * PHBattleCatalogStride, VM_PROT_READ, 0)) {
+        if (reason) *reason = @"遊戲圖鑑尚未就緒";
+        return NO;
+    }
     uint8_t intro = 0;
     uint32_t resume = UINT32_MAX, wave = UINT32_MAX, waveCopy = UINT32_MAX, waveBackup = UINT32_MAX;
     // The constructor has finished its initial SB pass, but its opening
-    // animation (or mode 7's phase-46 sync) still blocks the enemy/player state
+    // animation still blocks the enemy/player state
     // machine. Resumes and later waves must never get a new initial charge.
     state->entryWindow = state->protectedValuesValid && PHBattleIsEntryPhase(state) &&
         PHReadU8(impl + PHBattleIntroOffset, &intro) && intro == 1 &&
@@ -263,6 +284,7 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->protectedValuesValid &= PHReadU32(frame.header + PHBattleKey1RVA, &lastKey1) && lastKey1 == key1 &&
                                   PHReadU32(frame.header + PHBattleKey2RVA, &lastKey2) && lastKey2 == key2;
     if (CanReadNative(state)) {
+        if (!SinglePlayerSelectorsMatch(state)) return NO;
         try {
             uint32_t digest = static_cast<uint32_t>(Calls(frame.header).digest(game));
             state->digestKnown = PHReadU32(impl + PHBattleDigestShadowOffset, &shadow);
@@ -279,6 +301,10 @@ static void RequireWrite(uintptr_t address, const void *data, size_t length) {
     if (!PHWriteData(address, data, length)) throw std::runtime_error("Battle data write failed");
 }
 
+static void RequireSinglePlayer(const PHBattleState *state) {
+    if (!SinglePlayerSelectorsMatch(state)) throw std::runtime_error("Multiplayer battle writes disabled");
+}
+
 // One synchronous native transformation transaction, also used for rollback.
 // It never restores resource pointers or clears the game's audit flags.
 static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, uint32_t catalog,
@@ -290,6 +316,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     NativeCalls native = Calls(header);
     try {
         @try {
+            RequireSinglePlayer(state);
             uint8_t flags = state->members[slot].flags & static_cast<uint8_t>(~2u);
             uint8_t radius = 0;
             uint16_t previous = static_cast<uint16_t>(state->members[slot].catalogID);
@@ -305,12 +332,14 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
                 }
                 radius = static_cast<uint8_t>(factor * 0.5f * scale + 0.5f);
             }
+            RequireSinglePlayer(state);
             *didMutate = YES;
             native.set16(member + PHBattleFormOffset, form);
             RequireWrite(member + 56, &flags, sizeof(flags));
             RequireWrite(member + 63, &radius, sizeof(radius));
             RequireWrite(member + 64, &previous, sizeof(previous));
             if (!native.rebuildMember(game, member, UINT32_MAX)) throw std::runtime_error("Member rebuild failed");
+            RequireSinglePlayer(state);
             uint64_t maximum = native.maxCharge(member, 0);
             if (maximum > UINT16_MAX) throw std::runtime_error("Invalid skill charge bound");
             uint16_t nextCharge = capCharge ? static_cast<uint16_t>(std::min<uint64_t>(charge, maximum)) : charge;
@@ -322,7 +351,9 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
             // Match ordinary transformation case 236: rebuild this member once,
             // cap its existing charge, then refresh team totals. Rebuilding all
             // six members here could consume unrelated pending member state.
+            RequireSinglePlayer(state);
             native.refreshTeam(game, 0);
+            RequireSinglePlayer(state);
             uint32_t digestShadow = static_cast<uint32_t>(native.digest(game)) ^ 0x689d8b5cu;
             RequireWrite(impl + PHBattleDigestShadowOffset, &digestShadow, sizeof(digestShadow));
             uint32_t key1 = 0, key2 = 0, hp = 0;
@@ -363,7 +394,6 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 }
 #include "PHBattleProvider.inc"
 #include "PHBattleEntry.inc"
-#include "PHBattleRebind.inc"
 }
 
 @interface PHBattleNative : NSObject <PHBattleEngine>
@@ -376,6 +406,8 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     uint64_t _nextToken;
     PHBattleIdentity _entryIdentity;
     BOOL _entryAttempted;
+    BOOL _multiplayerDisabled;
+    PHBattleFrame _lastFrame;
 }
 
 - (BOOL)readState:(PHBattleState *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -384,10 +416,34 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (!CheckCode(frame.header, reason)) return NO;
         _verifiedHeader = frame.header;
     }
-    if (!ReadLive(state, frame, reason)) return NO;
+    if (_lastFrame.header != frame.header || _lastFrame.player != frame.player || _lastFrame.epoch != frame.epoch)
+        _multiplayerDisabled = NO;
+    _lastFrame = frame;
+    if (!ReadLive(state, frame, reason, nullptr, 6, _multiplayerDisabled)) return NO;
+    _multiplayerDisabled = state->present && state->multiplayerDisabled;
     TagProviderMembers(&_provider, state);
     if (!state->present || !PHBattleSameIdentity(&_entryIdentity, &state->identity)) _entryAttempted = NO;
     return YES;
+}
+
+- (BOOL)canMutateState:(const PHBattleState *)expected reason:(NSString **)reason {
+    if (!expected || expected->multiplayerDisabled || !PHBattleIsSinglePlayer(expected->mode, expected->multiplayer)) {
+        if (reason) *reason = @"多人戰鬥已停用套隊、還原及數值寫入";
+        return NO;
+    }
+    if (_lastFrame.header != expected->identity.header || _lastFrame.player != expected->identity.player ||
+        _lastFrame.epoch != expected->identity.epoch) {
+        if (reason) *reason = @"戰鬥檢查的帳號或影像已變更，已取消操作";
+        return NO;
+    }
+    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy, false};
+    PHBattleState live = {};
+    if (![self readState:&live frame:frame reason:reason]) return NO;
+    if (live.multiplayerDisabled) {
+        if (reason) *reason = @"多人戰鬥已停用套隊、還原及數值寫入；離開本場後才恢復單人功能";
+        return NO;
+    }
+    return live.present && PHBattleSameIdentity(&expected->identity, &live.identity);
 }
 
 - (BOOL)validateLoadout:(const PHBattleLoadout *)loadout state:(const PHBattleState *)state reason:(NSString **)reason {
@@ -398,6 +454,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 - (PHBattleMutationResult)applyLoadout:(const PHBattleLoadout *)loadout state:(const PHBattleState *)expected
     slot:(NSUInteger)slot member:(PHBattleMember *)member reason:(NSString **)reason {
     if (_busy || _faulted || !expected || !member || slot >= 6 || !NSThread.isMainThread) return PHBattleMutationRejected;
+    if (![self canMutateState:expected reason:reason]) return PHBattleMutationRejected;
     _busy = YES;
     PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, loadout, nullptr, member, reason);
     _busy = NO;
@@ -408,6 +465,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 - (PHBattleMutationResult)restoreLoadout:(const PHBattleMember *)original state:(const PHBattleState *)expected
     slot:(NSUInteger)slot reason:(NSString **)reason {
     if (_busy || _faulted || !expected || !original || slot >= 6 || !NSThread.isMainThread) return PHBattleMutationRejected;
+    if (![self canMutateState:expected reason:reason]) return PHBattleMutationRejected;
     _busy = YES;
     PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, nullptr, original, nullptr, reason);
     _busy = NO;
@@ -423,11 +481,11 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (reason) *reason = @"本次入場已處理，或原生操作已停止";
         return PHBattleMutationRejected;
     }
+    if (![self canMutateState:expected reason:reason]) return PHBattleMutationRejected;
     _busy = YES;
     _entryIdentity = expected->identity;
     _entryAttempted = YES;
-    PHBattleMutationResult result = ApplyLocalEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
-    if (result == PHBattleMutationApplied) RememberEntryBindings(&_provider, expected, mask, members);
+    PHBattleMutationResult result = ApplyEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
     return result;
@@ -435,12 +493,8 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 
 - (PHBattleMutationResult)rebindEntryMembers:(uint8_t)mask state:(const PHBattleState *)expected
     members:(PHBattleMember *)members reason:(NSString **)reason {
-    if (_busy || _faulted || !expected || !members || !NSThread.isMainThread) return PHBattleMutationRejected;
-    _busy = YES;
-    PHBattleMutationResult result = RebindEntryTeam(&_provider, mask, expected, members, reason);
-    _busy = NO;
-    _faulted |= result == PHBattleMutationUncertain;
-    return result;
+    if (reason) *reason = @"多人同步後補回已停用";
+    return PHBattleMutationRejected;
 }
 
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
@@ -456,6 +510,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (reason) *reason = @"原生戰鬥操作已停止或正在執行";
         return PHBattleMutationUncertain;
     }
+    if (![self canMutateState:expected reason:reason]) return PHBattleMutationRejected;
     PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy, false};
     PHBattleState before = {};
     if (!CheckCode(frame.header, reason) || !ReadLive(&before, frame, reason) ||

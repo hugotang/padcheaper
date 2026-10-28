@@ -32,8 +32,13 @@ static inline bool PHBattlePolicyAllows(const PHBattlePolicy *policy, int16_t mo
            PHBattleFilterAllows(&policy->multiplayer, multiplayer);
 }
 
-// Native digest/refresh functions use stored teams for multi 1/4. Battle
-// mutations use the bank adapter; the timer remains limited to this array.
+// This is an engine restriction, independent of legacy allow-all filters.
+// Mode 7 remains multiplayer even while its multi selector is transitioning.
+static inline bool PHBattleIsSinglePlayer(int16_t mode, uint32_t multiplayer) {
+    return multiplayer == 0 && mode != 7;
+}
+
+// Describes native storage only; it must never authorize battle writes.
 static inline bool PHBattleUsesPrimaryTeam(uint32_t multiplayer) {
     return multiplayer != 1 && multiplayer != 4;
 }

@@ -841,6 +841,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"\nCurrent entry: applied %@ / lost mask 0x%02x / rebind waiting %@ / rebound members %@\nLast binding loss: phase %@ / serial %@",
         battle[@"entryApplied"], [battle[@"entryLostMask"] unsignedIntValue], battle[@"rebindPendingCount"],
         battle[@"entryRebindCount"], battle[@"lastLossPhase"], battle[@"lastLossSerial"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle writes: single-player only %@ / multiplayer disabled %@",
+        battle[@"singlePlayerOnly"], battle[@"multiplayerDisabled"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nCurrent HP: %@ / local team HP: %@ / valid %@",
         battle[@"currentHP"], battle[@"localTeamHP"], battle[@"hpKnown"]];
     for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
@@ -978,11 +980,14 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"apiPaths"] = @[path];
     } else if ([action isEqualToString:@"experimentalWrites"]) {
         next[action] = @([value boolValue]);
-    } else if ([@[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"entryModes", @"sourceModes", @"multiModes", @"autoApplyTeam"] containsObject:action]) {
+    } else if ([action isEqual:@"allowAllMulti"] || [action isEqual:@"multiModes"]) {
+        PHFeedback = @"多人戰鬥操作已停用，不能透過入口設定開啟";
+        return;
+    } else if ([@[@"allowAllModes", @"allowAllSources", @"entryModes", @"sourceModes", @"autoApplyTeam"] containsObject:action]) {
         NSMutableDictionary *battle = [PHConfigurationBattleFilters(next) mutableCopy];
         if ([action hasPrefix:@"allowAll"] || [action isEqual:@"autoApplyTeam"]) battle[action] = @([value boolValue]);
         else {
-            NSArray *values = PHConfigurationReadFilterText(value, [action isEqualToString:@"multiModes"] ? UINT32_MAX : UINT16_MAX);
+            NSArray *values = PHConfigurationReadFilterText(value, UINT16_MAX);
             if (!values) { PHFeedback = @"清單需為不重複的非負整數，以逗號分隔，最多 32 個"; return; }
             battle[action] = values;
         }

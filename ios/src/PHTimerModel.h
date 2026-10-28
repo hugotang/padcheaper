@@ -8,7 +8,7 @@ extern "C" {
 typedef struct {
     PHBattleIdentity identity;
     uintptr_t countdown, dialog;
-    bool present, valuesValid;
+    bool present, valuesValid, multiplayerDisabled;
     PHBattlePolicy policy;
     PHInputState input;
     int16_t mode, limitSeconds;

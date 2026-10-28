@@ -87,57 +87,24 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "ordinary idle battle is eligible");
     state.mode = 12;
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 12 solo entry is eligible");
-    state.sourceMode = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 12 still requires ordinary sources");
-    state.sourceMode = 0;
-    state.multiplayer = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 12 still requires solo");
-    state.multiplayer = 0;
     state.mode = 1;
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 1 solo entry is eligible");
-    state.multiplayer = 2;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow disconnected multiplayer");
-    state.multiplayer = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow active multiplayer");
-    state.multiplayer = 0; state.sourceMode = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "category 1 does not allow a scripted source");
-    state.sourceMode = 0;
-    state.multiplayer = 0; state.mode = 7;
     for (uint32_t mode = 0; mode <= UINT16_MAX; ++mode) {
         state.mode = (int16_t)mode;
-        Check(PHBattleStateGate(&state) == PHBattleGateReady, "all entry modes are eligible by default without changing native selectors");
+        Check(PHBattleStateGate(&state) == (mode == 7 ? PHBattleGateMultiplayer : PHBattleGateReady),
+            "default entry filters never authorize the known three-player category, even with multi zero");
     }
-    state.mode = 7;
+    state.mode = 3;
     state.policy = (PHBattlePolicy){.configured = true, .modes = {.count = 3, .values = {0,1,12}},
         .sources = {.count = 1, .values = {0}}, .multiplayer = {.count = 1, .values = {0}}};
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "an optional configured mode list limits new writes");
-    state.policy.modes.allowAll = true; state.sourceMode = 3; state.multiplayer = 2;
-    Check(PHBattleStateGate(&state) == PHBattleGateMode, "source/multi lists are independent of the all-mode switch");
-    state.policy.sources.values[0] = 3; state.policy.multiplayer.values[0] = 2;
-    Check(PHBattleStateGate(&state) == PHBattleGateReady, "explicit source/multi values reach the primary-team structural checks");
-    state.policy.multiplayer.allowAll = true;
-    state.multiplayer = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 1 requires a verified native layout");
-    state.multiplayer = 4;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 4 requires a verified native layout");
-    state.mode = 0;
-    state.teamBanksValid = true; state.teamCount = 2; state.teamSize = 5;
-    state.teamBanks[0] = 10; state.teamBanks[1] = 20;
-    for (uint32_t multi = 1; multi <= 4; multi += 3) {
-        state.multiplayer = multi;
-        Check(PHBattleStateGate(&state) == PHBattleGateReady, "verified multi 1/4 layouts reach normal mutation gates");
-        PHBattleState other = state; other.currentTeam = 1;
-        Check(!PHBattleSameTeamView(&state, &other) && PHBattleSameIdentity(&state.identity, &other.identity),
-              "a team switch changes the transaction view without ending dungeon ownership");
-    }
-    state.currentTeam = 2;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "out-of-range current team cannot enter native calls");
-    state.currentTeam = 0; state.teamCount = PHBattleTeamCapacity + 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "unbounded native bank counts fail closed");
-    state.teamCount = 2;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "an optional mode list limits single-player writes");
+    state.policy.modes.allowAll = true; state.sourceMode = 3;
+    Check(PHBattleStateGate(&state) == PHBattleGateMode, "source filtering remains independent in single player");
+    state.policy.sources.values[0] = 3;
+    Check(PHBattleStateGate(&state) == PHBattleGateReady, "configured solo sources retain their normal checks");
     state.policy.sources.count = PHBattleFilterCapacity + 1;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "invalid filter capacity fails closed");
-    state.policy = (PHBattlePolicy){0}; state.multiplayer = 0;
+    state.policy = (PHBattlePolicy){0};
     state.mode = 0; state.sourceMode = 1;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "scripted source is refused");
     state.sourceMode = 0; state.phase = 43;
@@ -163,36 +130,34 @@ int main(void) {
     Check(PHBattleEntryGate(&state) == PHBattleGateInput, "entry waits for the dungeon selection touch to finish");
     state.input.rawActiveMask = 0; state.auditFlags = 0x10000;
     Check(PHBattleEntryGate(&state) == PHBattleGateAudit, "entry preserves all normal audit checks");
-    state.auditFlags = 0; state.mode = 7; state.multiplayer = 1;
-    state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
-        .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
-    state.teamSize = 6; state.teamCount = 2; state.teamBanks[2] = 30;
-    state.phase = 46;
-    Check(PHBattleEntryGate(&state) == PHBattleGateLayout, "mode 7 requires verified local seat and turn information");
-    state.turnInfoValid = true;
-    for (unsigned count = 2; count <= 3; ++count) for (unsigned player = 0; player < count; ++player) {
-        state.teamCount = (uint8_t)count; state.playerTeam = (uint8_t)player; state.currentTeam = 0;
-        state.turnSerial = state.turnTeam = 0; state.phase = 46; state.entryWindow = true;
-        Check(PHBattleEntryGate(&state) == PHBattleGateReady && PHBattleStateGate(&state) == PHBattleGatePhase,
-            "two or three participants can initialize their own six-member bank during phase 46");
-        state.phase = 2; state.entryWindow = false;
-        state.currentTeam = state.playerTeam;
-        state.turnSerial = state.turnTeam = (uint8_t)((player + 1) % count);
-        Check(PHBattleStateGate(&state) == PHBattleGateTurn && PHBattleEntryGate(&state) == PHBattleGatePhase,
-            "previewing our bank during another player's phase 2 permits neither manual writes nor an SB reset");
-        state.turnTeam = state.playerTeam; state.turnSerial = player + count;
-        Check(PHBattleStateGate(&state) == PHBattleGateReady, "native modulo turn ownership enables only our operational view");
-        PHBattleState later = state; later.turnSerial += count;
-        Check(!PHBattleSameTeamView(&state, &later), "a later turn cannot reuse a stale mutation snapshot");
-        later = state; later.playerTeam = (uint8_t)((player + 1) % count);
-        Check(!PHBattleSameTeamBanks(&state, &later), "changed local network seats invalidate the transaction");
-        state.currentTeam = (uint8_t)((player + 1) % count);
-        Check(PHBattleStateGate(&state) == PHBattleGateTurn, "our turn cannot mutate a remote preview");
-        state.phase = 46; state.entryWindow = true;
-        Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "a later turn cannot impersonate a new phase-46 entry");
+    state.auditFlags = 0;
+    PHBattleState solo = state;
+    for (unsigned filters = 0; filters < 3; ++filters) for (uint32_t multi = 0; multi <= 5; ++multi)
+    for (unsigned phase = 0; phase <= 48; ++phase) {
+        state = solo; state.phase = phase; state.mode = multi ? 12 : 7; state.multiplayer = multi;
+        if (filters) state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
+            .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
+        if (filters == 2) {
+            state.policy.multiplayer.allowAll = false;
+            state.policy.multiplayer.count = 1; state.policy.multiplayer.values[0] = multi;
+        }
+        state.teamBanksValid = state.turnInfoValid = true; state.teamCount = 3; state.teamSize = 6;
+        state.teamBanks[0] = 10; state.teamBanks[1] = 20; state.teamBanks[2] = 30;
+        for (unsigned player = 0; player < 3; ++player) {
+            state.playerTeam = state.currentTeam = state.turnTeam = (uint8_t)player; state.turnSerial = player;
+            Check(PHBattleStateGate(&state) == PHBattleGateMultiplayer && PHBattleEntryGate(&state) == PHBattleGateMultiplayer,
+                "filters, valid banks, host/guest seats, own turns and entry phases cannot enable multiplayer writes");
+        }
+        state.protectedValuesValid = false; state.teamBanksValid = false;
+        Check(PHBattleStateGate(&state) == PHBattleGateMultiplayer,
+            "multiplayer disablement is reported before temporary protected-value or layout errors");
     }
-    state.multiplayer = 0; state.turnSerial = 0;
-    Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "phase 46 does not broaden single-player entry eligibility");
+    state = solo; state.multiplayerDisabled = true;
+    Check(PHBattleEntryGate(&state) == PHBattleGateMultiplayer, "a detected multiplayer battle remains disabled after selector reset");
+    state.present = false;
+    Check(PHBattleEntryGate(&state) == PHBattleGateAbsent, "leaving battle permits the controller to clear its multiplayer latch");
+    state = solo; state.phase = 46;
+    Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "phase 46 never broadens single-player entry eligibility");
     printf("Battle model tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

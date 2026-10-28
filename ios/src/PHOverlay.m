@@ -208,12 +208,15 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.timerLabel = PHLabel(11, UIFontWeightRegular);
     self.timerLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
     self.timerLabel.accessibilityIdentifier = @"padcheaper.timerStatus";
-    self.filterToggle = [self button:@"入口設定 · mode／source／multi" action:@selector(toggleFilters)
+    self.filterToggle = [self button:@"單人入口設定 · mode／source" action:@selector(toggleFilters)
         identifier:@"padcheaper.filtersOpen"];
+    UILabel *soloOnly = PHLabel(12, UIFontWeightRegular);
+    soloOnly.text = @"戰鬥操作僅限單人；多人套隊、補回、還原及數值寫入已停用。";
+    soloOnly.accessibilityIdentifier = @"padcheaper.singlePlayerOnly";
     self.filterSettings = [[UIStackView alloc] initWithArrangedSubviews:@[
         [self switchRow:@"允許所有 mode" key:@"allowAllModes"], [self filterButton:@"編輯 mode 清單" key:@"entryModes"],
         [self switchRow:@"允許所有 source" key:@"allowAllSources"], [self filterButton:@"編輯 source 清單" key:@"sourceModes"],
-        [self switchRow:@"允許所有 multi" key:@"allowAllMulti"], [self filterButton:@"編輯 multi 清單" key:@"multiModes"]
+        soloOnly
     ]];
     self.filterSettings.axis = UILayoutConstraintAxisVertical;
     self.filterSettings.spacing = 8;
@@ -371,7 +374,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.editingFilter = key;
     NSString *name = [key isEqualToString:@"entryModes"] ? @"mode" : [key isEqualToString:@"sourceModes"] ? @"source" : @"multi";
     NSString *message = @"以逗號分隔整數，例如 0,1,12。最多 32 個；留空會停止新操作，已套用位置會還原。";
-    if ([key isEqualToString:@"multiModes"]) message = [message stringByAppendingString:@" multi 1／4 會檢查目前隊伍與助人的來源。"];
+    message = [message stringByAppendingString:@" 這些設定不能啟用多人戰鬥操作。"];
     self.filterAlert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"允許的 %@", name]
         message:message preferredStyle:UIAlertControllerStyleAlert];
     __weak PHOverlayController *weakSelf = self;
@@ -489,12 +492,12 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         self.captions[key].text = [key isEqualToString:@"experimentalWrites"] ?
             (canSave ? @"切換後自動儲存" : @"設定無法寫入，請重新檢查") :
             [key isEqual:@"autoApplyTeam"] ? (toggle.on ? state[@"featureStates"][key] ?: @"下次入場使用選中的儲存隊伍，重算 SB" : @"關閉；可在編輯器手動套用") :
-            [key hasPrefix:@"allowAll"] ? (toggle.on ? @"不限制數值；仍檢查隊伍結構" : @"使用下方允許清單") : state[@"featureStates"][key];
+            [key hasPrefix:@"allowAll"] ? (toggle.on ? @"接受所有分類；仍僅限單人" : @"使用下方允許清單；仍僅限單人") : state[@"featureStates"][key];
     }
-    NSArray *listKeys = @[@"entryModes", @"sourceModes", @"multiModes"];
-    NSArray *allKeys = @[@"allowAllModes", @"allowAllSources", @"allowAllMulti"];
-    NSArray *names = @[@"mode", @"source", @"multi"];
-    for (NSUInteger i = 0; i < 3; ++i) {
+    NSArray *listKeys = @[@"entryModes", @"sourceModes"];
+    NSArray *allKeys = @[@"allowAllModes", @"allowAllSources"];
+    NSArray *names = @[@"mode", @"source"];
+    for (NSUInteger i = 0; i < listKeys.count; ++i) {
         UIButton *button = self.filterButtons[listKeys[i]];
         button.hidden = [filters[allKeys[i]] boolValue];
         button.enabled = canSave;
@@ -515,7 +518,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.saveLabel.textColor = [savePhase hasSuffix:@"failed"] ?
         [UIColor colorWithRed:1 green:0.54 blue:0.54 alpha:1] : [UIColor colorWithWhite:1 alpha:0.80];
     NSDictionary *battle = state[@"battleState"];
-    [self.filterToggle setTitle:[NSString stringWithFormat:@"入口設定 · mode %@／source %@／multi %@",
+    [self.filterToggle setTitle:[NSString stringWithFormat:@"單人入口設定 · mode %@／source %@／multi %@",
         battle[@"mode"] ?: @"—", battle[@"sourceMode"] ?: @"—", battle[@"multiplayer"] ?: @"—"] forState:UIControlStateNormal];
     [self.formationController updateBattle:battle];
     self.battleLabel.text = [NSString stringWithFormat:@"%@\n%@", battle[@"message"] ?: @"等待戰鬥檢查",

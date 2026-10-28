@@ -35,7 +35,8 @@ static BOOL ReadTimer(PHTimerState *state, PHBattleFrame frame) {
     uint32_t player = 0;
     if (!PHReadU8(save, &scene) || !PHReadU8(save + 1, &requested) ||
         !PHReadU32(save + PHPlayerIDOffset, &player) || player != frame.player) return NO;
-    if (scene != 1 || requested != scene) return YES;
+    if (scene != 1) return YES;
+    if (requested != scene) return NO;
     uintptr_t object = 0, impl = 0;
     if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game ||
         !PHReadPointer(game + 0x70, &impl) || !impl || (impl & 7u) || impl > UINTPTR_MAX - 0xc0000 ||
@@ -85,7 +86,7 @@ static void Write(uintptr_t address, const void *data, size_t length) {
 
 static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString **reason) {
     PHTimerState current = {};
-    if (!CheckTimerCode(frame.header, reason) || !ReadTimer(&current, frame) || !PHTimerCanDismiss(&current) ||
+    if (expected->multiplayerDisabled || !CheckTimerCode(frame.header, reason) || !ReadTimer(&current, frame) || !PHTimerCanDismiss(&current) ||
         !SameTimer(expected, &current) || expected->dialog != current.dialog ||
         !PHMemoryHasProtection(current.dialog, 0x1a0, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE) ||
         !PHMemoryHasProtection(frame.header + PHBattlePRNGRVA, 4, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) {
@@ -119,7 +120,7 @@ static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString 
     PHBattleFrame _frame;
     PHTimerState _state, _queuedState;
     uintptr_t _verifiedHeader;
-    BOOL _hasState, _queued, _fault;
+    BOOL _hasState, _queued, _fault, _multiplayerDisabled;
     NSTimeInterval _time, _lastRead, _queuedTime;
     NSUInteger _pauseClears, _flagWrites, _dismissals;
     NSString *_message, *_gate;
@@ -135,6 +136,8 @@ static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString 
 
 - (void)onFrame:(PHBattleFrame)frame atTime:(NSTimeInterval)time force:(BOOL)force {
     NSCAssert(NSThread.isMainThread, @"Timer commands require the game main thread");
+    if (_frame.header != frame.header || _frame.player != frame.player || _frame.epoch != frame.epoch)
+        _multiplayerDisabled = NO;
     _frame = frame; _time = time;
     if (!frame.ready || !frame.enabled) {
         if (_queued) { _queued = NO; _message = @"條件已改變，取消待執行撤窗"; }
@@ -148,6 +151,11 @@ static BOOL Dismiss(const PHTimerState *expected, PHBattleFrame frame, NSString 
         _verifiedHeader = frame.header;
     }
     _hasState = ReadTimer(&_state, frame);
+    if (_hasState) {
+        _multiplayerDisabled = _state.present && (_multiplayerDisabled || !PHBattleIsSinglePlayer(_state.mode, _state.multiplayer));
+        _state.multiplayerDisabled = _multiplayerDisabled;
+        if (_multiplayerDisabled) _queued = NO;
+    }
     _gate = !_hasState ? @"計時資料未通過檢查" : !PHTimerEligible(&_state) ? @"等待一般單人計時關卡" :
         PHTimerCanDismiss(&_state) ? @"已偵測計時退出彈窗，可手動關閉" :
         (_state.phase == 58 && _state.pending == 32 && _state.dialog && !_state.input.valid) ? @"觸控狀態未通過檢查，暫停撤窗" :

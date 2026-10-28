@@ -229,8 +229,11 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeRender(self.window, overlay, @"features");
     UIButton *filters = (UIButton *)PHProbeFind(overlay, @"padcheaper.filtersOpen");
     [filters sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck(!PHProbeFind(overlay, @"padcheaper.filters").hidden, @"mode/source/multi settings must open from the GUI");
-    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"autoApplyTeam"]) {
+    PHProbeCheck(!PHProbeFind(overlay, @"padcheaper.filters").hidden, @"single-player entry settings must open from the GUI");
+    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.allowAllMulti") == nil &&
+        PHProbeFind(overlay, @"padcheaper.multiModes") == nil && PHProbeFind(overlay, @"padcheaper.singlePlayerOnly") != nil,
+        @"the GUI explains single-player-only operation and offers no multiplayer override");
+    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"autoApplyTeam"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, @"eligibility filters must have editable GUI switches");
         for (NSNumber *value in @[@NO,@YES]) {

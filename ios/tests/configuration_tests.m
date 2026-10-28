@@ -84,6 +84,11 @@ int main(void) {
         policy = PHConfigurationBattlePolicy(config);
         Check(PHConfigurationIsValid(config) && PHBattlePolicyAllows(&policy, 7, 3, 2) &&
               !PHBattlePolicyAllows(&policy, 1, 3, 2), "mode/source/multi filters have independent bounds and consume GUI-persisted values");
+        config[@"battle"] = @{@"allowAllModes": @YES, @"allowAllSources": @YES, @"allowAllMulti": @YES};
+        policy = PHConfigurationBattlePolicy(config);
+        Check(PHConfigurationIsValid(config) && PHBattlePolicyAllows(&policy, 7, 3, 1) &&
+            !PHBattleIsSinglePlayer(7, 0) && !PHBattleIsSinglePlayer(12, 1) && !PHBattleIsSinglePlayer(12, 2),
+            "legacy allow-all config remains readable but cannot override the engine's single-player restriction");
         config[@"battle"] = @{@"entryModes": @[]};
         Check(PHConfigurationIsValid(config), "empty lists are valid even when the all-mode switch is on");
         for (id invalid in @[@[@YES], @[@1.5], @[@-1], @[@65536], @[@0,@0], @"0,1"]) {

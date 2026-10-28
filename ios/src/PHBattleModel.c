@@ -67,7 +67,7 @@ bool PHBattleIsThreePlayer(const PHBattleState *state) {
 }
 
 bool PHBattleIsEntryPhase(const PHBattleState *state) {
-    return state && (state->phase == 0 || (PHBattleIsThreePlayer(state) && state->phase == 46));
+    return state && state->phase == 0;
 }
 
 bool PHBattleTeamLayoutValid(const PHBattleState *state) {
@@ -96,17 +96,13 @@ bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b) {
 
 static PHBattleGate StateGate(const PHBattleState *state, bool entry) {
     if (!state || !state->present) return PHBattleGateAbsent;
+    if (state->multiplayerDisabled || !PHBattleIsSinglePlayer(state->mode, state->multiplayer))
+        return PHBattleGateMultiplayer;
     if (!state->protectedValuesValid) return PHBattleGateProtected;
     if (!PHBattlePolicyAllows(&state->policy, state->mode, state->sourceMode, state->multiplayer))
         return PHBattleGateMode;
     if (!PHBattleTeamLayoutValid(state)) return PHBattleGateLayout;
-    if (entry ? !PHBattleIsEntryPhase(state) || !state->entryWindow ||
-        (PHBattleIsThreePlayer(state) && state->turnSerial != 0) : state->phase != 2) return PHBattleGatePhase;
-    // Phase 2 is also used while replaying a remote player's turn. The native
-    // controller compares turnSerial % teamCount with the local network seat.
-    // Entry is a separate preemptive-free transaction that selects our bank.
-    if (!entry && PHBattleIsThreePlayer(state) &&
-        (state->currentTeam != state->playerTeam || state->turnTeam != state->playerTeam)) return PHBattleGateTurn;
+    if (entry ? !PHBattleIsEntryPhase(state) || !state->entryWindow : state->phase != 2) return PHBattleGatePhase;
     if (!state->input.valid) return PHBattleGateInputUnavailable;
     if (!PHInputIsQuiet(&state->input)) return PHBattleGateInput;
     if (state->dragActive) return PHBattleGateDrag;
