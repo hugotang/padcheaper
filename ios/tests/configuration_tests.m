@@ -40,6 +40,8 @@ int main(void) {
         Check(PHConfigurationIsValid(defaults) && ![defaults[@"experimentalWrites"] boolValue], "defaults are diagnostic");
         Check([PHConfigurationBattleFilters(defaults)[@"autoApplyTeam"] isEqual:@NO], "entry auto-apply defaults off");
         Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
+        Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
+            [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");
         NSData *serialized = [NSJSONSerialization dataWithJSONObject:defaults options:0 error:NULL];
         Check(PHConfigurationIsValid([NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL]),
               "config retains Boolean types through JSON persistence");
@@ -60,6 +62,22 @@ int main(void) {
         }
         config[@"orbs"] = @"thorough";
         Check(!PHConfigurationIsValid(config), "malformed orb settings are rejected");
+        NSArray *goals = @[@{@"kind":@"column", @"colors":@4, @"count":@1, @"length":@0},
+            @{@"kind":@"cross", @"colors":@32, @"count":@1, @"length":@0}];
+        config[@"orbs"] = @{@"quality":@"thorough", @"mode":@"manual", @"goals":goals};
+        serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+        NSDictionary *goalConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
+        Check(PHConfigurationIsValid(goalConfig) && [PHConfigurationOrbSettings(goalConfig)[@"goals"] isEqual:goals],
+            "shape, color, conjunction and quality persist together");
+        for (NSDictionary *invalid in @[@{@"mode":@"manual"}, @{@"mode":@"unknown"}, @{@"goals":@YES},
+            @{@"mode":@"manual", @"goals":@[goals[0], goals[0]]},
+            @{@"mode":@"manual", @"goals":@[@{@"kind":@"l", @"colors":@YES}]}]) {
+            config[@"orbs"] = invalid;
+            Check(!PHConfigurationIsValid(config), "unusable target configuration is rejected before saving");
+        }
+        config[@"orbs"] = @{@"mode":@"leaders", @"goals":goals};
+        Check(PHConfigurationIsValid(config) && [PHConfigurationOrbSettings(config)[@"quality"] isEqual:@"balanced"],
+            "automatic leader mode retains the saved manual profile and default quality");
         [config removeObjectForKey:@"orbs"];
         config[@"experimentalWrites"] = @YES;
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO};

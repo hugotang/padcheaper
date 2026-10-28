@@ -9,7 +9,12 @@
     "dimensions": [[6, 5], [7, 6], [5, 4]],
     "min_erase": 3,
     "continuous": false,
-    "input": "scoped-private-manager"
+    "input": "scoped-private-manager",
+    "goal_modes": ["combo", "manual", "leaders"],
+    "max_goals": 6,
+    "shape_wave": "first-removal-only",
+    "leader_planning": "minimum-board-conditions-only",
+    "full_leader_activation": false
   },
   "user_report": {
     "date": "2026-10-28",

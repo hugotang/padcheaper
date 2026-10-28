@@ -32,6 +32,28 @@ bool CheckCode(uintptr_t header, NSString **reason) {
     return true;
 }
 
+// Optional read-only context. A missing catalog must not disable ordinary
+// combo/manual previews; leader mode separately requires both current IDs.
+bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
+    uint32_t count = 0; uintptr_t catalog = 0;
+    if (!PHReadU32(save + PHBattleCatalogCountOffset, &count) || !count || count > 65536 ||
+        !PHReadPointer(save + PHBattleCatalogPointerOffset, &catalog) || !catalog ||
+        catalog > UINTPTR_MAX - size_t(count) * PHBattleCatalogStride) return false;
+    uint16_t numbers[2]{};
+    for (unsigned i = 0; i < 2; ++i) {
+        const uintptr_t member = impl + PHBattleMemberOffset + (i ? 5 : 0) * PHBattleMemberStride;
+        uint8_t active = 0; uint32_t id = 0, record = 0, lastID = 0; uintptr_t parameter = 0;
+        if (!PHReadU8(member, &active) || !(active & 1u) ||
+            !PHReadU32(member + PHBattleCatalogIDOffset, &id) || !id || id >= count ||
+            !PHBattleNumberForCatalogID(id, &numbers[i]) ||
+            !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
+            parameter != catalog + id * PHBattleCatalogStride || !PHReadU32(parameter, &record) || record != id ||
+            !PHReadU32(member + PHBattleCatalogIDOffset, &lastID) || lastID != id) return false;
+    }
+    state.leaderNumbers[0] = numbers[0]; state.leaderNumbers[1] = numbers[1];
+    return true;
+}
+
 bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     state = {};
     if (!NSThread.isMainThread || !frame.ready || !frame.header || !frame.player || frame.header > UINTPTR_MAX - 0x3000000u) {
@@ -141,6 +163,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         !PHReadPointer(game + 0x70, &lastImpl) || lastImpl != impl ||
         !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2) return false;
+    state.leadersValid = ReadLeaders(state, save, impl);
     state.valid = true;
     if (!state.ordinary) { if (reason) *reason = @"特殊規則、固定起點、彈窗或入場動畫尚未結束"; }
     else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型或效果；本版限六種基本珠與強化珠"; }
@@ -202,6 +225,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     if (!PHOrbSameTurn(expected, &live) || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSameBoard(&live.board, &expected->board) ||
+        (down && !PHOrbSameLeaders(expected, &live)) ||
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||
         (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) {
         if (reason) *reason = @"輸入前盤面或操作條件已改變";

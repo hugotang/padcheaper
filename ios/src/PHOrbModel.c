@@ -36,6 +36,36 @@ bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         a->board.width == b->board.width && a->board.height == b->board.height;
 }
 
+bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
+    return a && b && a->leadersValid == b->leadersValid &&
+        (!a->leadersValid || (a->leaderNumbers[0] == b->leaderNumbers[0] && a->leaderNumbers[1] == b->leaderNumbers[1]));
+}
+
+bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {
+    if (!goals || goals->count > PHOrbMaxGoals) return false;
+    for (unsigned i = 0; i < goals->count; ++i) {
+        const PHOrbGoal *g = &goals->items[i];
+        if (g->kind > PHOrbGoalFour || !g->count || g->count > PHOrbMaxCells / 3) return false;
+        if (g->kind == PHOrbGoalCombo) {
+            if (g->colors || g->length) return false;
+        } else {
+            if (!g->colors || g->colors > 63) return false;
+            if (g->kind == PHOrbGoalColors) {
+                unsigned colors = 0;
+                for (unsigned bit = 0; bit < 6; ++bit) colors += (g->colors >> bit) & 1u;
+                if (g->count > colors) return false;
+            }
+            if (g->kind == PHOrbGoalMatch) {
+                if (g->length < 3 || g->length > PHOrbMaxCells) return false;
+            } else if (g->length) return false;
+        }
+        // Repeated requirements use a count, avoiding ambiguous double counting.
+        for (unsigned j = 0; j < i; ++j) if (goals->items[j].kind == g->kind &&
+            goals->items[j].colors == g->colors && goals->items[j].length == g->length) return false;
+    }
+    return true;
+}
+
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height) {
     if (!width || !height || width * height > PHOrbMaxCells || a >= width * height || b >= width * height) return false;
     return (a / width == b / width && (a + 1 == b || b + 1 == a)) ||

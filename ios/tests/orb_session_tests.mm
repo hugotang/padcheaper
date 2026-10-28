@@ -12,6 +12,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     PHOrbSnapshot live;
     NSUInteger stages, releases, cell, reads;
     BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
+    BOOL replaceLeaderOnStart, replaceLeaderOnMove;
 }
 - (instancetype)initWithWidth:(unsigned)width height:(unsigned)height;
 - (void)nativeFrame;
@@ -44,6 +45,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled || multiplayerLatched ||
         !PHOrbSameTurn(&live, expected) || !PHOrbSameBoard(&live.board, &expected->board) ||
+        (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height) return NO;
     ++stages; cell = target; down = hold; beginning = begin; staged = YES;
     if (!down) ++releases;
@@ -59,6 +61,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!down) { live.dragged = 0; live.settled = true; live.phase = 3; return; }
     if (beginning) {
         if (!ignoreStart) { live.dragged = live.board.tokens[cell]; live.settled = false; }
+        if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
         return;
     }
     if (ignoreMove) return;
@@ -70,6 +73,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
     std::swap(live.board.flags[from], live.board.flags[cell]); std::swap(live.board.enhancement[from], live.board.enhancement[cell]);
     ++live.moves;
+    if (replaceLeaderOnMove) { live.leaderNumbers[0] = 14242; replaceLeaderOnMove = NO; }
     if (corruptSwap) live.board.types[cells - 1] = uint8_t((live.board.types[cells - 1] + 1) % 6);
 }
 @end
@@ -161,6 +165,91 @@ int main() {
         Check(![session configureQuality:@"thorough"] && [[session snapshot][@"quality"] isEqual:@"fast"],
             "quality cannot rewrite the options of an already armed gesture");
         [session queueStop:@"end quality fixture"];
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check(Preview(session, engine), "goal-change preview setup");
+        generation = [[session snapshot][@"generation"] unsignedIntegerValue];
+        NSArray *simpleGoal = @[@{@"kind":@"combo", @"colors":@0, @"count":@1, @"length":@0}];
+        NSDictionary *manualSettings = @{@"quality":@"fast", @"mode":@"manual", @"goals":simpleGoal};
+        Check([session configureSettings:manualSettings], "valid goal settings are accepted as one transaction");
+        [session queueExecute:generation];
+        Check(engine->stages == 0 && [[session snapshot][@"path"] count] == 0,
+              "changing a goal invalidates the previous executable generation");
+        Check(Preview(session, engine) && [[session snapshot][@"goalsMet"] boolValue], "new solver job uses the captured target");
+        Execute(session);
+        Check(![session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[]}],
+              "an armed gesture cannot change its target mid-execution");
+        [session queueStop:@"end goal fixture"];
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        [session configureSettings:@{@"quality":@"thorough", @"mode":@"manual", @"goals":simpleGoal}];
+        Tick(session, engine, Frame()); [session queueRead];
+        for (unsigned i = 0; i < 100 && ![[session snapshot][@"phase"] isEqual:@"solving"]; ++i) Tick(session, engine, Frame());
+        Check([[session snapshot][@"phase"] isEqual:@"solving"], "in-flight goal cancellation setup");
+        generation = [[session snapshot][@"generation"] unsignedIntegerValue];
+        [session configureSettings:@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[]}];
+        for (unsigned i = 0; i < 100; ++i) Tick(session, engine, Frame());
+        Check([[session snapshot][@"phase"] isEqual:@"idle"] && [[session snapshot][@"generation"] unsignedIntegerValue] != generation &&
+              [[session snapshot][@"path"] count] == 0 && engine->stages == 0,
+              "an old goal worker completion cannot publish a route after settings change");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = uint8_t(1 + (i % 6 + 2 * (i / 6)) % 4);
+        for (unsigned i : {0u,1u,2u,6u,7u,8u,12u,13u,14u}) engine->live.board.types[i] = 0;
+        NSArray *conflict = @[@{@"kind":@"square", @"colors":@1, @"count":@1, @"length":@0},
+            @{@"kind":@"l", @"colors":@1, @"count":@1, @"length":@0}];
+        [session configureSettings:@{@"quality":@"fast", @"mode":@"manual", @"goals":conflict}];
+        Check(Preview(session, engine) && ![[session snapshot][@"goalsMet"] boolValue] &&
+              ![[session snapshot][@"canExecute"] boolValue] && [[session snapshot][@"goalCount"] unsignedIntegerValue] == 2,
+              "conflicting shapes yield a labelled non-executable partial preview");
+        Execute(session); for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
+        Check(engine->stages == 0, "even a direct execute request cannot bypass unmet goals");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        NSDictionary *leaderSettings = @{@"quality":@"fast", @"mode":@"leaders", @"goals":@[]};
+        [session configureSettings:leaderSettings];
+        Check(!Preview(session, engine) && [[session snapshot][@"phase"] isEqual:@"blocked"] && engine->stages == 0,
+              "leader mode requires live validated IDs and never falls back to ordinary autoplay");
+        engine->live.leadersValid = true; engine->live.leaderNumbers[0] = engine->live.leaderNumbers[1] = 1;
+        Check(Preview(session, engine) && [[session snapshot][@"goalPlan"][@"available"] boolValue],
+              "live leaders without board conditions use combo priority with explicit scope");
+        generation = [[session snapshot][@"generation"] unsignedIntegerValue];
+        engine->live.leaderNumbers[0] = 14242;
+        for (unsigned i = 0; i < 10; ++i) Tick(session, engine, Frame());
+        [session queueExecute:generation];
+        Check(engine->stages == 0 && ![[session snapshot][@"canExecute"] boolValue],
+              "leader change invalidates a stale preview even when all orb tokens remain identical");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        engine->live.leadersValid = true; engine->live.leaderNumbers[0] = engine->live.leaderNumbers[1] = 1;
+        [session configureSettings:leaderSettings];
+        Check(Preview(session, engine), "leader change during gesture setup"); Execute(session); UntilDragging(session, engine);
+        stages = engine->stages; engine->live.leaderNumbers[0] = 14242;
+        Tick(session, engine, Frame());
+        Check(engine->stages == stages + 1 && engine->releases == 1 && !engine->down && !engine->live.dragged &&
+              [[session snapshot][@"completed"] unsignedIntegerValue] == 0,
+              "mid-gesture leader change sends only the owned release and never another route step");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        engine->live.leadersValid = true; engine->live.leaderNumbers[0] = engine->live.leaderNumbers[1] = 1;
+        [session configureSettings:leaderSettings];
+        Check(Preview(session, engine), "leader change inside native start setup");
+        engine->replaceLeaderOnStart = YES; Execute(session);
+        for (unsigned i = 0; i < 120 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
+        Check(!engine->replaceLeaderOnStart && engine->live.moves == 0 && engine->releases == 1 && !engine->live.dragged &&
+              [[session snapshot][@"completed"] unsignedIntegerValue] == 0,
+              "leader change inside an accepted native start releases the owned orb without beginning the old route");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        engine->live.leadersValid = true; engine->live.leaderNumbers[0] = engine->live.leaderNumbers[1] = 1;
+        [session configureSettings:leaderSettings];
+        Check(Preview(session, engine), "leader change inside native swap setup"); Execute(session); UntilDragging(session, engine);
+        engine->replaceLeaderOnMove = YES;
+        for (unsigned i = 0; i < 120 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
+        Check(!engine->replaceLeaderOnMove && engine->live.moves == 1 && engine->releases == 1 && !engine->live.dragged &&
+              [[session snapshot][@"confirmed"] unsignedIntegerValue] == 0 &&
+              [[session snapshot][@"completed"] unsignedIntegerValue] == 0,
+              "an accepted native swap cannot replace the plan's leader identity and continue the old route");
 
         engine = [[FakeOrbEngine alloc] initWithWidth:7 height:6]; session = [[PHOrbSession alloc] initWithEngine:engine];
         [session configureQuality:@"thorough"]; engine->live.fps = 20; engine->live.remainingFrames = 200;

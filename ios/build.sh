@@ -9,6 +9,7 @@ python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
+python3 ios/tools/generate_leaders.py
 
 sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
@@ -32,7 +33,7 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m \
     "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
     "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
@@ -58,6 +59,7 @@ cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
 cp ios/docs/auto-orbs.md "$build_dir/auto-orbs.md"
+cp ios/docs/orb-goals.md "$build_dir/orb-goals.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
@@ -100,7 +102,8 @@ metadata = {
     "dylib_version": version,
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
-    "automatic_orbs": "single-player 6x5/7x6/5x4 memory snapshot, persisted fast/balanced/thorough search quality, native path preview and explicit execute-once/stop; frame-quantized time budget and per-frame native swap acknowledgements; expanded geometry and quality device verification pending",
+    "automatic_orbs": "single-player 6x5/7x6/5x4 memory snapshot, saved fast/balanced/thorough quality and up to six conjunctive shape/color/combo goals; explicit execute-once requires every goal, frame time budget and native swap acknowledgement; new features remain pending device verification",
+    "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",
     "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",

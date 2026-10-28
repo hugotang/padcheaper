@@ -1,6 +1,176 @@
 #import "PHOrbController.h"
+#import "PHOrbPlanning.h"
 #include "PHOrbModel.h"
 #include <math.h>
+
+@interface PHOrbGoalEditor : UIViewController
+@property(nonatomic, strong) NSMutableArray<NSMutableDictionary *> *draft;
+@property(nonatomic, copy) NSString *(^saveGoals)(NSArray *goals);
+@property(nonatomic, strong) UIStackView *rows;
+@property(nonatomic, strong) UILabel *notice;
+- (instancetype)initWithGoals:(NSArray *)goals save:(NSString *(^)(NSArray *))save;
+- (void)rebuild;
+- (void)change:(NSUInteger)index field:(NSString *)field value:(id)value;
+@end
+
+@implementation PHOrbGoalEditor
+- (instancetype)initWithGoals:(NSArray *)goals save:(NSString *(^)(NSArray *))save {
+    if ((self = [super init])) {
+        _draft = [NSMutableArray array];
+        for (NSDictionary *goal in goals) [_draft addObject:goal.mutableCopy];
+        _saveGoals = [save copy];
+    }
+    return self;
+}
+- (UILabel *)label:(NSString *)text {
+    UILabel *label = [UILabel new]; label.text = text; label.numberOfLines = 0;
+    label.font = [UIFont systemFontOfSize:15]; label.textColor = UIColor.labelColor; return label;
+}
+- (UIButton *)button:(NSString *)title {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButtonConfiguration *config = [UIButtonConfiguration tintedButtonConfiguration];
+    config.title = title; button.configuration = config;
+    [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    return button;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    self.view.backgroundColor = UIColor.systemBackgroundColor;
+    self.view.accessibilityIdentifier = @"padcheaper.orbsGoalEditor";
+    UILabel *title = [self label:@"指定盤面目標"]; title.font = [UIFont boldSystemFontOfSize:22];
+    UIButton *cancel = [self button:@"取消"];
+    [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
+    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]];
+    header.spacing = 12; header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
+    UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:scroll];
+    self.rows = [UIStackView new]; self.rows.axis = UILayoutConstraintAxisVertical; self.rows.spacing = 16;
+    self.rows.translatesAutoresizingMaskIntoConstraints = NO; [scroll addSubview:self.rows];
+    UIButton *save = [self button:@"儲存目標"];
+    save.configuration = [UIButtonConfiguration filledButtonConfiguration]; [save setTitle:@"儲存目標" forState:UIControlStateNormal];
+    save.accessibilityIdentifier = @"padcheaper.orbsGoalSave";
+    [save addTarget:self action:@selector(save) forControlEvents:UIControlEventTouchUpInside];
+    self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;
+    self.notice.accessibilityIdentifier = @"padcheaper.orbsGoalNotice";
+    UIStackView *footer = [[UIStackView alloc] initWithArrangedSubviews:@[self.notice, save]];
+    footer.axis = UILayoutConstraintAxisVertical; footer.spacing = 8; footer.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:footer];
+    UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
+    [NSLayoutConstraint activateConstraints:@[
+        [header.topAnchor constraintEqualToAnchor:safe.topAnchor constant:16],
+        [header.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
+        [header.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-20],
+        [footer.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
+        [footer.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-20],
+        [footer.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-12],
+        [scroll.topAnchor constraintEqualToAnchor:header.bottomAnchor constant:16],
+        [scroll.bottomAnchor constraintEqualToAnchor:footer.topAnchor constant:-12],
+        [scroll.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
+        [scroll.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor],
+        [self.rows.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor],
+        [self.rows.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-20],
+        [self.rows.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:20],
+        [self.rows.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-20],
+        [self.rows.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-40]
+    ]];
+    [self rebuild];
+}
+- (void)change:(NSUInteger)index field:(NSString *)field value:(id)value {
+    if (index >= self.draft.count) return;
+    NSMutableDictionary *goal = self.draft[index]; goal[field] = value;
+    if ([field isEqual:@"kind"]) {
+        goal[@"count"] = @1;
+        goal[@"colors"] = [value isEqual:@"combo"] ? @0 : [goal[@"colors"] unsignedIntegerValue] ? goal[@"colors"] : @63;
+        goal[@"length"] = [value isEqual:@"match"] ? @6 : @0;
+    }
+    if ([goal[@"kind"] isEqual:@"colors"]) {
+        NSUInteger colors = 0;
+        for (NSUInteger bit = 0; bit < 6; ++bit) colors += ([goal[@"colors"] unsignedIntegerValue] >> bit) & 1u;
+        goal[@"count"] = @(MIN([goal[@"count"] unsignedIntegerValue], colors));
+    }
+    [self rebuild];
+}
+- (UIButton *)menu:(NSUInteger)index field:(NSString *)field values:(NSArray *)values titles:(NSArray *)titles {
+    id selected = self.draft[index][field]; NSUInteger selectedIndex = [values indexOfObject:selected];
+    NSString *title = selectedIndex == NSNotFound ? PHOrbColorTitle([selected unsignedIntegerValue]) : titles[selectedIndex];
+    UIButton *button = [self button:title]; button.showsMenuAsPrimaryAction = YES;
+    button.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsGoal%@%lu", field, (unsigned long)index];
+    NSMutableArray *actions = [NSMutableArray array]; __weak PHOrbGoalEditor *weakSelf = self;
+    for (NSUInteger i = 0; i < values.count; ++i) {
+        id value = values[i];
+        UIAction *action = [UIAction actionWithTitle:titles[i] image:nil identifier:nil handler:^(__kindof UIAction *sender) {
+            [weakSelf change:index field:field value:value];
+        }];
+        action.state = [value isEqual:selected] ? UIMenuElementStateOn : UIMenuElementStateOff; [actions addObject:action];
+    }
+    button.menu = [UIMenu menuWithTitle:@"" children:actions]; return button;
+}
+- (UIStackView *)stepper:(NSUInteger)index field:(NSString *)field title:(NSString *)title minimum:(NSUInteger)minimum maximum:(NSUInteger)maximum {
+    UIStepper *stepper = [UIStepper new]; stepper.minimumValue = minimum; stepper.maximumValue = maximum;
+    stepper.value = [self.draft[index][field] doubleValue];
+    stepper.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsGoal%@%lu", field, (unsigned long)index];
+    stepper.accessibilityLabel = title;
+    __weak PHOrbGoalEditor *weakSelf = self; __weak UIStepper *weakStepper = stepper;
+    [stepper addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) {
+        [weakSelf change:index field:field value:@((NSUInteger)weakStepper.value)];
+    }] forControlEvents:UIControlEventValueChanged];
+    UILabel *label = [self label:[NSString stringWithFormat:@"%@：%@", title, self.draft[index][field]]];
+    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[label, stepper]]; row.spacing = 12; row.alignment = UIStackViewAlignmentCenter;
+    [row.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES; return row;
+}
+- (void)rebuild {
+    self.notice.text = @"";
+    for (UIView *view in self.rows.arrangedSubviews) { [self.rows removeArrangedSubview:view]; [view removeFromSuperview]; }
+    __weak PHOrbGoalEditor *weakSelf = self;
+    for (NSUInteger i = 0; i < self.draft.count; ++i) {
+        NSDictionary *goal = self.draft[i]; NSString *kind = goal[@"kind"];
+        UIStackView *card = [UIStackView new]; card.axis = UILayoutConstraintAxisVertical; card.spacing = 8;
+        card.backgroundColor = UIColor.secondarySystemBackgroundColor; card.layer.cornerRadius = 12;
+        card.layoutMargins = UIEdgeInsetsMake(12, 12, 12, 12); card.layoutMarginsRelativeArrangement = YES;
+        UIButton *remove = [self button:@"刪除"]; remove.tintColor = UIColor.systemRedColor;
+        [remove addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) {
+            PHOrbGoalEditor *editor = weakSelf;
+            if (editor && i < editor.draft.count) { [editor.draft removeObjectAtIndex:i]; [editor rebuild]; }
+        }] forControlEvents:UIControlEventTouchUpInside];
+        UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:[NSString stringWithFormat:@"條件 %lu", (unsigned long)i + 1]], remove]];
+        heading.spacing = 12; [card addArrangedSubview:heading];
+        NSArray *kinds = @[@"l", @"cross", @"t", @"square", @"row", @"column", @"four", @"match", @"combo", @"colors"];
+        NSMutableArray *titles = [NSMutableArray array]; for (NSString *value in kinds) [titles addObject:PHOrbGoalTitle(value)];
+        [card addArrangedSubview:[self menu:i field:@"kind" values:kinds titles:titles]];
+        if (![kind isEqual:@"combo"]) {
+            NSArray *masks = @[@63, @31, @1, @2, @4, @8, @16, @32];
+            NSMutableArray *colorTitles = [NSMutableArray array]; for (NSNumber *mask in masks) [colorTitles addObject:PHOrbColorTitle(mask.unsignedIntegerValue)];
+            [card addArrangedSubview:[self menu:i field:@"colors" values:masks titles:colorTitles]];
+        }
+        NSUInteger maximum = [kind isEqual:@"combo"] || [kind isEqual:@"match"] ? 14 : 3;
+        if ([kind isEqual:@"colors"]) {
+            maximum = 0; for (NSUInteger bit = 0; bit < 6; ++bit) maximum += ([goal[@"colors"] unsignedIntegerValue] >> bit) & 1u;
+        }
+        [card addArrangedSubview:[self stepper:i field:@"count" title:[kind isEqual:@"combo"] ? @"最低 Combo" :
+            [kind isEqual:@"colors"] ? @"顏色數" : @"獨立消除組數" minimum:1 maximum:MAX(maximum, [goal[@"count"] unsignedIntegerValue])]];
+        if ([kind isEqual:@"match"]) [card addArrangedSubview:[self stepper:i field:@"length" title:@"每組最少珠數" minimum:3 maximum:PHOrbMaxCells]];
+        [self.rows addArrangedSubview:card];
+    }
+    UIButton *add = [self button:@"＋ 新增條件"]; add.enabled = self.draft.count < PHOrbMaxGoals;
+    add.accessibilityIdentifier = @"padcheaper.orbsGoalAdd";
+    [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
+    [self.rows addArrangedSubview:[self label:@"所有條件需同時達成。相同條件請增加組數，最多 6 項。\n\nL／十字／T 須獨立 5 顆，3×3 須獨立 9 顆，四連須直線 4 顆，周邊不連同色珠；形狀以首批消除為準。橫排與直行依實際盤面寬高判定。多組目標需分成不同 Combo。\n\nCombo 與多色可包含盤內連鎖，不含天降或隊長加算。"]];
+}
+- (void)add {
+    if (self.draft.count >= PHOrbMaxGoals) return;
+    [self.draft addObject:[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0} mutableCopy]]; [self rebuild];
+}
+- (void)save {
+    PHOrbGoalSet goals = {0};
+    if (!PHOrbReadGoals(self.draft, &goals) || !goals.count) {
+        self.notice.text = @"請至少設定一項有效條件；相同形狀與珠色請合併成組數。"; return;
+    }
+    NSString *error = self.saveGoals(PHOrbGoalsJSON(&goals));
+    if (error.length) { self.notice.text = error; return; }
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+- (void)cancel { [self dismissViewControllerAnimated:YES completion:nil]; }
+@end
 
 @interface PHOrbBoardView : UIView
 @property(nonatomic, copy) NSDictionary *board;
@@ -79,6 +249,9 @@
 @property(nonatomic, strong) UILabel *availability;
 @property(nonatomic, strong) UISegmentedControl *qualityControl;
 @property(nonatomic, strong) UILabel *qualityDescription;
+@property(nonatomic, strong) UISegmentedControl *goalMode;
+@property(nonatomic, strong) UIButton *editGoals;
+@property(nonatomic, strong) UILabel *goalDescription;
 @property(nonatomic, strong) NSLayoutConstraint *boardAspect;
 @property(nonatomic) NSUInteger boardWidth, boardHeight;
 @property(nonatomic, strong) UISlider *slider;
@@ -87,6 +260,8 @@
 @property(nonatomic, strong) UIButton *stopButton;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
+- (void)editGoalSettings;
+- (void)changeGoalMode;
 @end
 
 @implementation PHOrbController
@@ -148,6 +323,13 @@
     [self.qualityControl addTarget:self action:@selector(changeQuality) forControlEvents:UIControlEventValueChanged];
     self.qualityDescription = [self label:13 weight:UIFontWeightRegular];
     self.qualityDescription.accessibilityIdentifier = @"padcheaper.orbsQualityDescription";
+    self.goalMode = [[UISegmentedControl alloc] initWithItems:@[@"高 Combo", @"指定形狀", @"隊長盤面"]];
+    self.goalMode.accessibilityIdentifier = @"padcheaper.orbsGoalMode"; self.goalMode.accessibilityLabel = @"求路目標";
+    [self.goalMode.heightAnchor constraintGreaterThanOrEqualToConstant:36].active = YES;
+    [self.goalMode addTarget:self action:@selector(changeGoalMode) forControlEvents:UIControlEventValueChanged];
+    self.editGoals = [self button:@"編輯形狀與珠色" selector:@selector(editGoalSettings) identifier:@"padcheaper.orbsGoalEdit"];
+    self.goalDescription = [self label:13 weight:UIFontWeightRegular];
+    self.goalDescription.accessibilityIdentifier = @"padcheaper.orbsGoalDescription";
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
@@ -162,7 +344,8 @@
     actions.distribution = UIStackViewDistributionFillEqually; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, qualityRow, self.qualityControl,
-        self.qualityDescription, self.status, self.boardView, self.slider, self.position, self.availability, note]];
+        self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
+        self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
@@ -209,9 +392,40 @@
     self.qualityDescription.text = qualityMessage.length ? qualityMessage :
         @[@"較快取得路徑，適合一般回合。", @"兼顧求路速度與搜尋範圍。", @"搜尋更多候選路徑，需要等候較久；不保證 Combo 一定較高。"][quality];
     self.qualityDescription.textColor = qualityMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    NSString *mode = state[@"goalMode"] ?: @"combo";
+    NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
+    self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
+    self.goalMode.enabled = [state[@"canSetGoals"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSDictionary *plan = state[@"goalPlan"] ?: @{};
+    BOOL leaderMode = [mode isEqual:@"leaders"];
+    self.editGoals.hidden = ![mode isEqual:@"manual"] && !(leaderMode && [plan[@"available"] boolValue] && [plan[@"goals"] count]);
+    self.editGoals.enabled = self.goalMode.enabled;
+    UIButtonConfiguration *editConfig = self.editGoals.configuration;
+    editConfig.title = leaderMode ? @"用這些條件自訂" : @"編輯形狀與珠色"; self.editGoals.configuration = editConfig;
+    NSArray *activeGoals = plan[@"goals"], *hits = state[@"goalHits"];
+    BOOL hasGoalResults = [state[@"path"] count] && activeGoals.count && hits.count == activeGoals.count;
+    NSMutableArray *goalLines = [NSMutableArray array];
+    if (leaderMode) {
+        [goalLines addObjectsFromArray:plan[@"leaders"] ?: @[]];
+        if (!hasGoalResults) [goalLines addObject:plan[@"message"] ?: @"讀盤後，從目前隊長／助人帶入可辨識的盤面條件。"];
+        [goalLines addObjectsFromArray:plan[@"unsupported"] ?: @[]];
+    } else if (!hasGoalResults) [goalLines addObject:PHOrbGoalsDescription([mode isEqual:@"manual"] ? state[@"goals"] : @[])];
+    if (hasGoalResults) {
+        for (NSUInteger i = 0; i < activeGoals.count; ++i) {
+            BOOL met = [hits[i] unsignedIntegerValue] >= [activeGoals[i][@"count"] unsignedIntegerValue];
+            [goalLines addObject:[NSString stringWithFormat:@"%@ %@（%@／%@）", met ? @"✓" : @"未達成：",
+                PHOrbGoalDescription(activeGoals[i]), hits[i], activeGoals[i][@"count"]]];
+        }
+    }
+    if (leaderMode) [goalLines addObject:plan[@"warning"] ?: @"僅規劃珠型與最低門檻，不代表完整隊長技已發動。"];
+    NSString *goalMessage = state[@"goalMessage"];
+    self.goalDescription.text = goalMessage.length ? goalMessage : [goalLines componentsJoinedByString:@"\n"];
+    self.goalDescription.textColor = goalMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.availability.text = [state[@"inputFault"] boolValue] ? @"輸入恢復未通過，請完整重啟遊戲後再試。" :
         ![state[@"canRead"] boolValue] && ![state[@"busy"] boolValue] ? @"等待遊戲校驗與登入後即可讀盤。" :
         ![state[@"enabled"] boolValue] ? @"預覽可使用；執行需要先開啟 PC 面板的功能總開關。" :
+        [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
+            @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
     self.boardView.board = state[@"board"]; self.boardView.path = state[@"path"];
     NSUInteger width = [state[@"board"][@"width"] unsignedIntegerValue], height = [state[@"board"][@"height"] unsignedIntegerValue];
@@ -247,7 +461,37 @@
     if (index >= 0 && index < 3 && self.qualityControl.enabled) self.action(@"orbsQuality", @[@"fast", @"balanced", @"thorough"][(NSUInteger)index]);
     [self refresh];
 }
-- (void)execute { self.action(@"orbsExecute", self.state[@"generation"]); self.close(); }
+- (void)changeGoalMode {
+    NSInteger index = self.goalMode.selectedSegmentIndex;
+    if (index < 0 || index > 2 || !self.goalMode.enabled) return;
+    NSString *mode = @[@"combo", @"manual", @"leaders"][(NSUInteger)index];
+    NSArray *goals = self.state[@"goals"] ?: @[];
+    if ([mode isEqual:@"manual"] && !goals.count) { [self editGoalSettings]; [self refresh]; return; }
+    self.action(@"orbsGoals", @{@"mode":mode, @"goals":goals}); [self refresh];
+}
+- (void)editGoalSettings {
+    if (!self.goalMode.enabled || self.presentedViewController) return;
+    NSArray *goals = [self.state[@"goalMode"] isEqual:@"leaders"] ? self.state[@"goalPlan"][@"goals"] : self.state[@"goals"];
+    if (!goals.count) goals = self.state[@"goalPlan"][@"goals"];
+    if (!goals.count) goals = @[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0}];
+    __weak PHOrbController *weakSelf = self;
+    PHOrbGoalEditor *editor = [[PHOrbGoalEditor alloc] initWithGoals:goals save:^NSString *(NSArray *saved) {
+        PHOrbController *controller = weakSelf;
+        if (!controller) return @"頁面已關閉，請重新開啟後儲存。";
+        controller.action(@"orbsGoals", @{@"mode":@"manual", @"goals":saved}); [controller refresh];
+        NSDictionary *state = controller.state;
+        if ([state[@"canSetGoals"] boolValue] && [state[@"goalMode"] isEqual:@"manual"] && [state[@"goals"] isEqual:saved]) return nil;
+        NSString *message = state[@"goalMessage"];
+        return message.length ? message : @"目標尚未確認儲存，請稍後重試。";
+    }];
+    editor.modalPresentationStyle = UIModalPresentationPageSheet;
+    editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    [self presentViewController:editor animated:YES completion:nil];
+}
+- (void)execute {
+    if (![self.state[@"canExecute"] boolValue]) return;
+    self.action(@"orbsExecute", self.state[@"generation"]); self.close();
+}
 - (void)stop { self.action(@"orbsStop", nil); [self refresh]; }
 - (void)closePage { self.close(); }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations { return UIInterfaceOrientationMaskAll; }

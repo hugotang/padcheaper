@@ -311,11 +311,36 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"quality"] isEqual:qualityIDs[index]],
             @"Quality selection is acknowledged by an actual config file write");
     }
+    UISegmentedControl *goalMode = (UISegmentedControl *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalMode");
+    PHProbeCheck(goalMode.enabled && goalMode.numberOfSegments == 3, @"Native goal modes are available without enabling game input");
+    goalMode.selectedSegmentIndex = 2; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"mode"] isEqual:@"leaders"], @"Leader board mode is saved explicitly");
+    goalMode.selectedSegmentIndex = 1; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
+    if (!orbController.presentedViewController)
+        [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *goalEditor = orbController.presentedViewController;
+    [goalEditor loadViewIfNeeded];
+    PHProbeCheck([goalEditor.view.accessibilityIdentifier isEqual:@"padcheaper.orbsGoalEditor"], @"First manual selection opens an editable native goal sheet");
+    NSMutableArray *goalDraft = [goalEditor valueForKey:@"draft"];
+    [goalDraft removeAllObjects];
+    [goalDraft addObject:[@{@"kind":@"column", @"colors":@4, @"count":@1, @"length":@0} mutableCopy]];
+    [(UIButton *)PHProbeFind(goalEditor.view, @"padcheaper.orbsGoalSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    NSArray *savedGoals = PHProbeJSON(@"config.json")[@"orbs"][@"goals"] ?: @[];
+    PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"mode"] isEqual:@"manual"] && savedGoals.count == 1 &&
+        [savedGoals[0][@"kind"] isEqual:@"column"] && [savedGoals[0][@"colors"] isEqual:@4] && orbController.presentedViewController == nil,
+        @"Goal sheet closes only after shape and color are acknowledged in the config file");
+    qualityControl.selectedSegmentIndex = 0; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:savedGoals], @"Changing quality preserves saved goal conjunctions");
+    qualityControl.selectedSegmentIndex = 2; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
+    goalMode.selectedSegmentIndex = 0; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:savedGoals], @"Combo mode retains the manual profile for later use");
     NSMutableArray *orbTypes = [NSMutableArray array], *orbEnhanced = [NSMutableArray array];
     for (unsigned i = 0; i < 30; ++i) { [orbTypes addObject:@(i % 6)]; [orbEnhanced addObject:@(i % 7 == 0)]; }
     __block NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
         @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
-        @"quality":@"balanced", @"canSetQuality":@YES,
+        @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
         @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
         @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
     NSDictionary *baseOrbFixture = orbFixture;
@@ -364,6 +389,42 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [orbController refresh];
     PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAvailability")).text containsString:@"重啟"],
         @"A terminal input fault explains how to recover");
+    NSMutableDictionary *goalFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    goalFailure[@"goalMode"] = @"manual"; goalFailure[@"goalMessage"] = @"目標未能儲存，仍保留原設定";
+    orbFixture = @{@"orbState":goalFailure}; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    goalEditor = orbController.presentedViewController; [goalEditor loadViewIfNeeded];
+    goalDraft = [goalEditor valueForKey:@"draft"];
+    if (goalDraft.count) goalDraft[0][@"colors"] = @2;
+    [(UIButton *)PHProbeFind(goalEditor.view, @"padcheaper.orbsGoalSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbController.presentedViewController == goalEditor && [orbAction isEqual:@"orbsGoals"] && goalDraft.count &&
+        [goalDraft[0][@"colors"] isEqual:@2] &&
+        [((UILabel *)PHProbeFind(goalEditor.view, @"padcheaper.orbsGoalNotice")).text containsString:@"未能儲存"],
+        @"Failed goal saves retain the editable draft and do not close the sheet or publish new settings");
+    [goalEditor dismissViewControllerAnimated:NO completion:nil];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+    [goalFailure removeObjectForKey:@"goalMessage"];
+    goalFailure[@"goalCount"] = @1; goalFailure[@"goalHits"] = @[@0]; goalFailure[@"goalsMet"] = @NO;
+    goalFailure[@"canExecute"] = @NO;
+    goalFailure[@"goalPlan"] = @{@"available":@YES, @"goals":savedGoals, @"message":@"木 整直行 × 1 組", @"warning":@""};
+    orbAction = nil; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbAction == nil && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled] &&
+        [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalDescription")).text containsString:@"未達成"],
+        @"Unmet goals show per-condition progress and cannot dispatch execution or close the preview");
+    PHProbeRender(self.window, orbWindow, @"orbs-goals");
+    NSMutableDictionary *unsupportedLeader = [baseOrbFixture[@"orbState"] mutableCopy];
+    unsupportedLeader[@"phase"] = @"blocked"; unsupportedLeader[@"goalMode"] = @"leaders";
+    unsupportedLeader[@"canExecute"] = @NO; unsupportedLeader[@"path"] = @[];
+    unsupportedLeader[@"goalPlan"] = @{@"available":@NO, @"goals":@[], @"leaders":@[@"隊長 #3230"],
+        @"message":@"請改用指定形狀。", @"warning":@"僅規劃盤面條件。",
+        @"unsupported":@[@"尚未支援的盤面規則（技能類型 119）"]};
+    orbFixture = @{@"orbState":unsupportedLeader}; orbAction = nil; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbAction == nil && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled] &&
+        [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalDescription")).text containsString:@"技能類型 119"],
+        @"Unsupported leader rules show their specific reason and cannot dispatch input");
     orbFixture = baseOrbFixture; [orbController refresh];
     [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([orbAction isEqual:@"orbsExecute"] && [orbValue isEqual:@19] &&

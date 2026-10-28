@@ -61,7 +61,109 @@ static PHOrbBoard Board(unsigned width, unsigned height, unsigned seed) {
     return board;
 }
 
+static PHOrbBoard ShapeBoard(unsigned width, unsigned height, const std::vector<unsigned> &positions) {
+    auto board = Board(width, height, 1);
+    // Background never contains the red/heart fixture colors or an initial run.
+    for (unsigned i = 0; i < width * height; ++i) board.types[i] = uint8_t(1 + (i % width + 2 * (i / width)) % 4);
+    for (unsigned i : positions) board.types[i] = 0;
+    return board;
+}
+static PHOrbGoalSet Goals(PHOrbGoalKind kind, unsigned colors = 1, unsigned count = 1, unsigned length = 0) {
+    PHOrbGoalSet goals{}; goals.count = 1;
+    goals.items[0] = {uint8_t(kind), uint8_t(colors), uint8_t(count), uint8_t(length)}; return goals;
+}
+static void ShapeTests() {
+    PHOrbEvaluation result{};
+    for (const auto &positions : std::vector<std::vector<unsigned>>{
+        {0,6,12,13,14}, {2,8,12,13,14}, {0,1,2,6,12}, {0,1,2,8,14}}) {
+        auto board = ShapeBoard(6,5,positions);
+        Check(PHOrbEvaluate(board, Goals(PHOrbGoalL), result) && result.goalsMet && result.goalHits[0] == 1,
+              "each geometrically distinct L rotation is recognized");
+        Check(PHOrbEvaluate(board, Goals(PHOrbGoalT), result) && !result.goalsMet, "an L is not a T");
+    }
+    for (const auto &positions : std::vector<std::vector<unsigned>>{
+        {0,1,2,7,13}, {1,7,12,13,14}, {0,6,7,8,12}, {2,6,7,8,14}}) {
+        Check(PHOrbEvaluate(ShapeBoard(6,5,positions), Goals(PHOrbGoalT), result) && result.goalsMet,
+              "all T rotations, including sideways shapes, are recognized");
+    }
+    auto cross = ShapeBoard(6,5,{1,6,7,8,13});
+    Check(PHOrbEvaluate(cross, Goals(PHOrbGoalCross), result) && result.goalsMet, "isolated cross is recognized");
+    Check(PHOrbEvaluate(cross, Goals(PHOrbGoalT), result) && !result.goalsMet, "cross and T are different requirements");
+    cross.types[19] = 0;
+    Check(PHOrbEvaluate(cross, Goals(PHOrbGoalCross), result) && !result.goalsMet, "a connected sixth orb invalidates a five-orb cross");
+    auto innerNeighbor = ShapeBoard(6,5,{0,6,12,13,14,7});
+    Check(PHOrbEvaluate(innerNeighbor, Goals(PHOrbGoalL), result) && !result.goalsMet,
+          "exact shape conservatively excludes even an unmatched same-color neighbor inside the L");
+    const std::vector<unsigned> squareCells{0,1,2,6,7,8,12,13,14};
+    auto square = ShapeBoard(6,5,squareCells);
+    Check(PHOrbEvaluate(square, Goals(PHOrbGoalSquare), result) && result.goalsMet, "isolated 3x3 square is recognized");
+    square.types[3] = square.types[9] = square.types[15] = 0;
+    Check(PHOrbEvaluate(square, Goals(PHOrbGoalSquare), result) && !result.goalsMet,
+          "3x4 rectangle cannot masquerade as a square by containing a 3x3 subregion");
+    auto largeSquare = ShapeBoard(7,6,{25,26,27,32,33,34,39,40,41});
+    Check(PHOrbEvaluate(largeSquare, Goals(PHOrbGoalSquare), result) && result.goalsMet,
+          "shape masks include the 42nd cell and do not truncate at 32 bits");
+    for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
+        unsigned w = dimensions.first, h = dimensions.second;
+        std::vector<unsigned> row, column;
+        for (unsigned x = 0; x < w; ++x) row.push_back((h - 1) * w + x);
+        for (unsigned y = 0; y < h; ++y) column.push_back(y * w + w - 1);
+        Check(PHOrbEvaluate(ShapeBoard(w,h,row), Goals(PHOrbGoalRow), result) && result.goalsMet,
+              "row means actual board width on every supported geometry");
+        row.pop_back();
+        Check(PHOrbEvaluate(ShapeBoard(w,h,row), Goals(PHOrbGoalRow), result) && !result.goalsMet,
+              "an almost-full row does not meet the goal");
+        Check(PHOrbEvaluate(ShapeBoard(w,h,column), Goals(PHOrbGoalColumn), result) && result.goalsMet,
+              "column means actual board height, including the smaller board");
+        column.pop_back();
+        Check(PHOrbEvaluate(ShapeBoard(w,h,column), Goals(PHOrbGoalColumn), result) && !result.goalsMet,
+              "an almost-full column does not meet the goal");
+    }
+    Check(PHOrbEvaluate(ShapeBoard(6,5,{0,1,2,3}), Goals(PHOrbGoalFour), result) && result.goalsMet,
+          "four consecutive isolated orbs meet the four-match goal");
+    Check(PHOrbEvaluate(ShapeBoard(6,5,{0,1,6,7}), Goals(PHOrbGoalFour), result) && !result.goalsMet,
+          "2x2 of the right color is not a match");
+    Check(PHOrbEvaluate(ShapeBoard(6,5,{0,1,2,3,4}), Goals(PHOrbGoalFour), result) && !result.goalsMet,
+          "a five-orb line is not an exact four-match");
+    auto columns = ShapeBoard(6,5,{0,6,12,18,24,4,10,16,22,28});
+    Check(PHOrbEvaluate(columns, Goals(PHOrbGoalColumn,1,2), result) && result.goalsMet, "two separate columns count as two groups");
+    columns.types[1] = columns.types[2] = columns.types[3] = 0;
+    Check(PHOrbEvaluate(columns, Goals(PHOrbGoalColumn,1,2), result) && !result.goalsMet && result.goalHits[0] == 1,
+          "two columns joined into one combo cannot satisfy two separate groups");
+
+    auto together = ShapeBoard(7,6,{0,7,14,15,16});
+    for (unsigned i : {5u,11u,12u,13u,19u}) together.types[i] = 5;
+    auto combined = Goals(PHOrbGoalL);
+    combined.items[combined.count++] = {PHOrbGoalCross, 32, 1, 0};
+    combined.items[combined.count++] = {PHOrbGoalColors, 33, 2, 0};
+    combined.items[combined.count++] = {PHOrbGoalCombo, 0, 2, 0};
+    Check(PHOrbEvaluate(together, combined, result) && result.goalsMet && result.matchedGoals == 4,
+          "different shapes, colors and combo threshold form a conjunction");
+    auto oracle = Oracle(together);
+    Check(result.combos == oracle.first && result.erased == oracle.second, "adding goals preserves independent cascade scoring");
+    combined.items[1].colors = 2;
+    Check(PHOrbEvaluate(together, combined, result) && !result.goalsMet, "the same geometry in the wrong color is not accepted");
+
+    std::atomic_bool cancel{false}; PHOrbRoute route{};
+    auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Balanced);
+    options.steps = 1; options.milliseconds = 1000; options.goals = Goals(PHOrbGoalSquare);
+    auto nearSquare = ShapeBoard(6,5,squareCells); std::swap(nearSquare.types[8], nearSquare.types[9]);
+    Check(PHOrbSolve(nearSquare, options, cancel, route) == PHOrbSolveStatus::Solved && route.goalsMet && route.count == 2,
+          "one legal adjacent swap completes a near-square and is favored over unmet routes");
+    auto insufficient = ShapeBoard(6,5,{0,1,2,6,7,8,12,13});
+    Check(PHOrbSolve(insufficient, options, cancel, route) == PHOrbSolveStatus::InsufficientOrbs && route.count == 0,
+          "inventory failure yields no executable route, without relying on skyfall");
+    auto conflict = ShapeBoard(6,5,squareCells);
+    options.goals.items[options.goals.count++] = {PHOrbGoalL, 1, 1, 0};
+    Check(PHOrbSolve(conflict, options, cancel, route) == PHOrbSolveStatus::GoalsUnmet && !route.goalsMet &&
+          route.count == 2 && route.matchedGoals < route.goalCount,
+          "nine red orbs cannot form disjoint red square and L; a legal partial route is explicitly unmet");
+    PHOrbBoard replay{};
+    Check(PHOrbReplay(&conflict, &route, route.count - 1, &replay), "an unmet route remains usable for explanatory preview only");
+}
+
 int main() {
+    ShapeTests();
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
         PHOrbSnapshot snapshot{}; snapshot.board = Board(dimensions.first, dimensions.second, 7);

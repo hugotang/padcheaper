@@ -1,13 +1,15 @@
 #import "PHOrbSession.h"
+#import "PHOrbPlanning.h"
 #include "PHOrbSolver.h"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <memory>
 
 namespace {
 constexpr double StepSeconds = 0.065, PreviewLifetime = 45, ExecutionLimit = 4, TimeMargin = 0.40;
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
-    return PHOrbSameTurn(&a, &b) && a.moves == b.moves && PHOrbSameBoard(&a.board, &b.board);
+    return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSameBoard(&a.board, &b.board);
 }
 double TimeAvailable(const PHOrbSnapshot &state) {
     return state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
@@ -42,7 +44,9 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     PHBattleFrame _frame;
     PHOrbSnapshot _live, _stable, _preview, _expected;
     PHOrbRoute _route;
-    NSString *_phase, *_message, *_quality;
+    NSString *_phase, *_message, *_quality, *_goalMode;
+    NSArray *_manualGoals;
+    NSDictionary *_goalPlan;
     PHOrbSolveOptions _solveOptions;
     NSUInteger _generation, _completed, _cancelled, _sentFrames, _confirmed;
     NSUInteger _target;
@@ -56,7 +60,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _engine = engine;
         _worker = dispatch_queue_create("jp.padcheaper.orbs.solver", DISPATCH_QUEUE_SERIAL);
         _phase = @"idle"; _message = @"單人操作階段，按「讀盤並求路」開始";
-        _quality = @"balanced";
+        _quality = @"balanced"; _goalMode = @"combo"; _manualGoals = @[]; _goalPlan = @{};
     }
     return self;
 }
@@ -69,14 +73,24 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _cancel.reset();
 }
 - (BOOL)configureQuality:(NSString *)quality {
+    if (!quality) return NO;
+    return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals}];
+}
+- (BOOL)configureSettings:(NSDictionary *)settings {
+    if (![settings isKindOfClass:NSDictionary.class]) return NO;
+    NSString *quality = settings[@"quality"], *mode = settings[@"mode"];
+    PHOrbGoalSet goals{};
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
+        ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
+        !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
         [self executing] || _inputFault) return NO;
-    if ([_quality isEqual:quality]) return YES;
-    const bool hadPreview = _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"];
+    NSArray *normalized = PHOrbGoalsJSON(&goals);
+    if ([_quality isEqual:quality] && [_goalMode isEqual:mode] && [_manualGoals isEqual:normalized]) return YES;
     [self cancelWorker];
     _quality = [quality copy]; _route = {}; _confirmed = 0; _solveOptions = OptionsForQuality(_quality);
+    _goalMode = [mode copy]; _manualGoals = normalized; _goalPlan = @{};
     _readQueued = _hasStable = false;
-    if (hadPreview) { _phase = @"idle"; _message = @"求路品質已變更，請重新讀盤"; }
+    _phase = @"idle"; _message = @"求路設定已變更，請重新讀盤";
     return YES;
 }
 - (void)queueStop:(NSString *)reason {
@@ -95,10 +109,10 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if ([self executing] || _inputFault) return;
     [self cancelWorker];
     _monitoring = _readQueued = true; _hasStable = false; _requestedAt = _now;
-    _route = {}; _phase = @"reading"; _message = @"等待盤面穩定…";
+    _route = {}; _goalPlan = @{}; _phase = @"reading"; _message = @"等待盤面穩定…";
 }
 - (void)queueExecute:(NSUInteger)generation {
-    if (![_phase isEqual:@"preview"] || generation != _generation || !_frame.enabled || _inputFault) return;
+    if (![_phase isEqual:@"preview"] || generation != _generation || !_frame.enabled || _inputFault || !_route.goalsMet) return;
     if (_now - _previewAt > PreviewLifetime || !_hasLive || !PHOrbCanPreview(&_live) || !SamePosition(_live, _preview)) {
         [self queueStop:@"盤面或回合已改變，請重新讀盤"];
         return;
@@ -114,6 +128,12 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
 - (void)beginSolve {
     _readQueued = false; _preview = _live;
     PHOrbSolveOptions options = OptionsForQuality(_quality);
+    _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
+        @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
+          @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
+    if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
+        _phase = @"blocked"; _message = _goalPlan[@"message"] ?: @"求路目標無法解析"; return;
+    }
     const double available = TimeAvailable(_live);
     // Quantize to native frames as well as the hard execution deadline. A
     // longer thorough route must remain feasible even at a lower frame rate.
@@ -134,18 +154,27 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             PHOrbSession *session = weakSelf;
             if (!session || generation != session->_generation || ![session->_phase isEqual:@"solving"] ||
                 cancel->load(std::memory_order_relaxed)) return;
-            if (result != PHOrbSolveStatus::Solved || route.count < 2) {
-                session->_phase = @"stopped"; session->_message = @"本次未取得有效路徑，請重新讀盤";
+            if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet) || route.count < 2) {
+                session->_phase = @"stopped";
+                session->_message = result == PHOrbSolveStatus::InsufficientOrbs ?
+                    @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" : @"本次未取得有效路徑，請重新讀盤";
                 return;
             }
             PHOrbBoard replay{};
-            if (!PHOrbReplay(&board, &route, route.count - 1, &replay)) {
+            PHOrbEvaluation evaluation{};
+            if (!PHOrbReplay(&board, &route, route.count - 1, &replay) || !PHOrbEvaluate(replay, options.goals, evaluation) ||
+                evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
+                evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != options.goals.count ||
+                !std::equal(std::begin(evaluation.goalHits), std::end(evaluation.goalHits), route.goalHits)) {
                 session->_phase = @"fault"; session->_message = @"路徑重播校驗失敗，已停止";
                 return;
             }
             session->_route = route; session->_phase = @"preview"; session->_previewAt = session->_now;
-            session->_message = [NSString stringWithFormat:@"預計 %u Combo（不含天降）· %u 步 · 約 %.1f 秒",
+            NSString *summary = [NSString stringWithFormat:@"預計 %u Combo（不含天降／加算）· %u 步 · 約 %.1f 秒",
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
+            session->_message = !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。可提高求路品質或調整目標。\n%@",
+                route.matchedGoals, route.goalCount, summary] : route.goalCount ?
+                [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
         });
     });
 }
@@ -246,6 +275,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             }
             return;
         }
+        // The game may replace a leader inside the original native frame.
+        // Check the captured plan before an accepted swap updates _expected.
+        if (!PHOrbSameLeaders(&_preview, &current)) {
+            if (_awaitingStart && current.dragged == _preview.board.tokens[_route.cells[0]])
+                _ownedOrb = current.dragged;
+            [self queueStop:@"隊長或助人已改變，已停止；請重新讀盤"];
+            return;
+        }
         if (_awaitingStart) {
             if (current.dragged == _preview.board.tokens[_route.cells[0]] && SamePosition(current, _preview)) {
                 _ownedOrb = current.dragged; _awaitingStart = false; _expected = current; _stepAt = time;
@@ -286,16 +323,21 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     }
 }
 - (NSDictionary *)snapshot {
-    NSMutableArray *path = [NSMutableArray array];
+    NSMutableArray *path = [NSMutableArray array], *goalHits = [NSMutableArray array];
     for (unsigned i = 0; i < _route.count; ++i) [path addObject:@(_route.cells[i])];
+    for (unsigned i = 0; i < _route.goalCount && i < PHOrbMaxGoals; ++i) [goalHits addObject:@(_route.goalHits[i])];
     BOOL preview = [_phase isEqual:@"preview"];
-    BOOL canExecute = preview && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
+    BOOL canExecute = preview && _route.goalsMet && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
         SamePosition(_live, _preview) && HasRouteTime(_live, _route);
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && ![self executing] && !_inputFault), @"canExecute":@(canExecute),
         @"busy":@([self executing]), @"canStop":@([self executing] || _readQueued || [_phase isEqual:@"solving"]),
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
+        @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
+        @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
+        @"goalHits":goalHits,
+        @"leadersValid":@(_live.leadersValid), @"leaderNumbers":@[@(_live.leaderNumbers[0]), @(_live.leaderNumbers[1])],
         @"searchBudgetMS":@(_solveOptions.milliseconds),
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),

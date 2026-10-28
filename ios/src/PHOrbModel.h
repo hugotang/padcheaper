@@ -5,7 +5,24 @@
 extern "C" {
 #endif
 
-enum { PHOrbMaxCells = 42, PHOrbMaxSteps = 48, PHOrbInputBytes = 2672 };
+enum { PHOrbMaxCells = 42, PHOrbMaxSteps = 48, PHOrbInputBytes = 2672, PHOrbMaxGoals = 6 };
+
+typedef enum {
+    PHOrbGoalCombo, PHOrbGoalColors, PHOrbGoalMatch, PHOrbGoalL,
+    PHOrbGoalCross, PHOrbGoalT, PHOrbGoalSquare, PHOrbGoalRow,
+    PHOrbGoalColumn, PHOrbGoalFour
+} PHOrbGoalKind;
+
+// Each goal is a conjunction. Colors is a six-bit fire/water/wood/light/dark/
+// heart mask. Count means combos, distinct colors, or separate matching groups.
+// Length is used only by Match (at least this many orbs in one group).
+typedef struct { uint8_t kind, colors, count, length; } PHOrbGoal;
+typedef struct { uint8_t count; PHOrbGoal items[PHOrbMaxGoals]; } PHOrbGoalSet;
+
+typedef struct {
+    uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
+    bool goalsMet;
+} PHOrbEvaluation;
 
 // Top row first. Coordinates belong to cells; tokens and orb data move.
 typedef struct {
@@ -22,21 +39,25 @@ typedef struct {
     uintptr_t inputManager, dragged;
     uint32_t phase, wave, moves;
     uint16_t remainingFrames;
+    uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
     uint8_t fps, minErase, freeMovement;
-    bool present, valid, settled, ordinary, multiplayerDisabled;
+    bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid;
 } PHOrbSnapshot;
 
 typedef struct {
     uint8_t count, cells[PHOrbMaxSteps + 1]; // Includes the starting cell.
     uint8_t combos, erased;
+    uint8_t goalHits[PHOrbMaxGoals], goalCount, matchedGoals;
     uint32_t evaluated, elapsedMS;
-    bool deadlineReached;
+    bool deadlineReached, goalsMet;
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);
 bool PHOrbBoardValid(const PHOrbBoard *board);
 bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);

@@ -10,6 +10,8 @@ clang_path="$(xcrun --sdk macosx --find clang)"
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
+python3 ios/tools/generate_leaders.py
+python3 ios/tests/leader_catalog_tests.py
 node ios/tests/formation_tests.js
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
@@ -33,6 +35,8 @@ for model in PHInputModel PHBattleModel PHBattlePreset PHOrbModel; do
     "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
         -c "ios/src/$model.c" -o "$build_dir/$model.o"
 done
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src -Iios/generated \
+    -c ios/src/PHOrbPlanning.m -o "$build_dir/PHOrbPlanning.o"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
     -c ios/src/PHOrbSolver.cpp -o "$build_dir/PHOrbSolver.o"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
@@ -45,10 +49,14 @@ done
     -lc++ -framework Foundation -framework CoreFoundation -o "$build_dir/orb-native-tests"
 "$build_dir/orb-native-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
-    -Wall -Wextra -Werror -Wno-unused-parameter -Iios/src \
-    ios/src/PHOrbSession.mm ios/tests/orb_session_tests.mm "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
-    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -framework Foundation -o "$build_dir/orb-session-tests"
+    -Wall -Wextra -Werror -Wno-unused-parameter -Iios/src -Iios/generated \
+    ios/src/PHOrbSession.mm ios/tests/orb_session_tests.mm "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
+    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -framework Foundation -framework CoreFoundation -o "$build_dir/orb-session-tests"
 "$build_dir/orb-session-tests"
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src -Iios/generated \
+    ios/tests/orb_planning_tests.m "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbModel.o" \
+    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -framework Foundation -framework CoreFoundation -o "$build_dir/orb-planning-tests"
+"$build_dir/orb-planning-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
     ios/tests/battle_native_tests.mm "$build_dir/PHInputModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHBattlePreset.o" \
@@ -86,8 +94,9 @@ done
 "$build_dir/codec-tests"
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks \
-    -Wall -Wextra -Werror -Iios/src \
+    -Wall -Wextra -Werror -Iios/src -Iios/generated \
     ios/src/PHIdentity.m ios/src/PHConfiguration.m ios/tests/configuration_tests.m \
+    "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -framework Foundation -framework CoreFoundation \
     -o "$build_dir/configuration-tests"
 "$build_dir/configuration-tests"

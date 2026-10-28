@@ -15,6 +15,7 @@
 // Publish only a successfully saved setting. A change invalidates old previews;
 // an in-flight native gesture retains its captured options until it finishes.
 - (BOOL)configureQuality:(NSString *)quality;
+- (BOOL)configureSettings:(NSDictionary *)settings;
 - (void)queueRead;
 - (void)queueExecute:(NSUInteger)generation;
 - (void)queueStop:(NSString *)reason;

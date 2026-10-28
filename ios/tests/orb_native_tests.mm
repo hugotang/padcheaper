@@ -9,12 +9,13 @@
 static unsigned failures, writes, failWrite, guardChecks;
 static bool codeValid = true;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
+static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
 static const uintptr_t Impl = reinterpret_cast<uintptr_t>(implBytes.data());
 static const uintptr_t Input = reinterpret_cast<uintptr_t>(realInput.data());
 static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr,"FAIL: %s\n",message); ++failures; } }
 static bool Range(uintptr_t address, size_t length) {
-    for (auto *region : {&guest, &implBytes, &realInput, &newInput}) {
+    for (auto *region : {&guest, &implBytes, &realInput, &newInput, &catalogBytes}) {
         auto base = reinterpret_cast<uintptr_t>(region->data());
         if (address >= base && address - base <= region->size() && length <= region->size() - (address - base)) return true;
     }
@@ -70,6 +71,17 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     }
 }
 static uintptr_t GlobalInput() { return Load<uintptr_t>(guest.data() + PHBattleInputRVA); }
+static void SetLeader(unsigned slot, uint16_t number) {
+    uint16_t id = 0;
+    if (!PHBattleCatalogIDForNumber(number, &id) || id >= 14600) { Check(false, "leader fixture number"); return; }
+    uintptr_t catalog = reinterpret_cast<uintptr_t>(catalogBytes.data());
+    Put<uint32_t>(Header + PHSaveRVA + PHBattleCatalogCountOffset, 14600);
+    Put<uintptr_t>(Header + PHSaveRVA + PHBattleCatalogPointerOffset, catalog);
+    Put<uint32_t>(catalog + id * PHBattleCatalogStride, id);
+    uintptr_t member = Impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
+    Put<uint8_t>(member, 1); Put<uint32_t>(member + PHBattleCatalogIDOffset, id);
+    Put<uintptr_t>(member + PHBattleCardParamOffset, catalog + id * PHBattleCatalogStride);
+}
 // Only the portions of the verified input update required by these fixtures.
 static void NativeInputFrame() {
     auto p = reinterpret_cast<uint8_t *>(GlobalInput());
@@ -96,6 +108,21 @@ int main() {
         Check([engine stageCell:0 down:NO beginning:NO expected:&state frame:Frame() reason:&reason], "owned release can be delivered while preserving manual input");
         Check(reinterpret_cast<uint8_t *>(GlobalInput())[1320 + 219] == 1, "private frame held tracking survives between draws");
         NativeInputFrame(); Check([engine finishInput:&reason] && realInput == manual, "release does not consume real finger events");
+
+        Reset(); SetLeader(0, 14242); SetLeader(5, 13834); engine = PHCreateOrbEngine();
+        Check([engine read:&state frame:Frame() reason:&reason] && state.leadersValid &&
+              state.leaderNumbers[0] == 14242 && state.leaderNumbers[1] == 13834 && writes == 0,
+              "current visible leader/helper IDs are read without native calls or writes and use encyclopedia numbering");
+        PHOrbSnapshot oldLeaders = state;
+        SetLeader(0, 12572);
+        Check([engine read:&state frame:Frame() reason:&reason] && state.leadersValid && state.leaderNumbers[0] == 12572 &&
+              !PHOrbSameLeaders(&oldLeaders, &state), "transformation or leader exchange changes the observed current ID");
+        Check(![engine stageCell:0 down:YES beginning:YES expected:&oldLeaders frame:Frame() reason:&reason] && writes == 0,
+              "a route planned for former leaders cannot stage input even on an identical board");
+        Put<uintptr_t>(Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride + PHBattleCardParamOffset, 0);
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) && !state.leadersValid &&
+              !state.leaderNumbers[0] && !state.leaderNumbers[1],
+              "invalid helper catalog pointer withholds both leader IDs while ordinary manual previews remain readable");
 
         for (auto dimensions : {std::pair<unsigned, unsigned>{7,6}, {5,4}}) {
             const unsigned width = dimensions.first, height = dimensions.second, last = width * height - 1;
