@@ -369,7 +369,7 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
                 restored = !referenced && (lease->active ? ReturnRecord(provider, lease, &current) :
                                                            ReleaseIdleProvider(provider, &current));
             }
-            if (bound && ReadLive(&current, frame, nullptr) && CanReadNative(&current) &&
+            if (bound && ReadLive(&current, frame, nullptr, &before, slot) && CanReadNative(&current) &&
                 PHBattleSameIdentity(&before.identity, &current.identity) &&
                 PHBattleSameTeamView(&before, &current) && PHBattleSameOrigin(&current.members[slot], &old) &&
                 ProfileOwned(provider, *lease, frame.header)) {

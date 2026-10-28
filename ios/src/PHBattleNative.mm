@@ -163,7 +163,8 @@ static BOOL CanReadNative(const PHBattleState *state) {
            PHInputIsQuiet(&state->input) && !state->dragActive;
 }
 
-static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reason) {
+static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reason,
+                     const PHBattleState *inFlight = nullptr, NSUInteger changingSlot = 6) {
     *state = {};
     state->identity.header = frame.header;
     state->identity.player = frame.player;
@@ -251,7 +252,8 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
             state, key1, key2, &state->members[slot], &chargeValid);
         state->entryChargesValid &= chargeValid;
     }
-    if (!PHBattleUsesPrimaryTeam(state->multiplayer)) ReadTeamBanks(state, key1, key2);
+    if (!PHBattleUsesPrimaryTeam(state->multiplayer)) ReadTeamBanks(state, key1, key2, inFlight, changingSlot);
+    if (inFlight && (!PHBattleSameIdentity(&inFlight->identity, &state->identity) || !PHBattleSameTeamView(inFlight, state))) return NO;
     if (PHBattleIsThreePlayer(state) && state->turnInfoValid && state->turnSerial != 0) state->entryWindow = false;
     uint32_t lastKey1 = 0, lastKey2 = 0;
     state->protectedValuesValid &= PHReadU32(frame.header + PHBattleKey1RVA, &lastKey1) && lastKey1 == key1 &&

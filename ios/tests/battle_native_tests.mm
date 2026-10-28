@@ -26,6 +26,7 @@ struct Fixture {
     unsigned rebuilds = 0, refreshes = 0, allocated = 0, released = 0;
     unsigned switches = 0, failSwitch = 0, changedBank = 1;
     unsigned failRebuild = 0;
+    bool changeOtherViewOnFailedRebuild = false;
     bool auditOnRefresh = false;
     unsigned advances = 0, memberAdvances = 0, failAdvanceTick = 0, closeWindowAtTick = 0;
     uint16_t chargeCaps[6] = {6,6,6,6,6,6};
@@ -259,7 +260,11 @@ struct Fixture {
         put<uint16_t>(m + PHBattleBaseIDOffset, base); put<uint16_t>(m + PHBattleAssistIDOffset, assist);
         put<uint32_t>(m + PHBattleCatalogIDOffset, catalogID);
         put<uintptr_t>(m + PHBattleCardParamOffset, (uintptr_t)f.catalog.data() + catalogID * PHBattleCatalogStride);
-        return f.failRebuild == f.rebuilds ? 0 : m;
+        if (f.failRebuild == f.rebuilds) {
+            if (f.changeOtherViewOnFailedRebuild) put<uint16_t>(f.member(4) + 0x510,98);
+            return 0;
+        }
+        return m;
     }
     static uint64_t Refresh(uintptr_t game, uint64_t value) {
         Fixture &f = *fixture; ++f.refreshes;
@@ -676,7 +681,7 @@ int main() {
                 !f.switches && !f.rebuilds && !f.allocated && boost == 77,
                 "changed ownership, incomplete banks, resumes, later waves/turns and invalid code/charge/HP reject before selecting a team");
         }
-        for (unsigned scenario = 0; scenario < 8; ++scenario) {
+        for (unsigned scenario = 0; scenario < 9; ++scenario) {
             Fixture f; f.configureBanks(1,3,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
             PHBattleState before = f.state(engine); PHBattleLoadout team[6];
             for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
@@ -689,9 +694,10 @@ int main() {
                 case 5: f.changeOtherBankOnRefresh = true; f.changedBank = 0; break;
                 case 6: f.closeWindowAtTick = 1; break;
                 case 7: f.invalidAwakeningCount = true; break;
+                case 8: f.failRebuild = 3; f.changeOtherViewOnFailedRebuild = true; break;
             }
             PHBattleMutationResult wanted = scenario == 2 || scenario == 3 ? PHBattleMutationRejected :
-                scenario >= 4 && scenario <= 6 ? PHBattleMutationUncertain : PHBattleMutationRolledBack;
+                (scenario >= 4 && scenario <= 6) || scenario == 8 ? PHBattleMutationUncertain : PHBattleMutationRolledBack;
             PHBattleMember output[6] = {}; uint16_t boost = 77; NSString *reason = nil;
             PHBattleMutationResult result = [engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:&reason];
             if (result != wanted) std::fprintf(stderr,"mode7 rollback scenario %u got %d wanted %d: %s\n",scenario,result,wanted,reason.UTF8String ?: "");

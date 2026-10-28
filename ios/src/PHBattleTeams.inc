@@ -7,7 +7,8 @@ static BOOL SameMemberParameters(const PHBattleMember &a, const PHBattleMember &
         !std::memcmp(a.extra, b.extra, sizeof(a.extra)) && !std::memcmp(a.assist, b.assist, sizeof(a.assist))));
 }
 
-static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
+static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2,
+                          const PHBattleState *inFlight = nullptr, NSUInteger changingSlot = 6) {
     uintptr_t impl = state->identity.impl, header = state->identity.header;
     uint32_t count = 0, current = 0, shared = 0, player = 0, turn = 0;
     uint8_t busy = 0;
@@ -96,7 +97,20 @@ static BOOL ReadTeamBanks(PHBattleState *state, uint32_t key1, uint32_t key2) {
                 if (!stored.active || view.sourceSlot != nativeSource) return NO;
                 view.sourceTeam = static_cast<uint8_t>(team);
                 view.sourceSlot = stored.sourceSlot;
-                if (!SameMemberParameters(view, stored)) return NO;
+                if (!SameMemberParameters(view, stored)) {
+                    // A failed rebuild can leave our one visible member ahead
+                    // of its bank, before refresh publishes it. Only the
+                    // synchronous rollback reader may accept that transition,
+                    // and only while the stored source still matches the exact
+                    // pre-write snapshot. Ordinary reads remain strict.
+                    if (!inFlight || changingSlot != slot || !PHBattleTeamLayoutValid(inFlight) ||
+                        !PHBattleSameIdentity(&inFlight->identity, &state->identity) ||
+                        inFlight->teamCount != count || inFlight->currentTeam != current ||
+                        inFlight->teamBanks[team] != state->teamBanks[team] ||
+                        !PHBattleSameOrigin(&inFlight->members[slot], &view) ||
+                        !SameMemberParameters(inFlight->storedMembers[team][position], stored) ||
+                        inFlight->storedMembers[team][position].charge != stored.charge) return NO;
+                }
             }
             uint32_t lastCount = 0, lastCurrent = 0;
             state->teamBanksValid = PHReadU32(impl + PHBattleTeamCountOffset, &lastCount) && lastCount == count &&
