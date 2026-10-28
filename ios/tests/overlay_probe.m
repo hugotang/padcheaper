@@ -411,11 +411,15 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 }
 
 - (void)verifyFocusedEditor {
+    // WKWebView's client rects already include its native keyboard pan and
+    // correspond to the snapshot's visible origin. Adding offsetTop again
+    // falsely rejects the visible header and accepts content below the keyboard.
     NSString *script = @"(()=>{const vv=visualViewport;const ids=['editor-done','kind-body','kind-assist','previous-slot','next-slot','search'];"
-        "const controls=ids.map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {id,top:r.top,bottom:r.bottom};});"
+        "const controls=ids.map(id=>{const el=document.getElementById(id),r=el.getBoundingClientRect();"
+        "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {id,top:r.top,bottom:r.bottom,hit:el.contains(hit)};});"
         "return {focused:document.activeElement.id==='search',scale:vv.scale,initial:PHProbeInitialScale,"
         "fits:document.documentElement.scrollWidth<=innerWidth,top:vv.offsetTop,height:vv.height,scroll:scrollY,controls,"
-        "controlsVisible:controls.every(r=>r.top>=vv.offsetTop-1&&r.bottom<=vv.offsetTop+vv.height+1)};})()";
+        "controlsVisible:controls.every(r=>r.top>=-1&&r.bottom<=vv.height+1&&r.hit)};})()";
     [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
         PHProbeCheck(!error && [value[@"focused"] boolValue] && [value[@"fits"] boolValue] &&
             fabs([value[@"scale"] doubleValue] - [value[@"initial"] doubleValue]) < 0.01 &&
