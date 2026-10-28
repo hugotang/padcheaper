@@ -34,6 +34,11 @@ const {pathToFileURL}=require('node:url');
  const fits=()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth);
  for(const [w,h] of [[320,700],[390,844],[430,932],[768,1024],[844,390]]){
   await page.setViewportSize({width:w,height:h});assert.equal(await fits(),true,'overview width '+w);
+  const clippedIDs=await page.locator('.card .number').evaluateAll(elements=>elements.filter(e=>{
+   const card=e.closest('.card').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(e);
+   const label=range.getBoundingClientRect();return label.left<card.left+1||label.right>card.right-1;
+  }).map(e=>e.textContent));
+  assert.deepEqual(clippedIDs,[],'complete card numbers at width '+w);
   await page.screenshot({path:path.resolve('build/editor-browser/overview-'+w+'.png'),fullPage:true});
  }
  await page.setViewportSize({width:390,height:844});
