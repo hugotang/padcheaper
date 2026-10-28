@@ -102,9 +102,10 @@ jobs:
           print('Optional automatic entry applies the selected saved team during a fresh dungeon opening and recomputes initial Skill Boost through native counters and charging calls.')
           print('Multi 1/4 use a validated bank adapter. Leases track each source team across switches; offscreen restores wait until their team is visible.')
           print('Mode 7 / multi 1 recognizes phase-46 entry sync, selects only the local network seat, restores the original view in the same frame, and requires local turn ownership for manual operations.')
+          print('If a peer snapshot removes an owned entry binding, the existing profiles rebind atomically on the local operation turn. Rebinding retains synchronized forms/charges, performs no new SB pass or allocation, and supports cancellation and full rollback.')
           print('The artifact starts in diagnostic mode; automatic entry is disabled by default. All entry modes are allowed by default, with source 0 / multi 0 defaults. GUI/config edits take effect without recompilation.')
           print('Protocol, save-state, native battle/session, failure recovery and simulator GUI checks passed. GUI checks include legacy draft migration, library management, focus scale, process restart and scene/legacy guest windows.')
-          print('GUI, cosmetics, badges, replacement and single-player automatic entry/SB were user-reported working. This multiplayer fix, resource loading and server settlement still require device verification; see device-testing.md.')
+          print('GUI, cosmetics, badges, replacement, single-player automatic entry/SB and 0.4.2 host automatic replacement were user-reported working. Guest rebind recovery and server settlement still require device verification; see device-testing.md.')
           print()
           print('SHA-256: `' + metadata['sha256'] + '`')
           PY

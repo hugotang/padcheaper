@@ -6,7 +6,7 @@ static BOOL SameEntryMembers(const PHBattleState &a, const PHBattleState &b, BOO
         const PHBattleMember &old = a.members[i], &live = b.members[i];
         if (old.active != live.active) return NO;
         if (!old.active) continue;
-        if (!PHBattleSameSource(&old, &live) || old.providerToken != live.providerToken ||
+        if (!PHBattleSameSource(&old, &live) || old.providerToken != live.providerToken || old.rebindToken != live.rebindToken ||
             old.formID != live.formID || old.catalogID != live.catalogID ||
             old.previousID != live.previousID || old.radius != live.radius || old.flags != live.flags ||
             old.level != live.level || old.skillLevel != live.skillLevel ||
@@ -226,7 +226,7 @@ static BOOL SameEntryBanks(const PHBattleState &a, const PHBattleState &b, int e
         for (unsigned slot = 0; slot < 6; ++slot) {
             const PHBattleMember &old = a.storedMembers[team][slot], &live = b.storedMembers[team][slot];
             if (!SameMemberParameters(old, live) || (old.active &&
-                (old.charge != live.charge || old.providerToken != live.providerToken))) return NO;
+                (old.charge != live.charge || old.providerToken != live.providerToken || old.rebindToken != live.rebindToken))) return NO;
         }
     }
     return YES;

@@ -32,6 +32,9 @@ typedef struct {
     uint8_t flags, radius;
     uint16_t previousID;
     uint64_t providerToken;
+    // Owned entry profile whose native binding was removed by team sync.
+    // This reserves the profile; it does not claim the member is replaced.
+    uint64_t rebindToken;
     uint16_t level, skillLevel;
     uint8_t extra[20], assist[8];
 } PHBattleMember;

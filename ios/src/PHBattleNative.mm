@@ -359,6 +359,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
 }
 #include "PHBattleProvider.inc"
 #include "PHBattleEntry.inc"
+#include "PHBattleRebind.inc"
 }
 
 @interface PHBattleNative : NSObject <PHBattleEngine>
@@ -422,6 +423,17 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     _entryIdentity = expected->identity;
     _entryAttempted = YES;
     PHBattleMutationResult result = ApplyLocalEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
+    if (result == PHBattleMutationApplied) RememberEntryBindings(&_provider, expected, mask, members);
+    _busy = NO;
+    _faulted |= result == PHBattleMutationUncertain;
+    return result;
+}
+
+- (PHBattleMutationResult)rebindEntryMembers:(uint8_t)mask state:(const PHBattleState *)expected
+    members:(PHBattleMember *)members reason:(NSString **)reason {
+    if (_busy || _faulted || !expected || !members || !NSThread.isMainThread) return PHBattleMutationRejected;
+    _busy = YES;
+    PHBattleMutationResult result = RebindEntryTeam(&_provider, mask, expected, members, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
     return result;

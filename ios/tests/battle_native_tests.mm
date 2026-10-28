@@ -174,6 +174,23 @@ struct Fixture {
         }
         if (threePlayer()) encode(bank(current) + PHBattleTeamHPOffset, decode(impl() + PHBattleHPOffset, 0x766cfc6du), 0x766cfc6du);
     }
+    void receivePeerTeam(uint32_t serial, unsigned view, uint8_t mask = 63) {
+        // Model 0x10001771C's per-bank snapshot restore: overwrite encoded
+        // script/form/charge fields, then rebuild from the native source.
+        // Copy-only loadView never reproduced this guest failure.
+        unsigned player = get<uint32_t>(impl() + PHBattlePlayerTeamOffset);
+        put<uint32_t>(impl() + PHBattleTurnSerialOffset, serial);
+        Set32(impl() + PHBattlePhaseOffset, 2);
+        for (unsigned slot = 0; slot < 6; ++slot) if (mask & (1u << slot)) {
+            uintptr_t m = bank(player,slot);
+            SetByte(m + PHBattleScriptSlotOffset, 255);
+            Set16(m + PHBattleFormOffset, slot == 2 ? 450 : 0);
+            Set16(m + PHBattleChargeOffset, slot);
+            put<uint32_t>(m + PHBattleChargeShadowOffset, slot ^ 0x68fb65ceu);
+            Rebuild(game(), m, UINT32_MAX);
+        }
+        loadView(view); shadows();
+    }
     template <typename T> static void put(uintptr_t address, T value) { std::memcpy((void *)address, &value, sizeof(value)); }
     template <typename T> static T get(uintptr_t address) { T value; std::memcpy(&value, (void *)address, sizeof(value)); return value; }
     static void encode(uintptr_t address, uint32_t value, uint32_t salt = 0x6a875a8bu) {
@@ -641,6 +658,160 @@ int main() {
                     "our original six members restore on our own turn with delayed charge intact");
             }
             Check(f.allocated == f.released, "local offscreen entry leases release after all six sources restore");
+        }
+        for (unsigned count : {2u, 3u}) for (unsigned player = 0; player < count; ++player) {
+            Fixture f; f.configureBanks(1,count,6,player); f.enter();
+            id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleState original = f.state(engine); PHBattleMember installed[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:63 state:&original members:installed initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "sync recovery starts with a successful automatic entry");
+            unsigned advances = f.advances;
+            f.chargeCaps[4] = 3;
+            for (unsigned round = 0; round < 3; ++round) {
+                uint32_t serial = player + count * (round + (player == 0));
+                f.receivePeerTeam(serial, player);
+                PHBattleState synced = f.state(engine);
+                for (unsigned slot = 0; slot < 6; ++slot) Check(!synced.members[slot].providerToken &&
+                    synced.members[slot].rebindToken == installed[slot].providerToken &&
+                    synced.members[slot].baseID == 100 + 1000 * player + slot,
+                    "peer snapshots remove bindings but retain recoverable local entry intent");
+                PHBattleMember rebound[6] = {}; NSString *reason = nil;
+                PHBattleMutationResult result = [engine rebindEntryMembers:63 state:&synced members:rebound reason:&reason];
+                if (result != PHBattleMutationApplied) std::fprintf(stderr,"rebind %u/%u round %u: %d %s\n",player,count,round,result,reason.UTF8String ?: "");
+                Check(result == PHBattleMutationApplied && f.advances == advances && f.allocated == 1 && !f.released,
+                    "all local profiles rebind in one transaction without repeating SB or allocating more records");
+                PHBattleState after = f.state(engine);
+                Check(SameEntryBanks(synced,after,player) && after.turnSerial == serial && after.currentTeam == player &&
+                    after.entryChargesValid && after.hpMatches && after.digestMatches,
+                    "rebind preserves every remote bank, turn ownership and protected mirrors");
+                for (unsigned slot = 0; slot < 6; ++slot) Check(after.members[slot].providerToken == installed[slot].providerToken &&
+                    !after.members[slot].rebindToken && after.members[slot].baseID == 200 + slot &&
+                    after.members[slot].assistID == 300 + slot && after.members[slot].charge == std::min<unsigned>(slot,f.chargeCaps[slot]) &&
+                    after.members[slot].formID == (slot == 2 ? 450 : 0),
+                    "rebind keeps consumed/delayed charge and synchronized forms, with only native charge caps applied");
+            }
+            // Even another overwrite cannot cause an automatic retry loop in
+            // the same local turn. A later turn may recover a new snapshot.
+            f.receivePeerTeam(Fixture::get<uint32_t>(f.impl()+PHBattleTurnSerialOffset), player);
+            PHBattleState duplicate = f.state(engine); PHBattleMember unused[6] = {};
+            unsigned writes = f.rebuilds;
+            Check([engine rebindEntryMembers:63 state:&duplicate members:unused reason:nullptr] == PHBattleMutationRejected && f.rebuilds == writes,
+                "the same turn cannot repeatedly rebind an overwritten profile");
+            // Cancel while unbound: native source levels and forms may have
+            // advanced since entry, and must not be restored from a snapshot.
+            Fixture::put<uint16_t>(f.member(2)+0x510,9); f.syncBanks(); f.shadows();
+            PHBattleState cancelBefore = f.state(engine); writes = f.rebuilds;
+            for (unsigned slot = 0; slot < 6; ++slot) {
+                PHBattleState current = f.state(engine);
+                Check([engine restoreLoadout:&original.storedMembers[player][slot] state:&current slot:slot reason:nullptr] == PHBattleMutationApplied,
+                    "restore cancels an unbound entry lease without reinstalling it first");
+            }
+            PHBattleState cancelled = f.state(engine);
+            Check(f.rebuilds == writes && f.allocated == f.released && cancelled.members[2].level == 9 &&
+                cancelled.members[2].formID == 450 && cancelled.members[2].charge == cancelBefore.members[2].charge &&
+                cancelled.hp == cancelBefore.hp, "unbound cancellation releases records while retaining native progress and HP");
+        }
+        {
+            Fixture f; f.configureBanks(1,2,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            for (unsigned slot = 0; slot < 6; ++slot) Fixture::SetByte(f.bank(1,slot)+PHBattleScriptSlotOffset,0);
+            PHBattleState original = f.state(engine); PHBattleLoadout team[6] = {}; team[0] = Loadout();
+            PHBattleMember output[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:1 state:&original members:output initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "partial automatic entry accepts native zero as an unset script binding");
+            f.receivePeerTeam(1,1,1); PHBattleState synced = f.state(engine);
+            Check(synced.members[0].rebindToken && !synced.members[1].rebindToken &&
+                [engine rebindEntryMembers:1 state:&synced members:output reason:nullptr] == PHBattleMutationApplied,
+                "a peer's minus-one unset binding can recover the same originally-zero local source");
+            PHBattleState after = f.state(engine);
+            for (unsigned slot = 1; slot < 6; ++slot) Check(SameMemberParameters(synced.members[slot],after.members[slot]) &&
+                synced.members[slot].charge == after.members[slot].charge, "partial recovery leaves unselected local slots unchanged");
+        }
+        for (unsigned scenario = 0; scenario < 3; ++scenario) {
+            Fixture f; f.configureBanks(1,2,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout team[6] = {}; team[0] = Loadout(); PHBattleMember output[6] = {}; uint16_t boost = 0;
+            PHBattleState original = f.state(engine);
+            if (scenario == 0) {
+                Fixture::Set32(f.impl()+PHBattlePhaseOffset,2);
+                Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,1); f.loadView(1);
+                PHBattleState local = f.state(engine);
+                Check([engine applyLoadout:&team[0] state:&local slot:0 member:output reason:nullptr] == PHBattleMutationApplied,
+                    "manual replacement fixture succeeds without automatic entry intent");
+            } else Check([engine applyEntryLoadouts:team mask:1 state:&original members:output initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "native takeover fixture enters successfully");
+            f.receivePeerTeam(3,1,1);
+            if (scenario == 1) {
+                // A new native script owns this slot. Its different positive
+                // binding must not be displaced by entry recovery.
+                std::memcpy((void *)f.parameter(1),(void *)f.parameter(0),PHBattleProfileSize);
+                Fixture::put<uint16_t>(f.parameter(1)+4,900);
+                Fixture::SetByte(f.bank(1)+PHBattleScriptSlotOffset,2);
+                Fixture::Rebuild(f.game(),f.bank(1),UINT32_MAX); f.loadView(1); f.shadows();
+            } else if (scenario == 2) {
+                // The lease record is now referenced by another bank. Keep it
+                // intact and do not silently give it a second local binding.
+                Fixture::SetByte(f.bank(0)+PHBattleScriptSlotOffset,1);
+                Fixture::Rebuild(f.game(),f.bank(0),UINT32_MAX); f.shadows();
+            }
+            PHBattleState current = f.state(engine); unsigned writes = f.rebuilds;
+            Check(!current.members[0].rebindToken &&
+                [engine rebindEntryMembers:1 state:&current members:output reason:nullptr] == PHBattleMutationRejected && f.rebuilds == writes,
+                "manual changes, new native scripts and foreign parameter references never gain automatic entry recovery");
+        }
+        for (unsigned scenario = 0; scenario < 10; ++scenario) {
+            Fixture f; f.configureBanks(1,2,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleState original = f.state(engine); PHBattleMember installed[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:63 state:&original members:installed initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "rebind rejection fixture enters successfully");
+            f.receivePeerTeam(1,1); PHBattleState before = f.state(engine);
+            switch (scenario) {
+                case 0: f.loadView(0); break;
+                case 1: Fixture::put<uint32_t>(f.impl()+PHBattleTurnSerialOffset,2); break;
+                case 2: Fixture::Set32(f.impl()+PHBattlePhaseOffset,48); break;
+                case 3: Fixture::put<uintptr_t>(f.impl()+PHBattleDragPointerOffset,1); break;
+                case 4: Fixture::Set16(f.member(0)+PHBattleChargeOffset,3); f.syncBanks(); break;
+                case 5: Fixture::put<uint16_t>(f.parameter(0)+4,999); break;
+                case 6: Fixture::put<uintptr_t>(f.header()+PHBattleScriptRVA+8,0); break;
+                case 7: Fixture::put<uint32_t>(f.impl()+PHBattlePlayerTeamOffset,0); break;
+                case 8: Fixture::Set16(f.member(0)+PHBattleTempIDOffset,500); f.syncBanks(); break;
+                case 9: Fixture::put<uint32_t>(f.bank(1)+PHBattleChargeShadowOffset,0); break;
+            }
+            unsigned writes = f.rebuilds; PHBattleMember unused[6] = {};
+            Check([engine rebindEntryMembers:63 state:&before members:unused reason:nullptr] == PHBattleMutationRejected &&
+                f.rebuilds == writes && f.allocated == 1,
+                "remote turns/views, changing snapshots, taken-over context, temporary forms and invalid shadows reject rebind before writes");
+        }
+        for (unsigned scenario = 0; scenario < 5; ++scenario) {
+            Fixture f; f.configureBanks(1,3,6,1); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleState original = f.state(engine); PHBattleMember output[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:63 state:&original members:output initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationApplied, "rebind rollback fixture enters successfully");
+            f.receivePeerTeam(1,1); PHBattleState before = f.state(engine);
+            switch (scenario) {
+                case 0: f.failRebuild = f.rebuilds + 3; f.newTeamHPCap = 60; break;
+                case 1: f.failWriteAddress = f.member(2)+PHBattleChargeShadowOffset; break;
+                case 2: f.auditOnRefresh = true; break;
+                case 3: f.changeOtherBankOnRefresh = true; f.changedBank = 2; break;
+                case 4: f.failRebuild = f.rebuilds + 3; f.changeOtherViewOnFailedRebuild = true; break;
+            }
+            PHBattleMutationResult wanted = scenario < 3 ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
+            NSString *reason = nil;
+            PHBattleMutationResult result = [engine rebindEntryMembers:63 state:&before members:output reason:&reason];
+            if (result != wanted) std::fprintf(stderr,"rebind rollback %u: got %d wanted %d %s\n",scenario,result,wanted,reason.UTF8String ?: "");
+            Check(result == wanted, "rebind failures distinguish complete rollback from an uncertain native state");
+            if (wanted == PHBattleMutationRolledBack) {
+                PHBattleState after = f.state(engine);
+                Check(SameEntryBanks(before,after) && SameEntryMembers(before,after,YES) && after.hp == before.hp &&
+                    after.entryChargesValid && f.allocated == 1 && !f.released,
+                    "failed rebind restores the full synchronized team, HP and charges while retaining its owned parameters");
+                Check(after.auditFlags == (scenario == 2 ? 0x10000u : 0u), "rebind rollback never clears the native audit flag");
+            } else {
+                unsigned writes = f.rebuilds;
+                Check([engine rebindEntryMembers:63 state:&before members:output reason:nullptr] == PHBattleMutationRejected && f.rebuilds == writes,
+                    "uncertain rebind latches off all further recovery writes");
+            }
         }
         {
             Fixture f; f.configureBanks(1,3,6,2); id<PHBattleEngine> engine = PHCreateBattleEngine();

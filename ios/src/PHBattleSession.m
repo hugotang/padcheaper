@@ -32,6 +32,7 @@ static uint16_t Number(uint32_t id) {
 }
 typedef struct {
     BOOL active, restorePending, restoreFailed, visible;
+    BOOL automatic, rebindPending, rebindFailed;
     NSUInteger slot;
     PHBattleIdentity identity;
     PHBattleMember original, applied;
@@ -39,7 +40,8 @@ typedef struct {
 } PHBattleLease;
 
 static BOOL MatchesLease(const PHBattleMember *expected, const PHBattleMember *m) {
-    return expected->providerToken ? m->providerToken == expected->providerToken && PHBattleSameOrigin(expected, m) :
+    return expected->providerToken ? (m->providerToken == expected->providerToken || m->rebindToken == expected->providerToken) &&
+        PHBattleSameOrigin(expected, m) :
         PHBattleSameSource(expected, m);
 }
 
@@ -80,6 +82,10 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
     uint8_t _automaticMask, _entryMask;
     BOOL _hasState, _prepared, _fault;
     BOOL _automaticHasIdentity, _autoArmed, _autoWaiting;
+    BOOL _entryApplied;
+    uint8_t _entryLostMask;
+    uint32_t _lastLossPhase, _lastLossSerial;
+    NSUInteger _entryRebindCount;
     NSUInteger _applyCount, _restoreCount, _rollbackCount;
     NSUInteger _automaticCount;
     uint16_t _initialBoost;
@@ -97,6 +103,15 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
     NSUInteger count = 0;
     for (NSUInteger i = 0; i < 6; ++i) count += _leases[i].active;
     return count;
+}
+- (NSUInteger)rebindPendingCount {
+    NSUInteger count = 0;
+    for (NSUInteger i = 0; i < 6; ++i) count += _leases[i].active && _leases[i].rebindPending;
+    return count;
+}
+- (void)resetEntryOutcome {
+    _entryApplied = NO; _entryLostMask = 0; _entryRebindCount = 0;
+    _lastLossPhase = _lastLossSerial = 0;
 }
 - (BOOL)restorePending {
     for (NSUInteger i = 0; i < 6; ++i) if (_leases[i].active && _leases[i].restorePending) return YES;
@@ -125,6 +140,7 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
     _frame = frame; _time = time;
     if (accountChanged) {
         _automaticHasIdentity = NO; _autoArmed = NO; _autoWaiting = NO;
+        [self resetEntryOutcome];
     }
     if (!frame.enabled || !frame.autoApplyTeam) {
         if (_autoWaiting) _message = @"入場自動套用已取消";
@@ -146,7 +162,7 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         _gateMessage = @"等待遊戲校驗、主執行緒與登入成功"; return;
     }
     BOOL watchEntry = frame.enabled && frame.autoApplyTeam && (_autoArmed || _autoWaiting || !_automaticHasIdentity);
-    if (!_pending && ![self restorePending] && !watchEntry && _hasState && time - _lastProbe < 0.25) return;
+    if (!_pending && ![self restorePending] && ![self rebindPendingCount] && !watchEntry && _hasState && time - _lastProbe < 0.25) return;
     _lastProbe = time;
     PHBattleState next = {0};
     NSString *reason = nil;
@@ -167,8 +183,10 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         // Observe the menu/scene transition first, then consume this arm once.
         _autoArmed = frame.enabled && frame.autoApplyTeam;
         _autoWaiting = NO; _automaticHasIdentity = NO;
+        [self resetEntryOutcome];
         if (_autoArmed) _automaticMessage = _automaticMask ? @"等待下次入場自動套用儲存隊伍" : @"請先儲存包含本體的隊伍";
     } else if (!_automaticHasIdentity || !PHBattleSameIdentity(&_automaticIdentity, &_state.identity)) {
+        [self resetEntryOutcome];
         _automaticIdentity = _state.identity; _automaticHasIdentity = YES;
         _autoWaiting = _autoArmed && frame.enabled && frame.autoApplyTeam;
         _autoArmed = NO;
@@ -196,11 +214,23 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         }
         if (superseded) {
             lease->active = NO; _message = @"其中一名隊員由遊戲接管；其餘位置仍可還原";
+            if (lease->automatic) {
+                _automaticMessage = _message; _entryLostMask |= (uint8_t)(1u << i);
+                _lastLossPhase = _state.phase; _lastLossSerial = _state.turnSerial;
+            }
         } else {
             lease->visible = position >= 0;
             lease->slot = lease->visible ? (NSUInteger)position : 6;
+            BOOL unbound = lease->automatic && m->rebindToken == lease->applied.providerToken && !m->providerToken;
+            if (unbound && !lease->rebindPending) {
+                _entryLostMask |= (uint8_t)(1u << i);
+                _lastLossPhase = _state.phase; _lastLossSerial = _state.turnSerial;
+                _automaticMessage = _message = @"多人同步移除了入場綁定；保留設定，等待自己的回合補回";
+            }
+            lease->rebindPending = unbound;
             if (!lease->restoreFailed && !PHBattlePolicyAllows(&frame.policy, _state.mode, _state.sourceMode, _state.multiplayer))
                 lease->restorePending = YES;
+            if (unbound && !frame.autoApplyTeam && !lease->restoreFailed) lease->restorePending = YES;
         }
     }
     if (_pending && gate == PHBattleGateMode) [self cancelQueue:@"入口設定已變更，取消剩餘替換；已套用位置將逐格還原"];
@@ -228,11 +258,12 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
                 if (result == PHBattleMutationApplied) {
                     NSUInteger count = 0;
                     for (NSUInteger i = 0; i < 6; ++i) if (_entryMask & (1u << i)) {
-                        _leases[i] = (PHBattleLease){.active = YES, .visible = visible, .slot = visible ? i : 6, .identity = _state.identity,
+                        _leases[i] = (PHBattleLease){.active = YES, .visible = visible, .automatic = YES,
+                            .slot = visible ? i : 6, .identity = _state.identity,
                             .original = originals[i], .applied = applied[i], .policy = _state.policy};
                         ++count;
                     }
-                    _applyCount += count; ++_automaticCount; _initialBoost = boost;
+                    _applyCount += count; ++_automaticCount; _initialBoost = boost; _entryApplied = YES;
                     _message = [NSString stringWithFormat:@"入場已自動套用 %lu 名隊員 · SB %u（已重算）", (unsigned long)count, boost];
                 } else [self recordFailure:result reason:reason];
                 _automaticMessage = _message;
@@ -267,12 +298,42 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
             if (result == PHBattleMutationApplied) {
                 lease->active = NO; lease->restoreFailed = NO; _restoreCount++;
                 _message = [NSString stringWithFormat:@"位置 %lu 已還原為 #%u", (unsigned long)lease->slot + 1, Number(lease->original.catalogID)];
+                if (lease->automatic) _automaticMessage = _message;
             } else { lease->restoreFailed = YES; [self recordFailure:result reason:reason]; }
             [self didMutate]; return;
         }
         if (temporary) _gateMessage = @"等待遊戲的暫時變身結束後還原";
         else if (offscreen) _gateMessage = @"等待切回包含待還原隊員的隊伍";
         return;
+    }
+    if ([self rebindPendingCount]) {
+        uint8_t mask = 0;
+        BOOL temporary = NO;
+        for (NSUInteger i = 0; i < 6; ++i) {
+            PHBattleLease *lease = &_leases[i];
+            if (!lease->active || !lease->rebindPending || lease->rebindFailed || !lease->visible) continue;
+            const PHBattleMember *m = &_state.members[lease->slot];
+            temporary |= m->temporaryID != 0 || m->temporaryTurns != 0;
+            mask |= (uint8_t)(1u << lease->slot);
+        }
+        if (!mask || !frame.enabled || !frame.autoApplyTeam || gate != PHBattleGateReady || !_state.turnSerial) return;
+        if (temporary) { _gateMessage = @"等待暫時變身結束後補回入場設定"; return; }
+        PHBattleMember rebound[6] = {0};
+        PHBattleMutationResult result = [_engine rebindEntryMembers:mask state:&_state members:rebound reason:&reason];
+        NSUInteger count = 0;
+        for (NSUInteger i = 0; i < 6; ++i) {
+            PHBattleLease *lease = &_leases[i];
+            if (!lease->active || !lease->rebindPending || !lease->visible || !(mask & (1u << lease->slot))) continue;
+            if (result == PHBattleMutationApplied) {
+                lease->applied = rebound[lease->slot]; lease->rebindPending = NO; ++count;
+            } else lease->rebindFailed = YES;
+        }
+        if (result == PHBattleMutationApplied) {
+            _entryRebindCount += count;
+            _message = [NSString stringWithFormat:@"自己的回合已補回 %lu 名隊員；保留同步後充能，未重發 SB", (unsigned long)count];
+        } else [self recordFailure:result reason:reason];
+        _automaticMessage = _message;
+        [self didMutate]; return;
     }
     if (!_pending) return;
     if (!_state.present || !PHBattleSameIdentity(&_queueIdentity, &_state.identity)) {
@@ -396,16 +457,18 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         [members addObject:@{@"slot": @(slot + 1), @"active": @(m.active), @"readable": @(m.readable),
             @"source": @(Number(m.baseID)), @"current": @(Number(m.catalogID)), @"form": @(Number(m.formID)),
             @"assist": @(Number(m.assistID)), @"nativeID": @(m.catalogID), @"charge": @(m.charge),
-            @"sourceTeam": @(m.sourceTeam + 1), @"sourceSlot": @(m.sourceSlot + 1),
+            @"sourceTeam": @(m.sourceTeam + 1), @"sourceSlot": @(m.sourceSlot + 1), @"scriptSlot": @(m.scriptSlot),
+            @"providerToken": @(m.providerToken), @"rebindToken": @(m.rebindToken),
             @"level": @(m.level), @"skillLevel": @(m.skillLevel), @"leased": @(leased),
             @"temporary": @(m.temporaryID != 0 || m.temporaryTurns != 0),
             @"replaceable": @(!leased && m.active && m.readable && m.sourceSlot >= 0 && m.sourceSlot <= 5 &&
                 m.scriptSlot <= 0 && !m.temporaryID && !m.temporaryTurns && Number(m.catalogID) != 0)}];
     }
-    BOOL canApply = _hasState && _frame.ready && _frame.enabled && activeCount < 6 && !_pending && !restoring && !_fault &&
+    NSUInteger rebindPending = [self rebindPendingCount];
+    BOOL canApply = _hasState && _frame.ready && _frame.enabled && activeCount < 6 && !_pending && !restoring && !rebindPending && !_fault &&
                     PHBattleStateGate(&_state) == PHBattleGateReady;
     NSString *phase = _fault ? @"fault" : restoring ? @"restore_pending" : _autoWaiting ? @"entry_pending" :
-        _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
+        rebindPending ? @"rebind_pending" : _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
     return @{@"implemented": @YES, @"phase": phase, @"enabled": @(_frame.enabled),
         @"canApply": @(canApply), @"canRestore": @((activeCount || _pending || _autoWaiting) && !_fault), @"applied": @(activeCount > 0),
         @"activeCount": @(activeCount), @"pendingMask": @(_pending), @"restorePending": @(restoring), @"fault": @(_fault),
@@ -426,6 +489,9 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         @"applyCount": @(_applyCount), @"restoreCount": @(_restoreCount), @"rollbackCount": @(_rollbackCount), @"deviceVerified": @NO,
         @"automaticEnabled": @(_frame.autoApplyTeam), @"automaticWaiting": @(_autoWaiting),
         @"automaticCount": @(_automaticCount), @"initialBoost": @(_initialBoost),
+        @"entryApplied": @(_entryApplied), @"entryLostMask": @(_entryLostMask),
+        @"entryRebindCount": @(_entryRebindCount), @"rebindPendingCount": @(rebindPending),
+        @"lastLossPhase": @(_lastLossPhase), @"lastLossSerial": @(_lastLossSerial),
         @"entryWindow": @(_hasState && _state.entryWindow), @"entryChargesValid": @(_hasState && _state.entryChargesValid),
         @"automaticMessage": _automaticMessage ?: @""};
 }

@@ -837,9 +837,14 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"teamBanksValid"], battle[@"currentTeam"], battle[@"teamCount"], battle[@"offscreenCount"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nThree-player turn: valid %@ / player %@ / owner %@ / serial %@",
         battle[@"turnInfoValid"], battle[@"playerTeam"], battle[@"turnTeam"], battle[@"turnSerial"]];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nCurrent entry: applied %@ / lost mask 0x%02x / rebind waiting %@ / rebound members %@\nLast binding loss: phase %@ / serial %@",
+        battle[@"entryApplied"], [battle[@"entryLostMask"] unsignedIntValue], battle[@"rebindPendingCount"],
+        battle[@"entryRebindCount"], battle[@"lastLossPhase"], battle[@"lastLossSerial"]];
     for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
-        diagnostics = [diagnostics stringByAppendingFormat:@"\nMember %@ source: team %@ / slot %@",
-            member[@"slot"], member[@"sourceTeam"], member[@"sourceSlot"]];
+        diagnostics = [diagnostics stringByAppendingFormat:@"\nMember %@ source: team %@ / slot %@ / script %@ / provider %@ / rebind %@",
+            member[@"slot"], member[@"sourceTeam"], member[@"sourceSlot"], member[@"scriptSlot"],
+            member[@"providerToken"], member[@"rebindToken"]];
     }
     for (NSString *inputName in @[@"Battle", @"Timer"]) {
         NSDictionary *inputState = [inputName isEqualToString:@"Battle"] ? battle : timer;

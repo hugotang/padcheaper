@@ -15,6 +15,10 @@
 - (PHBattleMutationResult)applyEntryLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask
     state:(const PHBattleState *)expected members:(PHBattleMember *)members initialBoost:(uint16_t *)boost
     reason:(NSString **)reason;
+// Reattach existing entry profiles on our own turn after multiplayer sync.
+// Keep synchronized forms/charges; never repeat entry SB or allocate profiles.
+- (PHBattleMutationResult)rebindEntryMembers:(uint8_t)mask state:(const PHBattleState *)expected
+    members:(PHBattleMember *)members reason:(NSString **)reason;
 // The engine rechecks live identity, source, form, phase, fingerprints and
 // consistency immediately before any mutation, and owns immediate rollback.
 - (PHBattleMutationResult)changeState:(const PHBattleState *)expected slot:(NSUInteger)slot

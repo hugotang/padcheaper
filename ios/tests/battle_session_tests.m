@@ -23,6 +23,8 @@ static void SyncFakeBanks(PHBattleState *state) {
     PHBattleState live;
     NSUInteger reads, changes, validations, fullApplies, fullRestores;
     NSUInteger entryCalls;
+    NSUInteger rebindCalls, unboundCancels;
+    PHBattleMember entryProfiles[6];
     uint16_t rejectNumber;
     uint64_t nextToken;
     PHBattleMutationResult nextResult;
@@ -31,6 +33,7 @@ static void SyncFakeBanks(PHBattleState *state) {
 - (void)makeBanked:(uint32_t)mode;
 - (void)makeThreePlayer:(NSUInteger)count player:(NSUInteger)player;
 - (void)showTeam:(NSUInteger)team;
+- (void)dropEntryBindings;
 @end
 @implementation FakeBattleEngine
 - (instancetype)init {
@@ -83,6 +86,18 @@ static void SyncFakeBanks(PHBattleState *state) {
         }
     }
 }
+- (void)dropEntryBindings {
+    SyncFakeBanks(&live);
+    for (NSUInteger slot = 0; slot < 6; ++slot) {
+        PHBattleMember *m = &live.storedMembers[live.playerTeam][slot];
+        m->rebindToken = m->providerToken; m->providerToken = 0; m->scriptSlot = 0;
+        m->baseID = (uint16_t)(100 + 1000 * live.playerTeam + slot); m->assistID = 0;
+        m->formID = slot == 2 ? 450 : 0; m->catalogID = m->formID ?: m->baseID;
+        m->charge = (uint16_t)slot; m->level = 9;
+    }
+    if (live.currentTeam == live.playerTeam)
+        memcpy(live.members,live.storedMembers[live.playerTeam],sizeof(live.members));
+}
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
     validations++;
     BOOL valid = !rejectTarget && target < state->catalogCount;
@@ -113,6 +128,13 @@ static void SyncFakeBanks(PHBattleState *state) {
 }
 - (PHBattleMutationResult)restoreLoadout:(const PHBattleMember *)original state:(const PHBattleState *)expected
     slot:(NSUInteger)slot reason:(NSString **)reason {
+    if (live.members[slot].rebindToken && nextResult == PHBattleMutationApplied) {
+        Check(PHBattleStateGate(expected) == PHBattleGateReady, "unbound cancellation still waits for local operation ownership");
+        live.members[slot].rebindToken = 0;
+        ++fullRestores; ++unboundCancels;
+        SyncFakeBanks(&live);
+        return PHBattleMutationApplied;
+    }
     PHBattleMutationResult result = [self changeState:expected slot:slot form:original->formID
         catalog:original->catalogID presentation:original reason:reason];
     if (result != PHBattleMutationApplied) return result;
@@ -145,7 +167,29 @@ static void SyncFakeBanks(PHBattleState *state) {
         [self applyLoadout:&loadouts[i] state:&selected slot:i member:&members[i] reason:reason];
     for (NSUInteger i = 0; i < 6; ++i) live.members[i].charge = live.members[i].baseID < 200 ? 6 : 8;
     memcpy(members,live.members,sizeof(live.members)); *boost = 8;
+    memcpy(entryProfiles,live.members,sizeof(entryProfiles));
     if (PHBattleIsThreePlayer(expected)) [self showTeam:originalView];
+    return PHBattleMutationApplied;
+}
+- (PHBattleMutationResult)rebindEntryMembers:(uint8_t)mask state:(const PHBattleState *)expected
+    members:(PHBattleMember *)members reason:(NSString **)reason {
+    ++rebindCalls;
+    Check(PHBattleIsThreePlayer(expected) && PHBattleStateGate(expected) == PHBattleGateReady,
+        "session rebind requires the local player's quiet operation turn");
+    if (nextResult != PHBattleMutationApplied) {
+        PHBattleMutationResult result = nextResult; nextResult = PHBattleMutationApplied;
+        if (reason) *reason = @"retained profile rebind failed";
+        return result;
+    }
+    for (NSUInteger slot = 0; slot < 6; ++slot) if (mask & (1u << slot)) {
+        PHBattleMember old = live.members[slot];
+        Check(old.rebindToken && !old.providerToken && !old.temporaryID && !old.temporaryTurns,
+            "session only rebinds released native bindings, after temporary transformations end");
+        live.members[slot] = entryProfiles[(NSUInteger)old.sourceSlot];
+        live.members[slot].charge = old.charge; live.members[slot].formID = old.formID;
+        live.members[slot].catalogID = old.formID ?: live.members[slot].baseID;
+    }
+    SyncFakeBanks(&live); memcpy(members,live.members,sizeof(live.members));
     return PHBattleMutationApplied;
 }
 - (PHBattleMutationResult)changeState:(const PHBattleState *)expected slot:(NSUInteger)slot
@@ -566,6 +610,87 @@ int main(void) {
                 "first local turn restores all original local sources with no second automatic entry");
             for (NSUInteger slot = 0; slot < 6; ++slot) Check(three->live.members[slot].baseID == 100 + 1000 * player + slot &&
                 three->live.members[slot].charge == 2, "later restoration preserves post-preemptive charge instead of resetting SB");
+        }
+        for (NSUInteger count = 2; count <= 3; ++count) for (NSUInteger player = 0; player < count; ++player) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:count player:player];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team); [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:100];
+            FreshEntry(three); three->live.phase = 46; [multiSession onFrame:multiFrame atTime:100.01];
+            three->live.phase = 2; three->live.entryWindow = false;
+            three->live.turnTeam = (uint8_t)((player + 1) % count);
+            three->live.turnSerial = (uint32_t)(count + three->live.turnTeam);
+            [three showTeam:three->live.turnTeam]; [three dropEntryBindings];
+            [multiSession onFrame:multiFrame atTime:101];
+            Check(!three->rebindCalls && [multiSession.snapshot[@"activeCount"] isEqual:@6] &&
+                [multiSession.snapshot[@"rebindPendingCount"] isEqual:@6] && [multiSession.snapshot[@"entryApplied"] boolValue] &&
+                [multiSession.snapshot[@"entryLostMask"] isEqual:@63] && [multiSession.snapshot[@"lastLossPhase"] isEqual:@2],
+                "native synchronization loss retains six entry leases and per-entry diagnostic evidence offscreen");
+            [three showTeam:player]; [multiSession onFrame:multiFrame atTime:101.1];
+            Check(!three->rebindCalls, "previewing the local team during a remote turn never rebinds it");
+            three->live.turnTeam = (uint8_t)player; three->live.turnSerial = (uint32_t)(2 * count + player);
+            three->live.input.rawActiveMask = 1; [multiSession onFrame:multiFrame atTime:101.2];
+            three->live.input.rawActiveMask = 0; three->live.dragActive = true;
+            [multiSession onFrame:multiFrame atTime:101.3];
+            three->live.dragActive = false; three->live.members[0].temporaryID = 500;
+            [multiSession onFrame:multiFrame atTime:101.4];
+            Check(!three->rebindCalls, "rebind waits through held input, orb drags and temporary native transformations");
+            three->live.members[0].temporaryID = 0;
+            team[0].bodyNumber = 999; [multiSession configureAutomaticLoadouts:team mask:1];
+            [multiSession onFrame:multiFrame atTime:101.5]; [multiSession onFrame:multiFrame atTime:101.6];
+            Check(three->rebindCalls == 1 && three->entryCalls == 1 && three->fullApplies == 6 && three->nextToken == 6 &&
+                [multiSession.snapshot[@"rebindPendingCount"] isEqual:@0] && [multiSession.snapshot[@"entryRebindCount"] isEqual:@6],
+                "one atomic rebind uses the captured profiles without a new automatic entry, allocation or six-frame partial team");
+            for (NSUInteger slot = 0; slot < 6; ++slot) Check(three->live.members[slot].baseID == 200 + slot &&
+                three->live.members[slot].charge == slot && three->live.members[slot].formID == (slot == 2 ? 450 : 0),
+                "rebind retains synchronized charge and forms even when the saved selection has changed");
+            [three dropEntryBindings]; three->live.turnSerial += (uint32_t)count;
+            [multiSession onFrame:multiFrame atTime:102]; [multiSession onFrame:multiFrame atTime:102.1];
+            Check(three->rebindCalls == 2 && three->entryCalls == 1 && three->nextToken == 6 &&
+                [multiSession.snapshot[@"entryRebindCount"] isEqual:@12], "later synchronized turns reuse the same six entry profiles");
+            [multiSession queueRestore];
+            for (NSUInteger slot = 0; slot < 6; ++slot) [multiSession onFrame:multiFrame atTime:103 + slot * 0.1];
+            Check(three->fullRestores == 6 && [multiSession.snapshot[@"activeCount"] isEqual:@0],
+                "rebound members retain their original restore records");
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:104];
+            Check(![multiSession.snapshot[@"entryApplied"] boolValue] && [multiSession.snapshot[@"entryLostMask"] isEqual:@0] &&
+                [multiSession.snapshot[@"entryRebindCount"] isEqual:@0] && [multiSession.snapshot[@"automaticCount"] isEqual:@1],
+                "per-entry evidence resets outside the dungeon independently of the process-wide automatic counter");
+        }
+        for (NSUInteger scenario = 0; scenario < 3; ++scenario) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:2 player:1];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team); [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:100];
+            FreshEntry(three); three->live.phase = 46; [multiSession onFrame:multiFrame atTime:100.01];
+            three->live.phase = 2; three->live.entryWindow = false; [three dropEntryBindings];
+            [multiSession onFrame:multiFrame atTime:101];
+            if (scenario == 0) [multiSession queueRestore];
+            else if (scenario == 1) multiFrame.autoApplyTeam = false;
+            else multiFrame.enabled = false;
+            [multiSession onFrame:multiFrame atTime:101.1];
+            Check(!three->rebindCalls && !three->unboundCancels, "cancelling a pending rebind still waits for our own turn");
+            three->live.turnSerial = three->live.turnTeam = 1; [three showTeam:1];
+            for (NSUInteger slot = 0; slot < 6; ++slot) [multiSession onFrame:multiFrame atTime:102 + slot * 0.1];
+            Check(!three->rebindCalls && three->unboundCancels == 6 && [multiSession.snapshot[@"activeCount"] isEqual:@0] &&
+                three->live.members[2].level == 9 && three->live.members[2].charge == 2,
+                "Restore, disabling automatic entry and disabling the feature release unbound intent without reverting native progress");
+        }
+        for (PHBattleMutationResult failed = PHBattleMutationRolledBack; failed <= PHBattleMutationUncertain; ++failed) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:2 player:1];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team); [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:100];
+            FreshEntry(three); three->live.phase = 46; [multiSession onFrame:multiFrame atTime:100.01];
+            three->live.phase = 2; three->live.entryWindow = false; [three dropEntryBindings];
+            three->live.turnSerial = three->live.turnTeam = 1; [three showTeam:1]; three->nextResult = failed;
+            for (NSUInteger tick = 0; tick < 4; ++tick) [multiSession onFrame:multiFrame atTime:101 + tick];
+            Check(three->rebindCalls == 1 && three->entryCalls == 1 && [multiSession.snapshot[@"entryRebindCount"] isEqual:@0] &&
+                [multiSession.snapshot[@"fault"] boolValue] == (failed == PHBattleMutationUncertain),
+                "failed recovery never loops; uncertainty stops writes and confirmed failure retains cancellation");
         }
         for (NSUInteger scenario = 0; scenario < 3; ++scenario) {
             FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:2 player:1];

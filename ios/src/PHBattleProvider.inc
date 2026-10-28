@@ -6,9 +6,10 @@ struct ProviderContext {
     uint32_t sourceLength;
 };
 struct ProviderLease {
-    bool active;
+    bool active, entryBinding;
     uint8_t parameter;
     uint64_t token;
+    uint32_t reboundSerial;
     PHBattleMember original;
     PHBattleProfile previous, installed;
 };
@@ -16,6 +17,8 @@ struct BattleProvider {
     PHBattleIdentity identity;
     ProviderContext context;
     bool allocatedProgram;
+    uint8_t entryTeamCount, entryPlayerTeam;
+    uintptr_t entryBanks[PHBattleTeamCapacity];
     ProviderLease leases[6];
 };
 
@@ -126,12 +129,26 @@ static BOOL ProfileOwned(const BattleProvider *provider, const ProviderLease &le
         !std::memcmp(&live, &lease.installed, sizeof(live));
 }
 
+static BOOL EntryProviderMatches(const BattleProvider *provider, const PHBattleState *state) {
+    return PHBattleIsThreePlayer(state) && PHBattleTeamLayoutValid(state) &&
+        provider->entryTeamCount == state->teamCount && provider->entryPlayerTeam == state->playerTeam &&
+        !std::memcmp(provider->entryBanks, state->teamBanks, sizeof(provider->entryBanks));
+}
+
+static BOOL SameUnboundEntrySource(const PHBattleMember &original, const PHBattleMember &member) {
+    // Both zero and -1 mean no script override in 0x1005A12F0. A peer may
+    // serialize either; neither is permission to replace a positive binding.
+    return PHBattleSameOrigin(&original, &member) && original.scriptSlot <= 0 && member.scriptSlot <= 0 &&
+        original.baseID == member.baseID && original.assistID == member.assistID;
+}
+
 static void TagProviderMembers(BattleProvider *provider, PHBattleState *state) {
     if (!provider->context.program) return;
     // The game's native scene cleanup owns any still-attached native allocation.
     // Never free a cached pointer after the battle/context identity changes.
     if (!state->present || !PHBattleSameIdentity(&provider->identity, &state->identity)) { *provider = {}; return; }
     if (!ContextMatches(provider, state->identity.header)) return;
+    BOOL entryContext = EntryProviderMatches(provider, state);
     for (const ProviderLease &lease : provider->leases) {
         if (!ProfileOwned(provider, lease, state->identity.header)) continue;
         auto tag = [&](PHBattleMember *members) {
@@ -147,7 +164,38 @@ static void TagProviderMembers(BattleProvider *provider, PHBattleState *state) {
         };
         tag(state->members);
         for (unsigned team = 0; team < state->teamCount; ++team) tag(state->storedMembers[team]);
+        // 0x10001771C restores each bank's script byte from a peer's turn
+        // snapshot. A peer without our local parameter provider sends the
+        // original binding. Retain intent only for the same local source and
+        // original base/assist, with our unchanged record wholly unreferenced.
+        // New native scripts, changed sources and taken-over contexts win.
+        if (!entryContext || !lease.entryBinding || state->turnSerial < lease.reboundSerial ||
+            ParameterReferenced(state, lease.parameter + 1)) continue;
+        auto pending = [&](PHBattleMember *members) {
+            int matches = 0, position = -1;
+            for (unsigned i = 0; i < 6; ++i) {
+                const PHBattleMember &m = members[i];
+                if (m.active && m.readable && m.sourceTeam == state->playerTeam &&
+                    SameUnboundEntrySource(lease.original, m) && !m.providerToken) { ++matches; position = i; }
+            }
+            if (matches == 1) members[position].rebindToken = lease.token;
+        };
+        pending(state->members);
+        pending(state->storedMembers[state->playerTeam]);
     }
+}
+
+static void RememberEntryBindings(BattleProvider *provider, const PHBattleState *state,
+                                  uint8_t mask, const PHBattleMember *members) {
+    if (!PHBattleIsThreePlayer(state)) return;
+    provider->entryTeamCount = state->teamCount;
+    provider->entryPlayerTeam = state->playerTeam;
+    std::memcpy(provider->entryBanks, state->teamBanks, sizeof(provider->entryBanks));
+    for (unsigned i = 0; i < 6; ++i) if (mask & (1u << i))
+        for (ProviderLease &lease : provider->leases) if (lease.active && lease.token == members[i].providerToken) {
+            lease.entryBinding = true;
+            lease.reboundSerial = state->turnSerial;
+        }
 }
 
 static int FreeParameter(const PHBattleState *state) {
@@ -288,15 +336,26 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
     PHBattleProfile profile = {};
     int parameter = -1;
     if (loadout) {
-        if (old.scriptSlot > 0 || old.providerToken || !PrepareProfile(loadout, &before, &profile, reason) ||
+        if (old.scriptSlot > 0 || old.providerToken || old.rebindToken || !PrepareProfile(loadout, &before, &profile, reason) ||
             !ProviderAvailable(provider, &before, reason)) return PHBattleMutationRejected;
         for (ProviderLease &candidate : provider->leases) if (!candidate.active) { lease = &candidate; break; }
         parameter = FreeParameter(&before);
         if (!lease || parameter < 0) return PHBattleMutationRejected;
     } else {
-        for (ProviderLease &candidate : provider->leases) if (candidate.active && candidate.token == old.providerToken) { lease = &candidate; break; }
+        uint64_t token = old.providerToken ? old.providerToken : old.rebindToken;
+        for (ProviderLease &candidate : provider->leases) if (candidate.active && candidate.token == token) { lease = &candidate; break; }
         if (!lease || !original || !PHBattleSameSource(&lease->original, original) || original->formID != lease->original.formID ||
             original->catalogID != lease->original.catalogID || !ProfileOwned(provider, *lease, frame.header)) return PHBattleMutationRejected;
+        if (old.rebindToken && !old.providerToken) {
+            // Sync has already restored the native source. Cancel its retained
+            // entry intent by releasing only the unreferenced owned record.
+            // Preserve the game's current level, form, HP and skill charge.
+            if (entry || expected->members[slot].rebindToken != old.rebindToken ||
+                ParameterReferenced(&before, lease->parameter + 1)) return PHBattleMutationRejected;
+            BOOL released = ReleaseProfile(provider, lease, &before);
+            if (!released && reason) *reason = @"同步後的編隊參數未能確認釋放，已停止後續寫入";
+            return released ? PHBattleMutationApplied : PHBattleMutationUncertain;
+        }
     }
     uintptr_t address = before.identity.impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
     BOOL changed = NO, touched = NO, bound = NO;
