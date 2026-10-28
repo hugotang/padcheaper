@@ -1,5 +1,6 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbRules.h"
+#import "PHOrbPlanning.h"
 #include <stdio.h>
 
 static unsigned failures;
@@ -78,6 +79,18 @@ int main(void) {
         Check(PHOrbProfilesValid(restored) && [PHOrbProfileNamed(restored,@"team")[@"settings"][@"rules"] isEqual:@[rescue]] &&
             [PHOrbProfileNamed(original,@"team")[@"settings"][@"rules"] isEqual:Settings()[@"rules"]],
             "rescue thresholds, conjunctive status and required preference persist together without mutating the original profile");
+        Check([PHOrbCanonicalSettings(Settings())[@"recovery"] isEqual:PHOrbDefaultRecovery()] && PHOrbProfilesValid(original),
+            "legacy four-key profile settings remain loadable and normalize to disabled hearts");
+        NSDictionary *heartPolicy = @{@"hpAtMost":@35,@"groups":@2,@"shape":@"four"}; settings[@"recovery"] = heartPolicy;
+        updated = PHOrbProfilesUpdatingSettings(original,settings);
+        json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
+        restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+        Check(PHOrbProfilesValid(restored) && [PHOrbProfileNamed(restored,@"team")[@"settings"][@"recovery"] isEqual:heartPolicy] &&
+            !PHOrbProfileNamed(original,@"team")[@"settings"][@"recovery"],
+            "heart threshold, shape and independent groups are saved with the chosen strategy without mutating legacy profiles");
+        settings[@"recovery"] = @{};
+        Check(!PHOrbCanonicalSettings(settings) && !PHOrbProfilesUpdatingSettings(original,settings),
+            "malformed conditional hearts cannot be dropped while saving other strategy fields");
         printf("Orb profiles tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

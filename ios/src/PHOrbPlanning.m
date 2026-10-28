@@ -73,6 +73,8 @@ NSString *PHOrbGoalsDescription(NSArray *goals) {
     return [lines componentsJoinedByString:@"\n"];
 }
 
+#include "PHOrbRecovery.inc"
+
 NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary *catalog) {
     NSMutableArray *goals = [NSMutableArray array], *leaders = [NSMutableArray array];
     NSMutableOrderedSet *warnings = [NSMutableOrderedSet orderedSet], *unsupported = [NSMutableOrderedSet orderedSet];

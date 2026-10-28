@@ -3,6 +3,7 @@
 #import "PHConfiguration.h"
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbPlanning.h"
 #include <stdio.h>
 
 static NSUInteger failures;
@@ -112,6 +113,23 @@ int main(void) {
         NSDictionary *rescueConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
         Check(PHConfigurationIsValid(rescueConfig) && [PHConfigurationOrbSettings(rescueConfig)[@"rules"] isEqual:@[rescueRule]],
             "HP, player status and required rules round-trip with their selected strategy");
+        Check([PHConfigurationOrbSettings(rescueConfig)[@"recovery"] isEqual:PHOrbDefaultRecovery()],
+            "older configuration and profile settings gain a disabled conditional heart policy");
+        NSDictionary *heartPolicy = @{@"hpAtMost":@40, @"groups":@2, @"shape":@"four"};
+        NSMutableDictionary *heartSettings = [PHConfigurationOrbSettings(config) mutableCopy]; heartSettings[@"recovery"] = heartPolicy;
+        config[@"orbs"] = heartSettings;
+        Check(!PHConfigurationIsValid(config), "updating only the common heart policy cannot leave the selected strategy stale");
+        config[@"orbProfiles"] = PHOrbProfilesUpdatingSettings(config[@"orbProfiles"],heartSettings);
+        serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+        NSDictionary *heartConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
+        Check(PHConfigurationIsValid(heartConfig) && [PHConfigurationOrbSettings(heartConfig)[@"recovery"] isEqual:heartPolicy] &&
+            [PHConfigurationOrbSettings(heartConfig)[@"rules"] isEqual:@[rescueRule]],
+            "conditional hearts and skill rescue rules persist in the same atomic profile transaction");
+        for (id malformed in @[@YES, @{}, @{@"hpAtMost":@40,@"groups":@0,@"shape":@"match"}]) {
+            heartSettings[@"recovery"] = malformed; config[@"orbs"] = heartSettings;
+            Check(!PHConfigurationIsValid(config), "malformed heart policies cannot silently revert to disabled recovery");
+        }
+        heartSettings[@"recovery"] = heartPolicy;
         config[@"orbProfiles"] = @{};
         Check(!PHConfigurationIsValid(config), "malformed profile libraries do not silently discard bindings");
         [config removeObjectForKey:@"orbProfiles"]; [config removeObjectForKey:@"orbs"];

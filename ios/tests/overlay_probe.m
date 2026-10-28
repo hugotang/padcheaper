@@ -340,12 +340,34 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     qualityControl.selectedSegmentIndex = 2; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
     goalMode.selectedSegmentIndex = 0; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
     PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:savedGoals], @"Combo mode retains the manual profile for later use");
+    UIButton *heartEdit = (UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRecoveryEdit");
+    PHProbeCheck(heartEdit.enabled, @"Recovery policy can be configured without enabling unvalidated game input");
+    [heartEdit sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *heartEditor = orbController.presentedViewController; [heartEditor loadViewIfNeeded];
+    UITextField *heartHP = (UITextField *)PHProbeFind(heartEditor.view, @"padcheaper.orbsRecoveryHP");
+    UISegmentedControl *heartGroups = (UISegmentedControl *)PHProbeFind(heartEditor.view, @"padcheaper.orbsRecoveryGroups");
+    UISegmentedControl *heartShape = (UISegmentedControl *)PHProbeFind(heartEditor.view, @"padcheaper.orbsRecoveryShape");
+    PHProbeCheck(orbWindow.isKeyWindow && [heartHP becomeFirstResponder] && heartGroups.numberOfSegments == 3 &&
+        heartShape.numberOfSegments == 2, @"Heart policy provides a working numeric keyboard and group/shape controls");
+    heartHP.text = @"40"; [heartHP sendActionsForControlEvents:UIControlEventEditingChanged]; [heartHP resignFirstResponder];
+    heartGroups.selectedSegmentIndex = 1; [heartGroups sendActionsForControlEvents:UIControlEventValueChanged];
+    heartShape.selectedSegmentIndex = 1; [heartShape sendActionsForControlEvents:UIControlEventValueChanged];
+    [(UIButton *)PHProbeFind(heartEditor.view, @"padcheaper.orbsRecoverySave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    NSDictionary *savedHeartPolicy = PHProbeJSON(@"config.json")[@"orbs"][@"recovery"];
+    PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow &&
+        [savedHeartPolicy isEqual:@{@"hpAtMost":@40,@"groups":@2,@"shape":@"four"}] &&
+        [PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:savedGoals],
+        @"Heart policy closes only after all fields reach config.json while preserving ordinary goals");
+    PHProbeRender(self.window, orbWindow, @"orbs-recovery-saved");
     NSMutableArray *orbTypes = [NSMutableArray array], *orbEnhanced = [NSMutableArray array];
     for (unsigned i = 0; i < 30; ++i) { [orbTypes addObject:@(i % 6)]; [orbEnhanced addObject:@(i % 7 == 0)]; }
     __block NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
         @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
         @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
         @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
+        @"recovery":savedHeartPolicy ?: @{}, @"canSetRecovery":@YES,
         @"profiles":@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[]}, @"canSetProfiles":@YES,
         @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
         @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
@@ -467,7 +489,48 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:rescuePayload],
         @"Acknowledged rescue-rule save retains all conditions and returns keyboard focus to the game");
     [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
+    NSMutableDictionary *recoveryFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    recoveryFailure[@"recoveryStatus"] = @"本回合 HP 30.0% ≤ 40%：要求心珠四顆直線 × 2 組";
+    orbFixture = @{@"orbState":recoveryFailure}; [orbController refresh];
+    PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsRecoveryDescription")).text containsString:@"本回合 HP 30.0%"],
+        @"Recovery settings and the latest conditional-goal decision remain visible in the main page");
+    recoveryFailure[@"recoveryMessage"] = @"心珠設定未能儲存，仍保留原設定";
+    orbFixture = @{@"orbState":recoveryFailure}; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRecoveryEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *recoveryEditor = orbController.presentedViewController; [recoveryEditor loadViewIfNeeded];
+    UITextField *recoveryHP = (UITextField *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoveryHP");
+    recoveryHP.text = @"101"; [recoveryHP sendActionsForControlEvents:UIControlEventEditingChanged]; orbAction = nil;
+    [(UIButton *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoverySave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(!orbAction && orbController.presentedViewController == recoveryEditor &&
+        [((UILabel *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoveryNotice")).text containsString:@"0–100"],
+        @"Invalid recovery percentages remain in the draft without publishing an action");
+    recoveryHP.text = @"35"; [recoveryHP sendActionsForControlEvents:UIControlEventEditingChanged];
+    UISegmentedControl *recoveryGroups = (UISegmentedControl *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoveryGroups");
+    UISegmentedControl *recoveryShape = (UISegmentedControl *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoveryShape");
+    recoveryGroups.selectedSegmentIndex = 2; [recoveryGroups sendActionsForControlEvents:UIControlEventValueChanged];
+    recoveryShape.selectedSegmentIndex = 0; [recoveryShape sendActionsForControlEvents:UIControlEventValueChanged];
+    NSDictionary *wantedHearts = @{@"hpAtMost":@35,@"groups":@3,@"shape":@"match"};
+    [(UIButton *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoverySave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbController.presentedViewController == recoveryEditor && [orbAction isEqual:@"orbsRecovery"] &&
+        [orbValue isEqual:wantedHearts] && [recoveryHP.text isEqual:@"35"] &&
+        [((UILabel *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoveryNotice")).text containsString:@"未能儲存"],
+        @"A failed recovery save preserves numeric, group and shape edits with a fixed error notice");
+    PHProbeRender(self.window, orbWindow, @"orbs-recovery-failed-draft");
+    [orbController setValue:[^(NSString *action, id value) {
+        orbAction = action; orbValue = value;
+        if ([action isEqual:@"orbsRecovery"]) {
+            NSMutableDictionary *state = [recoveryFailure mutableCopy]; state[@"recovery"] = value; state[@"recoveryMessage"] = @"";
+            orbFixture = @{@"orbState":state};
+        }
+    } copy] forKey:@"action"];
+    [(UIButton *)PHProbeFind(recoveryEditor.view, @"padcheaper.orbsRecoverySave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:wantedHearts],
+        @"Acknowledged recovery retry saves the retained policy and returns keyboard focus to the game");
+    [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
     NSMutableDictionary *profileFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    profileFailure[@"recovery"] = wantedHearts;
     profileFailure[@"profileMessage"] = @"策略未能儲存，仍保留原設定";
     orbFixture = @{@"orbState":profileFailure}; [orbController refresh];
     [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -480,6 +543,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck(orbController.presentedViewController == profileEditor && [orbAction isEqual:@"orbsProfiles"] &&
         [orbValue[@"library"][@"profiles"] count] == 1 &&
+        [orbValue[@"library"][@"profiles"][0][@"settings"][@"recovery"] isEqual:wantedHearts] &&
         [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"未能儲存"],
         @"Failed strategy save retains its draft, selection and fixed notice");
     PHProbeRender(self.window, orbWindow, @"orbs-strategy-profiles");
@@ -525,6 +589,24 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [overlay.rootViewController setValue:originalSnapshot forKey:@"snapshot"];
     [overlay.rootViewController setValue:originalAction forKey:@"action"];
     [overlay.rootViewController updateWithSnapshot:originalSnapshot()];
+    NSMutableDictionary *conditionalLeader = [baseOrbFixture[@"orbState"] mutableCopy];
+    conditionalLeader[@"goalMode"] = @"leaders";
+    conditionalLeader[@"goalPlan"] = @{@"available":@YES, @"baseGoals":@[],
+        @"goals":@[@{@"kind":@"match",@"colors":@32,@"count":@1,@"length":@3}], @"leaders":@[], @"message":@"心珠要求", @"warning":@""};
+    orbFixture = @{@"orbState":conditionalLeader}; [orbController refresh];
+    PHProbeCheck(PHProbeFind(orbWindow, @"padcheaper.orbsGoalEdit").hidden,
+        @"A purely conditional heart goal does not offer to copy nonexistent leader requirements");
+    conditionalLeader[@"goalPlan"] = @{@"available":@YES, @"baseGoals":savedGoals,
+        @"goals":[savedGoals arrayByAddingObject:@{@"kind":@"match",@"colors":@32,@"count":@1,@"length":@3}],
+        @"leaders":@[], @"message":@"本回合含心珠要求", @"warning":@""};
+    orbFixture = @{@"orbState":conditionalLeader}; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *baseGoalEditor = orbController.presentedViewController; [baseGoalEditor loadViewIfNeeded];
+    PHProbeCheck([[baseGoalEditor valueForKey:@"draft"] isEqual:savedGoals],
+        @"Customizing leader goals copies the base plan without making a transient heart condition permanent");
+    [baseGoalEditor dismissViewControllerAnimated:NO completion:nil];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
     NSMutableDictionary *unsupportedLeader = [baseOrbFixture[@"orbState"] mutableCopy];
     unsupportedLeader[@"phase"] = @"blocked"; unsupportedLeader[@"goalMode"] = @"leaders";
     unsupportedLeader[@"canExecute"] = @NO; unsupportedLeader[@"path"] = @[];

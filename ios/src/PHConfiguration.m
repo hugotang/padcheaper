@@ -15,7 +15,7 @@ NSDictionary *PHDefaultConfiguration(void) {
     return @{@"schema": @1, @"experimentalWrites": @NO,
              @"features": @{@"skin": @NO, @"bgm": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
-             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[]},
+             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[], @"recovery":PHOrbDefaultRecovery()},
              @"orbProfiles":PHOrbDefaultProfiles()};
 }
 
@@ -45,7 +45,8 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 }
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
-    NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[]} mutableCopy];
+    NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[],
+        @"recovery":PHOrbDefaultRecovery()} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
     return settings;
@@ -102,7 +103,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality]) return NO;
     if (![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
-        !PHOrbSkillRulesValid(orbs[@"rules"])) return NO;
+        !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"])) return NO;
     NSDictionary *profiles = PHConfigurationOrbProfiles(configuration);
     NSDictionary *selectedProfile = PHOrbProfileNamed(profiles, profiles[@"selected"]);
     if (selectedProfile && ![PHOrbCanonicalSettings(orbs) isEqual:PHOrbCanonicalSettings(selectedProfile[@"settings"])]) return NO;

@@ -1,6 +1,7 @@
 #import "PHOrbSession.h"
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbPlanning.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -17,7 +18,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
-    BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill;
+    BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
@@ -97,6 +98,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
         if (clearObstaclesWithSkill) { live.obstacles = 0; live.ordinary = true; }
         if (healWithSkill) live.automation.hp = live.automation.maximumHP;
+        if (makeHeartsWithSkill) for (unsigned i = 0; i < 4; ++i) live.board.types[i] = 5;
         if (clearPlayerStatusWithSkill) {
             live.automation.playerEffects = 0;
             for (auto &member : live.automation.members) member.bound = false;
@@ -153,6 +155,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_automation_session_tests.inc"
 #include "orb_strategy_session_tests.inc"
 #include "orb_survival_session_tests.inc"
+#include "orb_recovery_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -384,6 +387,7 @@ int main() {
         AutomationSessionTests();
         StrategySessionTests();
         SurvivalSessionTests();
+        RecoverySessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

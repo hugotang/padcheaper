@@ -33,7 +33,7 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m \
     "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
     "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
@@ -63,6 +63,7 @@ cp ios/docs/orb-goals.md "$build_dir/orb-goals.md"
 cp ios/docs/orb-automation.md "$build_dir/orb-automation.md"
 cp ios/docs/orb-strategies.md "$build_dir/orb-strategies.md"
 cp ios/docs/orb-survival.md "$build_dir/orb-survival.md"
+cp ios/docs/orb-recovery.md "$build_dir/orb-recovery.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
@@ -109,6 +110,7 @@ metadata = {
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
     "orb_survival": "read-only effective HP thresholds and temporary awakening/member bind or skill-seal conditions; required rules/groups need confirmed completion before a route while allowing other skills to remedy or haste; uncertain attempts never count as success; captured HP/player-state changes cancel the route; per-rule reasons shown; device verification pending",
+    "orb_recovery": "optional continuous-only post-skill HP threshold adds one to three heart groups, at least three connected or exactly four in a straight line; conjoins base goals without overriding required skills; unknown HP, insufficient hearts or unmet goals stop; atomic profile persistence; no recovery-amount or damage estimate; device verification pending",
     "orb_obstacles": "locked basic orbs preserve their native flag through ordinary matching; spinner, unmatchable, weakened and other unsupported effects may trigger user-chosen remedy skills, then require a fresh board; no timed spinner solver",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",

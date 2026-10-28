@@ -31,13 +31,14 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     NSString *quality = settings[@"quality"], *mode = settings[@"mode"];
     PHOrbGoalSet goals = {0};
     NSArray *rules = settings[@"rules"] ?: @[];
+    NSDictionary *recovery = settings[@"recovery"] ?: PHOrbDefaultRecovery();
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
-        !PHOrbSkillRulesValid(rules)) return nil;
+        !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
-    return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy]};
+    return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy], @"recovery":[recovery copy]};
 }
 
 NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
@@ -60,7 +61,8 @@ BOOL PHOrbProfilesValid(id library) {
             !Integer(record[@"dungeon"], UINT16_MAX) || !Integer(record[@"floor"], UINT16_MAX) ||
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
-            !Keys(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"])) return NO;
+            !(Keys(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"]) ||
+              Keys(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules", @"recovery"]))) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&

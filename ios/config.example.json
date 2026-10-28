@@ -21,7 +21,12 @@
     "quality": "balanced",
     "mode": "combo",
     "goals": [],
-    "rules": []
+    "rules": [],
+    "recovery": {
+      "hpAtMost": 0,
+      "groups": 1,
+      "shape": "match"
+    }
   },
   "apiHosts": [],
   "apiPaths": [],

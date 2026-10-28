@@ -4,6 +4,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbProfileEditor.h"
 #import "PHOrbRuleEditor.h"
+#import "PHOrbRecoveryEditor.h"
 #include "PHOrbModel.h"
 #include <math.h>
 
@@ -272,6 +273,8 @@
 @property(nonatomic, strong) UILabel *ruleDescription;
 @property(nonatomic, strong) UILabel *playerDescription;
 @property(nonatomic, strong) UILabel *decisionDescription;
+@property(nonatomic, strong) UIButton *editRecovery;
+@property(nonatomic, strong) UILabel *recoveryDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
 @property(nonatomic, strong) UILabel *profileDescription;
 @property(nonatomic, strong) NSTimer *timer;
@@ -337,6 +340,9 @@
     self.playerDescription.accessibilityIdentifier = @"padcheaper.orbsPlayerStatus";
     self.decisionDescription = [self label:13 weight:UIFontWeightRegular];
     self.decisionDescription.accessibilityIdentifier = @"padcheaper.orbsDecisions";
+    self.editRecovery = [self button:@"低血時的心珠目標" selector:@selector(editRecoverySettings) identifier:@"padcheaper.orbsRecoveryEdit"];
+    self.recoveryDescription = [self label:13 weight:UIFontWeightRegular];
+    self.recoveryDescription.accessibilityIdentifier = @"padcheaper.orbsRecoveryDescription";
     self.editProfiles = [self button:@"隊伍／關卡策略" selector:@selector(editProfileSettings) identifier:@"padcheaper.orbsProfileEdit"];
     self.profileDescription = [self label:13 weight:UIFontWeightRegular];
     self.profileDescription.accessibilityIdentifier = @"padcheaper.orbsProfileDescription";
@@ -374,7 +380,7 @@
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
         self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
-        self.editRules, self.ruleDescription, self.playerDescription, self.decisionDescription,
+        self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
@@ -444,6 +450,16 @@
     }
     self.decisionDescription.text = [decisions componentsJoinedByString:@"\n"];
     self.decisionDescription.hidden = !decisions.count;
+    self.editRecovery.enabled = [state[@"canSetRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSString *recoveryMessage = state[@"recoveryMessage"];
+    NSMutableArray *recoveryLines = [NSMutableArray arrayWithObject:PHOrbRecoveryDescription(state[@"recovery"] ?: PHOrbDefaultRecovery())];
+    if ([state[@"recoveryStatus"] length]) {
+        if ([state[@"recoveryTurn"] unsignedIntegerValue])
+            [recoveryLines addObject:[NSString stringWithFormat:@"最近心珠判斷 · 第 %@ 回合", state[@"recoveryTurn"]]];
+        [recoveryLines addObject:state[@"recoveryStatus"]];
+    }
+    self.recoveryDescription.text = recoveryMessage.length ? recoveryMessage : [recoveryLines componentsJoinedByString:@"\n"];
+    self.recoveryDescription.textColor = recoveryMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSArray *qualities = @[@"fast", @"balanced", @"thorough"];
     NSUInteger quality = [qualities indexOfObject:state[@"quality"] ?: @"balanced"];
     if (quality == NSNotFound) quality = 1;
@@ -459,7 +475,8 @@
     self.goalMode.enabled = [state[@"canSetGoals"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSDictionary *plan = state[@"goalPlan"] ?: @{};
     BOOL leaderMode = [mode isEqual:@"leaders"];
-    self.editGoals.hidden = ![mode isEqual:@"manual"] && !(leaderMode && [plan[@"available"] boolValue] && [plan[@"goals"] count]);
+    NSArray *editableGoals = plan[@"baseGoals"] ?: plan[@"goals"];
+    self.editGoals.hidden = ![mode isEqual:@"manual"] && !(leaderMode && [plan[@"available"] boolValue] && editableGoals.count);
     self.editGoals.enabled = self.goalMode.enabled;
     UIButtonConfiguration *editConfig = self.editGoals.configuration;
     editConfig.title = leaderMode ? @"用這些條件自訂" : @"編輯形狀與珠色"; self.editGoals.configuration = editConfig;
@@ -532,8 +549,9 @@
 }
 - (void)editGoalSettings {
     if (!self.goalMode.enabled || self.presentedViewController) return;
-    NSArray *goals = [self.state[@"goalMode"] isEqual:@"leaders"] ? self.state[@"goalPlan"][@"goals"] : self.state[@"goals"];
-    if (!goals.count) goals = self.state[@"goalPlan"][@"goals"];
+    NSArray *baseGoals = self.state[@"goalPlan"][@"baseGoals"] ?: self.state[@"goalPlan"][@"goals"];
+    NSArray *goals = [self.state[@"goalMode"] isEqual:@"leaders"] ? baseGoals : self.state[@"goals"];
+    if (!goals.count) goals = baseGoals;
     if (!goals.count) goals = @[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0}];
     __weak PHOrbController *weakSelf = self;
     PHOrbGoalEditor *editor = [[PHOrbGoalEditor alloc] initWithGoals:goals save:^NSString *(NSArray *saved) {
@@ -575,11 +593,27 @@
     [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)stop { self.action(@"orbsStop", nil); [self refresh]; }
+- (void)editRecoverySettings {
+    if (!self.editRecovery.enabled || self.presentedViewController) return;
+    __weak PHOrbController *weakSelf = self;
+    PHOrbRecoveryEditor *editor = [[PHOrbRecoveryEditor alloc] initWithSettings:self.state[@"recovery"] ?: PHOrbDefaultRecovery()
+        save:^NSString *(NSDictionary *settings) {
+            PHOrbController *controller = weakSelf; if (!controller) return @"頁面已關閉，請重新開啟後儲存。";
+            controller.action(@"orbsRecovery", settings); [controller refresh];
+            NSDictionary *state = controller.state;
+            if ([state[@"canSetRecovery"] boolValue] && [state[@"recovery"] isEqual:settings]) return nil;
+            NSString *message = state[@"recoveryMessage"];
+            return message.length ? message : @"心珠設定尚未確認儲存，請稍後重試。";
+        }];
+    editor.modalPresentationStyle = UIModalPresentationPageSheet;
+    editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    [self presentViewController:editor animated:YES completion:nil];
+}
 - (void)editProfileSettings {
     if (!self.editProfiles.enabled || self.presentedViewController) return;
     NSDictionary *state = self.state;
     NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
-        @"goals":state[@"goals"], @"rules":state[@"rules"]};
+        @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery()};
     __weak PHOrbController *weakSelf = self;
     PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
@@ -590,7 +624,7 @@
             NSDictionary *selected = PHOrbProfileNamed(library,library[@"selected"]);
             NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
-                @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[]});
+                @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery()});
             if ([saved[@"canSetProfiles"] boolValue] && [saved[@"profiles"] isEqual:library] && [actual isEqual:wanted]) return nil;
             NSString *message = saved[@"profileMessage"];
             return message.length ? message : @"策略尚未確認儲存，請稍後重試。";

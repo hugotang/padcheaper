@@ -55,7 +55,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     NSMutableArray *_automationLog;
     NSMutableArray<NSString *> *_ruleDecisions;
     NSMutableDictionary<NSNumber *, NSString *> *_unavailableReasons;
-    NSDictionary *_goalPlan;
+    NSDictionary *_goalPlan, *_recovery;
     NSDictionary *_profileLibrary, *_activeProfile;
     PHOrbSolveOptions _solveOptions;
     NSUInteger _generation, _completed, _cancelled, _sentFrames, _confirmed;
@@ -65,7 +65,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
     bool _inputFault, _awaitingStart, _monitoring;
     PHOrbSnapshot _autoOrigin, _skillBefore;
-    NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn;
+    NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn, _recoveryTurn;
     uint16_t _usedRules, _unavailableRules, _confirmedRules;
     uint8_t _usedSlots, _usedGroups, _confirmedGroups, _groupNext[PHOrbMaxSkillGroups];
     NSMutableSet<NSDictionary *> *_onceRules;
@@ -81,6 +81,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _phase = @"idle"; _message = @"單人操作階段，可預覽路徑或開始連續轉珠";
         _quality = @"balanced"; _goalMode = @"combo"; _manualGoals = @[]; _goalPlan = @{};
         _skillRules = @[]; _automationLog = [NSMutableArray array]; _onceRules = [NSMutableSet set];
+        _recovery = PHOrbDefaultRecovery();
         _ruleDecisions = [NSMutableArray array]; _unavailableReasons = [NSMutableDictionary dictionary];
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
     }
@@ -96,13 +97,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
 }
 - (BOOL)configureQuality:(NSString *)quality {
     if (!quality) return NO;
-    return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules}];
+    return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules, @"recovery":_recovery}];
 }
 - (BOOL)configureSettings:(NSDictionary *)settings {
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical || _automatic || [self executing] || _inputFault) return NO;
     if ([_quality isEqual:canonical[@"quality"]] && [_goalMode isEqual:canonical[@"mode"]] &&
-        [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]]) return YES;
+        [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
+        [_recovery isEqual:canonical[@"recovery"]]) return YES;
     [self cancelWorker];
     [self loadSettings:canonical];
     _readQueued = _hasStable = false;
@@ -114,8 +116,9 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _manualGoals = settings[@"goals"]; _goalPlan = @{}; _route = {}; _confirmed = 0;
     _solveOptions = OptionsForQuality(_quality);
     _skillRules = settings[@"rules"];
-    [_ruleDecisions removeAllObjects]; _decisionTurn = 0;
-    _watchPlayerState = false;
+    _recovery = settings[@"recovery"];
+    [_ruleDecisions removeAllObjects]; _decisionTurn = _recoveryTurn = 0;
+    _watchPlayerState = [_recovery[@"hpAtMost"] unsignedIntegerValue] > 0;
     for (NSDictionary *rule in _skillRules) if ([rule[@"enabled"] boolValue])
         _watchPlayerState |= [rule[@"hpAtMost"] unsignedIntegerValue] > 0 || [rule[@"required"] boolValue] ||
             (rule[@"status"] && ![rule[@"status"] isEqual:@"none"]);
@@ -162,7 +165,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _autoStartAt = _autoPhaseAt = _now; _autoOrigin = {}; _route = {}; _goalPlan = @{};
     _activeProfile = @{};
     [_automationLog removeAllObjects];
-    [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects]; _decisionTurn = 0;
+    [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects]; _decisionTurn = _recoveryTurn = 0;
     _phase = @"autoWaiting"; _message = @"連續模式準備中；點浮動「停止」可隨時中斷";
 }
 - (void)logAutomation:(NSString *)message {
@@ -377,6 +380,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
+    _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
+    _recoveryTurn = _automatic ? _autoTurn : 0;
     if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
         _phase = @"blocked"; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
         if (_automatic) [self queueStop:_message];
@@ -648,6 +653,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"playerBypass":@(_live.automation.playerBypass), @"skillWindow":@(_live.automation.window),
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
+        @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
+        @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
         @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
         @"goalHits":goalHits,

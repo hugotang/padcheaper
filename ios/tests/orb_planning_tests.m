@@ -8,6 +8,8 @@ static NSDictionary *Goal(NSString *kind, unsigned colors, unsigned count, unsig
 }
 static NSDictionary *Profile(NSArray *goals) { return @{@"goals":goals, @"warnings":@[], @"unsupported":@[]}; }
 
+#include "orb_recovery_planning_tests.inc"
+
 int main(void) {
     @autoreleasepool {
         PHOrbGoalSet goals = {0};
@@ -60,6 +62,7 @@ int main(void) {
         plan = PHOrbPlanForLeaderCatalog(&state, catalog);
         Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"combo", 0, 7, 0)]],
               "paired minimum-combo clauses merge to the stronger threshold");
+        RecoveryPlanningTests();
     }
     printf("Orb planning tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;

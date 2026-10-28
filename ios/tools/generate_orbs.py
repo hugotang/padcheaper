@@ -22,7 +22,9 @@ def generate(manifest):
                              'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened'],
                              'survival_conditions': ['hp_at_most', 'awoken_bind', 'member_bind', 'skill_seal'],
                              'required_skills': 'confirmed-rule-or-group-before-route',
-                             'hp_read': 'read-only-effective-cap', 'decision_reasons': True}:
+                             'hp_read': 'read-only-effective-cap', 'decision_reasons': True,
+                             'recovery_goal': {'mode': 'continuous-only', 'hp_percent': [1, 100], 'groups': [1, 3],
+                                               'shapes': ['match', 'four'], 'combine': 'post-skill-conjunction'}}:
         raise ValueError('Unreviewed orb scope')
     required = {'PHOrbInitRVA', 'PHOrbGeometryRVA', 'PHOrbNearestRVA', 'PHOrbPlayerInputRVA',
                 'PHOrbSwapRVA', 'PHOrbInputUpdateRVA', 'PHOrbInputGetRVA', 'PHOrbInputTransformRVA',
