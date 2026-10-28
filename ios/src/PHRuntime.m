@@ -9,6 +9,7 @@
 #import "PHSaveState.h"
 #import "PHBattleSession.h"
 #import "PHOrbSession.h"
+#import "PHOrbPlanning.h"
 #import "PHOrbProfiles.h"
 #import <UIKit/UIKit.h>
 #import "PHFormationModel.h"
