@@ -1,31 +1,27 @@
 # PADCheaper — iOS LiveContainer dylib
 
-這是 PADHelper 的 iOS 原型，目標為日服《パズル＆ドラゴンズ》23.6.0、iOS build **106878**、arm64，設計用於 LiveContainer 的無 JIT 載入方式。
+PADHelper 的 iOS 原型，目標為日服《パズル＆ドラゴンズ》23.6.0、iOS build **106878**、arm64，供 LiveContainer 無 JIT 載入。
 
-GitHub Actions 會用 macOS／Xcode 編譯 **PADCheaper.dylib**，執行隊伍 JSON、LiveContainer 身分／設定、戰鬥狀態、徽章原生佈局、計時策略及 iOS 模擬器 GUI 檢查，並上傳包含 dylib、SHA-256、設定範例及文件的 artifact。
+**0.4.6-ui 改善手機編隊及儲存狀態。** 六人總覽搭配獨立角色編輯面板，提供本體／武裝切換、上一格／下一格、整格交換／複製、撤銷及最近使用角色。隊伍庫最多 64 隊，支援 PADDashFormation 匯入／匯出。
 
-**0.4.4-entry 修正 mode 7／multi 1 的 guest 隊伍被換回合同步覆蓋後未補回的問題。** 入場設定仍在 phase 46 套用；若同步移除綁定，保留原有配方，等自己的操作回合一次補回六人，沿用同步後充能及原生變身，不重發 SB。支援兩人或三人入場；詳見 [三人模式修正](ios/docs/three-player-entry.md)。保留 64 隊隊伍庫、六個位置的本體／武裝編輯、PADDashFormation 匯入／匯出及覺醒名稱。
+儲存成功必須收到原生檔案寫入確認。失敗保留草稿、不關閉編輯器，也不變更下次入場選擇。「本場已套用」核對實際接受的本體、武裝及培養設定，不會因切換隊伍庫而誤標。滿級／滿技直接顯示實際數字；保留雙指縮放。
 
-本版也補上新隊伍的入場 HP 初始化，依原生固定／比例 HP 規則，只更新本機隊伍；guest 補回保留同步後的受傷 HP。多人綁定改為每個 frame 監測，省去最多約 250 ms 的檢查等待。隊伍數值及操作時間沿用原生 refresh；已生成的盤面不重建。詳見 [入場數值與時機](ios/docs/entry-derived-state.md)。
+**戰鬥與計時寫入僅限單人。** 非零 multi、mode 7 或本場曾偵測多人皆不可寫入；舊 allow-all 設定不能解除限制。多人仍可編隊、保存及分享。撤回原因及證據見 [多人限制](ios/docs/three-player-entry.md)。
 
-使用者已回報 GUI／Skin／BGM、徽章解鎖及六人替換可用，並於 2026-10-28 確認單人入場自動套隊與 SB、0.4.2 的 host 自動替換成功。這次 guest 補回、計時、帳號隔離與通關結算仍需真機驗證。原生格式與限制見 [整隊與滿狀態](ios/docs/team-presets.md)。
+單人新入場會使用已儲存的選取隊伍，於第一個符合條件的開場 frame 套用，重算原生 Skill Boost、初始化目前 HP 並刷新隊伍數值。中途開啟、續關及後續樓層不重新充能；已生成的開場盤面不重建。使用者確認過單人套隊與 SB，新版 HP、實際技能及結算仍需真機確認。
 
-**PC 面板的「入場自動套用隊伍」使用目前選中的儲存隊伍。** 先在地下城外開啟總開關、戰鬥隊員替換及此選項；新入場的開場動畫期間會一次套用整隊，透過遊戲原生流程重算 SB。戰鬥中途才開啟、續關或切樓層不會重新充能。手動套用仍保留目前充能。
+自動轉珠目前完成 [pazusoba/core 可行性研究](ios/docs/auto-orb-feasibility.md)，包含離線編譯、路徑重播與原碼問題的重現。此版 dylib 尚未加入求解器或自動輸入。
 
-**「入口設定」可即時修改 mode／source／multi。** mode 預設全部允許，source／multi 預設 0；三項各有「全部允許」與清單設定，自動保存到 config.json，每秒重載。multi 1／4 已加入原生多隊陣列適配，追蹤目前隊伍及助人的實際來源；畫面外隊員的還原會等到切回該隊。使用時須把 1、4 加入 multi 清單。版本、陣列、原生摘要及戰鬥階段仍須通過校驗。
-
-**0.2.1-gui 加入儲存／伺服器接受／回蓋狀態。** 新儲存會取消舊回蓋，即使新選擇改回預設或本地保存失敗，舊回應也不再覆蓋新選擇。
+GitHub Actions 使用 macOS／Xcode 編譯、檢查 arm64 Mach-O 與簽章，執行模型／原生戰鬥／儲存及 iOS 模擬器 GUI 測試。CI 產物附 SHA-256、設定範例及文件。CI 不替代真機驗收。
 
 - [編譯、安裝與設定](ios/README.md)
+- [編隊、儲存與生效狀態](ios/docs/formation.md)
+- [入場數值與時機](ios/docs/entry-derived-state.md)
+- [真機驗收](ios/docs/device-testing.md)
 - [靜態分析與可行性](ios/docs/feasibility.md)
-- [目前原型的時序與限制](ios/docs/runtime.md)
-- [單名戰鬥隊員替換](ios/docs/monster-replacement.md)
-- [六人編隊與入口設定](ios/docs/formation.md)
-- [徽章與計時控制](ios/docs/badge-timer.md)
-- [真機回報與儲存／重啟測試](ios/docs/device-testing.md)
-- [版本目標清單](ios/targets/pad-23.6.0.json)
+- [原生輸入讀取](ios/docs/battle-input.md)
 - [Actions 編譯流程](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)
 
-不需要上傳 IPA、IDA database 或簽署憑證到 GitHub。CI 產物使用 ad-hoc 簽章；安裝前須由 LiveContainer 使用裝置可用的憑證重新簽署。
+不需要上傳 IPA、IDA database 或簽署憑證。安裝前完整退出 PAD，替換 dylib，再由 LiveContainer 使用裝置憑證重新簽署。
 
-Android 參考專案為 [PADHelper](https://github.com/befollowed/PADhelper)，授權見 [LICENSE](LICENSE)。此 repo 保留分析／程式碼，不附遊戲 executable 或音訊資源。
+Android 參考專案為 [PADHelper](https://github.com/befollowed/PADhelper)，授權見 [LICENSE](LICENSE)。此 repo 不附遊戲 executable 或音訊資源。

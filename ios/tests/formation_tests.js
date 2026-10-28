@@ -90,6 +90,29 @@ assert.throws(()=>model.addLibraryTeam(full,team,'overflow'),/最多/);
 assert.equal(full.teams.length,64);
 assert.equal(model.deleteLibraryTeam(full).teams.length,63);
 
+const swapped=model.moveSlot(team,0,4);
+assert.deepEqual(swapped.slots[4],team.slots[0],'swap carries all body, assist and training values');
+assert.deepEqual(swapped.slots[0],team.slots[4]);
+assert.deepEqual(model.moveSlot(swapped,0,4),team,'swapping twice restores the original team');
+const copied=model.moveSlot(team,0,4,true);
+copied.slots[4].body.plus[0]=0;
+assert.deepEqual(copied.slots[0],team.slots[0],'copy must not alias its source');
+assert.deepEqual(team,JSON.parse(before),'slot operations never mutate the source');
+assert.throws(()=>model.moveSlot(team,-1,0),/來源/);
+assert.throws(()=>model.moveSlot(team,0,6),/目標/);
+assert.equal(model.matchesRecipe(team.slots[0],team.slots[0]),true);
+assert.equal(model.matchesRecipe(team.slots[0],imported.slots[0]),true,'explicit maximums match automatic maximums');
+for(const field of ['level','skill','awakenings','superAwakening']) {
+  const changed=structuredClone(team.slots[0]);changed.body[field]=field==='level'?110:field==='skill'?1:0;
+  assert.equal(model.matchesRecipe(changed,team.slots[0]),false,'changed '+field+' is not the applied recipe');
+}
+const changedLatent=structuredClone(team.slots[0]);changedLatent.body.latents=[11];
+assert.equal(model.matchesRecipe(changedLatent,team.slots[0]),false,'latents are included in applied identity');
+const changedAssist=structuredClone(team.slots[0]);changedAssist.assist.level=98;
+assert.equal(model.matchesRecipe(changedAssist,team.slots[0]),false,'assist training is included in applied identity');
+assert.equal(model.matchesRecipe(team.slots[0],{}),false,'a bare native lease is insufficient to claim this recipe applied');
+assert.equal(model.matchesRecipe(team.slots[0],team.slots[1]),false,'switching teams cannot inherit the previous applied badge');
+
 for(let id=1;id<=51;id++) assert.ok(model.latentNames[id] && !model.latentName(id).includes('未定義'),`latent ${id} has a verified label`);
 assert.equal(model.latentName(13),'隊長交換耐性');
 assert.equal(model.latentName(14),'邪魔掉落耐性');

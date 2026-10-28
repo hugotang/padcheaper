@@ -8,19 +8,20 @@
 @property(nonatomic, copy) NSDictionary *team;
 @property(nonatomic, copy) NSDictionary *library;
 @property(nonatomic, copy) NSDictionary *battle;
+@property(nonatomic, copy) PHOverlaySnapshot snapshot;
 @property(nonatomic, copy) PHOverlayAction action;
 @property(nonatomic, copy) dispatch_block_t close;
 @end
 
 @implementation PHFormationController
 - (instancetype)initWithTeam:(NSDictionary *)team library:(NSDictionary *)library battle:(NSDictionary *)battle
-    action:(PHOverlayAction)action close:(dispatch_block_t)close {
+    snapshot:(PHOverlaySnapshot)snapshot action:(PHOverlayAction)action close:(dispatch_block_t)close {
     if ((self = [super init])) {
         _library = PHFormationReadLibrary(library, NULL, NULL) ? library : PHFormationLibraryFromTeam(team);
         NSDictionary *selected = nil;
         PHFormationReadLibrary(_library, &selected, NULL);
         _team = selected;
-        _battle = battle; _action = action; _close = close;
+        _battle = battle; _snapshot = snapshot; _action = action; _close = close;
     }
     return self;
 }
@@ -73,13 +74,38 @@
         NSMutableDictionary *initial = [@{@"battle": self.battle ?: @{}} mutableCopy];
         if (self.team && PHFormationReadTeam(self.team, NULL, NULL)) initial[@"team"] = self.team;
         initial[@"library"] = self.library;
+        NSDictionary *current = self.snapshot ? self.snapshot() : nil;
+        initial[@"stored"] = current[@"formationLibraryStored"] ?: @NO;
+        initial[@"recent"] = [NSUserDefaults.standardUserDefaults arrayForKey:@"PADCheaper.formationRecent"] ?: @[];
         [self send:@"receive" value:initial];
-    } else if ([action isEqual:@"library"]) {
+    } else if ([action isEqual:@"persist"] && [value isKindOfClass:NSDictionary.class]) {
+        NSString *requestID = value[@"requestID"];
+        if (![requestID isKindOfClass:NSString.class] || !requestID.length || requestID.length > 80) return;
+        NSDictionary *library = value[@"library"];
         NSDictionary *selected = nil;
         NSString *reason = nil;
-        if (!PHFormationReadLibrary(value, &selected, &reason)) { [self send:@"notify" value:reason]; return; }
-        self.library = value; self.team = selected;
+        if (!PHFormationReadLibrary(library, &selected, &reason)) {
+            [self send:@"saveResult" value:@{@"requestID":requestID, @"ok":@NO, @"message":reason}]; return;
+        }
         self.action(@"formationLibrarySave", value);
+        NSDictionary *state = self.snapshot ? self.snapshot() : nil;
+        NSDictionary *receipt = state[@"formationSaveResult"];
+        if (![receipt[@"requestID"] isEqual:requestID]) {
+            [self send:@"saveResult" value:@{@"requestID":requestID, @"ok":@NO,
+                @"message":@"未收到儲存確認；草稿仍保留在編輯器"}]; return;
+        }
+        if ([receipt[@"ok"] isEqual:@YES]) { self.library = library; self.team = selected; }
+        NSMutableDictionary *result = [receipt mutableCopy];
+        result[@"battle"] = state[@"battleState"] ?: @{};
+        [self send:@"saveResult" value:result];
+    } else if ([action isEqual:@"recent"] && [value isKindOfClass:NSArray.class] && [value count] <= 24) {
+        NSMutableArray *recent = [NSMutableArray array];
+        for (id number in value) {
+            if (![number isKindOfClass:NSNumber.class] || [number doubleValue] != [number unsignedIntValue] ||
+                [number unsignedIntValue] < 1 || [number unsignedIntValue] > 65435) return;
+            if (![recent containsObject:number]) [recent addObject:number];
+        }
+        [NSUserDefaults.standardUserDefaults setObject:recent forKey:@"PADCheaper.formationRecent"];
     } else if ([action isEqual:@"paste"]) {
         [self send:@"importText" value:UIPasteboard.generalPasteboard.string ?: @""];
     } else if ([action isEqual:@"copy"] && [value isKindOfClass:NSString.class] && [value length] <= 65536 &&
@@ -91,19 +117,16 @@
     } else if ([action isEqual:@"restore"] && PHFormationReadRestoreSlot(value, NULL)) {
         self.action(@"battleRestoreSlot", value);
         [self finish];
-    } else if ([action isEqual:@"save"] || [action isEqual:@"close"] || [action isEqual:@"apply"]) {
-        id team = [action isEqual:@"apply"] && [value isKindOfClass:NSDictionary.class] ? value[@"team"] : value;
+    } else if ([action isEqual:@"dismiss"]) {
+        [self finish];
+    } else if ([action isEqual:@"applySaved"]) {
         NSString *reason = nil;
-        if (!PHFormationReadTeam(team, NULL, &reason)) { [self send:@"notify" value:reason]; return; }
-        if ([action isEqual:@"apply"] && !PHFormationReadApply(value, NULL, NULL, &reason)) {
+        if (!PHFormationReadApply(value, NULL, NULL, &reason)) {
             [self send:@"notify" value:reason]; return;
         }
-        self.team = team;
-        self.library = PHFormationLibraryUpdatingTeam(self.library, team);
-        self.action(@"formationSave", team);
-        if ([action isEqual:@"apply"]) { self.action(@"battleTeamApply", value); [self finish]; }
-        else if ([action isEqual:@"close"]) [self finish];
-        else [self send:@"notify" value:@"已儲存目前隊伍"];
+        if (![value[@"team"] isEqual:self.team]) { [self send:@"notify" value:@"隊伍有新變更，請先儲存再套用"]; return; }
+        self.action(@"battleTeamApply", value);
+        [self finish];
     }
 }
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction

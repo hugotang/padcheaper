@@ -172,6 +172,30 @@
       candidate.slots[slot][kind] = validateCard(value,isAssist,true);
       return normalize(candidate);
     }
+    function moveSlot(team, source, destination, copy = false) {
+      integer(source,0,5,'來源位置');
+      integer(destination,0,5,'目標位置');
+      const result = normalize(team), original = clone(result.slots[source]);
+      if (!copy) result.slots[source] = clone(result.slots[destination]);
+      result.slots[destination] = original;
+      return result;
+    }
+    function matchesRecipe(slot, recipe) {
+      if (!recipe?.body?.id || !slot?.body?.id) return false;
+      const effective = (value, assist) => {
+        value = validateCard(value,assist,true);
+        if (!value.id) return null;
+        const card = cards.get(value.id);
+        return {id:value.id,level:value.level || card.maxLevel,skill:value.skill || card.maxSkill,
+          awakenings:value.awakenings < 0 ? card.awakenings.length : value.awakenings,
+          superAwakening:assist ? 0 : value.superAwakening < 0 ? card.supers[0] || card.sync || 0 : value.superAwakening,
+          plus:value.plus,latents:value.latents};
+      };
+      try {
+        return ['body','assist'].every(kind=>JSON.stringify(effective(slot[kind],kind==='assist')) ===
+          JSON.stringify(effective(recipe[kind],kind==='assist')));
+      } catch (_) { return false; }
+    }
     function readMember(row, assist, version) {
       if (row === null || row === undefined || Array.isArray(row) && !row.length) return emptyCard(assist);
       if (!Array.isArray(row) || row.length > 7) throw new Error('PADDashFormation 角色格式不支援');
@@ -239,7 +263,7 @@
         (!query || String(c.id) === query || (c.name+' '+c.aliases).toLowerCase().includes(query)));
       return matches.sort((a,b)=>Number(String(b.id)===query)-Number(String(a.id)===query) || b.id-a.id).slice(0,60);
     }
-    return {cards,empty,normalize,selectCard,parseImport,exportLink,payload,search,validateCard,latentCost,
+    return {cards,empty,normalize,selectCard,moveSlot,matchesRecipe,parseImport,exportLink,payload,search,validateCard,latentCost,
       latentName,latentNames,awakeningName,awakeningNames,libraryCapacity,createLibrary,normalizeLibrary,selectedTeam,updateLibraryTeam,
       selectLibraryTeam,addLibraryTeam,deleteLibraryTeam};
   }

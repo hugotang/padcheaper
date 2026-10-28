@@ -1,0 +1,101 @@
+{
+  "source_commit": "493dd14746eb97f275704bef73baa0f8edcf61a8",
+  "platform": "Windows x64 desktop",
+  "depth": 25,
+  "beam": 1000,
+  "random_skyfall": false,
+  "runs": [
+    {
+      "cells": 30,
+      "seconds_including_process_start": 0.0659,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 23,
+      "combo": 6
+    },
+    {
+      "cells": 30,
+      "seconds_including_process_start": 0.0713,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 24,
+      "combo": 6
+    },
+    {
+      "cells": 30,
+      "seconds_including_process_start": 0.0675,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 21,
+      "combo": 6
+    },
+    {
+      "cells": 30,
+      "seconds_including_process_start": 0.0591,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 20,
+      "combo": 6
+    },
+    {
+      "cells": 30,
+      "seconds_including_process_start": 0.0726,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 23,
+      "combo": 6
+    },
+    {
+      "cells": 42,
+      "seconds_including_process_start": 0.0821,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 22,
+      "combo": 8
+    },
+    {
+      "cells": 42,
+      "seconds_including_process_start": 0.0749,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 20,
+      "combo": 8
+    },
+    {
+      "cells": 42,
+      "seconds_including_process_start": 0.076,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 24,
+      "combo": 8
+    },
+    {
+      "cells": 42,
+      "seconds_including_process_start": 0.07,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 16,
+      "combo": 8
+    },
+    {
+      "cells": 42,
+      "seconds_including_process_start": 0.0724,
+      "exit_code": 0,
+      "route_replayed": true,
+      "steps": 21,
+      "combo": 8
+    }
+  ],
+  "all_routes_replayed": true,
+  "median_seconds": 0.0718,
+  "source_probe": {
+    "write_past_three_slot_partition": true,
+    "hash_depends_on_byte_after_42_orbs": true,
+    "hardware_workers": 24,
+    "covered_initial_30_states": 24,
+    "max_combo_first_board": 8,
+    "max_combo_after_setting_same_board_twice": 19
+  },
+  "compiler": "g++ (Rev8, Built by MSYS2 project) 15.2.0",
+  "compiler_flags": "-std=c++17 -O2 -pthread"
+}

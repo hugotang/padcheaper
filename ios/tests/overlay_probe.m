@@ -333,26 +333,63 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
         NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
         [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
-        [self exerciseLibrary];
+        [self exerciseFailedFormationSave];
+    }];
+}
+
+- (void)exerciseFailedFormationSave {
+    NSFileManager *files = NSFileManager.defaultManager;
+    NSString *folder = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
+    NSString *path = [folder stringByAppendingPathComponent:@"formations.json"];
+    NSString *backup = [folder stringByAppendingPathComponent:@"formations.probe-backup.json"];
+    BOOL moved = [files moveItemAtPath:path toPath:backup error:NULL];
+    BOOL blocked = moved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(blocked, @"Save-failure fixture must block only the probe library file");
+    if (!blocked) {
+        if (moved) [files moveItemAtPath:backup toPath:path error:NULL];
+        [self exerciseLibrary]; return;
+    }
+    NSString *script = @"document.getElementById('team-title').value='尚未落盤的隊伍';"
+        "document.getElementById('close').click();const receipt=await PHFormationUI.whenSaved();"
+        "return {ok:receipt.ok,save:PHFormationUI.getSaveState(),title:PHFormationUI.getTeam().title,"
+        "label:document.getElementById('save-status').textContent};";
+    [self.formationWeb callAsyncJavaScript:script arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id value, NSError *failure) {
+        PHProbeCheck(!failure && [value[@"ok"] isEqual:@NO] && [value[@"save"][@"dirty"] boolValue] &&
+            [value[@"title"] isEqual:@"尚未落盤的隊伍"] && [value[@"label"] containsString:@"未完成"],
+            @"A real failed disk write must retain the draft and never acknowledge it as saved");
+        PHProbeCheck(!self.window.isKeyWindow && self.formationWeb.window.isKeyWindow,
+            @"Save-and-close must keep the editor open after a failed write");
+        NSDictionary *status = PHProbeJSON(@"status.json");
+        PHProbeCheck([status[@"formationDraft"][@"title"] isEqual:@"隊伍 A"] &&
+            [status[@"battleState"][@"automaticTeamTitle"] isEqual:@"隊伍 A"],
+            @"Failed saves must not publish a new automatic entry team");
+        BOOL repaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:backup toPath:path error:NULL];
+        PHProbeCheck(repaired, @"Save-failure fixture must restore the original library");
+        NSString *retry = @"document.getElementById('team-title').value='隊伍 A';document.getElementById('save').click();"
+            "return await PHFormationUI.whenSaved();";
+        [self.formationWeb callAsyncJavaScript:retry arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id receipt, NSError *retryError) {
+            PHProbeCheck(!retryError && [receipt[@"ok"] isEqual:@YES], @"Retry must acknowledge the successful canonical write");
+            [self exerciseLibrary];
+        }];
     }];
 }
 
 - (void)exerciseLibrary {
-    NSString *script = @"(()=>{const $=id=>document.getElementById(id),ui=PHFormationUI;"
+    NSString *script = @"const $=id=>document.getElementById(id),ui=PHFormationUI;"
         "const original=ui.getLibrary().selected;"
-        "$('team-title').value='未儲存的副本';$('team-copy').click();const copy=ui.getLibrary().selected;"
+        "$('team-title').value='未儲存的副本';$('team-copy').click();await ui.whenSaved();const copy=ui.getLibrary().selected;"
         "const independent=copy!==original&&ui.getLibrary().teams[0].team.title==='隊伍 A';"
-        "$('team-title').value='隊伍 B';$('skill').value='1';$('skill').dispatchEvent(new Event('change'));$('save').click();"
-        "$('team-new').click();const empty=ui.getLibrary().teams.length===3&&ui.getTeam().slots.every(s=>!s.body.id);"
+        "$('team-title').value='隊伍 B';$('skill').value='1';$('skill').dispatchEvent(new Event('change'));$('save').click();await ui.whenSaved();"
+        "$('team-new').click();await ui.whenSaved();const empty=ui.getLibrary().teams.length===3&&ui.getTeam().slots.every(s=>!s.body.id);"
         "$('team-delete').click();const confirm=!$('delete-confirm').hidden;$('delete-cancel').click();"
         "const cancelled=ui.getLibrary().teams.length===3&&$('delete-confirm').hidden;"
-        "$('team-delete').click();$('delete-yes').click();const deleted=ui.getLibrary().teams.length===2;"
-        "$('team-choice').value=original;$('team-choice').dispatchEvent(new Event('change'));"
+        "$('team-delete').click();$('delete-yes').click();await ui.whenSaved();const deleted=ui.getLibrary().teams.length===2;"
+        "$('team-choice').value=original;$('team-choice').dispatchEvent(new Event('change'));await ui.whenSaved();"
         "const originalSaved=ui.getTeam().title==='隊伍 A'&&ui.getTeam().slots[0].body.skill===0;"
-        "$('team-choice').value=copy;$('team-choice').dispatchEvent(new Event('change'));"
+        "$('team-choice').value=copy;$('team-choice').dispatchEvent(new Event('change'));await ui.whenSaved();"
         "const copySaved=ui.getTeam().title==='隊伍 B'&&ui.getTeam().slots[0].body.skill===1;"
-        "return {independent,empty,confirm,cancelled,deleted,originalSaved,copySaved,error:$('error').textContent};})()";
-    [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
+        "return {independent,empty,confirm,cancelled,deleted,originalSaved,copySaved,error:$('error').textContent};";
+    [self.formationWeb callAsyncJavaScript:script arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id value, NSError *error) {
         PHProbeCheck(!error && [value[@"error"] length] == 0, @"Library management completes through the native bridge");
         for (NSString *key in @[@"independent", @"empty", @"confirm", @"cancelled", @"deleted", @"originalSaved", @"copySaved"])
             PHProbeCheck([value[key] boolValue], [@"Formation library operation failed: " stringByAppendingString:key]);
@@ -365,7 +402,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck([library[@"teams"] count] == 2 && [team[@"title"] isEqual:@"隊伍 B"] &&
         [team[@"slots"][0][@"body"][@"skill"] isEqual:@1] &&
         [library[@"teams"][0][@"team"][@"title"] isEqual:@"隊伍 A"], @"Native library saves retain both independent teams and the selected backup");
-    NSString *script = @"(()=>{window.PHProbeInitialScale=visualViewport.scale;document.getElementById('search').focus();"
+    NSString *script = @"(()=>{document.querySelector('#body-grid .card').click();window.PHProbeInitialScale=visualViewport.scale;document.getElementById('search').focus();"
         "return [...document.querySelectorAll('input,select')].every(e=>parseFloat(getComputedStyle(e).fontSize)>=16);})()";
     [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
         PHProbeCheck(!error && [value boolValue], @"All editor input and select fonts prevent iOS focus zoom");
@@ -385,10 +422,11 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
             NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
             [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
                 [NSString stringWithFormat:@"Documents/%@-formation-focused.png", prefix]] atomically:YES];
-            [self.formationWeb evaluateJavaScript:@"document.activeElement.blur();document.getElementById('close').click()" completionHandler:^(id result, NSError *closeError) {
-                self.formationWeb = nil;
-                PHProbeCheck(!closeError && self.window.isKeyWindow, @"Closing formation restores the scene or legacy guest key window");
-                [self finishPortrait];
+            NSString *close = @"document.activeElement.blur();document.getElementById('editor-done').click();"
+                "document.getElementById('close').click();return await PHFormationUI.whenSaved();";
+            [self.formationWeb callAsyncJavaScript:close arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *closeError) {
+                PHProbeCheck(!closeError && [result[@"ok"] isEqual:@YES], @"Closing the editor waits for its saved receipt");
+                [self performSelector:@selector(finishFormationClose) withObject:nil afterDelay:0.3];
             }];
         }];
     }];
@@ -410,12 +448,25 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
             NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
             [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
                 [NSString stringWithFormat:@"Documents/%@-formation-restart.png", prefix]] atomically:YES];
-            [self.formationWeb evaluateJavaScript:@"document.getElementById('close').click()" completionHandler:^(id result, NSError *closeError) {
-                PHProbeCheck(!closeError && self.window.isKeyWindow, @"Restarted editor restores guest focus when closed");
-                PHProbeReport(@"done");
+            NSString *close = @"document.getElementById('close').click();return await PHFormationUI.whenSaved();";
+            [self.formationWeb callAsyncJavaScript:close arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *closeError) {
+                PHProbeCheck(!closeError && [result[@"ok"] isEqual:@YES], @"Restarted editor waits for save confirmation");
+                [self performSelector:@selector(finishRestartedFormationClose) withObject:nil afterDelay:0.3];
             }];
         }];
     }];
+}
+
+- (void)finishFormationClose {
+    self.formationWeb = nil;
+    PHProbeCheck(self.window.isKeyWindow, @"Closing formation restores the scene or legacy guest key window");
+    [self finishPortrait];
+}
+
+- (void)finishRestartedFormationClose {
+    self.formationWeb = nil;
+    PHProbeCheck(self.window.isKeyWindow, @"Restarted editor restores guest focus when closed");
+    PHProbeReport(@"done");
 }
 
 - (void)finishPortrait {

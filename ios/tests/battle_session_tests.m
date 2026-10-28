@@ -510,9 +510,20 @@ int main(void) {
               [session.snapshot[@"activeCount"] isEqual:@6], "a menu observation arms exactly one immutable six-member entry transaction");
         [session onFrame:frame atTime:100.02]; [session onFrame:frame atTime:100.5];
         Check(engine->entryCalls == 1, "more intro or gameplay frames never recharge the same entry");
+        NSDictionary *acceptedRecipe = session.snapshot[@"members"][0][@"appliedRecipe"];
+        Check([acceptedRecipe[@"body"][@"id"] isEqual:@200] && [acceptedRecipe[@"assist"][@"id"] isEqual:@300] &&
+            [acceptedRecipe[@"body"][@"plus"] isEqual:@[@297, @297, @297]] &&
+            [acceptedRecipe[@"assist"][@"skill"] isEqual:@1],
+            "the visible lease exposes its immutable body, assist and training recipe");
+        [session configureAutomaticLoadouts:automatic mask:63];
+        Check([session.snapshot[@"members"][0][@"appliedRecipe"] isEqual:acceptedRecipe],
+            "selecting a different next-entry team must not relabel the currently applied recipe");
         engine->live.phase = 2; engine->live.entryWindow = false; [session queueRestore];
         for (NSUInteger i = 0; i < 6; ++i) [session onFrame:frame atTime:101+i*0.1];
         Check(engine->fullRestores == 6 && [session.snapshot[@"activeCount"] isEqual:@0], "auto entry installs six independently restorable leases");
+        [session onFrame:frame atTime:101.8];
+        Check([session.snapshot[@"members"][0][@"appliedRecipe"] count] == 0,
+            "restored slots cannot retain an applied recipe label");
         engine->live.present = false; [session onFrame:frame atTime:102];
         engine->live.identity.entryHash[0]++; FreshEntry(engine); [session onFrame:frame atTime:102.01];
         Check(engine->entryCalls == 2 && [session.snapshot[@"automaticCount"] isEqual:@2], "returning to the menu arms the next dungeon once");

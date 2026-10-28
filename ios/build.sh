@@ -50,6 +50,7 @@ cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
+cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -78,7 +79,9 @@ metadata = {
     "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "architecture": "arm64",
     "dylib_version": version,
-    "gui": "floating controls; six-slot formation editor; up to 64 saved teams with selection, copy and delete; 16px input fonts; named awakenings; PADDashFormation import/export",
+    "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
+    "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
+    "automatic_orbs": "feasibility research only; no solver or automatic touch execution is included in this dylib",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",
     "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",
     "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",

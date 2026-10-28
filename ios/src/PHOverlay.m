@@ -437,7 +437,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.guestWindow = guest;
     __weak PHOverlayController *weakSelf = self;
     self.formationController = [[PHFormationController alloc] initWithTeam:self.state[@"formationDraft"]
-        library:self.state[@"formationLibrary"] battle:self.state[@"battleState"] action:self.action close:^{ [weakSelf closeFormation]; }];
+        library:self.state[@"formationLibrary"] battle:self.state[@"battleState"] snapshot:self.snapshot
+        action:self.action close:^{ [weakSelf closeFormation]; }];
     self.formationWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] :
         [[UIWindow alloc] initWithFrame:self.view.window.bounds];
     self.formationWindow.windowLevel = UIWindowLevelAlert + 2;

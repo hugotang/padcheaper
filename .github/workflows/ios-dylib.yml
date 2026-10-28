@@ -54,6 +54,12 @@ jobs:
       - name: Compile arm64 iPhoneOS dylib
         run: bash ios/build.sh
 
+      - name: Verify editor save and mobile interactions
+        run: |
+          npm install --prefix build/editor-ui-deps --no-audit --no-fund playwright@1.64.1
+          node build/editor-ui-deps/node_modules/playwright/cli.js install chromium
+          PH_PLAYWRIGHT_MODULE="$PWD/build/editor-ui-deps/node_modules/playwright" node ios/tests/editor_ui_tests.js
+
       - name: Inspect Mach-O and signature
         run: |
           file build/ios/PADCheaper.dylib
@@ -86,6 +92,7 @@ jobs:
             build/ios-ui-tests/*.png
             build/ios-ui-tests/*.json
             build/ios-ui-tests/*.log
+            build/editor-browser/*.png
           if-no-files-found: ignore
           retention-days: 30
 
@@ -98,7 +105,10 @@ jobs:
           print('Built **PADCheaper.dylib** for arm64 iPhoneOS, minimum iOS 15.0.')
           print()
           print('Download the run artifact, then re-sign with LiveContainer before loading.')
-          print('Version **' + metadata['dylib_version'] + '** includes a six-slot body/weapon editor and a library of up to 64 saved teams, with named awakenings and input focus zoom fixes.')
+          print('Version **' + metadata['dylib_version'] + '** includes a mobile team overview and member sheet, 64 saved teams, full-slot swap/copy, undo, recent cards and pinch zoom.')
+          print('Formation saves require a matching native success receipt. Real disk-write failure preserves the editor draft and the previously selected automatic entry team.')
+          print('Applied labels compare the immutable accepted body/assist/training recipe; switching or editing a team cannot inherit another recipe’s status.')
+          print('Automatic orb movement was researched against pazusoba/core; no solver or touch executor is included in this release.')
           print('Single-player automatic entry retains initial Skill Boost, effective current HP initialization and native team refresh.')
           print('Multiplayer battle writes are disabled: every nonzero multi value and mode 7 are blocked independently of configuration. Detection remains latched until leaving battle.')
           print('Multiplayer probes decode metadata without native getters/digest. Apply, transform, entry, restore, rebind and timer writes are refused; pending work is discarded without native cleanup.')

@@ -35,8 +35,26 @@ typedef struct {
     NSUInteger slot;
     PHBattleIdentity identity;
     PHBattleMember original, applied;
+    PHBattleLoadout loadout;
     PHBattlePolicy policy;
 } PHBattleLease;
+
+// The accepted recipe belongs to the lease, not to the editor's current team.
+// Keep the requested values immutable while the game may transform a member.
+static NSDictionary *RecipeSnapshot(const PHBattleLoadout *v) {
+    if (!v || !v->parameters) return @{};
+    NSMutableArray *latents = [NSMutableArray array];
+    for (NSUInteger i = 0; i < v->latentCount && i < 8; ++i) [latents addObject:@(v->latents[i])];
+    NSNumber *assistPlus = v->assistPlus ? @99 : @0;
+    return @{
+        @"body":@{@"id":@(v->bodyNumber), @"level":@(v->level), @"skill":@(v->skillLevel),
+            @"awakenings":@(v->awakenings), @"superAwakening":@(v->superAwakening),
+            @"plus":@[@(v->plus[0]), @(v->plus[1]), @(v->plus[2])], @"latents":latents},
+        @"assist":@{@"id":@(v->assistNumber), @"level":@(v->assistLevel), @"skill":@(v->assistSkillLevel),
+            @"awakenings":@(v->assistAwakenings), @"superAwakening":@0,
+            @"plus":@[assistPlus, assistPlus, assistPlus], @"latents":@[]}
+    };
+}
 
 static BOOL MatchesLease(const PHBattleMember *expected, const PHBattleMember *m) {
     return expected->providerToken ? m->providerToken == expected->providerToken &&
@@ -246,7 +264,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
                     for (NSUInteger i = 0; i < 6; ++i) if (_entryMask & (1u << i)) {
                         _leases[i] = (PHBattleLease){.active = YES, .visible = YES, .automatic = YES,
                             .slot = i, .identity = _state.identity,
-                            .original = originals[i], .applied = applied[i], .policy = _state.policy};
+                            .original = originals[i], .applied = applied[i], .loadout = _entryLoadouts[i], .policy = _state.policy};
                         ++count;
                     }
                     _applyCount += count; ++_automaticCount; _initialBoost = boost; _entryApplied = YES;
@@ -342,7 +360,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         _pending &= (uint8_t)~(1u << i);
         if (result == PHBattleMutationApplied) {
             _leases[freeLease] = (PHBattleLease){.active = YES, .visible = YES, .slot = slot, .identity = _state.identity,
-                                                .original = original, .applied = applied, .policy = _state.policy};
+                                                .original = original, .applied = applied, .loadout = _loadouts[i], .policy = _state.policy};
             _applyCount++;
             _message = [NSString stringWithFormat:@"位置 %lu 已套用 #%u；共 %lu 名，可分別還原%@", (unsigned long)slot + 1,
                 _loadouts[i].bodyNumber, (unsigned long)[self activeCount], _pending ? @"，繼續套用其餘位置" : @""];
@@ -412,12 +430,16 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     if (_hasState && _state.present) for (NSUInteger slot = 0; slot < 6; ++slot) {
         PHBattleMember m = _state.members[slot];
         BOOL leased = [self hasLeaseAtSlot:slot];
+        NSDictionary *recipe = @{};
+        for (NSUInteger i = 0; i < 6; ++i) if (_leases[i].active && _leases[i].visible && _leases[i].slot == slot &&
+            MatchesLease(&_leases[i].applied, &m)) { recipe = RecipeSnapshot(&_leases[i].loadout); break; }
         [members addObject:@{@"slot": @(slot + 1), @"active": @(m.active), @"readable": @(m.readable),
             @"source": @(Number(m.baseID)), @"current": @(Number(m.catalogID)), @"form": @(Number(m.formID)),
             @"assist": @(Number(m.assistID)), @"nativeID": @(m.catalogID), @"charge": @(m.charge),
             @"sourceTeam": @(m.sourceTeam + 1), @"sourceSlot": @(m.sourceSlot + 1), @"scriptSlot": @(m.scriptSlot),
             @"providerToken": @(m.providerToken), @"rebindToken": @(m.rebindToken),
             @"level": @(m.level), @"skillLevel": @(m.skillLevel), @"leased": @(leased),
+            @"appliedRecipe": recipe,
             @"temporary": @(m.temporaryID != 0 || m.temporaryTurns != 0),
             @"replaceable": @(!_multiplayerDisabled && !leased && m.active && m.readable && m.sourceSlot >= 0 && m.sourceSlot <= 5 &&
                 m.scriptSlot <= 0 && !m.temporaryID && !m.temporaryTurns && Number(m.catalogID) != 0)}];
@@ -427,6 +449,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     NSString *phase = _multiplayerDisabled ? @"multiplayer_disabled" : _fault ? @"fault" : restoring ? @"restore_pending" : _autoWaiting ? @"entry_pending" :
         _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
     return @{@"implemented": @YES, @"phase": phase, @"enabled": @(_frame.enabled),
+        @"present": @(_hasState && _state.present),
         @"singlePlayerOnly": @YES, @"multiplayerDisabled": @(_multiplayerDisabled),
         @"canApply": @(canApply), @"canRestore": @(!_multiplayerDisabled && (activeCount || _pending || _autoWaiting) && !_fault), @"applied": @(activeCount > 0),
         @"activeCount": @(activeCount), @"pendingMask": @(_pending), @"restorePending": @(restoring), @"fault": @(_fault),
