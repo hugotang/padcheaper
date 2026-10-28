@@ -4,11 +4,11 @@
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 
-static BOOL Boolean(id value) {
+static BOOL PHOrbProfileIsBoolean(id value) {
     return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
 }
 static BOOL Integer(id value, NSUInteger maximum) {
-    if (![value isKindOfClass:NSNumber.class] || Boolean(value)) return NO;
+    if (![value isKindOfClass:NSNumber.class] || PHOrbProfileIsBoolean(value)) return NO;
     double n = [value doubleValue];
     return isfinite(n) && n >= 0 && n <= maximum && trunc(n) == n;
 }
@@ -49,7 +49,7 @@ NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
 BOOL PHOrbProfilesValid(id library) {
     if (![library isKindOfClass:NSDictionary.class] || !Keys(library, @[@"schema", @"selected", @"autoSelect", @"profiles"]) ||
         !Integer(library[@"schema"], 1) || ![library[@"schema"] isEqual:@1] || !Identifier(library[@"selected"], YES) ||
-        !Boolean(library[@"autoSelect"]) || ![library[@"profiles"] isKindOfClass:NSArray.class] ||
+        !PHOrbProfileIsBoolean(library[@"autoSelect"]) || ![library[@"profiles"] isKindOfClass:NSArray.class] ||
         [library[@"profiles"] count] > PHOrbMaxProfiles) return NO;
     NSMutableSet *ids = [NSMutableSet set];
     for (id record in library[@"profiles"]) {

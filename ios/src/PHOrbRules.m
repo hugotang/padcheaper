@@ -82,11 +82,11 @@ NSString *PHOrbSurvivalDescription(const PHOrbSnapshot *state) {
     return [parts componentsJoinedByString:@" · "];
 }
 
-static BOOL Boolean(id value) {
+static BOOL PHOrbRuleIsBoolean(id value) {
     return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
 }
 static BOOL Integer(id value, NSInteger minimum, NSInteger maximum) {
-    if (![value isKindOfClass:NSNumber.class] || Boolean(value)) return NO;
+    if (![value isKindOfClass:NSNumber.class] || PHOrbRuleIsBoolean(value)) return NO;
     double number = [value doubleValue];
     return isfinite(number) && trunc(number) == number && number >= minimum && number <= maximum;
 }
@@ -101,13 +101,13 @@ BOOL PHOrbSkillRulesValid(id rules) {
         if (![actual isSubsetOfSet:keys] || ![required isSubsetOfSet:actual]) return NO;
         NSDictionary *rule = PHOrbNormalizedSkillRule(raw);
         if (
-            !Boolean(rule[@"enabled"]) || !Integer(rule[@"slot"], 1, 6) || !Integer(rule[@"monster"], 0, UINT16_MAX) ||
+            !PHOrbRuleIsBoolean(rule[@"enabled"]) || !Integer(rule[@"slot"], 1, 6) || !Integer(rule[@"monster"], 0, UINT16_MAX) ||
             !Integer(rule[@"every"], 1, 999) || !Integer(rule[@"floor"], 0, 999) || !Integer(rule[@"color"], -1, 5) ||
             !Integer(rule[@"below"], 0, PHOrbMaxCells + 1) || ![rule[@"enemy"] isKindOfClass:NSString.class] ||
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
-            !Boolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
+            !PHOrbRuleIsBoolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
             ![rule[@"obstacle"] isKindOfClass:NSString.class] || ![PHOrbObstacleConditions() containsObject:rule[@"obstacle"]] ||
-            !Integer(rule[@"hpAtMost"], 0, 100) || !Boolean(rule[@"required"]) ||
+            !Integer(rule[@"hpAtMost"], 0, 100) || !PHOrbRuleIsBoolean(rule[@"required"]) ||
             ![rule[@"status"] isKindOfClass:NSString.class] || ![PHOrbPlayerConditions() containsObject:rule[@"status"]] ||
             ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] < [rule[@"reserveUntil"] unsignedIntValue])) return NO;
         uint16_t catalogID = 0;
