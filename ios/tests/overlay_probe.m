@@ -10,6 +10,10 @@ static NSMutableArray<NSString *> *PHProbeFailures;
 static UIWindow *PHProbeLegacyOverlay;
 static NSDictionary *PHProbeRestartLibrary;
 
+@interface UIViewController (PHProbeOverlayState)
+- (void)updateWithSnapshot:(NSDictionary *)snapshot;
+@end
+
 static NSDictionary *PHProbeJSON(NSString *name) {
     NSData *data = [NSData dataWithContentsOfFile:[PHProbeRoot stringByAppendingPathComponent:name]];
     return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
@@ -341,6 +345,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     __block NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
         @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
         @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
+        @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
         @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
         @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
     NSDictionary *baseOrbFixture = orbFixture;
@@ -369,7 +374,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
             fabs(CGRectGetHeight(boardView.bounds) - CGRectGetWidth(boardView.bounds) * height / width) < 1,
             @"Expanded board preview uses its actual columns and aspect ratio");
         PHProbeRender(self.window, orbWindow, [NSString stringWithFormat:@"orbs-%lux%lu-preview", (unsigned long)width, (unsigned long)height]);
-        for (NSString *identifier in @[@"padcheaper.orbsClose", @"padcheaper.orbsRead", @"padcheaper.orbsExecute"]) {
+        for (NSString *identifier in @[@"padcheaper.orbsClose", @"padcheaper.orbsRead", @"padcheaper.orbsExecute", @"padcheaper.orbsStart", @"padcheaper.orbsStop"]) {
             UIView *control = PHProbeFind(orbWindow, identifier);
             CGRect bounds = [control convertRect:control.bounds toView:orbWindow];
             PHProbeCheck(control && CGRectContainsRect(orbWindow.bounds, bounds), @"Fixed return and action buttons remain on screen for every board size");
@@ -414,6 +419,53 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalDescription")).text containsString:@"未達成"],
         @"Unmet goals show per-condition progress and cannot dispatch execution or close the preview");
     PHProbeRender(self.window, orbWindow, @"orbs-goals");
+    NSMutableDictionary *ruleFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    ruleFailure[@"ruleMessage"] = @"規則未能儲存，仍保留原設定";
+    orbFixture = @{@"orbState":ruleFailure}; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *ruleEditor = orbController.presentedViewController; [ruleEditor loadViewIfNeeded];
+    [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    NSMutableArray *ruleDraft = [ruleEditor valueForKey:@"draft"];
+    UITextField *ruleFloor = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulefloor0");
+    PHProbeCheck(orbWindow.isKeyWindow && [ruleFloor becomeFirstResponder], @"Skill rule editor accepts numeric keyboard input");
+    ruleFloor.text = @"3"; [ruleFloor sendActionsForControlEvents:UIControlEventEditingChanged]; [ruleFloor resignFirstResponder];
+    [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbController.presentedViewController == ruleEditor && [orbAction isEqual:@"orbsRules"] &&
+        [orbValue count] == 1 && ruleDraft.count && [ruleDraft[0][@"floor"] isEqual:@3] &&
+        [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"未能儲存"],
+        @"Failed skill-rule saves preserve the draft and editor with a fixed error notice");
+    PHProbeRender(self.window, orbWindow, @"orbs-skill-rules");
+    [ruleEditor dismissViewControllerAnimated:NO completion:nil];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+    PHProbeCheck(self.window.isKeyWindow, @"Closing skill rules returns key status to the game");
+    orbFixture = baseOrbFixture; orbAction = nil; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStart") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck([orbAction isEqual:@"orbsStart"] && [overlay.rootViewController valueForKey:@"orbWindow"] == orbWindow,
+        @"Unacknowledged continuous start leaves the page open to show its status");
+    PHOverlaySnapshot originalSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
+    PHOverlayAction originalAction = [overlay.rootViewController valueForKey:@"action"];
+    for (NSString *phase in @[@"autoWaiting", @"solving", @"skillWaiting", @"turnWaiting"]) {
+        NSMutableDictionary *continuous = [baseOrbFixture[@"orbState"] mutableCopy];
+        continuous[@"phase"] = phase; continuous[@"automatic"] = @YES; continuous[@"busy"] = @YES;
+        continuous[@"canStart"] = @NO; continuous[@"canStop"] = @YES; continuous[@"canRead"] = @NO; continuous[@"canExecute"] = @NO;
+        orbFixture = @{@"orbState":continuous}; orbAction = nil; [orbController refresh];
+        [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStop") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        PHProbeCheck([orbAction isEqual:@"orbsStop"] && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") isEnabled] &&
+            ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStart") isEnabled],
+            @"Every automatic phase exposes stop and locks rule editing and duplicate start");
+        NSMutableDictionary *bubbleState = [originalSnapshot() mutableCopy]; bubbleState[@"orbState"] = continuous;
+        [overlay.rootViewController setValue:[^{ return bubbleState; } copy] forKey:@"snapshot"];
+        __block NSString *bubbleAction = nil;
+        [overlay.rootViewController setValue:[^(NSString *action, id value) { bubbleAction = action; } copy] forKey:@"action"];
+        [overlay.rootViewController updateWithSnapshot:bubbleState];
+        PHProbeCheck([bubble.currentTitle containsString:@"停止"], @"Floating button is stop during waiting, solving and skill animation");
+        [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+        PHProbeCheck([bubbleAction isEqual:@"orbsStop"], @"Floating stop acts immediately instead of opening the panel");
+    }
+    [overlay.rootViewController setValue:originalSnapshot forKey:@"snapshot"];
+    [overlay.rootViewController setValue:originalAction forKey:@"action"];
+    [overlay.rootViewController updateWithSnapshot:originalSnapshot()];
     NSMutableDictionary *unsupportedLeader = [baseOrbFixture[@"orbState"] mutableCopy];
     unsupportedLeader[@"phase"] = @"blocked"; unsupportedLeader[@"goalMode"] = @"leaders";
     unsupportedLeader[@"canExecute"] = @NO; unsupportedLeader[@"path"] = @[];

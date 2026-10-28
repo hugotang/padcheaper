@@ -1,5 +1,6 @@
 #import "PHConfiguration.h"
 #import "PHOrbPlanning.h"
+#import "PHOrbRules.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 
@@ -13,7 +14,7 @@ NSDictionary *PHDefaultConfiguration(void) {
     return @{@"schema": @1, @"experimentalWrites": @NO,
              @"features": @{@"skin": @NO, @"bgm": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
-             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[]}};
+             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[]}};
 }
 
 static BOOL PHIsBoolean(id value) {
@@ -42,7 +43,7 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 }
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
-    NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[]} mutableCopy];
+    NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[]} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
     return settings;
@@ -93,7 +94,8 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     id quality = orbs[@"quality"], mode = orbs[@"mode"];
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality]) return NO;
     if (![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
-        !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count])) return NO;
+        !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
+        !PHOrbSkillRulesValid(orbs[@"rules"])) return NO;
     if (configuration[@"battle"] && ![configuration[@"battle"] isKindOfClass:NSDictionary.class]) return NO;
     NSDictionary *battle = PHConfigurationBattleFilters(configuration);
     for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"autoApplyTeam"]) if (!PHIsBoolean(battle[key])) return NO;

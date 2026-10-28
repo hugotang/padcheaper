@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "PHIdentity.h"
 #import "PHConfiguration.h"
+#import "PHOrbRules.h"
 #include <stdio.h>
 
 static NSUInteger failures;
@@ -42,6 +43,7 @@ int main(void) {
         Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
         Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
             [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");
+        Check([PHConfigurationOrbSettings(defaults)[@"rules"] isEqual:@[]], "skills are opt-in rules and continuous running is never a saved switch");
         NSData *serialized = [NSJSONSerialization dataWithJSONObject:defaults options:0 error:NULL];
         Check(PHConfigurationIsValid([NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL]),
               "config retains Boolean types through JSON persistence");
@@ -80,6 +82,15 @@ int main(void) {
             "automatic leader mode retains the saved manual profile and default quality");
         [config removeObjectForKey:@"orbs"];
         config[@"experimentalWrites"] = @YES;
+        Check([PHConfigurationOrbSettings(config)[@"rules"] isEqual:@[]], "old schema 1 configs gain no automatic skill behavior");
+        config[@"orbs"] = @{@"rules":@[PHOrbDefaultSkillRule()]};
+        serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+        NSDictionary *skillConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
+        Check(PHConfigurationIsValid(skillConfig) && [PHConfigurationOrbSettings(skillConfig)[@"rules"] isEqual:@[PHOrbDefaultSkillRule()]],
+            "rule settings persist without modifying search quality or saved goals");
+        config[@"orbs"] = @{@"rules":@[@{@"slot":@1}]};
+        Check(!PHConfigurationIsValid(config), "partial malformed rules are rejected instead of becoming unconditional casts");
+        [config removeObjectForKey:@"orbs"];
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO};
         config[@"apiHosts"] = @[@"example.invalid"];
         config[@"apiPaths"] = @[@"/api.php"];

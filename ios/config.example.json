@@ -20,7 +20,8 @@
   "orbs": {
     "quality": "balanced",
     "mode": "combo",
-    "goals": []
+    "goals": [],
+    "rules": []
   },
   "apiHosts": [],
   "apiPaths": []

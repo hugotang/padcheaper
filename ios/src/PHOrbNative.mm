@@ -106,6 +106,9 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     if (!hashPresent) return false;
     state.minErase = shape[4]; state.freeMovement = shape[5];
     state.board.width = shape[0]; state.board.height = shape[1];
+    // Skills may remove unmatchable/locked/special orbs. Their window is
+    // separate from ordinary drag eligibility, never a relaxation of it.
+    state.automation.window = source == 0 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
     // Release may enter the resolve phase and start removing orb objects in
     // this same native frame. Identity + drag metadata is sufficient to
     // acknowledge release; a resolving board must never be used for a route.
@@ -173,6 +176,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     return true;
 }
 
+#include "PHOrbSkills.inc"
+
 // sub_10006924C is a pure affine raw-to-frame transform. Invert its measured
 // basis; never assume UIKit screen points equal the native 640-wide board.
 bool RawPoint(uintptr_t header, float x, float y, float *raw) {
@@ -195,6 +200,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 }
 
 @interface PHNativeOrbEngine : NSObject <PHOrbEngine>
+- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header;
+- (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header;
 @end
 @implementation PHNativeOrbEngine {
     Manager _manager;
@@ -213,6 +220,67 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     if (_multiplayerDisabled && reason) *reason = @"本場曾進入多人；離開關卡後才可讀盤";
     return YES;
+}
+- (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (![self read:state frame:frame reason:reason]) return NO;
+    if (!state->present || !state->valid || state->multiplayerDisabled) return YES;
+    if (!ReadAutomationFields(*state)) {
+        if (reason) *reason = @"技能／敵人資料未通過讀取校驗，已停止";
+        return NO;
+    }
+    return YES;
+}
+- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
+    return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, -1) & 1) != 0;
+}
+- (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
+    reinterpret_cast<void (*)(uintptr_t, uintptr_t)>(header + PHOrbStartSkillRVA)(game, member);
+}
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !expected || slot >= 6 || !frame.ready || !frame.enabled)
+        return PHOrbSkillRejected;
+    PHOrbSnapshot live{};
+    if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
+    if (!PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+        !PHOrbSameAutomation(expected, &live) || live.phase != 2 || !live.settled || live.dragged ||
+        !PHInputIsQuiet(&live.input)) {
+        if (reason) *reason = @"施放前盤面、隊員或戰鬥狀態已改變，已停止";
+        return PHOrbSkillRejected;
+    }
+    if (!CheckCode(frame.header, reason)) return PHOrbSkillRejected;
+    const auto &member = live.automation.members[slot];
+    if (member.overridden) {
+        if (reason) *reason = @"此位置保留了手動技能選項，未自動改動選擇";
+        return PHOrbSkillUnavailable;
+    }
+    if (!live.automation.window || live.automation.busy || !member.active || member.bound || member.state ||
+        live.automation.skillUses >= 255) {
+        if (reason) *reason = @"技能目前不可使用";
+        return PHOrbSkillUnavailable;
+    }
+    const uintptr_t address = live.identity.impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
+    // Native can-use updates skill-stage and assist selection caches. It is
+    // deliberately called only here, after every read-only gate, never while
+    // polling. Selector -1 preserves the game's base/charged-assist choice.
+    BOOL available = [self nativeCanUseGame:live.identity.game member:address header:frame.header];
+    PHOrbSnapshot checked{};
+    if (![self readAutomation:&checked frame:frame reason:reason] || checked.multiplayerDisabled) return PHOrbSkillRejected;
+    if (!checked.automation.window || checked.automation.busy || checked.dragged || !checked.settled ||
+        !PHInputIsQuiet(&checked.input) || !PHOrbSameAutomation(&live, &checked)) {
+        if (reason) *reason = @"技能檢查後狀態已改變，未啟動技能";
+        return PHOrbSkillRejected;
+    }
+    if (!available) { if (reason) *reason = @"冷卻尚未完成或遊戲判定技能無效"; return PHOrbSkillUnavailable; }
+    [self nativeStartGame:live.identity.game member:address header:frame.header];
+    PHOrbSnapshot accepted{};
+    if (![self readAutomation:&accepted frame:frame reason:reason] || accepted.multiplayerDisabled ||
+        !PHBattleSameIdentity(&live.identity, &accepted.identity) || accepted.phase != 22 ||
+        accepted.automation.members[slot].state != 2) {
+        if (reason) *reason = @"遊戲未確認技能啟動，已停止；請檢查遊戲畫面";
+        return PHOrbSkillRejected;
+    }
+    return PHOrbSkillStarted;
 }
 - (BOOL)stageCell:(NSUInteger)cell down:(BOOL)down beginning:(BOOL)beginning
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {

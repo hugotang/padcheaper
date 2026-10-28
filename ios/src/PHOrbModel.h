@@ -32,6 +32,27 @@ typedef struct {
     int16_t x[PHOrbMaxCells], y[PHOrbMaxCells];
 } PHOrbBoard;
 
+enum {
+    PHOrbEnemyDamageAbsorb = 1, PHOrbEnemyAttributeAbsorb = 2,
+    PHOrbEnemyDamageVoid = 4, PHOrbEnemyComboAbsorb = 8,
+    PHOrbMaxSkillRules = 12
+};
+
+typedef struct {
+    uint16_t number, charge;
+    uint8_t state;
+    bool active, bound, overridden;
+} PHOrbSkillMember;
+
+// Populated only by the explicit automation reader. Ordinary previews do not
+// call skill getters (some native getters lazily mutate cooldown caches).
+typedef struct {
+    PHOrbSkillMember members[6];
+    uint16_t skillUses;
+    uint8_t enemyEffects, playerBypass, activeEnemies;
+    bool valid, window, busy, enemiesKnown, boardKnown;
+} PHOrbAutomationState;
+
 typedef struct {
     PHBattleIdentity identity;
     PHOrbBoard board;
@@ -42,6 +63,7 @@ typedef struct {
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
     uint8_t fps, minErase, freeMovement;
     bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid;
+    PHOrbAutomationState automation;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -61,6 +83,7 @@ bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
+bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 
 #ifdef __cplusplus
 }

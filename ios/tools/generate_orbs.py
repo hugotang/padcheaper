@@ -10,11 +10,18 @@ def generate(manifest):
     if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.0-106878':
         raise ValueError('Unsupported orb target')
     if manifest['scope'] != {'multiplayer': False, 'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': 3,
-                             'continuous': False, 'input': 'scoped-private-manager'}:
+                             'continuous': True, 'input': 'scoped-private-manager',
+                             'goal_modes': ['combo', 'manual', 'leaders'], 'max_goals': 6,
+                             'shape_wave': 'first-removal-only', 'leader_planning': 'minimum-board-conditions-only',
+                             'full_leader_activation': False, 'skill_rules': 'ordered-conjunctive-single-player',
+                             'max_skill_rules': 12, 'skill_entry': 'native-confirmed-current-skill',
+                             'enemy_conditions': ['damage_absorb', 'attribute_absorb', 'damage_void', 'combo_absorb']}:
         raise ValueError('Unreviewed orb scope')
     required = {'PHOrbInitRVA', 'PHOrbGeometryRVA', 'PHOrbNearestRVA', 'PHOrbPlayerInputRVA',
                 'PHOrbSwapRVA', 'PHOrbInputUpdateRVA', 'PHOrbInputGetRVA', 'PHOrbInputTransformRVA',
-                'PHOrbInputHistoryRVA', 'PHOrbFlagsRVA'}
+                'PHOrbInputHistoryRVA', 'PHOrbFlagsRVA', 'PHOrbCanUseSkillRVA', 'PHOrbStartSkillRVA',
+                'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
+                'PHOrbSkillEffectsRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',

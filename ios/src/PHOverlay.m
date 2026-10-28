@@ -246,7 +246,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
         [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
         self.battleRestore, self.battleLabel,
-        [self button:@"自動轉珠 · 讀盤／預覽" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"],
+        [self button:@"自動轉珠 · 連續／技能規則" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"],
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
         [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
@@ -510,7 +510,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.bubble.layer.borderColor = color.CGColor;
     self.bubble.accessibilityLabel = [NSString stringWithFormat:@"PADCheaper 已載入，%@，點擊開啟面板", shortStatus];
     if ([state[@"orbState"][@"busy"] boolValue]) {
-        [self.bubble setTitle:@"停止\n轉珠" forState:UIControlStateNormal];
+        [self.bubble setTitle:[state[@"orbState"][@"automatic"] boolValue] ? @"停止\n自動" : @"停止\n轉珠" forState:UIControlStateNormal];
         [self.bubble setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];
         self.bubble.layer.borderColor = UIColor.systemRedColor.CGColor;
         self.bubble.accessibilityLabel = @"停止自動轉珠";

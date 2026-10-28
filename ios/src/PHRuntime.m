@@ -52,6 +52,7 @@ static PHTimer *PHTimerTracker;
 static PHOrbSession *PHOrbTracker;
 static NSString *PHOrbQualityNotice;
 static NSString *PHOrbGoalNotice;
+static NSString *PHOrbRuleNotice;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
@@ -746,6 +747,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     orbs[@"qualityMessage"] = PHOrbQualityNotice ?: @"";
     orbs[@"canSetGoals"] = orbs[@"canSetQuality"];
     orbs[@"goalMessage"] = PHOrbGoalNotice ?: @"";
+    orbs[@"canSetRules"] = orbs[@"canSetQuality"];
+    orbs[@"ruleMessage"] = PHOrbRuleNotice ?: @"";
     NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
@@ -910,6 +913,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nContinuous orbs: %@ / turn %@ / moves %@ / skills %@ / skill window %@\nSkill rules: %@\nSkill log: %@\nEnemy effects: %@ / player bypass: %@",
+        orbs[@"automatic"], orbs[@"autoTurn"], orbs[@"autoMoves"], orbs[@"autoSkills"], orbs[@"skillWindow"],
+        orbs[@"rules"], orbs[@"automationLog"], orbs[@"enemyEffects"], orbs[@"playerBypass"]];
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
@@ -945,6 +951,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqual:@"orbsStart"]) {
+        [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
+        [PHOrbTracker queueAutomatic]; return;
+    }
     if ([action isEqual:@"orbsRead"]) {
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
         [PHOrbTracker queueRead]; return;
@@ -1034,23 +1044,31 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHFeedback = @"設定無法儲存，請按「重新檢查」。";
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = PHFeedback;
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = PHFeedback;
+        if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = PHFeedback;
         return;
     }
     PHReloadConfig();
     NSMutableDictionary *next = [PHConfig mutableCopy];
-    if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"]) {
+    if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) return;
         NSMutableDictionary *settings = [PHConfigurationOrbSettings(next) mutableCopy];
         if ([action isEqual:@"orbsQuality"]) {
             if (![value isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:value]) return;
             settings[@"quality"] = value;
+        } else if ([action isEqual:@"orbsRules"]) {
+            if (![value isKindOfClass:NSArray.class]) return;
+            settings[@"rules"] = value;
         } else {
             if (![value isKindOfClass:NSDictionary.class] || !value[@"mode"] || !value[@"goals"]) return;
             settings[@"mode"] = value[@"mode"]; settings[@"goals"] = value[@"goals"];
         }
         next[@"orbs"] = settings;
-        if (!PHConfigurationIsValid(next)) { PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。"; return; }
+        if (!PHConfigurationIsValid(next)) {
+            if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查位置、角色編號、樓層及缺珠條件。";
+            else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
+            return;
+        }
     } else if ([action isEqualToString:@"adoptEndpoint"]) {
         NSString *host = PHObservedEndpoint[@"host"], *path = PHObservedEndpoint[@"path"];
         if (![host isKindOfClass:NSString.class] || !host.length || ![path isKindOfClass:NSString.class] || ![path hasPrefix:@"/"]) {
@@ -1084,7 +1102,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHConfig = next;
         PHConfigValid = YES;
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
-        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil;
+        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil;
         PHUnlockDataReady = NO;
         PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
     } else {
@@ -1093,6 +1111,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHFeedback = PHStorageMessage;
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = @"品質未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = @"目標未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
+        if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
     }
     PHLastStatus = 0;
 }

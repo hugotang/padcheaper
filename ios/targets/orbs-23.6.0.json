@@ -6,15 +6,41 @@
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
     "multiplayer": false,
-    "dimensions": [[6, 5], [7, 6], [5, 4]],
+    "dimensions": [
+      [
+        6,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        5,
+        4
+      ]
+    ],
     "min_erase": 3,
-    "continuous": false,
+    "continuous": true,
     "input": "scoped-private-manager",
-    "goal_modes": ["combo", "manual", "leaders"],
+    "goal_modes": [
+      "combo",
+      "manual",
+      "leaders"
+    ],
     "max_goals": 6,
     "shape_wave": "first-removal-only",
     "leader_planning": "minimum-board-conditions-only",
-    "full_leader_activation": false
+    "full_leader_activation": false,
+    "skill_rules": "ordered-conjunctive-single-player",
+    "max_skill_rules": 12,
+    "skill_entry": "native-confirmed-current-skill",
+    "enemy_conditions": [
+      "damage_absorb",
+      "attribute_absorb",
+      "damage_void",
+      "combo_absorb"
+    ]
   },
   "user_report": {
     "date": "2026-10-28",
@@ -31,7 +57,25 @@
     "PHOrbSpecialDragOffset": "0xb7ea6",
     "PHOrbDialogOffset": "0xbe9c8",
     "PHOrbMoveBlockedOffset": "0x9299e",
-    "PHOrbTransformEnabledRVA": "0x1b4e842"
+    "PHOrbTransformEnabledRVA": "0x1b4e842",
+    "PHOrbSkillUsesOffset": "0xb5048",
+    "PHOrbEnemyCountOffset": "0xbdc80",
+    "PHOrbEnemyOffset": "0xb7f38",
+    "PHOrbEnemyStride": "0xba8",
+    "PHOrbSkillMemberStateOffset": "0x4c8",
+    "PHOrbSkillOverrideOffset": "0x4c4",
+    "PHOrbSkillBindOffset": "0x48",
+    "PHOrbSkillSealOffset": "0xb43d8",
+    "PHOrbSkillSealExtraOffset": "0xb4a78",
+    "PHOrbSkillSpecialOffset": "0xb63d2",
+    "PHOrbSkillTimedOffset": "0xb7ea6",
+    "PHOrbSkillMovementOffset": "0xb3d58",
+    "PHOrbSkillSpecialModeOffset": "0xb3938",
+    "PHOrbSkillLimitOffset": "0xb3a00",
+    "PHOrbSkillLimitRemainingOffset": "0xb4fd0",
+    "PHOrbSkillDungeonRulesOffset": "0xb0f20",
+    "PHOrbTutorialIndexRVA": "0x1b5a770",
+    "PHOrbTutorialTableRVA": "0x13223e8"
   },
   "guards": [
     {
@@ -113,6 +157,62 @@
       "length": 64,
       "bytes": "ffc301d1e923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa193840f938d34291081b537908651a53083d00131f050071",
       "sha256": "848804a442eb414fda1358cbd19c8a0d1a4dd2d008e6e17885b4f0cff6664eab"
+    },
+    {
+      "name": "PHOrbCanUseSkillRVA",
+      "va": "0x1005c4070",
+      "rva": "0x5c4070",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f60302aaf30301aaf40300aa09feff97a00d0034606205914eb3fe97e20300aa6082139101008052",
+      "sha256": "50ba9fe830a3cc02344f6d5606f7b8768d8f021d7f54866058384235c372f88b"
+    },
+    {
+      "name": "PHOrbStartSkillRVA",
+      "va": "0x1005cc374",
+      "rva": "0x5cc374",
+      "length": 64,
+      "bytes": "ffc306d1fc6f16a9f85f17a9f65718a9f44f19a9fd7b1aa9fd830691f40301aa285a00d008b142f9080140f9a8831bf8083840f9092787526901a072096969b8",
+      "sha256": "5a13a7a1e0febdcf4fed3167cdffa62dd8a944ae9b56590fe887428e0e6ec992"
+    },
+    {
+      "name": "PHOrbSkillUpdateRVA",
+      "va": "0x1005cce18",
+      "rva": "0x5cce18",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa173e82527701a072d4008052783a40f91603178bc0e20291",
+      "sha256": "44b5a4a655737d24724619c19778446a1e821ff045db822f4ee389ba6257ee84"
+    },
+    {
+      "name": "PHOrbBattleUpdateRVA",
+      "va": "0x1005b4edc",
+      "rva": "0x5b4edc",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f30300aa5cd3ea97f40300aa2e37fe97e0000034683a40f949dc8f526901a0720a6969784a791512",
+      "sha256": "2618617c05fddd3590d09d05e08ada2838f11d39c8dc95aca9562ba10dd3b9a9"
+    },
+    {
+      "name": "PHOrbEnemyDamageRVA",
+      "va": "0x100562f74",
+      "rva": "0x562f74",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f50307aaf40306aaf30305aaf90304aafa0303aaf80302aaf60301aaf70300aa083840f9",
+      "sha256": "46be76f61baef297518f93e1ea485cc70c3cf76a137f154540d8401cbceb4e01"
+    },
+    {
+      "name": "PHOrbMemberTapRVA",
+      "va": "0x1005afa74",
+      "rva": "0x5afa74",
+      "length": 64,
+      "bytes": "ff4302d1e923026dfc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291fb0300aa73e8ea97e00300f9e0031baaa7cdff97733b40f968ce4291",
+      "sha256": "e7be4d3617bce3c03de9092d850e04c5d1de5ffd590c0ce938fb8255d446578c"
+    },
+    {
+      "name": "PHOrbSkillEffectsRVA",
+      "va": "0x1005cb714",
+      "rva": "0x5cb714",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f40301aaf30300aa39ac00d039c31e9108948f52e818a072296b68b8",
+      "sha256": "7148fce6c662763f488f857278dc50c95a9c886a7ace3c4786d271007b51186c"
     }
   ]
 }

@@ -41,6 +41,22 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         (!a->leadersValid || (a->leaderNumbers[0] == b->leaderNumbers[0] && a->leaderNumbers[1] == b->leaderNumbers[1]));
 }
 
+bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
+    if (!PHOrbSameTurn(a, b) || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
+        a->moves != b->moves || !PHOrbSameBoard(&a->board, &b->board)) return false;
+    const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
+    if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
+        x->skillUses != y->skillUses || x->enemiesKnown != y->enemiesKnown || x->boardKnown != y->boardKnown ||
+        x->enemyEffects != y->enemyEffects || x->playerBypass != y->playerBypass ||
+        x->activeEnemies != y->activeEnemies) return false;
+    for (unsigned i = 0; i < 6; ++i) {
+        const PHOrbSkillMember *m = &x->members[i], *n = &y->members[i];
+        if (m->active != n->active || m->number != n->number || m->charge != n->charge ||
+            m->state != n->state || m->bound != n->bound || m->overridden != n->overridden) return false;
+    }
+    return true;
+}
+
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {
     if (!goals || goals->count > PHOrbMaxGoals) return false;
     for (unsigned i = 0; i < goals->count; ++i) {

@@ -1,8 +1,10 @@
 #import "PHOrbSession.h"
+#import "PHOrbRules.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <utility>
+#include <vector>
 
 static unsigned failures;
 static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr, "FAIL: %s\n", message); ++failures; } }
@@ -13,6 +15,9 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     NSUInteger stages, releases, cell, reads;
     BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
+    BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill;
+    NSUInteger skillFrames, activeSkill, skillAttempts;
+    std::vector<NSUInteger> skillOrder;
 }
 - (instancetype)initWithWidth:(unsigned)width height:(unsigned)height;
 - (void)nativeFrame;
@@ -25,6 +30,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.inputManager = 4; live.present = live.valid = live.settled = live.ordinary = true;
         live.phase = 2; live.input.valid = true; live.minErase = 3; live.freeMovement = 1;
         live.remainingFrames = 300; live.fps = 60; live.board.width = uint8_t(width); live.board.height = uint8_t(height);
+        live.automation.valid = live.automation.window = live.automation.enemiesKnown = live.automation.boardKnown = true;
+        live.automation.activeEnemies = 1;
+        for (unsigned i = 0; i < 6; ++i) {
+            live.automation.members[i].active = true; live.automation.members[i].number = uint16_t(100 + i);
+            live.automation.members[i].charge = 5;
+        }
         uint32_t random = 731;
         for (unsigned i = 0; i < width * height; ++i) {
             random = random * 1664525u + 1013904223u;
@@ -40,6 +51,20 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!live.present) multiplayerLatched = NO;
     if (live.multiplayerDisabled) multiplayerLatched = YES;
     *state = live; state->multiplayerDisabled |= multiplayerLatched; return YES;
+}
+- (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    return [self read:state frame:frame reason:reason];
+}
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!frame.ready || !frame.enabled || slot >= 6 || staged || multiplayerLatched || live.multiplayerDisabled ||
+        !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+        !PHOrbSameAutomation(&live, expected) || live.phase != 2 || !PHInputIsQuiet(&live.input)) return PHOrbSkillRejected;
+    ++skillAttempts;
+    if (unavailableSkills[slot]) return PHOrbSkillUnavailable;
+    Check(!live.dragged && !staged && !live.automation.busy, "skills and orb gestures never overlap");
+    activeSkill = slot; skillOrder.push_back(slot); skillFrames = 4;
+    live.phase = 22; live.automation.members[slot].state = 2; live.automation.busy = true;
+    return PHOrbSkillStarted;
 }
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -57,6 +82,15 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     staged = NO; return YES;
 }
 - (void)nativeFrame {
+    if (skillFrames) {
+        Check(!staged, "no synthetic input is staged during a native skill");
+        if (hangSkill || --skillFrames) return;
+        live.phase = 2; live.automation.members[activeSkill].state = 0; live.automation.busy = false;
+        if (!failSkillAck) ++live.automation.skillUses;
+        if (hasteFirst) unavailableSkills[0] = NO;
+        if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
+        return;
+    }
     if (!staged) return;
     if (!down) { live.dragged = 0; live.settled = true; live.phase = 3; return; }
     if (beginning) {
@@ -101,6 +135,8 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
     for (unsigned i = 0; i < 100 && !engine->live.dragged; ++i) Tick(session, engine, Frame());
     Check(engine->live.dragged != 0, "native accepted start fixture");
 }
+
+#include "orb_automation_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -329,7 +365,8 @@ int main() {
         [session queueStop:@"cancel worker"];
         for (unsigned i = 0; i < 400; ++i) Tick(session, engine, Frame());
         Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->stages == 0, "late solver completion cannot revive canceled intent");
-        std::printf("Orb session tests: %s (preview, execute once, manual/background/multi, stale results, acknowledgment and faults)\n", failures ? "FAILED" : "passed");
+        AutomationSessionTests();
+        std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;
 }

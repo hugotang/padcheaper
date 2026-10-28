@@ -1,5 +1,7 @@
 #import "PHOrbController.h"
 #import "PHOrbPlanning.h"
+#import "PHOrbRules.h"
+#import "PHOrbRuleEditor.h"
 #include "PHOrbModel.h"
 #include <math.h>
 
@@ -258,6 +260,9 @@
 @property(nonatomic, strong) UIButton *readButton;
 @property(nonatomic, strong) UIButton *executeButton;
 @property(nonatomic, strong) UIButton *stopButton;
+@property(nonatomic, strong) UIButton *startButton;
+@property(nonatomic, strong) UIButton *editRules;
+@property(nonatomic, strong) UILabel *ruleDescription;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
@@ -292,7 +297,7 @@
     [self.view addSubview:scroll];
     UILabel *title = [self label:26 weight:UIFontWeightBold]; title.text = @"自動轉珠";
     UILabel *subtitle = [self label:14 weight:UIFontWeightRegular];
-    subtitle.text = @"單人 · 6×5／7×6／5×4 · 每次一條路徑";
+    subtitle.text = @"單人 · 6×5／7×6／5×4 · 連續轉珠與技能規則";
     self.status = [self label:17 weight:UIFontWeightSemibold]; self.status.accessibilityIdentifier = @"padcheaper.orbsStatus";
     self.boardView = [PHOrbBoardView new];
     self.boardView.layer.cornerRadius = 12; self.boardView.clipsToBounds = YES;
@@ -313,9 +318,11 @@
     self.stopButton = [self button:@"停止" selector:@selector(stop) identifier:@"padcheaper.orbsStop"];
     self.stopButton.tintColor = UIColor.systemRedColor;
     [self.stopButton.widthAnchor constraintEqualToConstant:72].active = YES;
+    self.startButton = [self button:@"開始連續轉珠" selector:@selector(startAutomatic) identifier:@"padcheaper.orbsStart"];
+    self.editRules = [self button:@"編輯自動技能規則" selector:@selector(editSkillRules) identifier:@"padcheaper.orbsRuleEdit"];
+    self.ruleDescription = [self label:13 weight:UIFontWeightRegular];
+    self.ruleDescription.accessibilityIdentifier = @"padcheaper.orbsRuleDescription";
     UILabel *qualityTitle = [self label:15 weight:UIFontWeightMedium]; qualityTitle.text = @"求路品質";
-    UIStackView *qualityRow = [[UIStackView alloc] initWithArrangedSubviews:@[qualityTitle, self.stopButton]];
-    qualityRow.axis = UILayoutConstraintAxisHorizontal; qualityRow.spacing = 12;
     self.qualityControl = [[UISegmentedControl alloc] initWithItems:@[@"快速", @"均衡", @"深入"]];
     self.qualityControl.accessibilityIdentifier = @"padcheaper.orbsQuality";
     self.qualityControl.accessibilityLabel = @"求路品質";
@@ -333,19 +340,23 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"先核對珠色與起點。拖動滑桿可看每一步；執行時回到遊戲，浮動按鈕會變成「停止」。\n\n支援六種基本珠及強化珠；多人、轉轉、不可消與特殊消除規則會停用。預計 Combo 不含天降。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n可先用「讀盤並求路／執行一次」核對。盤面需符合所選目標；技能處理後仍有未支援的珠型、轉轉或特殊規則會停止。預計 Combo 不含天降。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
     header.axis = UILayoutConstraintAxisHorizontal; header.spacing = 12; header.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:header];
-    UIStackView *actions = [[UIStackView alloc] initWithArrangedSubviews:@[self.readButton, self.executeButton]];
-    actions.axis = UILayoutConstraintAxisHorizontal; actions.spacing = 10;
-    actions.distribution = UIStackViewDistributionFillEqually; actions.translatesAutoresizingMaskIntoConstraints = NO;
+    UIStackView *manualActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.readButton, self.executeButton]];
+    manualActions.axis = UILayoutConstraintAxisHorizontal; manualActions.spacing = 10;
+    manualActions.distribution = UIStackViewDistributionFillEqually;
+    UIStackView *autoActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.startButton, self.stopButton]];
+    autoActions.spacing = 10;
+    UIStackView *actions = [[UIStackView alloc] initWithArrangedSubviews:@[autoActions, manualActions]];
+    actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
-    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, qualityRow, self.qualityControl,
+    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, qualityTitle, self.qualityControl,
         self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
-        self.status, self.boardView, self.slider, self.position, self.availability, note]];
+        self.editRules, self.ruleDescription, self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
@@ -383,6 +394,17 @@
     self.status.text = state[@"message"] ?: @"等待初始化";
     self.readButton.enabled = [state[@"canRead"] boolValue]; self.executeButton.enabled = [state[@"canExecute"] boolValue];
     self.stopButton.enabled = [state[@"canStop"] boolValue];
+    self.startButton.enabled = [state[@"canStart"] boolValue];
+    self.editRules.enabled = [state[@"canSetRules"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSMutableArray *ruleLines = [NSMutableArray array];
+    for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];
+    if (!ruleLines.count) [ruleLines addObject:@"尚無技能規則；開始後只會連續轉珠。"];
+    if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
+        state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
+    [ruleLines addObjectsFromArray:state[@"automationLog"] ?: @[]];
+    NSString *ruleMessage = state[@"ruleMessage"];
+    self.ruleDescription.text = ruleMessage.length ? ruleMessage : [ruleLines componentsJoinedByString:@"\n"];
+    self.ruleDescription.textColor = ruleMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSArray *qualities = @[@"fast", @"balanced", @"thorough"];
     NSUInteger quality = [qualities indexOfObject:state[@"quality"] ?: @"balanced"];
     if (quality == NSNotFound) quality = 1;
@@ -491,6 +513,27 @@
 - (void)execute {
     if (![self.state[@"canExecute"] boolValue]) return;
     self.action(@"orbsExecute", self.state[@"generation"]); self.close();
+}
+- (void)startAutomatic {
+    if (![self.state[@"canStart"] boolValue]) return;
+    self.action(@"orbsStart", nil); [self refresh];
+    if ([self.state[@"automatic"] boolValue]) self.close();
+}
+- (void)editSkillRules {
+    if (!self.editRules.enabled || self.presentedViewController) return;
+    __weak PHOrbController *weakSelf = self;
+    PHOrbRuleEditor *editor = [[PHOrbRuleEditor alloc] initWithRules:self.state[@"rules"] ?: @[] save:^NSString *(NSArray *rules) {
+        PHOrbController *controller = weakSelf;
+        if (!controller) return @"頁面已關閉，請重新開啟後儲存。";
+        controller.action(@"orbsRules", rules); [controller refresh];
+        NSDictionary *state = controller.state;
+        if ([state[@"canSetRules"] boolValue] && [state[@"rules"] isEqual:rules]) return nil;
+        NSString *message = state[@"ruleMessage"];
+        return message.length ? message : @"規則尚未確認儲存，請稍後重試。";
+    }];
+    editor.modalPresentationStyle = UIModalPresentationPageSheet;
+    editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)stop { self.action(@"orbsStop", nil); [self refresh]; }
 - (void)closePage { self.close(); }

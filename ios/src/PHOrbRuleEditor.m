@@ -1,0 +1,193 @@
+#import "PHOrbRuleEditor.h"
+#import "PHOrbRules.h"
+
+@interface PHOrbRuleEditor ()
+@property(nonatomic, strong) NSMutableArray<NSMutableDictionary *> *draft;
+@property(nonatomic, copy) NSString *(^saveRules)(NSArray *);
+@property(nonatomic, strong) UIStackView *rows;
+@property(nonatomic, strong) UILabel *notice;
+@property(nonatomic, weak) UIWindow *previousWindow;
+@property(nonatomic, weak) UIWindow *editorWindow;
+- (void)rebuild;
+@end
+
+@implementation PHOrbRuleEditor
+- (instancetype)initWithRules:(NSArray *)rules save:(NSString *(^)(NSArray *))save {
+    if ((self = [super init])) {
+        _draft = [NSMutableArray array];
+        for (NSDictionary *rule in rules) [_draft addObject:rule.mutableCopy];
+        _saveRules = [save copy];
+    }
+    return self;
+}
+- (UILabel *)label:(NSString *)text {
+    UILabel *label = [UILabel new]; label.text = text; label.numberOfLines = 0;
+    label.textColor = UIColor.labelColor; label.font = [UIFont systemFontOfSize:15]; return label;
+}
+- (UIButton *)button:(NSString *)title {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButtonConfiguration *config = [UIButtonConfiguration tintedButtonConfiguration]; config.title = title;
+    button.configuration = config; [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    return button;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    self.view.backgroundColor = UIColor.systemBackgroundColor; self.view.accessibilityIdentifier = @"padcheaper.orbsRuleEditor";
+    UILabel *title = [self label:@"自動技能規則"]; title.font = [UIFont boldSystemFontOfSize:22];
+    UIButton *cancel = [self button:@"取消"]; [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
+    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]]; header.spacing = 12;
+    header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
+    UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO;
+    scroll.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive; [self.view addSubview:scroll];
+    self.rows = [UIStackView new]; self.rows.axis = UILayoutConstraintAxisVertical; self.rows.spacing = 16;
+    self.rows.translatesAutoresizingMaskIntoConstraints = NO; [scroll addSubview:self.rows];
+    self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;
+    self.notice.accessibilityIdentifier = @"padcheaper.orbsRuleNotice";
+    UIButton *save = [self button:@"儲存規則"]; save.accessibilityIdentifier = @"padcheaper.orbsRuleSave";
+    [save addTarget:self action:@selector(save) forControlEvents:UIControlEventTouchUpInside];
+    UIStackView *footer = [[UIStackView alloc] initWithArrangedSubviews:@[self.notice, save]];
+    footer.axis = UILayoutConstraintAxisVertical; footer.spacing = 8; footer.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:footer];
+    UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
+    [NSLayoutConstraint activateConstraints:@[
+        [header.topAnchor constraintEqualToAnchor:safe.topAnchor constant:16],
+        [header.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
+        [header.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-20],
+        [footer.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
+        [footer.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-20],
+        [footer.bottomAnchor constraintEqualToAnchor:self.view.keyboardLayoutGuide.topAnchor constant:-12],
+        [scroll.topAnchor constraintEqualToAnchor:header.bottomAnchor constant:12],
+        [scroll.bottomAnchor constraintEqualToAnchor:footer.topAnchor constant:-12],
+        [scroll.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor], [scroll.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor],
+        [self.rows.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor],
+        [self.rows.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-20],
+        [self.rows.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:20],
+        [self.rows.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-20],
+        [self.rows.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-40]
+    ]];
+    [self rebuild];
+}
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    self.editorWindow = self.view.window;
+    for (UIWindow *window in self.editorWindow.windowScene.windows)
+        if (window.isKeyWindow && window != self.editorWindow) { self.previousWindow = window; break; }
+    if (!self.previousWindow && [UIApplication.sharedApplication.delegate respondsToSelector:@selector(window)])
+        self.previousWindow = UIApplication.sharedApplication.delegate.window;
+    // Only the text editor borrows key status; the ordinary preview leaves the
+    // game's window key. This is also needed by legacy AppDelegate guests.
+    [self.editorWindow makeKeyWindow];
+}
+- (void)viewDidDisappear:(BOOL)animated {
+    [super viewDidDisappear:animated];
+    [self.view endEditing:YES];
+    if (self.editorWindow.isKeyWindow && self.previousWindow && !self.previousWindow.hidden) [self.previousWindow makeKeyWindow];
+    self.previousWindow = nil; self.editorWindow = nil;
+}
+- (UIButton *)menu:(NSUInteger)index field:(NSString *)field values:(NSArray *)values titles:(NSArray *)titles {
+    id selected = self.draft[index][field]; NSUInteger current = [values indexOfObject:selected];
+    UIButton *button = [self button:current == NSNotFound ? @"請選擇" : titles[current]];
+    button.showsMenuAsPrimaryAction = YES;
+    button.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRule%@%lu", field, (unsigned long)index];
+    NSMutableArray *actions = [NSMutableArray array]; __weak PHOrbRuleEditor *weakSelf = self;
+    for (NSUInteger i = 0; i < values.count; ++i) {
+        id value = values[i];
+        UIAction *action = [UIAction actionWithTitle:titles[i] image:nil identifier:nil handler:^(__kindof UIAction *sender) {
+            PHOrbRuleEditor *editor = weakSelf; if (!editor || index >= editor.draft.count) return;
+            editor.draft[index][field] = value;
+            if ([field isEqual:@"color"]) editor.draft[index][@"below"] = [value integerValue] < 0 ? @0 : @3;
+            [editor rebuild];
+        }];
+        action.state = [selected isEqual:value] ? UIMenuElementStateOn : UIMenuElementStateOff; [actions addObject:action];
+    }
+    button.menu = [UIMenu menuWithTitle:@"" children:actions]; return button;
+}
+- (UIView *)number:(NSUInteger)index field:(NSString *)key title:(NSString *)title {
+    UITextField *field = [UITextField new]; field.borderStyle = UITextBorderStyleRoundedRect;
+    field.font = [UIFont systemFontOfSize:16]; field.keyboardType = UIKeyboardTypeNumberPad;
+    field.text = [self.draft[index][key] description]; field.accessibilityLabel = title;
+    field.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRule%@%lu", key, (unsigned long)index];
+    [field.widthAnchor constraintEqualToConstant:88].active = YES; [field.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    UIToolbar *toolbar = [UIToolbar new]; [toolbar sizeToFit];
+    toolbar.items = @[[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil],
+        [[UIBarButtonItem alloc] initWithTitle:@"完成" style:UIBarButtonItemStyleDone target:self action:@selector(endEditing)]];
+    field.inputAccessoryView = toolbar;
+    __weak PHOrbRuleEditor *weakSelf = self; __weak UITextField *weakField = field;
+    [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+        PHOrbRuleEditor *editor = weakSelf; if (!editor || index >= editor.draft.count) return;
+        NSString *text = weakField.text ?: @"";
+        BOOL digits = text.length > 0 && text.length <= 5 &&
+            [text rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"0123456789"].invertedSet].location == NSNotFound;
+        editor.draft[index][key] = digits ? (id)@(text.integerValue) : (id)text;
+    }] forControlEvents:UIControlEventEditingChanged];
+    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:title], field]];
+    row.spacing = 12; row.alignment = UIStackViewAlignmentCenter; return row;
+}
+- (void)rebuild {
+    [self.view endEditing:YES]; self.notice.text = @"";
+    for (UIView *view in self.rows.arrangedSubviews) { [self.rows removeArrangedSubview:view]; [view removeFromSuperview]; }
+    __weak PHOrbRuleEditor *weakSelf = self;
+    for (NSUInteger i = 0; i < self.draft.count; ++i) {
+        NSDictionary *rule = self.draft[i];
+        UIStackView *card = [UIStackView new]; card.axis = UILayoutConstraintAxisVertical; card.spacing = 8;
+        card.backgroundColor = UIColor.secondarySystemBackgroundColor; card.layer.cornerRadius = 12;
+        card.layoutMargins = UIEdgeInsetsMake(12,12,12,12); card.layoutMarginsRelativeArrangement = YES;
+        UISwitch *enabled = [UISwitch new]; enabled.on = [rule[@"enabled"] boolValue];
+        enabled.accessibilityLabel = [NSString stringWithFormat:@"啟用規則 %lu", (unsigned long)i + 1];
+        __weak UISwitch *weakEnabled = enabled;
+        [enabled addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+            PHOrbRuleEditor *editor = weakSelf;
+            if (editor && i < editor.draft.count) editor.draft[i][@"enabled"] = @(weakEnabled.on);
+        }] forControlEvents:UIControlEventValueChanged];
+        UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[
+            [self label:[NSString stringWithFormat:@"優先 %lu", (unsigned long)i + 1]], enabled]];
+        heading.spacing = 12; [card addArrangedSubview:heading];
+        [card addArrangedSubview:[self menu:i field:@"slot" values:@[@1,@2,@3,@4,@5,@6]
+            titles:@[@"位置 1 · 隊長", @"位置 2", @"位置 3", @"位置 4", @"位置 5", @"位置 6 · 助人"]]];
+        [card addArrangedSubview:[self number:i field:@"monster" title:@"角色圖鑑編號（0 不限定）"]];
+        [card addArrangedSubview:[self number:i field:@"every" title:@"回合間隔（1 每回合）"]];
+        [card addArrangedSubview:[self number:i field:@"floor" title:@"指定樓層（0 所有樓層）"]];
+        [card addArrangedSubview:[self menu:i field:@"color" values:@[@-1,@0,@1,@2,@3,@4,@5]
+            titles:@[@"不限定盤面", @"缺火珠", @"缺水珠", @"缺木珠", @"缺光珠", @"缺暗珠", @"缺心珠"]]];
+        if ([rule[@"color"] integerValue] >= 0) [card addArrangedSubview:[self number:i field:@"below" title:@"珠數少於此數才觸發"]];
+        NSMutableArray *titles = [NSMutableArray array]; for (NSString *effect in PHOrbEnemyConditions()) [titles addObject:PHOrbEnemyConditionTitle(effect)];
+        [card addArrangedSubview:[self menu:i field:@"enemy" values:PHOrbEnemyConditions() titles:titles]];
+        NSMutableArray *buttons = [NSMutableArray array];
+        for (NSUInteger actionIndex = 0; actionIndex < 3; ++actionIndex) {
+            UIButton *button = [self button:@[@"上移", @"下移", @"刪除"][actionIndex]];
+            button.enabled = actionIndex == 0 ? i > 0 : actionIndex == 1 ? i + 1 < self.draft.count : YES;
+            if (actionIndex == 2) button.tintColor = UIColor.systemRedColor;
+            [button addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+                PHOrbRuleEditor *editor = weakSelf; if (!editor || i >= editor.draft.count) return;
+                if (actionIndex == 2) [editor.draft removeObjectAtIndex:i];
+                else if (actionIndex == 0 && i) [editor.draft exchangeObjectAtIndex:i withObjectAtIndex:i - 1];
+                else if (actionIndex == 1 && i + 1 < editor.draft.count) [editor.draft exchangeObjectAtIndex:i withObjectAtIndex:i + 1];
+                [editor rebuild];
+            }] forControlEvents:UIControlEventTouchUpInside]; [buttons addObject:button];
+        }
+        UIStackView *order = [[UIStackView alloc] initWithArrangedSubviews:buttons]; order.spacing = 8;
+        order.distribution = UIStackViewDistributionFillEqually; [card addArrangedSubview:order];
+        [self.rows addArrangedSubview:card];
+    }
+    UIButton *add = [self button:@"＋ 新增技能規則"]; add.enabled = self.draft.count < PHOrbMaxSkillRules;
+    add.accessibilityIdentifier = @"padcheaper.orbsRuleAdd";
+    [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
+    [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能，未冷卻好會略過。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
+}
+- (void)add {
+    if (self.draft.count >= PHOrbMaxSkillRules) return;
+    NSMutableDictionary *rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"slot"] = @(self.draft.count % 6 + 1);
+    [self.draft addObject:rule]; [self rebuild];
+}
+- (void)save {
+    [self.view endEditing:YES];
+    if (!PHOrbSkillRulesValid(self.draft)) { self.notice.text = @"請填有效整數：角色 0–65535、間隔 1–999、樓層 0–999、缺珠 1–43。"; return; }
+    NSMutableArray *rules = [NSMutableArray array]; for (NSDictionary *rule in self.draft) [rules addObject:rule.copy];
+    NSString *error = self.saveRules([rules copy]);
+    if (error.length) { self.notice.text = error; return; }
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+- (void)endEditing { [self.view endEditing:YES]; }
+- (void)cancel { [self dismissViewControllerAnimated:YES completion:nil]; }
+@end

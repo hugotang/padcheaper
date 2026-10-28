@@ -89,6 +89,8 @@ static void NativeInputFrame() {
     std::memcpy(p + 1320 + 12, p + 4, 8); p[213] = 0;
 }
 
+#include "orb_skill_native_tests.inc"
+
 int main() {
     @autoreleasepool {
         Reset(); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
@@ -198,7 +200,8 @@ int main() {
 
         Reset(); codeValid = false; engine = PHCreateOrbEngine();
         Check(![engine read:&state frame:Frame() reason:&reason] && writes == 0, "wrong target rejects native access");
-        std::printf("Orb native tests: %s (memory fixtures, input ownership, multiplayer, effects and restoration faults)\n", failures ? "FAILED" : "passed");
+        SkillNativeTests();
+        std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;
 }
