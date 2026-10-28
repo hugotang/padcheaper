@@ -135,10 +135,11 @@ static BOOL ParameterReferenced(const PHBattleState *state, int scriptSlot) {
 }
 
 static BOOL StoredTeamsUnchanged(const PHBattleState *before, const PHBattleState *after,
-                                const PHBattleMember *changed = nullptr, BOOL charges = YES) {
+                                const PHBattleMember *changed = nullptr, BOOL charges = YES, BOOL entryHP = NO) {
     if (!PHBattleSameTeamView(before, after)) return NO;
     if (PHBattleIsThreePlayer(before)) for (unsigned team = 0; team < before->teamCount; ++team)
-        if ((!changed || changed->sourceTeam != team) && before->teamHP[team] != after->teamHP[team]) return NO;
+        if ((!changed || changed->sourceTeam != team) && (!entryHP || team != before->currentTeam) &&
+            before->teamHP[team] != after->teamHP[team]) return NO;
     for (unsigned team = 0; team < before->teamCount; ++team) for (unsigned slot = 0; slot < 6; ++slot) {
         const PHBattleMember &stored = before->storedMembers[team][slot];
         if (changed && PHBattleSameOrigin(&stored, changed)) continue;

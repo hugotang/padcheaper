@@ -658,6 +658,33 @@ int main(void) {
                 [multiSession.snapshot[@"entryRebindCount"] isEqual:@0] && [multiSession.snapshot[@"automaticCount"] isEqual:@1],
                 "per-entry evidence resets outside the dungeon independently of the process-wide automatic counter");
         }
+        for (NSUInteger count = 2; count <= 3; ++count) for (NSUInteger player = 0; player < count; ++player) {
+            FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:count player:player];
+            PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];
+            PHBattleLoadout team[6]; FullTeam(team); [multiSession configureAutomaticLoadouts:team mask:63];
+            PHBattleFrame multiFrame = BankFrame(); multiFrame.autoApplyTeam = true;
+            three->live.present = false; [multiSession onFrame:multiFrame atTime:100];
+            FreshEntry(three); three->live.phase = 46; [multiSession onFrame:multiFrame atTime:100.01];
+            [multiSession onFrame:multiFrame atTime:100.02];
+            NSUInteger reads = three->reads;
+            for (NSUInteger tick = 3; tick < 8; ++tick) [multiSession onFrame:multiFrame atTime:100 + tick * 0.01];
+            Check(three->reads == reads + 5 && three->entryCalls == 1 && !three->rebindCalls,
+                "owned multiplayer entry bindings are monitored every frame even before any loss is known");
+            three->live.phase = 48; three->live.entryWindow = false; [three dropEntryBindings];
+            [multiSession onFrame:multiFrame atTime:100.08];
+            Check(!three->rebindCalls, "earlier monitoring never mutates inside the phase-48 synchronization transaction");
+            three->live.phase = 2; three->live.turnTeam = (uint8_t)player;
+            three->live.turnSerial = (uint32_t)(player ? player : count); [three showTeam:player];
+            [multiSession onFrame:multiFrame atTime:100.09];
+            Check(three->rebindCalls == 1 && three->entryCalls == 1 && [multiSession.snapshot[@"entryRebindCount"] isEqual:@6],
+                "the first completed native frame of the local turn rebinds without the previous 250-ms polling delay");
+            [multiSession onFrame:multiFrame atTime:100.10];
+            [multiSession onFrame:multiFrame atTime:100.11];
+            [three dropEntryBindings]; three->live.turnSerial += (uint32_t)count;
+            [multiSession onFrame:multiFrame atTime:100.12];
+            Check(three->rebindCalls == 2 && three->entryCalls == 1 && three->nextToken == 6,
+                "later synchronized turns receive the same immediate monitoring without repeat SB or new leases");
+        }
         for (NSUInteger scenario = 0; scenario < 3; ++scenario) {
             FakeBattleEngine *three = [FakeBattleEngine new]; [three makeThreePlayer:2 player:1];
             PHBattleSession *multiSession = [PHBattleSession.alloc initWithEngine:three];

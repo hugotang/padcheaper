@@ -80,6 +80,8 @@ static BOOL RestoreEntryTeam(BattleProvider *provider, uint64_t *nextToken, uint
             native.set32(original.identity.impl + PHBattleHPOffset, original.hp);
             uint32_t hpShadow = original.hp ^ 0x8085a6beu;
             RequireWrite(original.identity.impl + PHBattleHPShadowOffset, &hpShadow, sizeof(hpShadow));
+            // Refresh the HP display without issuing another entry refill.
+            native.adjustHP(original.identity.impl + PHBattleHPControllerOffset, 0, 1);
             // Publish both charge and restored HP into their owning banks.
             if (!PHBattleUsesPrimaryTeam(original.multiplayer)) native.refreshTeam(original.identity.game, 0);
             uint32_t digestShadow = static_cast<uint32_t>(native.digest(original.identity.game)) ^ 0x689d8b5cu;
@@ -203,6 +205,26 @@ static PHBattleMutationResult ApplyEntryTeam(BattleProvider *provider, uint64_t 
                 if (maximum > UINT16_MAX || after.members[i].charge > maximum)
                     throw std::runtime_error("Initial skill charge exceeds native cap");
             }
+            // Normal refresh already rebuilt max HP, recovery, awakenings,
+            // leader effects and move time. It only clamps existing HP. A new
+            // dungeon must also initialize current HP from the new team's
+            // effective maximum (including fixed/percentage dungeon rules).
+            // Do this once, after the whole batch, and only for the selected
+            // local team. refreshTeam(game, 1) would refill other banks too.
+            PHBattleState charged = after;
+            uintptr_t hpController = after.identity.impl + PHBattleHPControllerOffset;
+            uint64_t initialHP = native.maximumHP(hpController);
+            if (!initialHP || initialHP > INT32_MAX) throw std::runtime_error("Invalid initial HP maximum");
+            native.adjustHP(hpController, static_cast<int32_t>(initialHP), 1);
+            if (!PHBattleUsesPrimaryTeam(after.multiplayer)) native.refreshTeam(after.identity.game, 0);
+            if (!ReadLive(&after, frame, &failure)) throw std::runtime_error("Initial HP unreadable");
+            TagProviderMembers(provider, &after);
+            if (PHBattleEntryGate(&after) != PHBattleGateReady || !after.entryChargesValid || after.hp != initialHP ||
+                native.maximumHP(hpController) != initialHP || !PHBattleSameIdentity(&charged.identity, &after.identity) ||
+                !SameEntryMembers(charged, after, YES) || !StoredTeamsUnchanged(&charged, &after, nullptr, YES, YES) ||
+                (PHBattleIsThreePlayer(&after) && after.teamHP[after.currentTeam] != initialHP) ||
+                !PHReadU32(frame.header + PHSaveRVA + PHBattleAuditOffset, &audit) || (audit & ~before.auditFlags))
+                throw std::runtime_error("Initial HP check failed");
             std::memcpy(members, after.members, sizeof(after.members));
             *boost = initial;
             return PHBattleMutationApplied;
@@ -213,7 +235,7 @@ static PHBattleMutationResult ApplyEntryTeam(BattleProvider *provider, uint64_t 
         return failed == PHBattleMutationRolledBack ? failed : PHBattleMutationRejected;
     }
     BOOL restored = RestoreEntryTeam(provider, nextToken, applied, before, chargeShadows);
-    if (reason) *reason = restored ? @"入場自動套用未通過校驗；整隊與原有充能已回復" :
+    if (reason) *reason = restored ? @"入場自動套用未通過校驗；整隊、原有充能及 HP 已回復" :
         @"入場隊伍未能確認完整還原，已停止後續寫入；請複製診斷";
     return restored ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
 }

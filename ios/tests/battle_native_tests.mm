@@ -32,6 +32,9 @@ struct Fixture {
     uint16_t chargeCaps[6] = {6,6,6,6,6,6};
     bool awakeningsDisabled = false, chargingDisabled = false, invalidAwakeningCount = false;
     uint32_t newTeamHPCap = 0;
+    uint32_t newTeamMaximumHP = 0, entryRuleMaximumHP = 0, displayedHP = 100;
+    unsigned hpInitializations = 0, failEntryHP = 0;
+    bool invalidHPMaximum = false;
     int32_t badgeSkillBoost = 2;
     uintptr_t failWriteAddress = 0;
     size_t failWriteLength = 0, partialWrite = 0;
@@ -44,7 +47,7 @@ struct Fixture {
         fixture = this;
         PHTestNativeCalls = {Set16, Rebuild, Refresh, Digest, MaxCharge, Radius, SetByte, Allocate, Release,
             Set32, TeamAwakening, TeamLatent, CurrentBadge, BadgeBoost, AdvanceTeam, AdvanceMember, MemberHasSkill,
-            TeamSize, SoloRules, SharedHelper, SharedLeader, SwitchTeam};
+            TeamSize, SoloRules, SharedHelper, SharedLeader, SwitchTeam, MaximumHP, AdjustHP};
         for (size_t i = 0; i < PHBattleTextGuardCount; ++i)
             std::memcpy(image.data() + PHBattleTextGuards[i].rva, PHBattleTextGuards[i].bytes, 64);
         put<uint8_t>(header() + PHSaveRVA, 1); put<uint8_t>(header() + PHSaveRVA + 1, 1);
@@ -121,6 +124,7 @@ struct Fixture {
         if (threePlayer()) {
             Set32(impl() + PHBattleHPOffset, decode(bank(team) + PHBattleTeamHPOffset, 0x766cfc6du));
             put<uint32_t>(impl() + PHBattleHPShadowOffset, decode(impl() + PHBattleHPOffset, 0x766cfc6du) ^ 0x8085a6beu);
+            displayedHP = decode(impl() + PHBattleHPOffset, 0x766cfc6du);
         }
     }
     bool threePlayer() const {
@@ -289,13 +293,49 @@ struct Fixture {
         if (f.auditOnRefresh) put<uint32_t>(f.header() + PHSaveRVA + PHBattleAuditOffset, 0x10000);
         if (f.newTeamHPCap) {
             for (unsigned i = 0; i < 6; ++i) if ((int8_t)decode(f.member(i) + PHBattleScriptSlotOffset) > 0) {
-                Set32(f.impl() + PHBattleHPOffset, f.newTeamHPCap); break;
+                Set32(f.impl() + PHBattleHPOffset,
+                    std::min(f.newTeamHPCap,decode(f.impl() + PHBattleHPOffset,0x766cfc6du))); break;
             }
         }
         if (f.bankedTeams) {
             f.syncBanks();
             f.loadView(get<uint32_t>(f.impl() + PHBattleCurrentTeamOffset));
             if (f.changeOtherBankOnRefresh) put<uint16_t>(f.bank(f.changedBank,2) + 0x510, 98);
+        }
+        return 0;
+    }
+    static uint64_t MaximumHP(uintptr_t controller) {
+        Fixture &f = *fixture;
+        Check(controller == f.impl() + PHBattleHPControllerOffset, "maximum HP uses the native HP controller ABI");
+        bool replaced = false;
+        for (unsigned slot = 0; slot < 6; ++slot)
+            replaced |= (int8_t)decode(f.member(slot) + PHBattleScriptSlotOffset) > 0;
+        if (replaced && f.invalidHPMaximum) return UINT32_MAX;
+        // Native maximum can differ from raw team HP because of dungeon
+        // rules. The transaction must use this result, not a local HP sum.
+        if (f.entryRuleMaximumHP) return f.entryRuleMaximumHP;
+        if (replaced && f.newTeamHPCap) return f.newTeamHPCap;
+        if (replaced && f.newTeamMaximumHP) return f.newTeamMaximumHP;
+        return 100 + (f.threePlayer() ? 50 * get<uint32_t>(f.impl() + PHBattleCurrentTeamOffset) : 0);
+    }
+    static uint64_t AdjustHP(uintptr_t controller, int32_t amount, uint8_t suppressAnimation) {
+        Fixture &f = *fixture;
+        Check(controller == f.impl() + PHBattleHPControllerOffset && suppressAnimation == 1,
+            "entry HP uses the native controller and suppresses the refill animation");
+        if (amount > 0) {
+            ++f.hpInitializations;
+            if (f.failEntryHP == 1) return 0;
+        }
+        int64_t next = decode(f.impl() + PHBattleHPOffset, 0x766cfc6du) + (int64_t)amount;
+        uint32_t hp = (uint32_t)std::min<int64_t>(MaximumHP(controller), std::max<int64_t>(0,next));
+        Set32(f.impl() + PHBattleHPOffset,hp);
+        put<uint32_t>(f.impl() + PHBattleHPShadowOffset,hp ^ 0x8085a6beu);
+        f.displayedHP = hp;
+        if (amount > 0) switch (f.failEntryHP) {
+            case 2: put<uint32_t>(f.header() + PHSaveRVA + PHBattleAuditOffset,0x10000); break;
+            case 3: encode(f.bank(f.changedBank) + PHBattleTeamHPOffset,17,0x766cfc6du); break;
+            case 4: put<uint32_t>(f.impl() + PHBattleHPShadowOffset,0); break;
+            case 5: Set32(f.impl() + PHBattlePhaseOffset,2); break;
         }
         return 0;
     }
@@ -884,6 +924,76 @@ int main() {
                 Check([engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:nullptr] == PHBattleMutationRejected &&
                     f.rebuilds == writes && f.switches == switches, "uncertain multiplayer entry latches off further native mutations");
             }
+        }
+        for (unsigned count : {1u, 2u, 3u}) for (unsigned player = 0; player < count; ++player)
+        for (unsigned rule = 0; rule < 4; ++rule) {
+            Fixture f;
+            if (count > 1) f.configureBanks(1,count,6,player);
+            f.enter(); f.newTeamMaximumHP = 900;
+            if (rule == 1) f.newTeamHPCap = 60;
+            if (rule == 2) f.entryRuleMaximumHP = 321;
+            if (rule == 3) f.entryRuleMaximumHP = 75;
+            uint32_t expectedHP = rule == 0 ? 900 : rule == 1 ? 60 : rule == 2 ? 321 : 75;
+            id<PHBattleEngine> engine = PHCreateBattleEngine(); PHBattleState before = f.state(engine);
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleMember output[6] = {}; uint16_t boost = 0;
+            Check([engine applyEntryLoadouts:team mask:(rule & 1 ? 1 : 63) state:&before members:output
+                initialBoost:&boost reason:nullptr] == PHBattleMutationApplied,
+                "new entry initializes current HP for complete and partial teams using the native effective maximum");
+            PHBattleState after = f.state(engine);
+            Check(f.hpInitializations == 1 && after.hpMatches && after.entryChargesValid && after.digestMatches,
+                "one HP initialization follows the complete profile and SB batch with valid mirrors");
+            if (count == 1) Check(after.hp == expectedHP && f.displayedHP == expectedHP,
+                "solo entry updates both gameplay HP and the HP display for larger, smaller and rule-limited teams");
+            else {
+                for (unsigned bank = 0; bank < count; ++bank)
+                    Check(after.teamHP[bank] == (bank == player ? expectedHP : before.teamHP[bank]),
+                        "entry publishes only the local participant's new HP and retains every remote bank's HP");
+                Check(after.currentTeam == before.currentTeam && after.hp == (player ? before.hp : expectedHP) &&
+                    f.displayedHP == after.hp, "guest entry restores the original view and its own HP display");
+                uint32_t serial = player ? player : count;
+                Fixture::encode(f.bank(player) + PHBattleTeamHPOffset,37,0x766cfc6du);
+                f.receivePeerTeam(serial,player,rule & 1 ? 1 : 63);
+                PHBattleState synced = f.state(engine);
+                Check([engine rebindEntryMembers:(rule & 1 ? 1 : 63) state:&synced members:output reason:nullptr] ==
+                    PHBattleMutationApplied && f.hpInitializations == 1,
+                    "later synchronization recovery cannot rerun the new entry HP initialization");
+                after = f.state(engine);
+                Check(after.hp == 37 && after.teamHP[player] == 37,
+                    "guest recovery retains synchronized damage even when the new team has a larger maximum");
+            }
+        }
+        for (unsigned failure : {0u, 1u, 2u, 4u, 5u}) {
+            Fixture f; f.enter(); f.newTeamMaximumHP = 900;
+            f.failEntryHP = failure; f.invalidHPMaximum = failure == 0;
+            id<PHBattleEngine> engine = PHCreateBattleEngine(); PHBattleState before = f.state(engine);
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleMember output[6] = {}; uint16_t boost = 77;
+            PHBattleMutationResult result = [engine applyEntryLoadouts:team mask:63 state:&before members:output
+                initialBoost:&boost reason:nullptr];
+            Check(result == (failure < 3 ? PHBattleMutationRolledBack : PHBattleMutationUncertain) && boost == 77,
+                "invalid maximum, failed HP update, new audit flags, corrupted HP and a closed entry window never report success");
+            PHBattleState after = f.state(engine);
+            if (result == PHBattleMutationRolledBack) {
+                Check(after.hp == before.hp && f.displayedHP == before.hp && after.hpMatches && after.entryChargesValid &&
+                    SameEntryMembers(before,after,YES) && f.allocated == f.released,
+                    "a recoverable HP initialization failure restores all six profiles, charges, HP and display");
+                Check(after.auditFlags == (failure == 2 ? 0x10000u : 0), "HP rollback preserves native audit evidence");
+            } else {
+                unsigned rebuilds = f.rebuilds;
+                Check([engine applyLoadout:team state:&after slot:0 member:output reason:nullptr] == PHBattleMutationRejected &&
+                    f.rebuilds == rebuilds, "unprovable HP rollback stops further native writes");
+            }
+        }
+        {
+            Fixture f; f.configureBanks(1,3,6,1); f.enter(); f.newTeamMaximumHP = 900;
+            f.failEntryHP = 3; f.changedBank = 2;
+            id<PHBattleEngine> engine = PHCreateBattleEngine(); PHBattleState before = f.state(engine);
+            PHBattleLoadout team[6]; for (unsigned slot = 0; slot < 6; ++slot) team[slot] = Loadout(slot);
+            PHBattleMember output[6] = {}; uint16_t boost = 77;
+            Check([engine applyEntryLoadouts:team mask:63 state:&before members:output initialBoost:&boost reason:nullptr] ==
+                PHBattleMutationUncertain && boost == 77,
+                "HP initialization cannot silently accept or overwrite a change to another participant's HP");
         }
         for (uint32_t multi : {1u, 4u}) {
             Fixture f; f.configureBanks(multi); f.enter(); id<PHBattleEngine> engine = PHCreateBattleEngine();

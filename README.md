@@ -4,7 +4,9 @@
 
 GitHub Actions 會用 macOS／Xcode 編譯 **PADCheaper.dylib**，執行隊伍 JSON、LiveContainer 身分／設定、戰鬥狀態、徽章原生佈局、計時策略及 iOS 模擬器 GUI 檢查，並上傳包含 dylib、SHA-256、設定範例及文件的 artifact。
 
-**0.4.3-entry 修正 mode 7／multi 1 的 guest 隊伍被換回合同步覆蓋後未補回的問題。** 入場設定仍在 phase 46 套用；若同步移除綁定，保留原有配方，等自己的操作回合一次補回六人，沿用同步後充能及原生變身，不重發 SB。支援兩人或三人入場；詳見 [三人模式修正](ios/docs/three-player-entry.md)。保留 64 隊隊伍庫、六個位置的本體／武裝編輯、PADDashFormation 匯入／匯出及覺醒名稱。
+**0.4.4-entry 修正 mode 7／multi 1 的 guest 隊伍被換回合同步覆蓋後未補回的問題。** 入場設定仍在 phase 46 套用；若同步移除綁定，保留原有配方，等自己的操作回合一次補回六人，沿用同步後充能及原生變身，不重發 SB。支援兩人或三人入場；詳見 [三人模式修正](ios/docs/three-player-entry.md)。保留 64 隊隊伍庫、六個位置的本體／武裝編輯、PADDashFormation 匯入／匯出及覺醒名稱。
+
+本版也補上新隊伍的入場 HP 初始化，依原生固定／比例 HP 規則，只更新本機隊伍；guest 補回保留同步後的受傷 HP。多人綁定改為每個 frame 監測，省去最多約 250 ms 的檢查等待。隊伍數值及操作時間沿用原生 refresh；已生成的盤面不重建。詳見 [入場數值與時機](ios/docs/entry-derived-state.md)。
 
 使用者已回報 GUI／Skin／BGM、徽章解鎖及六人替換可用，並於 2026-10-28 確認單人入場自動套隊與 SB、0.4.2 的 host 自動替換成功。這次 guest 補回、計時、帳號隔離與通關結算仍需真機驗證。原生格式與限制見 [整隊與滿狀態](ios/docs/team-presets.md)。
 

@@ -49,6 +49,7 @@ cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
+cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -79,7 +80,9 @@ metadata = {
     "dylib_version": version,
     "gui": "floating controls; six-slot formation editor; up to 64 saved teams with selection, copy and delete; 16px input fonts; named awakenings; PADDashFormation import/export",
     "battle_replacement": "up to six native parameter leases; body/weapon/training/awakenings; individual/all restore across bank switches; offscreen restores wait for their team; device verification pending",
-    "automatic_entry": "opt-in selected saved team at fresh wave-zero opening; native Skill Boost recomputation; mode 7/multi 1 phase-46 sync selects the local network seat and restores the original view in-frame; resumes and later waves/turns excluded",
+    "automatic_entry": "opt-in selected saved team at fresh wave-zero opening; native Skill Boost and local effective HP initialization; mode 7/multi 1 phase-46 sync selects the local network seat and restores the original view in-frame; resumes and later waves/turns excluded",
+    "entry_recovery": "owned three-player bindings monitored each completed native frame; rebind on the first eligible local operation turn without repeating SB or refilling HP; synchronized forms and charges retained",
+    "entry_board_limit": "board dimensions and generated opening board remain from the native constructor; ordinary team refresh does not regenerate them",
     "three_player_turn_gate": "two or three six-member banks; current view and turnSerial % teamCount must match the local network seat for manual operations",
     "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "all entry modes by default; source/multi zero defaults; live allow-all switches and lists; validated bank adapter for multi 1/4",

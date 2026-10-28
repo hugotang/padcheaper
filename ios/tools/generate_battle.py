@@ -40,7 +40,7 @@ def generate(manifest):
                 "PHBattleTeamAwakeningRVA", "PHBattleTeamLatentRVA", "PHBattleCurrentBadgeRVA",
                 "PHBattleBadgeBoostRVA", "PHBattleAdvanceTeamRVA", "PHBattleAdvanceMemberRVA", "PHBattleMemberHasSkillRVA",
                 "PHBattleTeamSizeRVA", "PHBattleSoloRulesRVA", "PHBattleSharedHelperRVA", "PHBattleSharedLeaderRVA",
-                "PHBattleSwitchTeamRVA"}
+                "PHBattleSwitchTeamRVA", "PHBattleMaximumHPRVA", "PHBattleAdjustHPRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

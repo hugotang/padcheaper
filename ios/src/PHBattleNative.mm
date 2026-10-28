@@ -33,6 +33,8 @@ struct NativeCalls {
     uint64_t (*sharedHelper)(uintptr_t);
     uint64_t (*sharedLeader)(uintptr_t);
     void (*switchTeam)(uintptr_t, uint32_t, int);
+    uint64_t (*maximumHP)(uintptr_t);
+    uint64_t (*adjustHP)(uintptr_t, int32_t, uint8_t);
 };
 
 #ifdef PH_BATTLE_NATIVE_TESTS
@@ -68,7 +70,9 @@ static NativeCalls Calls(uintptr_t header) {
         reinterpret_cast<uint64_t (*)(uint64_t)>(header + PHBattleSoloRulesRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedHelperRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedLeaderRVA),
-        reinterpret_cast<void (*)(uintptr_t, uint32_t, int)>(header + PHBattleSwitchTeamRVA)
+        reinterpret_cast<void (*)(uintptr_t, uint32_t, int)>(header + PHBattleSwitchTeamRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleMaximumHPRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t, int32_t, uint8_t)>(header + PHBattleAdjustHPRVA)
     };
 #endif
 }

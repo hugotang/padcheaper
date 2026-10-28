@@ -2,7 +2,9 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.4.3-entry` 修正 mode 7／multi 1 的 guest 入場綁定被換回合同步移除後未補回的問題。保留原有配方，在自己的操作回合補回，保留同步後充能與變身，不重新發放 SB。兩人及三人入場均適用；入場計算與 host／單人流程保留。使用方法見 [六人編隊與入口設定](docs/formation.md)，修正依據見 [三人模式入場](docs/three-player-entry.md)。使用者已確認單人入場套隊／SB 及 0.4.2 host 自動替換成功；guest 補回與結算仍待真機驗證。
+`0.4.4-entry` 修正 mode 7／multi 1 的 guest 入場綁定被換回合同步移除後未補回的問題。保留原有配方，在自己的操作回合補回，保留同步後充能與變身，不重新發放 SB。兩人及三人入場均適用；入場計算與 host／單人流程保留。使用方法見 [六人編隊與入口設定](docs/formation.md)，修正依據見 [三人模式入場](docs/three-player-entry.md)。使用者已確認單人入場套隊／SB 及 0.4.2 host 自動替換成功；guest 補回與結算仍待真機驗證。
+
+本版新入場會依新隊伍的原生有效上限初始化目前 HP；換回合補回不補滿受傷 HP。多人綁定逐 frame 監測，移除原先最多約 250 ms 的檢查延遲。已存在的 refresh 會更新隊伍衍生數值與操作時間；7×6 等建構時決定的盤面不重新生成。HP 與時機依據見 [入場數值核對](docs/entry-derived-state.md)，新版 HP 及 guest 行為仍待真機核對。
 
 ## GitHub Actions
 
@@ -34,7 +36,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭會顯示 `0.4.3-entry`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，關閉時返回原遊戲視窗。
+5. 面板標頭會顯示 `0.4.4-entry`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，關閉時返回原遊戲視窗。
 
 浮動按鈕的含義：
 
@@ -79,6 +81,6 @@ PC 面板的「入口設定」可修改 mode／source／multi 的全部允許開
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.3-entry constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.4-entry constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

@@ -162,7 +162,16 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
         _gateMessage = @"等待遊戲校驗、主執行緒與登入成功"; return;
     }
     BOOL watchEntry = frame.enabled && frame.autoApplyTeam && (_autoArmed || _autoWaiting || !_automaticHasIdentity);
-    if (!_pending && ![self restorePending] && ![self rebindPendingCount] && !watchEntry && _hasState && time - _lastProbe < 0.25) return;
+    // Detect a removed binding on the first completed native frame, including
+    // after several quiet frames. Pending-only monitoring found the first
+    // loss up to 250 ms late, before it knew a rebind was needed.
+    BOOL watchBindings = NO;
+    if (frame.enabled && frame.autoApplyTeam && !_fault && PHBattleIsThreePlayer(&_state)) {
+        for (NSUInteger i = 0; i < 6; ++i)
+            watchBindings |= _leases[i].active && _leases[i].automatic && !_leases[i].rebindFailed && !_leases[i].restoreFailed;
+    }
+    if (!_pending && ![self restorePending] && ![self rebindPendingCount] && !watchEntry && !watchBindings &&
+        _hasState && time - _lastProbe < 0.25) return;
     _lastProbe = time;
     PHBattleState next = {0};
     NSString *reason = nil;
@@ -264,7 +273,7 @@ static const PHBattleMember *FindStoredMember(const PHBattleState *state, const 
                         ++count;
                     }
                     _applyCount += count; ++_automaticCount; _initialBoost = boost; _entryApplied = YES;
-                    _message = [NSString stringWithFormat:@"入場已自動套用 %lu 名隊員 · SB %u（已重算）", (unsigned long)count, boost];
+                    _message = [NSString stringWithFormat:@"入場已自動套用 %lu 名隊員 · SB %u／入場 HP 已重算", (unsigned long)count, boost];
                 } else [self recordFailure:result reason:reason];
                 _automaticMessage = _message;
                 [self didMutate]; return;
