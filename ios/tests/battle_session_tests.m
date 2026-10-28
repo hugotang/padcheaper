@@ -521,7 +521,7 @@ int main(void) {
         engine->live.phase = 2; engine->live.entryWindow = false; [session queueRestore];
         for (NSUInteger i = 0; i < 6; ++i) [session onFrame:frame atTime:101+i*0.1];
         Check(engine->fullRestores == 6 && [session.snapshot[@"activeCount"] isEqual:@0], "auto entry installs six independently restorable leases");
-        [session onFrame:frame atTime:101.8];
+        [session onFrame:frame atTime:101.7];
         Check([session.snapshot[@"members"][0][@"appliedRecipe"] count] == 0,
             "restored slots cannot retain an applied recipe label");
         engine->live.present = false; [session onFrame:frame atTime:102];

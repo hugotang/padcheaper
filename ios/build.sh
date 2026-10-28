@@ -51,6 +51,8 @@ cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
+mkdir -p "$build_dir/research"
+cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -71,6 +73,9 @@ readme.write_text(readme.read_text(encoding="utf-8").replace(
     "](../.github/workflows/ios-dylib.yml)",
     "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)"), encoding="utf-8")
 binary = directory / "PADCheaper.dylib"
+research_notes = directory / "auto-orb-feasibility.md"
+research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
+    "](../research/", "](research/"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
                     Path("ios/src/PHOverlay.h").read_text()).group(1)
