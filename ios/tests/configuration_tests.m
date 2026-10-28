@@ -38,6 +38,7 @@ int main(void) {
 
         NSDictionary *defaults = PHDefaultConfiguration();
         Check(PHConfigurationIsValid(defaults) && ![defaults[@"experimentalWrites"] boolValue], "defaults are diagnostic");
+        Check([PHConfigurationBattleFilters(defaults)[@"autoApplyTeam"] isEqual:@NO], "entry auto-apply defaults off");
         NSData *serialized = [NSJSONSerialization dataWithJSONObject:defaults options:0 error:NULL];
         Check(PHConfigurationIsValid([NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL]),
               "config retains Boolean types through JSON persistence");
@@ -74,6 +75,7 @@ int main(void) {
         Check(!PHConfigurationIsValid(config), "endpoint path must be absolute");
         config = [defaults mutableCopy];
         [config removeObjectForKey:@"battle"];
+        Check([PHConfigurationBattleFilters(config)[@"autoApplyTeam"] isEqual:@NO], "old configs keep entry auto-apply off");
         PHBattlePolicy policy = PHConfigurationBattlePolicy(config);
         Check(PHConfigurationIsValid(config) && PHBattlePolicyAllows(&policy, 7, 0, 0) &&
               !PHBattlePolicyAllows(&policy, 7, 1, 0), "old configs gain all-mode support while keeping source/multi zero defaults");
@@ -90,6 +92,15 @@ int main(void) {
         }
         config[@"battle"] = @{@"allowAllSources": @1};
         Check(!PHConfigurationIsValid(config), "filter switches must be JSON booleans");
+        for (id invalid in @[@1, @0, @"true", NSNull.null, @[]]) {
+            config[@"battle"] = @{@"autoApplyTeam":invalid};
+            Check(!PHConfigurationIsValid(config), "entry auto-apply rejects numbers, strings and malformed values");
+        }
+        config[@"battle"] = @{@"autoApplyTeam":@YES};
+        NSData *automaticJSON = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+        NSDictionary *automaticConfig = [NSJSONSerialization JSONObjectWithData:automaticJSON options:0 error:NULL];
+        Check(PHConfigurationIsValid(automaticConfig) && [PHConfigurationBattleFilters(automaticConfig)[@"autoApplyTeam"] isEqual:@YES],
+              "entry switch persists as a Boolean without changing existing filter defaults");
         config[@"battle"] = @{@"sourceModes": @[@65536]};
         Check(!PHConfigurationIsValid(config), "source selector is bounded by its native u16 field");
         config[@"battle"] = @{@"multiModes": @[@4294967295ULL]};

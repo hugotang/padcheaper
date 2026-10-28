@@ -20,6 +20,18 @@ struct NativeCalls {
     uint64_t (*setByte)(uintptr_t, uint64_t);
     uintptr_t (*allocate)(uint64_t, uint64_t, uint64_t);
     void (*release)(uintptr_t, int, int);
+    uint64_t (*set32)(uintptr_t, uint64_t);
+    int32_t (*teamAwakening)(uintptr_t, uint64_t, uint8_t *, uint64_t, uint64_t);
+    int32_t (*teamLatent)(uintptr_t, uint64_t, uint8_t *);
+    uint64_t (*currentBadge)(uintptr_t);
+    int32_t (*badgeBoost)(int32_t);
+    uint64_t (*advanceTeam)(uintptr_t, int, int);
+    uint64_t (*advanceMember)(uintptr_t, int);
+    int32_t (*memberHasSkill)(uintptr_t);
+    uint64_t (*teamSize)(void);
+    uint64_t (*soloRules)(uint64_t);
+    uint64_t (*sharedHelper)(uintptr_t);
+    uint64_t (*sharedLeader)(uintptr_t);
 };
 
 #ifdef PH_BATTLE_NATIVE_TESTS
@@ -42,7 +54,19 @@ static NativeCalls Calls(uintptr_t header) {
         reinterpret_cast<float (*)(void)>(header + PHBattleRadiusRVA),
         reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleSetByteRVA),
         reinterpret_cast<uintptr_t (*)(uint64_t, uint64_t, uint64_t)>(header + PHBattleAllocateRVA),
-        reinterpret_cast<void (*)(uintptr_t, int, int)>(header + PHBattleReleaseRVA)
+        reinterpret_cast<void (*)(uintptr_t, int, int)>(header + PHBattleReleaseRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t, uint64_t)>(header + PHBattleSet32RVA),
+        reinterpret_cast<int32_t (*)(uintptr_t, uint64_t, uint8_t *, uint64_t, uint64_t)>(header + PHBattleTeamAwakeningRVA),
+        reinterpret_cast<int32_t (*)(uintptr_t, uint64_t, uint8_t *)>(header + PHBattleTeamLatentRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleCurrentBadgeRVA),
+        reinterpret_cast<int32_t (*)(int32_t)>(header + PHBattleBadgeBoostRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t, int, int)>(header + PHBattleAdvanceTeamRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t, int)>(header + PHBattleAdvanceMemberRVA),
+        reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHBattleMemberHasSkillRVA),
+        reinterpret_cast<uint64_t (*)(void)>(header + PHBattleTeamSizeRVA),
+        reinterpret_cast<uint64_t (*)(uint64_t)>(header + PHBattleSoloRulesRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedHelperRVA),
+        reinterpret_cast<uint64_t (*)(uintptr_t)>(header + PHBattleSharedLeaderRVA)
     };
 #endif
 }
@@ -92,10 +116,48 @@ static BOOL CatalogValid(uint32_t target, const PHBattleState *state) {
     return PHReadU32(state->catalog + target * PHBattleCatalogStride, &recordID) && recordID == target;
 }
 
+static BOOL ReadMember(uintptr_t address, const PHBattleState *state, uint32_t key1, uint32_t key2,
+                       PHBattleMember *member, BOOL *chargeValid) {
+    uint8_t bytes[0x5f0];
+    *member = {};
+    *chargeValid = YES;
+    if (!PHReadMemory(address, bytes, sizeof(bytes))) return NO;
+    member->active = (bytes[0] & 1u) != 0;
+    if (!member->active) { member->readable = true; return YES; }
+    std::memcpy(&member->baseID, bytes + PHBattleBaseIDOffset, sizeof(member->baseID));
+    std::memcpy(&member->assistID, bytes + PHBattleAssistIDOffset, sizeof(member->assistID));
+    std::memcpy(&member->catalogID, bytes + PHBattleCatalogIDOffset, sizeof(member->catalogID));
+    std::memcpy(&member->previousID, bytes + 64, sizeof(member->previousID));
+    member->flags = bytes[56]; member->radius = bytes[63];
+    std::memcpy(&member->level, bytes + 0x510, sizeof(member->level));
+    std::memcpy(&member->skillLevel, bytes + 0x512, sizeof(member->skillLevel));
+    std::memcpy(member->extra, bytes + 0x4f0, sizeof(member->extra));
+    std::memcpy(member->assist, bytes + 0x59e, sizeof(member->assist));
+    uintptr_t parameter = 0;
+    std::memcpy(&parameter, bytes + PHBattleCardParamOffset, sizeof(parameter));
+    member->readable = DecodeByte(bytes, PHBattleSourceSlotOffset, key1, key2, &member->sourceSlot) &&
+        DecodeByte(bytes, PHBattleScriptSlotOffset, key1, key2, &member->scriptSlot) &&
+        Decode16(bytes, PHBattleFormOffset, key1, key2, &member->formID) &&
+        Decode16(bytes, PHBattleTempIDOffset, key1, key2, &member->temporaryID) &&
+        Decode16(bytes, PHBattleTempTurnsOffset, key1, key2, &member->temporaryTurns) &&
+        Decode16(bytes, PHBattleChargeOffset, key1, key2, &member->charge) &&
+        member->scriptSlot <= PHBattleParameterSlots && CatalogValid(member->baseID, state) &&
+        CatalogValid(member->catalogID, state) && (!member->assistID || CatalogValid(member->assistID, state)) &&
+        (!member->formID || CatalogValid(member->formID, state)) &&
+        parameter == state->catalog + member->catalogID * PHBattleCatalogStride;
+    uint32_t shadow = 0;
+    std::memcpy(&shadow, bytes + PHBattleChargeShadowOffset, sizeof(shadow));
+    *chargeValid = member->readable && (member->charge ^ shadow) == 0x68fb65ceu;
+    return member->readable;
+}
+
+#include "PHBattleTeams.inc"
+
 static BOOL CanReadNative(const PHBattleState *state) {
     // Read-only diagnostics and immediate rollback remain available when a
     // GUI filter is disabled. The mutation entry points enforce StateGate.
-    return state->present && state->protectedValuesValid && PHBattleUsesPrimaryTeam(state->multiplayer) && state->phase == 2 &&
+    return state->present && state->protectedValuesValid && PHBattleTeamLayoutValid(state) &&
+           (state->phase == 2 || state->entryWindow) &&
            PHInputIsQuiet(&state->input) && !state->dragActive;
 }
 
@@ -169,38 +231,25 @@ static BOOL ReadLive(PHBattleState *state, PHBattleFrame frame, NSString **reaso
     state->phase = phase;
     state->hp = hp;
     state->hpMatches = PHReadU32(impl + PHBattleHPShadowOffset, &shadow) && (hp ^ shadow) == 0x8085a6beu;
+    uint8_t intro = 0;
+    uint32_t resume = UINT32_MAX, wave = UINT32_MAX, waveCopy = UINT32_MAX, waveBackup = UINT32_MAX;
+    // The constructor has finished its initial SB pass, but its opening
+    // animation still blocks the enemy/player state machine. A resumed battle
+    // or any later wave must never receive a new initial skill charge.
+    state->entryWindow = state->protectedValuesValid && phase == 0 &&
+        PHReadU8(impl + PHBattleIntroOffset, &intro) && intro == 1 &&
+        PHReadU32(save + PHBattleResumeFlagsOffset, &resume) && !(resume & 0x80000000u) &&
+        DecodeAt(impl + PHBattleWaveOffset, key1, key2, 0x766cfc6du, &wave) && wave == 0 &&
+        DecodeAt(impl + PHBattleWaveCopyOffset, key1, key2, 0x766cfc6du, &waveCopy) && waveCopy == wave &&
+        DecodeAt(impl + PHBattleWaveBackupOffset, key1, key2, 0x766cfc6du, &waveBackup) && waveBackup == wave;
+    state->entryChargesValid = true;
     for (NSUInteger slot = 0; slot < 6; ++slot) {
-        PHBattleMember &member = state->members[slot];
-        uintptr_t address = impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
-        uint8_t bytes[0x5f0];
-        if (!PHReadMemory(address, bytes, sizeof(bytes))) { state->protectedValuesValid = false; continue; }
-        member.active = (bytes[0] & 1u) != 0;
-        if (!member.active) { member.readable = true; continue; }
-        std::memcpy(&member.baseID, bytes + PHBattleBaseIDOffset, sizeof(member.baseID));
-        std::memcpy(&member.assistID, bytes + PHBattleAssistIDOffset, sizeof(member.assistID));
-        std::memcpy(&member.catalogID, bytes + PHBattleCatalogIDOffset, sizeof(member.catalogID));
-        std::memcpy(&member.previousID, bytes + 64, sizeof(member.previousID));
-        member.flags = bytes[56];
-        member.radius = bytes[63];
-        std::memcpy(&member.level, bytes + 0x510, sizeof(member.level));
-        std::memcpy(&member.skillLevel, bytes + 0x512, sizeof(member.skillLevel));
-        std::memcpy(member.extra, bytes + 0x4f0, sizeof(member.extra));
-        std::memcpy(member.assist, bytes + 0x59e, sizeof(member.assist));
-        uintptr_t parameter = 0;
-        std::memcpy(&parameter, bytes + PHBattleCardParamOffset, sizeof(parameter));
-        member.readable = DecodeByte(bytes, PHBattleSourceSlotOffset, key1, key2, &member.sourceSlot) &&
-            DecodeByte(bytes, PHBattleScriptSlotOffset, key1, key2, &member.scriptSlot) &&
-            Decode16(bytes, PHBattleFormOffset, key1, key2, &member.formID) &&
-            Decode16(bytes, PHBattleTempIDOffset, key1, key2, &member.temporaryID) &&
-            Decode16(bytes, PHBattleTempTurnsOffset, key1, key2, &member.temporaryTurns) &&
-            Decode16(bytes, PHBattleChargeOffset, key1, key2, &member.charge) &&
-            member.scriptSlot <= PHBattleParameterSlots &&
-            CatalogValid(member.baseID, state) && CatalogValid(member.catalogID, state) &&
-            (!member.assistID || CatalogValid(member.assistID, state)) &&
-            (!member.formID || CatalogValid(member.formID, state)) &&
-            parameter == state->catalog + member.catalogID * PHBattleCatalogStride;
-        state->protectedValuesValid &= member.readable;
+        BOOL chargeValid = NO;
+        state->protectedValuesValid &= ReadMember(impl + PHBattleMemberOffset + slot * PHBattleMemberStride,
+            state, key1, key2, &state->members[slot], &chargeValid);
+        state->entryChargesValid &= chargeValid;
     }
+    if (!PHBattleUsesPrimaryTeam(state->multiplayer)) ReadTeamBanks(state, key1, key2);
     uint32_t lastKey1 = 0, lastKey2 = 0;
     state->protectedValuesValid &= PHReadU32(frame.header + PHBattleKey1RVA, &lastKey1) && lastKey1 == key1 &&
                                   PHReadU32(frame.header + PHBattleKey2RVA, &lastKey2) && lastKey2 == key2;
@@ -226,7 +275,7 @@ static void RequireWrite(uintptr_t address, const void *data, size_t length) {
 static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, uint32_t catalog,
                     const PHBattleMember *presentation, uint16_t charge, BOOL capCharge,
                     BOOL *didMutate, uint16_t *finalCharge, NSString **reason,
-                    const PHBattleMember *sourceExpected = nullptr) {
+                    const PHBattleMember *sourceExpected = nullptr, BOOL entry = NO) {
     uintptr_t header = state->identity.header, game = state->identity.game, impl = state->identity.impl;
     uintptr_t member = impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
     NativeCalls native = Calls(header);
@@ -257,6 +306,10 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
             if (maximum > UINT16_MAX) throw std::runtime_error("Invalid skill charge bound");
             uint16_t nextCharge = capCharge ? static_cast<uint16_t>(std::min<uint64_t>(charge, maximum)) : charge;
             native.set16(member + PHBattleChargeOffset, nextCharge);
+            if (entry) {
+                uint32_t chargeShadow = nextCharge ^ 0x68fb65ceu;
+                RequireWrite(member + PHBattleChargeShadowOffset, &chargeShadow, sizeof(chargeShadow));
+            }
             // Match ordinary transformation case 236: rebuild this member once,
             // cap its existing charge, then refresh team totals. Rebuilding all
             // six members here could consume unrelated pending member state.
@@ -268,10 +321,11 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
                 !DecodeAt(impl + PHBattleHPOffset, key1, key2, 0x766cfc6du, &hp)) throw std::runtime_error("HP decode failed");
             uint32_t hpShadow = hp ^ 0x8085a6beu;
             RequireWrite(impl + PHBattleHPShadowOffset, &hpShadow, sizeof(hpShadow));
-            PHBattleFrame frame = {header, state->identity.player, state->identity.epoch, true, true, state->policy};
+            PHBattleFrame frame = {header, state->identity.player, state->identity.epoch, true, true, state->policy, false};
             PHBattleState after = {};
             if (!ReadLive(&after, frame, reason) || !CanReadNative(&after) || !after.hpMatches || !after.digestMatches ||
-                !PHBattleSameIdentity(&state->identity, &after.identity)) throw std::runtime_error("Post-mutation battle check failed");
+                !PHBattleSameIdentity(&state->identity, &after.identity) || !PHBattleSameTeamView(state, &after))
+                throw std::runtime_error("Post-mutation battle check failed");
             const PHBattleMember &changed = after.members[slot];
             const PHBattleMember *source = sourceExpected ? sourceExpected : &state->members[slot];
             if (!PHBattleSameSource(source, &changed) || changed.formID != form || changed.catalogID != catalog ||
@@ -286,6 +340,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
                     std::memcmp(old.extra, current.extra, sizeof(old.extra)) ||
                     std::memcmp(old.assist, current.assist, sizeof(old.assist))))) throw std::runtime_error("Other member changed");
             }
+            if (!StoredTeamsUnchanged(state, &after, &state->members[slot])) throw std::runtime_error("Other stored team changed");
             *finalCharge = nextCharge;
             return YES;
         } @catch (NSException *exception) {
@@ -298,6 +353,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     return NO;
 }
 #include "PHBattleProvider.inc"
+#include "PHBattleEntry.inc"
 }
 
 @interface PHBattleNative : NSObject <PHBattleEngine>
@@ -308,6 +364,8 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     BOOL _busy, _faulted;
     BattleProvider _provider;
     uint64_t _nextToken;
+    PHBattleIdentity _entryIdentity;
+    BOOL _entryAttempted;
 }
 
 - (BOOL)readState:(PHBattleState *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -318,6 +376,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     }
     if (!ReadLive(state, frame, reason)) return NO;
     TagProviderMembers(&_provider, state);
+    if (!state->present || !PHBattleSameIdentity(&_entryIdentity, &state->identity)) _entryAttempted = NO;
     return YES;
 }
 
@@ -346,6 +405,23 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     return result;
 }
 
+- (PHBattleMutationResult)applyEntryLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask
+    state:(const PHBattleState *)expected members:(PHBattleMember *)members initialBoost:(uint16_t *)boost
+    reason:(NSString **)reason {
+    if (_busy || _faulted || !expected || !members || !boost || !NSThread.isMainThread ||
+        (_entryAttempted && PHBattleSameIdentity(&_entryIdentity, &expected->identity))) {
+        if (reason) *reason = @"本次入場已處理，或原生操作已停止";
+        return PHBattleMutationRejected;
+    }
+    _busy = YES;
+    _entryIdentity = expected->identity;
+    _entryAttempted = YES;
+    PHBattleMutationResult result = ApplyEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
+    _busy = NO;
+    _faulted |= result == PHBattleMutationUncertain;
+    return result;
+}
+
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
     BOOL valid = state && CatalogValid(target, state);
     if (!valid && reason) *reason = @"目標不在目前有效圖鑑中，或角色參數尚未載入";
@@ -359,10 +435,11 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         if (reason) *reason = @"原生戰鬥操作已停止或正在執行";
         return PHBattleMutationUncertain;
     }
-    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy};
+    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy, false};
     PHBattleState before = {};
     if (!CheckCode(frame.header, reason) || !ReadLive(&before, frame, reason) ||
         PHBattleStateGate(&before) != PHBattleGateReady || !PHBattleSameIdentity(&expected->identity, &before.identity) ||
+        !PHBattleSameTeamView(expected, &before) ||
         expected->catalog != before.catalog || expected->catalogCount != before.catalogCount ||
         !PHBattleSameSource(&expected->members[slot], &before.members[slot]) ||
         expected->members[slot].formID != before.members[slot].formID ||
@@ -395,11 +472,14 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     PHBattleState current = {};
     BOOL canRollback = ReadLive(&current, frame, NULL) && CanReadNative(&current) &&
         PHBattleSameIdentity(&before.identity, &current.identity) &&
+        PHBattleSameTeamView(&before, &current) &&
         PHBattleSameSource(&before.members[slot], &current.members[slot]) &&
         (current.members[slot].formID == form || current.members[slot].formID == before.members[slot].formID);
     BOOL rollbackMutation = NO;
     BOOL restored = canRollback && Perform(&current, slot, before.members[slot].formID, before.members[slot].catalogID,
         &before.members[slot], before.members[slot].charge, NO, &rollbackMutation, &charge, NULL);
+    PHBattleState rolledBack = {};
+    restored = restored && ReadLive(&rolledBack, frame, NULL) && StoredTeamsUnchanged(&before, &rolledBack);
     _busy = NO;
     _faulted = !restored;
     if (reason) *reason = restored ? @"替換未通過校驗；已還原原有形態與技能充能" :

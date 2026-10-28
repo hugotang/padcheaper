@@ -9,6 +9,11 @@
     slot:(NSUInteger)slot member:(PHBattleMember *)member reason:(NSString **)reason;
 - (PHBattleMutationResult)restoreLoadout:(const PHBattleMember *)original state:(const PHBattleState *)expected
     slot:(NSUInteger)slot reason:(NSString **)reason;
+// A fresh wave-zero intro permits one synchronous team transaction and the
+// game's initial SB calculation, before enemy preemptives or player input.
+- (PHBattleMutationResult)applyEntryLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask
+    state:(const PHBattleState *)expected members:(PHBattleMember *)members initialBoost:(uint16_t *)boost
+    reason:(NSString **)reason;
 // The engine rechecks live identity, source, form, phase, fingerprints and
 // consistency immediately before any mutation, and owns immediate rollback.
 - (PHBattleMutationResult)changeState:(const PHBattleState *)expected slot:(NSUInteger)slot
@@ -23,6 +28,7 @@
 // UI actions only enqueue work. No engine calls or native writes occur here.
 - (void)queueApplySlot:(NSUInteger)slot targetText:(NSString *)text;
 - (void)queueLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask;
+- (void)configureAutomaticLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask;
 - (void)queueRestoreSlot:(NSUInteger)slot;
 - (void)queueRestore;
 - (NSDictionary *)snapshot;

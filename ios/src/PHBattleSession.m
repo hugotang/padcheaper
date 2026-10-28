@@ -3,12 +3,13 @@
 
 static NSString *PHBattleGateMessage(PHBattleGate gate, const PHBattleState *state) {
     switch (gate) {
-        case PHBattleGateReady: return @"單人操作階段，可套用六個位置";
+        case PHBattleGateReady: return state->entryWindow ? @"新地下城開場，可自動套用隊伍" :
+            PHBattleUsesPrimaryTeam(state->multiplayer) ? @"操作階段，可套用六個位置" : @"操作階段，可套用目前隊伍與助人";
         case PHBattleGateAbsent: return @"等待進入地下城";
         case PHBattleGateProtected: return @"戰鬥保護值或隊員參數未通過檢查";
         case PHBattleGateMode: return [NSString stringWithFormat:@"入口未在目前設定的允許清單內（mode %d／source %u／multi %u）",
                                       state->mode, state->sourceMode, state->multiplayer];
-        case PHBattleGateLayout: return @"multi 1／4 使用另一套隊伍陣列，目前六人引擎尚未適配";
+        case PHBattleGateLayout: return @"隊伍陣列或隊員來源尚未通過檢查，暫停操作";
         case PHBattleGatePhase: return [NSString stringWithFormat:@"等待玩家操作階段（phase %u）", state->phase];
         case PHBattleGateInputUnavailable: return @"觸控狀態未通過檢查，暫停替換";
         case PHBattleGateInput: return [NSString stringWithFormat:@"等待放開觸控或輸入處理完成（raw 0x%02x／frame 0x%02x）",
@@ -27,25 +28,39 @@ static uint16_t Number(uint32_t id) {
     return number;
 }
 typedef struct {
-    BOOL active, restorePending, restoreFailed;
+    BOOL active, restorePending, restoreFailed, visible;
     NSUInteger slot;
     PHBattleIdentity identity;
     PHBattleMember original, applied;
     PHBattlePolicy policy;
 } PHBattleLease;
 
+static BOOL MatchesLease(const PHBattleMember *expected, const PHBattleMember *m) {
+    return expected->providerToken ? m->providerToken == expected->providerToken && PHBattleSameOrigin(expected, m) :
+        PHBattleSameSource(expected, m);
+}
+
 static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *expected) {
     NSInteger result = -1;
     for (NSUInteger i = 0; i < 6; ++i) {
         const PHBattleMember *m = &state->members[i];
-        BOOL match = expected->providerToken ? m->active && m->readable &&
-            m->providerToken == expected->providerToken && m->sourceSlot == expected->sourceSlot :
-            PHBattleSameSource(expected, m);
-        if (!match) continue;
-        if (result >= 0) return -1;
+        if (!MatchesLease(expected, m)) continue;
+        if (result >= 0) return -2;
         result = (NSInteger)i;
     }
     return result;
+}
+
+static const PHBattleMember *FindStoredMember(const PHBattleState *state, const PHBattleMember *expected) {
+    if (!PHBattleTeamLayoutValid(state)) return NULL;
+    const PHBattleMember *found = NULL;
+    for (NSUInteger team = 0; team < state->teamCount; ++team) for (NSUInteger slot = 0; slot < 6; ++slot) {
+        const PHBattleMember *m = &state->storedMembers[team][slot];
+        if (!MatchesLease(expected, m)) continue;
+        if (found) return NULL;
+        found = m;
+    }
+    return found;
 }
 
 @implementation PHBattleSession {
@@ -55,12 +70,19 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     PHBattleIdentity _queueIdentity;
     PHBattleMember _pendingMembers[6];
     PHBattleLoadout _loadouts[6];
+    PHBattleLoadout _automaticLoadouts[6], _entryLoadouts[6];
+    PHBattleIdentity _automaticIdentity;
     PHBattleLease _leases[6];
     uint8_t _pending;
+    uint8_t _automaticMask, _entryMask;
     BOOL _hasState, _prepared, _fault;
+    BOOL _automaticHasIdentity, _autoArmed, _autoWaiting;
     NSUInteger _applyCount, _restoreCount, _rollbackCount;
+    NSUInteger _automaticCount;
+    uint16_t _initialBoost;
     NSTimeInterval _time, _lastProbe, _queuedTime;
     NSString *_message, *_gateMessage;
+    NSString *_automaticMessage;
 }
 - (instancetype)initWithEngine:(id<PHBattleEngine>)engine {
     if ((self = [super init])) {
@@ -78,7 +100,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     return NO;
 }
 - (BOOL)hasLeaseAtSlot:(NSUInteger)slot {
-    for (NSUInteger i = 0; i < 6; ++i) if (_leases[i].active && _leases[i].slot == slot) return YES;
+    for (NSUInteger i = 0; i < 6; ++i) if (_leases[i].active && _leases[i].visible && _leases[i].slot == slot) return YES;
     return NO;
 }
 - (void)cancelQueue:(NSString *)message { _pending = 0; _prepared = NO; _message = message; }
@@ -88,9 +110,23 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     _fault |= result == PHBattleMutationUncertain;
     _message = reason ?: @"操作未完成，剩餘位置已取消；已套用的位置仍可還原";
 }
+- (void)configureAutomaticLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask {
+    NSCAssert(NSThread.isMainThread, @"Automatic team config requires main");
+    _automaticMask = loadouts && !(mask & ~0x3fu) ? mask : 0;
+    if (_automaticMask) memcpy(_automaticLoadouts, loadouts, sizeof(_automaticLoadouts));
+    else memset(_automaticLoadouts, 0, sizeof(_automaticLoadouts));
+}
 - (void)onFrame:(PHBattleFrame)frame atTime:(NSTimeInterval)time {
     NSCAssert(NSThread.isMainThread, @"Battle commands require the game main thread");
+    BOOL accountChanged = _frame.header != frame.header || _frame.player != frame.player || _frame.epoch != frame.epoch;
     _frame = frame; _time = time;
+    if (accountChanged) {
+        _automaticHasIdentity = NO; _autoArmed = NO; _autoWaiting = NO;
+    }
+    if (!frame.enabled || !frame.autoApplyTeam) {
+        if (_autoWaiting) _message = @"入場自動套用已取消";
+        _autoArmed = NO; _autoWaiting = NO;
+    }
     if (_pending && (_queueIdentity.header != frame.header || _queueIdentity.player != frame.player ||
         _queueIdentity.epoch != frame.epoch)) [self cancelQueue:@"帳號或遊戲影像已變更，取消待執行隊伍"];
     for (NSUInteger i = 0; i < 6; ++i) {
@@ -102,8 +138,12 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         if (!frame.enabled && lease->active && !lease->restoreFailed) lease->restorePending = YES;
     }
     if (!frame.enabled && _pending) [self cancelQueue:@"功能已關閉，取消待執行替換"];
-    if (!frame.ready) { _hasState = NO; _gateMessage = @"等待遊戲校驗、主執行緒與登入成功"; return; }
-    if (!_pending && ![self restorePending] && time - _lastProbe < 0.25) return;
+    if (!frame.ready) {
+        _hasState = NO; _autoArmed = NO; _autoWaiting = NO;
+        _gateMessage = @"等待遊戲校驗、主執行緒與登入成功"; return;
+    }
+    BOOL watchEntry = frame.enabled && frame.autoApplyTeam && (_autoArmed || _autoWaiting || !_automaticHasIdentity);
+    if (!_pending && ![self restorePending] && !watchEntry && _hasState && time - _lastProbe < 0.25) return;
     _lastProbe = time;
     PHBattleState next = {0};
     NSString *reason = nil;
@@ -119,17 +159,34 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     _state = next; _state.policy = frame.policy; _hasState = YES;
     PHBattleGate gate = PHBattleStateGate(&_state);
     _gateMessage = PHBattleGateMessage(gate, &_state);
+    if (!_state.present) {
+        // Enabling the option in an existing battle never arms that battle.
+        // Observe the menu/scene transition first, then consume this arm once.
+        _autoArmed = frame.enabled && frame.autoApplyTeam;
+        _autoWaiting = NO; _automaticHasIdentity = NO;
+        if (_autoArmed) _automaticMessage = _automaticMask ? @"等待下次入場自動套用儲存隊伍" : @"請先儲存包含本體的隊伍";
+    } else if (!_automaticHasIdentity || !PHBattleSameIdentity(&_automaticIdentity, &_state.identity)) {
+        _automaticIdentity = _state.identity; _automaticHasIdentity = YES;
+        _autoWaiting = _autoArmed && frame.enabled && frame.autoApplyTeam;
+        _autoArmed = NO;
+        if (_autoWaiting) {
+            memcpy(_entryLoadouts, _automaticLoadouts, sizeof(_entryLoadouts));
+            _entryMask = _automaticMask;
+            _automaticMessage = _message = @"已排程入場自動套用，等待開場動畫檢查";
+        }
+    }
     for (NSUInteger i = 0; i < 6; ++i) {
         PHBattleLease *lease = &_leases[i];
         if (!lease->active) continue;
         if (!_state.present || !PHBattleSameIdentity(&lease->identity, &_state.identity)) {
             lease->active = NO; _message = @"地下城已變更；舊替換紀錄已失效"; continue;
         }
-        if (!_state.protectedValuesValid) continue;
+        if (!_state.protectedValuesValid || !PHBattleTeamLayoutValid(&_state)) continue;
         NSInteger position = FindMember(&_state, &lease->applied);
-        BOOL superseded = position < 0;
+        const PHBattleMember *m = position >= 0 ? &_state.members[position] :
+            position == -1 ? FindStoredMember(&_state, &lease->applied) : NULL;
+        BOOL superseded = !m;
         if (!superseded && !lease->applied.providerToken) {
-            PHBattleMember *m = &_state.members[position];
             superseded = m->formID != lease->applied.formID ||
                 ((!m->temporaryID && !m->temporaryTurns) &&
                  (m->catalogID != lease->applied.catalogID || m->previousID != lease->applied.previousID));
@@ -137,19 +194,59 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         if (superseded) {
             lease->active = NO; _message = @"其中一名隊員由遊戲接管；其餘位置仍可還原";
         } else {
-            lease->slot = (NSUInteger)position;
+            lease->visible = position >= 0;
+            lease->slot = lease->visible ? (NSUInteger)position : 6;
             if (!lease->restoreFailed && !PHBattlePolicyAllows(&frame.policy, _state.mode, _state.sourceMode, _state.multiplayer))
                 lease->restorePending = YES;
         }
     }
     if (_pending && gate == PHBattleGateMode) [self cancelQueue:@"入口設定已變更，取消剩餘替換；已套用位置將逐格還原"];
     if (_fault) return;
-    // Exactly one mutation per fresh frame, even for Apply followed by Restore.
+    if (_autoWaiting) {
+        if (!_entryMask || _pending || [self activeCount] || [self restorePending]) {
+            _autoWaiting = NO;
+            _automaticMessage = _message = !_entryMask ? @"儲存隊伍沒有本體，本次未自動套用" : @"已有隊伍操作，本次自動套用已取消";
+        } else if (_state.protectedValuesValid && !_state.entryWindow) {
+            _autoWaiting = NO;
+            _automaticMessage = _message = @"本次不是新的入場動畫，保留目前技能充能；等待下次入場";
+        } else {
+            PHBattleGate entryGate = PHBattleEntryGate(&_state);
+            if (entryGate == PHBattleGateReady) {
+                // Finish the immutable entry batch in this frame, before the
+                // original game can leave its intro and process preemptives.
+                _autoWaiting = NO;
+                PHBattleMember originals[6], applied[6] = {0};
+                memcpy(originals, _state.members, sizeof(originals));
+                uint16_t boost = 0;
+                PHBattleMutationResult result = [_engine applyEntryLoadouts:_entryLoadouts mask:_entryMask state:&_state
+                    members:applied initialBoost:&boost reason:&reason];
+                if (result == PHBattleMutationApplied) {
+                    NSUInteger count = 0;
+                    for (NSUInteger i = 0; i < 6; ++i) if (_entryMask & (1u << i)) {
+                        _leases[i] = (PHBattleLease){.active = YES, .visible = YES, .slot = i, .identity = _state.identity,
+                            .original = originals[i], .applied = applied[i], .policy = _state.policy};
+                        ++count;
+                    }
+                    _applyCount += count; ++_automaticCount; _initialBoost = boost;
+                    _message = [NSString stringWithFormat:@"入場已自動套用 %lu 名隊員 · SB %u（已重算）", (unsigned long)count, boost];
+                } else [self recordFailure:result reason:reason];
+                _automaticMessage = _message;
+                [self didMutate]; return;
+            }
+            if (entryGate == PHBattleGateMode || entryGate == PHBattleGateLayout || entryGate == PHBattleGateAudit ||
+                entryGate == PHBattleGateHP || entryGate == PHBattleGateDigest) {
+                _autoWaiting = NO;
+                _automaticMessage = _message = [@"本次未自動套用：" stringByAppendingString:PHBattleGateMessage(entryGate, &_state)];
+            } else { _gateMessage = PHBattleGateMessage(entryGate, &_state); return; }
+        }
+    }
+    // Manual Apply/Restore still performs exactly one member per fresh frame.
     if ([self restorePending]) {
-        BOOL temporary = NO;
+        BOOL temporary = NO, offscreen = NO;
         for (NSUInteger i = 0; i < 6; ++i) {
             PHBattleLease *lease = &_leases[i];
             if (!lease->active || !lease->restorePending) continue;
+            if (!lease->visible) { offscreen = YES; continue; }
             PHBattleState restoreState = _state;
             restoreState.policy = PHBattlePolicyAllows(&_state.policy, _state.mode, _state.sourceMode, _state.multiplayer) ?
                 _state.policy : lease->policy;
@@ -169,6 +266,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             [self didMutate]; return;
         }
         if (temporary) _gateMessage = @"等待遊戲的暫時變身結束後還原";
+        else if (offscreen) _gateMessage = @"等待切回包含待還原隊員的隊伍";
         return;
     }
     if (!_pending) return;
@@ -220,7 +318,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         }
         _pending &= (uint8_t)~(1u << i);
         if (result == PHBattleMutationApplied) {
-            _leases[freeLease] = (PHBattleLease){.active = YES, .slot = slot, .identity = _state.identity,
+            _leases[freeLease] = (PHBattleLease){.active = YES, .visible = YES, .slot = slot, .identity = _state.identity,
                                                 .original = original, .applied = applied, .policy = _state.policy};
             _applyCount++;
             _message = [NSString stringWithFormat:@"位置 %lu 已套用 #%u；共 %lu 名，可分別還原%@", (unsigned long)slot + 1,
@@ -259,6 +357,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         }
     }
     memcpy(_loadouts, loadouts, sizeof(_loadouts));
+    _autoWaiting = NO;
     memcpy(_pendingMembers, _state.members, sizeof(_pendingMembers));
     _queueIdentity = _state.identity; _pending = mask; _prepared = NO; _queuedTime = _time;
     _message = @"已排入隊伍設定，等待遊戲畫面更新";
@@ -266,18 +365,24 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
 - (void)queueRestoreSlot:(NSUInteger)slot {
     NSCAssert(NSThread.isMainThread, @"Battle UI actions require main");
     if (_fault) { _message = @"原生操作狀態不明，已停止後續寫入"; return; }
+    BOOL cancelledEntry = _autoWaiting;
+    _autoWaiting = NO; _autoArmed = NO;
     [self cancelQueue:@"已取消待執行隊伍"];
     BOOL found = NO;
     for (NSUInteger i = 0; i < 6; ++i) {
-        if (_leases[i].active && (slot >= 6 || _leases[i].slot == slot)) {
+        if (_leases[i].active && (slot >= 6 || (_leases[i].visible && _leases[i].slot == slot))) {
             _leases[i].restorePending = YES; _leases[i].restoreFailed = NO; found = YES;
         }
     }
-    _message = found ? @"已排入還原，等待相同戰鬥的操作階段" : @"該位置沒有可還原的替換；待執行隊伍已取消";
+    _message = found ? @"已排入還原，等待相同戰鬥的操作階段" :
+        cancelledEntry ? @"已取消本次入場自動套用" : @"該位置沒有可還原的替換；待執行隊伍已取消";
+    if (cancelledEntry) _automaticMessage = _message;
 }
 - (void)queueRestore { [self queueRestoreSlot:6]; }
 - (NSDictionary *)snapshot {
     NSUInteger activeCount = [self activeCount];
+    NSUInteger offscreenCount = 0;
+    for (NSUInteger i = 0; i < 6; ++i) offscreenCount += _leases[i].active && !_leases[i].visible;
     BOOL restoring = [self restorePending];
     NSMutableArray *members = [NSMutableArray array];
     if (_hasState && _state.present) for (NSUInteger slot = 0; slot < 6; ++slot) {
@@ -286,6 +391,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         [members addObject:@{@"slot": @(slot + 1), @"active": @(m.active), @"readable": @(m.readable),
             @"source": @(Number(m.baseID)), @"current": @(Number(m.catalogID)), @"form": @(Number(m.formID)),
             @"assist": @(Number(m.assistID)), @"nativeID": @(m.catalogID), @"charge": @(m.charge),
+            @"sourceTeam": @(m.sourceTeam + 1), @"sourceSlot": @(m.sourceSlot + 1),
             @"level": @(m.level), @"skillLevel": @(m.skillLevel), @"leased": @(leased),
             @"temporary": @(m.temporaryID != 0 || m.temporaryTurns != 0),
             @"replaceable": @(!leased && m.active && m.readable && m.sourceSlot >= 0 && m.sourceSlot <= 5 &&
@@ -293,12 +399,15 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     }
     BOOL canApply = _hasState && _frame.ready && _frame.enabled && activeCount < 6 && !_pending && !restoring && !_fault &&
                     PHBattleStateGate(&_state) == PHBattleGateReady;
-    NSString *phase = _fault ? @"fault" : restoring ? @"restore_pending" : _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
+    NSString *phase = _fault ? @"fault" : restoring ? @"restore_pending" : _autoWaiting ? @"entry_pending" :
+        _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
     return @{@"implemented": @YES, @"phase": phase, @"enabled": @(_frame.enabled),
-        @"canApply": @(canApply), @"canRestore": @((activeCount || _pending) && !_fault), @"applied": @(activeCount > 0),
+        @"canApply": @(canApply), @"canRestore": @((activeCount || _pending || _autoWaiting) && !_fault), @"applied": @(activeCount > 0),
         @"activeCount": @(activeCount), @"pendingMask": @(_pending), @"restorePending": @(restoring), @"fault": @(_fault),
         @"message": _message ?: @"", @"gate": _gateMessage ?: @"", @"members": members,
         @"mode": @(_state.mode), @"sourceMode": @(_state.sourceMode), @"multiplayer": @(_state.multiplayer),
+        @"teamCount": @(_state.teamCount), @"currentTeam": @(_state.currentTeam + 1),
+        @"teamBanksValid": @(_state.teamBanksValid), @"offscreenCount": @(offscreenCount),
         @"battlePhase": @(_state.phase), @"auditFlags": @(_state.auditFlags),
         @"inputValid": @(_hasState && _state.input.valid), @"inputQuiet": @(_hasState && PHInputIsQuiet(&_state.input)),
         @"rawInputCount": @(_state.input.rawCount), @"frameInputCount": @(_state.input.frameCount),
@@ -306,6 +415,10 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         @"rawInputFlags": @(_state.input.rawFlags), @"frameInputFlags": @(_state.input.frameFlags),
         @"dragActive": @(_hasState && _state.dragActive), @"digestKnown": @(_hasState && _state.digestKnown),
         @"digestMatches": @(_hasState && _state.digestMatches), @"hpMatches": @(_hasState && _state.hpMatches),
-        @"applyCount": @(_applyCount), @"restoreCount": @(_restoreCount), @"rollbackCount": @(_rollbackCount), @"deviceVerified": @NO};
+        @"applyCount": @(_applyCount), @"restoreCount": @(_restoreCount), @"rollbackCount": @(_rollbackCount), @"deviceVerified": @NO,
+        @"automaticEnabled": @(_frame.autoApplyTeam), @"automaticWaiting": @(_autoWaiting),
+        @"automaticCount": @(_automaticCount), @"initialBoost": @(_initialBoost),
+        @"entryWindow": @(_hasState && _state.entryWindow), @"entryChargesValid": @(_hasState && _state.entryChargesValid),
+        @"automaticMessage": _automaticMessage ?: @""};
 }
 @end

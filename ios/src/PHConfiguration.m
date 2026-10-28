@@ -5,7 +5,7 @@
 static NSDictionary *PHDefaultBattleFilters(void) {
     return @{@"allowAllModes": @YES, @"entryModes": @[@0, @1, @12],
              @"allowAllSources": @NO, @"sourceModes": @[@0],
-             @"allowAllMulti": @NO, @"multiModes": @[@0]};
+             @"allowAllMulti": @NO, @"multiModes": @[@0], @"autoApplyTeam": @NO};
 }
 
 NSDictionary *PHDefaultConfiguration(void) {
@@ -81,7 +81,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     if (features[@"badge"] && !PHIsBoolean(features[@"badge"])) return NO;
     if (configuration[@"battle"] && ![configuration[@"battle"] isKindOfClass:NSDictionary.class]) return NO;
     NSDictionary *battle = PHConfigurationBattleFilters(configuration);
-    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti"]) if (!PHIsBoolean(battle[key])) return NO;
+    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"autoApplyTeam"]) if (!PHIsBoolean(battle[key])) return NO;
     if (!PHValidFilter(battle[@"entryModes"], UINT16_MAX) || !PHValidFilter(battle[@"sourceModes"], UINT16_MAX) ||
         !PHValidFilter(battle[@"multiModes"], UINT32_MAX)) return NO;
     for (NSString *key in @[@"apiHosts", @"apiPaths"]) {

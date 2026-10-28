@@ -13,6 +13,57 @@
     if ([13, 14, 15, 37, 38, 39, 40, 41, 42, 46, 47, 48, 49].includes(id)) return 6;
     return id === 51 ? 4 : 2;
   };
+  // IDs verified against the Japanese latent TAMADRA catalog. Stored IDs are
+  // never translated when labels change. 52 is reserved by the native range
+  // but has no named TAMADRA in the supported catalog.
+  const latentNames = Object.freeze({
+    1:'HP 強化',2:'攻擊強化',3:'回復強化',4:'操作時間延長',5:'自動回復',
+    6:'火傷害減輕',7:'水傷害減輕',8:'木傷害減輕',9:'光傷害減輕',10:'闇傷害減輕',
+    11:'技能延遲耐性',12:'全能力強化',13:'隊長交換耐性',14:'邪魔掉落耐性',15:'毒掉落耐性',
+    16:'進化用殺手',17:'覺醒用殺手',18:'強化合成用殺手',19:'販賣用殺手',
+    20:'神殺手',21:'龍殺手',22:'惡魔殺手',23:'機械殺手',24:'平衡殺手',
+    25:'攻擊殺手',26:'體力殺手',27:'回復殺手',28:'HP 強化＋',29:'攻擊強化＋',30:'回復強化＋',
+    31:'操作時間延長＋',32:'火傷害減輕＋',33:'水傷害減輕＋',34:'木傷害減輕＋',35:'光傷害減輕＋',36:'闇傷害減輕＋',
+    37:'傷害無效貫通',38:'屬性吸收貫通',39:'傷害吸收貫通',40:'轉轉回復',41:'消除不可回復',
+    42:'傷害上限解放',43:'HP 強化＋＋',44:'攻擊強化＋＋',45:'回復強化＋＋',
+    46:'雲／操作不可回復',47:'技能加速＋＋',48:'武裝無效回復',49:'傷害上限解放（高倍率）',
+    50:'部位追擊',51:'無視防禦力'
+  });
+  const latentName = id => latentNames[id] || `未定義潛覺（ID ${id}）`;
+  const awakeningNames = Object.freeze({
+    0:'不啟用',1:'HP 強化',2:'攻擊強化',3:'回復強化',4:'火傷害減輕',5:'水傷害減輕',
+    6:'木傷害減輕',7:'光傷害減輕',8:'闇傷害減輕',9:'自動回復',10:'封鎖耐性',
+    11:'暗闇耐性',12:'邪魔耐性',13:'毒耐性',14:'火珠強化',15:'水珠強化',16:'木珠強化',
+    17:'光珠強化',18:'闇珠強化',19:'操作時間延長',20:'封鎖回復',21:'技能加速',
+    22:'火橫列強化',23:'水橫列強化',24:'木橫列強化',25:'光橫列強化',26:'闇橫列強化',
+    27:'雙體攻擊',28:'技能封鎖耐性',29:'回復珠強化',30:'協力強化',31:'龍殺手',32:'神殺手',
+    33:'惡魔殺手',34:'機械殺手',35:'平衡殺手',36:'攻擊殺手',37:'體力殺手',38:'回復殺手',
+    39:'進化用殺手',40:'覺醒用殺手',41:'強化合成用殺手',42:'販賣用殺手',43:'連擊強化',
+    44:'防禦破壞',45:'追加攻擊',46:'隊伍 HP 強化',47:'隊伍回復強化',48:'傷害無效貫通',
+    49:'武裝覺醒',50:'超追加攻擊',51:'技能充能',52:'封鎖耐性＋',53:'操作時間延長＋',
+    54:'雲耐性',55:'操作不可耐性',56:'技能加速＋',57:'HP 80％以上強化',58:'HP 50％以下強化',
+    59:'L 字消除減傷',60:'L 字消除攻擊',61:'超連擊強化',62:'連擊珠',63:'語音',64:'地下城獎勵',
+    65:'HP 弱化',66:'攻擊弱化',67:'回復弱化',68:'暗闇耐性＋',69:'邪魔耐性＋',70:'毒耐性＋',
+    71:'邪魔珠加護',72:'毒珠加護',73:'火連珠強化',74:'水連珠強化',75:'木連珠強化',76:'光連珠強化',
+    77:'闇連珠強化',78:'十字消除攻擊',79:'三色攻擊強化',80:'四色攻擊強化',81:'五色攻擊強化',
+    82:'超連珠強化',83:'附加龍類型',84:'附加神類型',85:'附加惡魔類型',86:'附加機械類型',
+    87:'附加平衡類型',88:'附加攻擊類型',89:'附加體力類型',90:'附加回復類型',91:'副屬性變火',
+    92:'副屬性變水',93:'副屬性變木',94:'副屬性變光',95:'副屬性變闇',96:'雙體攻擊＋',
+    97:'技能充能＋',98:'自動回復＋',99:'火珠強化＋',100:'水珠強化＋',101:'木珠強化＋',
+    102:'光珠強化＋',103:'闇珠強化＋',104:'回復珠強化＋',105:'技能加速－',106:'浮游',
+    107:'連擊強化＋',108:'L 字消除攻擊＋',109:'傷害無效貫通＋',110:'十字消除攻擊＋',
+    111:'超連擊強化＋',112:'三色攻擊強化＋',113:'四色攻擊強化＋',114:'五色攻擊強化＋',
+    115:'封鎖回復＋',116:'火橫列強化×3',117:'水橫列強化×3',118:'木橫列強化×3',
+    119:'光橫列強化×3',120:'闇橫列強化×3',121:'火連珠強化＋',122:'水連珠強化＋',
+    123:'木連珠強化＋',124:'光連珠強化＋',125:'闇連珠強化＋',126:'T 字消除攻擊',
+    127:'全能力強化',128:'陽之加護',129:'陰之加護',130:'熟成',131:'部位破壞',132:'下午茶',
+    133:'火水同時攻擊',134:'水木同時攻擊',135:'木火同時攻擊',136:'技能延遲耐性',137:'全珠強化',
+    138:'同色武裝強化',139:'自力',140:'操作時間縮短耐性',141:'達人多色',142:'全能力強化＋',
+    143:'加速',144:'15 連擊強化',145:'希望之魂',146:'勇氣之魂',147:'命運之魂',148:'武裝無效耐性',
+    149:'火直列消除攻擊',150:'水直列消除攻擊',151:'木直列消除攻擊',152:'光直列消除攻擊',153:'闇直列消除攻擊'
+  });
+  const awakeningName = id => awakeningNames[id] || `未定義覺醒（ID ${id}）`;
+  const libraryCapacity = 64;
   function createModel(data) {
     const cards = new Map(data.cards.map(r => [r[0], {id:r[0],name:r[1],attrs:r[2],maxLevel:r[3],maxSkill:r[4],
       awakenings:r[5],supers:r[6],sync:r[7] || 0,canAssist:r[8],latentSlots:r[9],aliases:r[10]}]));
@@ -54,6 +105,60 @@
       if (!value || value.schema !== 1 || !Array.isArray(value.slots) || value.slots.length !== 6) throw new Error('隊伍需要六個位置');
       return {schema:1,title:typeof value.title === 'string' ? value.title.slice(0,80) : '我的隊伍',
         slots:value.slots.map(s=>({body:validateCard(s.body,false,true),assist:validateCard(s.assist,true,true)}))};
+    }
+    function libraryID(value) {
+      if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(value)) throw new Error('隊伍識別碼無效');
+      return value;
+    }
+    function normalizeLibrary(value) {
+      if (!value || value.schema !== 1 || !Array.isArray(value.teams) || !value.teams.length ||
+          value.teams.length > libraryCapacity) throw new Error(`隊伍庫需要 1 至 ${libraryCapacity} 個隊伍`);
+      const selected = libraryID(value.selected), ids = new Set();
+      const teams = value.teams.map(record => {
+        if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('隊伍庫記錄格式不正確');
+        const id = libraryID(record.id);
+        if (ids.has(id)) throw new Error('隊伍識別碼重複');
+        ids.add(id);
+        return {id,team:normalize(record.team)};
+      });
+      if (!ids.has(selected)) throw new Error('目前選取的隊伍不存在');
+      return {schema:1,selected,teams};
+    }
+    function createLibrary(value) {
+      const id = value ? 'legacy' : 'default';
+      return normalizeLibrary({schema:1,selected:id,teams:[{id,team:value || empty()}]});
+    }
+    function selectedTeam(value) {
+      const library = normalizeLibrary(value);
+      return library.teams.find(record=>record.id===library.selected).team;
+    }
+    function updateLibraryTeam(value, draft) {
+      const library = normalizeLibrary(value), team = normalize(draft);
+      library.teams.find(record=>record.id===library.selected).team = team;
+      return library;
+    }
+    function selectLibraryTeam(value, id) {
+      const library = normalizeLibrary(value);
+      if (!library.teams.some(record=>record.id===id)) throw new Error('要切換的隊伍不存在');
+      library.selected = id;
+      return library;
+    }
+    function addLibraryTeam(value, draft, id) {
+      const library = normalizeLibrary(value);
+      libraryID(id);
+      if (library.teams.length >= libraryCapacity) throw new Error(`最多可儲存 ${libraryCapacity} 個隊伍`);
+      if (library.teams.some(record=>record.id===id)) throw new Error('隊伍識別碼重複');
+      library.teams.push({id,team:normalize(draft)});
+      library.selected = id;
+      return library;
+    }
+    function deleteLibraryTeam(value, id = value.selected) {
+      const library = normalizeLibrary(value), index = library.teams.findIndex(record=>record.id===id);
+      if (index < 0) throw new Error('要刪除的隊伍不存在');
+      if (library.teams.length === 1) throw new Error('請至少保留一個隊伍');
+      library.teams.splice(index,1);
+      if (library.selected === id) library.selected = library.teams[Math.min(index,library.teams.length-1)].id;
+      return library;
     }
     function selectCard(team, slot, kind, id) {
       integer(slot,0,5,'位置');
@@ -134,9 +239,11 @@
         (!query || String(c.id) === query || (c.name+' '+c.aliases).toLowerCase().includes(query)));
       return matches.sort((a,b)=>Number(String(b.id)===query)-Number(String(a.id)===query) || b.id-a.id).slice(0,60);
     }
-    return {cards,empty,normalize,selectCard,parseImport,exportLink,payload,search,validateCard,latentCost};
+    return {cards,empty,normalize,selectCard,parseImport,exportLink,payload,search,validateCard,latentCost,
+      latentName,latentNames,awakeningName,awakeningNames,libraryCapacity,createLibrary,normalizeLibrary,selectedTeam,updateLibraryTeam,
+      selectLibraryTeam,addLibraryTeam,deleteLibraryTeam};
   }
-  const api = {createModel,latentCost};
+  const api = {createModel,latentCost,latentName,latentNames,awakeningName,awakeningNames,libraryCapacity};
   if (typeof module !== 'undefined') module.exports = api;
   else root.PHFormation = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

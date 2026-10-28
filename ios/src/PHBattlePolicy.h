@@ -32,9 +32,8 @@ static inline bool PHBattlePolicyAllows(const PHBattlePolicy *policy, int16_t mo
            PHBattleFilterAllows(&policy->multiplayer, multiplayer);
 }
 
-// Native digest/refresh functions switch to banks of teams for multi 1/4.
-// This engine operates on the primary six-member array, so those layouts need
-// their own adapter regardless of the user's eligibility filters.
+// Native digest/refresh functions use stored teams for multi 1/4. Battle
+// mutations use the bank adapter; the timer remains limited to this array.
 static inline bool PHBattleUsesPrimaryTeam(uint32_t multiplayer) {
     return multiplayer != 1 && multiplayer != 4;
 }

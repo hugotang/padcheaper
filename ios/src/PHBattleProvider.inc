@@ -134,22 +134,26 @@ static void TagProviderMembers(BattleProvider *provider, PHBattleState *state) {
     if (!ContextMatches(provider, state->identity.header)) return;
     for (const ProviderLease &lease : provider->leases) {
         if (!ProfileOwned(provider, lease, state->identity.header)) continue;
-        int matches = 0, position = -1;
-        for (unsigned i = 0; i < 6; ++i) {
-            PHBattleMember &m = state->members[i];
-            if (m.active && m.readable && m.sourceSlot == lease.original.sourceSlot &&
-                m.scriptSlot == lease.parameter + 1 && m.baseID == Profile16(lease.installed, 4) &&
-                m.assistID == Profile16(lease.installed, 14)) { ++matches; position = i; }
-        }
-        if (matches == 1) state->members[position].providerToken = lease.token;
+        auto tag = [&](PHBattleMember *members) {
+            int matches = 0, position = -1;
+            for (unsigned i = 0; i < 6; ++i) {
+                PHBattleMember &m = members[i];
+                if (PHBattleSameOrigin(&m, &lease.original) && m.scriptSlot == lease.parameter + 1 &&
+                    m.baseID == Profile16(lease.installed, 4) && m.assistID == Profile16(lease.installed, 14)) {
+                    ++matches; position = i;
+                }
+            }
+            if (matches == 1) members[position].providerToken = lease.token;
+        };
+        tag(state->members);
+        for (unsigned team = 0; team < state->teamCount; ++team) tag(state->storedMembers[team]);
     }
 }
 
 static int FreeParameter(const PHBattleState *state) {
     PHBattleProfile empty = {};
     for (unsigned index = 0; index < PHBattleParameterSlots; ++index) {
-        BOOL inUse = NO;
-        for (const PHBattleMember &m : state->members) inUse |= m.active && m.scriptSlot == static_cast<int>(index + 1);
+        BOOL inUse = ParameterReferenced(state, static_cast<int>(index + 1));
         PHBattleProfile live = {};
         if (!inUse && PHReadMemory(ParameterAddress(state->identity.header, index), &live, sizeof(live)) &&
             !std::memcmp(&live, &empty, sizeof(live))) return static_cast<int>(index);
@@ -220,7 +224,7 @@ static BOOL ReleaseIdleProvider(BattleProvider *provider, const PHBattleState *s
     if (!provider->context.program) { *provider = {}; return YES; }
     if (!PHBattleSameIdentity(&provider->identity, &state->identity) || !ContextMatches(provider, header)) return NO;
     if (provider->allocatedProgram) {
-        for (const PHBattleMember &m : state->members) if (m.active && m.scriptSlot > 0) return YES;
+        for (unsigned i = 0; i < PHBattleParameterSlots; ++i) if (ParameterReferenced(state, static_cast<int>(i + 1))) return YES;
         // Native code may have acquired another, not-yet-bound record. Leave a
         // still-attached program to the native scene cleanup in that case.
         PHBattleProfile record = {}, zero = {};
@@ -259,13 +263,19 @@ static BOOL ProfileMatchesMember(const PHBattleProfile &profile, const PHBattleM
 
 static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *nextToken,
     const PHBattleState *expected, NSUInteger slot, const PHBattleLoadout *loadout,
-    const PHBattleMember *original, PHBattleMember *output, NSString **reason) {
-    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy};
+    const PHBattleMember *original, PHBattleMember *output, NSString **reason, BOOL entry = NO) {
+    PHBattleFrame frame = {expected->identity.header, expected->identity.player, expected->identity.epoch, true, true, expected->policy, false};
     PHBattleState before = {};
     if (!CheckCode(frame.header, reason) || !ReadLive(&before, frame, reason)) return PHBattleMutationRejected;
     TagProviderMembers(provider, &before);
     const PHBattleMember &old = before.members[slot];
-    if (PHBattleStateGate(&before) != PHBattleGateReady || !PHBattleSameIdentity(&expected->identity, &before.identity) ||
+    // Immediate entry rollback may follow a new audit flag from our failed
+    // operation. Restore owned sources while keeping that flag in the game.
+    BOOL phaseAllowed = entry && original ? before.entryWindow && CanReadNative(&before) &&
+        before.hpMatches && before.digestKnown && before.digestMatches :
+        (entry ? PHBattleEntryGate(&before) : PHBattleStateGate(&before)) == PHBattleGateReady;
+    if (!phaseAllowed ||
+        !PHBattleSameIdentity(&expected->identity, &before.identity) || !PHBattleSameTeamView(expected, &before) ||
         expected->catalog != before.catalog || expected->catalogCount != before.catalogCount ||
         !PHBattleSameSource(&expected->members[slot], &old) || expected->members[slot].formID != old.formID ||
         expected->members[slot].catalogID != old.catalogID || expected->members[slot].providerToken != old.providerToken ||
@@ -320,7 +330,7 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
             bound = YES;
             Calls(frame.header).setByte(address + PHBattleScriptSlotOffset, static_cast<uint8_t>(wanted.scriptSlot));
             BOOL success = Perform(&before, slot, wanted.formID, wanted.catalogID, loadout ? nullptr : original,
-                old.charge, YES, &changed, &charge, &failure, &wanted);
+                old.charge, YES, &changed, &charge, &failure, &wanted, entry);
             uint32_t audit = UINT32_MAX;
             success = success && ReadLive(&after, frame, &failure) &&
                 PHReadU32(frame.header + PHSaveRVA + PHBattleAuditOffset, &audit) && !(audit & ~before.auditFlags) &&
@@ -355,18 +365,18 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
             if (loadout && !bound && ReadLive(&current, frame, nullptr) &&
                 PHBattleSameIdentity(&before.identity, &current.identity) &&
                 PHBattleSameSource(&old, &current.members[slot]) && ContextMatches(provider, frame.header)) {
-                BOOL referenced = NO;
-                for (const PHBattleMember &m : current.members)
-                    referenced |= m.active && m.scriptSlot == parameter + 1;
+                BOOL referenced = ParameterReferenced(&current, parameter + 1);
                 restored = !referenced && (lease->active ? ReturnRecord(provider, lease, &current) :
                                                            ReleaseIdleProvider(provider, &current));
             }
             if (bound && ReadLive(&current, frame, nullptr) && CanReadNative(&current) &&
                 PHBattleSameIdentity(&before.identity, &current.identity) &&
-                current.members[slot].sourceSlot == old.sourceSlot && ProfileOwned(provider, *lease, frame.header)) {
+                PHBattleSameTeamView(&before, &current) && PHBattleSameOrigin(&current.members[slot], &old) &&
+                ProfileOwned(provider, *lease, frame.header)) {
                 Calls(frame.header).setByte(address + PHBattleScriptSlotOffset, static_cast<uint8_t>(old.scriptSlot));
                 restored = Perform(&current, slot, old.formID, old.catalogID, &old, old.charge, NO,
-                    &changed, &charge, nullptr, &old) && ReadLive(&after, frame, nullptr);
+                    &changed, &charge, nullptr, &old, entry) && ReadLive(&after, frame, nullptr) &&
+                    StoredTeamsUnchanged(&before, &after);
                 if (restored && loadout) restored = ReleaseProfile(provider, lease, &after);
                 if (restored && !loadout) {
                     TagProviderMembers(provider, &after);

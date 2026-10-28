@@ -6,15 +6,22 @@
 @interface PHFormationController () <WKScriptMessageHandler, WKNavigationDelegate>
 @property(nonatomic, strong) WKWebView *web;
 @property(nonatomic, copy) NSDictionary *team;
+@property(nonatomic, copy) NSDictionary *library;
 @property(nonatomic, copy) NSDictionary *battle;
 @property(nonatomic, copy) PHOverlayAction action;
 @property(nonatomic, copy) dispatch_block_t close;
 @end
 
 @implementation PHFormationController
-- (instancetype)initWithTeam:(NSDictionary *)team battle:(NSDictionary *)battle
+- (instancetype)initWithTeam:(NSDictionary *)team library:(NSDictionary *)library battle:(NSDictionary *)battle
     action:(PHOverlayAction)action close:(dispatch_block_t)close {
-    if ((self = [super init])) { _team = team; _battle = battle; _action = action; _close = close; }
+    if ((self = [super init])) {
+        _library = PHFormationReadLibrary(library, NULL, NULL) ? library : PHFormationLibraryFromTeam(team);
+        NSDictionary *selected = nil;
+        PHFormationReadLibrary(_library, &selected, NULL);
+        _team = selected;
+        _battle = battle; _action = action; _close = close;
+    }
     return self;
 }
 - (void)viewDidLoad {
@@ -65,7 +72,14 @@
     if ([action isEqual:@"ready"]) {
         NSMutableDictionary *initial = [@{@"battle": self.battle ?: @{}} mutableCopy];
         if (self.team && PHFormationReadTeam(self.team, NULL, NULL)) initial[@"team"] = self.team;
+        initial[@"library"] = self.library;
         [self send:@"receive" value:initial];
+    } else if ([action isEqual:@"library"]) {
+        NSDictionary *selected = nil;
+        NSString *reason = nil;
+        if (!PHFormationReadLibrary(value, &selected, &reason)) { [self send:@"notify" value:reason]; return; }
+        self.library = value; self.team = selected;
+        self.action(@"formationLibrarySave", value);
     } else if ([action isEqual:@"paste"]) {
         [self send:@"importText" value:UIPasteboard.generalPasteboard.string ?: @""];
     } else if ([action isEqual:@"copy"] && [value isKindOfClass:NSString.class] && [value length] <= 65536 &&
@@ -85,10 +99,11 @@
             [self send:@"notify" value:reason]; return;
         }
         self.team = team;
+        self.library = PHFormationLibraryUpdatingTeam(self.library, team);
         self.action(@"formationSave", team);
         if ([action isEqual:@"apply"]) { self.action(@"battleTeamApply", value); [self finish]; }
         else if ([action isEqual:@"close"]) [self finish];
-        else [self send:@"notify" value:@"已保留編隊草稿"];
+        else [self send:@"notify" value:@"已儲存目前隊伍"];
     }
 }
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction

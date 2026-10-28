@@ -52,4 +52,59 @@ assert.equal(JSON.stringify(team),before,'invalid edits must preserve all six dr
 const custom=JSON.parse(JSON.stringify(team));custom.slots[0].body.plus=[198,99,99];
 assert.deepEqual(model.parseImport(model.exportLink(custom)).team.slots[0].body.plus,[198,99,99]);
 for(const value of ['null','[]','false','{"s":"en","v":5,"f":[]}']) assert.throws(()=>model.parseImport(value));
-console.log('Formation editor model/import tests: passed');
+
+let library=model.createLibrary(team);
+assert.equal(library.selected,'legacy');
+assert.deepEqual(model.selectedTeam(library),team,'legacy single-team migration retains every slot');
+assert.equal(model.createLibrary().selected,'default');
+const stored=JSON.stringify(library);
+const draft=structuredClone(team);draft.title='副本';draft.slots[0].body.skill=1;
+library=model.addLibraryTeam(library,draft,'copy');
+draft.slots[0].body.skill=2;
+assert.equal(model.selectedTeam(library).slots[0].body.skill,1,'copy has independent nested member settings');
+assert.deepEqual(library.teams[0].team,team,'save-as does not overwrite the source saved record');
+let copyDraft=model.selectedTeam(library);copyDraft.title='重新命名';copyDraft.slots[5].assist.skill=0;
+library=model.updateLibraryTeam(library,copyDraft);
+copyDraft.slots[5].assist.skill=1;
+assert.equal(model.selectedTeam(library).slots[5].assist.skill,0,'saved records do not alias later draft edits');
+library=model.selectLibraryTeam(library,'legacy');
+assert.deepEqual(model.selectedTeam(library),team,'switching retrieves the original independent team');
+library=model.selectLibraryTeam(library,'copy');
+assert.equal(model.selectedTeam(library).title,'重新命名');
+assert.deepEqual(model.normalizeLibrary(JSON.parse(JSON.stringify(library))),library,'library survives a JSON restart');
+assert.equal(model.deleteLibraryTeam(library).selected,'legacy');
+assert.throws(()=>model.deleteLibraryTeam(model.createLibrary()),/至少/);
+for(const change of [
+  {selected:'missing'}, {selected:true}, {teams:[]}, {schema:true},
+  {teams:[{id:'bad id',team}]}, {teams:[{id:'x',team},{id:'x',team}]},
+  {teams:[{id:'legacy',team:{...team,slots:[]}}]}
+]) assert.throws(()=>model.normalizeLibrary({...JSON.parse(stored),...change}));
+const unchanged=JSON.stringify(library);
+assert.throws(()=>model.addLibraryTeam(library,team,'copy'),/重複/);
+assert.throws(()=>model.selectLibraryTeam(library,'missing'),/不存在/);
+assert.equal(JSON.stringify(library),unchanged,'failed management operations cannot alter saved teams');
+let full=model.createLibrary();
+for(let i=1;i<model.libraryCapacity;i++) full=model.addLibraryTeam(full,model.empty(),`team-${i}`);
+assert.equal(full.teams.length,64);
+assert.throws(()=>model.addLibraryTeam(full,team,'overflow'),/最多/);
+assert.equal(full.teams.length,64);
+assert.equal(model.deleteLibraryTeam(full).teams.length,63);
+
+for(let id=1;id<=51;id++) assert.ok(model.latentNames[id] && !model.latentName(id).includes('未定義'),`latent ${id} has a verified label`);
+assert.equal(model.latentName(13),'隊長交換耐性');
+assert.equal(model.latentName(14),'邪魔掉落耐性');
+assert.equal(model.latentName(37),'傷害無效貫通');
+assert.equal(model.latentName(38),'屬性吸收貫通');
+assert.equal(model.latentName(42),'傷害上限解放');
+assert.equal(model.latentName(43),'HP 強化＋＋');
+assert.equal(model.latentName(50),'部位追擊');
+assert.equal(model.latentName(51),'無視防禦力');
+const latentDraft=structuredClone(team);latentDraft.slots[0].body.latents=[13];
+assert.deepEqual(model.parseImport(model.exportLink(latentDraft)).team.slots[0].body.latents,[13],'corrected labels never remap saved latent IDs');
+for(const card of model.cards.values()) for(const id of [...card.awakenings,...card.supers,card.sync].filter(Boolean))
+  assert.ok(model.awakeningNames[id],`card ${card.id}: awakening ${id} has a label`);
+assert.equal(model.awakeningName(106),'浮游');
+assert.equal(model.awakeningName(131),'部位破壞');
+assert.equal(model.awakeningName(48),'傷害無效貫通');
+assert.equal(model.awakeningName(145),'希望之魂');
+console.log('Formation editor model/import/library/awakening-label tests: passed');

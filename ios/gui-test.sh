@@ -142,7 +142,7 @@ import sys
 report = json.load(open(sys.argv[1]))
 if not report["success"]:
     raise SystemExit("Overlay probe failed:\n" + "\n".join(report["failures"]))
-print("Simulator overlay probe passed: early load, invalid target, persisted switches, API adoption, touch passthrough")
+print("Simulator overlay probe passed: target guards, floating controls, formation library, persisted entry option and input viewport")
 PY
                 xcrun simctl terminate "$device_id" "$bundle_id"
                 return 0
@@ -158,6 +158,23 @@ PY
 }
 
 run_probe "$app_dir" jp.gungho.pad overlay
+
+restart_probe() {
+    local probe_app="$1" bundle_id="$2" prefix="$3" container_dir
+    container_dir="$(xcrun simctl get_app_container "$device_id" "$bundle_id" data)"
+    python3 - "$container_dir" <<'PY'
+from pathlib import Path
+import sys
+
+container = Path(sys.argv[1])
+root = container / "Library/Application Support/PADHelper"
+(root / "formation-restart.json").write_bytes((root / "formations.json").read_bytes())
+(container / "Documents/overlay-probe.json").unlink()
+PY
+    run_probe "$probe_app" "$bundle_id" "$prefix-restart"
+}
+
+restart_probe "$app_dir" jp.gungho.pad overlay
 
 # PAD itself uses the legacy AppDelegate window. A second install also models
 # LC's rewritten bundle ID, while still exercising the exact same runtime.
@@ -181,3 +198,4 @@ info["PHProbeLegacy"] = True
 PY
 codesign --force --sign - --timestamp=none "$legacy_app"
 run_probe "$legacy_app" com.example.PADCheaperLegacyProbe legacy
+restart_probe "$legacy_app" com.example.PADCheaperLegacyProbe legacy

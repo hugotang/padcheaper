@@ -32,16 +32,11 @@
 @property(nonatomic, strong) UILabel *feedbackLabel;
 @property(nonatomic, strong) UIButton *endpointButton;
 @property(nonatomic, strong) UIScrollView *scroll;
-@property(nonatomic, strong) UISegmentedControl *battleSlot;
-@property(nonatomic, strong) UIButton *battleTarget;
-@property(nonatomic, strong) UIButton *battleApply;
 @property(nonatomic, strong) UIButton *battleRestore;
 @property(nonatomic, strong) UILabel *battleLabel;
 @property(nonatomic, strong) UIButton *timerDismiss;
 @property(nonatomic, strong) UILabel *timerLabel;
-@property(nonatomic, strong) UIStackView *keypad;
 @property(nonatomic, strong) UIStackView *bodyStack;
-@property(nonatomic, copy) NSString *targetText;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, UISwitch *> *switches;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, UILabel *> *captions;
 @property(nonatomic) CGPoint position;
@@ -108,34 +103,6 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     row.spacing = 12;
     [row.heightAnchor constraintGreaterThanOrEqualToConstant:48].active = YES;
     return row;
-}
-
-- (UIStackView *)numberPad {
-    NSMutableArray *rows = [NSMutableArray array];
-    NSArray *titles = @[@[@"1", @"2", @"3"], @[@"4", @"5", @"6"], @[@"7", @"8", @"9"], @[@"清空", @"0", @"⌫"]];
-    for (NSArray *rowTitles in titles) {
-        NSMutableArray *buttons = [NSMutableArray array];
-        for (NSString *title in rowTitles) {
-            NSInteger tag = [title isEqualToString:@"清空"] ? 11 : [title isEqualToString:@"⌫"] ? 10 : title.integerValue;
-            UIButton *button = [self button:title action:@selector(enterDigit:)
-                identifier:[NSString stringWithFormat:@"padcheaper.digit.%ld", (long)tag]];
-            button.tag = tag;
-            button.titleLabel.font = [UIFont monospacedDigitSystemFontOfSize:19 weight:UIFontWeightMedium];
-            [buttons addObject:button];
-        }
-        UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:buttons];
-        row.axis = UILayoutConstraintAxisHorizontal;
-        row.distribution = UIStackViewDistributionFillEqually;
-        row.spacing = 6;
-        [rows addObject:row];
-    }
-    [rows addObject:[self button:@"完成輸入" action:@selector(toggleNumberPad) identifier:@"padcheaper.digit.done"]];
-    UIStackView *pad = [[UIStackView alloc] initWithArrangedSubviews:rows];
-    pad.axis = UILayoutConstraintAxisVertical;
-    pad.spacing = 6;
-    pad.accessibilityIdentifier = @"padcheaper.keypad";
-    pad.hidden = YES;
-    return pad;
 }
 
 - (UIButton *)filterButton:(NSString *)title key:(NSString *)key {
@@ -232,30 +199,10 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.checksLabel.textColor = [UIColor colorWithWhite:1 alpha:0.72];
     self.saveLabel = PHLabel(12, UIFontWeightRegular);
     self.saveLabel.accessibilityIdentifier = @"padcheaper.persistence";
-    self.targetText = @"";
-    UILabel *battleTitle = PHLabel(13, UIFontWeightMedium);
-    battleTitle.text = @"快速替換本體（保留原有培養與武裝）";
-    self.battleSlot = [[UISegmentedControl alloc] initWithItems:@[@"1", @"2", @"3", @"4", @"5", @"6"]];
-    self.battleSlot.selectedSegmentIndex = 0;
-    self.battleSlot.selectedSegmentTintColor = [UIColor colorWithRed:0.12 green:0.57 blue:0.44 alpha:1];
-    [self.battleSlot setTitleTextAttributes:@{NSForegroundColorAttributeName: UIColor.whiteColor} forState:UIControlStateNormal];
-    self.battleSlot.accessibilityIdentifier = @"padcheaper.battleSlot";
-    [self.battleSlot addTarget:self action:@selector(selectBattleSlot) forControlEvents:UIControlEventValueChanged];
-    [self.battleSlot.heightAnchor constraintEqualToConstant:36].active = YES;
-    self.battleTarget = [self button:@"輸入目標圖鑑 ID" action:@selector(toggleNumberPad) identifier:@"padcheaper.battleTarget"];
-    self.keypad = [self numberPad];
-    self.battleApply = [self button:@"套用替換" action:@selector(applyBattle) identifier:@"padcheaper.battleApply"];
-    self.battleRestore = [self button:@"還原／取消" action:@selector(restoreBattle) identifier:@"padcheaper.battleRestore"];
-    UIStackView *battleActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.battleApply, self.battleRestore]];
-    battleActions.axis = UILayoutConstraintAxisHorizontal;
-    battleActions.distribution = UIStackViewDistributionFillEqually;
-    battleActions.spacing = 8;
+    self.battleRestore = [self button:@"全部還原／取消" action:@selector(restoreBattle) identifier:@"padcheaper.battleRestore"];
     self.battleLabel = PHLabel(11, UIFontWeightRegular);
     self.battleLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
     self.battleLabel.accessibilityIdentifier = @"padcheaper.battleStatus";
-    UILabel *battleNote = PHLabel(11, UIFontWeightRegular);
-    battleNote.text = @"完整編隊請用上方編輯器；此處只切換角色形態。關閉後會逐格還原。";
-    battleNote.textColor = [UIColor colorWithWhite:1 alpha:0.55];
     self.timerDismiss = [self button:@"手動關閉計時退出彈窗" action:@selector(dismissTimer)
         identifier:@"padcheaper.timerDismiss"];
     self.timerLabel = PHLabel(11, UIFontWeightRegular);
@@ -291,7 +238,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self switchRow:@"功能總開關" key:@"experimentalWrites"],
         [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
         [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
-        self.battleLabel, battleTitle, self.battleSlot, self.battleTarget, battleActions, battleNote,
+        [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
+        self.battleRestore, self.battleLabel,
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
         [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
@@ -423,7 +371,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.editingFilter = key;
     NSString *name = [key isEqualToString:@"entryModes"] ? @"mode" : [key isEqualToString:@"sourceModes"] ? @"source" : @"multi";
     NSString *message = @"以逗號分隔整數，例如 0,1,12。最多 32 個；留空會停止新操作，已套用位置會還原。";
-    if ([key isEqualToString:@"multiModes"]) message = [message stringByAppendingString:@" multi 1／4 的隊伍陣列尚未適配。"];
+    if ([key isEqualToString:@"multiModes"]) message = [message stringByAppendingString:@" multi 1／4 會檢查目前隊伍與助人的來源。"];
     self.filterAlert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"允許的 %@", name]
         message:message preferredStyle:UIAlertControllerStyleAlert];
     __weak PHOverlayController *weakSelf = self;
@@ -471,41 +419,6 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self updateWithSnapshot:self.snapshot()];
 }
 
-- (void)toggleNumberPad {
-    if (self.keypad.superview) {
-        [self.bodyStack removeArrangedSubview:self.keypad];
-        [self.keypad removeFromSuperview];
-        self.keypad.hidden = YES;
-    } else {
-        NSUInteger index = [self.bodyStack.arrangedSubviews indexOfObject:self.battleTarget];
-        [self.bodyStack insertArrangedSubview:self.keypad atIndex:index + 1];
-        self.keypad.hidden = NO;
-    }
-    [self.view layoutIfNeeded];
-    if (!self.keypad.hidden) {
-        CGRect pad = [self.keypad convertRect:self.keypad.bounds toView:self.scroll];
-        CGRect target = [self.battleTarget convertRect:self.battleTarget.bounds toView:self.scroll];
-        [self.scroll scrollRectToVisible:CGRectUnion(target, pad) animated:YES];
-    }
-}
-
-- (void)enterDigit:(UIButton *)button {
-    if (button.tag == 11) self.targetText = @"";
-    else if (button.tag == 10) {
-        if (self.targetText.length) self.targetText = [self.targetText substringToIndex:self.targetText.length - 1];
-    } else if (button.tag >= 0 && button.tag <= 9 && self.targetText.length < 5) {
-        self.targetText = [self.targetText stringByAppendingFormat:@"%ld", (long)button.tag];
-    }
-    [self updateWithSnapshot:self.snapshot()];
-}
-
-- (void)selectBattleSlot { [self updateWithSnapshot:self.snapshot()]; }
-
-- (void)applyBattle {
-    self.action(@"battleApply", @{@"slot": @(self.battleSlot.selectedSegmentIndex), @"target": self.targetText ?: @""});
-    [self updateWithSnapshot:self.snapshot()];
-}
-
 - (void)restoreBattle {
     self.action(@"battleRestore", nil);
     [self updateWithSnapshot:self.snapshot()];
@@ -521,7 +434,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.guestWindow = guest;
     __weak PHOverlayController *weakSelf = self;
     self.formationController = [[PHFormationController alloc] initWithTeam:self.state[@"formationDraft"]
-        battle:self.state[@"battleState"] action:self.action close:^{ [weakSelf closeFormation]; }];
+        library:self.state[@"formationLibrary"] battle:self.state[@"battleState"] action:self.action close:^{ [weakSelf closeFormation]; }];
     self.formationWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] :
         [[UIWindow alloc] initWithFrame:self.view.window.bounds];
     self.formationWindow.windowLevel = UIWindowLevelAlert + 2;
@@ -570,10 +483,12 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     for (NSString *key in self.switches) {
         UISwitch *toggle = self.switches[key];
         toggle.on = [key isEqualToString:@"experimentalWrites"] ? [config[key] boolValue] :
-                    [key hasPrefix:@"allowAll"] ? [filters[key] boolValue] : [config[@"features"][key] boolValue];
+                    [key hasPrefix:@"allowAll"] || [key isEqual:@"autoApplyTeam"] ? [filters[key] boolValue] :
+                    [config[@"features"][key] boolValue];
         toggle.enabled = canSave;
         self.captions[key].text = [key isEqualToString:@"experimentalWrites"] ?
             (canSave ? @"切換後自動儲存" : @"設定無法寫入，請重新檢查") :
+            [key isEqual:@"autoApplyTeam"] ? (toggle.on ? state[@"featureStates"][key] ?: @"下次入場使用選中的儲存隊伍，重算 SB" : @"關閉；可在編輯器手動套用") :
             [key hasPrefix:@"allowAll"] ? (toggle.on ? @"不限制數值；仍檢查隊伍結構" : @"使用下方允許清單") : state[@"featureStates"][key];
     }
     NSArray *listKeys = @[@"entryModes", @"sourceModes", @"multiModes"];
@@ -603,20 +518,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.filterToggle setTitle:[NSString stringWithFormat:@"入口設定 · mode %@／source %@／multi %@",
         battle[@"mode"] ?: @"—", battle[@"sourceMode"] ?: @"—", battle[@"multiplayer"] ?: @"—"] forState:UIControlStateNormal];
     [self.formationController updateBattle:battle];
-    self.battleLabel.text = state[@"battleSummary"];
-    [self.battleTarget setTitle:self.targetText.length ? [NSString stringWithFormat:@"目標 #%@ · 點擊修改", self.targetText] :
-                                                        @"輸入目標圖鑑 ID" forState:UIControlStateNormal];
-    uint16_t target = 0;
-    BOOL validTarget = PHBattleParseTarget(self.targetText.UTF8String, &target);
-    NSInteger slot = self.battleSlot.selectedSegmentIndex;
-    NSArray *members = battle[@"members"];
-    NSDictionary *selected = slot >= 0 && (NSUInteger)slot < members.count ? members[(NSUInteger)slot] : nil;
-    self.battleApply.enabled = [state[@"targetMatched"] boolValue] && [battle[@"canApply"] boolValue] && validTarget &&
-        [selected[@"replaceable"] boolValue] && [selected[@"current"] unsignedIntValue] != target;
+    self.battleLabel.text = [NSString stringWithFormat:@"%@\n%@", battle[@"message"] ?: @"等待戰鬥檢查",
+        battle[@"gate"] ?: @""];
     self.battleRestore.enabled = [battle[@"canRestore"] boolValue];
     self.timerDismiss.enabled = [state[@"targetMatched"] boolValue] && [state[@"timerState"][@"canDismiss"] boolValue];
     self.timerLabel.text = state[@"timerSummary"];
-    self.battleSlot.enabled = ![battle[@"phase"] isEqualToString:@"apply_pending"];
     self.pathLabel.text = [@"設定檔：\n" stringByAppendingString:(state[@"configPath"] ?: @"初始化中")];
     self.feedbackLabel.text = state[@"feedback"];
     self.feedbackLabel.hidden = self.feedbackLabel.text.length == 0;

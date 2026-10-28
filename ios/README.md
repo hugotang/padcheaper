@@ -2,7 +2,7 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.4.0-team` 提供六人本體／武裝編輯、搜尋、PADDashFormation 匯入／匯出，以及逐格／整隊套用與還原。PC 面板另有可熱更新的 mode／source／multi 設定；mode 預設全部允許，source／multi 預設 0。使用方法與限制見 [六人編隊與入口設定](docs/formation.md)。保留既有皮膚／BGM／徽章、觸控判斷與計時功能。使用者已回報先前 GUI／外觀、徽章及單名替換可用；本版六人參數來源、計時與通關結算仍需真機驗證。
+`0.4.1-entry` 提供六人本體／武裝編輯、最多 64 隊的隊伍庫、PADDashFormation 匯入／匯出，以及逐格／整隊套用與還原。新增可選的入場自動套隊及原生 SB 重算、multi 1／4 多隊陣列適配，補齊潛覺／超覺醒名稱並修正鍵盤彈出時的放大。mode／source／multi 可在 GUI 熱更新；mode 預設全部允許，source／multi 預設 0。使用方法與限制見 [六人編隊與入口設定](docs/formation.md)。使用者已回報先前編隊替換可用；本版自動 SB、multi 實際戰鬥、計時與通關結算仍需真機驗證。
 
 ## GitHub Actions
 
@@ -34,7 +34,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭會顯示 `0.4.0-team`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，關閉時返回原遊戲視窗。
+5. 面板標頭會顯示 `0.4.1-entry`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，關閉時返回原遊戲視窗。
 
 浮動按鈕的含義：
 
@@ -67,9 +67,11 @@ PC 面板的「入口設定」可修改 mode／source／multi 的全部允許開
 
 `0.2.1-gui` 面板另顯示本機保存、伺服器接受及最後回蓋結果，與「功能已啟用」分開。伺服器接受只計算已改寫的 save_decks、HTTP 200 且 JSON res=0；原生解析成功及同一交易仍是回蓋條件。新儲存取消舊回蓋，改回預設時可顯示「此請求無需預設化」。計數每次啟動歸零。下一步按 [儲存與重啟測試](docs/device-testing.md) 驗收。
 
-**戰鬥換怪：** 先用原隊伍入場，開啟總開關及「戰鬥隊員替換」，再點「編輯六人隊伍」。每格有本體與武裝，預設本體滿級／普通覺醒全開／+891、武裝 Lv.99／滿覺醒／+297／SLv.1；實際上限按角色資料檢查。先儲存草稿或匯入分享連結，再逐格或整隊套用；每 frame 只操作一名，失敗時停止其餘位置，已成功位置仍可還原。原數字鍵盤保留為只換形態的快速功能。
+**戰鬥換怪：** 開啟總開關及「戰鬥隊員替換」，再點「編輯六人隊伍」。每格有本體與武裝，預設本體滿級／普通覺醒全開／+891、武裝 Lv.99／滿覺醒／+297／SLv.1；實際上限按角色資料檢查。隊伍庫提供新增、另存、切換和刪除，最多保存 64 隊。手動「套用本格／整隊」每 frame 操作一名，失敗時停止其餘位置，已成功位置仍可還原。面板原有快速本體替換區已移除。
 
-完整參數租用會追蹤隊長交換與原生變身，還原時保留目前技能充能並依角色上限裁切。編隊草稿保存在 formation.json；戰鬥還原紀錄僅在目前程序／地下城有效。離開地下城、帳號改變或資料來源被接管後會停止舊紀錄。新角色技能及效果需遊戲資源，六人效果與通關結算尚未真機驗證。
+**入場自動套隊：** 在地下城外先選取並儲存隊伍，開啟「入場自動套用隊伍」。下次新入場會在開場動畫、敵人先制前一次套用選定隊伍，按新隊伍的普通／超／武裝覺醒、潛覺、徽章與關卡規則重算原生 SB。手動替換保留現有充能；中途開啟、續關及切樓層不會補發 SB。新設定 `battle.autoApplyTeam` 預設 false。
+
+隊伍庫保存在 formations.json；舊 formation.json 自動轉入隊伍庫，並繼續作為目前選取隊伍的備份。完整參數租用會追蹤隊長交換、原生變身及 multi 1／4 的來源隊伍；畫面外隊員的還原等切回該隊後執行。最多同時保留六名替換紀錄，還原保留目前技能充能並依角色上限裁切。戰鬥紀錄僅在目前程序／地下城有效；離開地下城、帳號改變或資料來源被接管後停止舊紀錄。新角色技能及效果需遊戲資源，自動 SB、multi 實際效果與通關結算尚未真機驗證。
 
 **計時控制：** 「背景計時修正」限一般單人、明確設有倒數上限的關卡。自動路徑只處理旗標，不跳轉 phase；若已出現計時退出彈窗，「手動關閉計時退出彈窗」才會可按。操作綁定目前地下城及該彈窗，3 秒逾時或狀態改變即取消。此按鈕會選擇返回操作階段的路徑；實際倒數、切樓層與結算仍待真機驗證。
 
@@ -77,6 +79,6 @@ PC 面板的「入口設定」可修改 mode／source／multi 的全部允許開
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.0-team constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.1-entry constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

@@ -7,15 +7,29 @@ static void Check(BOOL condition, const char *message) {
     if (!condition) { fprintf(stderr, "FAIL: %s\n", message); failures++; }
 }
 
+static void SyncFakeBanks(PHBattleState *state) {
+    if (!state->teamBanksValid || state->teamCount > PHBattleTeamCapacity) return;
+    for (NSUInteger i = 0; i < 6; ++i) {
+        PHBattleMember *view = &state->members[i];
+        for (NSUInteger team = 0; team < state->teamCount; ++team) for (NSUInteger slot = 0; slot < 6; ++slot) {
+            PHBattleMember *stored = &state->storedMembers[team][slot];
+            if (PHBattleSameOrigin(view, stored)) *stored = *view;
+        }
+    }
+}
+
 @interface FakeBattleEngine : NSObject <PHBattleEngine> {
 @public
     PHBattleState live;
     NSUInteger reads, changes, validations, fullApplies, fullRestores;
+    NSUInteger entryCalls;
     uint16_t rejectNumber;
     uint64_t nextToken;
     PHBattleMutationResult nextResult;
     BOOL readFailure, rejectTarget;
 }
+- (void)makeBanked:(uint32_t)mode;
+- (void)showTeam:(NSUInteger)team;
 @end
 @implementation FakeBattleEngine
 - (instancetype)init {
@@ -35,9 +49,26 @@ static void Check(BOOL condition, const char *message) {
     live.identity.entryMode = live.mode;
     live.identity.sourceMode = live.sourceMode;
     live.identity.multiplayer = live.multiplayer;
+    SyncFakeBanks(&live);
     *state = live;
     state->policy = frame.policy;
     return YES;
+}
+- (void)makeBanked:(uint32_t)mode {
+    live.multiplayer = mode; live.teamCount = 2; live.teamSize = 5; live.teamBanksValid = true;
+    live.teamBanks[0] = 10; live.teamBanks[1] = 20;
+    for (NSUInteger team = 0; team < 2; ++team) for (NSUInteger slot = 0; slot < 6; ++slot) {
+        PHBattleMember m = live.members[slot];
+        m.sourceTeam = (uint8_t)team; m.active = slot < 5;
+        m.baseID = (uint16_t)(100 + 1000 * team + slot); m.catalogID = m.baseID;
+        live.storedMembers[team][slot] = m;
+    }
+    live.members[5] = live.storedMembers[1][0];
+}
+- (void)showTeam:(NSUInteger)team {
+    SyncFakeBanks(&live); live.currentTeam = (uint8_t)team;
+    for (NSUInteger slot = 0; slot < 5; ++slot) live.members[slot] = live.storedMembers[team][slot];
+    live.members[5] = live.storedMembers[team ^ 1][0];
 }
 - (BOOL)validateTarget:(uint16_t)target state:(const PHBattleState *)state reason:(NSString **)reason {
     validations++;
@@ -78,6 +109,25 @@ static void Check(BOOL condition, const char *message) {
     fullRestores++;
     return result;
 }
+- (PHBattleMutationResult)applyEntryLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask
+    state:(const PHBattleState *)expected members:(PHBattleMember *)members initialBoost:(uint16_t *)boost
+    reason:(NSString **)reason {
+    entryCalls++;
+    Check(PHBattleEntryGate(expected) == PHBattleGateReady, "session uses the fresh entry gate for its atomic native command");
+    if (!expected->entryChargesValid) return PHBattleMutationRejected;
+    if (nextResult != PHBattleMutationApplied) {
+        PHBattleMutationResult result = nextResult; nextResult = PHBattleMutationApplied;
+        if (reason) *reason = @"entry transaction failed";
+        return result;
+    }
+    for (NSUInteger i = 0; i < 6; ++i) if ((mask & (1u << i)) &&
+        ![self validateLoadout:&loadouts[i] state:expected reason:reason]) return PHBattleMutationRejected;
+    for (NSUInteger i = 0; i < 6; ++i) if (mask & (1u << i))
+        [self applyLoadout:&loadouts[i] state:expected slot:i member:&members[i] reason:reason];
+    for (NSUInteger i = 0; i < 6; ++i) live.members[i].charge = live.members[i].baseID < 200 ? 6 : 8;
+    memcpy(members,live.members,sizeof(live.members)); *boost = 8;
+    return PHBattleMutationApplied;
+}
 - (PHBattleMutationResult)changeState:(const PHBattleState *)expected slot:(NSUInteger)slot
     form:(uint16_t)form catalog:(uint32_t)catalog presentation:(const PHBattleMember *)presentation reason:(NSString **)reason {
     changes++;
@@ -100,6 +150,11 @@ static void Check(BOOL condition, const char *message) {
 @end
 
 static PHBattleFrame Frame(void) { return (PHBattleFrame){.header = 0x100000000, .player = 42, .epoch = 1, .ready = true, .enabled = true}; }
+static PHBattleFrame BankFrame(void) {
+    PHBattleFrame frame = Frame(); frame.policy.configured = true;
+    frame.policy.modes.allowAll = frame.policy.sources.allowAll = frame.policy.multiplayer.allowAll = true;
+    return frame;
+}
 static PHBattleSession *Session(FakeBattleEngine *engine) {
     PHBattleSession *session = [[PHBattleSession alloc] initWithEngine:engine];
     [session onFrame:Frame() atTime:100];
@@ -110,6 +165,11 @@ static void FullTeam(PHBattleLoadout loadouts[6]) {
     for (NSUInteger i = 0; i < 6; ++i) loadouts[i] = (PHBattleLoadout){.bodyNumber = (uint16_t)(200 + i),
         .assistNumber = (uint16_t)(300 + i), .plus = {297, 297, 297}, .awakenings = -1,
         .assistAwakenings = -1, .superAwakening = -1, .assistPlus = true, .parameters = true, .assistSkillLevel = 1};
+}
+static PHBattleFrame AutomaticFrame(void) { PHBattleFrame frame = Frame(); frame.autoApplyTeam = true; return frame; }
+static void FreshEntry(FakeBattleEngine *engine) {
+    engine->live.present = true; engine->live.phase = 0;
+    engine->live.entryWindow = engine->live.entryChargesValid = true;
 }
 
 int main(void) {
@@ -369,6 +429,159 @@ int main(void) {
         frame.policy.sources.count = 0; [session onFrame:frame atTime:100.2];
         Check(engine->fullApplies == 1 && engine->fullRestores == 1,
               "source filter edits also restore using the owned transaction policy");
+
+        for (uint32_t multi = 1; multi <= 4; multi += 3) {
+            FakeBattleEngine *bankEngine = [FakeBattleEngine new]; [bankEngine makeBanked:multi];
+            PHBattleSession *bankSession = [PHBattleSession.alloc initWithEngine:bankEngine];
+            PHBattleLoadout bankTeam[6]; FullTeam(bankTeam);
+            [bankSession onFrame:BankFrame() atTime:100]; [bankSession queueLoadouts:bankTeam mask:63];
+            for (NSUInteger i = 0; i < 6; ++i) [bankSession onFrame:BankFrame() atTime:101 + i * 0.1];
+            [bankSession onFrame:BankFrame() atTime:102];
+            [bankEngine showTeam:1]; [bankSession onFrame:BankFrame() atTime:103];
+            Check(bankEngine->fullApplies == 6 && [bankSession.snapshot[@"activeCount"] isEqual:@6] &&
+                [bankSession.snapshot[@"offscreenCount"] isEqual:@4],
+                "switching banked teams preserves four off-screen leases and exposes the original leaders in their new positions");
+            [bankSession queueRestoreSlot:1]; [bankSession onFrame:BankFrame() atTime:103.1];
+            Check(bankEngine->fullRestores == 0, "restoring a visible slot cannot target another team's off-screen record at the same index");
+            [bankSession queueRestore];
+            for (NSUInteger i = 0; i < 3; ++i) [bankSession onFrame:BankFrame() atTime:103.2 + i * 0.1];
+            Check(bankEngine->fullRestores == 2 && [bankSession.snapshot[@"activeCount"] isEqual:@4] &&
+                [bankSession.snapshot[@"offscreenCount"] isEqual:@4] && [bankSession.snapshot[@"restorePending"] boolValue],
+                "restore-all restores visible leader/helper sources and waits for the remaining owning team");
+            [bankEngine showTeam:0];
+            for (NSUInteger i = 0; i < 4; ++i) [bankSession onFrame:BankFrame() atTime:105 + i * 0.1];
+            Check(bankEngine->fullRestores == 6 && ![bankSession.snapshot[@"applied"] boolValue],
+                "switching back restores every deferred off-screen source without losing ownership");
+        }
+        {
+            FakeBattleEngine *bankEngine = [FakeBattleEngine new]; [bankEngine makeBanked:1];
+            PHBattleSession *bankSession = [PHBattleSession.alloc initWithEngine:bankEngine];
+            PHBattleLoadout bankTeam[6]; FullTeam(bankTeam);
+            [bankSession onFrame:BankFrame() atTime:100]; [bankSession queueLoadouts:bankTeam mask:63];
+            [bankSession onFrame:BankFrame() atTime:100.1];
+            [bankEngine showTeam:1]; [bankSession onFrame:BankFrame() atTime:101];
+            Check(bankEngine->fullApplies == 1 && [bankSession.snapshot[@"pendingMask"] isEqual:@0] &&
+                [bankSession.snapshot[@"activeCount"] isEqual:@1],
+                "switching teams mid-batch cancels unavailable targets while retaining the already-installed source");
+        }
+        {
+            FakeBattleEngine *bankEngine = [FakeBattleEngine new]; [bankEngine makeBanked:1];
+            bankEngine->live.storedMembers[1][1].baseID = 101; bankEngine->live.storedMembers[1][1].catalogID = 101;
+            PHBattleSession *bankSession = [PHBattleSession.alloc initWithEngine:bankEngine];
+            [bankSession onFrame:BankFrame() atTime:100]; [bankSession queueApplySlot:1 targetText:@"300"];
+            [bankSession onFrame:BankFrame() atTime:100.1];
+            [bankEngine showTeam:1]; [bankSession onFrame:BankFrame() atTime:101];
+            [bankSession queueRestore]; [bankSession onFrame:BankFrame() atTime:101.1];
+            Check(bankEngine->changes == 1 && [bankSession.snapshot[@"offscreenCount"] isEqual:@1],
+                "identical base characters and source indices in another team cannot capture a form-only lease");
+            [bankEngine showTeam:0]; [bankSession onFrame:BankFrame() atTime:102];
+            Check(bankEngine->changes == 2 && ![bankSession.snapshot[@"applied"] boolValue],
+                "the original team's form-only source restores when it becomes visible again");
+        }
+        {
+            FakeBattleEngine *bankEngine = [FakeBattleEngine new]; [bankEngine makeBanked:4];
+            PHBattleSession *bankSession = [PHBattleSession.alloc initWithEngine:bankEngine];
+            PHBattleLoadout bankTeam[6]; FullTeam(bankTeam);
+            [bankSession onFrame:BankFrame() atTime:100]; [bankSession queueLoadouts:bankTeam mask:1];
+            [bankSession onFrame:BankFrame() atTime:100.1];
+            bankEngine->live.teamBanksValid = false; [bankSession queueRestore];
+            [bankSession onFrame:BankFrame() atTime:101];
+            Check([bankSession.snapshot[@"activeCount"] isEqual:@1] && bankEngine->fullRestores == 0,
+                "a transient invalid bank layout pauses restoration without discarding its lease");
+            bankEngine->live.teamBanksValid = true; [bankSession onFrame:BankFrame() atTime:102];
+            Check(bankEngine->fullRestores == 1, "verified bank recovery resumes the original queued restoration");
+        }
+        {
+            FakeBattleEngine *bankEngine = [FakeBattleEngine new]; [bankEngine makeBanked:1];
+            PHBattleSession *bankSession = [PHBattleSession.alloc initWithEngine:bankEngine];
+            PHBattleLoadout bankTeam[6]; FullTeam(bankTeam);
+            [bankSession configureAutomaticLoadouts:bankTeam mask:63];
+            PHBattleFrame bankFrame = BankFrame(); bankFrame.autoApplyTeam = true; bankEngine->live.present = false;
+            [bankSession onFrame:bankFrame atTime:100]; FreshEntry(bankEngine);
+            [bankSession onFrame:bankFrame atTime:100.01];
+            Check(bankEngine->entryCalls == 1 && bankEngine->fullApplies == 6 &&
+                [bankSession.snapshot[@"automaticCount"] isEqual:@1],
+                "a verified banked dungeon entry runs the same one-time automatic team transaction");
+        }
+
+        PHBattleLoadout automatic[6]; FullTeam(automatic);
+        engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+        [session configureAutomaticLoadouts:automatic mask:63];
+        automatic[0].bodyNumber = 999;
+        Check(!engine->reads && !engine->changes && !engine->entryCalls, "saving or selecting an automatic team only copies configuration");
+        frame = AutomaticFrame(); engine->live.present = false;
+        [session onFrame:frame atTime:100]; FreshEntry(engine);
+        [session onFrame:frame atTime:100.01];
+        Check(engine->entryCalls == 1 && engine->fullApplies == 6 && engine->live.members[0].baseID == 200 &&
+              [session.snapshot[@"automaticCount"] isEqual:@1] && [session.snapshot[@"initialBoost"] isEqual:@8] &&
+              [session.snapshot[@"activeCount"] isEqual:@6], "a menu observation arms exactly one immutable six-member entry transaction");
+        [session onFrame:frame atTime:100.02]; [session onFrame:frame atTime:100.5];
+        Check(engine->entryCalls == 1, "more intro or gameplay frames never recharge the same entry");
+        engine->live.phase = 2; engine->live.entryWindow = false; [session queueRestore];
+        for (NSUInteger i = 0; i < 6; ++i) [session onFrame:frame atTime:101+i*0.1];
+        Check(engine->fullRestores == 6 && [session.snapshot[@"activeCount"] isEqual:@0], "auto entry installs six independently restorable leases");
+        engine->live.present = false; [session onFrame:frame atTime:102];
+        engine->live.identity.entryHash[0]++; FreshEntry(engine); [session onFrame:frame atTime:102.01];
+        Check(engine->entryCalls == 2 && [session.snapshot[@"automaticCount"] isEqual:@2], "returning to the menu arms the next dungeon once");
+
+        FullTeam(automatic); engine = [FakeBattleEngine new]; session = Session(engine);
+        [session configureAutomaticLoadouts:automatic mask:63];
+        FreshEntry(engine); frame = AutomaticFrame(); [session onFrame:frame atTime:100.3];
+        Check(!engine->entryCalls && !engine->changes, "enabling automatic mode inside an already observed battle cannot recharge it");
+
+        engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+        [session configureAutomaticLoadouts:automatic mask:63]; engine->live.present = false;
+        [session onFrame:AutomaticFrame() atTime:100]; FreshEntry(engine); engine->live.input.rawActiveMask = 1;
+        [session onFrame:AutomaticFrame() atTime:100.01];
+        Check(!engine->entryCalls && [session.snapshot[@"automaticWaiting"] boolValue], "entry waits for the dungeon button's live touch release");
+        automatic[0].bodyNumber = 999; [session configureAutomaticLoadouts:automatic mask:1];
+        engine->live.input.rawActiveMask = 0; [session onFrame:AutomaticFrame() atTime:100.02];
+        Check(engine->entryCalls == 1 && engine->fullApplies == 6 && engine->live.members[0].baseID == 200,
+              "changing saved selection during the intro cannot modify the captured entry batch");
+
+        FullTeam(automatic); engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+        [session configureAutomaticLoadouts:automatic mask:63]; engine->live.present = false;
+        [session onFrame:AutomaticFrame() atTime:100]; FreshEntry(engine); engine->live.input.rawActiveMask = 1;
+        [session onFrame:AutomaticFrame() atTime:100.01]; [session queueRestore];
+        engine->live.input.rawActiveMask = 0; [session onFrame:AutomaticFrame() atTime:100.02];
+        Check(!engine->entryCalls && ![session.snapshot[@"automaticWaiting"] boolValue], "Restore/Cancel consumes a pending intro without applying or charging it later");
+
+        for (NSUInteger scenario = 0; scenario < 9; ++scenario) {
+            engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+            [session configureAutomaticLoadouts:automatic mask:63]; engine->live.present = false; frame = AutomaticFrame();
+            [session onFrame:frame atTime:100]; FreshEntry(engine);
+            switch (scenario) {
+                case 0: frame.enabled = false; break;
+                case 1: frame.autoApplyTeam = false; break;
+                case 2: frame.ready = false; break;
+                case 3: frame.epoch++; engine->live.identity.epoch++; break;
+                case 4: frame.player++; engine->live.identity.player++; break;
+                case 5: engine->live.entryWindow = false; break;
+                case 6: engine->live.phase = 2; engine->live.entryWindow = false; break;
+                case 7: engine->live.sourceMode = 3; break;
+                case 8: frame.policy = (PHBattlePolicy){.configured = true}; break;
+            }
+            [session onFrame:frame atTime:100.01];
+            frame.enabled = frame.ready = frame.autoApplyTeam = true;
+            engine->live.phase = 2; engine->live.entryWindow = false;
+            [session onFrame:frame atTime:100.5];
+            Check(!engine->entryCalls && !engine->changes, "disabled, account-changed, resumed/missed-window or excluded entries never fall back to a phase-two recharge");
+        }
+        engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+        [session configureAutomaticLoadouts:NULL mask:0]; engine->live.present = false;
+        [session onFrame:AutomaticFrame() atTime:100]; FreshEntry(engine); [session onFrame:AutomaticFrame() atTime:100.01];
+        Check(!engine->entryCalls && ![session.snapshot[@"automaticWaiting"] boolValue], "an empty saved team skips auto entry without a native call");
+
+        for (NSUInteger scenario = 0; scenario < 3; ++scenario) {
+            engine = [FakeBattleEngine new]; session = [PHBattleSession.alloc initWithEngine:engine];
+            [session configureAutomaticLoadouts:automatic mask:63]; engine->live.present = false;
+            [session onFrame:AutomaticFrame() atTime:100]; FreshEntry(engine);
+            engine->nextResult = scenario == 0 ? PHBattleMutationRejected : scenario == 1 ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
+            [session onFrame:AutomaticFrame() atTime:100.01]; [session onFrame:AutomaticFrame() atTime:100.5];
+            Check(engine->entryCalls == 1 && [session.snapshot[@"activeCount"] isEqual:@0] &&
+                [session.snapshot[@"rollbackCount"] unsignedIntegerValue] == (scenario == 1 ? 1u : 0u) &&
+                [session.snapshot[@"fault"] boolValue] == (scenario == 2), "failed atomic entry is consumed once, counts confirmed rollback, and faults only on unconfirmed restoration");
+        }
         printf("Battle session tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

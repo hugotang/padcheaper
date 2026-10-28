@@ -2,10 +2,12 @@
 #import <WebKit/WebKit.h>
 #import "PHOverlay.h"
 #include <dlfcn.h>
+#include <math.h>
 
 static NSString *PHProbeRoot;
 static NSMutableArray<NSString *> *PHProbeFailures;
 static UIWindow *PHProbeLegacyOverlay;
+static NSDictionary *PHProbeRestartLibrary;
 
 static NSDictionary *PHProbeJSON(NSString *name) {
     NSData *data = [NSData dataWithContentsOfFile:[PHProbeRoot stringByAppendingPathComponent:name]];
@@ -86,11 +88,15 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 @property(nonatomic, strong) WKWebView *formationWeb;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
 - (void)exerciseOverlay;
-- (void)finishTargetEntry;
+- (void)finishPanelChecks;
 - (void)verifyRejectedTarget;
 - (void)verifyLandscape;
 - (void)checkFormation;
 - (void)verifyFormation;
+- (void)exerciseLibrary;
+- (void)verifyLibrary;
+- (void)verifyFocusedEditor;
+- (void)checkRestartedFormation;
 - (void)finishPortrait;
 @end
 
@@ -113,6 +119,18 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeRoot = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
     PHProbeFailures = [NSMutableArray array];
     [NSFileManager.defaultManager createDirectoryAtPath:PHProbeRoot withIntermediateDirectories:YES attributes:nil error:NULL];
+    PHProbeRestartLibrary = PHProbeJSON(@"formation-restart.json");
+    if (!PHProbeRestartLibrary) {
+        NSDictionary *body = @{@"id":@14238, @"level":@0, @"skill":@0, @"awakenings":@-1,
+            @"superAwakening":@-1, @"plus":@[@297,@297,@297], @"latents":@[]};
+        NSDictionary *assist = @{@"id":@14132, @"level":@0, @"skill":@1, @"awakenings":@-1,
+            @"superAwakening":@0, @"plus":@[@99,@99,@99], @"latents":@[]};
+        NSMutableArray *slots = [NSMutableArray array];
+        for (unsigned i = 0; i < 6; ++i) [slots addObject:@{@"body":body, @"assist":assist}];
+        NSDictionary *legacy = @{@"schema":@1, @"title":@"舊版隊伍", @"slots":slots};
+        [[NSJSONSerialization dataWithJSONObject:legacy options:0 error:NULL]
+            writeToFile:[PHProbeRoot stringByAppendingPathComponent:@"formation.json"] atomically:YES];
+    }
     NSDictionary *endpoint = @{@"schema": @1, @"host": @"example.invalid", @"path": @"/api.php", @"queryIncluded": @NO};
     [[NSJSONSerialization dataWithJSONObject:endpoint options:0 error:NULL]
      writeToFile:[PHProbeRoot stringByAppendingPathComponent:@"endpoint.json"] atomically:YES];
@@ -126,10 +144,24 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 
 - (void)exerciseOverlay {
     UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
+    if (PHProbeRestartLibrary) {
+        PHProbeCheck([PHProbeJSON(@"formations.json") isEqual:PHProbeRestartLibrary], @"Restart keeps the saved library file intact");
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"battle"][@"autoApplyTeam"] isEqual:@YES], @"Automatic entry option survives a process restart");
+        [(UIButton *)PHProbeFind(overlay, @"padcheaper.bubble") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        [(UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        UIWindow *formationWindow = [overlay.rootViewController valueForKey:@"formationWindow"];
+        self.formationWeb = (WKWebView *)PHProbeFind(formationWindow, @"padcheaper.formationWeb");
+        [self checkRestartedFormation];
+        return;
+    }
     PHProbeCheck(overlay != nil && !overlay.hidden, @"Floating GUI must appear before the target gate finishes");
     PHProbeCheck(!overlay.isKeyWindow && self.window.isKeyWindow, @"Overlay must leave the guest window key");
     NSDictionary *config = PHProbeJSON(@"config.json");
     PHProbeCheck(config != nil && [config[@"experimentalWrites"] isEqual:@NO], @"Config must exist before UUID validation");
+    NSDictionary *migrated = PHProbeJSON(@"formations.json");
+    PHProbeCheck([migrated[@"selected"] isEqual:@"legacy"] && [migrated[@"teams"] count] == 1 &&
+        [migrated[@"teams"][0][@"team"] isEqual:PHProbeJSON(@"formation.json")], @"Old single-team drafts migrate without losing member settings");
+    PHProbeCheck([config[@"battle"][@"autoApplyTeam"] isEqual:@NO], @"Automatic entry replacement starts disabled");
     NSDictionary *status = PHProbeJSON(@"status.json");
     PHProbeCheck([status[@"loaded"] isEqual:@YES] && [status[@"targetMatched"] isEqual:@NO], @"Loaded status must be independent of feature activation");
     PHProbeCheck([status[@"saveState"][@"localSaveCount"] isEqual:@0] &&
@@ -162,44 +194,21 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
                  @"GUI switches must persist to config.json");
     PHProbeCheck([config[@"apiHosts"] isEqual:@[@"example.invalid"]] && [config[@"apiPaths"] isEqual:@[@"/api.php"]],
                  @"GUI must persist only the endpoint host and path");
-    UISegmentedControl *slot = (UISegmentedControl *)PHProbeFind(overlay, @"padcheaper.battleSlot");
-    UIButton *target = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleTarget");
-    UIButton *apply = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleApply");
     UIButton *restore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
-    PHProbeCheck(slot.numberOfSegments == 6 && target != nil && apply != nil && restore != nil,
-                 @"Battle GUI must provide six positions, target entry, apply and restore");
-    slot.selectedSegmentIndex = 5;
-    [slot sendActionsForControlEvents:UIControlEventValueChanged];
-    [target sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.keypad") != nil && self.window.isKeyWindow && !overlay.isKeyWindow,
-                 @"Numeric keypad must work without stealing the game key window");
-    for (NSString *digit in @[@"1", @"2", @"3", @"4", @"5", @"6"]) {
-        UIButton *key = (UIButton *)PHProbeFind(overlay, [@"padcheaper.digit." stringByAppendingString:digit]);
-        [key sendActionsForControlEvents:UIControlEventTouchUpInside];
-    }
-    PHProbeCheck([target.currentTitle containsString:@"12345"] && ![target.currentTitle containsString:@"123456"],
-                 @"Target entry is limited to five digits");
-    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.10") sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck([target.currentTitle containsString:@"1234"] && ![target.currentTitle containsString:@"12345"], @"Backspace removes one digit");
-    // Let UIKit finish title/segment transitions and scrolling before capturing
-    // the entered value and keypad as the user sees them.
-    [self performSelector:@selector(finishTargetEntry) withObject:nil afterDelay:0.6];
+    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.formationOpen") != nil && restore != nil,
+                 @"Panel provides formation editing and all-member restore");
+    for (NSString *identifier in @[@"battleSlot", @"battleTarget", @"battleApply", @"keypad"])
+        PHProbeCheck(PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:identifier]) == nil,
+                     @"Obsolete quick-replacement controls must not occupy the panel");
+    [self performSelector:@selector(finishPanelChecks) withObject:nil afterDelay:0.6];
 }
 
-- (void)finishTargetEntry {
+- (void)finishPanelChecks {
     UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
-    UIButton *target = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleTarget");
-    UIButton *apply = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleApply");
     UIButton *restore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
-    PHProbeRender(self.window, overlay, @"keypad");
-    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.11") sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck([target.currentTitle containsString:@"輸入目標"], @"Clear resets target entry");
-    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.2") sendActionsForControlEvents:UIControlEventTouchUpInside];
-    [(UIButton *)PHProbeFind(overlay, @"padcheaper.digit.done") sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck(PHProbeFind(overlay, @"padcheaper.keypad") == nil && self.window.isKeyWindow, @"Done removes the keypad and preserves guest focus");
-    PHProbeCheck(!apply.enabled && !restore.enabled, @"Unmatched UUID must keep battle apply/restore unavailable");
+    PHProbeCheck(restore != nil && !restore.enabled, @"Unmatched UUID must keep battle restore unavailable");
     // Direct action dispatch also exercises the runtime guard behind disabled UI.
-    [apply sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [restore sendActionsForControlEvents:UIControlEventTouchUpInside];
     UIButton *timerDismiss = (UIButton *)PHProbeFind(overlay, @"padcheaper.timerDismiss");
     PHProbeCheck(timerDismiss != nil && !timerDismiss.enabled, @"Manual timer control requires a verified timed exit popup");
     [timerDismiss sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -221,7 +230,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UIButton *filters = (UIButton *)PHProbeFind(overlay, @"padcheaper.filtersOpen");
     [filters sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck(!PHProbeFind(overlay, @"padcheaper.filters").hidden, @"mode/source/multi settings must open from the GUI");
-    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti"]) {
+    for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"autoApplyTeam"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, @"eligibility filters must have editable GUI switches");
         for (NSNumber *value in @[@NO,@YES]) {
@@ -296,6 +305,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
             return;
         }
         NSString *script = @"(()=>{const m=PHFormation.createModel(PH_CATALOG);let t=m.empty();"
+            "t.title='隊伍 A';"
             "const ids=[[14238,14132,153],[14246,13334,142],[14240,8484,111],[14244,13711,142],[14234,13535,142],[14234,12460,142]];"
             "ids.forEach(([b,a,s],i)=>{t=m.selectCard(t,i,'body',b);t=m.selectCard(t,i,'assist',a);t.slots[i].body.superAwakening=s;});"
             "PHFormationUI.receive({team:t});document.getElementById('save').click();"
@@ -320,10 +330,87 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
         NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
         [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
-        [self.formationWeb evaluateJavaScript:@"document.getElementById('close').click()" completionHandler:^(id value, NSError *failure) {
-            self.formationWeb = nil;
-            PHProbeCheck(self.window.isKeyWindow, @"closing formation restores the original scene or legacy guest key window");
-            [self finishPortrait];
+        [self exerciseLibrary];
+    }];
+}
+
+- (void)exerciseLibrary {
+    NSString *script = @"(()=>{const $=id=>document.getElementById(id),ui=PHFormationUI;"
+        "const original=ui.getLibrary().selected;"
+        "$('team-title').value='未儲存的副本';$('team-copy').click();const copy=ui.getLibrary().selected;"
+        "const independent=copy!==original&&ui.getLibrary().teams[0].team.title==='隊伍 A';"
+        "$('team-title').value='隊伍 B';$('skill').value='1';$('skill').dispatchEvent(new Event('change'));$('save').click();"
+        "$('team-new').click();const empty=ui.getLibrary().teams.length===3&&ui.getTeam().slots.every(s=>!s.body.id);"
+        "$('team-delete').click();const confirm=!$('delete-confirm').hidden;$('delete-cancel').click();"
+        "const cancelled=ui.getLibrary().teams.length===3&&$('delete-confirm').hidden;"
+        "$('team-delete').click();$('delete-yes').click();const deleted=ui.getLibrary().teams.length===2;"
+        "$('team-choice').value=original;$('team-choice').dispatchEvent(new Event('change'));"
+        "const originalSaved=ui.getTeam().title==='隊伍 A'&&ui.getTeam().slots[0].body.skill===0;"
+        "$('team-choice').value=copy;$('team-choice').dispatchEvent(new Event('change'));"
+        "const copySaved=ui.getTeam().title==='隊伍 B'&&ui.getTeam().slots[0].body.skill===1;"
+        "return {independent,empty,confirm,cancelled,deleted,originalSaved,copySaved,error:$('error').textContent};})()";
+    [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
+        PHProbeCheck(!error && [value[@"error"] length] == 0, @"Library management completes through the native bridge");
+        for (NSString *key in @[@"independent", @"empty", @"confirm", @"cancelled", @"deleted", @"originalSaved", @"copySaved"])
+            PHProbeCheck([value[key] boolValue], [@"Formation library operation failed: " stringByAppendingString:key]);
+        [self performSelector:@selector(verifyLibrary) withObject:nil afterDelay:0.5];
+    }];
+}
+
+- (void)verifyLibrary {
+    NSDictionary *library = PHProbeJSON(@"formations.json"), *team = PHProbeJSON(@"formation.json");
+    PHProbeCheck([library[@"teams"] count] == 2 && [team[@"title"] isEqual:@"隊伍 B"] &&
+        [team[@"slots"][0][@"body"][@"skill"] isEqual:@1] &&
+        [library[@"teams"][0][@"team"][@"title"] isEqual:@"隊伍 A"], @"Native library saves retain both independent teams and the selected backup");
+    NSString *script = @"(()=>{window.PHProbeInitialScale=visualViewport.scale;document.getElementById('search').focus();"
+        "return [...document.querySelectorAll('input,select')].every(e=>parseFloat(getComputedStyle(e).fontSize)>=16);})()";
+    [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
+        PHProbeCheck(!error && [value boolValue], @"All editor input and select fonts prevent iOS focus zoom");
+        [self performSelector:@selector(verifyFocusedEditor) withObject:nil afterDelay:0.8];
+    }];
+}
+
+- (void)verifyFocusedEditor {
+    NSString *script = @"({focused:document.activeElement.id==='search',scale:visualViewport.scale,"
+        "initial:PHProbeInitialScale,fits:document.documentElement.scrollWidth<=innerWidth})";
+    [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
+        PHProbeCheck(!error && [value[@"focused"] boolValue] && [value[@"fits"] boolValue] &&
+            fabs([value[@"scale"] doubleValue] - [value[@"initial"] doubleValue]) < 0.01 &&
+            fabs(self.formationWeb.scrollView.zoomScale - 1.0) < 0.01, @"Focused editor input keeps its viewport and native scroll zoom stable");
+        [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
+            PHProbeCheck(snapshot != nil && !failure, @"Focused editor snapshot must render");
+            NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+            [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
+                [NSString stringWithFormat:@"Documents/%@-formation-focused.png", prefix]] atomically:YES];
+            [self.formationWeb evaluateJavaScript:@"document.activeElement.blur();document.getElementById('close').click()" completionHandler:^(id result, NSError *closeError) {
+                self.formationWeb = nil;
+                PHProbeCheck(!closeError && self.window.isKeyWindow, @"Closing formation restores the scene or legacy guest key window");
+                [self finishPortrait];
+            }];
+        }];
+    }];
+}
+
+- (void)checkRestartedFormation {
+    self.formationAttempts++;
+    if (!self.formationWeb) { PHProbeCheck(NO, @"Restarted editor must open"); PHProbeReport(@"done"); return; }
+    NSString *script = @"window.PHFormationUI&&PHFormationUI.initialized?PHFormationUI.getLibrary():null";
+    [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
+        if (error || ![value isKindOfClass:NSDictionary.class]) {
+            if (self.formationAttempts < 60) [self performSelector:@selector(checkRestartedFormation) withObject:nil afterDelay:0.5];
+            else { PHProbeCheck(NO, @"Restarted editor bridge did not initialize"); PHProbeReport(@"done"); }
+            return;
+        }
+        PHProbeCheck([value isEqual:PHProbeRestartLibrary], @"Process restart reloads every saved team and the selected draft through the bridge");
+        [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
+            PHProbeCheck(snapshot != nil && !failure, @"Restarted library snapshot must render");
+            NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+            [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
+                [NSString stringWithFormat:@"Documents/%@-formation-restart.png", prefix]] atomically:YES];
+            [self.formationWeb evaluateJavaScript:@"document.getElementById('close').click()" completionHandler:^(id result, NSError *closeError) {
+                PHProbeCheck(!closeError && self.window.isKeyWindow, @"Restarted editor restores guest focus when closed");
+                PHProbeReport(@"done");
+            }];
         }];
     }];
 }

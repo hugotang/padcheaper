@@ -49,6 +49,7 @@ static PHBadges *PHBadgeTracker;
 static PHTimer *PHTimerTracker;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
+static NSDictionary *PHFormationLibrary;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
 static uint8_t PHSkinAdded[128];
@@ -93,7 +94,8 @@ static NSDictionary *PHReadJSON(NSString *name) {
     if (!PHFolder.length) return nil;
     NSString *path = [PHFolder stringByAppendingPathComponent:name];
     NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL];
-    if ([attributes[NSFileSize] unsignedLongLongValue] > 65536) return nil;
+    NSUInteger limit = [name isEqual:@"formations.json"] ? 2 * 1024 * 1024 : 65536;
+    if ([attributes[NSFileSize] unsignedLongLongValue] > limit) return nil;
     NSData *data = [NSData dataWithContentsOfFile:path];
     id object = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
     return [object isKindOfClass:NSDictionary.class] ? object : nil;
@@ -169,6 +171,29 @@ static void PHReloadConfig(void) {
     PHConfig = PHConfigValid ? next : PHDefaultConfiguration();
 }
 
+static void PHConfigureAutomaticTeam(NSDictionary *team) {
+    PHBattleLoadout loadouts[6] = {0};
+    uint8_t mask = 0;
+    if (PHFormationReadTeam(team, loadouts, NULL)) {
+        for (NSUInteger i = 0; i < 6; ++i) if (loadouts[i].bodyNumber) mask |= (uint8_t)(1u << i);
+    }
+    [PHBattleTracker configureAutomaticLoadouts:loadouts mask:mask];
+}
+
+static void PHSaveFormationLibrary(NSDictionary *library) {
+    NSDictionary *selected = nil;
+    NSString *reason = nil;
+    if (!PHFormationReadLibrary(library, &selected, &reason)) { PHFeedback = reason; return; }
+    PHFormationLibrary = library;
+    PHFormationDraft = selected;
+    PHConfigureAutomaticTeam(selected);
+    BOOL saved = PHStorageReady && PHWriteJSON(library, @"formations.json");
+    // Keep the selected draft as a backward-compatible backup. The library is
+    // the canonical store, so changing selection never replaces other teams.
+    if (saved) PHWriteJSON(selected, @"formation.json");
+    PHFeedback = saved ? @"隊伍庫與目前選取隊伍已儲存" : @"隊伍庫已保留於本次執行，但檔案儲存失敗";
+}
+
 static void PHPrepareStorage(void) {
     PHFolder = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
     NSError *error = nil;
@@ -182,8 +207,17 @@ static void PHPrepareStorage(void) {
         PHStorageMessage = @"無法寫入 config.json；面板仍可顯示診斷。";
     }
     PHReloadConfig();
-    NSDictionary *formation = PHReadJSON(@"formation.json");
-    if (PHFormationReadTeam(formation, NULL, NULL)) PHFormationDraft = formation;
+    NSDictionary *library = PHReadJSON(@"formations.json"), *selected = nil;
+    if (PHFormationReadLibrary(library, &selected, NULL)) {
+        PHFormationLibrary = library; PHFormationDraft = selected;
+    } else if (!PHFormationLibrary) {
+        PHFormationLibrary = PHFormationLibraryFromTeam(PHReadJSON(@"formation.json"));
+        PHFormationReadLibrary(PHFormationLibrary, &selected, NULL);
+        PHFormationDraft = selected;
+        NSString *libraryPath = [PHFolder stringByAppendingPathComponent:@"formations.json"];
+        if (PHStorageReady && ![NSFileManager.defaultManager fileExistsAtPath:libraryPath]) PHWriteJSON(PHFormationLibrary, @"formations.json");
+    }
+    PHConfigureAutomaticTeam(PHFormationDraft);
     if (!PHObservedEndpoint) {
         NSDictionary *endpoint = PHReadJSON(@"endpoint.json");
         if ([endpoint[@"host"] isKindOfClass:NSString.class] &&
@@ -202,7 +236,8 @@ static PHBattleFrame PHBattleFrameContext(void) {
         PHCurrentPlayer(&player) && player == PHPlayer;
     return (PHBattleFrame){.header = (uintptr_t)PHGuest, .player = PHPlayer, .epoch = PHAccountEpoch, .ready = ready,
         .enabled = PHStorageReady && PHConfigValid && !PHStorageFault && PHEnabled(@"battleSwap"),
-        .policy = PHConfigurationBattlePolicy(PHConfig)};
+        .policy = PHConfigurationBattlePolicy(PHConfig),
+        .autoApplyTeam = [PHConfigurationBattleFilters(PHConfig)[@"autoApplyTeam"] boolValue]};
 }
 
 static PHBattleFrame PHTimerFrameContext(void) {
@@ -756,6 +791,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         [battle[@"restorePending"] boolValue] ? @"等待還原" : [battle[@"applied"] boolValue] ?
         [NSString stringWithFormat:@"已替換 %@ 名隊員", battle[@"activeCount"]] :
         !PHValidated ? @"等待遊戲校驗" : battle[@"gate"] ?: @"等待戰鬥檢查";
+    featureStates[@"autoApplyTeam"] = ![PHConfigurationBattleFilters(PHConfig)[@"autoApplyTeam"] boolValue] ? @"關閉" :
+        !master ? @"等待總開關" : !PHEnabled(@"battleSwap") ? @"等待開啟戰鬥隊員替換" :
+        [NSString stringWithFormat:@"%@ · %@", PHFormationDraft[@"title"] ?: @"未命名隊伍",
+            battle[@"automaticMessage"] ?: @"下次入場自動套用，重算 SB"];
     NSMutableArray<NSString *> *battleLines = [NSMutableArray arrayWithObjects:battle[@"message"] ?: @"尚未替換隊員",
         battle[@"gate"] ?: @"等待戰鬥檢查", nil];
     for (NSDictionary *member in battle[@"members"]) {
@@ -791,6 +830,15 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle filters: %@\nBadge: %@\nTimer: %@",
         PHConfigurationBattleFilters(PHConfig), badge[@"message"], timerSummary];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nAutomatic entry: enabled %@ / waiting %@ / count %@ / last SB %@\nEntry window: %@ / charges valid %@\nEntry result: %@\nTeam banks: valid %@ / current %@ / count %@ / offscreen leases %@",
+        battle[@"automaticEnabled"], battle[@"automaticWaiting"], battle[@"automaticCount"], battle[@"initialBoost"],
+        battle[@"entryWindow"], battle[@"entryChargesValid"], battle[@"automaticMessage"],
+        battle[@"teamBanksValid"], battle[@"currentTeam"], battle[@"teamCount"], battle[@"offscreenCount"]];
+    for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
+        diagnostics = [diagnostics stringByAppendingFormat:@"\nMember %@ source: team %@ / slot %@",
+            member[@"slot"], member[@"sourceTeam"], member[@"sourceSlot"]];
+    }
     for (NSString *inputName in @[@"Battle", @"Timer"]) {
         NSDictionary *inputState = [inputName isEqualToString:@"Battle"] ? battle : timer;
         diagnostics = [diagnostics stringByAppendingFormat:
@@ -814,6 +862,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"featureStates": featureStates, @"endpoint": PHObservedEndpoint ?: @{}, @"checks": checks,
         @"saveState": saveState, @"saveSummary": saveSummary,
         @"battleState": battle, @"battleSummary": battleSummary, @"formationDraft": PHFormationDraft ?: @{},
+        @"formationLibrary": PHFormationLibrary ?: @{},
         @"badgeState": badge,
         @"timerState": timer, @"timerSummary": timerSummary,
         @"configPath": path, @"feedback": PHFeedback ?: @"", @"diagnostics": diagnostics,
@@ -822,18 +871,26 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
     if (PHContextIdentified && PHFolder.length && now - PHLastStatus >= 5) {
         PHLastStatus = now;
-        PHWriteJSON(snapshot, @"status.json");
+        NSMutableDictionary *status = [snapshot mutableCopy];
+        [status removeObjectForKey:@"formationLibrary"];
+        status[@"formationLibraryCount"] = @([PHFormationLibrary[@"teams"] count]);
+        status[@"formationSelectedID"] = PHFormationLibrary[@"selected"] ?: @"";
+        PHWriteJSON(status, @"status.json");
     }
     return snapshot;
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqualToString:@"formationLibrarySave"]) {
+        PHSaveFormationLibrary(value);
+        PHLastStatus = 0;
+        return;
+    }
     if ([action isEqualToString:@"formationSave"]) {
         NSString *reason = nil;
         if (PHFormationReadTeam(value, NULL, &reason)) {
-            PHFormationDraft = value;
-            PHFeedback = PHStorageReady && PHWriteJSON(value, @"formation.json") ?
-                @"編隊草稿已儲存" : @"編隊已保留於本次執行，但草稿檔儲存失敗";
+            NSDictionary *library = PHFormationLibraryUpdatingTeam(PHFormationLibrary, value);
+            PHSaveFormationLibrary(library ?: PHFormationLibraryFromTeam(value));
         } else PHFeedback = reason;
         PHLastStatus = 0;
         return;
@@ -912,9 +969,9 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"apiPaths"] = @[path];
     } else if ([action isEqualToString:@"experimentalWrites"]) {
         next[action] = @([value boolValue]);
-    } else if ([@[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"entryModes", @"sourceModes", @"multiModes"] containsObject:action]) {
+    } else if ([@[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"entryModes", @"sourceModes", @"multiModes", @"autoApplyTeam"] containsObject:action]) {
         NSMutableDictionary *battle = [PHConfigurationBattleFilters(next) mutableCopy];
-        if ([action hasPrefix:@"allowAll"]) battle[action] = @([value boolValue]);
+        if ([action hasPrefix:@"allowAll"] || [action isEqual:@"autoApplyTeam"]) battle[action] = @([value boolValue]);
         else {
             NSArray *values = PHConfigurationReadFilterText(value, [action isEqualToString:@"multiModes"] ? UINT32_MAX : UINT16_MAX);
             if (!values) { PHFeedback = @"清單需為不重複的非負整數，以逗號分隔，最多 32 個"; return; }

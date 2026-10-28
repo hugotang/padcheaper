@@ -43,6 +43,47 @@ int main(void) {
         NSUInteger position = 0;
         Check(PHFormationReadRestoreSlot(@6, &position) && position == 6, "restore-all sentinel crosses the native bridge");
         Check(!PHFormationReadRestoreSlot(@YES, NULL) && !PHFormationReadRestoreSlot(@7, NULL), "restore positions are strictly bounded");
+
+        team = Team();
+        NSDictionary *library = PHFormationLibraryFromTeam(team), *selectedTeam = nil;
+        Check(PHFormationReadLibrary(library, &selectedTeam, NULL) && [library[@"selected"] isEqual:@"legacy"] &&
+              [selectedTeam isEqual:team], "legacy formation migrates without changing any member or latent ID");
+        team[@"title"] = @"later edit";
+        Check([selectedTeam[@"title"] isEqual:@"六人測試"], "migration copies mutable drafts independently");
+        NSDictionary *emptyLibrary = PHFormationLibraryFromTeam(nil);
+        Check(PHFormationReadLibrary(emptyLibrary, &selectedTeam, NULL) && [emptyLibrary[@"selected"] isEqual:@"default"] &&
+              [selectedTeam[@"slots"] count] == 6, "new installations get a valid six-position default library");
+        NSMutableDictionary *copy = Team(); copy[@"title"] = @"第二隊";
+        library = @{@"schema":@1, @"selected":@"second", @"teams":@[
+            library[@"teams"][0], @{@"id":@"second", @"team":copy}]};
+        Check(PHFormationReadLibrary(library, &selectedTeam, NULL) && [selectedTeam[@"title"] isEqual:@"第二隊"],
+              "a stable selected ID chooses the saved team used for entry");
+        copy[@"title"] = @"改名";
+        NSDictionary *updated = PHFormationLibraryUpdatingTeam(library, copy);
+        copy[@"title"] = @"unsaved change";
+        Check([updated[@"teams"][1][@"team"][@"title"] isEqual:@"改名"] &&
+              [updated[@"teams"][0][@"team"][@"title"] isEqual:@"六人測試"], "saving or renaming one team preserves independent records");
+        NSData *json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
+        Check(PHFormationReadLibrary([NSJSONSerialization JSONObjectWithData:json options:0 error:NULL], NULL, NULL),
+              "multi-team library survives its canonical JSON persistence format");
+        for (NSDictionary *changes in @[
+            @{@"selected":@"missing"}, @{@"selected":@YES}, @{@"schema":@YES}, @{@"teams":@[]},
+            @{@"teams":@[@{@"id":@"bad id", @"team":Team()}]},
+            @{@"teams":@[@{@"id":@"second", @"team":Team()}, @{@"id":@"second", @"team":Team()}]},
+            @{@"teams":@[@{@"id":@"second", @"team":@{}}]}
+        ]) {
+            NSMutableDictionary *bad = [updated mutableCopy]; [bad addEntriesFromDictionary:changes];
+            selectedTeam = @{@"sentinel":@YES};
+            Check(!PHFormationReadLibrary(bad, &selectedTeam, NULL) && [selectedTeam[@"sentinel"] isEqual:@YES],
+                  "malformed libraries leave the selected output and all saved records unchanged");
+        }
+        NSMutableArray *records = [NSMutableArray array];
+        for (NSUInteger i = 0; i < PHFormationLibraryCapacity; ++i)
+            [records addObject:@{@"id":[NSString stringWithFormat:@"t%lu",(unsigned long)i], @"team":Team()}];
+        NSDictionary *full = @{@"schema":@1, @"selected":@"t0", @"teams":records};
+        Check(PHFormationReadLibrary(full, NULL, NULL), "all 64 saved teams validate");
+        [records addObject:@{@"id":@"overflow", @"team":Team()}];
+        Check(!PHFormationReadLibrary(full, NULL, NULL), "overflowing libraries are refused");
         printf("Formation native bridge tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

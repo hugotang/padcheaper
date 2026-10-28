@@ -79,6 +79,9 @@ int main(void) {
     Check(PHBattleSameSource(&m, &n), "form change preserves source identity");
     n.sourceSlot = 1;
     Check(!PHBattleSameSource(&m, &n), "leader/member exchange changes source identity");
+    n = m; n.sourceTeam = 1;
+    Check(!PHBattleSameSource(&m, &n) && !PHBattleSameOrigin(&m, &n),
+          "identical characters in different stored teams have distinct origins");
     PHBattleState state = {.present = true, .protectedValuesValid = true, .input = {.valid = true},
                            .digestKnown = true, .digestMatches = true, .hpMatches = true, .phase = 2};
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "ordinary idle battle is eligible");
@@ -114,9 +117,23 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "explicit source/multi values reach the primary-team structural checks");
     state.policy.multiplayer.allowAll = true;
     state.multiplayer = 1;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "an allow-all filter cannot adapt banked multiplayer layout 1");
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 1 requires a verified native layout");
     state.multiplayer = 4;
-    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "an allow-all filter cannot adapt banked multiplayer layout 4");
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "banked multi 4 requires a verified native layout");
+    state.teamBanksValid = true; state.teamCount = 2; state.teamSize = 5;
+    state.teamBanks[0] = 10; state.teamBanks[1] = 20;
+    for (uint32_t multi = 1; multi <= 4; multi += 3) {
+        state.multiplayer = multi;
+        Check(PHBattleStateGate(&state) == PHBattleGateReady, "verified multi 1/4 layouts reach normal mutation gates");
+        PHBattleState other = state; other.currentTeam = 1;
+        Check(!PHBattleSameTeamView(&state, &other) && PHBattleSameIdentity(&state.identity, &other.identity),
+              "a team switch changes the transaction view without ending dungeon ownership");
+    }
+    state.currentTeam = 2;
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "out-of-range current team cannot enter native calls");
+    state.currentTeam = 0; state.teamCount = PHBattleTeamCapacity + 1;
+    Check(PHBattleStateGate(&state) == PHBattleGateLayout, "unbounded native bank counts fail closed");
+    state.teamCount = 2;
     state.policy.sources.count = PHBattleFilterCapacity + 1;
     Check(PHBattleStateGate(&state) == PHBattleGateMode, "invalid filter capacity fails closed");
     state.policy = (PHBattlePolicy){0}; state.multiplayer = 0;
@@ -136,6 +153,15 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateHP, "HP shadow failure is refused");
     state.hpMatches = true; state.digestMatches = false;
     Check(PHBattleStateGate(&state) == PHBattleGateDigest, "member digest failure is refused");
+    state.digestMatches = true; state.phase = 0;
+    Check(PHBattleEntryGate(&state) == PHBattleGatePhase, "phase zero alone cannot recharge an entry");
+    state.entryWindow = true;
+    Check(PHBattleEntryGate(&state) == PHBattleGateReady && PHBattleStateGate(&state) == PHBattleGatePhase,
+          "fresh entry uses a separate gate while manual writes still require phase two");
+    state.input.rawActiveMask = 1;
+    Check(PHBattleEntryGate(&state) == PHBattleGateInput, "entry waits for the dungeon selection touch to finish");
+    state.input.rawActiveMask = 0; state.auditFlags = 0x10000;
+    Check(PHBattleEntryGate(&state) == PHBattleGateAudit, "entry preserves all normal audit checks");
     printf("Battle model tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

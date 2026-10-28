@@ -10,7 +10,9 @@ def generate(manifest):
     if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.0-106878":
         raise ValueError("Unsupported battle target")
     if manifest["gate"] != {"entry_categories": "all", "source_modes_default": [0], "multiplayer_modes_default": [0],
-                            "unsupported_banked_multiplayer": [1, 4], "runtime_configuration": "battle", "player_input_phase": 2}:
+                            "unsupported_banked_multiplayer": [], "supported_banked_multiplayer": [1, 4],
+                            "runtime_configuration": "battle", "player_input_phase": 2,
+                            "automatic_entry_phase": 0, "automatic_entry_window": "fresh-wave-zero-intro"}:
         raise ValueError("Battle gate differs from the reviewed prototype")
     if manifest["input"] != {
         "manager_pointer_rva": "0x2ac6fd8", "slots_per_bank": 5, "record_bytes": 264,
@@ -32,7 +34,10 @@ def generate(manifest):
     required = {"PHBattleSet16RVA", "PHBattleRebuildMemberRVA", "PHBattleRefreshTeamRVA",
                 "PHBattleDigestRVA", "PHBattleMaxChargeRVA", "PHBattleRadiusRVA", "PHBattleDecode32RVA",
                 "PHBattleSet32RVA", "PHBattleDismissDialogRVA", "PHBattleWaitTimerRVA",
-                "PHBattleSetByteRVA", "PHBattleAllocateRVA", "PHBattleReleaseRVA"}
+                "PHBattleSetByteRVA", "PHBattleAllocateRVA", "PHBattleReleaseRVA",
+                "PHBattleTeamAwakeningRVA", "PHBattleTeamLatentRVA", "PHBattleCurrentBadgeRVA",
+                "PHBattleBadgeBoostRVA", "PHBattleAdvanceTeamRVA", "PHBattleAdvanceMemberRVA", "PHBattleMemberHasSkillRVA",
+                "PHBattleTeamSizeRVA", "PHBattleSoloRulesRVA", "PHBattleSharedHelperRVA", "PHBattleSharedLeaderRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

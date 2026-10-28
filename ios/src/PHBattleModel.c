@@ -52,19 +52,38 @@ bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b) 
            a->multiplayer == b->multiplayer && memcmp(a->entryHash, b->entryHash, sizeof(a->entryHash)) == 0;
 }
 
-bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
+bool PHBattleSameOrigin(const PHBattleMember *a, const PHBattleMember *b) {
     return a && b && a->active && b->active && a->readable && b->readable &&
-           a->sourceSlot == b->sourceSlot && a->scriptSlot == b->scriptSlot &&
+           a->sourceTeam == b->sourceTeam && a->sourceSlot == b->sourceSlot;
+}
+
+bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b) {
+    return PHBattleSameOrigin(a, b) && a->scriptSlot == b->scriptSlot &&
            a->baseID == b->baseID && a->assistID == b->assistID;
 }
 
-PHBattleGate PHBattleStateGate(const PHBattleState *state) {
+bool PHBattleTeamLayoutValid(const PHBattleState *state) {
+    if (!state) return false;
+    if (PHBattleUsesPrimaryTeam(state->multiplayer)) return true;
+    if (!state->teamBanksValid || !state->teamCount || state->teamCount > PHBattleTeamCapacity ||
+        state->currentTeam >= state->teamCount || (state->teamSize != 5 && state->teamSize != 6)) return false;
+    for (unsigned i = 0; i < state->teamCount; ++i) if (!state->teamBanks[i]) return false;
+    return true;
+}
+
+bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b) {
+    if (!a || !b || !PHBattleTeamLayoutValid(a) || !PHBattleTeamLayoutValid(b) || a->multiplayer != b->multiplayer) return false;
+    return PHBattleUsesPrimaryTeam(a->multiplayer) || (a->teamCount == b->teamCount && a->currentTeam == b->currentTeam &&
+        a->teamSize == b->teamSize && !memcmp(a->teamBanks, b->teamBanks, sizeof(a->teamBanks)));
+}
+
+static PHBattleGate StateGate(const PHBattleState *state, bool entry) {
     if (!state || !state->present) return PHBattleGateAbsent;
     if (!state->protectedValuesValid) return PHBattleGateProtected;
     if (!PHBattlePolicyAllows(&state->policy, state->mode, state->sourceMode, state->multiplayer))
         return PHBattleGateMode;
-    if (!PHBattleUsesPrimaryTeam(state->multiplayer)) return PHBattleGateLayout;
-    if (state->phase != 2) return PHBattleGatePhase;
+    if (!PHBattleTeamLayoutValid(state)) return PHBattleGateLayout;
+    if (entry ? state->phase != 0 || !state->entryWindow : state->phase != 2) return PHBattleGatePhase;
     if (!state->input.valid) return PHBattleGateInputUnavailable;
     if (!PHInputIsQuiet(&state->input)) return PHBattleGateInput;
     if (state->dragActive) return PHBattleGateDrag;
@@ -73,3 +92,6 @@ PHBattleGate PHBattleStateGate(const PHBattleState *state) {
     if (!state->digestKnown || !state->digestMatches) return PHBattleGateDigest;
     return PHBattleGateReady;
 }
+
+PHBattleGate PHBattleStateGate(const PHBattleState *state) { return StateGate(state, false); }
+PHBattleGate PHBattleEntryGate(const PHBattleState *state) { return StateGate(state, true); }

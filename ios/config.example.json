@@ -9,6 +9,7 @@
     "battleSwap": false
   },
   "battle": {
+    "autoApplyTeam": false,
     "allowAllModes": true,
     "entryModes": [0, 1, 12],
     "allowAllSources": false,

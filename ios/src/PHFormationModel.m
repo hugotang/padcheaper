@@ -94,3 +94,58 @@ BOOL PHFormationReadRestoreSlot(id value, NSUInteger *slot) {
     if (slot) *slot = (NSUInteger)selected;
     return YES;
 }
+
+static BOOL ValidTeamID(id value) {
+    if (![value isKindOfClass:NSString.class] || ![value length] || [value length] > 80) return NO;
+    NSCharacterSet *allowed = [NSCharacterSet characterSetWithCharactersInString:
+        @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"];
+    return [value rangeOfCharacterFromSet:allowed.invertedSet].location == NSNotFound;
+}
+
+BOOL PHFormationReadLibrary(id value, NSDictionary **selectedTeam, NSString **reason) {
+    NSInteger schema = 0;
+    BOOL valid = [value isKindOfClass:NSDictionary.class] && ReadInteger(value[@"schema"], 1, 1, &schema) &&
+        ValidTeamID(value[@"selected"]) && [value[@"teams"] isKindOfClass:NSArray.class] &&
+        [value[@"teams"] count] > 0 && [value[@"teams"] count] <= PHFormationLibraryCapacity;
+    NSMutableSet *ids = [NSMutableSet set];
+    NSDictionary *selected = nil;
+    if (valid) for (id record in value[@"teams"]) {
+        if (![record isKindOfClass:NSDictionary.class] || !ValidTeamID(record[@"id"]) ||
+            [ids containsObject:record[@"id"]] || !PHFormationReadTeam(record[@"team"], NULL, NULL)) {
+            valid = NO; break;
+        }
+        [ids addObject:record[@"id"]];
+        if ([record[@"id"] isEqual:value[@"selected"]]) selected = record[@"team"];
+    }
+    if (!valid || !selected) { if (reason) *reason = @"隊伍庫格式、隊伍數量或目前選取的隊伍無效"; return NO; }
+    if (selectedTeam) *selectedTeam = selected;
+    return YES;
+}
+
+NSDictionary *PHFormationLibraryFromTeam(NSDictionary *team) {
+    BOOL legacy = PHFormationReadTeam(team, NULL, NULL);
+    if (!legacy) {
+        NSDictionary *body = @{@"id":@0, @"level":@0, @"skill":@0, @"awakenings":@-1,
+            @"superAwakening":@-1, @"plus":@[@297,@297,@297], @"latents":@[]};
+        NSDictionary *assist = @{@"id":@0, @"level":@0, @"skill":@1, @"awakenings":@-1,
+            @"superAwakening":@0, @"plus":@[@99,@99,@99], @"latents":@[]};
+        NSMutableArray *slots = [NSMutableArray array];
+        for (unsigned i = 0; i < 6; ++i) [slots addObject:@{@"body":body, @"assist":assist}];
+        team = @{@"schema":@1, @"title":@"我的隊伍", @"slots":slots};
+    }
+    NSString *identifier = legacy ? @"legacy" : @"default";
+    NSDictionary *library = @{@"schema":@1, @"selected":identifier, @"teams":@[@{@"id":identifier, @"team":team}]};
+    NSData *data = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
+    return [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+}
+
+NSDictionary *PHFormationLibraryUpdatingTeam(NSDictionary *library, NSDictionary *team) {
+    if (!PHFormationReadLibrary(library, NULL, NULL) || !PHFormationReadTeam(team, NULL, NULL)) return nil;
+    NSMutableArray *records = [library[@"teams"] mutableCopy];
+    for (NSUInteger i = 0; i < records.count; ++i) if ([records[i][@"id"] isEqual:library[@"selected"]]) {
+        records[i] = @{@"id":library[@"selected"], @"team":team}; break;
+    }
+    NSDictionary *updated = @{@"schema":@1, @"selected":library[@"selected"], @"teams":records};
+    NSData *data = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
+    return [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+}

@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+enum { PHBattleTeamCapacity = 8 };
+
 typedef struct {
     uintptr_t header, game, impl;
     uint32_t player;
@@ -24,6 +26,7 @@ typedef struct {
 typedef struct {
     bool active, readable;
     int8_t sourceSlot, scriptSlot;
+    uint8_t sourceTeam;
     uint16_t baseID, assistID, formID, temporaryID, temporaryTurns, charge;
     uint32_t catalogID;
     uint8_t flags, radius;
@@ -36,6 +39,11 @@ typedef struct {
 typedef struct {
     PHBattleIdentity identity;
     bool present, protectedValuesValid, dragActive, digestKnown, digestMatches, hpMatches;
+    bool entryWindow, entryChargesValid;
+    bool teamBanksValid;
+    uint8_t teamCount, currentTeam, teamSize;
+    uintptr_t teamBanks[PHBattleTeamCapacity];
+    PHBattleMember storedMembers[PHBattleTeamCapacity][6];
     PHInputState input;
     int16_t mode;
     uint16_t sourceMode;
@@ -51,6 +59,7 @@ typedef struct {
     uint64_t epoch;
     bool ready, enabled;
     PHBattlePolicy policy;
+    bool autoApplyTeam;
 } PHBattleFrame;
 
 typedef enum {
@@ -72,8 +81,12 @@ bool PHBattleNumberForCatalogID(uint32_t catalogID, uint16_t *number);
 bool PHBattleDecodeProtected(const uint32_t raw[4], uint32_t key1, uint32_t key2,
                             uint32_t salt, uint32_t *value);
 bool PHBattleSameIdentity(const PHBattleIdentity *a, const PHBattleIdentity *b);
+bool PHBattleSameOrigin(const PHBattleMember *a, const PHBattleMember *b);
 bool PHBattleSameSource(const PHBattleMember *a, const PHBattleMember *b);
+bool PHBattleTeamLayoutValid(const PHBattleState *state);
+bool PHBattleSameTeamView(const PHBattleState *a, const PHBattleState *b);
 PHBattleGate PHBattleStateGate(const PHBattleState *state);
+PHBattleGate PHBattleEntryGate(const PHBattleState *state);
 
 #ifdef __cplusplus
 }
