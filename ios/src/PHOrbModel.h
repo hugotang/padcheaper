@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 enum { PHOrbMaxCells = 42, PHOrbMaxSteps = 48, PHOrbInputBytes = 2672, PHOrbMaxGoals = 6 };
+enum { PHOrbFlagSwapping = 0x4, PHOrbFlagLocked = 0x800 };
 
 typedef enum {
     PHOrbGoalCombo, PHOrbGoalColors, PHOrbGoalMatch, PHOrbGoalL,
@@ -35,7 +36,13 @@ typedef struct {
 enum {
     PHOrbEnemyDamageAbsorb = 1, PHOrbEnemyAttributeAbsorb = 2,
     PHOrbEnemyDamageVoid = 4, PHOrbEnemyComboAbsorb = 8,
-    PHOrbMaxSkillRules = 12
+    PHOrbMaxSkillRules = 12, PHOrbMaxSkillGroups = 6
+};
+
+enum {
+    PHOrbObstacleUnmatchable = 1, PHOrbObstacleBoardEffect = 2,
+    PHOrbObstacleOrbEffect = 4, PHOrbObstacleSpecialOrbs = 8,
+    PHOrbObstacleSpinner = 16, PHOrbObstacleLocked = 32, PHOrbObstacleWeakened = 64
 };
 
 typedef struct {
@@ -61,7 +68,7 @@ typedef struct {
     uint32_t phase, wave, moves;
     uint16_t remainingFrames;
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
-    uint8_t fps, minErase, freeMovement;
+    uint8_t fps, minErase, freeMovement, obstacles;
     bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid;
     PHOrbAutomationState automation;
 } PHOrbSnapshot;
@@ -84,6 +91,7 @@ bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+uint8_t PHOrbBoardObstacles(const PHOrbSnapshot *state);
 
 #ifdef __cplusplus
 }

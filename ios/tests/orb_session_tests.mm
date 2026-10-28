@@ -1,5 +1,6 @@
 #import "PHOrbSession.h"
 #import "PHOrbRules.h"
+#import "PHOrbProfiles.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -15,7 +16,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     NSUInteger stages, releases, cell, reads;
     BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
-    BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill;
+    BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
@@ -89,6 +90,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (!failSkillAck) ++live.automation.skillUses;
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
+        if (clearObstaclesWithSkill) { live.obstacles = 0; live.ordinary = true; }
         return;
     }
     if (!staged) return;
@@ -137,6 +139,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 }
 
 #include "orb_automation_session_tests.inc"
+#include "orb_strategy_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -366,6 +369,7 @@ int main() {
         for (unsigned i = 0; i < 400; ++i) Tick(session, engine, Frame());
         Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->stages == 0, "late solver completion cannot revive canceled intent");
         AutomationSessionTests();
+        StrategySessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

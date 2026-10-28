@@ -40,6 +40,22 @@
       "attribute_absorb",
       "damage_void",
       "combo_absorb"
+    ],
+    "skill_groups": "round-robin-one-per-orb-turn",
+    "once_rules": "current-battle-memory",
+    "reserved_skills": true,
+    "strategy_profiles": 64,
+    "profile_selection": "explicit-start-only",
+    "locked_orbs": true,
+    "timed_spinners": false,
+    "obstacle_conditions": [
+      "unmatchable",
+      "special_orbs",
+      "orb_effect",
+      "board_effect",
+      "spinner",
+      "locked",
+      "weakened"
     ]
   },
   "user_report": {
@@ -213,6 +229,38 @@
       "length": 64,
       "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f40301aaf30300aa39ac00d039c31e9108948f52e818a072296b68b8",
       "sha256": "7148fce6c662763f488f857278dc50c95a9c886a7ace3c4786d271007b51186c"
+    },
+    {
+      "name": "PHOrbSpinnerSetRVA",
+      "va": "0x100565eec",
+      "rva": "0x565eec",
+      "length": 64,
+      "bytes": "ff4303d1fc6f07a9fa6708a9f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391e71f00b9f80306aaf90305aafa0304aaf50303aaf60302aaf40301aaf30300aa",
+      "sha256": "bb157cb203a13733c0f3d7af155af82a2031631c33ea013ae90ea969d92f2e1b"
+    },
+    {
+      "name": "PHOrbLockedRVA",
+      "va": "0x1005abf34",
+      "rva": "0x5abf34",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091150440b975035836f30301aaf40300aa28ad00d008c11e915649009029f2915209696938490120370821579100a11991",
+      "sha256": "c18ff444aced5ce8010e63e4efd6daf215680a947ad5e21aaf2d4f54e6374cb2"
+    },
+    {
+      "name": "PHOrbChangeRVA",
+      "va": "0x1005beee0",
+      "rva": "0x5beee0",
+      "length": 64,
+      "bytes": "f85fbca9f65701a9f44f02a9fd7b03a9fdc30091282440791f050071a00b0054f80304aaf70303aaf40302aaf60301aaf30300aae00301aa2100805206b4ff97",
+      "sha256": "276cb69a0cc4072252521535a15c7350cef800f6a216261b664d224cb7d0299c"
+    },
+    {
+      "name": "PHOrbMatchRVA",
+      "va": "0x1005fc5cc",
+      "rva": "0x5fc5cc",
+      "length": 64,
+      "bytes": "ef3bb66ded33016deb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291ff8307d1a85800d008b142f9080140f9a88315f8",
+      "sha256": "648dc67dc418a531d6961d94f99a922a5b44e43cb0bafc228087b842615248a1"
     }
   ]
 }

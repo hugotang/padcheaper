@@ -15,13 +15,17 @@ def generate(manifest):
                              'shape_wave': 'first-removal-only', 'leader_planning': 'minimum-board-conditions-only',
                              'full_leader_activation': False, 'skill_rules': 'ordered-conjunctive-single-player',
                              'max_skill_rules': 12, 'skill_entry': 'native-confirmed-current-skill',
-                             'enemy_conditions': ['damage_absorb', 'attribute_absorb', 'damage_void', 'combo_absorb']}:
+                             'enemy_conditions': ['damage_absorb', 'attribute_absorb', 'damage_void', 'combo_absorb'],
+                             'skill_groups': 'round-robin-one-per-orb-turn', 'once_rules': 'current-battle-memory',
+                             'reserved_skills': True, 'strategy_profiles': 64, 'profile_selection': 'explicit-start-only',
+                             'locked_orbs': True, 'timed_spinners': False,
+                             'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened']}:
         raise ValueError('Unreviewed orb scope')
     required = {'PHOrbInitRVA', 'PHOrbGeometryRVA', 'PHOrbNearestRVA', 'PHOrbPlayerInputRVA',
                 'PHOrbSwapRVA', 'PHOrbInputUpdateRVA', 'PHOrbInputGetRVA', 'PHOrbInputTransformRVA',
                 'PHOrbInputHistoryRVA', 'PHOrbFlagsRVA', 'PHOrbCanUseSkillRVA', 'PHOrbStartSkillRVA',
                 'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
-                'PHOrbSkillEffectsRVA'}
+                'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',

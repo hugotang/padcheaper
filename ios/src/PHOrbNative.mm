@@ -124,11 +124,15 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     for (uintptr_t offset : {uintptr_t(739268), uintptr_t(739360), uintptr_t(738980), uintptr_t(739000)}) {
         uint16_t effect = 0;
         if (!PHReadU16(impl + offset, &effect)) return false;
-        if (effect & 0x3ffu) state.ordinary = false;
+        if (effect & 0x3ffu) {
+            state.ordinary = false;
+            state.obstacles |= offset == 739268 ? PHOrbObstacleUnmatchable :
+                offset == 739360 ? PHOrbObstacleSpinner : PHOrbObstacleBoardEffect;
+        }
     }
     uint16_t connectedA = 0, connectedB = 0;
     if (!PHReadU16(impl + 746068, &connectedA) || !PHReadU16(impl + 746076, &connectedB)) return false;
-    if (connectedA || connectedB) state.ordinary = false;
+    if (connectedA || connectedB) { state.ordinary = false; state.obstacles |= PHOrbObstacleBoardEffect; }
     const unsigned width = state.board.width, height = state.board.height;
     if (!PHOrbDimensionsSupported(width, height)) {
         if (reason) *reason = @"本版支援 6×5、7×6 及 5×4 盤面";
@@ -169,7 +173,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     state.leadersValid = ReadLeaders(state, save, impl);
     state.valid = true;
     if (!state.ordinary) { if (reason) *reason = @"特殊規則、固定起點、彈窗或入場動畫尚未結束"; }
-    else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型或效果；本版限六種基本珠與強化珠"; }
+    else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型或效果；本版接受六種基本珠、強化珠及鎖珠"; }
     else if (!state.settled && !state.dragged) { if (reason) *reason = @"等待盤面動畫停止"; }
     else if (!PHInputIsQuiet(&state.input)) { if (reason) *reason = @"請先放開手指"; }
     else if (reason) *reason = @"可以讀盤及求路";

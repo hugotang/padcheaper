@@ -346,6 +346,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
         @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
         @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
+        @"profiles":@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[]}, @"canSetProfiles":@YES,
         @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
         @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
     NSDictionary *baseOrbFixture = orbFixture;
@@ -439,6 +440,36 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     [ruleEditor dismissViewControllerAnimated:NO completion:nil];
     [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
     PHProbeCheck(self.window.isKeyWindow, @"Closing skill rules returns key status to the game");
+    NSMutableDictionary *profileFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    profileFailure[@"profileMessage"] = @"策略未能儲存，仍保留原設定";
+    orbFixture = @{@"orbState":profileFailure}; [orbController refresh];
+    [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    UIViewController *profileEditor = orbController.presentedViewController; [profileEditor loadViewIfNeeded];
+    [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    UITextField *profileName = (UITextField *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileName");
+    PHProbeCheck(orbWindow.isKeyWindow && [profileName becomeFirstResponder], @"Strategy sheet accepts its name with the keyboard");
+    profileName.text = @"循環策略"; [profileName sendActionsForControlEvents:UIControlEventEditingChanged]; [profileName resignFirstResponder];
+    [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbController.presentedViewController == profileEditor && [orbAction isEqual:@"orbsProfiles"] &&
+        [orbValue[@"library"][@"profiles"] count] == 1 &&
+        [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"未能儲存"],
+        @"Failed strategy save retains its draft, selection and fixed notice");
+    PHProbeRender(self.window, orbWindow, @"orbs-strategy-profiles");
+    NSDictionary *profilePayload = orbValue;
+    [orbController setValue:[^(NSString *action, id value) {
+        orbAction = action; orbValue = value;
+        if ([action isEqual:@"orbsProfiles"]) {
+            NSMutableDictionary *state = [profileFailure mutableCopy];
+            state[@"profiles"] = value[@"library"]; state[@"profileMessage"] = @"";
+            orbFixture = @{@"orbState":state};
+        }
+    } copy] forKey:@"action"];
+    [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:profilePayload],
+        @"Acknowledged strategy save publishes the retained draft and restores game focus");
+    [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
     orbFixture = baseOrbFixture; orbAction = nil; [orbController refresh];
     [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStart") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([orbAction isEqual:@"orbsStart"] && [overlay.rootViewController valueForKey:@"orbWindow"] == orbWindow,
@@ -452,6 +483,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         orbFixture = @{@"orbState":continuous}; orbAction = nil; [orbController refresh];
         [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStop") sendActionsForControlEvents:UIControlEventTouchUpInside];
         PHProbeCheck([orbAction isEqual:@"orbsStop"] && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") isEnabled] &&
+            ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsProfileEdit") isEnabled] &&
             ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsStart") isEnabled],
             @"Every automatic phase exposes stop and locks rule editing and duplicate start");
         NSMutableDictionary *bubbleState = [originalSnapshot() mutableCopy]; bubbleState[@"orbState"] = continuous;

@@ -15,7 +15,7 @@
 - (instancetype)initWithRules:(NSArray *)rules save:(NSString *(^)(NSArray *))save {
     if ((self = [super init])) {
         _draft = [NSMutableArray array];
-        for (NSDictionary *rule in rules) [_draft addObject:rule.mutableCopy];
+        for (NSDictionary *rule in rules) [_draft addObject:PHOrbNormalizedSkillRule(rule).mutableCopy];
         _saveRules = [save copy];
     }
     return self;
@@ -148,11 +148,18 @@
         [card addArrangedSubview:[self number:i field:@"monster" title:@"角色圖鑑編號（0 不限定）"]];
         [card addArrangedSubview:[self number:i field:@"every" title:@"回合間隔（1 每回合）"]];
         [card addArrangedSubview:[self number:i field:@"floor" title:@"指定樓層（0 所有樓層）"]];
+        [card addArrangedSubview:[self menu:i field:@"group" values:@[@0,@1,@2,@3,@4,@5,@6]
+            titles:@[@"獨立施放", @"輪替組 1", @"輪替組 2", @"輪替組 3", @"輪替組 4", @"輪替組 5", @"輪替組 6"]]];
+        [card addArrangedSubview:[self menu:i field:@"once" values:@[@NO,@YES] titles:@[@"每個符合條件的回合", @"本場只用一次"]]];
+        [card addArrangedSubview:[self number:i field:@"reserveUntil" title:@"此位置保留至第幾層（0 不保留）"]];
         [card addArrangedSubview:[self menu:i field:@"color" values:@[@-1,@0,@1,@2,@3,@4,@5]
             titles:@[@"不限定盤面", @"缺火珠", @"缺水珠", @"缺木珠", @"缺光珠", @"缺暗珠", @"缺心珠"]]];
         if ([rule[@"color"] integerValue] >= 0) [card addArrangedSubview:[self number:i field:@"below" title:@"珠數少於此數才觸發"]];
         NSMutableArray *titles = [NSMutableArray array]; for (NSString *effect in PHOrbEnemyConditions()) [titles addObject:PHOrbEnemyConditionTitle(effect)];
         [card addArrangedSubview:[self menu:i field:@"enemy" values:PHOrbEnemyConditions() titles:titles]];
+        NSMutableArray *obstacleTitles = [NSMutableArray array];
+        for (NSString *condition in PHOrbObstacleConditions()) [obstacleTitles addObject:PHOrbObstacleConditionTitle(condition)];
+        [card addArrangedSubview:[self menu:i field:@"obstacle" values:PHOrbObstacleConditions() titles:obstacleTitles]];
         NSMutableArray *buttons = [NSMutableArray array];
         for (NSUInteger actionIndex = 0; actionIndex < 3; ++actionIndex) {
             UIButton *button = [self button:@[@"上移", @"下移", @"刪除"][actionIndex]];
@@ -174,6 +181,7 @@
     add.accessibilityIdentifier = @"padcheaper.orbsRuleAdd";
     [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
     [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能，未冷卻好會略過。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
+    [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下回合從下一條開始，未就緒者可略過。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件只決定何時嘗試你指定的技能；技能完成後仍會重讀，效果未解除就停止。"]];
 }
 - (void)add {
     if (self.draft.count >= PHOrbMaxSkillRules) return;

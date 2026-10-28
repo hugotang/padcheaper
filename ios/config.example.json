@@ -24,5 +24,11 @@
     "rules": []
   },
   "apiHosts": [],
-  "apiPaths": []
+  "apiPaths": [],
+  "orbProfiles": {
+    "schema": 1,
+    "selected": "",
+    "autoSelect": false,
+    "profiles": []
+  }
 }

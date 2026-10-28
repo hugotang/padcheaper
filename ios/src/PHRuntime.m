@@ -9,6 +9,7 @@
 #import "PHSaveState.h"
 #import "PHBattleSession.h"
 #import "PHOrbSession.h"
+#import "PHOrbProfiles.h"
 #import <UIKit/UIKit.h>
 #import "PHFormationModel.h"
 #import "PHBadges.h"
@@ -53,6 +54,7 @@ static PHOrbSession *PHOrbTracker;
 static NSString *PHOrbQualityNotice;
 static NSString *PHOrbGoalNotice;
 static NSString *PHOrbRuleNotice;
+static NSString *PHOrbProfileNotice;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
@@ -177,6 +179,7 @@ static void PHReloadConfig(void) {
     NSDictionary *next = PHReadJSON(@"config.json");
     PHConfigValid = PHConfigurationIsValid(next);
     PHConfig = PHConfigValid ? next : PHDefaultConfiguration();
+    [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
     [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
 }
 
@@ -749,6 +752,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     orbs[@"goalMessage"] = PHOrbGoalNotice ?: @"";
     orbs[@"canSetRules"] = orbs[@"canSetQuality"];
     orbs[@"ruleMessage"] = PHOrbRuleNotice ?: @"";
+    orbs[@"profiles"] = PHConfigurationOrbProfiles(PHConfig);
+    orbs[@"canSetProfiles"] = orbs[@"canSetQuality"];
+    orbs[@"profileMessage"] = PHOrbProfileNotice ?: @"";
     NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
@@ -952,6 +958,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 
 static void PHHandleOverlayAction(NSString *action, id value) {
     if ([action isEqual:@"orbsStart"]) {
+        [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
         [PHOrbTracker queueAutomatic]; return;
     }
@@ -1045,11 +1052,23 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = PHFeedback;
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = PHFeedback;
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = PHFeedback;
+        if ([action isEqual:@"orbsProfiles"]) PHOrbProfileNotice = PHFeedback;
         return;
     }
     PHReloadConfig();
     NSMutableDictionary *next = [PHConfig mutableCopy];
-    if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"]) {
+    if ([action isEqual:@"orbsProfiles"]) {
+        NSDictionary *orbState = [PHOrbTracker snapshot];
+        if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) {
+            PHOrbProfileNotice = @"請先停止連續模式及轉珠，再儲存策略。"; return;
+        }
+        if (![value isKindOfClass:NSDictionary.class] || !PHOrbProfilesValid(value[@"library"]) ||
+            !PHOrbCanonicalSettings(value[@"settings"])) { PHOrbProfileNotice = @"策略格式或設定無效。"; return; }
+        NSDictionary *library = value[@"library"];
+        NSDictionary *selected = PHOrbProfileNamed(library, library[@"selected"]);
+        NSDictionary *settings = PHOrbCanonicalSettings(selected ? selected[@"settings"] : value[@"settings"]);
+        next[@"orbProfiles"] = library; next[@"orbs"] = settings;
+    } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) return;
         NSMutableDictionary *settings = [PHConfigurationOrbSettings(next) mutableCopy];
@@ -1064,11 +1083,20 @@ static void PHHandleOverlayAction(NSString *action, id value) {
             settings[@"mode"] = value[@"mode"]; settings[@"goals"] = value[@"goals"];
         }
         next[@"orbs"] = settings;
+        NSDictionary *profiles = PHOrbProfilesUpdatingSettings(PHConfigurationOrbProfiles(next), settings);
+        if (!profiles) {
+            if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查角色、樓層、群組及盤面條件。";
+            else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
+            return;
+        }
+        next[@"orbProfiles"] = profiles;
         if (!PHConfigurationIsValid(next)) {
             if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查位置、角色編號、樓層及缺珠條件。";
             else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
             return;
         }
+        // The selected profile and its working settings share one atomic
+        // config write. A failed save cannot update one without the other.
     } else if ([action isEqualToString:@"adoptEndpoint"]) {
         NSString *host = PHObservedEndpoint[@"host"], *path = PHObservedEndpoint[@"path"];
         if (![host isKindOfClass:NSString.class] || !host.length || ![path isKindOfClass:NSString.class] || ![path hasPrefix:@"/"]) {
@@ -1101,8 +1129,9 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if (PHConfigurationIsValid(next) && PHWriteJSON(next, @"config.json")) {
         PHConfig = next;
         PHConfigValid = YES;
+        [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
-        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil;
+        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbProfileNotice = nil;
         PHUnlockDataReady = NO;
         PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
     } else {
@@ -1112,6 +1141,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = @"品質未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = @"目標未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
+        if ([action isEqual:@"orbsProfiles"]) PHOrbProfileNotice = @"策略未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
     }
     PHLastStatus = 0;
 }

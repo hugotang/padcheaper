@@ -40,9 +40,16 @@ done
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     -c ios/src/PHOrbRules.m -o "$build_dir/PHOrbRules.o"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+    -c ios/src/PHOrbProfiles.m -o "$build_dir/PHOrbProfiles.o"
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     ios/tests/orb_rules_tests.m "$build_dir/PHOrbRules.o" "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -framework Foundation -framework CoreFoundation -o "$build_dir/orb-rules-tests"
 "$build_dir/orb-rules-tests"
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+    ios/tests/orb_profiles_tests.m "$build_dir/PHOrbProfiles.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbPlanning.o" \
+    "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
+    -framework Foundation -framework CoreFoundation -o "$build_dir/orb-profiles-tests"
+"$build_dir/orb-profiles-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
     -c ios/src/PHOrbSolver.cpp -o "$build_dir/PHOrbSolver.o"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
@@ -56,7 +63,7 @@ done
 "$build_dir/orb-native-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -Wall -Wextra -Werror -Wno-unused-parameter -Iios/src -Iios/generated \
-    ios/src/PHOrbSession.mm ios/tests/orb_session_tests.mm "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
+    ios/src/PHOrbSession.mm ios/tests/orb_session_tests.mm "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbProfiles.o" "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
     "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -framework Foundation -framework CoreFoundation -o "$build_dir/orb-session-tests"
 "$build_dir/orb-session-tests"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src -Iios/generated \
@@ -102,7 +109,7 @@ done
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks \
     -Wall -Wextra -Werror -Iios/src -Iios/generated \
     ios/src/PHIdentity.m ios/src/PHConfiguration.m ios/tests/configuration_tests.m \
-    "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
+    "$build_dir/PHOrbPlanning.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbProfiles.o" "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -framework Foundation -framework CoreFoundation \
     -o "$build_dir/configuration-tests"
 "$build_dir/configuration-tests"

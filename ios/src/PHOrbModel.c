@@ -11,9 +11,9 @@ bool PHOrbBoardValid(const PHOrbBoard *board) {
     for (unsigned i = 0; i < board->width * board->height; ++i) {
         float enhancement;
         memcpy(&enhancement, &board->enhancement[i], sizeof(enhancement));
-        // 0x4 is cleared by the native swap animation. All other flags are
-        // retained in the snapshot and rejected until their rules are modeled.
-        if (board->types[i] > 5 || (board->flags[i] & ~4u) || !isfinite(enhancement) ||
+        // Lock blocks native color-changing skills, not ordinary swaps or
+        // matching. Preserve it with the orb. Other effects remain rejected.
+        if (board->types[i] > 5 || (board->flags[i] & ~(PHOrbFlagSwapping | PHOrbFlagLocked)) || !isfinite(enhancement) ||
             enhancement < 0 || enhancement > 1) return false;
     }
     return true;
@@ -43,7 +43,8 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
 
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!PHOrbSameTurn(a, b) || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
-        a->moves != b->moves || !PHOrbSameBoard(&a->board, &b->board)) return false;
+        a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary ||
+        !PHOrbSameBoard(&a->board, &b->board)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
         x->skillUses != y->skillUses || x->enemiesKnown != y->enemiesKnown || x->boardKnown != y->boardKnown ||
@@ -55,6 +56,21 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
             m->state != n->state || m->bound != n->bound || m->overridden != n->overridden) return false;
     }
     return true;
+}
+
+uint8_t PHOrbBoardObstacles(const PHOrbSnapshot *state) {
+    if (!state) return 0;
+    uint8_t result = state->obstacles;
+    if (!PHOrbDimensionsSupported(state->board.width, state->board.height)) return result;
+    for (unsigned i = 0; i < state->board.width * state->board.height; ++i) {
+        float enhancement;
+        memcpy(&enhancement, &state->board.enhancement[i], sizeof(enhancement));
+        if (isfinite(enhancement) && enhancement < 0) result |= PHOrbObstacleWeakened;
+        if (state->board.types[i] > 5) result |= PHOrbObstacleSpecialOrbs;
+        if (state->board.flags[i] & PHOrbFlagLocked) result |= PHOrbObstacleLocked;
+        if (state->board.flags[i] & ~(PHOrbFlagSwapping | PHOrbFlagLocked)) result |= PHOrbObstacleOrbEffect;
+    }
+    return result;
 }
 
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {

@@ -1,6 +1,8 @@
 #import "PHOrbController.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
+#import "PHOrbProfiles.h"
+#import "PHOrbProfileEditor.h"
 #import "PHOrbRuleEditor.h"
 #include "PHOrbModel.h"
 #include <math.h>
@@ -183,7 +185,7 @@
 @implementation PHOrbBoardView
 - (void)drawRect:(CGRect)rect {
     NSUInteger width = [self.board[@"width"] unsignedIntegerValue], height = [self.board[@"height"] unsignedIntegerValue];
-    NSArray *source = self.board[@"types"], *enhanced = self.board[@"enhanced"];
+    NSArray *source = self.board[@"types"], *enhanced = self.board[@"enhanced"], *locked = self.board[@"locked"];
     const NSUInteger cells = width * height;
     if (!PHOrbDimensionsSupported((unsigned)width, (unsigned)height) || source.count != cells || enhanced.count != cells) {
         NSString *text = @"讀取盤面後顯示預覽";
@@ -192,11 +194,14 @@
         return;
     }
     NSMutableArray *types = source.mutableCopy, *plus = enhanced.mutableCopy;
+    NSMutableArray *locks = [NSMutableArray array];
+    for (NSUInteger i = 0; i < cells; ++i) [locks addObject:locked.count == cells ? locked[i] : @NO];
     NSUInteger through = MIN(self.step, self.path.count ? self.path.count - 1 : 0);
     for (NSUInteger i = 1; i <= through; ++i) {
         NSUInteger a = self.path[i - 1].unsignedIntegerValue, b = self.path[i].unsignedIntegerValue;
         if (a >= cells || b >= cells) return;
         [types exchangeObjectAtIndex:a withObjectAtIndex:b]; [plus exchangeObjectAtIndex:a withObjectAtIndex:b];
+        [locks exchangeObjectAtIndex:a withObjectAtIndex:b];
     }
     NSArray *colors = @[[UIColor colorWithRed:0.91 green:0.24 blue:0.27 alpha:1],
         [UIColor colorWithRed:0.15 green:0.56 blue:0.95 alpha:1], [UIColor colorWithRed:0.13 green:0.66 blue:0.40 alpha:1],
@@ -218,6 +223,8 @@
         [label drawAtPoint:CGPointMake(CGRectGetMidX(square) - size.width / 2, CGRectGetMidY(square) - size.height / 2) withAttributes:attributes];
         if ([plus[i] boolValue]) [@"+" drawAtPoint:CGPointMake(CGRectGetMaxX(square) - 15, square.origin.y + 3)
             withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:14], NSForegroundColorAttributeName:UIColor.whiteColor}];
+        if ([locks[i] boolValue]) [@"鎖" drawAtPoint:CGPointMake(square.origin.x + 4, square.origin.y + 3)
+            withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:11], NSForegroundColorAttributeName:UIColor.whiteColor}];
     }
     if (!self.path.count || self.path[0].unsignedIntegerValue >= cells) return;
     UIBezierPath *line = [UIBezierPath bezierPath];
@@ -263,6 +270,8 @@
 @property(nonatomic, strong) UIButton *startButton;
 @property(nonatomic, strong) UIButton *editRules;
 @property(nonatomic, strong) UILabel *ruleDescription;
+@property(nonatomic, strong) UIButton *editProfiles;
+@property(nonatomic, strong) UILabel *profileDescription;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
@@ -322,6 +331,9 @@
     self.editRules = [self button:@"編輯自動技能規則" selector:@selector(editSkillRules) identifier:@"padcheaper.orbsRuleEdit"];
     self.ruleDescription = [self label:13 weight:UIFontWeightRegular];
     self.ruleDescription.accessibilityIdentifier = @"padcheaper.orbsRuleDescription";
+    self.editProfiles = [self button:@"隊伍／關卡策略" selector:@selector(editProfileSettings) identifier:@"padcheaper.orbsProfileEdit"];
+    self.profileDescription = [self label:13 weight:UIFontWeightRegular];
+    self.profileDescription.accessibilityIdentifier = @"padcheaper.orbsProfileDescription";
     UILabel *qualityTitle = [self label:15 weight:UIFontWeightMedium]; qualityTitle.text = @"求路品質";
     self.qualityControl = [[UISegmentedControl alloc] initWithItems:@[@"快速", @"均衡", @"深入"]];
     self.qualityControl.accessibilityIdentifier = @"padcheaper.orbsQuality";
@@ -354,7 +366,7 @@
     UIStackView *actions = [[UIStackView alloc] initWithArrangedSubviews:@[autoActions, manualActions]];
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
-    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, qualityTitle, self.qualityControl,
+    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
         self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -395,6 +407,13 @@
     self.readButton.enabled = [state[@"canRead"] boolValue]; self.executeButton.enabled = [state[@"canExecute"] boolValue];
     self.stopButton.enabled = [state[@"canStop"] boolValue];
     self.startButton.enabled = [state[@"canStart"] boolValue];
+    self.editProfiles.enabled = [state[@"canSetProfiles"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSDictionary *profiles = state[@"profiles"] ?: PHOrbDefaultProfiles();
+    NSDictionary *profile = [state[@"automatic"] boolValue] ? state[@"activeProfile"] : PHOrbProfileNamed(profiles, profiles[@"selected"]);
+    NSString *profileMessage = state[@"profileMessage"];
+    self.profileDescription.text = profileMessage.length ? profileMessage : [NSString stringWithFormat:@"%@%@",
+        profile[@"name"] ?: @"通用設定", [profiles[@"autoSelect"] boolValue] ? @" · 開始時自動配對" : @""];
+    self.profileDescription.textColor = profileMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.editRules.enabled = [state[@"canSetRules"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSMutableArray *ruleLines = [NSMutableArray array];
     for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];
@@ -402,6 +421,7 @@
     if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
         state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
     [ruleLines addObjectsFromArray:state[@"automationLog"] ?: @[]];
+    if ([state[@"obstacles"] length]) [ruleLines addObject:[NSString stringWithFormat:@"目前盤面：%@", state[@"obstacles"]]];
     NSString *ruleMessage = state[@"ruleMessage"];
     self.ruleDescription.text = ruleMessage.length ? ruleMessage : [ruleLines componentsJoinedByString:@"\n"];
     self.ruleDescription.textColor = ruleMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
@@ -536,6 +556,30 @@
     [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)stop { self.action(@"orbsStop", nil); [self refresh]; }
+- (void)editProfileSettings {
+    if (!self.editProfiles.enabled || self.presentedViewController) return;
+    NSDictionary *state = self.state;
+    NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
+        @"goals":state[@"goals"], @"rules":state[@"rules"]};
+    __weak PHOrbController *weakSelf = self;
+    PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
+        settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
+        save:^NSString *(NSDictionary *library, NSDictionary *working) {
+            PHOrbController *controller = weakSelf; if (!controller) return @"頁面已關閉，請重新開啟後儲存。";
+            controller.action(@"orbsProfiles", @{@"library":library, @"settings":working}); [controller refresh];
+            NSDictionary *saved = controller.state;
+            NSDictionary *selected = PHOrbProfileNamed(library,library[@"selected"]);
+            NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
+            NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
+                @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[]});
+            if ([saved[@"canSetProfiles"] boolValue] && [saved[@"profiles"] isEqual:library] && [actual isEqual:wanted]) return nil;
+            NSString *message = saved[@"profileMessage"];
+            return message.length ? message : @"策略尚未確認儲存，請稍後重試。";
+        }];
+    editor.modalPresentationStyle = UIModalPresentationPageSheet;
+    editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    [self presentViewController:editor animated:YES completion:nil];
+}
 - (void)closePage { self.close(); }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations { return UIInterfaceOrientationMaskAll; }
 @end

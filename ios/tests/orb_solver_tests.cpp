@@ -201,8 +201,10 @@ int main() {
     auto same = board;
     std::swap(same.tokens[0], same.tokens[1]);
     Check(!PHOrbSameBoard(&board, &same), "same-color token swaps invalidate stale previews");
-    same = board; same.flags[0] = 0x800;
+    same = board; same.flags[0] = 0x1000;
     Check(!PHOrbBoardValid(&same), "unmodeled flags fail closed");
+    same = board; same.flags[0] = PHOrbFlagLocked;
+    Check(PHOrbBoardValid(&same) && !PHOrbSameBoard(&same,&board), "locked basic orbs are matchable but not interchangeable with unlocked snapshots");
     same = board; same.types[0] = 9;
     Check(PHOrbSolve(same, {}, cancel, route) == PHOrbSolveStatus::Invalid, "unsupported orb rejected without process exit");
     Check(PHOrbSolve(board, {49, 64, 100}, cancel, route) == PHOrbSolveStatus::Invalid, "depth bounded");

@@ -2,6 +2,7 @@
 #import "PHIdentity.h"
 #import "PHConfiguration.h"
 #import "PHOrbRules.h"
+#import "PHOrbProfiles.h"
 #include <stdio.h>
 
 static NSUInteger failures;
@@ -91,6 +92,19 @@ int main(void) {
         config[@"orbs"] = @{@"rules":@[@{@"slot":@1}]};
         Check(!PHConfigurationIsValid(config), "partial malformed rules are rejected instead of becoming unconditional casts");
         [config removeObjectForKey:@"orbs"];
+        Check([PHConfigurationOrbProfiles(config) isEqual:PHOrbDefaultProfiles()], "old configurations have no bound strategy or automatic selection");
+        NSDictionary *profileSettings = PHOrbCanonicalSettings(PHConfigurationOrbSettings(config));
+        NSDictionary *profile = @{@"id":@"team-a",@"name":@"隊伍 A",@"team":@[@0,@0,@0,@0,@0,@0],
+            @"dungeon":@0,@"floor":@0,@"settings":profileSettings};
+        config[@"orbProfiles"] = @{@"schema":@1,@"selected":@"team-a",@"autoSelect":@NO,@"profiles":@[profile]};
+        Check(PHConfigurationIsValid(config), "selected profile and common settings initially agree");
+        config[@"orbs"] = @{@"quality":@"fast"};
+        Check(!PHConfigurationIsValid(config), "partial writes cannot leave profile and effective settings disagreeing");
+        config[@"orbProfiles"] = PHOrbProfilesUpdatingSettings(config[@"orbProfiles"],PHConfigurationOrbSettings(config));
+        Check(PHConfigurationIsValid(config), "one config transaction publishes selected profile and settings together");
+        config[@"orbProfiles"] = @{};
+        Check(!PHConfigurationIsValid(config), "malformed profile libraries do not silently discard bindings");
+        [config removeObjectForKey:@"orbProfiles"]; [config removeObjectForKey:@"orbs"];
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO};
         config[@"apiHosts"] = @[@"example.invalid"];
         config[@"apiPaths"] = @[@"/api.php"];

@@ -148,7 +148,7 @@ int main() {
                 "expanded board can release at its last cell");
             NativeInputFrame(); Check([engine finishInput:&reason] && realInput == originalInput, "expanded release preserves real input");
             Put<uintptr_t>(Impl + PHBattleDragPointerOffset, 0);
-            Put<uint32_t>(state.board.tokens[last] + 4, 0x800);
+            Put<uint32_t>(state.board.tokens[last] + 4, 0x1000);
             PHOrbSnapshot effect{}; [engine read:&effect frame:Frame() reason:&reason];
             Check(!PHOrbCanPreview(&effect), "unsupported effects in the extra row remain blocked");
         }
@@ -163,10 +163,22 @@ int main() {
         Reset(); engine = PHCreateOrbEngine(); [engine read:&state frame:Frame() reason:&reason];
         Put<uint32_t>(state.board.tokens[0] + 4, 0x800);
         PHOrbSnapshot changed{}; [engine read:&changed frame:Frame() reason:&reason];
-        Check(!PHOrbCanPreview(&changed), "unmodeled block effect rejected");
+        Check(PHOrbCanPreview(&changed) && (PHOrbBoardObstacles(&changed) & PHOrbObstacleLocked),
+            "verified locked basic orb keeps its flag and remains matchable");
+        Check(![engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason],
+            "changed lock state still invalidates an older preview");
+        Check([engine stageCell:0 down:YES beginning:YES expected:&changed frame:Frame() reason:&reason] &&
+            [engine finishInput:&reason], "fresh locked snapshot may start a guarded native drag");
+        Put<uint32_t>(state.board.tokens[0] + 4, 0x1800);
+        [engine read:&changed frame:Frame() reason:&reason];
+        Check(!PHOrbCanPreview(&changed), "lock acceptance does not authorize other simultaneous orb effects");
         Put<uint32_t>(state.board.tokens[0] + 4, 0); Put<uint16_t>(Impl + 739268, 0x401);
-        [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed), "native unmatchable effect blocks ordinary solver");
-        Put<uint16_t>(Impl + 739268, 0); Put<uint16_t>(state.board.tokens[0] + 18, 3);
+        [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed) &&
+            (PHOrbBoardObstacles(&changed) & PHOrbObstacleUnmatchable), "unmatchable effect has a specific remedy condition");
+        Put<uint16_t>(Impl + 739268, 0); Put<uint16_t>(Impl + 739360, 0x401);
+        [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed) &&
+            (PHOrbBoardObstacles(&changed) & PHOrbObstacleSpinner), "active spinner duration cannot authorize a static route even before the next color change");
+        Put<uint16_t>(Impl + 739360, 0); Put<uint16_t>(state.board.tokens[0] + 18, 3);
         [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed), "swap animation is not a settled board");
         Put<uint16_t>(state.board.tokens[0] + 18, 0);
         Put<uintptr_t>(Impl + PHOrbTableOffset + 65 * 8, state.board.tokens[0]);

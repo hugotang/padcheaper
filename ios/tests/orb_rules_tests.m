@@ -51,6 +51,34 @@ int main(void) {
         NSData *data = [NSJSONSerialization dataWithJSONObject:@[rule] options:0 error:NULL];
         id saved = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
         Check(PHOrbSkillRulesValid(saved) && [saved isEqual:@[rule]], "all conditions and Boolean enabled state survive persistence");
+        NSMutableDictionary *legacy = [PHOrbDefaultSkillRule() mutableCopy];
+        [legacy removeObjectsForKeys:@[@"group",@"once",@"reserveUntil",@"obstacle"]];
+        Check(PHOrbSkillRulesValid(@[legacy]) && [PHOrbNormalizedSkillRule(legacy) isEqual:PHOrbDefaultSkillRule()],
+            "legacy rules gain no grouping, reservation, once or obstacle condition");
+        for (NSDictionary *change in @[@{@"group":@7},@{@"group":@YES},@{@"once":@1},@{@"reserveUntil":@1000},
+            @{@"reserveUntil":@5,@"floor":@3},@{@"obstacle":@"made_up"}]) {
+            NSMutableDictionary *bad = [PHOrbDefaultSkillRule() mutableCopy]; [bad addEntriesFromDictionary:change];
+            Check(!PHOrbSkillRulesValid(@[bad]), "cycle and obstacle fields are validated strictly");
+        }
+        NSMutableDictionary *a = [PHOrbDefaultSkillRule() mutableCopy], *b = [a mutableCopy], *c = [a mutableCopy];
+        a[@"group"] = @1; b[@"slot"] = @2; c[@"slot"] = @3; c[@"group"] = @1;
+        uint8_t next[PHOrbMaxSkillGroups] = {0}; next[0] = 1;
+        Check([PHOrbSkillRuleOrder(@[a,b,c],next) isEqual:@[@2,@0,@1]], "group priority and rotation wrap before independent next group");
+        a[@"reserveUntil"] = @5;
+        Check(PHOrbSkillReservedUntil(@[a,b,c],0) == 5 && PHOrbSkillReservedUntil(@[a,b,c],1) == 0,
+            "reservation is shared by all rules at that position only");
+        a[@"enabled"] = @NO;
+        Check(PHOrbSkillReservedUntil(@[a,b,c],0) == 0, "disabled rules do not reserve skills");
+        rule = [PHOrbDefaultSkillRule() mutableCopy]; state.automation.members[0].active = true;
+        state.automation.members[0].bound = false; state.ordinary = true; state.phase = 2;
+        rule[@"obstacle"] = @"spinner"; state.obstacles = PHOrbObstacleSpinner;
+        Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleYes, "known spinner effect can request a remedy skill without authorizing a route");
+        state.obstacles = 0;
+        Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleNo, "removed spinner no longer requests the same remedy");
+        rule[@"obstacle"] = @"locked"; state.board.flags[29] = PHOrbFlagLocked;
+        Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleYes && PHOrbBoardValid(&state.board), "locked basic orb is a skill condition but still supports ordinary matching");
+        state.board.flags[29] |= 0x1000;
+        Check(!PHOrbBoardValid(&state.board) && (PHOrbBoardObstacles(&state) & PHOrbObstacleOrbEffect), "lock acceptance does not authorize other combined effects");
         printf("Orb rules tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

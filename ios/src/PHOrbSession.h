@@ -23,6 +23,7 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUna
 // an in-flight native gesture retains its captured options until it finishes.
 - (BOOL)configureQuality:(NSString *)quality;
 - (BOOL)configureSettings:(NSDictionary *)settings;
+- (BOOL)configureProfiles:(NSDictionary *)library;
 - (void)queueRead;
 - (void)queueAutomatic;
 - (void)queueExecute:(NSUInteger)generation;
