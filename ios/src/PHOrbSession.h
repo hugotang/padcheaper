@@ -12,6 +12,9 @@
 
 @interface PHOrbSession : NSObject
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine;
+// Publish only a successfully saved setting. A change invalidates old previews;
+// an in-flight native gesture retains its captured options until it finishes.
+- (BOOL)configureQuality:(NSString *)quality;
 - (void)queueRead;
 - (void)queueExecute:(NSUInteger)generation;
 - (void)queueStop:(NSString *)reason;

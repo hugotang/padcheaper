@@ -8,6 +8,9 @@ struct PHOrbSolveOptions {
     unsigned milliseconds = 350;
 };
 
+enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
+PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept;
+
 enum class PHOrbSolveStatus { Solved, Cancelled, Invalid, NoRoute, Failed };
 // One caller-owned worker, immutable input, no native/game calls or process exit.
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,

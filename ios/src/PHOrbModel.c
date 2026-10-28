@@ -2,9 +2,12 @@
 #include <math.h>
 #include <string.h>
 
+bool PHOrbDimensionsSupported(unsigned width, unsigned height) {
+    return (width == 6 && height == 5) || (width == 7 && height == 6) || (width == 5 && height == 4);
+}
+
 bool PHOrbBoardValid(const PHOrbBoard *board) {
-    if (!board || !((board->width == 6 && board->height == 5) ||
-        (board->width == 7 && board->height == 6) || (board->width == 5 && board->height == 4))) return false;
+    if (!board || !PHOrbDimensionsSupported(board->width, board->height)) return false;
     for (unsigned i = 0; i < board->width * board->height; ++i) {
         float enhancement;
         memcpy(&enhancement, &board->enhancement[i], sizeof(enhancement));
@@ -29,7 +32,8 @@ bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b) {
 
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     return a && b && PHBattleSameIdentity(&a->identity, &b->identity) && a->wave == b->wave &&
-        a->inputManager == b->inputManager && a->minErase == b->minErase && a->freeMovement == b->freeMovement;
+        a->inputManager == b->inputManager && a->minErase == b->minErase && a->freeMovement == b->freeMovement &&
+        a->board.width == b->board.width && a->board.height == b->board.height;
 }
 
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height) {
@@ -59,5 +63,5 @@ bool PHOrbCanPreview(const PHOrbSnapshot *state) {
     return state && state->present && state->valid && state->settled && state->ordinary &&
         !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) &&
         state->identity.sourceMode == 0 && state->phase == 2 && !state->dragged && PHInputIsQuiet(&state->input) &&
-        state->board.width == 6 && state->board.height == 5 && PHOrbBoardValid(&state->board);
+        PHOrbBoardValid(&state->board);
 }

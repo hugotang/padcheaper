@@ -11,7 +11,8 @@ static NSDictionary *PHDefaultBattleFilters(void) {
 NSDictionary *PHDefaultConfiguration(void) {
     return @{@"schema": @1, @"experimentalWrites": @NO,
              @"features": @{@"skin": @NO, @"bgm": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
-             @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters()};
+             @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
+             @"orbs": @{@"quality": @"balanced"}};
 }
 
 static BOOL PHIsBoolean(id value) {
@@ -37,6 +38,12 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
         for (NSString *key in filters.allKeys) if (configuration[@"battle"][key]) filters[key] = configuration[@"battle"][key];
     }
     return filters;
+}
+
+NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
+    id settings = configuration[@"orbs"];
+    id quality = [settings isKindOfClass:NSDictionary.class] ? settings[@"quality"] : nil;
+    return @{@"quality": quality ?: @"balanced"};
 }
 
 PHBattlePolicy PHConfigurationBattlePolicy(NSDictionary *configuration) {
@@ -79,6 +86,9 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     // Schema 1 files created by older dylibs remain valid; absent means off.
     if (features[@"battleSwap"] && !PHIsBoolean(features[@"battleSwap"])) return NO;
     if (features[@"badge"] && !PHIsBoolean(features[@"badge"])) return NO;
+    if (configuration[@"orbs"] && ![configuration[@"orbs"] isKindOfClass:NSDictionary.class]) return NO;
+    id quality = PHConfigurationOrbSettings(configuration)[@"quality"];
+    if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality]) return NO;
     if (configuration[@"battle"] && ![configuration[@"battle"] isKindOfClass:NSDictionary.class]) return NO;
     NSDictionary *battle = PHConfigurationBattleFilters(configuration);
     for (NSString *key in @[@"allowAllModes", @"allowAllSources", @"allowAllMulti", @"autoApplyTeam"]) if (!PHIsBoolean(battle[key])) return NO;

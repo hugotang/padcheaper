@@ -33,6 +33,7 @@ typedef struct {
     bool deadlineReached;
 } PHOrbRoute;
 
+bool PHOrbDimensionsSupported(unsigned width, unsigned height);
 bool PHOrbBoardValid(const PHOrbBoard *board);
 bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);

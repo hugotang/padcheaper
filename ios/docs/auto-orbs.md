@@ -1,18 +1,22 @@
-# iOS 自動轉珠原型 — 0.5.0-orbs
+# iOS 自動轉珠 — 0.5.1-orbs 開發中
 
-這版實作單人「讀盤並求路 → 路徑預覽 → 執行一次／停止」。沒有逐回合自動開始，也不自動使用技能、選關卡或接續結算。CI 驗證的是離線求解、原生記憶體／輸入 fixture 及 iOS 介面；**iPhone 上的真實 PAD 拖珠尚未驗證**。
+這批源碼擴充單人「讀盤並求路 → 路徑預覽 → 執行一次／停止」，加入 7×6／5×4 及求路品質。依使用者要求，**尚未編譯測試**，等明確說「編譯測試」才集中建置。沒有逐回合自動開始，也不自動使用技能、選關卡或接續結算。
+
+使用者已於 2026-10-28 回報 `0.5.0-orbs` 測試通過，作為普通單人 6×5 的真機基準。CI 49 驗證的是該版離線求解、原生記憶體／輸入 fixture 及 iOS 介面；本批新增內容尚待驗證，見 [待驗證清單](development.md)。
 
 ## 使用
 
-1. 進入普通單人 6×5 關卡，等待操作階段並放開手指。
-2. PC 面板 →「自動轉珠 · 讀盤／預覽」→「讀盤並求路」。
+1. 新版完成建置後，進入普通單人 6×5、7×6 或 5×4 關卡，等待操作階段並放開手指。
+2. PC 面板 →「自動轉珠 · 讀盤／預覽」→選擇「快速／均衡／深入」→「讀盤並求路」。品質寫入 config 成功才生效；既有 config 預設均衡，切換後需要重新讀盤。
 3. 核對火、水、木、光、暗、心及強化標記。盤面由上到下、由左到右顯示；滑桿逐步重播，文字標明起點與目前格子。
 4. 開啟 PC 功能總開關後可按「執行一次」。頁面收起，等待 0.35 秒後開始。浮動按鈕變成「停止轉珠」。
 5. 玩家觸碰遊戲或按停止便中斷。完成後會放開，下一回合需要重新讀盤。
 
 預覽只計算目前珠子的三連消除及既有珠落下的連鎖，不計隨機天降、隊伍傷害、L 字、無效貫通或其他形狀目標。「預計 Combo」不是保證結果或最優解。
 
-第一版只接受 6×5、六種基本珠及 0 到 1 的強化值；7×6、5×4、毒／邪魔／炸彈、鎖定等尚未分類的旗標、轉轉、不可消、固定起點及特殊消除規則會拒絕。core 的 5×4／7×6 離線測試不代表 iOS 已開放這些盤面。多人偵測會鎖定本場，只有離開戰鬥才解除；舊設定的 allowAllMulti 不能覆蓋限制。首次讀盤後維持低頻場景監測，短暫讀取失敗不會阻止觀察離場，也不會自行解除多人限制。
+本批僅接受 6×5／7×6／5×4、六種基本珠及 0 到 1 的強化值；毒／邪魔／炸彈、鎖定等尚未分類的旗標、轉轉、不可消、固定起點及特殊消除規則仍會拒絕。多人偵測會鎖定本場，只有離開戰鬥才解除；舊設定的 allowAllMulti 不能覆蓋限制。首次讀盤後維持低頻場景監測，短暫讀取失敗不會阻止觀察離場，也不會自行解除多人限制。
+
+盤面大小由原生記憶體讀取，不提供手動強制尺寸。每一格都核對物件池、珠子指標及等距格心；預覽使用實際行列數。回合內尺寸變動會作廢舊路徑，不對新盤面送出舊輸入。原生頁面的返回與讀盤／執行按鈕固定顯示，盤面和說明可捲動。
 
 ## 原生邊界
 
@@ -36,9 +40,9 @@
 
 拖珠沒有改寫珠型、交換表、傷害或操作時間，也沒有建立任意 UITouch、patch 指令或依賴 JIT。只有原始 drawFrame 呼叫期間，把 global input pointer 暫時指向 session 持有的私有 manager。遊戲自己的 raw→frame 更新及玩家輸入函式消費 began/held/ended，原生函式負責交換、扣時間、釋放與消除。`@finally` 立即恢復原始 manager，真實 UIKit 事件始終保存在原始 manager。
 
-這個 manager 使用範圍依據是已檢視的同步原生 frame 與 input lifecycle。iPhone 上的完整 call lifecycle 仍須實測，不能把 fixture 視為真機保證。原生座標轉換函式的基底經求逆與 round-trip 檢查；不假設螢幕像素等於盤面座標。
+這個 manager 使用範圍依據是已檢視的同步原生 frame 與 input lifecycle，並已有 `0.5.0` 普通 6×5 的使用者真機通過回報。新增尺寸仍需新版驗收。原生座標轉換函式的基底經求逆與 round-trip 檢查；不假設螢幕像素等於盤面座標。
 
-每一格交換都核對所有 cell tokens、珠型、旗標及原生交換次數，確認後才能前進。預設每步至少 65 ms，最多 32 步；求解依原生可用時間縮短深度，執行另外有 4 秒上限。未接受起點／交換 0.2 秒後中止；恢復指標失敗保留 allocation 與 lease，設 release 並重試，且禁止再次開始。
+每一格交換都核對所有 cell tokens、珠型、旗標及原生交換次數，確認後才能前進。每步至少 65 ms；三種品質的最大步數見下表，求解還會按原生可用時間、完整 frame 間隔及 4 秒執行上限縮短路徑。深入模式不加快拖珠。未接受起點／交換 0.2 秒後中止；恢復指標失敗保留 allocation 與 lease，設 release 並重試，且禁止再次開始。
 
 手動介入時只送自己的 release，真實觸控留待遊戲下一幀處理。場景、樓層、帳號、多人或 input manager 改變時，丟棄意圖，不把舊清理寫進新場景。離開前景會取消工作，回前景不恢復路徑。
 
@@ -46,15 +50,23 @@
 
 參考 [pazusoba/core](https://github.com/pazusoba/core) 及 `E:\pad\ultimate` 的新分支。後者的 Python auto 流程確實存在，也已補完 shape 分支；本版沒有把它當成缺 Python 或 shape 空白的 upstream 版本。
 
-iOS 核心是受限的 C++ beam search adaptation；保留 [MIT 授權](../third_party/pazusoba/LICENSE) 及 [來源說明](../third_party/pazusoba/NOTICE.md)。不編譯 Android CLI、OpenMP、x86 BMI、長存 cache 或直接 exit 的路徑。只用一個 serial background worker，預設 beam 256／350 ms，API 上限 512／1000 ms／48 步。候選、路徑與本層 visited 的大小皆有界限。工作持有 immutable board 及取消旗標，換預覽／停止就增加 generation；舊 completion 不得發布新結果。
+iOS 核心是受限的 C++ beam search adaptation；保留 [MIT 授權](../third_party/pazusoba/LICENSE) 及 [來源說明](../third_party/pazusoba/NOTICE.md)。不編譯 Android CLI、OpenMP、x86 BMI、長存 cache 或直接 exit 的路徑。只用一個 serial background worker，預設均衡；API 上限 512／1000 ms／48 步。
+
+| 品質 | 最多步數 | beam | 搜尋時間預算 |
+|---|---:|---:|---:|
+| 快速 | 24 | 128 | 120 ms |
+| 均衡 | 32 | 256 | 350 ms |
+| 深入 | 48 | 512 | 800 ms |
+
+較高品質搜尋更多候選，並不保證每個盤面都得到較高 Combo。候選、路徑與本層 visited 的大小皆有界限。工作持有 immutable board 及取消旗標，換預覽／停止／切換品質就增加 generation；舊 completion 不得發布新結果。品質保存於 `orbs.quality`，只接受 `fast`／`balanced`／`thorough`。執行中不能用介面切換品質；外部設定變更於這次執行結束後套用。
 
 求解後獨立重播路徑再發布；執行按鈕附帶預覽 generation。45 秒後或真實盤面有變就作廢，避免執行未看過的新路徑。
 
-## 驗證與真機第一輪
+## 已寫入、待執行的驗證案例
 
-- `orb_solver_tests.cpp`：24 個固定種子、三種尺寸；獨立 run/union/gravity oracle；不可變快照、非法跳格、舊 token、取消、時間與 beam/depth 上限。
-- `orb_native_tests.mm`：真實布局的記憶體 fixture；上下方向、池重複、旗標／不可消、多人 latch、private input、保留手動輸入、消除階段的放開確認、指標恢復失敗及 manager 取代。
-- `orb_session_tests.mm`：preview 不注入、每步確認、只執行一次、過期預覽、手動／背景／多人中斷、讀取失敗後的多人離場監測、未接受交換與取消後的舊 completion。
-- 原生 GUI probe：6×5 顏色與逐步預覽、generation 轉交、關閉回遊戲；既有編隊 GUI／儲存測試繼續執行。
+- `orb_solver_tests.cpp`：24 個固定種子、三種尺寸與三種品質；獨立 run/union/gravity oracle；不可變快照、非法跳格、舊 token、取消、時間與 beam/depth 上限。
+- `orb_native_tests.mm`：三種尺寸的真實布局記憶體 fixture；首末格及額外列、尺寸改變、未知尺寸／旗標／不可消、多人 latch、private input、保留手動輸入、消除階段的放開確認、指標恢復失敗及 manager 取代。
+- `orb_session_tests.mm`：preview 不注入、每步確認、三種尺寸的執行及最後一格放開、尺寸變更時取消、品質切換後失效、低 frame rate 的時間預算、只執行一次及既有中斷案例。
+- 設定／原生 GUI probe：品質保存及重啟、未確認儲存的 UI 回復、三種尺寸的顏色／比例／逐步預覽、固定操作列、generation 轉交與返回遊戲；保留既有編隊 GUI／儲存測試。
 
-真機先用普通關卡核對讀盤，再執行一次並測手動停止。若被拒絕或路徑中止，複製 PC 診斷可看到 phase、規則、步數、native move counter、剩餘 frame、solver 耗時與 input fault。未經真機測試前不宣稱操作、實際 Combo 或結算已驗證。
+新版真機先核對 7×6／5×4 讀盤，再執行一次並測停止與品質切換。若被拒絕或路徑中止，複製 PC 診斷可看到盤面尺寸、品質、phase、步數、native move counter、剩餘 frame、搜尋上限、耗時與 input fault。先前通過回報不擴大到尚未驗證的新增內容。

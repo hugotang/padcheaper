@@ -104,9 +104,9 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     uint16_t connectedA = 0, connectedB = 0;
     if (!PHReadU16(impl + 746068, &connectedA) || !PHReadU16(impl + 746076, &connectedB)) return false;
     if (connectedA || connectedB) state.ordinary = false;
-    // This first device prototype intentionally rejects all other geometries.
-    if (state.board.width != 6 || state.board.height != 5) {
-        if (reason) *reason = @"本版先支援 6×5 盤面";
+    const unsigned width = state.board.width, height = state.board.height;
+    if (!PHOrbDimensionsSupported(width, height)) {
+        if (reason) *reason = @"本版支援 6×5、7×6 及 5×4 盤面";
         return true;
     }
     std::array<uint8_t, PoolStride * PoolCount> pool;
@@ -115,9 +115,9 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         !PHReadMemory(impl + PHOrbTableOffset, table.data(), sizeof(table))) return false;
     const uintptr_t start = impl + PHOrbPoolOffset, end = start + pool.size();
     state.settled = true;
-    for (unsigned row = 0; row < 5; ++row) for (unsigned col = 0; col < 6; ++col) {
-        const unsigned i = row * 6 + col;
-        const uintptr_t token = table[(4 - row) * 16 + col];
+    for (unsigned row = 0; row < height; ++row) for (unsigned col = 0; col < width; ++col) {
+        const unsigned i = row * width + col;
+        const uintptr_t token = table[(height - 1 - row) * 16 + col];
         if (token < start || token >= end || (token - start) % PoolStride) return false;
         for (unsigned previous = 0; previous < i; ++previous) if (state.board.tokens[previous] == token) return false;
         const uint8_t *block = pool.data() + token - start;
@@ -131,8 +131,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     }
     const int spacing = state.board.x[1] - state.board.x[0];
     if (spacing < 20 || spacing > 160) return false;
-    for (unsigned row = 0; row < 5; ++row) for (unsigned col = 0; col < 6; ++col) {
-        unsigned i = row * 6 + col;
+    for (unsigned row = 0; row < height; ++row) for (unsigned col = 0; col < width; ++col) {
+        unsigned i = row * width + col;
         if (state.board.x[i] != state.board.x[0] + int(col) * spacing ||
             state.board.y[i] != state.board.y[0] + int(row) * spacing) return false;
     }

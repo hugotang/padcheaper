@@ -50,6 +50,7 @@ static PHBattleSession *PHBattleTracker;
 static PHBadges *PHBadgeTracker;
 static PHTimer *PHTimerTracker;
 static PHOrbSession *PHOrbTracker;
+static NSString *PHOrbQualityNotice;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
@@ -174,6 +175,7 @@ static void PHReloadConfig(void) {
     NSDictionary *next = PHReadJSON(@"config.json");
     PHConfigValid = PHConfigurationIsValid(next);
     PHConfig = PHConfigValid ? next : PHDefaultConfiguration();
+    [PHOrbTracker configureQuality:PHConfigurationOrbSettings(PHConfig)[@"quality"]];
 }
 
 static void PHConfigureAutomaticTeam(NSDictionary *team) {
@@ -738,7 +740,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm"), wantsBadge = PHEnabled(@"badge");
     NSDictionary *badge = [PHBadgeTracker snapshot];
     NSDictionary *timer = [PHTimerTracker snapshot];
-    NSDictionary *orbs = [PHOrbTracker snapshot];
+    NSMutableDictionary *orbs = [[PHOrbTracker snapshot] mutableCopy];
+    orbs[@"canSetQuality"] = @(PHStorageReady && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue]);
+    orbs[@"qualityMessage"] = PHOrbQualityNotice ?: @"";
     NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
@@ -895,10 +899,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             [inputState[@"frameInputFlags"] unsignedIntValue]];
     }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle drag active: %@", battle[@"dragActive"]];
-    diagnostics = [diagnostics stringByAppendingFormat:@"\nAuto orbs: %@ · %@\nOrb progress: %@/%@ · completed %@ · input frames %@ · input fault %@\nOrb board: settled %@ / ordinary %@ / phase %@ / wave %@ / moves %@ / time %@ frames at %@ fps\nOrb solver: %@ ms / %@ candidates / deadline %@\nOrb device verified: NO",
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nAuto orbs: %@ · %@\nOrb progress: %@/%@ · completed %@ · input frames %@ · input fault %@\nOrb board: %@×%@ / settled %@ / ordinary %@ / phase %@ / wave %@ / moves %@ / time %@ frames at %@ fps\nOrb solver: %@ / %@ ms / %@ candidates / deadline %@ / limits %@ steps, %@ beam, %@ ms\nOrb device verified by CI: NO\nOrb baseline: 0.5.0 6×5 execute-once reported passed by user on 2026-10-28",
         orbs[@"phase"], orbs[@"message"], orbs[@"confirmed"], orbs[@"steps"], orbs[@"completed"], orbs[@"inputFrames"],
-        orbs[@"inputFault"], orbs[@"settled"], orbs[@"ordinary"], orbs[@"nativePhase"], orbs[@"wave"], orbs[@"moves"],
-        orbs[@"remainingFrames"], orbs[@"fps"], orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"]];
+        orbs[@"inputFault"], orbs[@"board"][@"width"], orbs[@"board"][@"height"], orbs[@"settled"], orbs[@"ordinary"],
+        orbs[@"nativePhase"], orbs[@"wave"], orbs[@"moves"], orbs[@"remainingFrames"], orbs[@"fps"], orbs[@"quality"],
+        orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
@@ -934,7 +939,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
-    if ([action isEqual:@"orbsRead"]) { [PHOrbTracker queueRead]; return; }
+    if ([action isEqual:@"orbsRead"]) {
+        [PHOrbTracker configureQuality:PHConfigurationOrbSettings(PHConfig)[@"quality"]];
+        [PHOrbTracker queueRead]; return;
+    }
     if ([action isEqual:@"orbsExecute"]) {
         if ([value isKindOfClass:NSNumber.class]) [PHOrbTracker queueExecute:[value unsignedIntegerValue]];
         return;
@@ -1018,11 +1026,17 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     }
     if (!PHStorageReady) {
         PHFeedback = @"設定無法儲存，請按「重新檢查」。";
+        if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = PHFeedback;
         return;
     }
     PHReloadConfig();
     NSMutableDictionary *next = [PHConfig mutableCopy];
-    if ([action isEqualToString:@"adoptEndpoint"]) {
+    if ([action isEqual:@"orbsQuality"]) {
+        NSDictionary *orbState = [PHOrbTracker snapshot];
+        if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue] ||
+            ![value isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:value]) return;
+        next[@"orbs"] = @{@"quality":value};
+    } else if ([action isEqualToString:@"adoptEndpoint"]) {
         NSString *host = PHObservedEndpoint[@"host"], *path = PHObservedEndpoint[@"path"];
         if (![host isKindOfClass:NSString.class] || !host.length || ![path isKindOfClass:NSString.class] || ![path hasPrefix:@"/"]) {
             PHFeedback = @"尚未偵測 API，請在遊戲內先儲存一次隊伍。";
@@ -1054,12 +1068,15 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if (PHConfigurationIsValid(next) && PHWriteJSON(next, @"config.json")) {
         PHConfig = next;
         PHConfigValid = YES;
+        [PHOrbTracker configureQuality:PHConfigurationOrbSettings(PHConfig)[@"quality"]];
+        PHOrbQualityNotice = nil;
         PHUnlockDataReady = NO;
         PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
     } else {
         PHStorageReady = NO;
         PHStorageMessage = @"config.json 寫入失敗；請按「重新檢查」。";
         PHFeedback = PHStorageMessage;
+        if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = @"品質未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
     }
     PHLastStatus = 0;
 }

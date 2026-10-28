@@ -9,7 +9,7 @@ import re
 def generate(manifest):
     if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.0-106878':
         raise ValueError('Unsupported orb target')
-    if manifest['scope'] != {'multiplayer': False, 'dimensions': [6, 5], 'min_erase': 3,
+    if manifest['scope'] != {'multiplayer': False, 'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': 3,
                              'continuous': False, 'input': 'scoped-private-manager'}:
         raise ValueError('Unreviewed orb scope')
     required = {'PHOrbInitRVA', 'PHOrbGeometryRVA', 'PHOrbNearestRVA', 'PHOrbPlayerInputRVA',

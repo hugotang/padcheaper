@@ -5,13 +5,25 @@
 #include <memory>
 
 namespace {
-constexpr double StepSeconds = 0.065, PreviewLifetime = 45;
+constexpr double StepSeconds = 0.065, PreviewLifetime = 45, ExecutionLimit = 4, TimeMargin = 0.40;
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
     return PHOrbSameTurn(&a, &b) && a.moves == b.moves && PHOrbSameBoard(&a.board, &b.board);
 }
 double TimeAvailable(const PHOrbSnapshot &state) {
     return state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
         double(state.remainingFrames) / state.fps : 0;
+}
+double StepDuration(const PHOrbSnapshot &state) {
+    return state.fps >= 15 && state.fps <= 120 ? std::ceil(StepSeconds * state.fps) / state.fps : StepSeconds;
+}
+bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route) {
+    if (route.count < 2) return false;
+    const double required = (route.count - 1) * StepDuration(state) + TimeMargin;
+    return required <= std::min(TimeAvailable(state), ExecutionLimit);
+}
+PHOrbSolveOptions OptionsForQuality(NSString *quality) {
+    return PHOrbOptionsForQuality([quality isEqual:@"fast"] ? PHOrbSearchQuality::Fast :
+        [quality isEqual:@"thorough"] ? PHOrbSearchQuality::Thorough : PHOrbSearchQuality::Balanced);
 }
 NSDictionary *BoardJSON(const PHOrbBoard &board) {
     NSMutableArray *types = [NSMutableArray array], *enhanced = [NSMutableArray array];
@@ -30,7 +42,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     PHBattleFrame _frame;
     PHOrbSnapshot _live, _stable, _preview, _expected;
     PHOrbRoute _route;
-    NSString *_phase, *_message;
+    NSString *_phase, *_message, *_quality;
+    PHOrbSolveOptions _solveOptions;
     NSUInteger _generation, _completed, _cancelled, _sentFrames, _confirmed;
     NSUInteger _target;
     uintptr_t _ownedOrb;
@@ -43,6 +56,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _engine = engine;
         _worker = dispatch_queue_create("jp.padcheaper.orbs.solver", DISPATCH_QUEUE_SERIAL);
         _phase = @"idle"; _message = @"單人操作階段，按「讀盤並求路」開始";
+        _quality = @"balanced";
     }
     return self;
 }
@@ -53,6 +67,17 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     ++_generation;
     if (_cancel) _cancel->store(true, std::memory_order_relaxed);
     _cancel.reset();
+}
+- (BOOL)configureQuality:(NSString *)quality {
+    if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
+        [self executing] || _inputFault) return NO;
+    if ([_quality isEqual:quality]) return YES;
+    const bool hadPreview = _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"];
+    [self cancelWorker];
+    _quality = [quality copy]; _route = {}; _confirmed = 0; _solveOptions = OptionsForQuality(_quality);
+    _readQueued = _hasStable = false;
+    if (hadPreview) { _phase = @"idle"; _message = @"求路品質已變更，請重新讀盤"; }
+    return YES;
 }
 - (void)queueStop:(NSString *)reason {
     const bool cancelledIntent = _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
@@ -78,7 +103,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         [self queueStop:@"盤面或回合已改變，請重新讀盤"];
         return;
     }
-    if (TimeAvailable(_live) < (_route.count - 1) * StepSeconds + 0.40) {
+    if (!HasRouteTime(_live, _route)) {
         _message = @"操作時間不足，請重新讀盤取得較短路徑";
         return;
     }
@@ -88,9 +113,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
 }
 - (void)beginSolve {
     _readQueued = false; _preview = _live;
-    PHOrbSolveOptions options;
+    PHOrbSolveOptions options = OptionsForQuality(_quality);
     const double available = TimeAvailable(_live);
-    if (available > 0.5) options.steps = std::max(1u, std::min(options.steps, unsigned((available - 0.40) / StepSeconds)));
+    // Quantize to native frames as well as the hard execution deadline. A
+    // longer thorough route must remain feasible even at a lower frame rate.
+    const double budget = std::min(available > 0 ? available : ExecutionLimit, ExecutionLimit);
+    options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
+        unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
+    _solveOptions = options;
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
@@ -115,7 +145,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             }
             session->_route = route; session->_phase = @"preview"; session->_previewAt = session->_now;
             session->_message = [NSString stringWithFormat:@"預計 %u Combo（不含天降）· %u 步 · 約 %.1f 秒",
-                route.combos, route.count - 1, (route.count - 1) * StepSeconds];
+                route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
         });
     });
 }
@@ -148,7 +178,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             [self queueStop:@"執行前盤面或開關已改變，請重新讀盤"]; return;
         }
         if (time - _requestedAt < 0.35) return;
-        if (time - _requestedAt > 2 || TimeAvailable(current) < (_route.count - 1) * StepSeconds + 0.40) {
+        if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
             [self queueStop:@"開始逾時或操作時間不足"]; return;
         }
         _phase = @"running"; _startedAt = _stepAt = _sentAt = time;
@@ -156,7 +186,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     }
     if ([_phase isEqual:@"running"]) {
         if (!frame.enabled || !PHInputIsQuiet(&current.input) || !current.ordinary ||
-            time - _startedAt > 4 || time < _startedAt || (!current.dragged && !_awaitingStart)) {
+            time - _startedAt > ExecutionLimit || time < _startedAt || (!current.dragged && !_awaitingStart)) {
             [self queueStop:!PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" : @"操作條件已改變，已停止"];
         } else if (!_awaitingStart && current.dragged != _ownedOrb) {
             [self queueStop:@"拖珠已由遊戲接管，已停止"]; _ownedOrb = 0; _phase = @"stopped"; return;
@@ -175,7 +205,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _expected = current;
         // Use the dragged orb's actual cell when a partial move was rejected.
         NSUInteger cell = 0;
-        for (; cell < 30; ++cell) if (current.board.tokens[cell] == _ownedOrb) break;
+        const NSUInteger cells = current.board.width * current.board.height;
+        for (; cell < cells; ++cell) if (current.board.tokens[cell] == _ownedOrb) break;
         _staged = [_engine stageCell:cell down:NO beginning:NO expected:&current frame:frame reason:&reason];
         _releaseStaged = _staged;
         if (!_staged) { _ownedOrb = 0; _phase = @"stopped"; _message = reason ?: @"已停止輸入，等待遊戲結束拖珠"; }
@@ -210,7 +241,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
                 _ownedOrb = 0;
                 _phase = _releaseComplete ? @"complete" : @"stopped";
                 if (_releaseComplete) { ++_completed; _message = @"本次路徑已執行並放開；下一回合請重新讀盤"; }
-            } else if (time - _startedAt > 4.5) {
+            } else if (time - _startedAt > ExecutionLimit + 0.5) {
                 _phase = @"stopped"; _ownedOrb = 0; _message = @"已停止輸入；遊戲尚未確認放開，請手動檢查";
             }
             return;
@@ -259,11 +290,13 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     for (unsigned i = 0; i < _route.count; ++i) [path addObject:@(_route.cells[i])];
     BOOL preview = [_phase isEqual:@"preview"];
     BOOL canExecute = preview && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
-        SamePosition(_live, _preview) && TimeAvailable(_live) >= (_route.count - 1) * StepSeconds + 0.40;
+        SamePosition(_live, _preview) && HasRouteTime(_live, _route);
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && ![self executing] && !_inputFault), @"canExecute":@(canExecute),
         @"busy":@([self executing]), @"canStop":@([self executing] || _readQueued || [_phase isEqual:@"solving"]),
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
+        @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
+        @"searchBudgetMS":@(_solveOptions.milliseconds),
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),
         @"completed":@(_completed), @"cancelled":@(_cancelled), @"inputFrames":@(_sentFrames), @"inputFault":@(_inputFault),

@@ -39,10 +39,28 @@ int main(void) {
         NSDictionary *defaults = PHDefaultConfiguration();
         Check(PHConfigurationIsValid(defaults) && ![defaults[@"experimentalWrites"] boolValue], "defaults are diagnostic");
         Check([PHConfigurationBattleFilters(defaults)[@"autoApplyTeam"] isEqual:@NO], "entry auto-apply defaults off");
+        Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
         NSData *serialized = [NSJSONSerialization dataWithJSONObject:defaults options:0 error:NULL];
         Check(PHConfigurationIsValid([NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL]),
               "config retains Boolean types through JSON persistence");
         NSMutableDictionary *config = [defaults mutableCopy];
+        [config removeObjectForKey:@"orbs"];
+        Check(PHConfigurationIsValid(config) && [PHConfigurationOrbSettings(config)[@"quality"] isEqual:@"balanced"],
+            "existing schema 1 files gain balanced quality without migration or lost settings");
+        for (NSString *quality in @[@"fast", @"balanced", @"thorough"]) {
+            config[@"orbs"] = @{@"quality":quality};
+            NSData *qualityJSON = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+            NSDictionary *restored = [NSJSONSerialization JSONObjectWithData:qualityJSON options:0 error:NULL];
+            Check(PHConfigurationIsValid(restored) && [PHConfigurationOrbSettings(restored)[@"quality"] isEqual:quality],
+                "each quality round-trips through saved config");
+        }
+        for (id invalid in @[@YES, @1, @"unknown", NSNull.null, @[]]) {
+            config[@"orbs"] = @{@"quality":invalid};
+            Check(!PHConfigurationIsValid(config), "invalid quality cannot select unbounded solver options");
+        }
+        config[@"orbs"] = @"thorough";
+        Check(!PHConfigurationIsValid(config), "malformed orb settings are rejected");
+        [config removeObjectForKey:@"orbs"];
         config[@"experimentalWrites"] = @YES;
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO};
         config[@"apiHosts"] = @[@"example.invalid"];

@@ -17,6 +17,9 @@
     "allowAllMulti": false,
     "multiModes": [0]
   },
+  "orbs": {
+    "quality": "balanced"
+  },
   "apiHosts": [],
   "apiPaths": []
 }

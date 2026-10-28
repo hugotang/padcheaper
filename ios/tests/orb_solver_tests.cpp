@@ -64,6 +64,10 @@ static PHOrbBoard Board(unsigned width, unsigned height, unsigned seed) {
 int main() {
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
+        PHOrbSnapshot snapshot{}; snapshot.board = Board(dimensions.first, dimensions.second, 7);
+        snapshot.present = snapshot.valid = snapshot.settled = snapshot.ordinary = snapshot.input.valid = true;
+        snapshot.phase = 2;
+        Check(PHOrbCanPreview(&snapshot), "all supported dimensions can preview an ordinary single-player board");
         for (unsigned seed = 1; seed <= 8; ++seed) {
             auto board = Board(dimensions.first, dimensions.second, seed);
             const auto original = board;
@@ -76,6 +80,17 @@ int main() {
             Check(route.count <= 13 && route.combos <= dimensions.first * dimensions.second / 3, "route and combo bounds");
         }
     }
+    for (auto quality : {PHOrbSearchQuality::Fast, PHOrbSearchQuality::Balanced, PHOrbSearchQuality::Thorough}) {
+        const auto options = PHOrbOptionsForQuality(quality);
+        auto profileBoard = Board(7,6,83);
+        PHOrbBoard profileReplay{};
+        Check(PHOrbSolve(profileBoard, options, cancel, route) == PHOrbSolveStatus::Solved &&
+            route.count <= options.steps + 1 && PHOrbReplay(&profileBoard, &route, route.count - 1, &profileReplay),
+            "every shipped quality produces a bounded legal route for the largest board");
+        const auto score = Oracle(profileReplay);
+        Check(score.first == route.combos && score.second == route.erased, "quality profiles preserve independent combo scoring");
+    }
+    Check(!PHOrbDimensionsSupported(8,6) && !PHOrbDimensionsSupported(6,6), "unreviewed board geometries remain rejected");
     auto board = Board(6,5,42);
     Check(!PHOrbAdjacent(5,6,6,5) && !PHOrbAdjacent(0,7,6,5), "row wrap and diagonals rejected");
     PHOrbRoute invalid{}; invalid.count = 2; invalid.cells[0] = 5; invalid.cells[1] = 6;

@@ -148,6 +148,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     if (PHProbeRestartLibrary) {
         PHProbeCheck([PHProbeJSON(@"formations.json") isEqual:PHProbeRestartLibrary], @"Restart keeps the saved library file intact");
         PHProbeCheck([PHProbeJSON(@"config.json")[@"battle"][@"autoApplyTeam"] isEqual:@YES], @"Automatic entry option survives a process restart");
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"quality"] isEqual:@"thorough"], @"Orb quality survives a process restart");
         [(UIButton *)PHProbeFind(overlay, @"padcheaper.bubble") sendActionsForControlEvents:UIControlEventTouchUpInside];
         [(UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen") sendActionsForControlEvents:UIControlEventTouchUpInside];
         UIWindow *formationWindow = [overlay.rootViewController valueForKey:@"formationWindow"];
@@ -163,6 +164,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck([migrated[@"selected"] isEqual:@"legacy"] && [migrated[@"teams"] count] == 1 &&
         [migrated[@"teams"][0][@"team"] isEqual:PHProbeJSON(@"formation.json")], @"Old single-team drafts migrate without losing member settings");
     PHProbeCheck([config[@"battle"][@"autoApplyTeam"] isEqual:@NO], @"Automatic entry replacement starts disabled");
+    PHProbeCheck([config[@"orbs"][@"quality"] isEqual:@"balanced"], @"New installs default to balanced orb quality");
     NSDictionary *status = PHProbeJSON(@"status.json");
     PHProbeCheck([status[@"loaded"] isEqual:@YES] && [status[@"targetMatched"] isEqual:@NO], @"Loaded status must be independent of feature activation");
     PHProbeCheck([status[@"saveState"][@"localSaveCount"] isEqual:@0] &&
@@ -300,12 +302,23 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         @"Orb preview uses native controls and preserves guest key window");
     PHProbeCheck(![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
         @"Unvalidated guest cannot execute automatic input");
+    UISegmentedControl *qualityControl = (UISegmentedControl *)PHProbeFind(orbWindow, @"padcheaper.orbsQuality");
+    PHProbeCheck(qualityControl.enabled && qualityControl.numberOfSegments == 3, @"Orb quality can be configured without enabling game input");
+    NSArray *qualityIDs = @[@"fast", @"balanced", @"thorough"];
+    for (NSUInteger index = 0; index < qualityIDs.count; ++index) {
+        qualityControl.selectedSegmentIndex = (NSInteger)index;
+        [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"quality"] isEqual:qualityIDs[index]],
+            @"Quality selection is acknowledged by an actual config file write");
+    }
     NSMutableArray *orbTypes = [NSMutableArray array], *orbEnhanced = [NSMutableArray array];
     for (unsigned i = 0; i < 30; ++i) { [orbTypes addObject:@(i % 6)]; [orbEnhanced addObject:@(i % 7 == 0)]; }
-    NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
+    __block NSDictionary *orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
         @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
+        @"quality":@"balanced", @"canSetQuality":@YES,
         @"board":@{@"width":@6, @"height":@5, @"types":orbTypes, @"enhanced":orbEnhanced},
         @"path":@[@0,@1,@7,@8,@14,@15,@21]}};
+    NSDictionary *baseOrbFixture = orbFixture;
     __block NSString *orbAction = nil; __block id orbValue = nil;
     [orbController setValue:[^{ return orbFixture; } copy] forKey:@"snapshot"];
     [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
@@ -316,6 +329,42 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeCheck([PHProbeFind(orbWindow, @"padcheaper.orbsBoard").accessibilityLabel containsString:@"第 3／6 步"],
         @"Native preview describes the selected step and starting cell");
     PHProbeRender(self.window, orbWindow, @"orbs-preview");
+    for (NSArray<NSNumber *> *dimensions in @[@[@7,@6], @[@5,@4]]) {
+        const NSUInteger width = dimensions[0].unsignedIntegerValue, height = dimensions[1].unsignedIntegerValue;
+        NSMutableArray *types = [NSMutableArray array], *enhanced = [NSMutableArray array];
+        for (NSUInteger i = 0; i < width * height; ++i) { [types addObject:@(i % 6)]; [enhanced addObject:@(i % 7 == 0)]; }
+        NSMutableDictionary *state = [baseOrbFixture[@"orbState"] mutableCopy];
+        state[@"board"] = @{@"width":@(width), @"height":@(height), @"types":types, @"enhanced":enhanced};
+        state[@"path"] = @[@0, @1, @(width + 1), @(width + 2), @(width * 2 + 2), @(width * 2 + 3), @(width * 3 + 3)];
+        orbFixture = @{@"orbState":state}; [orbController refresh];
+        orbSlider.value = 3; [orbSlider sendActionsForControlEvents:UIControlEventValueChanged];
+        [orbController.view layoutIfNeeded];
+        UIView *boardView = PHProbeFind(orbWindow, @"padcheaper.orbsBoard");
+        PHProbeCheck([boardView.accessibilityLabel containsString:@"目前：上起 2 列、左起 3 格"] &&
+            fabs(CGRectGetHeight(boardView.bounds) - CGRectGetWidth(boardView.bounds) * height / width) < 1,
+            @"Expanded board preview uses its actual columns and aspect ratio");
+        PHProbeRender(self.window, orbWindow, [NSString stringWithFormat:@"orbs-%lux%lu-preview", (unsigned long)width, (unsigned long)height]);
+        for (NSString *identifier in @[@"padcheaper.orbsClose", @"padcheaper.orbsRead", @"padcheaper.orbsExecute"]) {
+            UIView *control = PHProbeFind(orbWindow, identifier);
+            CGRect bounds = [control convertRect:control.bounds toView:orbWindow];
+            PHProbeCheck(control && CGRectContainsRect(orbWindow.bounds, bounds), @"Fixed return and action buttons remain on screen for every board size");
+        }
+    }
+    NSMutableDictionary *qualityFailure = [baseOrbFixture[@"orbState"] mutableCopy];
+    qualityFailure[@"qualityMessage"] = @"品質未能儲存，仍保留原設定";
+    orbFixture = @{@"orbState":qualityFailure}; [orbController refresh];
+    qualityControl.selectedSegmentIndex = 0; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck([orbAction isEqual:@"orbsQuality"] && [orbValue isEqual:@"fast"] && qualityControl.selectedSegmentIndex == 1 &&
+        [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsQualityDescription")).text containsString:@"未能儲存"],
+        @"Unacknowledged quality selection restores the last saved segment and shows the failure");
+    qualityFailure[@"busy"] = @YES; orbAction = nil; [orbController refresh];
+    qualityControl.selectedSegmentIndex = 0; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
+    PHProbeCheck(!qualityControl.enabled && orbAction == nil, @"Busy session cannot change quality through the control");
+    qualityFailure[@"busy"] = @NO; qualityFailure[@"inputFault"] = @YES; qualityFailure[@"canRead"] = @NO;
+    [orbController refresh];
+    PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAvailability")).text containsString:@"重啟"],
+        @"A terminal input fault explains how to recover");
+    orbFixture = baseOrbFixture; [orbController refresh];
     [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([orbAction isEqual:@"orbsExecute"] && [orbValue isEqual:@19] &&
         [overlay.rootViewController valueForKey:@"orbWindow"] == nil && self.window.isKeyWindow,

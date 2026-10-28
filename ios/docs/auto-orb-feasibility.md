@@ -1,6 +1,6 @@
 # 自動轉珠可行性：pazusoba/core
 
-後續：`0.5.0-orbs` 已實作單人 iOS 原型，見 [使用與設計](auto-orbs.md)。以下保留 `0.4.7-ui` 時的 upstream 研究；其中 shape 空白、初始化等問題是指定 upstream commit 的結果，不適用於後來檢查的 `E:\pad\ultimate` 新分支。iPhone 原生拖珠仍待驗證。
+後續：`0.5.0-orbs` 已實作單人 iOS 原型，並於 2026-10-28 收到使用者測試通過回報；`0.5.1-orbs` 新增尺寸／品質的源碼尚未編譯，見 [使用與設計](auto-orbs.md)。以下保留 `0.4.7-ui` 時的 upstream 研究；其中 shape 空白、初始化等問題是指定 upstream commit 的結果，不適用於後來檢查的 `E:\pad\ultimate` 新分支。
 
 2026-10-28；研究對象為 [pazusoba/core](https://github.com/pazusoba/core) 的 `493dd14746eb97f275704bef73baa0f8edcf61a8`。`0.4.7-ui` 不含求解器或自動輸入；本文件記錄離線驗證與後續實作條件。
 

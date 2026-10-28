@@ -91,6 +91,15 @@ uint64_t Hash(const Node &node, unsigned size) {
 }
 }
 
+PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
+    switch (quality) {
+        case PHOrbSearchQuality::Fast: return {24, 128, 120};
+        case PHOrbSearchQuality::Thorough: return {48, 512, 800};
+        case PHOrbSearchQuality::Balanced: return {};
+    }
+    return {}; // Unknown callers retain the established balanced limits.
+}
+
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
     route = {};
