@@ -411,12 +411,17 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 }
 
 - (void)verifyFocusedEditor {
-    NSString *script = @"({focused:document.activeElement.id==='search',scale:visualViewport.scale,"
-        "initial:PHProbeInitialScale,fits:document.documentElement.scrollWidth<=innerWidth})";
+    NSString *script = @"(()=>{const vv=visualViewport;const ids=['editor-done','kind-body','kind-assist','previous-slot','next-slot','search'];"
+        "const controls=ids.map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {id,top:r.top,bottom:r.bottom};});"
+        "return {focused:document.activeElement.id==='search',scale:vv.scale,initial:PHProbeInitialScale,"
+        "fits:document.documentElement.scrollWidth<=innerWidth,top:vv.offsetTop,height:vv.height,scroll:scrollY,controls,"
+        "controlsVisible:controls.every(r=>r.top>=vv.offsetTop-1&&r.bottom<=vv.offsetTop+vv.height+1)};})()";
     [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
         PHProbeCheck(!error && [value[@"focused"] boolValue] && [value[@"fits"] boolValue] &&
             fabs([value[@"scale"] doubleValue] - [value[@"initial"] doubleValue]) < 0.01 &&
             fabs(self.formationWeb.scrollView.zoomScale - 1.0) < 0.01, @"Focused editor input keeps its viewport and native scroll zoom stable");
+        PHProbeCheck([value[@"controlsVisible"] boolValue],
+            [NSString stringWithFormat:@"Focused input must leave editor navigation and search visible: %@", value]);
         [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
             PHProbeCheck(snapshot != nil && !failure, @"Focused editor snapshot must render");
             NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";

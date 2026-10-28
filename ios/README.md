@@ -2,7 +2,7 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.4.6-ui` 改善手機編隊：首屏顯示六人總覽，點角色開啟編輯面板，提供上一格／下一格、本體／武裝切換、整格交換／複製、撤銷及最近使用角色。滿級／滿技顯示實際數字，保留雙指縮放。
+`0.4.7-ui` 改善手機編隊：首屏顯示六人總覽，點角色開啟編輯面板，提供上一格／下一格、本體／武裝切換、整格交換／複製、撤銷及最近使用角色。滿級／滿技顯示實際數字，保留雙指縮放。
 
 儲存成功必須收到原生檔案寫入確認；失敗保留草稿及編輯視窗，不變更下次入場隊伍。「本場已套用」核對實際接受的本體、武裝及培養設定，不會因切換隊伍庫而沿用另一份配方的標記。詳見 [編隊及狀態說明](docs/formation.md)。
 
@@ -42,7 +42,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭會顯示 `0.4.6-ui`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭會顯示 `0.4.7-ui`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
@@ -87,6 +87,6 @@ PC 面板的「單人入口設定」可修改 mode／source 的全部允許開�
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.6-ui constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.4.7-ui constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

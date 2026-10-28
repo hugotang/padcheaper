@@ -1,6 +1,6 @@
 # 自動轉珠可行性：pazusoba/core
 
-2026-10-28；研究對象為 [pazusoba/core](https://github.com/pazusoba/core) 的 `493dd14746eb97f275704bef73baa0f8edcf61a8`。`0.4.6-ui` 不含求解器或自動輸入；本文件記錄離線驗證與後續實作條件。
+2026-10-28；研究對象為 [pazusoba/core](https://github.com/pazusoba/core) 的 `493dd14746eb97f275704bef73baa0f8edcf61a8`。`0.4.7-ui` 不含求解器或自動輸入；本文件記錄離線驗證與後續實作條件。
 
 ## 結論
 

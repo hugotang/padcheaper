@@ -281,7 +281,14 @@
       else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
     }
   });
-  function resizeEditor() {if(!window.visualViewport||Math.abs(visualViewport.scale-1)>.01)return;document.documentElement.style.setProperty('--editor-height',visualViewport.height+'px');}
-  window.visualViewport?.addEventListener('resize',resizeEditor);resizeEditor();
+  function resizeEditor() {
+    if(!window.visualViewport||Math.abs(visualViewport.scale-1)>.01)return;
+    // iOS can pan the visual viewport while focusing an input. Height alone
+    // leaves the fixed header above the visible area during that pan.
+    document.documentElement.style.setProperty('--editor-height',visualViewport.height+'px');
+    document.documentElement.style.setProperty('--editor-top',visualViewport.offsetTop+'px');
+  }
+  window.visualViewport?.addEventListener('resize',resizeEditor);
+  window.visualViewport?.addEventListener('scroll',resizeEditor);resizeEditor();
   resetFields();render();bridge('ready');
 })();

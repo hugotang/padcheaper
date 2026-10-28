@@ -43,6 +43,18 @@ const {pathToFileURL}=require('node:url');
  assert.match(await page.locator('#battle-summary').innerText(),/其他配方/);
  await page.selectOption('#team-choice','legacy');await page.evaluate(()=>PHFormationUI.whenSaved());
  await page.locator('#body-grid .card').first().click();await page.locator('#editor-dialog').waitFor({state:'visible'});
+ assert.equal(await page.evaluate(()=>getComputedStyle(document.getElementById('main')).visibility),'hidden','background overview is hidden while editing');
+ const pan=await page.evaluate(()=>{
+  const vv=window.visualViewport,resize=new Event('resize'),scroll=new Event('scroll');
+  Object.defineProperty(vv,'offsetTop',{configurable:true,value:120});
+  Object.defineProperty(vv,'height',{configurable:true,value:500});
+  vv.dispatchEvent(resize);vv.dispatchEvent(scroll);
+  const rect=document.getElementById('editor-done').getBoundingClientRect();
+  const visible=rect.top>=120&&rect.bottom<=620;
+  delete vv.offsetTop;delete vv.height;vv.dispatchEvent(resize);vv.dispatchEvent(scroll);
+  return visible;
+ });
+ assert.equal(pan,true,'editor navigation follows the visual viewport when the keyboard pans it');
  assert.equal(await page.locator('#level').inputValue(),'120');
  assert.equal(await page.evaluate(()=>PHFormationUI.getTeam().slots[0].body.level),0,'displayed maximum retains sentinel');
  await page.locator('#level').fill('110');await page.locator('#level').dispatchEvent('change');

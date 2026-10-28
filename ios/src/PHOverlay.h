@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-#define PH_RUNTIME_VERSION @"0.4.6-ui"
+#define PH_RUNTIME_VERSION @"0.4.7-ui"
 
 typedef NSDictionary *(^PHOverlaySnapshot)(void);
 typedef void (^PHOverlayAction)(NSString *action, id value);
