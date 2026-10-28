@@ -86,6 +86,9 @@ binary = directory / "PADCheaper.dylib"
 research_notes = directory / "auto-orb-feasibility.md"
 research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
     "](../research/", "](research/"), encoding="utf-8")
+orb_notes = directory / "auto-orbs.md"
+orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
+    "](../third_party/", "](third_party/"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
                     Path("ios/src/PHOverlay.h").read_text()).group(1)

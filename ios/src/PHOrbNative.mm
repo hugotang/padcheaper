@@ -84,6 +84,14 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     if (!hashPresent) return false;
     state.minErase = shape[4]; state.freeMovement = shape[5];
     state.board.width = shape[0]; state.board.height = shape[1];
+    // Release may enter the resolve phase and start removing orb objects in
+    // this same native frame. Identity + drag metadata is sufficient to
+    // acknowledge release; a resolving board must never be used for a route.
+    if (state.phase != 2) {
+        state.valid = true;
+        if (reason) *reason = @"等待自己的操作階段";
+        return true;
+    }
     state.ordinary = source == 0 && state.minErase == 3 && state.freeMovement == 1 &&
         int8_t(fixedX) == -1 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
     // Active board effects examined by the native player/match routines.
@@ -134,8 +142,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2) return false;
     state.valid = true;
-    if (state.phase != 2) { if (reason) *reason = @"等待自己的操作階段"; }
-    else if (!state.ordinary) { if (reason) *reason = @"特殊規則、固定起點、彈窗或入場動畫尚未結束"; }
+    if (!state.ordinary) { if (reason) *reason = @"特殊規則、固定起點、彈窗或入場動畫尚未結束"; }
     else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型或效果；本版限六種基本珠與強化珠"; }
     else if (!state.settled && !state.dragged) { if (reason) *reason = @"等待盤面動畫停止"; }
     else if (!PHInputIsQuiet(&state.input)) { if (reason) *reason = @"請先放開手指"; }
@@ -188,12 +195,18 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (_staged || _multiplayerDisabled || !expected || !frame.ready || (down && !frame.enabled) ||
         (beginning && !CheckCode(frame.header, reason))) return NO;
-    PHOrbSnapshot live{};
-    if (![self read:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled ||
-        !PHOrbSameTurn(expected, &live) || live.phase != 2 || live.moves != expected->moves ||
+    PHOrbSnapshot live{}; NSString *readReason = nil;
+    if (![self read:&live frame:frame reason:&readReason] || !live.valid || live.multiplayerDisabled) {
+        if (reason) *reason = readReason ?: @"輸入前狀態無法確認";
+        return NO;
+    }
+    if (!PHOrbSameTurn(expected, &live) || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSameBoard(&live.board, &expected->board) ||
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||
-        (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) return NO;
+        (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) {
+        if (reason) *reason = @"輸入前盤面或操作條件已改變";
+        return NO;
+    }
     uintptr_t real = 0;
     if (!PHReadPointer(frame.header + PHBattleInputRVA, &real) || real != live.inputManager || (real & 7u) ||
         !PHMemoryHasProtection(real, PHOrbInputBytes, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return NO;

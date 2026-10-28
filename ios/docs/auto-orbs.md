@@ -12,7 +12,7 @@
 
 預覽只計算目前珠子的三連消除及既有珠落下的連鎖，不計隨機天降、隊伍傷害、L 字、無效貫通或其他形狀目標。「預計 Combo」不是保證結果或最優解。
 
-第一版只接受 6×5、六種基本珠及非負強化值；7×6、5×4、毒／邪魔／炸彈、鎖定等尚未分類的旗標、轉轉、不可消、固定起點及特殊消除規則會拒絕。core 的 5×4／7×6 離線測試不代表 iOS 已開放這些盤面。多人偵測會鎖定本場，只有離開戰鬥才解除；舊設定的 allowAllMulti 不能覆蓋限制。
+第一版只接受 6×5、六種基本珠及 0 到 1 的強化值；7×6、5×4、毒／邪魔／炸彈、鎖定等尚未分類的旗標、轉轉、不可消、固定起點及特殊消除規則會拒絕。core 的 5×4／7×6 離線測試不代表 iOS 已開放這些盤面。多人偵測會鎖定本場，只有離開戰鬥才解除；舊設定的 allowAllMulti 不能覆蓋限制。首次讀盤後維持低頻場景監測，短暫讀取失敗不會阻止觀察離場，也不會自行解除多人限制。
 
 ## 原生邊界
 
@@ -53,8 +53,8 @@ iOS 核心是受限的 C++ beam search adaptation；保留 [MIT 授權](../third
 ## 驗證與真機第一輪
 
 - `orb_solver_tests.cpp`：24 個固定種子、三種尺寸；獨立 run/union/gravity oracle；不可變快照、非法跳格、舊 token、取消、時間與 beam/depth 上限。
-- `orb_native_tests.mm`：真實布局的記憶體 fixture；上下方向、池重複、旗標／不可消、多人 latch、private input、保留手動輸入、指標恢復失敗及 manager 取代。
-- `orb_session_tests.mm`：preview 不注入、每步確認、只執行一次、過期預覽、手動／背景／多人中斷、未接受交換與取消後的舊 completion。
+- `orb_native_tests.mm`：真實布局的記憶體 fixture；上下方向、池重複、旗標／不可消、多人 latch、private input、保留手動輸入、消除階段的放開確認、指標恢復失敗及 manager 取代。
+- `orb_session_tests.mm`：preview 不注入、每步確認、只執行一次、過期預覽、手動／背景／多人中斷、讀取失敗後的多人離場監測、未接受交換與取消後的舊 completion。
 - 原生 GUI probe：6×5 顏色與逐步預覽、generation 轉交、關閉回遊戲；既有編隊 GUI／儲存測試繼續執行。
 
 真機先用普通關卡核對讀盤，再執行一次並測手動停止。若被拒絕或路徑中止，複製 PC 診斷可看到 phase、規則、步數、native move counter、剩餘 frame、solver 耗時與 input fault。未經真機測試前不宣稱操作、實際 Combo 或結算已驗證。

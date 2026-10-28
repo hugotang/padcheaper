@@ -36,7 +36,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     uintptr_t _ownedOrb;
     double _now, _lastRead, _requestedAt, _stableAt, _previewAt, _startedAt, _stepAt, _sentAt;
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
-    bool _inputFault, _awaitingStart;
+    bool _inputFault, _awaitingStart, _monitoring;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
@@ -55,18 +55,21 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _cancel.reset();
 }
 - (void)queueStop:(NSString *)reason {
+    const bool cancelledIntent = _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
+        [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] ||
+        ([_phase isEqual:@"releasing"] && _releaseComplete);
     [self cancelWorker];
     _readQueued = false; _hasStable = false;
     _message = reason ?: @"已停止";
     _releaseComplete = false;
     if (_ownedOrb || _staged) _phase = @"releasing";
     else _phase = @"stopped";
-    ++_cancelled;
+    if (cancelledIntent) ++_cancelled;
 }
 - (void)queueRead {
     if ([self executing] || _inputFault) return;
     [self cancelWorker];
-    _readQueued = true; _hasStable = false; _requestedAt = _now;
+    _monitoring = _readQueued = true; _hasStable = false; _requestedAt = _now;
     _route = {}; _phase = @"reading"; _message = @"等待盤面穩定…";
 }
 - (void)queueExecute:(NSUInteger)generation {
@@ -189,7 +192,10 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _frame = frame; _now = time;
     if (_inputFault) return;
     const BOOL active = [self executing];
-    if (!active && !_readQueued && !_hasLive && ![_phase isEqual:@"solving"]) return;
+    // Keep observing scene exits after transient read failures. Otherwise a
+    // multiplayer latch could survive into the next solo battle forever.
+    // Monitoring starts only after the user first asks to read a board.
+    if (!active && !_monitoring) return;
     if (!active && time - _lastRead < 0.10) return;
     _lastRead = time;
     PHOrbSnapshot current{}; NSString *reason = nil;

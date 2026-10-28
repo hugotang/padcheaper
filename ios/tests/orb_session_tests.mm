@@ -9,8 +9,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 @interface FakeOrbEngine : NSObject <PHOrbEngine> {
 @public
     PHOrbSnapshot live;
-    NSUInteger stages, releases, cell;
-    BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap;
+    NSUInteger stages, releases, cell, reads;
+    BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
 }
 - (void)nativeFrame;
 @end
@@ -31,12 +31,15 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     return self;
 }
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
-    if (!frame.ready || staged) return NO;
-    *state = live; return YES;
+    ++reads;
+    if (!frame.ready || staged || failRead) return NO;
+    if (!live.present) multiplayerLatched = NO;
+    if (live.multiplayerDisabled) multiplayerLatched = YES;
+    *state = live; state->multiplayerDisabled |= multiplayerLatched; return YES;
 }
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
-    if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled ||
+    if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled || multiplayerLatched ||
         !PHOrbSameTurn(&live, expected) || !PHOrbSameBoard(&live.board, &expected->board) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= 30) return NO;
     ++stages; cell = target; down = hold; beginning = begin; staged = YES;
@@ -94,6 +97,10 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 int main() {
     @autoreleasepool {
         FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        for (unsigned i = 0; i < 20; ++i) Tick(session, engine, Frame());
+        [session queueStop:@"idle background"];
+        Check(engine->reads == 0 && [[session snapshot][@"cancelled"] unsignedIntegerValue] == 0,
+            "unused feature neither polls the board nor counts idle cancellation");
         Check(Preview(session, engine), "read -> background solve -> preview");
         Check(engine->stages == 0, "preview never stages input");
         auto generation = [[session snapshot][@"generation"] unsignedIntegerValue];
@@ -125,6 +132,26 @@ int main() {
         stages = engine->stages; engine->live.multiplayerDisabled = true; engine->live.identity.multiplayer = 1;
         Tick(session, engine, Frame());
         Check(engine->stages == stages && ![[session snapshot][@"busy"] boolValue], "multiplayer transition never receives cleanup input");
+
+        engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+        engine->live.multiplayerDisabled = true; engine->live.identity.multiplayer = 1;
+        Tick(session, engine, Frame()); [session queueRead];
+        for (unsigned i = 0; i < 120; ++i) Tick(session, engine, Frame());
+        Check([[session snapshot][@"phase"] isEqual:@"blocked"] && engine->multiplayerLatched,
+            "multiplayer read remains blocked after request timeout");
+        engine->live.multiplayerDisabled = false; engine->live.identity.multiplayer = 0;
+        [session queueRead];
+        for (unsigned i = 0; i < 120; ++i) Tick(session, engine, Frame());
+        Check([[session snapshot][@"phase"] isEqual:@"blocked"] && engine->multiplayerLatched,
+            "selector reset and a new read cannot clear the multiplayer latch");
+        engine->failRead = YES;
+        for (unsigned i = 0; i < 8; ++i) Tick(session, engine, Frame());
+        engine->failRead = NO; engine->live.present = false; engine->live.valid = false;
+        for (unsigned i = 0; i < 8; ++i) Tick(session, engine, Frame());
+        Check(!engine->multiplayerLatched, "scene exit is still observed after a transient read failure");
+        engine->live.present = engine->live.valid = true;
+        Check(Preview(session, engine) && engine->stages == 0,
+            "a new solo battle can preview after the observed multiplayer exit without injecting input");
 
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
         Check(Preview(session, engine), "ignored native move setup"); Execute(session); UntilDragging(session, engine); engine->ignoreMove = YES;

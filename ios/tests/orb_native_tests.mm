@@ -105,6 +105,10 @@ int main() {
         Put<uint16_t>(state.board.tokens[0] + 18, 0);
         Put<uintptr_t>(Impl + PHOrbTableOffset + 65 * 8, state.board.tokens[0]);
         Check(![engine read:&changed frame:Frame() reason:&reason], "duplicate pool token rejected");
+        Protected(Impl + PHBattlePhaseOffset, 3, 0x766cfc6d);
+        Put<uintptr_t>(Impl + PHBattleDragPointerOffset, 0);
+        Check([engine read:&changed frame:Frame() reason:&reason] && changed.valid && !changed.dragged && !PHOrbCanPreview(&changed),
+            "release metadata remains readable after native resolution invalidates the board table");
 
         Reset(); engine = PHCreateOrbEngine(); Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
         [engine read:&state frame:Frame() reason:&reason];
