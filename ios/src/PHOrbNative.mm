@@ -4,6 +4,7 @@
 #import <CoreFoundation/CoreFoundation.h>
 #include "PHTargetGenerated.h"
 #include "PHOrbGenerated.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>

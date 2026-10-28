@@ -213,6 +213,7 @@ int main() {
         Reset(); codeValid = false; engine = PHCreateOrbEngine();
         Check(![engine read:&state frame:Frame() reason:&reason] && writes == 0, "wrong target rejects native access");
         SkillNativeTests();
+        SurvivalNativeTests();
         std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

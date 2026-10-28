@@ -17,6 +17,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
+    BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
@@ -32,6 +33,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.phase = 2; live.input.valid = true; live.minErase = 3; live.freeMovement = 1;
         live.remainingFrames = 300; live.fps = 60; live.board.width = uint8_t(width); live.board.height = uint8_t(height);
         live.automation.valid = live.automation.window = live.automation.enemiesKnown = live.automation.boardKnown = true;
+        live.automation.hpKnown = live.automation.statusKnown = true;
+        live.automation.hp = live.automation.maximumHP = 1000;
         live.automation.activeEnemies = 1;
         for (unsigned i = 0; i < 6; ++i) {
             live.automation.members[i].active = true; live.automation.members[i].number = uint16_t(100 + i);
@@ -61,11 +64,13 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
         !PHOrbSameAutomation(&live, expected) || live.phase != 2 || !PHInputIsQuiet(&live.input)) return PHOrbSkillRejected;
     ++skillAttempts;
-    if (unavailableSkills[slot]) return PHOrbSkillUnavailable;
+    const PHOrbSkillMember &member = live.automation.members[slot];
+    if (unavailableSkills[slot] || !live.automation.window || live.automation.busy || !member.active ||
+        member.bound || member.state || member.overridden) return PHOrbSkillUnavailable;
     Check(!live.dragged && !staged && !live.automation.busy, "skills and orb gestures never overlap");
     activeSkill = slot; skillOrder.push_back(slot); skillFrames = 4;
     live.phase = 22; live.automation.members[slot].state = 2; live.automation.busy = true;
-    return PHOrbSkillStarted;
+    return rejectStartedSkill ? PHOrbSkillRejected : PHOrbSkillStarted;
 }
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -91,6 +96,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
         if (clearObstaclesWithSkill) { live.obstacles = 0; live.ordinary = true; }
+        if (healWithSkill) live.automation.hp = live.automation.maximumHP;
+        if (clearPlayerStatusWithSkill) {
+            live.automation.playerEffects = 0;
+            for (auto &member : live.automation.members) member.bound = false;
+        }
         return;
     }
     if (!staged) return;
@@ -98,6 +108,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (beginning) {
         if (!ignoreStart) { live.dragged = live.board.tokens[cell]; live.settled = false; }
         if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
+        if (dropHPOnStart) { live.automation.hp = 100; dropHPOnStart = NO; }
         return;
     }
     if (ignoreMove) return;
@@ -109,6 +120,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
     std::swap(live.board.flags[from], live.board.flags[cell]); std::swap(live.board.enhancement[from], live.board.enhancement[cell]);
     ++live.moves;
+    if (dropHPOnMove) { live.automation.hp = 100; dropHPOnMove = NO; }
     if (replaceLeaderOnMove) { live.leaderNumbers[0] = 14242; replaceLeaderOnMove = NO; }
     if (corruptSwap) live.board.types[cells - 1] = uint8_t((live.board.types[cells - 1] + 1) % 6);
 }
@@ -140,6 +152,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 
 #include "orb_automation_session_tests.inc"
 #include "orb_strategy_session_tests.inc"
+#include "orb_survival_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -370,6 +383,7 @@ int main() {
         Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->stages == 0, "late solver completion cannot revive canceled intent");
         AutomationSessionTests();
         StrategySessionTests();
+        SurvivalSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

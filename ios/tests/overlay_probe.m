@@ -422,7 +422,13 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     PHProbeRender(self.window, orbWindow, @"orbs-goals");
     NSMutableDictionary *ruleFailure = [baseOrbFixture[@"orbState"] mutableCopy];
     ruleFailure[@"ruleMessage"] = @"規則未能儲存，仍保留原設定";
+    ruleFailure[@"playerStatus"] = @"HP 100／1000（10.0%） · 有暫時覺醒無效";
+    ruleFailure[@"ruleDecisions"] = @[@"HP 10.0% ≤ 40% · 施放者被綁定"]; ruleFailure[@"decisionTurn"] = @1;
     orbFixture = @{@"orbState":ruleFailure}; [orbController refresh];
+    PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsPlayerStatus")).text containsString:@"HP"] &&
+        [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsDecisions")).text containsString:@"施放者被綁定"],
+        @"Rescue status and latest per-rule explanation have dedicated visible labels");
+    PHProbeRender(self.window, orbWindow, @"orbs-survival-decisions");
     [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
     [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
     UIViewController *ruleEditor = orbController.presentedViewController; [ruleEditor loadViewIfNeeded];
@@ -431,15 +437,36 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UITextField *ruleFloor = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulefloor0");
     PHProbeCheck(orbWindow.isKeyWindow && [ruleFloor becomeFirstResponder], @"Skill rule editor accepts numeric keyboard input");
     ruleFloor.text = @"3"; [ruleFloor sendActionsForControlEvents:UIControlEventEditingChanged]; [ruleFloor resignFirstResponder];
+    UITextField *ruleHP = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulehpAtMost0");
+    PHProbeCheck([ruleHP becomeFirstResponder] && PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulestatus0") &&
+        PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulerequired0"), @"Rescue threshold uses the numeric keyboard beside status and required controls");
+    ruleHP.text = @"101"; [ruleHP sendActionsForControlEvents:UIControlEventEditingChanged];
+    [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbController.presentedViewController == ruleEditor &&
+        [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"HP"],
+        @"Out-of-range rescue percentage keeps the draft and a fixed validation notice");
+    ruleHP.text = @"40"; [ruleHP sendActionsForControlEvents:UIControlEventEditingChanged]; [ruleHP resignFirstResponder];
+    if (ruleDraft.count) { ruleDraft[0][@"status"] = @"awoken_bind"; ruleDraft[0][@"required"] = @YES; }
     [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck(orbController.presentedViewController == ruleEditor && [orbAction isEqual:@"orbsRules"] &&
         [orbValue count] == 1 && ruleDraft.count && [ruleDraft[0][@"floor"] isEqual:@3] &&
+        [orbValue[0][@"hpAtMost"] isEqual:@40] && [orbValue[0][@"status"] isEqual:@"awoken_bind"] && [orbValue[0][@"required"] boolValue] &&
         [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"未能儲存"],
         @"Failed skill-rule saves preserve the draft and editor with a fixed error notice");
     PHProbeRender(self.window, orbWindow, @"orbs-skill-rules");
-    [ruleEditor dismissViewControllerAnimated:NO completion:nil];
-    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
-    PHProbeCheck(self.window.isKeyWindow, @"Closing skill rules returns key status to the game");
+    NSArray *rescuePayload = orbValue;
+    [orbController setValue:[^(NSString *action, id value) {
+        orbAction = action; orbValue = value;
+        if ([action isEqual:@"orbsRules"]) {
+            NSMutableDictionary *state = [ruleFailure mutableCopy]; state[@"rules"] = value; state[@"ruleMessage"] = @"";
+            orbFixture = @{@"orbState":state};
+        }
+    } copy] forKey:@"action"];
+    [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.4]];
+    PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:rescuePayload],
+        @"Acknowledged rescue-rule save retains all conditions and returns keyboard focus to the game");
+    [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
     NSMutableDictionary *profileFailure = [baseOrbFixture[@"orbState"] mutableCopy];
     profileFailure[@"profileMessage"] = @"策略未能儲存，仍保留原設定";
     orbFixture = @{@"orbState":profileFailure}; [orbController refresh];

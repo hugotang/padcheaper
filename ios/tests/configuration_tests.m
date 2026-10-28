@@ -102,6 +102,16 @@ int main(void) {
         Check(!PHConfigurationIsValid(config), "partial writes cannot leave profile and effective settings disagreeing");
         config[@"orbProfiles"] = PHOrbProfilesUpdatingSettings(config[@"orbProfiles"],PHConfigurationOrbSettings(config));
         Check(PHConfigurationIsValid(config), "one config transaction publishes selected profile and settings together");
+        NSMutableDictionary *rescueRule = [PHOrbDefaultSkillRule() mutableCopy];
+        rescueRule[@"hpAtMost"] = @40; rescueRule[@"status"] = @"awoken_bind"; rescueRule[@"required"] = @YES;
+        NSMutableDictionary *rescueSettings = [PHConfigurationOrbSettings(config) mutableCopy]; rescueSettings[@"rules"] = @[rescueRule];
+        config[@"orbs"] = rescueSettings;
+        Check(!PHConfigurationIsValid(config), "a partial rescue-setting update cannot leave the selected profile stale");
+        config[@"orbProfiles"] = PHOrbProfilesUpdatingSettings(config[@"orbProfiles"],rescueSettings);
+        serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
+        NSDictionary *rescueConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
+        Check(PHConfigurationIsValid(rescueConfig) && [PHConfigurationOrbSettings(rescueConfig)[@"rules"] isEqual:@[rescueRule]],
+            "HP, player status and required rules round-trip with their selected strategy");
         config[@"orbProfiles"] = @{};
         Check(!PHConfigurationIsValid(config), "malformed profile libraries do not silently discard bindings");
         [config removeObjectForKey:@"orbProfiles"]; [config removeObjectForKey:@"orbs"];

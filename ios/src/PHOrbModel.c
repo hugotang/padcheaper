@@ -44,7 +44,7 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!PHOrbSameTurn(a, b) || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
         a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary ||
-        !PHOrbSameBoard(&a->board, &b->board)) return false;
+        !PHOrbSameBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
         x->skillUses != y->skillUses || x->enemiesKnown != y->enemiesKnown || x->boardKnown != y->boardKnown ||
@@ -56,6 +56,14 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
             m->state != n->state || m->bound != n->bound || m->overridden != n->overridden) return false;
     }
     return true;
+}
+
+bool PHOrbSamePlayerState(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
+    if (!a || !b) return false;
+    const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
+    return x->hpKnown == y->hpKnown && x->hp == y->hp && x->maximumHP == y->maximumHP &&
+        x->statusKnown == y->statusKnown && x->playerEffects == y->playerEffects &&
+        x->awakeningRestricted == y->awakeningRestricted;
 }
 
 uint8_t PHOrbBoardObstacles(const PHOrbSnapshot *state) {

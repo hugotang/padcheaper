@@ -1,5 +1,18 @@
 static unsigned canUseCalls, skillStartCalls;
 static bool skillAvailable, switchMultiInCanUse;
+static const uintptr_t SurvivalDungeon = Header + 0x1800000;
+static void SetSurvivalHP(uint32_t hp, uint64_t maximum) {
+    Protected(Impl + PHBattleHPOffset, hp, 0x766cfc6d);
+    Put<uint32_t>(Impl + PHBattleHPShadowOffset, hp ^ 0x8085a6beu);
+    Protected(Impl + PHOrbHPBaseLowOffset, uint32_t(maximum), 0x766cfc6d);
+    Protected(Impl + PHOrbHPBaseHighOffset, uint32_t(maximum >> 32), 0x766cfc6d);
+}
+static void SetSurvivalOptions(const char *options) {
+    Put<uint32_t>(SurvivalDungeon + PHBattleDungeonRulesOffset, 1);
+    Put<uintptr_t>(Header + PHSaveRVA + PHBattleDungeonRulePoolOffset, SurvivalDungeon + 0x100);
+    Put<uintptr_t>(SurvivalDungeon + 0x110, SurvivalDungeon + 0x200);
+    std::memcpy(reinterpret_cast<void *>(SurvivalDungeon + 0x201), options, std::strlen(options) + 1);
+}
 @interface FixtureSkillEngine : PHNativeOrbEngine
 @end
 @implementation FixtureSkillEngine
@@ -18,7 +31,8 @@ static bool skillAvailable, switchMultiInCanUse;
 static void SkillFixture() {
     Reset(); canUseCalls = skillStartCalls = 0; skillAvailable = true; switchMultiInCanUse = false;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);
-    Protected(Impl + PHBattleHPOffset, 100, 0x766cfc6d);
+    SetSurvivalHP(100, 1000);
+    Put<uintptr_t>(Impl + PHOrbSkillDungeonRulesOffset, SurvivalDungeon);
     Protected(Impl + PHOrbSkillLimitOffset, UINT32_MAX, 0x766cfc6d);
     Protected(Impl + PHOrbSkillLimitRemainingOffset, 1, 0x6a875a8b);
     Put<uint16_t>(Impl + PHOrbSkillSpecialOffset, UINT16_MAX);
@@ -37,6 +51,77 @@ static void SkillFixture() {
     Put<uint8_t>(enemy + 23, 255);
     for (uintptr_t offset : {uintptr_t(2400), uintptr_t(2192), uintptr_t(2256), uintptr_t(2224), uintptr_t(2176), uintptr_t(2240)})
         Protected(enemy + offset, 0, 0x6a875a8b);
+}
+
+static void SurvivalNativeTests() {
+    SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
+    Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.hpKnown &&
+        state.automation.hp == 100 && state.automation.maximumHP == 1000 && state.automation.statusKnown,
+        "current HP uses its shadow and the ordinary effective cap is decoded read-only");
+    SetSurvivalOptions("hpper:5000|HFFIX:900|HPFIX:200|hpfix:300");
+    Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.hpKnown && state.automation.maximumHP == 200,
+        "first case-insensitive fixed HP option takes priority over percentage and later fixed options");
+    SetSurvivalOptions("hpfix:0|hpper:5000");
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 1000, "a zero fixed option shadows the percentage option like native lookup");
+    SetSurvivalHP(1, 3); SetSurvivalOptions("hpper:5000");
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 2, "dungeon percentage preserves native float32 half-up rounding");
+    SkillFixture(); SetSurvivalHP(1, 3); engine = [FixtureSkillEngine new];
+    Put<uint16_t>(Impl + PHOrbHPModifierTurnsOffset, 0x401);
+    Protected(Impl + PHOrbHPModifierOffset, uint32_t(-50), 0x6a875a8b);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 2, "temporary percentage uses the active signed duration and float64 rounding");
+    Protected(Impl + PHOrbHPModifierOffset, 200, 0x6a875a8b);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 200, "temporary positive cap replaces the ordinary maximum");
+    Put<uint16_t>(Impl + PHOrbHPModifierTurnsOffset, 0x3ff);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 3, "negative signed duration does not activate an old HP modifier");
+    SetSurvivalHP(1, UINT64_C(4294967296));
+    Put<uint16_t>(Impl + PHOrbHPModifierTurnsOffset, 1);
+    Protected(Impl + PHOrbHPModifierOffset, uint32_t(-100), 0x6a875a8b);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == INT32_MAX, "temporary percentage clamps the decoded 64-bit base to the native signed cap");
+    SetSurvivalHP(1, 0);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.hpKnown && state.automation.maximumHP == 1, "temporary percentage retains the native minimum of one HP");
+
+    for (unsigned change = 0; change < 5; ++change) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        if (change == 0) Put<uint32_t>(Impl + PHBattleHPShadowOffset, 0);
+        if (change == 1) SetSurvivalHP(1001, 1000);
+        if (change == 2) SetSurvivalOptions("hpper:invalid");
+        if (change == 3) Put<uint32_t>(SurvivalDungeon + PHBattleDungeonRulesOffset, 1);
+        if (change == 4) Put<uint32_t>(Impl + PHOrbHPBaseLowOffset, 0);
+        Check([engine readAutomation:&state frame:Frame() reason:&reason] && !state.automation.hpKnown &&
+            state.automation.maximumHP == 0 && !canUseCalls && !skillStartCalls && !writes,
+            "unconfirmed HP inputs remain unknown without inventing a maximum or calling native code");
+    }
+    SkillFixture(); engine = [FixtureSkillEngine new];
+    Put<uint8_t>(SurvivalDungeon + 33, 4);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.statusKnown && state.automation.awakeningRestricted && !state.automation.playerEffects,
+        "fixed dungeon awakening restriction is not a cleanseable temporary bind");
+    Put<uint16_t>(Impl + PHBattleAwakeningStateOffset, 0x401);
+    Protected(Impl + PHBattleMemberOffset + PHBattleMemberStride + PHOrbSkillBindOffset, 2, 0x6a875a8b);
+    Put<uint16_t>(Impl + PHOrbSkillSealOffset, 1);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(state.automation.playerEffects == (PHOrbPlayerAwokenBind | PHOrbPlayerMemberBind | PHOrbPlayerSkillSeal),
+        "temporary awakening bind, any-member bind and skill seal remain distinct player conditions");
+    Put<uint16_t>(Impl + PHBattleAwakeningStateOffset, 0x3ff);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check(!(state.automation.playerEffects & PHOrbPlayerAwokenBind), "expired signed awakening duration does not request a rescue");
+
+    for (unsigned change = 0; change < 3; ++change) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        if (change == 0) SetSurvivalHP(99, 1000);
+        if (change == 1) SetSurvivalHP(100, 2000);
+        if (change == 2) Put<uint16_t>(Impl + PHBattleAwakeningStateOffset, 1);
+        Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !canUseCalls && !skillStartCalls,
+            "changed HP, effective maximum or player effect invalidates a pending native skill before cache evaluation");
+    }
 }
 
 static void SkillNativeTests() {

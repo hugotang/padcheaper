@@ -53,6 +53,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules;
     NSMutableArray *_automationLog;
+    NSMutableArray<NSString *> *_ruleDecisions;
+    NSMutableDictionary<NSNumber *, NSString *> *_unavailableReasons;
     NSDictionary *_goalPlan;
     NSDictionary *_profileLibrary, *_activeProfile;
     PHOrbSolveOptions _solveOptions;
@@ -63,14 +65,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
     bool _inputFault, _awaitingStart, _monitoring;
     PHOrbSnapshot _autoOrigin, _skillBefore;
-    NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule;
-    uint16_t _usedRules, _unavailableRules;
-    uint8_t _usedSlots, _usedGroups, _groupNext[PHOrbMaxSkillGroups];
+    NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn;
+    uint16_t _usedRules, _unavailableRules, _confirmedRules;
+    uint8_t _usedSlots, _usedGroups, _confirmedGroups, _groupNext[PHOrbMaxSkillGroups];
     NSMutableSet<NSDictionary *> *_onceRules;
     PHBattleIdentity _historyIdentity;
     bool _historyBound, _historyResolve;
     double _autoPhaseAt, _autoStartAt;
-    bool _automatic, _autoBound, _sawResolve, _skillAcknowledged;
+    bool _automatic, _autoBound, _sawResolve, _skillAcknowledged, _watchPlayerState;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
@@ -79,6 +81,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _phase = @"idle"; _message = @"單人操作階段，可預覽路徑或開始連續轉珠";
         _quality = @"balanced"; _goalMode = @"combo"; _manualGoals = @[]; _goalPlan = @{};
         _skillRules = @[]; _automationLog = [NSMutableArray array]; _onceRules = [NSMutableSet set];
+        _ruleDecisions = [NSMutableArray array]; _unavailableReasons = [NSMutableDictionary dictionary];
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
     }
     return self;
@@ -111,6 +114,11 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _manualGoals = settings[@"goals"]; _goalPlan = @{}; _route = {}; _confirmed = 0;
     _solveOptions = OptionsForQuality(_quality);
     _skillRules = settings[@"rules"];
+    [_ruleDecisions removeAllObjects]; _decisionTurn = 0;
+    _watchPlayerState = false;
+    for (NSDictionary *rule in _skillRules) if ([rule[@"enabled"] boolValue])
+        _watchPlayerState |= [rule[@"hpAtMost"] unsignedIntegerValue] > 0 || [rule[@"required"] boolValue] ||
+            (rule[@"status"] && ![rule[@"status"] isEqual:@"none"]);
 }
 - (BOOL)configureProfiles:(NSDictionary *)library {
     if (!PHOrbProfilesValid(library) || _automatic || [self executing] || _inputFault) return NO;
@@ -154,6 +162,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _autoStartAt = _autoPhaseAt = _now; _autoOrigin = {}; _route = {}; _goalPlan = @{};
     _activeProfile = @{};
     [_automationLog removeAllObjects];
+    [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects]; _decisionTurn = 0;
     _phase = @"autoWaiting"; _message = @"連續模式準備中；點浮動「停止」可隨時中斷";
 }
 - (void)logAutomation:(NSString *)message {
@@ -171,7 +180,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if (!state->present) {
         _historyBound = _historyResolve = false; [_onceRules removeAllObjects];
         _historyRules = nil;
-        _usedRules = _unavailableRules = _usedSlots = _usedGroups = 0;
+        _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
         return;
     }
@@ -180,12 +190,15 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if (!_historyBound || !PHBattleSameIdentity(&_historyIdentity, &state->identity)) {
         _historyIdentity = state->identity; _historyBound = true; _historyResolve = false;
         _historyRules = nil;
-        [_onceRules removeAllObjects]; _usedRules = _unavailableRules = _usedSlots = _usedGroups = 0;
+        [_onceRules removeAllObjects];
+        _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
     }
     if (ResolvingOrbs(state->phase) && state->moves > 0) _historyResolve = true;
     if (_historyResolve && state->phase == 2 && state->moves == 0 && state->settled && !state->dragged) {
-        _usedRules = _unavailableRules = _usedSlots = _usedGroups = 0; _historyResolve = false;
+        _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        [_unavailableReasons removeAllObjects]; _historyResolve = false;
     }
 }
 // Called on every observed native frame while armed, even during animation.
@@ -208,7 +221,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         // automatically selected profile stops. Only rules chosen for a new
         // run may reset its cursor; reloading the UI must not restart a cycle.
         if (![_historyRules isEqual:_skillRules]) {
-            _usedRules = _unavailableRules = 0;
+            _usedRules = _unavailableRules = _confirmedRules = _confirmedGroups = 0;
+            [_unavailableReasons removeAllObjects];
             std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
             _historyRules = _skillRules;
         }
@@ -220,6 +234,15 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     }
     if (!PHInputIsQuiet(&state->input) || (state->dragged && ![self executing])) {
         [self queueStop:@"偵測到手動操作，已停止連續模式"]; return NO;
+    }
+    if (_watchPlayerState && state->phase == 2 &&
+        ([_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] || [_phase isEqual:@"arming"] || [_phase isEqual:@"running"]) &&
+        !PHOrbSamePlayerState(&_preview, state)) {
+        // A change in the native frame accepting our first touch still needs
+        // an owned-orb release; it must not bypass the new rescue condition.
+        if (_staged && _awaitingStart && _route.count && state->dragged == _preview.board.tokens[_route.cells[0]])
+            _ownedOrb = state->dragged;
+        [self queueStop:@"求路後 HP 或我方異常已改變，請重新開始判斷自救規則"]; return NO;
     }
     if ([_phase isEqual:@"skillWaiting"] && state->automation.skillUses == _skillBefore.automation.skillUses + 1)
         _skillAcknowledged = true; // Preserve acknowledgement if a skill clears the floor and the counter later resets.
@@ -257,28 +280,73 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     }
     if ([_phase isEqual:@"skillWaiting"]) {
         ++_autoSkills; _unavailableRules = 0; // Haste may make a formerly unavailable member ready.
+        [_unavailableReasons removeAllObjects];
+        _confirmedRules |= 1u << _skillRule;
+        NSUInteger group = [_skillRules[_skillRule][@"group"] unsignedIntegerValue];
+        if (group) _confirmedGroups |= 1u << (group - 1);
         [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu 技能完成", (unsigned long)_autoTurn, (unsigned long)_skillRule + 1]];
         [self waitForAutomationBoard]; return;
     }
+    [_ruleDecisions removeAllObjects]; _decisionTurn = _autoTurn;
+    for (NSUInteger i = 0; i < _skillRules.count; ++i) [_ruleDecisions addObject:@"尚未判斷"];
+    uint16_t unmetRequired = 0;
     for (NSNumber *index in PHOrbSkillRuleOrder(_skillRules, _groupNext)) {
         NSUInteger i = index.unsignedIntegerValue;
         NSDictionary *rule = _skillRules[i];
         NSUInteger slot = [rule[@"slot"] unsignedIntegerValue] - 1;
         NSUInteger group = [rule[@"group"] unsignedIntegerValue];
-        if (((_usedRules | _unavailableRules) & (1u << i)) || (_usedSlots & (1u << slot))) continue;
-        if ((group && (_usedGroups & (1u << (group - 1)))) ||
-            ([rule[@"once"] boolValue] && [_onceRules containsObject:rule]) ||
-            PHOrbSkillReservedUntil(_skillRules, slot) > _live.wave + 1) continue;
-        PHOrbRuleMatch match = PHOrbMatchSkillRule(rule, &_live, _autoTurn);
-        if (match == PHOrbRuleUnknown) { [self queueStop:@"規則所需的敵人或盤面資料無法確認，已停止"]; return; }
+        if (![rule[@"enabled"] boolValue]) { _ruleDecisions[i] = @"已停用"; continue; }
+        if ((_confirmedRules & (1u << i)) || (group && (_confirmedGroups & (1u << (group - 1))))) {
+            _ruleDecisions[i] = group ? @"同組本回合已有技能確認完成" : @"本回合已確認完成";
+            continue;
+        }
+        const PHOrbSkillMember *member = &_live.automation.members[slot];
+        NSString *unavailable = nil;
+        if (_usedRules & (1u << i)) unavailable = @"本回合已嘗試，但未確認完成";
+        else if (_usedSlots & (1u << slot)) unavailable = @"此位置本回合已使用，不能重複施放";
+        else if (group && (_usedGroups & (1u << (group - 1)))) unavailable = @"同組本回合已嘗試，但未確認完成";
+        else if ([rule[@"once"] boolValue] && [_onceRules containsObject:rule]) unavailable = @"本場一次的使用紀錄已消耗";
+        else if (PHOrbSkillReservedUntil(_skillRules, slot) > _live.wave + 1)
+            unavailable = [NSString stringWithFormat:@"此位置保留至第 %lu 層", (unsigned long)PHOrbSkillReservedUntil(_skillRules, slot)];
+        else if (_unavailableRules & (1u << i)) unavailable = _unavailableReasons[@(i)] ?: @"遊戲判定技能不可用";
+        else if (!member->active) unavailable = @"此位置沒有可使用的隊員";
+        else if (member->bound) unavailable = @"施放者被綁定";
+        else if (member->state) unavailable = @"施放者尚未回到待命狀態";
+        else if (member->overridden) unavailable = @"此位置保留了手動技能選項";
+        // Optional rules retain the previous short circuit: unavailable
+        // actors do not make unrelated, unknown condition data mandatory.
+        if (unavailable && ![rule[@"required"] boolValue]) {
+            _ruleDecisions[i] = [NSString stringWithFormat:@"略過 · %@", unavailable]; continue;
+        }
+        NSString *trigger = nil;
+        PHOrbRuleMatch match = PHOrbTriggerSkillRule(rule, &_live, _autoTurn, &trigger);
+        _ruleDecisions[i] = trigger ?: @"條件無法確認";
+        if (match == PHOrbRuleUnknown) {
+            [self queueStop:[NSString stringWithFormat:@"規則 %lu：%@，已停止", (unsigned long)i + 1, _ruleDecisions[i]]]; return;
+        }
         if (match != PHOrbRuleYes) continue;
+        if ([rule[@"required"] boolValue]) unmetRequired |= 1u << i;
+        if (unavailable) {
+            _ruleDecisions[i] = [NSString stringWithFormat:@"%@ · %@", trigger, unavailable]; continue;
+        }
         if ([rule[@"once"] boolValue] && _onceRules.count >= 128) {
             [self queueStop:@"本場一次性技能紀錄已達上限，請離開本場後再開始"]; return;
         }
         _skillRule = i; _skillBefore = _live; _phase = @"skillArming";
+        _ruleDecisions[i] = [NSString stringWithFormat:@"觸發 · %@", trigger];
+        [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu 觸發 · %@",
+            (unsigned long)_autoTurn, (unsigned long)i + 1, trigger]];
         _message = [NSString stringWithFormat:@"連續第 %lu 回合 · 規則 %lu：準備使用位置 %lu 技能",
             (unsigned long)_autoTurn, (unsigned long)i + 1, (unsigned long)slot + 1];
         return;
+    }
+    // Defer this check until other eligible skills and grouped alternatives
+    // had their chance to heal, cleanse or haste, then reevaluate the trigger.
+    if (unmetRequired) {
+        for (NSUInteger i = 0; i < _skillRules.count; ++i) if (unmetRequired & (1u << i)) {
+            [self queueStop:[NSString stringWithFormat:@"必要規則 %lu 未完成：%@；已停止轉珠",
+                (unsigned long)i + 1, _ruleDecisions[i]]]; return;
+        }
     }
     if (!PHOrbCanPreview(&_live)) {
         NSString *obstacles = PHOrbObstacleDescription(&_live);
@@ -392,6 +460,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             if (result == PHOrbSkillRejected) { [self queueStop:reason ?: @"技能啟動校驗失敗，已停止"]; return; }
             if (result == PHOrbSkillUnavailable) {
                 _unavailableRules |= 1u << _skillRule;
+                _unavailableReasons[@(_skillRule)] = reason ?: @"技能不可用";
                 [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu 略過 · %@",
                     (unsigned long)_autoTurn, (unsigned long)_skillRule + 1, reason ?: @"技能不可用"]];
                 [self waitForAutomationBoard];
@@ -570,6 +639,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"busy":@(_automatic || [self executing]), @"canStop":@(_automatic || [self executing] || _readQueued || preview || [_phase isEqual:@"solving"]),
         @"automatic":@(_automatic), @"autoTurn":@(_autoTurn), @"autoMoves":@(_autoMoves), @"autoSkills":@(_autoSkills),
         @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),
+        @"ruleDecisions":[_ruleDecisions copy], @"decisionTurn":@(_decisionTurn),
+        @"playerStatus":PHOrbSurvivalDescription(&_live), @"confirmedSkillRules":@(_confirmedRules),
         @"obstacles":PHOrbObstacleDescription(&_live), @"usedSkillGroups":@(_usedGroups),
         @"activeProfile":_activeProfile,
         @"profileContext":@{@"known":@(_hasLive && _live.valid && _live.present && !_live.multiplayerDisabled),

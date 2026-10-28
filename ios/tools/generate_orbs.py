@@ -19,13 +19,18 @@ def generate(manifest):
                              'skill_groups': 'round-robin-one-per-orb-turn', 'once_rules': 'current-battle-memory',
                              'reserved_skills': True, 'strategy_profiles': 64, 'profile_selection': 'explicit-start-only',
                              'locked_orbs': True, 'timed_spinners': False,
-                             'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened']}:
+                             'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened'],
+                             'survival_conditions': ['hp_at_most', 'awoken_bind', 'member_bind', 'skill_seal'],
+                             'required_skills': 'confirmed-rule-or-group-before-route',
+                             'hp_read': 'read-only-effective-cap', 'decision_reasons': True}:
         raise ValueError('Unreviewed orb scope')
     required = {'PHOrbInitRVA', 'PHOrbGeometryRVA', 'PHOrbNearestRVA', 'PHOrbPlayerInputRVA',
                 'PHOrbSwapRVA', 'PHOrbInputUpdateRVA', 'PHOrbInputGetRVA', 'PHOrbInputTransformRVA',
                 'PHOrbInputHistoryRVA', 'PHOrbFlagsRVA', 'PHOrbCanUseSkillRVA', 'PHOrbStartSkillRVA',
                 'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
-                'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA'}
+                'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA',
+                'PHOrbMaximumHPRVA', 'PHOrbDungeonHPRVA', 'PHOrbDungeonOptionRVA', 'PHOrbDungeonOptionParseRVA',
+                'PHOrbAwakeningCheckRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',

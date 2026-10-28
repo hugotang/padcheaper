@@ -56,7 +56,16 @@
       "spinner",
       "locked",
       "weakened"
-    ]
+    ],
+    "survival_conditions": [
+      "hp_at_most",
+      "awoken_bind",
+      "member_bind",
+      "skill_seal"
+    ],
+    "required_skills": "confirmed-rule-or-group-before-route",
+    "hp_read": "read-only-effective-cap",
+    "decision_reasons": true
   },
   "user_report": {
     "date": "2026-10-28",
@@ -91,7 +100,11 @@
     "PHOrbSkillLimitRemainingOffset": "0xb4fd0",
     "PHOrbSkillDungeonRulesOffset": "0xb0f20",
     "PHOrbTutorialIndexRVA": "0x1b5a770",
-    "PHOrbTutorialTableRVA": "0x13223e8"
+    "PHOrbTutorialTableRVA": "0x13223e8",
+    "PHOrbHPBaseLowOffset": "0xb7e10",
+    "PHOrbHPBaseHighOffset": "0xb7e20",
+    "PHOrbHPModifierTurnsOffset": "0xb480c",
+    "PHOrbHPModifierOffset": "0xb4810"
   },
   "guards": [
     {
@@ -261,6 +274,46 @@
       "length": 64,
       "bytes": "ef3bb66ded33016deb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291ff8307d1a85800d008b142f9080140f9a88315f8",
       "sha256": "648dc67dc418a531d6961d94f99a922a5b44e43cb0bafc228087b842615248a1"
+    },
+    {
+      "name": "PHOrbMaximumHPRVA",
+      "va": "0x1005fb690",
+      "rva": "0x5fb690",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa082601b008c13791083940f909e481526901a072006969f84010f19740010034f40300aa1f000071",
+      "sha256": "12147938ed6848f836dc7c3a05d01a4387fb1178b609b52751b37ec4cde72c53"
+    },
+    {
+      "name": "PHOrbDungeonHPRVA",
+      "va": "0x10023f7c0",
+      "rva": "0x23f7c0",
+      "length": 64,
+      "bytes": "ffc300d1f44f01a9fd7b02a9fd830091f30300aae23300916103805252fbff9760000034e00f40b908000014e2330091e00313aa810380524bfbff9760000034",
+      "sha256": "fdbd8b59b8ddeac45fe061ab0a046819e222cccbefd93aacb7d8d611f3cce80f"
+    },
+    {
+      "name": "PHOrbDungeonOptionRVA",
+      "va": "0x10023e524",
+      "rva": "0x23e524",
+      "length": 64,
+      "bytes": "ffc303d1fa670aa9f85f0ba9f6570ca9f44f0da9fd7b0ea9fd830391a876009008b142f9080140f9a8831bf8087c40b9c806003489c800f029c11e910a358c52",
+      "sha256": "393aed455c41eeb0b0c36627f6b3c5c1b55fe12d08d5b0921f0951c6b0829d15"
+    },
+    {
+      "name": "PHOrbDungeonOptionParseRVA",
+      "va": "0x10023e670",
+      "rva": "0x23e670",
+      "length": 64,
+      "bytes": "ff4303d1f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391f30301aaf50300aa080080d2a976009029b142f9290140f9a9831cf81480af52f72300911840a752",
+      "sha256": "29c6ab1ad7f867437da7f3c8db6763b1a31b423570853d0e401690eeee770f36"
+    },
+    {
+      "name": "PHOrbAwakeningCheckRVA",
+      "va": "0x10059f2bc",
+      "rva": "0x59f2bc",
+      "length": 64,
+      "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291e3130329f60301aaf70300aae21b00f95f0000393f50007160000054dfce0171",
+      "sha256": "27c22c1930b98566eb3465e10b28e18960a26fba9babdf8e0f3d184cb6af1937"
     }
   ]
 }

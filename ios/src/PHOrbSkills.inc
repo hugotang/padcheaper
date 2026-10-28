@@ -9,6 +9,8 @@ bool PositiveDuration(uint16_t value) {
     return int16_t(uint16_t(value << 6)) > 0;
 }
 
+#include "PHOrbSurvival.inc"
+
 bool ReadAutomationFields(PHOrbSnapshot &state) {
     auto &out = state.automation;
     const uintptr_t header = state.identity.header, impl = state.identity.impl, save = header + PHSaveRVA;
@@ -40,6 +42,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
             !PHReadU32(member + PHBattleChargeShadowOffset, &shadow) || (shadow ^ charge) != 0x68fb65ceu ||
             !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID)) return false;
         m.bound = int8_t(uint8_t(bind)) > 0; m.charge = uint16_t(charge);
+        if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
         // These are decoded by native can-use before it refreshes CardParam.
         for (uintptr_t offset : {uintptr_t(344), uintptr_t(360), uintptr_t(488), uintptr_t(504)}) {
             uint32_t value = 0;
@@ -85,6 +88,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         if (dungeonRules > UINTPTR_MAX - 33 || !PHReadU8(dungeonRules + 32, &rules)) return false;
         out.window &= !(rules & 0x40u);
     }
+    if (PositiveDuration(bindTurns) || PositiveDuration(sealTurns)) out.playerEffects |= PHOrbPlayerSkillSeal;
+    ReadSurvival(state, dungeonRules, key1, key2, hp);
     out.enemiesKnown = true;
     // Mapping verified in 0x100562F74. These are enemy effects, distinct from
     // the player's bypass durations below. Only living ordinary enemies count.

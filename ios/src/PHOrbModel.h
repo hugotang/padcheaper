@@ -45,6 +45,10 @@ enum {
     PHOrbObstacleSpinner = 16, PHOrbObstacleLocked = 32, PHOrbObstacleWeakened = 64
 };
 
+enum {
+    PHOrbPlayerAwokenBind = 1, PHOrbPlayerMemberBind = 2, PHOrbPlayerSkillSeal = 4
+};
+
 typedef struct {
     uint16_t number, charge;
     uint8_t state;
@@ -55,9 +59,10 @@ typedef struct {
 // call skill getters (some native getters lazily mutate cooldown caches).
 typedef struct {
     PHOrbSkillMember members[6];
+    uint32_t hp, maximumHP;
     uint16_t skillUses;
-    uint8_t enemyEffects, playerBypass, activeEnemies;
-    bool valid, window, busy, enemiesKnown, boardKnown;
+    uint8_t enemyEffects, playerBypass, activeEnemies, playerEffects;
+    bool valid, window, busy, enemiesKnown, boardKnown, hpKnown, statusKnown, awakeningRestricted;
 } PHOrbAutomationState;
 
 typedef struct {
@@ -91,6 +96,7 @@ bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+bool PHOrbSamePlayerState(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 uint8_t PHOrbBoardObstacles(const PHOrbSnapshot *state);
 
 #ifdef __cplusplus

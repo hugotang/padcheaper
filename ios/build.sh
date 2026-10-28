@@ -62,6 +62,7 @@ cp ios/docs/auto-orbs.md "$build_dir/auto-orbs.md"
 cp ios/docs/orb-goals.md "$build_dir/orb-goals.md"
 cp ios/docs/orb-automation.md "$build_dir/orb-automation.md"
 cp ios/docs/orb-strategies.md "$build_dir/orb-strategies.md"
+cp ios/docs/orb-survival.md "$build_dir/orb-survival.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
@@ -107,6 +108,7 @@ metadata = {
     "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
+    "orb_survival": "read-only effective HP thresholds and temporary awakening/member bind or skill-seal conditions; required rules/groups need confirmed completion before a route while allowing other skills to remedy or haste; uncertain attempts never count as success; captured HP/player-state changes cancel the route; per-rule reasons shown; device verification pending",
     "orb_obstacles": "locked basic orbs preserve their native flag through ordinary matching; spinner, unmatchable, weakened and other unsupported effects may trigger user-chosen remedy skills, then require a fresh board; no timed spinner solver",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",

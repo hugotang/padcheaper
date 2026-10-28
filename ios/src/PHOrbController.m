@@ -270,6 +270,8 @@
 @property(nonatomic, strong) UIButton *startButton;
 @property(nonatomic, strong) UIButton *editRules;
 @property(nonatomic, strong) UILabel *ruleDescription;
+@property(nonatomic, strong) UILabel *playerDescription;
+@property(nonatomic, strong) UILabel *decisionDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
 @property(nonatomic, strong) UILabel *profileDescription;
 @property(nonatomic, strong) NSTimer *timer;
@@ -331,6 +333,10 @@
     self.editRules = [self button:@"編輯自動技能規則" selector:@selector(editSkillRules) identifier:@"padcheaper.orbsRuleEdit"];
     self.ruleDescription = [self label:13 weight:UIFontWeightRegular];
     self.ruleDescription.accessibilityIdentifier = @"padcheaper.orbsRuleDescription";
+    self.playerDescription = [self label:13 weight:UIFontWeightMedium];
+    self.playerDescription.accessibilityIdentifier = @"padcheaper.orbsPlayerStatus";
+    self.decisionDescription = [self label:13 weight:UIFontWeightRegular];
+    self.decisionDescription.accessibilityIdentifier = @"padcheaper.orbsDecisions";
     self.editProfiles = [self button:@"隊伍／關卡策略" selector:@selector(editProfileSettings) identifier:@"padcheaper.orbsProfileEdit"];
     self.profileDescription = [self label:13 weight:UIFontWeightRegular];
     self.profileDescription.accessibilityIdentifier = @"padcheaper.orbsProfileDescription";
@@ -368,7 +374,8 @@
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
         self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
-        self.editRules, self.ruleDescription, self.status, self.boardView, self.slider, self.position, self.availability, note]];
+        self.editRules, self.ruleDescription, self.playerDescription, self.decisionDescription,
+        self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
@@ -420,11 +427,23 @@
     if (!ruleLines.count) [ruleLines addObject:@"尚無技能規則；開始後只會連續轉珠。"];
     if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
         state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
-    [ruleLines addObjectsFromArray:state[@"automationLog"] ?: @[]];
     if ([state[@"obstacles"] length]) [ruleLines addObject:[NSString stringWithFormat:@"目前盤面：%@", state[@"obstacles"]]];
     NSString *ruleMessage = state[@"ruleMessage"];
     self.ruleDescription.text = ruleMessage.length ? ruleMessage : [ruleLines componentsJoinedByString:@"\n"];
     self.ruleDescription.textColor = ruleMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.playerDescription.text = state[@"playerStatus"] ?: @"";
+    self.playerDescription.hidden = !self.playerDescription.text.length;
+    NSMutableArray *decisions = [NSMutableArray array];
+    NSArray *rows = state[@"ruleDecisions"] ?: @[];
+    if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];
+    for (NSUInteger i = 0; i < rows.count; ++i)
+        [decisions addObject:[NSString stringWithFormat:@"規則 %lu：%@", (unsigned long)i + 1, rows[i]]];
+    if ([state[@"automationLog"] count]) {
+        [decisions addObject:@"近期事件"];
+        [decisions addObjectsFromArray:state[@"automationLog"]];
+    }
+    self.decisionDescription.text = [decisions componentsJoinedByString:@"\n"];
+    self.decisionDescription.hidden = !decisions.count;
     NSArray *qualities = @[@"fast", @"balanced", @"thorough"];
     NSUInteger quality = [qualities indexOfObject:state[@"quality"] ?: @"balanced"];
     if (quality == NSNotFound) quality = 1;

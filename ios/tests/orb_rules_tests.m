@@ -46,13 +46,22 @@ int main(void) {
         }
         state.automation.members[0].bound = true;
         Check(PHOrbMatchSkillRule(rule, &state, 1) == PHOrbRuleNo, "bound member is not a skill candidate");
+        state.automation.enemiesKnown = false;
+        Check(PHOrbMatchSkillRule(rule, &state, 1) == PHOrbRuleNo &&
+            PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown,
+            "legacy matching skips an unavailable caster before unknown conditions while required evaluation still sees them");
+        state.automation.members[0].bound = false; rule[@"floor"] = @0; rule[@"reserveUntil"] = @5;
+        Check(PHOrbMatchSkillRule(rule, &state, 1) == PHOrbRuleNo &&
+            PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown,
+            "reserved legacy rules do not require unknown enemy data before their reserved floor");
+        state.automation.enemiesKnown = true; rule[@"floor"] = @3; rule[@"reserveUntil"] = @0;
         state.automation.members[0].bound = false; rule[@"enabled"] = @NO;
         Check(PHOrbMatchSkillRule(rule, &state, 1) == PHOrbRuleNo, "disabled rules never trigger");
         NSData *data = [NSJSONSerialization dataWithJSONObject:@[rule] options:0 error:NULL];
         id saved = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
         Check(PHOrbSkillRulesValid(saved) && [saved isEqual:@[rule]], "all conditions and Boolean enabled state survive persistence");
         NSMutableDictionary *legacy = [PHOrbDefaultSkillRule() mutableCopy];
-        [legacy removeObjectsForKeys:@[@"group",@"once",@"reserveUntil",@"obstacle"]];
+        [legacy removeObjectsForKeys:@[@"group",@"once",@"reserveUntil",@"obstacle",@"hpAtMost",@"status",@"required"]];
         Check(PHOrbSkillRulesValid(@[legacy]) && [PHOrbNormalizedSkillRule(legacy) isEqual:PHOrbDefaultSkillRule()],
             "legacy rules gain no grouping, reservation, once or obstacle condition");
         for (NSDictionary *change in @[@{@"group":@7},@{@"group":@YES},@{@"once":@1},@{@"reserveUntil":@1000},
@@ -79,6 +88,50 @@ int main(void) {
         Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleYes && PHOrbBoardValid(&state.board), "locked basic orb is a skill condition but still supports ordinary matching");
         state.board.flags[29] |= 0x1000;
         Check(!PHOrbBoardValid(&state.board) && (PHOrbBoardObstacles(&state) & PHOrbObstacleOrbEffect), "lock acceptance does not authorize other combined effects");
+        for (NSDictionary *change in @[@{@"hpAtMost":@101}, @{@"hpAtMost":@-1}, @{@"hpAtMost":@YES},
+            @{@"hpAtMost":@40.5}, @{@"hpAtMost":@"40"}, @{@"required":@1}, @{@"status":@"unknown"}]) {
+            NSMutableDictionary *bad = [PHOrbDefaultSkillRule() mutableCopy]; [bad addEntriesFromDictionary:change];
+            Check(!PHOrbSkillRulesValid(@[bad]), "HP, player status and required fields cannot silently coerce malformed settings");
+        }
+        rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"hpAtMost"] = @40; rule[@"required"] = @YES;
+        state.automation.hpKnown = true; state.automation.hp = 400; state.automation.maximumHP = 1000;
+        NSString *reason = nil;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,&reason) == PHOrbRuleYes && [reason containsString:@"40"],
+            "inclusive HP threshold includes a useful explanation");
+        state.automation.hp = 401;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,&reason) == PHOrbRuleNo && [reason containsString:@"高於"],
+            "one HP above the threshold is not rounded into a rescue trigger");
+        state.automation.hpKnown = false;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,&reason) == PHOrbRuleUnknown && [reason containsString:@"上限"],
+            "unknown HP is neither full health nor a confirmed low-health trigger");
+        state.automation.hpKnown = true; state.automation.hp = state.automation.maximumHP = INT32_MAX;
+        rule[@"hpAtMost"] = @99;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleNo, "HP comparison uses wide products without signed or 32-bit overflow");
+        rule[@"hpAtMost"] = @100;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "100 percent includes the largest supported full-health value");
+        rule[@"hpAtMost"] = @0; rule[@"status"] = @"awoken_bind";
+        state.automation.statusKnown = true; state.automation.awakeningRestricted = true; state.automation.playerEffects = 0;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,&reason) == PHOrbRuleNo && [reason containsString:@"關卡"],
+            "fixed dungeon restriction cannot masquerade as temporary awakening bind");
+        state.automation.playerEffects = PHOrbPlayerAwokenBind;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "temporary bind is detected even when the dungeon also restricts awakenings");
+        rule[@"hpAtMost"] = @40;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleNo, "HP and player status predicates are conjunctive");
+        state.automation.hp = 1;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "low HP and the requested status can jointly request rescue");
+        state.automation.statusKnown = false;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleUnknown, "unknown player effects cannot bypass a rescue rule");
+        state.automation.statusKnown = true; state.automation.members[0].bound = true;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes && PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleNo,
+            "unavailable caster does not hide the condition of a required rule");
+        rule[@"reserveUntil"] = @5;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "reservation is reported as an execution constraint rather than a missing rescue condition");
+        state.automation.members[0].bound = false;
+        PHOrbSnapshot before = state;
+        ++state.automation.hp;
+        Check(!PHOrbSamePlayerState(&before,&state), "new HP invalidates captured rescue decisions");
+        state = before; state.automation.awakeningRestricted = false;
+        Check(!PHOrbSamePlayerState(&before,&state), "changed fixed awakening restriction invalidates player context");
         printf("Orb rules tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

@@ -1085,7 +1085,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"orbs"] = settings;
         NSDictionary *profiles = PHOrbProfilesUpdatingSettings(PHConfigurationOrbProfiles(next), settings);
         if (!profiles) {
-            if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查角色、樓層、群組及盤面條件。";
+            if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查角色、樓層、群組、HP 百分比及異常條件。";
             else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
             return;
         }

@@ -5,7 +5,7 @@
 NSDictionary *PHOrbDefaultSkillRule(void) {
     return @{@"enabled":@YES, @"slot":@1, @"monster":@0, @"every":@1, @"floor":@0,
              @"color":@-1, @"below":@0, @"enemy":@"none", @"group":@0, @"once":@NO,
-             @"reserveUntil":@0, @"obstacle":@"none"};
+             @"reserveUntil":@0, @"obstacle":@"none", @"hpAtMost":@0, @"status":@"none", @"required":@NO};
 }
 
 NSDictionary *PHOrbNormalizedSkillRule(NSDictionary *rule) {
@@ -51,6 +51,37 @@ NSString *PHOrbEnemyConditionTitle(NSString *condition) {
              @"damage_void":@"傷害無效", @"combo_absorb":@"Combo 吸收"}[condition] ?: @"未知敵人條件";
 }
 
+NSArray<NSString *> *PHOrbPlayerConditions(void) {
+    return @[@"none", @"awoken_bind", @"member_bind", @"skill_seal"];
+}
+
+NSString *PHOrbPlayerConditionTitle(NSString *condition) {
+    return @{@"none":@"不限定我方異常", @"awoken_bind":@"有暫時覺醒無效",
+        @"member_bind":@"有隊員被綁定", @"skill_seal":@"有技能封印"}[condition] ?: @"未知我方條件";
+}
+
+static unsigned PlayerFlag(NSString *condition) {
+    return [@{@"awoken_bind":@(PHOrbPlayerAwokenBind), @"member_bind":@(PHOrbPlayerMemberBind),
+        @"skill_seal":@(PHOrbPlayerSkillSeal)}[condition] unsignedIntValue];
+}
+
+NSString *PHOrbSurvivalDescription(const PHOrbSnapshot *state) {
+    if (!state || !state->valid || !state->automation.valid) return @"";
+    const PHOrbAutomationState *player = &state->automation;
+    NSMutableArray *parts = [NSMutableArray array];
+    if (player->hpKnown && player->maximumHP) [parts addObject:[NSString stringWithFormat:@"HP %u／%u（%.1f%%）",
+        player->hp, player->maximumHP, 100.0 * player->hp / player->maximumHP]];
+    else [parts addObject:@"有效 HP 上限尚未確認"];
+    if (!player->statusKnown) [parts addObject:@"我方異常資料尚未確認"];
+    else {
+        for (NSString *condition in PHOrbPlayerConditions())
+            if (player->playerEffects & PlayerFlag(condition)) [parts addObject:PHOrbPlayerConditionTitle(condition)];
+        if (player->awakeningRestricted) [parts addObject:@"關卡禁止覺醒（不屬於技能可解除的暫時效果）"];
+        if (!player->playerEffects && !player->awakeningRestricted) [parts addObject:@"未見已支援的我方異常"];
+    }
+    return [parts componentsJoinedByString:@" · "];
+}
+
 static BOOL Boolean(id value) {
     return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
 }
@@ -76,6 +107,8 @@ BOOL PHOrbSkillRulesValid(id rules) {
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
             !Boolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
             ![rule[@"obstacle"] isKindOfClass:NSString.class] || ![PHOrbObstacleConditions() containsObject:rule[@"obstacle"]] ||
+            !Integer(rule[@"hpAtMost"], 0, 100) || !Boolean(rule[@"required"]) ||
+            ![rule[@"status"] isKindOfClass:NSString.class] || ![PHOrbPlayerConditions() containsObject:rule[@"status"]] ||
             ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] < [rule[@"reserveUntil"] unsignedIntValue])) return NO;
         uint16_t catalogID = 0;
         if ([rule[@"monster"] unsignedIntValue] && !PHBattleCatalogIDForNumber([rule[@"monster"] unsignedIntValue], &catalogID)) return NO;
@@ -111,36 +144,82 @@ NSArray<NSNumber *> *PHOrbSkillRuleOrder(NSArray *rules, const uint8_t next[PHOr
     return order;
 }
 
-PHOrbRuleMatch PHOrbMatchSkillRule(NSDictionary *rule, const PHOrbSnapshot *state, NSUInteger turn) {
-    if (!PHOrbSkillRulesValid(@[rule ?: @{}]) || !state || !turn) return PHOrbRuleUnknown;
-    if (![rule[@"enabled"] boolValue] || (turn - 1) % [rule[@"every"] unsignedIntegerValue] ||
-        ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] != state->wave + 1) ||
-        [rule[@"reserveUntil"] unsignedIntValue] > state->wave + 1) return PHOrbRuleNo;
-    if (!state->automation.valid) return PHOrbRuleUnknown;
+static PHOrbRuleMatch Explained(PHOrbRuleMatch match, NSString *message, NSString **reason) {
+    if (reason) *reason = message;
+    return match;
+}
+
+PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *state, NSUInteger turn, NSString **reason) {
+    if (!PHOrbSkillRulesValid(@[rule ?: @{}]) || !state || !turn)
+        return Explained(PHOrbRuleUnknown, @"規則或回合資料無效", reason);
+    rule = PHOrbNormalizedSkillRule(rule);
+    if (![rule[@"enabled"] boolValue]) return Explained(PHOrbRuleNo, @"已停用", reason);
+    if ((turn - 1) % [rule[@"every"] unsignedIntegerValue])
+        return Explained(PHOrbRuleNo, @"目前回合不符合間隔", reason);
+    if ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] != state->wave + 1)
+        return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"目前第 %u 層，不是指定的第 %@ 層", state->wave + 1, rule[@"floor"]], reason);
+    if (!state->automation.valid) return Explained(PHOrbRuleUnknown, @"技能與隊伍資料無法確認", reason);
     const PHOrbSkillMember *member = &state->automation.members[[rule[@"slot"] unsignedIntegerValue] - 1];
-    if (!member->active || member->bound || member->state ||
-        ([rule[@"monster"] unsignedIntValue] && [rule[@"monster"] unsignedIntValue] != member->number)) return PHOrbRuleNo;
+    if ([rule[@"monster"] unsignedIntValue] && [rule[@"monster"] unsignedIntValue] != member->number)
+        return Explained(PHOrbRuleNo, @"目前角色形態不符合指定編號", reason);
+    NSMutableArray *matched = [NSMutableArray array];
+    NSUInteger hpLimit = [rule[@"hpAtMost"] unsignedIntegerValue];
+    if (hpLimit) {
+        const PHOrbAutomationState *player = &state->automation;
+        if (!player->hpKnown || !player->maximumHP || player->hp > player->maximumHP)
+            return Explained(PHOrbRuleUnknown, @"目前 HP 或有效上限無法確認", reason);
+        if ((uint64_t)player->hp * 100 > (uint64_t)player->maximumHP * hpLimit)
+            return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"HP %.1f%% 高於 %@%% 門檻",
+                100.0 * player->hp / player->maximumHP, rule[@"hpAtMost"]], reason);
+        [matched addObject:[NSString stringWithFormat:@"HP %.1f%% ≤ %@%%",
+            100.0 * player->hp / player->maximumHP, rule[@"hpAtMost"]]];
+    }
+    NSString *status = rule[@"status"];
+    if (![status isEqual:@"none"]) {
+        if (!state->automation.statusKnown) return Explained(PHOrbRuleUnknown, @"我方異常狀態無法確認", reason);
+        if (!(state->automation.playerEffects & PlayerFlag(status)))
+            return Explained(PHOrbRuleNo, [status isEqual:@"awoken_bind"] && state->automation.awakeningRestricted ?
+                @"關卡禁止覺醒，但沒有暫時覺醒無效" : @"未出現指定的我方異常", reason);
+        [matched addObject:PHOrbPlayerConditionTitle(status)];
+    }
     NSInteger color = [rule[@"color"] integerValue];
     if (color >= 0) {
         if (!state->automation.boardKnown || !state->settled ||
-            !PHOrbDimensionsSupported(state->board.width, state->board.height)) return PHOrbRuleUnknown;
+            !PHOrbDimensionsSupported(state->board.width, state->board.height))
+            return Explained(PHOrbRuleUnknown, @"盤面珠數無法確認", reason);
         unsigned count = 0;
         for (unsigned i = 0; i < state->board.width * state->board.height; ++i) count += state->board.types[i] == color;
-        if (count >= [rule[@"below"] unsignedIntValue]) return PHOrbRuleNo;
+        if (count >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
+        [matched addObject:[NSString stringWithFormat:@"指定珠色 %u 顆 < %@ 顆", count, rule[@"below"]]];
     }
     NSUInteger enemy = [PHOrbEnemyConditions() indexOfObject:rule[@"enemy"]];
     if (enemy) {
-        if (!state->automation.enemiesKnown) return PHOrbRuleUnknown;
+        if (!state->automation.enemiesKnown) return Explained(PHOrbRuleUnknown, @"敵人效果無法確認", reason);
         unsigned flag = 1u << (enemy - 1);
-        if (!(state->automation.enemyEffects & flag) || (state->automation.playerBypass & flag)) return PHOrbRuleNo;
+        if (!(state->automation.enemyEffects & flag)) return Explained(PHOrbRuleNo, @"敵人沒有指定效果", reason);
+        if (state->automation.playerBypass & flag) return Explained(PHOrbRuleNo, @"我方已有對應的全隊無效化效果", reason);
+        [matched addObject:PHOrbEnemyConditionTitle(rule[@"enemy"])];
     }
     NSString *obstacle = rule[@"obstacle"] ?: @"none";
     if (![obstacle isEqual:@"none"]) {
-        if (!state->automation.boardKnown) return PHOrbRuleUnknown;
+        if (!state->automation.boardKnown) return Explained(PHOrbRuleUnknown, @"盤面妨礙無法確認", reason);
         unsigned flag = ObstacleFlag(obstacle);
-        if (!(PHOrbBoardObstacles(state) & flag)) return PHOrbRuleNo;
+        if (!(PHOrbBoardObstacles(state) & flag)) return Explained(PHOrbRuleNo, @"沒有指定的盤面妨礙", reason);
+        [matched addObject:PHOrbObstacleConditionTitle(obstacle)];
     }
-    return PHOrbRuleYes;
+    return Explained(PHOrbRuleYes, matched.count ? [matched componentsJoinedByString:@"、"] : @"角色、回合與樓層條件符合", reason);
+}
+
+PHOrbRuleMatch PHOrbMatchSkillRule(NSDictionary *rule, const PHOrbSnapshot *state, NSUInteger turn) {
+    if (!PHOrbSkillRulesValid(@[rule ?: @{}]) || !state || !turn) return PHOrbRuleUnknown;
+    // Keep the legacy availability-first behavior. Required rules use the
+    // condition-only entry point so an unavailable caster cannot hide them.
+    if ([rule[@"reserveUntil"] unsignedIntValue] > state->wave + 1) return PHOrbRuleNo;
+    if (state->automation.valid) {
+        const PHOrbSkillMember *member = &state->automation.members[[rule[@"slot"] unsignedIntegerValue] - 1];
+        if (!member->active || member->bound || member->state) return PHOrbRuleNo;
+    }
+    return PHOrbTriggerSkillRule(rule, state, turn, NULL);
 }
 
 NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
@@ -157,6 +236,9 @@ NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
     if ([rule[@"once"] boolValue]) [parts addObject:@"本場一次"];
     if ([rule[@"reserveUntil"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"此位置保留至第 %@ 層", rule[@"reserveUntil"]]];
     if (rule[@"obstacle"] && ![rule[@"obstacle"] isEqual:@"none"]) [parts addObject:PHOrbObstacleConditionTitle(rule[@"obstacle"])];
+    if ([rule[@"hpAtMost"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"HP ≤ %@%%", rule[@"hpAtMost"]]];
+    if (rule[@"status"] && ![rule[@"status"] isEqual:@"none"]) [parts addObject:PHOrbPlayerConditionTitle(rule[@"status"])];
+    if ([rule[@"required"] boolValue]) [parts addObject:@"必要：未確認施放就停止轉珠"];
     if (![rule[@"enabled"] boolValue]) [parts addObject:@"已停用"];
     return [parts componentsJoinedByString:@" · "];
 }

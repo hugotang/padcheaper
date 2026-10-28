@@ -69,6 +69,15 @@ int main(void) {
         NSData *json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
         NSDictionary *restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
         Check(PHOrbProfilesValid(restored) && [restored isEqual:updated], "profiles, bindings and Boolean rules survive JSON persistence");
+        NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy];
+        rescue[@"hpAtMost"] = @40; rescue[@"status"] = @"awoken_bind"; rescue[@"required"] = @YES;
+        settings[@"rules"] = @[rescue];
+        updated = PHOrbProfilesUpdatingSettings(original,settings);
+        json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
+        restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+        Check(PHOrbProfilesValid(restored) && [PHOrbProfileNamed(restored,@"team")[@"settings"][@"rules"] isEqual:@[rescue]] &&
+            [PHOrbProfileNamed(original,@"team")[@"settings"][@"rules"] isEqual:Settings()[@"rules"]],
+            "rescue thresholds, conjunctive status and required preference persist together without mutating the original profile");
         printf("Orb profiles tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

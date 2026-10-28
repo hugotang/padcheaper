@@ -152,6 +152,12 @@
             titles:@[@"獨立施放", @"輪替組 1", @"輪替組 2", @"輪替組 3", @"輪替組 4", @"輪替組 5", @"輪替組 6"]]];
         [card addArrangedSubview:[self menu:i field:@"once" values:@[@NO,@YES] titles:@[@"每個符合條件的回合", @"本場只用一次"]]];
         [card addArrangedSubview:[self number:i field:@"reserveUntil" title:@"此位置保留至第幾層（0 不保留）"]];
+        [card addArrangedSubview:[self number:i field:@"hpAtMost" title:@"HP 百分比 ≤（1–100，0 不限定）"]];
+        NSMutableArray *playerTitles = [NSMutableArray array];
+        for (NSString *condition in PHOrbPlayerConditions()) [playerTitles addObject:PHOrbPlayerConditionTitle(condition)];
+        [card addArrangedSubview:[self menu:i field:@"status" values:PHOrbPlayerConditions() titles:playerTitles]];
+        [card addArrangedSubview:[self menu:i field:@"required" values:@[@NO,@YES]
+            titles:@[@"不可用時略過", @"必要：未確認完成就停止"]]];
         [card addArrangedSubview:[self menu:i field:@"color" values:@[@-1,@0,@1,@2,@3,@4,@5]
             titles:@[@"不限定盤面", @"缺火珠", @"缺水珠", @"缺木珠", @"缺光珠", @"缺暗珠", @"缺心珠"]]];
         if ([rule[@"color"] integerValue] >= 0) [card addArrangedSubview:[self number:i field:@"below" title:@"珠數少於此數才觸發"]];
@@ -180,7 +186,8 @@
     UIButton *add = [self button:@"＋ 新增技能規則"]; add.enabled = self.draft.count < PHOrbMaxSkillRules;
     add.accessibilityIdentifier = @"padcheaper.orbsRuleAdd";
     [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能，未冷卻好會略過。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
+    [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能。一般規則不可用時略過；必要規則會先讓其他技能或同組替補嘗試補救，條件仍成立而未確認施放完成時停止轉珠。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
+    [self.rows addArrangedSubview:[self label:@"HP 條件以目前有效上限計算，含固定／比例關卡及臨時上限修正；無法確認就停止，不把未知當成滿血。HP 與異常條件同時設定時，兩者都要成立。\n\n暫時覺醒無效與關卡禁止覺醒分開判斷；隊員綁定條件檢查全隊。技能封印期間不能靠施放技能自行解除，必要規則會停止並提示。\n\n同組任何一條確認完成，即滿足該組本回合的必要要求。必要設定不會越過保留樓層、本場一次或每位置限制；不同必要技能請分組。確認施放不等於保證回到 HP 門檻或解除所有異常，請指定合適的技能。"]];
     [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下回合從下一條開始，未就緒者可略過。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件只決定何時嘗試你指定的技能；技能完成後仍會重讀，效果未解除就停止。"]];
 }
 - (void)add {
@@ -190,7 +197,7 @@
 }
 - (void)save {
     [self.view endEditing:YES];
-    if (!PHOrbSkillRulesValid(self.draft)) { self.notice.text = @"請填有效整數：角色 0–65535、間隔 1–999、樓層 0–999、缺珠 1–43。"; return; }
+    if (!PHOrbSkillRulesValid(self.draft)) { self.notice.text = @"請檢查角色、群組與條件：間隔 1–999、樓層 0–999、缺珠 1–43、HP 百分比 0–100；保留樓層不能晚於指定樓層。"; return; }
     NSMutableArray *rules = [NSMutableArray array]; for (NSDictionary *rule in self.draft) [rules addObject:rule.copy];
     NSString *error = self.saveRules([rules copy]);
     if (error.length) { self.notice.text = error; return; }
