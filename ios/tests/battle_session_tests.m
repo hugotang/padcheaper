@@ -473,14 +473,14 @@ int main(void) {
         frame = Frame(); frame.enabled = false;
         [session onFrame:frame atTime:100.3]; [session onFrame:frame atTime:100.4];
         Check(engine->fullRestores == 2 && ![session.snapshot[@"applied"] boolValue], "master-off restores every owned position");
-        engine = [FakeBattleEngine new]; engine->live.mode = 7; session = Session(engine);
+        engine = [FakeBattleEngine new]; engine->live.mode = 12; session = Session(engine);
         [session queueLoadouts:loadouts mask:63]; [session onFrame:Frame() atTime:100.1];
         frame = Frame();
         frame.policy = (PHBattlePolicy){.configured = true, .modes = {.count = 1, .values = {0}},
             .sources = {.count = 1, .values = {0}}, .multiplayer = {.count = 1, .values = {0}}};
         [session onFrame:frame atTime:100.2];
         Check(engine->fullApplies == 1 && engine->fullRestores == 1 && [session.snapshot[@"pendingMask"] isEqual:@0],
-              "restricting mode mid-batch cancels future writes and restores the owned member with its original policy");
+              "restricting a solo mode mid-batch cancels future writes and restores the owned member with its original policy");
         [session onFrame:frame atTime:100.6]; [session queueLoadouts:loadouts mask:1];
         Check(![session.snapshot[@"canApply"] boolValue] && [session.snapshot[@"pendingMask"] isEqual:@0],
               "a hot-reloaded list rejects new operations without recompile");
