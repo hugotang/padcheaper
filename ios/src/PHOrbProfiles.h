@@ -19,4 +19,5 @@ FOUNDATION_EXPORT NSDictionary *PHOrbPlanFromProfile(NSDictionary *profile);
 FOUNDATION_EXPORT NSDictionary *PHOrbProfilesImportingPlan(NSDictionary *library, id plan, NSString **reason);
 FOUNDATION_EXPORT NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictionary *profile);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed);
+FOUNDATION_EXPORT BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSString *PHOrbPlanDescription(NSDictionary *plan);

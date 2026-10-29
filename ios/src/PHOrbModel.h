@@ -77,8 +77,12 @@ enum {
 typedef struct {
     uint32_t selection; // Raw native skill choice; UINT32_MAX means automatic base/assist selection.
     uint16_t number, charge, assistCatalogID, skillLevel[2], skillUses[2];
+    // Current usable form is number. During a validated native temporary
+    // transformation, identityNumber/identityAssist retain the underlying
+    // loadout for plan continuity only; never use them to activate a skill.
+    uint16_t identityNumber, identityAssist, temporaryID, temporaryTurns;
     uint8_t state, skillStage[2], cachedSkillStage[2];
-    bool active, bound;
+    bool active, bound, temporaryKnown;
 } PHOrbSkillMember;
 
 typedef enum { PHOrbSkillAutomatic, PHOrbSkillBody, PHOrbSkillAssist } PHOrbSkillSource;
@@ -127,6 +131,7 @@ typedef struct {
     uint8_t thornContacts, heartFours;
     uint32_t thornDamage;
     uint32_t evaluated, elapsedMS;
+    uint8_t searchPasses, backtracks, exploredDepth;
     bool deadlineReached, goalsMet, hazardsSafe;
 } PHOrbRoute;
 

@@ -69,6 +69,8 @@ static void SkillFixture() {
         const uintptr_t member = Impl + PHBattleMemberOffset + i * PHBattleMemberStride;
         for (uintptr_t offset : {uintptr_t(72), uintptr_t(344), uintptr_t(360), uintptr_t(488), uintptr_t(504)})
             Protected(member + offset, 0, 0x6a875a8b);
+        for (uintptr_t offset : {PHBattleTempIDOffset, PHBattleTempTurnsOffset, PHBattleFormOffset})
+            Protected(member + offset, 0, 0x6a875a8b);
         Protected(member + PHBattleChargeOffset, 5, 0x6a875a8b);
         Put<uint32_t>(member + PHBattleChargeShadowOffset, 5u ^ 0x68fb65ceu);
         Put<uint32_t>(member + PHOrbSkillOverrideOffset, UINT32_MAX);
@@ -284,7 +286,44 @@ static void SkillSourceNativeTests() {
     Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBody,CurrentFixtureSkill} expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !skillStartCalls && !writes,
         "source getter race into multiplayer cancels before selection preparation and activation");
 }
+static void TemporarySkillNativeTests() {
+    const uintptr_t member = Impl + PHBattleMemberOffset;
+    uint16_t original = 0, temporary = 0, assist = 0;
+    PHBattleCatalogIDForNumber(14038, &original); PHBattleCatalogIDForNumber(4264, &temporary);
+    PHBattleCatalogIDForNumber(14039, &assist);
+    SkillFixture(); SetLeader(0, 4264);
+    Put<uint16_t>(member + PHBattleBaseIDOffset, original);
+    Put<uint16_t>(member + PHBattleAssistIDOffset, assist);
+    Protected(member + PHBattleTempIDOffset, temporary, 0x6a875a8b);
+    Protected(member + PHBattleTempTurnsOffset, 3, 0x6a875a8b);
+    FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}, changed{}; NSString *reason = nil;
+    Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.members[0].number == 4264 &&
+        state.automation.members[0].identityNumber == 14038 && state.automation.members[0].identityAssist == assist &&
+        state.automation.members[0].temporaryKnown && state.automation.members[0].temporaryTurns == 3 &&
+        !state.automation.members[0].assistCatalogID && !canUseCalls && !readinessCalls && !skillStartCalls && !writes,
+        "temporary body and underlying form/assist are decoded independently with no native getter or write");
+    uint16_t base = 0; PHBattleCatalogIDForNumber(14037, &base);
+    Put<uint16_t>(member + PHBattleBaseIDOffset, base);
+    Protected(member + PHBattleFormOffset, original, 0x6a875a8b);
+    Check([engine readAutomation:&changed frame:Frame() reason:&reason] && changed.automation.members[0].identityNumber == 14038,
+        "persistent transformed form takes priority over the pre-transform base ID");
+    Protected(member + PHBattleTempTurnsOffset, 2, 0x6a875a8b);
+    Check([engine readAutomation:&changed frame:Frame() reason:&reason] && !PHOrbSameAutomation(&state,&changed) &&
+        [engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !canUseCalls && !writes,
+        "changed temporary state invalidates even another slot's pending native activation");
+    Protected(member + PHBattleTempIDOffset, original, 0x6a875a8b);
+    Check(![engine readAutomation:&changed frame:Frame() reason:&reason], "inconsistent current and temporary IDs fail the automation read");
+    Protected(member + PHBattleTempIDOffset, temporary, 0x6a875a8b);
+    Put<uint32_t>(member + PHBattleTempTurnsOffset, 0);
+    Check(![engine readAutomation:&changed frame:Frame() reason:&reason], "damaged protected temporary state cannot be interpreted as no transformation");
+    Protected(member + PHBattleTempTurnsOffset, 0, 0x6a875a8b);
+    SetLeader(0,14038); Put<uint16_t>(member + 1438,assist);
+    Check([engine readAutomation:&changed frame:Frame() reason:&reason] && changed.automation.members[0].number == 14038 &&
+        !changed.automation.members[0].temporaryTurns && changed.automation.members[0].identityAssist == assist,
+        "expired native temporary duration resumes current body and assist even with retained temporary ID");
+}
 static void SkillNativeTests() {
+    TemporarySkillNativeTests();
     SkillSourceNativeTests();
     SkillOrbConditionTests();
     SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;

@@ -46,6 +46,28 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         // Keep authoritative stages/use counts and the derived stage cache
         // separately: can-use refreshes the cache only after basic readiness.
         if (!PHReadU16(member + 1438, &m.assistCatalogID)) return false;
+        uint32_t temporaryID = 0, temporaryTurns = 0, form = 0;
+        if (!SmallProtected(member + PHBattleTempIDOffset, key1, key2, UINT16_MAX, temporaryID) ||
+            !SmallProtected(member + PHBattleTempTurnsOffset, key1, key2, UINT16_MAX, temporaryTurns) ||
+            !SmallProtected(member + PHBattleFormOffset, key1, key2, UINT16_MAX, form)) return false;
+        m.temporaryID = uint16_t(temporaryID); m.temporaryTurns = uint16_t(temporaryTurns);
+        m.identityNumber = m.number; m.identityAssist = m.assistCatalogID;
+        if (temporaryTurns) {
+            uint16_t base = 0, assist = 0;
+            // 0x1005A12F0 stores the source at +1456/+1458, applies the
+            // persistent +280 form, then overrides it with +248 whenever
+            // +264 is nonzero. Temporary forms clear the active assist.
+            if (!temporaryID || id != temporaryID ||
+                !PHReadU16(member + PHBattleBaseIDOffset, &base) ||
+                !PHReadU16(member + PHBattleAssistIDOffset, &assist)) return false;
+            const uint32_t underlying = form ? form : base;
+            uint16_t ignored = 0;
+            if (!underlying || underlying >= catalogCount ||
+                !PHBattleNumberForCatalogID(underlying, &m.identityNumber) ||
+                (assist && (assist >= catalogCount || !PHBattleNumberForCatalogID(assist, &ignored)))) return false;
+            m.identityAssist = assist;
+        }
+        m.temporaryKnown = true;
         for (unsigned skill = 0; skill < 2; ++skill) {
             uint32_t stage = 0, uses = 0;
             if (!SmallProtected(member + 344 + 16 * skill, key1, key2, UINT8_MAX, stage) ||

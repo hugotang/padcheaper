@@ -166,6 +166,7 @@ static void ShapeTests() {
 #include "orb_thorn_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
 #include "orb_t_boundary_solver_tests.inc"
+#include "orb_search_recovery_tests.inc"
 
 int main() {
     ShapeTests();
@@ -173,6 +174,7 @@ int main() {
     OrbEffectSolverTests();
     ThornSolverTests();
     OrbShapeSolverTests();
+    SearchRecoveryTests();
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
         PHOrbSnapshot snapshot{}; snapshot.board = Board(dimensions.first, dimensions.second, 7);

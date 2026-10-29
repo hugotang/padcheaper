@@ -151,9 +151,22 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
         uint16_t assist = 0;
         unsigned number = [profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue];
         if (number && !PHBattleCatalogIDForNumber(number, &assist)) return NO;
-        if (!member->active || member->number != [bodies[i] unsignedIntValue] || member->assistCatalogID != assist) return NO;
+        if (!member->active || member->temporaryTurns || member->number != [bodies[i] unsignedIntValue] || member->assistCatalogID != assist) return NO;
     }
     return YES;
+}
+
+BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state) {
+    if (!state || !state->automation.valid) return NO;
+    PHOrbSnapshot identity = *state;
+    for (NSUInteger i = 0; i < 6; ++i) {
+        PHOrbSkillMember *member = &identity.automation.members[i];
+        if (!member->temporaryTurns) continue;
+        if (!member->temporaryKnown || !member->temporaryID || !member->identityNumber) return NO;
+        member->number = member->identityNumber; member->assistCatalogID = member->identityAssist;
+        member->temporaryTurns = 0;
+    }
+    return PHOrbProfileMatchesOpeningTeam(profile, &identity, [profile[@"opening"] count]);
 }
 
 NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {

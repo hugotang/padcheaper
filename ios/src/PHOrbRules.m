@@ -215,8 +215,14 @@ PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *st
         return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"目前第 %u 層，不是指定的第 %@ 層", state->wave + 1, rule[@"floor"]], reason);
     if (!state->automation.valid) return Explained(PHOrbRuleUnknown, @"技能與隊伍資料無法確認", reason);
     const PHOrbSkillMember *member = &state->automation.members[[rule[@"slot"] unsignedIntegerValue] - 1];
-    if ([rule[@"monster"] unsignedIntValue] && [rule[@"monster"] unsignedIntValue] != member->number)
-        return Explained(PHOrbRuleNo, @"目前角色形態不符合指定編號", reason);
+    if ([rule[@"monster"] unsignedIntValue] && [rule[@"monster"] unsignedIntValue] != member->number) {
+        // A required cleanse must remain a live requirement when its caster
+        // is temporarily replaced. Session availability blocks the old skill;
+        // this exception only evaluates whether its rescue is still needed.
+        if (![rule[@"required"] boolValue] || !member->temporaryKnown || !member->temporaryTurns ||
+            !member->temporaryID || [rule[@"monster"] unsignedIntValue] != member->identityNumber)
+            return Explained(PHOrbRuleNo, @"目前角色形態不符合指定編號", reason);
+    }
     NSMutableArray *matched = [NSMutableArray array];
     NSUInteger hpLimit = [rule[@"hpAtMost"] unsignedIntegerValue];
     if (hpLimit) {

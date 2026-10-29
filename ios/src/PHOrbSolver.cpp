@@ -16,7 +16,7 @@ using Bits = uint64_t;
 using Clock = std::chrono::steady_clock;
 constexpr uint8_t Empty = 255;
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
-struct Pattern { Bits cells, border; };
+struct Pattern { Bits cells, border; uint16_t stableColors = 63; };
 struct Context {
     unsigned width, height;
     PHOrbGoalSet goals;
@@ -26,7 +26,7 @@ struct Context {
     Bits dynamicSpinners = 0;
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
-    bool guidance = true;
+    bool guidance = true, stableHints = true;
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
@@ -140,6 +140,21 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
             return Count(pattern.cells) < context.minMatch || MarkedRuns(pattern.cells, context) != pattern.cells;
         }), patterns.end());
     }
+    // Guide toward one layout that can survive every shared phase. The old
+    // per-phase minima could keep chasing different, incompatible layouts.
+    // These masks affect hints only: exact matches still examine all phases.
+    // Locked/single-color spinners are stable; a border spinner whose cycle
+    // excludes the target color cannot spoil an exact shape's border.
+    if (context.variants > 1) for (unsigned g = 0; g < goals.count; ++g) {
+        const auto kind = goals.items[g].kind;
+        if (kind < PHOrbGoalL) continue;
+        for (auto &pattern : context.patterns[g]) {
+            if (pattern.cells & context.dynamicSpinners) pattern.stableColors = 0;
+            else if (kind != PHOrbGoalFour && kind != PHOrbGoalRow && kind != PHOrbGoalColumn &&
+                     (pattern.border & context.dynamicSpinners))
+                pattern.stableColors &= ~board.spinnerColors;
+        }
+    }
     if (context.guidance && context.shapeGoals) for (unsigned i = 0; i < w * h; ++i) {
         Bits frontier = Bits(1) << i, seen = frontier;
         if (frontier & context.blocked) continue;
@@ -241,6 +256,7 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
         const Bits color = colors[c];
         for (unsigned p = 0; p < context.patterns[g].size(); ++p) {
             const auto &pattern = context.patterns[g][p];
+            if (context.stableHints && !(pattern.stableColors & (1u << c))) continue;
             ShapeHint hint{pattern.cells, pattern.border, 4096, uint16_t(1 + p * PHOrbBasicTypes + c), uint8_t(c), exact};
             if (met) {
                 if ((pattern.cells & used & color) == pattern.cells) OfferHint(hints, hint);
@@ -569,13 +585,27 @@ uint64_t LayoutKey(const Node &node, const Context &context) {
     return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals);
 }
 
-void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth, const Context &context) {
+bool BetterForSearch(const Node &a, const Node &b, unsigned focus) {
+    if (focus < PHOrbMaxGoals && a.score.result.hazardsSafe == b.score.result.hazardsSafe &&
+        !a.score.result.goalsMet && !b.score.result.goalsMet &&
+        a.score.result.poisonErased == b.score.result.poisonErased &&
+        a.score.result.unmatchedBombs == b.score.result.unmatchedBombs) {
+        const unsigned av = a.score.progress + 3 * a.score.goalProgress[focus];
+        const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
+        if (av != bv) return av > bv;
+    }
+    return Better(a, b);
+}
+
+void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth,
+                const Context &context, unsigned focus, std::vector<Node> *discarded = nullptr) {
     const size_t keep = std::min(size_t(limit), next.size());
+    const auto order = [focus](const Node &a, const Node &b) { return BetterForSearch(a, b, focus); };
     if (!context.shapeGoals || keep < 4 || keep == next.size()) {
-        std::partial_sort(next.begin(), next.begin() + keep, next.end(), Better);
+        std::partial_sort(next.begin(), next.begin() + keep, next.end(), order);
         next.resize(keep); beam.swap(next); return;
     }
-    std::sort(next.begin(), next.end(), Better);
+    std::sort(next.begin(), next.end(), order);
     beam.clear();
     const size_t elite = keep - keep / 4, none = next.size();
     std::vector<bool> selected(next.size());
@@ -610,6 +640,12 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
     }
     // A small pool with identical layouts still fills its bounded quota.
     for (size_t i = elite; i < next.size() && beam.size() < keep; ++i) if (!selected[i]) take(i);
+    if (discarded) {
+        const size_t cap = std::min(size_t(128), keep);
+        std::unordered_set<uint64_t> alternatives;
+        for (size_t i = 0; i < next.size() && discarded->size() < cap; ++i)
+            if (!selected[i] && alternatives.insert(LayoutKey(next[i], context)).second) discarded->push_back(next[i]);
+    }
     // Interleave reserved candidates so a deadline halfway through the next
     // layer can still explore them instead of expanding all elites first.
     next.clear();
@@ -625,7 +661,7 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
 PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
     switch (quality) {
         case PHOrbSearchQuality::Fast: return {24, 128, 120, {}};
-        case PHOrbSearchQuality::Thorough: return {48, 512, 800, {}};
+        case PHOrbSearchQuality::Thorough: return {48, 512, 800, {}, {}, 1, 2};
         case PHOrbSearchQuality::Balanced: return {};
     }
     return {};
@@ -669,7 +705,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
-        !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > 1000) return PHOrbSolveStatus::Invalid;
+        !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > 1000 ||
+        options.recoveryPasses > 1 || options.backtrackLimit > 2) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
@@ -689,47 +726,95 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // evaluation. Check the clock between each such candidate.
         const unsigned deadlineMask = context.variants > 1 || context.shapeGoals ? 0u : options.goals.count ? 7u : 31u;
         if (!EnoughOrbs(initial, context)) return PHOrbSolveStatus::InsufficientOrbs;
-        std::vector<Node> beam, next;
-        beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * 4);
+        std::vector<Node> starts, beam, next;
+        starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * 4);
         for (unsigned i = 0; i < size; ++i) {
             if (!PHOrbCanStartAt(&board, i)) continue;
-            Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); beam.push_back(node);
+            Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); starts.push_back(node);
         }
+        struct Frontier { unsigned depth; std::vector<Node> nodes; };
+        std::vector<Frontier> saved;
         Node best;
         bool found = false, timedOut = false;
-        unsigned evaluated = 0;
+        unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
         std::unordered_set<uint64_t> visited;
         visited.reserve(options.beam * 4);
-        for (unsigned depth = 0; depth < options.steps && !timedOut; ++depth) {
-            next.clear(); visited.clear();
-            for (const Node &parent : beam) {
-                unsigned current = parent.path[parent.length - 1];
-                for (int cell : {int(current) - int(board.width), int(current) + int(board.width), int(current) - 1, int(current) + 1}) {
-                    if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
-                    if ((evaluated & deadlineMask) == 0 && Clock::now() >= deadline) { timedOut = true; break; }
-                    if (cell < 0 || !PHOrbAdjacent(current, unsigned(cell), board.width, board.height) ||
-                        (blocked & (Bits(1) << cell)) ||
-                        (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
-                    Node child = parent;
-                    if (child.thorns[cell]) {
-                        const uint32_t damage = damageTable[child.thorns[cell]];
-                        if (!budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
-                        child.thornDamage += damage; ++child.thornContacts;
+        const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
+        const bool recover = context.shapeGoals && options.recoveryPasses;
+        const bool retain = context.shapeGoals && options.backtrackLimit && options.steps >= 12;
+        const auto primaryDeadline = recover ? start + (deadline - start) * 2 / 3 : deadline;
+        auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
+                          Clock::time_point passDeadline, bool saveFrontiers) {
+            ++passes;
+            bool passEnded = false;
+            for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
+                next.clear(); visited.clear();
+                for (const Node &parent : beam) {
+                    unsigned current = parent.path[parent.length - 1];
+                    for (int cell : {int(current) - int(board.width), int(current) + int(board.width), int(current) - 1, int(current) + 1}) {
+                        if (cancel.load(std::memory_order_relaxed)) return;
+                        if ((evaluated & deadlineMask) == 0) {
+                            const auto now = Clock::now();
+                            if (now >= deadline) { timedOut = true; break; }
+                            // A successful main search can spend the remaining
+                            // budget improving combos. Otherwise reserve time
+                            // for a different score or a discarded frontier.
+                            if (now >= passDeadline && !met()) { passEnded = true; break; }
+                        }
+                        if (cell < 0 || !PHOrbAdjacent(current, unsigned(cell), board.width, board.height) ||
+                            (blocked & (Bits(1) << cell)) ||
+                            (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
+                        Node child = parent;
+                        if (child.thorns[cell]) {
+                            const uint32_t damage = damageTable[child.thorns[cell]];
+                            if (!budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
+                            child.thornDamage += damage; ++child.thornContacts;
+                        }
+                        child.path[child.length++] = uint8_t(cell);
+                        std::swap(child.cells[current], child.cells[cell]);
+                        std::swap(child.thorns[current], child.thorns[cell]);
+                        if (!visited.insert(Hash(child, size)).second) continue;
+                        child.score = Evaluate(child.cells, scoring);
+                        if (child.thornContacts && !child.score.result.heartFours) child.score.result.hazardsSafe = false;
+                        ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
+                        if (!found || Better(child, best)) { best = child; found = true; }
+                        next.push_back(child);
                     }
-                    child.path[child.length++] = uint8_t(cell);
-                    std::swap(child.cells[current], child.cells[cell]);
-                    std::swap(child.thorns[current], child.thorns[cell]);
-                    if (!visited.insert(Hash(child, size)).second) continue;
-                    child.score = Evaluate(child.cells, context);
-                    if (child.thornContacts && !child.score.result.heartFours) child.score.result.hazardsSafe = false;
-                    ++evaluated;
-                    if (!found || Better(child, best)) { best = child; found = true; }
-                    next.push_back(child);
+                    if (passEnded || timedOut) break;
                 }
-                if (timedOut) break;
+                if (next.empty() || passEnded || timedOut || depth + 1 == options.steps) break;
+                // Keep at most two small frontiers from early and middle
+                // depths. These are genuinely discarded nodes, not copies
+                // of the beam that the first pass already expanded.
+                const bool checkpoint = saveFrontiers && !met() && saved.size() < options.backtrackLimit &&
+                    (depth + 1 == options.steps / 4 || depth + 1 == options.steps / 2);
+                if (checkpoint) {
+                    Frontier frontier{depth + 1, {}};
+                    SelectBeam(next, beam, options.beam, depth, scoring, focus, &frontier.nodes);
+                    if (!frontier.nodes.empty()) saved.push_back(std::move(frontier));
+                } else SelectBeam(next, beam, options.beam, depth, scoring, focus);
             }
-            if (next.empty() || timedOut || depth + 1 == options.steps) break;
-            SelectBeam(next, beam, options.beam, depth, context);
+        };
+        beam = starts;
+        search(context, 0, PHOrbMaxGoals, primaryDeadline, retain);
+        if (recover && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
+            Context recovery = context;
+            // Alternate layouts can collectively satisfy all phases even
+            // when no single layout is phase-independent. Never delete those
+            // possibilities from exact evaluation or the recovery search.
+            recovery.stableHints = false;
+            const auto now = Clock::now();
+            const auto recoveryDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
+            beam = starts;
+            search(recovery, 0, found ? best.score.focus : 0, recoveryDeadline, false);
+        }
+        while (!saved.empty() && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
+            auto frontier = std::move(saved.back()); saved.pop_back();
+            const auto now = Clock::now();
+            if (now >= deadline) { timedOut = true; break; }
+            const auto passDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
+            beam = std::move(frontier.nodes); ++backtracks;
+            search(context, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
         }
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         if (!found) return PHOrbSolveStatus::NoRoute;
@@ -746,6 +831,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const auto finished = Clock::now();
         route.evaluated = evaluated; route.deadlineReached = timedOut || finished >= deadline;
         route.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(finished - start).count());
+        route.searchPasses = uint8_t(passes); route.backtracks = uint8_t(backtracks); route.exploredDepth = uint8_t(exploredDepth);
         PHOrbBoard replay{};
         if (!PHOrbReplay(&board, &route, route.count - 1, &replay) || std::memcmp(replay.types, best.cells.data(), size)) {
             route = {}; return PHOrbSolveStatus::Failed;

@@ -26,7 +26,109 @@ static PHOrbSession *PlanSession(FakeOrbEngine *engine, NSDictionary *profile) {
         "complete plan accepted by the session");
     Tick(session,engine,Frame()); [session queueAutomatic]; return session;
 }
+static void SetTemporaryForm(FakeOrbEngine *engine, unsigned slot) {
+    auto &member = engine->live.automation.members[slot];
+    member.identityNumber = member.number; member.identityAssist = member.assistCatalogID;
+    member.number = 4264; member.assistCatalogID = 0;
+    member.temporaryKnown = true; member.temporaryTurns = 3;
+    PHBattleCatalogIDForNumber(4264, &member.temporaryID);
+    if (slot == 0 || slot == 5) { engine->live.leadersValid = true; engine->live.leaderNumbers[slot == 5] = 4264; }
+}
+static void TemporaryPlanSessionTests() {
+    NSMutableDictionary *profile = [PlanSessionProfile() mutableCopy];
+    NSMutableDictionary *leader = [PHOrbDefaultSkillRule() mutableCopy];
+    leader[@"slot"] = @1; leader[@"monster"] = @14038; leader[@"source"] = @"body"; leader[@"skill"] = @64787;
+    NSMutableDictionary *other = [PHOrbDefaultSkillRule() mutableCopy]; other[@"slot"] = @5; other[@"monster"] = @14065;
+    profile[@"settings"] = @{@"quality":@"fast", @"mode":@"manual",
+        @"goals":@[@{@"kind":@"combo",@"colors":@0,@"count":@1,@"length":@0}], @"rules":@[leader,other]};
+    for (unsigned scenario = 0; scenario < 6; ++scenario) {
+        NSMutableDictionary *currentProfile = [profile mutableCopy];
+        if (scenario == 5) {
+            NSMutableDictionary *settings = [currentProfile[@"settings"] mutableCopy];
+            settings[@"mode"] = @"leaders"; currentProfile[@"settings"] = settings;
+        }
+        FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = PlanSession(engine,currentProfile);
+        for (unsigned i = 0; i < 3000 && [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] < 6; ++i)
+            Tick(session,engine,Frame());
+        Check(engine->skillOrder.size() == 6, "temporary form fixture completes opening once");
+        engine->chosenSkill[0] = 64787;
+        SetTemporaryForm(engine,0); engine->live.leaderNumbers[1] = 14065;
+        if (scenario == 1) engine->live.automation.members[0].temporaryKnown = false;
+        if (scenario == 2) ++engine->live.automation.members[0].identityAssist;
+        if (scenario == 3) engine->live.automation.members[0].temporaryTurns = 0;
+        if (scenario == 4) {
+            [session queueStop:@"stop during temporary form"]; [session queueAutomatic];
+        }
+        if (scenario >= 1 && scenario <= 3) {
+            for (unsigned i = 0; i < 60 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+            Check(![[session snapshot][@"automatic"] boolValue] && engine->skillOrder.size() == 6 && !engine->stages,
+                "unknown temporary state, changed underlying assist or persistent replacement cannot bypass plan binding");
+            continue;
+        }
+        if (scenario == 5) {
+            // Whether the current pair is supported or not, the new plan
+            // must use the actual temporary leader, never its identity ID.
+            for (unsigned i = 0; i < 2500 && ![[session snapshot][@"goalPlan"] count] &&
+                [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+            NSDictionary *actual = [session snapshot][@"goalPlan"];
+            NSDictionary *expected = PHOrbPlanForLeaders(&engine->live);
+            Check([actual[@"leaders"] isEqual:expected[@"leaders"]] &&
+                [actual[@"goals"] isEqual:expected[@"goals"]] &&
+                [actual[@"available"] isEqual:expected[@"available"]] &&
+                [[actual[@"leaders"] firstObject] containsString:@"#4264"] &&
+                [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6,
+                "leader mode rebuilds current temporary leader goals after preserving the completed opening");
+            [session queueStop:@"end current temporary leader plan fixture"];
+            continue;
+        }
+        Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.size() == 7 && engine->skillOrder.back() == 4 &&
+            [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6 &&
+            [[session snapshot][@"goalPlan"][@"warning"] containsString:@"暫時變身"],
+            "a temporary leader permits other loop skills and manual goals, preserves opening and reports changed leader conditions");
+        Check([[[session snapshot][@"ruleDecisions"] componentsJoinedByString:@" "] containsString:@"原形態技能暫停"],
+            "the original leader skill is explicitly skipped without a native attempt");
+        for (unsigned i = 0; i < 5; ++i) Tick(session,engine,Frame());
+        auto &member = engine->live.automation.members[0];
+        member.number = member.identityNumber; member.assistCatalogID = member.identityAssist; member.temporaryTurns = 0;
+        engine->live.leaderNumbers[0] = member.number;
+        engine->live.phase = 2; engine->live.moves = 0; engine->live.settled = true; ++engine->live.wave;
+        for (unsigned i = 0; i < 2500 && engine->skillOrder.size() < 8 && [[session snapshot][@"automatic"] boolValue]; ++i)
+            Tick(session,engine,Frame());
+        Check(engine->skillOrder.size() >= 8 && engine->skillOrder[7] == 0 &&
+            [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6,
+            "the original leader resumes its skill after native restoration without replaying the opening");
+        [session queueStop:@"end temporary leader fixture"];
+    }
+    FakeOrbEngine *explicitEngine = [FakeOrbEngine new]; SetTemporaryForm(explicitEngine,2);
+    NSMutableDictionary *explicitRule = [PHOrbDefaultSkillRule() mutableCopy];
+    explicitRule[@"slot"] = @3; explicitRule[@"monster"] = @4264;
+    PHOrbSession *explicitSession = AutomaticSession(explicitEngine,@[explicitRule]);
+    Check(UntilPhase(explicitSession,explicitEngine,@"skillWaiting") && explicitEngine->skillOrder.size() == 1 &&
+        explicitEngine->skillOrder[0] == 2,
+        "an explicit rule for the actual temporary monster may still request its current native skill");
+    [explicitSession queueStop:@"end explicit temporary skill fixture"];
+    // Required rescue is independent from the temporary caster's availability.
+    for (bool rescueNeeded : {false,true}) {
+        FakeOrbEngine *engine = [FakeOrbEngine new];
+        NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy];
+        rescue[@"slot"] = @3; rescue[@"monster"] = @102; rescue[@"status"] = @"awoken_bind"; rescue[@"required"] = @YES;
+        SetTemporaryForm(engine,2);
+        engine->live.automation.playerEffects = rescueNeeded ? PHOrbPlayerAwokenBind : 0;
+        PHOrbSession *session = AutomaticSession(engine,@[rescue]);
+        if (rescueNeeded) {
+            FinishSurvivalAttempt(session,engine);
+            Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.empty() &&
+                [[session snapshot][@"message"] containsString:@"必要規則"] && [[session snapshot][@"message"] containsString:@"暫時變身"],
+                "a required cleanse cannot disappear because its original caster temporarily became another monster");
+        } else {
+            Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.empty(),
+                "temporary rescue caster does not stop a turn with no corresponding status");
+            [session queueStop:@"end unneeded temporary rescue fixture"];
+        }
+    }
+}
 static void PlanSessionTests() {
+    TemporaryPlanSessionTests();
     NSDictionary *profile = PlanSessionProfile();
     FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = PlanSession(engine,profile);
     const std::vector<NSUInteger> expected{4,0,3,1,2,5};

@@ -8,6 +8,8 @@ struct PHOrbSolveOptions {
     unsigned milliseconds = 350;
     PHOrbGoalSet goals{};
     PHOrbThornState thorns{};
+    unsigned recoveryPasses = 1;
+    unsigned backtrackLimit = 0;
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
@@ -31,5 +33,7 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept;
 // One caller-owned worker, immutable input, no native/game calls or process exit.
+// Recovery passes and at most two saved, discarded frontiers share the original
+// deadline; neither changes exact evaluation or the maximum gesture length.
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

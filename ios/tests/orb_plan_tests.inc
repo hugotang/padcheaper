@@ -41,4 +41,21 @@ static void PlanTests(void) {
         "transformation only matches the confirmed opening progress, never a fresh opening");
     ++state.automation.members[5].assistCatalogID;
     Check(!PHOrbProfileMatchesOpeningTeam(profile,&state,2), "same body with a different assist cannot resume a plan");
+    --state.automation.members[5].assistCatalogID;
+    PHOrbSkillMember *member = &state.automation.members[0];
+    member->identityNumber = 14038; member->identityAssist = member->assistCatalogID;
+    member->number = 4264; member->temporaryKnown = true; member->temporaryTurns = 3;
+    PHBattleCatalogIDForNumber(4264, &member->temporaryID); member->assistCatalogID = 0;
+    Check(PHOrbProfileMatchesRunningTeam(profile,&state) && !PHOrbProfileMatchesOpeningTeam(profile,&state,2),
+        "native temporary form retains final plan identity while the opening remains strict");
+    member->temporaryKnown = false;
+    Check(!PHOrbProfileMatchesRunningTeam(profile,&state), "unverified temporary identity cannot bypass the team gate");
+    member->temporaryKnown = true; member->identityNumber = 14037;
+    Check(!PHOrbProfileMatchesRunningTeam(profile,&state), "temporary identity must match the completed transformation");
+    member->identityNumber = 14038; ++member->identityAssist;
+    Check(!PHOrbProfileMatchesRunningTeam(profile,&state), "temporary form cannot hide an actual change of underlying assist");
+    --member->identityAssist; member->temporaryTurns = 0;
+    Check(!PHOrbProfileMatchesRunningTeam(profile,&state), "a persistent unexpected substitution still stops the plan");
+    member->number = 14038; member->assistCatalogID = member->identityAssist;
+    Check(PHOrbProfileMatchesRunningTeam(profile,&state), "restored original form resumes the same completed plan");
 }

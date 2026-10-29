@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--baseline-commit", default="2c3362d7a928d64e83837dc0f92d9505d0da8a38")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     fixture = json.loads((root / "ios/research/orb-shape-0407.json").read_text(encoding="utf-8-sig"))
@@ -101,7 +102,7 @@ def main():
     report = {
         "schema": 1, "platform": platform.platform(), "machine": platform.machine(),
         "scope": "Ordinary screenshot transcription and synthetic basic boards; no native timer/effects or device performance claim.",
-        "baseline_commit": "2c3362d7a928d64e83837dc0f92d9505d0da8a38",
+        "baseline_commit": args.baseline_commit,
         "candidate_source_sha256": hashlib.sha256((root / "ios/src/PHOrbSolver.cpp").read_bytes()).hexdigest(),
         "probe_source_sha256": hashlib.sha256((root / "ios/research/orb_shape_probe.cpp").read_bytes()).hexdigest(),
         "binaries": {name: {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}

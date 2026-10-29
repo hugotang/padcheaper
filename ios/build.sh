@@ -68,6 +68,8 @@ cp ios/docs/orb-effects.md "$build_dir/orb-effects.md"
 cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
 cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
 cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
+cp ios/docs/release-0.5.7.md "$build_dir/release-0.5.7.md"
+cp ios/docs/solver-research-2026-10-30.md "$build_dir/solver-research-2026-10-30.md"
 cp ios/docs/release-0.5.6.md "$build_dir/release-0.5.6.md"
 cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
 mkdir -p "$build_dir/templates"
@@ -84,6 +86,7 @@ mkdir -p "$build_dir/research"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
 cp ios/research/orb-shape-0407.json "$build_dir/research/"
 cp ios/research/orb_shape_probe.cpp ios/research/orb_shape_benchmark.py ios/research/orb-shape-results.json "$build_dir/research/"
+cp ios/research/orb-spinner-20261030.json ios/research/orb-shape-results-057.json "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -110,7 +113,7 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md"):
+for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
@@ -132,6 +135,7 @@ metadata = {
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
     "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; atomic single-file config commit; source/skill constraints never force a native choice; explicit start; in-process opening progress",
+    "temporary_team_form": "validated native temporary identity preserves completed opening; original/generic actor skills pause, explicit current-monster rules may run; required rescue remains enforced; actual current leaders determine leader-mode goals",
     "orb_release_trace": "fresh actual-board evaluation before release; bounded last-three accepted routes and search trace; poison-stop counts; no device first-wave confirmation",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
@@ -148,7 +152,7 @@ metadata = {
     "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable and removal rules applied; jammer ordinary combos, no deterministic poison/mortal matches, all bombs must clear first wave; thorn target contacts require current HP above pending plus route damage upper bound and first-wave heart four, without crediting healing/resistance; unknown effects still block",
     "skill_orb_conditions": "native refusal may explain direct composite type-255 color counts; only actual attempt context retained; no bypass of native readiness; color-specific unmatchable rule uses ANY selected basic color, other predicates remain AND",
     "orb_spinners": "validate all six stored row masks before clipping to the current board after resize; offscreen cells do not block; custom types 0-9; avoid every visible spinner cell; all shared phases must meet goals and hazards; no timed color capture; raw read diagnostics retained; pending device verification",
-    "orb_shape_search": "first-wave exact four uses actual marked groups, permitting unmarked same-color neighbors; other exact shapes retain conservative borders; bounded repair-distance and joint-template guidance, weakest-goal progress and interleaved diverse beam candidates; unchanged quality budgets; per-goal failure and search-time diagnostics; performance and device verification pending",
+    "orb_shape_search": "exact four uses first-wave marked groups; other exact shapes retain conservative borders; phase-stable primary hints with alternate missing-goal recovery and at most two discarded-frontier revisits in thorough mode; original total time and path budgets; exact all-phase validation unchanged; passes/backtracks/deepest diagnostics; device verification pending",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",

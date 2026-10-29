@@ -115,6 +115,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSMutableArray *orbCounts = [NSMutableArray array];
     if (known) for (unsigned count : counts) [orbCounts addObject:@(count)];
     return @{@"number":@(member.number), @"state":@(member.state), @"charge":@(member.charge),
+        @"identityNumber":@(member.identityNumber), @"identityAssist":@(member.identityAssist),
+        @"temporaryKnown":@(member.temporaryKnown), @"temporaryID":@(member.temporaryID), @"temporaryTurns":@(member.temporaryTurns),
         @"selection":@(member.selection), @"active":@(member.active), @"bound":@(member.bound),
         @"skillStages":@[@(member.skillStage[0]), @(member.skillStage[1])],
         @"cachedSkillStages":@[@(member.cachedSkillStage[0]), @(member.cachedSkillStage[1])],
@@ -147,6 +149,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSDictionary *_openingProfile;
     NSMutableArray<NSDictionary *> *_openingLog;
     NSUInteger _openingStep;
+    uint8_t _temporaryMask;
     bool _openingInFlight, _openingAcknowledged, _openingStarted;
     PHOrbSnapshot _openingBefore;
     NSDictionary *_searchTrace;
@@ -345,7 +348,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 - (void)observeRuleHistory:(const PHOrbSnapshot *)state read:(BOOL)read {
     if (!read) return;
     if (!state->present) {
-        _openingProfile = nil; _openingStep = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
         [_openingLog removeAllObjects];
         _historyBound = _historyResolve = false; [_onceRules removeAllObjects];
         _historyRules = nil;
@@ -357,7 +360,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!state->valid || state->multiplayerDisabled ||
         !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) return;
     if (!_historyBound || !PHBattleSameIdentity(&_historyIdentity, &state->identity)) {
-        _openingProfile = nil; _openingStep = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
         [_openingLog removeAllObjects];
         _historyIdentity = state->identity; _historyBound = true; _historyResolve = false;
         _historyRules = nil;
@@ -407,7 +410,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 _openingProfile = _activeProfile; _openingStep = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
                 [_openingLog removeAllObjects];
             }
-            if (!_openingInFlight && !PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep)) {
+            const bool openingDone = resume && _openingStep == [_openingProfile[@"opening"] count];
+            if (!_openingInFlight && !(openingDone ? PHOrbProfileMatchesRunningTeam(_openingProfile, state) :
+                PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep))) {
                 [self queueStop:@"目前本體／武裝與已確認的開場進度不符，未重播技能"]; return NO;
             }
             if (_openingInFlight && !_openingStarted) {
@@ -520,7 +525,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [self waitForAutomationBoard]; return;
     }
     if (_activeProfile[@"formation"]) {
-        if (!PHOrbProfileMatchesOpeningTeam(_activeProfile, &_live, _openingStep)) {
+        const bool openingDone = _openingStep == [_activeProfile[@"opening"] count];
+        if (!(openingDone ? PHOrbProfileMatchesRunningTeam(_activeProfile, &_live) :
+              PHOrbProfileMatchesOpeningTeam(_activeProfile, &_live, _openingStep))) {
             [self queueStop:@"隊伍形態或武裝與本次流程不符，已停止"]; return;
         }
         if (_openingStep < [_activeProfile[@"opening"] count]) {
@@ -532,6 +539,17 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             return;
         }
     }
+    uint8_t temporaryMask = 0;
+    for (unsigned slot = 0; slot < 6; ++slot) {
+        const auto &member = _live.automation.members[slot];
+        if (member.temporaryTurns) {
+            temporaryMask |= uint8_t(1u << slot);
+            if (!(_temporaryMask & (1u << slot))) [self logAutomation:[NSString stringWithFormat:
+                @"位置 %u 暫時變身：#%u → #%u；保留流程，略過原形態技能", slot + 1, member.identityNumber, member.number]];
+        } else if (_temporaryMask & (1u << slot)) [self logAutomation:[NSString stringWithFormat:
+            @"位置 %u 暫時變身已結束，恢復原技能循環", slot + 1]];
+    }
+    _temporaryMask = temporaryMask;
     if (_decisionTurn != _autoTurn) [_skillAttemptContexts removeAllObjects];
     [_ruleDecisions removeAllObjects]; _decisionTurn = _autoTurn;
     _decisionRules = _skillRules; _decisionState = _live;
@@ -563,6 +581,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             unavailable = [NSString stringWithFormat:@"此位置保留至第 %lu 層", (unsigned long)PHOrbSkillReservedUntil(_skillRules, slot)];
         else if (_unavailableRules & (1u << i)) unavailable = _unavailableReasons[@(i)] ?: @"遊戲判定技能不可用";
         else if (!member->active) unavailable = @"此位置沒有可使用的隊員";
+        else if (member->temporaryTurns && (!member->temporaryKnown ||
+                 [rule[@"monster"] unsignedIntValue] != member->number))
+            unavailable = [NSString stringWithFormat:@"暫時變身為 #%u，原形態技能暫停", member->number];
         else if (member->bound) unavailable = @"施放者被綁定";
         else if (member->state) unavailable = @"施放者尚未回到待命狀態";
         // Optional rules retain the previous short circuit: unavailable
@@ -645,6 +666,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
     _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
+    if ([_goalMode isEqual:@"manual"] && _preview.automation.valid &&
+        (_preview.automation.members[0].temporaryTurns || _preview.automation.members[5].temporaryTurns)) {
+        NSMutableDictionary *plan = [_goalPlan mutableCopy];
+        NSString *warning = @"隊長／助人正在暫時變身；保留指定盤面目標，這些目標不代表目前隊長的倍率或減傷已發動。";
+        plan[@"warning"] = [plan[@"warning"] length] ? [plan[@"warning"] stringByAppendingFormat:@"\n%@", warning] : warning;
+        _goalPlan = [plan copy];
+    }
     _recoveryTurn = _automatic ? _autoTurn : 0;
     if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
         _phase = @"blocked"; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
@@ -679,6 +707,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
             trace[@"path"] = RouteCells(route); trace[@"elapsedMS"] = @(route.elapsedMS);
             trace[@"evaluated"] = @(route.evaluated); trace[@"deadline"] = @(route.deadlineReached);
+            trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
+            trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";
@@ -1109,6 +1139,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"searchBudgetMS":@(_solveOptions.milliseconds),
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),
+        @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
         @"completed":@(_completed), @"cancelled":@(_cancelled), @"inputFrames":@(_sentFrames), @"inputFault":@(_inputFault),
         @"startSent":@(_startSent), @"startAccepted":@(_startSent && !_awaitingStart),
         @"multiplayerDisabled":@(_live.multiplayerDisabled), @"nativePhase":@(_live.phase), @"wave":@(_live.wave),

@@ -942,6 +942,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"inputFault"], orbs[@"board"][@"width"], orbs[@"board"][@"height"], orbs[@"settled"], orbs[@"ordinary"],
         orbs[@"nativePhase"], orbs[@"wave"], orbs[@"moves"], orbs[@"remainingFrames"], orbs[@"fps"], orbs[@"quality"],
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb search passes: %@ / backtracks %@ / deepest %@ steps",
+        orbs[@"searchPasses"], orbs[@"backtracks"], orbs[@"exploredDepth"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
         orbs[@"startSent"], orbs[@"startAccepted"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb execution: %@ ms / limit %@ ms",
@@ -984,6 +986,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             @" / skill stages %@ / cached stages %@ / levels %@ / use counts %@ / assist catalog %@",
             decision[@"skillStages"], decision[@"cachedSkillStages"], decision[@"skillLevels"],
             decision[@"memberSkillUses"], decision[@"assistCatalogID"]];
+        if ([decision[@"temporaryTurns"] unsignedIntValue]) diagnostics = [diagnostics stringByAppendingFormat:
+            @" / temporary %@ / original #%@ / original assist %@ / native duration %@",
+            decision[@"temporaryKnown"], decision[@"identityNumber"], decision[@"identityAssist"], decision[@"temporaryTurns"]];
         diagnostics = [diagnostics stringByAppendingFormat:
             @"\n  Observation: %@ / phase %@ / wave %@ / skill uses %@ / board %@×%@ / spinners %@ / orb counts [fire,water,wood,light,dark,heart,jammer,poison,mortal,bomb]: [%@]",
             [decision[@"nativeAttempt"] boolValue] ? @"native attempt" : @"rule scan", decision[@"observedPhase"],
