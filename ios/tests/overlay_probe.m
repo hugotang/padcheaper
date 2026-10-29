@@ -12,6 +12,7 @@ static NSMutableArray<NSString *> *PHProbeFailures;
 static UIWindow *PHProbeLegacyOverlay;
 static NSHashTable<UIWindow *> *PHProbeLegacyWindows;
 static NSDictionary *PHProbeRestartLibrary;
+static NSMutableArray<NSDictionary *> *PHProbeGeometry;
 
 @interface UIViewController (PHProbeOverlayState)
 - (void)updateWithSnapshot:(NSDictionary *)snapshot;
@@ -31,7 +32,8 @@ static void PHProbeCheck(BOOL condition, NSString *message) {
 }
 
 static void PHProbeReport(NSString *phase) {
-    NSDictionary *report = @{@"phase": phase, @"success": @(PHProbeFailures.count == 0), @"failures": PHProbeFailures};
+    NSDictionary *report = @{@"phase": phase, @"success": @(PHProbeFailures.count == 0), @"failures": PHProbeFailures,
+        @"geometry":PHProbeGeometry ?: @[]};
     NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:NULL];
     [data writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Documents/overlay-probe.json"] atomically:YES];
 }
@@ -218,6 +220,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     }
     PHProbeRoot = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
     PHProbeFailures = [NSMutableArray array];
+    PHProbeGeometry = [NSMutableArray array];
     [NSFileManager.defaultManager createDirectoryAtPath:PHProbeRoot withIntermediateDirectories:YES attributes:nil error:NULL];
     PHProbeRestartLibrary = PHProbeJSON(@"formation-restart.json");
     if (!PHProbeRestartLibrary) {
@@ -797,8 +800,10 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Disabled shortcuts retain a visible result without requiring the settings page");
             [overlay.rootViewController setValue:[NSValue valueWithCGPoint:CGPointMake(1, .20)] forKey:@"position"];
             [overlay.rootViewController.view setNeedsLayout]; [overlay.rootViewController.view layoutIfNeeded];
-            BOOL orbWasHidden = orbWindow.hidden; orbWindow.hidden = YES;
-            PHProbeRender(self.window, overlay, @"orb-shortcuts"); orbWindow.hidden = orbWasHidden;
+            // Render these two windows directly. Hiding and immediately
+            // reattaching the live editor window solely for a screenshot
+            // starts a UIKit scene transition unrelated to the user action.
+            PHProbeRender(self.window, overlay, @"orb-shortcuts");
             [overlay.rootViewController setValue:@YES forKey:@"expanded"];
             PHProbeFind(overlay, @"padcheaper.panel").hidden = NO; bubble.hidden = YES;
             for (NSString *phase in @[@"autoWaiting", @"solving", @"skillWaiting", @"turnWaiting"]) {
@@ -1070,14 +1075,30 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 
 - (void)verifyLandscape {
     self.landscapeAttempts++;
-    [self.window.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-    UIWindow *overlayWindow = PHProbeOverlay(self.window.windowScene);
-    [overlayWindow.rootViewController setNeedsUpdateOfSupportedInterfaceOrientations];
-    [self.window.windowScene requestGeometryUpdateWithPreferences:
-     [[UIWindowSceneGeometryPreferencesIOS alloc] initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscapeLeft]
-                                                    errorHandler:^(NSError *error) {
-        self.landscapeError = error.localizedDescription;
-    }];
+    UIWindowScene *scene = self.window.windowScene;
+    NSMutableArray *windows = [NSMutableArray array];
+    BOOL transitioning = NO;
+    for (UIWindow *window in scene.windows) {
+        UIViewController *root = window.rootViewController;
+        BOOL transition = root.transitionCoordinator != nil || root.presentedViewController != nil;
+        transitioning |= !window.hidden && transition;
+        [windows addObject:@{@"class":NSStringFromClass(window.class), @"hidden":@(window.hidden),
+            @"key":@(window.isKeyWindow), @"bounds":NSStringFromCGRect(window.bounds),
+            @"controller":root ? NSStringFromClass(root.class) : @"nil",
+            @"orientations":@(root.supportedInterfaceOrientations), @"transition":@(transition)}];
+        if (!window.hidden) [root setNeedsUpdateOfSupportedInterfaceOrientations];
+    }
+    [PHProbeGeometry addObject:@{@"attempt":@(self.landscapeAttempts), @"appState":@(UIApplication.sharedApplication.applicationState),
+        @"sceneState":@(scene.activationState), @"windows":windows}];
+    if (UIApplication.sharedApplication.applicationState == UIApplicationStateActive &&
+        scene.activationState == UISceneActivationStateForegroundActive && !transitioning) {
+        [scene requestGeometryUpdateWithPreferences:
+         [[UIWindowSceneGeometryPreferencesIOS alloc] initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscapeLeft]
+                                        errorHandler:^(NSError *error) {
+            self.landscapeError = error.localizedDescription;
+            [PHProbeGeometry addObject:@{@"error":error.description}];
+        }];
+    }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
         UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");

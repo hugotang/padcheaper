@@ -12,7 +12,7 @@ IDA 確認原生新一次點擊於 `0x1005CCDC0` 清除 `member +1220` 的舊技
 
 複製診斷新增每條規則對應位置、角色及判斷理由，保留判斷當時的 state／累積充能／選擇值，停止後普通讀取或還原通用設定不會清掉。面板也列明規則與位置；新求路清除舊路徑進度，修正 `28/18` 的混用，但保留程序累計完成數。
 
-新增確認後重新起算間隔造成 30 fps 多等一幀的計時修正；保留 65 ms、4 秒上限與逐步確認。加入當次技能／冷卻／階段診斷、不同停止原因及執行耗時。進化技能使用 32-bit ID；明細 getter 只在原生拒絕後呼叫，一般讀取仍不呼叫原生技能 getter。
+修正從交換確認後重新起算間隔、造成 30 fps 多等一幀的計時缺陷；改從提交目標的 frame 計時，保留 65 ms、4 秒上限與逐步確認。加入當次技能／冷卻／階段診斷、不同停止原因及執行耗時。進化技能使用 32-bit ID；明細 getter 只在原生拒絕後呼叫，一般讀取仍不呼叫原生技能 getter。
 
 沿用本對話「開始編譯測試」授權，定版 0.5.4-orbs。native／session／30-fps 渲染延遲回歸案例已補，待本批 macOS／iPhoneOS／GUI 集中驗證；41 筆指紋已與原始執行檔核對。0.5.3 的既有 CI 不算本批驗證；既有交付目錄及 ZIP 保持原樣，device_verified 維持 false。
 
@@ -23,6 +23,8 @@ IDA 確認原生新一次點擊於 `0x1005CCDC0` 清除 `member +1220` 的舊技
 [CI 60](https://github.com/hugotang/padcheaper/actions/runs/40862953604)，來源 `4a3510635a3529b180142fce352ce0e0c14bd24c`：原生／session／model／設定全部回歸、arm64 iPhoneOS 編譯、瀏覽器及嚴格簽章通過。Scene GUI 完成新增快捷按鈕與技能位置診斷檢查，但最後旋轉請求回報 `BSActionErrorDomain error 2`，guest 及 overlay 都未轉為橫向；兩個旋轉斷言失敗，其他三份 GUI 報告未執行。已查看快捷按鈕及失敗時截圖，未交付此產物；以相同來源手動重跑 [CI 61](https://github.com/hugotang/padcheaper/actions/runs/40864616441)，保留旋轉檢查，尚不推定為產品問題或 runner 問題。
 
 CI 61 的 model／solver／orb native 通過，但 session 的既有求路取消案例偶發失敗：`Tick` 先跑主執行緒回呼，快速求路可能已從 solving 進到 preview，之後才輪詢 solving 會永遠錯過。測試改為在回呼前觀察同步進入 solving 的時點，再取消並正常排空回呼，保留「不能產生任何輸入或恢復自動」斷言；目標變更的取消案例也使用相同方式。這是測試同步修正，沒有更改產品的求路或取消邏輯。待新來源重跑完整 CI，旋轉仍需完成核對。
+
+[CI 62](https://github.com/hugotang/padcheaper/actions/runs/40865567714)，來源 `f25727c23daaef76be38cf7961cfb34dde785038`：取消同步修正後完整核心測試、編譯、簽章及瀏覽器通過，Scene GUI 仍只有旋轉的兩項斷言失敗。快捷截圖原本不必要地隱藏並立即顯示 editor window，現改為直接繪製目標 window，避免僅為截圖改變 UIKit 場景；旋轉測試新增每次嘗試的場景、視窗、支援方向及過場資料，僅在前景且無切換時請求，仍保留全部幾何斷言。待驗證，未交付 CI 62。
 
 ## 0.5.3-orbs：集中編譯測試完成，CI 59 通過
 
