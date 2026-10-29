@@ -1,4 +1,12 @@
 static void PHProbePlanStorage(UIWindow *overlay) {
+    // The probe intentionally loads the dylib at runtime. Resolve helpers
+    // from that exact handle instead of introducing a static link to it.
+    __typeof__(&PHConfigurationOrbProfiles) configProfiles = (__typeof__(&PHConfigurationOrbProfiles))dlsym(PHProbeDylib, "PHConfigurationOrbProfiles");
+    __typeof__(&PHOrbProfilesImportingPlan) importPlan = (__typeof__(&PHOrbProfilesImportingPlan))dlsym(PHProbeDylib, "PHOrbProfilesImportingPlan");
+    __typeof__(&PHOrbProfileNamed) profileNamed = (__typeof__(&PHOrbProfileNamed))dlsym(PHProbeDylib, "PHOrbProfileNamed");
+    __typeof__(&PHFormationReadLibrary) readLibrary = (__typeof__(&PHFormationReadLibrary))dlsym(PHProbeDylib, "PHFormationReadLibrary");
+    PHProbeCheck(configProfiles && importPlan && profileNamed && readLibrary, @"Plan helpers resolve from the loaded test dylib");
+    if (!configProfiles || !importPlan || !profileNamed || !readLibrary) return;
     PHOverlaySnapshot snapshot = [overlay.rootViewController valueForKey:@"snapshot"];
     PHOverlayAction action = [overlay.rootViewController valueForKey:@"action"];
     NSDictionary *initial = snapshot();
@@ -13,8 +21,8 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     NSString *planPath = [NSBundle.mainBundle pathForResource:@"team-plan" ofType:@"json"];
     NSData *data = [NSData dataWithContentsOfFile:planPath];
     NSDictionary *plan = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
-    NSDictionary *library = PHOrbProfilesImportingPlan(PHConfigurationOrbProfiles(baseline), plan, NULL);
-    NSDictionary *profile = PHOrbProfileNamed(library, library[@"selected"]);
+    NSDictionary *library = importPlan(configProfiles(baseline), plan, NULL);
+    NSDictionary *profile = profileNamed(library, library[@"selected"]);
     PHProbeCheck(profile != nil, @"Real storage test loads the executable Uryu plan");
     if (!profile) return;
     NSDictionary *payload = @{@"library":library, @"settings":profile[@"settings"]};
@@ -31,7 +39,7 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     NSDictionary *failed = snapshot();
     PHProbeCheck([failed[@"config"] isEqual:baseline] &&
         [failed[@"formationLibrary"] isEqual:baseline[@"formations"]] &&
-        [failed[@"orbState"][@"profiles"] isEqual:PHConfigurationOrbProfiles(baseline)] &&
+        [failed[@"orbState"][@"profiles"] isEqual:configProfiles(baseline)] &&
         [failed[@"orbState"][@"profileMessage"] length] > 0,
         @"Failed full-plan disk write publishes neither the new formation nor the opening/strategy");
     BOOL repaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:backup toPath:path error:NULL];
@@ -40,7 +48,7 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     action(@"retry", nil);
     action(@"orbsProfiles", payload);
     NSDictionary *committed = snapshot(), *disk = PHProbeJSON(@"config.json"), *team = nil;
-    PHFormationReadLibrary(disk[@"formations"], &team, NULL);
+    readLibrary(disk[@"formations"], &team, NULL);
     PHProbeCheck([disk[@"orbProfiles"] isEqual:library] && [disk[@"orbs"] isEqual:profile[@"settings"]] &&
         [disk[@"formations"][@"teams"] count] == [baseline[@"formations"][@"teams"] count] + 1 &&
         [team isEqual:plan[@"formation"]] && [committed[@"formationDraft"] isEqual:team] &&
@@ -51,6 +59,6 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     PHProbeCheck(restored && [reloaded[@"config"] isEqual:baseline] &&
         [reloaded[@"formationLibrary"] isEqual:baseline[@"formations"]] &&
         [reloaded[@"formationDraft"] isEqual:initial[@"formationDraft"]] &&
-        [reloaded[@"orbState"][@"profiles"] isEqual:PHConfigurationOrbProfiles(baseline)],
+        [reloaded[@"orbState"][@"profiles"] isEqual:configProfiles(baseline)],
         @"External canonical reload updates both formations and strategies, and restores the probe baseline");
 }

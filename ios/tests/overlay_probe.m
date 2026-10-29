@@ -16,6 +16,7 @@ static UIWindow *PHProbeLegacyOverlay;
 static NSHashTable<UIWindow *> *PHProbeLegacyWindows;
 static NSDictionary *PHProbeRestartLibrary;
 static NSMutableArray<NSDictionary *> *PHProbeGeometry;
+static void *PHProbeDylib;
 
 @interface UIViewController (PHProbeOverlayState)
 - (void)updateWithSnapshot:(NSDictionary *)snapshot;
@@ -244,6 +245,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
      writeToFile:[PHProbeRoot stringByAppendingPathComponent:@"endpoint.json"] atomically:YES];
     NSString *library = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Frameworks/PADCheaperTest.dylib"];
     void *handle = dlopen(library.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL);
+    PHProbeDylib = handle;
     const char *error = handle ? NULL : dlerror();
     PHProbeCheck(handle != NULL, error ? @(error) : @"Simulator dylib could not be loaded");
     self.targetDeadline = NSProcessInfo.processInfo.systemUptime + 90;
