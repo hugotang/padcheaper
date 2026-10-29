@@ -544,7 +544,8 @@
                 PHOrbGoalDescription(activeGoals[i]), hits[i], activeGoals[i][@"count"]]];
         }
     }
-    if (leaderMode) [goalLines addObject:plan[@"warning"] ?: @"僅規劃珠型與最低門檻，不代表完整隊長技已發動。"];
+    if ([plan[@"warning"] length]) [goalLines addObject:plan[@"warning"]];
+    else if (leaderMode) [goalLines addObject:@"僅規劃珠型與最低門檻，不代表完整隊長技已發動。"];
     NSString *goalMessage = state[@"goalMessage"];
     self.goalDescription.text = goalMessage.length ? goalMessage : [goalLines componentsJoinedByString:@"\n"];
     self.goalDescription.textColor = goalMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;

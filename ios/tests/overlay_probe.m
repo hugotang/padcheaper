@@ -977,6 +977,19 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [baseGoalEditor dismissViewControllerAnimated:NO completion:nil];
         }),
         PHProbeStep(@"leader-goal-editor-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            NSMutableDictionary *temporaryLeader = [baseOrbFixture[@"orbState"] mutableCopy];
+            temporaryLeader[@"goalMode"] = @"manual"; temporaryLeader[@"path"] = @[];
+            temporaryLeader[@"goalPlan"] = @{@"available":@YES, @"goals":savedGoals,
+                @"warning":@"隊長／助人正在暫時變身；保留指定盤面目標，這些目標不代表目前隊長的倍率或減傷已發動。"};
+            orbFixture = @{@"orbState":temporaryLeader}; [orbController refresh];
+            UILabel *temporaryWarning = (UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalDescription");
+            PHProbeCheck([temporaryWarning.text containsString:@"暫時變身"] && [temporaryWarning.text containsString:@"減傷"],
+                @"Manual goals display the temporary leader warning instead of hiding all non-leader-mode warnings");
+            [orbController.view layoutIfNeeded];
+            UIScrollView *warningScroll = PHProbeScrollParent(temporaryWarning);
+            [warningScroll scrollRectToVisible:[temporaryWarning convertRect:temporaryWarning.bounds toView:warningScroll] animated:NO];
+            [orbController.view layoutIfNeeded];
+            PHProbeRender(self.window, orbWindow, @"orbs-temporary-leader");
             NSMutableDictionary *unsupportedLeader = [baseOrbFixture[@"orbState"] mutableCopy];
             unsupportedLeader[@"phase"] = @"blocked"; unsupportedLeader[@"goalMode"] = @"leaders";
             unsupportedLeader[@"canExecute"] = @NO; unsupportedLeader[@"path"] = @[];
