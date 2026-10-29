@@ -4,7 +4,11 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 0.5.2-orbs：iPhone 起點輸入修正，GUI 佈局同步待重跑
+## 0.5.2-orbs：iPhone 起點輸入修正，CI 56 完成
+
+2026-10-29，[CI 56](https://github.com/hugotang/padcheaper/actions/runs/40816242119) 全部成功，二進位來源 `2c3362d7a928d64e83837dc0f92d9505d0da8a38`。原生／模型／規則／策略及既有回歸、arm64 iPhoneOS 編譯、Mach-O／嚴格簽章、瀏覽器，以及 Scene／舊式視窗首次啟動與重啟均通過。四份 GUI 報告都是 `phase=done`、`success=1`、零 failures；已檢視「技能就緒就放」、失敗草稿保留與兩種擴充尺寸的畫面。
+
+下載的 dylib SHA-256 為 `e2c2540bd922ac1f59c2d63567d45244014bda3f75f4932dfaba153acf0524d2`，與 CI、`build-info.json` 及 `SHA256SUMS` 一致。原始 IPA 的 UUID、執行檔雜湊及 26 筆指紋重新核對通過；原生位址及單人限制保持一致。交付來源固定為 CI 56 的二進位與 manifests，文件補記獨立保存。iPhone 起點修復、白哉實際技能與其餘裝置驗收仍待真機回報；CI 使用替身資料，`device_verified` 維持 false。
 
 2026-10-29，使用者回報 iPad 可正常自動轉珠，未指定其版本、尺寸或其他新增功能；iPhone 的 0.5.1 剛開始就停止。iPhone 診斷顯示普通單人 6×5、phase 2、30 fps、輸入安靜且版本校驗通過；路徑 0/29，原生日誌原因為「遊戲未接受起點」。完整裝置診斷不加入 repo。這次是已授權集中編譯測試的缺陷後續修復。
 

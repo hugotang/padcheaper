@@ -6,9 +6,7 @@
 
 使用者已於 2026-10-28 回報 `0.5.0-orbs` 測試通過，記錄為單人 6×5 基準版本的真機通過回報。
 
-`0.5.1-orbs` 已通過 [CI 53](https://github.com/hugotang/padcheaper/actions/runs/40748683671)，二進位來源 `96f5b2ffbbdaea273dba887aa9d8f73ff546ee99`。新版包與設定保留方式見 [0.5.1 安裝說明](docs/release-0.5.1.md)；新增功能的真機驗收順序見 [device-testing.md](docs/device-testing.md)。
-
-`0.5.2-orbs` 修正部分 iPhone 在起點等待期間重送按下、無法選珠的問題，並加入「技能就緒就放」設定及白哉輪替範例。新版目前待編譯測試，更新與設定保留方式見 [0.5.2 安裝說明](docs/release-0.5.2.md)。
+`0.5.2-orbs` 修正部分 iPhone 在起點等待期間重送按下、無法選珠的問題，並加入「技能就緒就放」設定及白哉輪替範例。[CI 56](https://github.com/hugotang/padcheaper/actions/runs/40816242119) 的原生、arm64 編譯、簽章、瀏覽器與四份模擬器／重啟報告均通過，二進位來源 `2c3362d7a928d64e83837dc0f92d9505d0da8a38`。更新與設定保留方式見 [0.5.2 安裝說明](docs/release-0.5.2.md)；真機 iPhone 修復及技能效果仍待回報，順序見 [device-testing.md](docs/device-testing.md)。
 
 保留手機編隊六人總覽、角色編輯面板、上一格／下一格、本體／武裝切換、整格交換／複製、撤銷及最近使用角色。滿級／滿技顯示實際數字，保留雙指縮放。
 

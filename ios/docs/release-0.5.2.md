@@ -15,7 +15,8 @@
 | 啟用／位置 | 開／5 | 開／6 |
 | 輪替組 | 1 | 1 |
 | 回合間隔 | 1 | 1 |
-| 本場一次 | 關 | 關 |
+| 使用次數 | 每個符合條件的回合 | 每個符合條件的回合 |
+| 角色圖鑑編號 | 0 | 0 |
 | 指定樓層／保留至樓層 | 0／0 | 0／0 |
 | 其他觸發條件 | 不限定 | 不限定 |
 
@@ -27,4 +28,11 @@
 
 完整關閉 PAD，在 LiveContainer 的 PAD Tweak Folder 替換成新版 PADCheaper.dylib，移除重複舊版，使用有效憑證重新簽署 tweaks 後啟動。面板應顯示 `0.5.2-orbs`。保留 guest 容器內原 config.json、隊伍庫與帳號檔；範例設定只供首次安裝參考。
 
-新版目前待編譯測試，二進位與 CI 來源會在通過後補入。真機 iPhone 修復及白哉實際技能仍待回報；詳見 [裝置驗收](device-testing.md)及 [驗證記錄](development.md)。
+2026-10-29，[CI 56](https://github.com/hugotang/padcheaper/actions/runs/40816242119) 全部通過：原生及既有回歸、arm64 iPhoneOS 編譯、嚴格簽章、瀏覽器，以及 Scene／舊式視窗的首次啟動與重啟，共四份 GUI 報告，零 failures。
+
+- 二進位來源：`2c3362d7a928d64e83837dc0f92d9505d0da8a38`。
+- dylib SHA-256：`e2c2540bd922ac1f59c2d63567d45244014bda3f75f4932dfaba153acf0524d2`。
+- 原始 IPA 的 UUID、執行檔雜湊及 26 筆程式指紋已重新核對一致。
+- `build-info.json` 保留 CI 二進位來源；交付 `verification.json` 記錄核對結果與獨立文件提交。
+
+真機 iPhone 修復及白哉實際技能仍待回報；詳見 [裝置驗收](device-testing.md)及 [驗證記錄](development.md)。更新後先測無技能規則的「執行一次」，再測連續／輪替。
