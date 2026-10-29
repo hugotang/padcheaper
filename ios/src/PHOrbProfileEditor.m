@@ -175,7 +175,9 @@
         }]];
         NSDictionary *settings = record[@"settings"];
         if (record[@"formation"]) {
-            [self.rows addArrangedSubview:[self label:PHOrbPlanDescription(PHOrbPlanFromProfile(record))]];
+            UILabel *summary = [self label:PHOrbPlanDescription(PHOrbPlanFromProfile(record))];
+            summary.accessibilityIdentifier = @"padcheaper.orbsPlanSummary";
+            [self.rows addArrangedSubview:summary];
             [self.rows addArrangedSubview:[self action:@"複製整包 config" identifier:@"padcheaper.orbsPlanExport" handler:^(PHOrbProfileEditor *editor) {
                 NSDictionary *plan = PHOrbPlanFromProfile(editor.selected);
                 NSData *data = plan ? [NSJSONSerialization dataWithJSONObject:plan options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL] : nil;

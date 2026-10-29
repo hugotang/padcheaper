@@ -787,6 +787,35 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck(orbController.presentedViewController == profileEditor && [orbValue[@"library"][@"profiles"][0][@"formation"] isEqual:exportedPlan[@"formation"]],
                 @"Failed full-plan save keeps the reviewable formation and opening draft open");
             PHProbeRender(self.window, orbWindow, @"orbs-team-plan-import");
+            NSDictionary *previousFixture = orbFixture;
+            NSMutableDictionary *matchingPlan = [profileFailure mutableCopy];
+            matchingPlan[@"profiles"] = orbValue[@"library"]; matchingPlan[@"profileMessage"] = @"";
+            matchingPlan[@"quality"] = exportedPlan[@"board"][@"quality"];
+            matchingPlan[@"goalMode"] = exportedPlan[@"board"][@"mode"];
+            matchingPlan[@"goals"] = exportedPlan[@"board"][@"goals"];
+            matchingPlan[@"recovery"] = exportedPlan[@"board"][@"recovery"];
+            matchingPlan[@"rules"] = exportedPlan[@"rotation"];
+            orbFixture = @{@"orbState":matchingPlan, @"formationDraft":@{}};
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(orbController.presentedViewController == profileEditor &&
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"尚未確認"],
+                @"Existing matching strategy settings cannot acknowledge a missing formation selection");
+            matchingPlan[@"profileMessage"] = @"隊伍庫已滿；整包未儲存";
+            orbFixture = @{@"orbState":matchingPlan, @"formationDraft":exportedPlan[@"formation"]};
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(orbController.presentedViewController == profileEditor &&
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"隊伍庫已滿"],
+                @"Explicit save failure cannot be masked by old matching formation and strategy settings");
+            orbFixture = previousFixture; [orbController refresh];
+            UILabel *planSummary = (UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanSummary");
+            UIScrollView *planScroll = PHProbeScrollParent(planSummary);
+            [profileEditor.view layoutIfNeeded];
+            CGRect summaryFrame = [planSummary convertRect:planSummary.bounds toView:planScroll];
+            [planScroll setContentOffset:CGPointMake(0, MAX(0, CGRectGetMinY(summaryFrame))) animated:NO];
+            PHProbeCheck(CGRectContainsPoint(planScroll.bounds, CGPointMake(CGRectGetMidX(summaryFrame), CGRectGetMinY(summaryFrame) + 12)) &&
+                [planSummary.text containsString:@"開場（依序完成）"] && [planSummary.text containsString:@"→ #14038"],
+                @"The imported six-member/opening summary can scroll into view and shows the expected transformation");
+            PHProbeRender(self.window, orbWindow, @"orbs-team-plan-summary");
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileDelete") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [profileEditor.view layoutIfNeeded];

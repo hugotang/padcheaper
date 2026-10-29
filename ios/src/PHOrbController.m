@@ -677,8 +677,11 @@
             NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery()});
-            if ([saved[@"canSetProfiles"] boolValue] && [saved[@"profiles"] isEqual:library] && [actual isEqual:wanted]) return nil;
             NSString *message = saved[@"profileMessage"];
+            const BOOL formationSaved = !selected[@"formation"] ||
+                [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];
+            if ([saved[@"canSetProfiles"] boolValue] && !message.length && formationSaved &&
+                [saved[@"profiles"] isEqual:library] && [actual isEqual:wanted]) return nil;
             return message.length ? message : @"策略尚未確認儲存，請稍後重試。";
         }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;
