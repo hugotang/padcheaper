@@ -24,4 +24,8 @@
 
 ## 驗證狀態
 
-集中編譯測試進行中，結果見 [開發紀錄](development.md)。尚未將本批替身測試視為真機技能／結算通過；device_verified 維持 false。既有 0.5.3 交付目錄與 ZIP 保持原樣。
+[CI 63](https://github.com/hugotang/padcheaper/actions/runs/40867358095) 的原生／session／solver 回歸、arm64 iPhoneOS 編譯、簽章、瀏覽器及四份 iOS 模擬器初次啟動／重啟報告全部通過。已查看快捷按鈕、規則位置文字與橫向畫面；30 fps 加 12 ms 渲染延遲的 44 步路徑在替身中以 3033 ms 完整結束。詳見 [開發紀錄](development.md)。
+
+二進位來源 `90839427b54f3546bede33de226424c726b5277d`；4,782,112 bytes；SHA-256 `1a7305a381f5abc444956e56d64826aba78ce02890172275b9732ace3fa9968e`。下載檔、CI、build-info 與 SHA256SUMS 已一致，72 組原生指紋已對上原始 IPA。
+
+原關卡套隊／還原、技能拒絕及實際結算仍需新版真機核對，device_verified 維持 false。既有 0.5.3 交付目錄與 ZIP 保持原樣。
