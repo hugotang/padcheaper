@@ -8,6 +8,10 @@
 
 隊長模式依當下隊長重建目標；手動目標保持原設定並提示暫時隊長的倍率／減傷未被這些目標證明。原生讀取只補充暫時身分資料，沒有強制還原敵人效果。config 格式不變，現有雨龍模板可繼續使用。
 
-Windows 求解器／模型及獨立 oracle 回歸通過；macOS 原生／session／規則／config、iPhoneOS 編譯／簽章、瀏覽器及模擬器 GUI 待本次 CI 驗證。`device_verified=false`。T 字首消六顆的真機根因仍未確定，既有放手盤面記錄保留供追查。
+2026-10-30，[CI 72](https://github.com/hugotang/padcheaper/actions/runs/40925229351) 的原生／session／求解器／規則／config、iPhoneOS 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視手動目標的暫時隊長提示、整包匯入與浮動快捷畫面。原生解碼、狀態競態取消、暫時變身後繼續／停止重開／恢復、必要自救及當前隊長規劃均通過替身回歸。`device_verified=false`。T 字首消六顆的真機根因仍未確定，既有放手盤面記錄保留供追查。
 
 安裝全新 0.5.7 dylib 前停用舊版，再以 LiveContainer 重新簽署並完整重啟。保留原設定、隊伍庫及舊版交付。重啟不會推測本場開場進度，請在新單人關卡驗收。
+
+本次 macOS 雙轉轉回歸：快速 1／2、21 步、3 Combo、120 ms；均衡 2／2、24 步、3 Combo、172 ms；深入 2／2、44 步、6 Combo、555 ms。不同主機及期限可能回傳不同長度；不等於 iPhone 實測。
+
+二進位來源 `69a7b86deadb9bf06f5e87d376a451ff8aea53dc`，大小 4,871,936 bytes，SHA-256 `9b3941b4dffbbb5eb6eb52880b1fe1e8c1beccaf2e7e563bf07c264e952e1350`。83 組原生程式指紋與原始 IPA 相符；交付二進位、manifests 及兩份 config 範例保留 CI 原件，驗證文件另作純文件提交。

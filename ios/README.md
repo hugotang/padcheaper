@@ -4,7 +4,7 @@
 
 `0.5.7-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
-0.5.7 改進轉轉形狀引導，新增共用原期限的缺項補搜及深入檔有限回溯；完整開場後可保留敵方暫時變身的流程進度，暫停原形態技能並繼續核對必要自救。Windows 回歸及 456 次舊新版對照已通過，iOS CI 待驗證。詳見 [0.5.7 更新](docs/release-0.5.7.md)。
+0.5.7 改進轉轉形狀引導，新增共用原期限的缺項補搜及深入檔有限回溯；完整開場後可保留敵方暫時變身的流程進度，暫停原形態技能並繼續核對必要自救。Windows 回歸及 456 次舊新版對照通過；[CI 72](https://github.com/hugotang/padcheaper/actions/runs/40925229351) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機驗收待回報。詳見 [0.5.7 更新](docs/release-0.5.7.md)。
 
 0.5.6 新增「隊伍＋開場流程＋技能循環＋盤面目標」config 匯入／匯出、本體／武裝及指定技能限制、至少珠數條件、放手前重新驗證與最近三次實際轉珠紀錄。詳見 [0.5.6 更新](docs/release-0.5.6.md) 和 [整包 config](docs/team-plan-config.md)；[CI 70](https://github.com/hugotang/padcheaper/actions/runs/40910345825) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機結果待回報。
 
