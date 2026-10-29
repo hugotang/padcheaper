@@ -2,6 +2,7 @@
 #import <WebKit/WebKit.h>
 #import "PHOverlay.h"
 #import "PHOrbController.h"
+#import "PHOrbModel.h"
 #import <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <math.h>
