@@ -7,6 +7,7 @@ struct PHOrbSolveOptions {
     unsigned beam = 256;
     unsigned milliseconds = 350;
     PHOrbGoalSet goals{};
+    PHOrbThornState thorns{};
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
@@ -23,8 +24,12 @@ enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Canc
 // common phase of their validated color cycle (up to ten phases), requiring
 // every result to meet the goals and hazard policy. Native unmatchable colors,
 // minimum runs and minimum connected matches apply to every cascade.
-// Routes respect tape/fixed start and never traverse spinners or thorns.
+// Routes respect tape/fixed start and avoid spinners. Damaging thorn swaps
+// require verified HP, a strict damage budget and a first-wave heart four.
+// The budget ignores healing and resistance; these may improve real outcomes.
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept;
+bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
+                        PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept;
 // One caller-owned worker, immutable input, no native/game calls or process exit.
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

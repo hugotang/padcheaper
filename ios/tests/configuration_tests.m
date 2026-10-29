@@ -105,6 +105,7 @@ int main(void) {
         Check(PHConfigurationIsValid(config), "one config transaction publishes selected profile and settings together");
         NSMutableDictionary *rescueRule = [PHOrbDefaultSkillRule() mutableCopy];
         rescueRule[@"hpAtMost"] = @40; rescueRule[@"status"] = @"awoken_bind"; rescueRule[@"required"] = @YES;
+        rescueRule[@"obstacle"] = @"unmatchable"; rescueRule[@"unmatchableColors"] = @40;
         NSMutableDictionary *rescueSettings = [PHConfigurationOrbSettings(config) mutableCopy]; rescueSettings[@"rules"] = @[rescueRule];
         config[@"orbs"] = rescueSettings;
         Check(!PHConfigurationIsValid(config), "a partial rescue-setting update cannot leave the selected profile stale");
@@ -112,7 +113,7 @@ int main(void) {
         serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
         NSDictionary *rescueConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
         Check(PHConfigurationIsValid(rescueConfig) && [PHConfigurationOrbSettings(rescueConfig)[@"rules"] isEqual:@[rescueRule]],
-            "HP, player status and required rules round-trip with their selected strategy");
+            "HP, status, required flag and light/heart unmatchable colors round-trip with their selected strategy");
         Check([PHConfigurationOrbSettings(rescueConfig)[@"recovery"] isEqual:PHOrbDefaultRecovery()],
             "older configuration and profile settings gain a disabled conditional heart policy");
         NSDictionary *heartPolicy = @{@"hpAtMost":@40, @"groups":@2, @"shape":@"four"};

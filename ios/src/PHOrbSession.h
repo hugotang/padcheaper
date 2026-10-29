@@ -30,6 +30,8 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUna
 - (void)queueAutomatic;
 - (void)queueExecute:(NSUInteger)generation;
 - (void)queueStop:(NSString *)reason;
+// Interrupt pending work without replacing an already recorded stop/failure.
+- (void)stopForLifecycle:(NSString *)reason;
 - (void)beforeFrame:(PHBattleFrame)frame time:(NSTimeInterval)time;
 - (void)finishNativeFrame;
 - (void)afterFrame:(PHBattleFrame)frame time:(NSTimeInterval)time;

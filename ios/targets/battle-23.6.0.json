@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.4-orbs",
+  "prototype_version": "0.5.5-orbs",
   "device_verified": false,
   "server_acceptance_verified": false,
   "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
@@ -344,6 +344,30 @@
       "length": 64,
       "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f40302aaf60301aaf30300aa171589520000178baba6fd97f50300aae00313aa8fd1ff971f00166b",
       "sha256": "d321be2b0633bed373dea28490b4a605b4666c2390f5706be4cebf49ff571076"
+    },
+    {
+      "name": "PHBattleAssistBuildGuardRVA",
+      "va": "0x100531aec",
+      "rva": "0x531aec",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30301aa0820a052280000b93f180039012840b9e1030034020080524dfaff97082040796802007908284079680a007908484039",
+      "sha256": "d7cbb50135230aec083c5fab1c4ba23f442bfd7f829a33494792555c50954c03"
+    },
+    {
+      "name": "PHBattleAssistCopyGuardRVA",
+      "va": "0x1004812b0",
+      "rva": "0x4812b0",
+      "length": 64,
+      "bytes": "c92200b9c006803d02000014080080d2c80600f90820a052c8e20bb8df120339650000b4a80040f9c8e20bf888b6009008c11e9109f091520001098b58ba0294",
+      "sha256": "9c141fcf967803344172def85e4239e0559e23025ae2eceda3e482a84ae46b5c"
+    },
+    {
+      "name": "PHBattleAssistInitGuardRVA",
+      "va": "0x1005a131c",
+      "rva": "0x5a131c",
+      "length": 64,
+      "bytes": "bf0319f80820a052a88318b8bfe318383f140039083840f909e481526901a072006969f8327df29797ad0090f7c21e91400c003460e20291a13eff97f50300aa",
+      "sha256": "3cc4d24ea26734569d16e1ff5ce370066e25cd0300e1fa2563cd274e7769a607"
     }
   ],
   "input": {
@@ -425,5 +449,15 @@
     "device_verified": false,
     "enabled": false
   },
-  "multiplayer_device_report": "2026-10-28: local team appeared replaced, other players retained original team; derived values did not appear rebuilt and disconnects occurred. Exact server rejection reason unverified."
+  "multiplayer_device_report": "2026-10-28: local team appeared replaced, other players retained original team; derived values did not appear rebuilt and disconnects occurred. Exact server rejection reason unverified.",
+  "assist_comparison": {
+    "descriptor_offset": "0x59e",
+    "bytes": 8,
+    "padding_byte": 7,
+    "no_assist_unused_bytes": [
+      4,
+      5
+    ],
+    "other_fields": "compared-exactly"
+  }
 }

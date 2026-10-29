@@ -625,6 +625,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.battleLabel.text = [NSString stringWithFormat:@"%@\n%@", battle[@"message"] ?: @"等待戰鬥檢查",
         battle[@"gate"] ?: @""];
     self.battleRestore.enabled = [battle[@"canRestore"] boolValue];
+    [self.battleRestore setTitle:[battle[@"canRetryRestore"] boolValue] ? @"重試未完成還原" : @"全部還原／取消"
+        forState:UIControlStateNormal];
     self.timerDismiss.enabled = [state[@"targetMatched"] boolValue] && [state[@"timerState"][@"canDismiss"] boolValue];
     self.timerLabel.text = state[@"timerSummary"];
     self.pathLabel.text = [@"設定檔：\n" stringByAppendingString:(state[@"configPath"] ?: @"初始化中")];

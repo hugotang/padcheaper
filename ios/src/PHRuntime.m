@@ -569,7 +569,7 @@ static void PHDrawFrame(id self, SEL command) {
 }
 
 static void PHRestoreBackground(id self, SEL command) {
-    if (NSThread.isMainThread) [PHOrbTracker queueStop:@"遊戲從背景返回；先前的轉珠路徑已停止"];
+    if (NSThread.isMainThread) [PHOrbTracker stopForLifecycle:@"遊戲從背景返回；先前的轉珠路徑已停止"];
     PHOriginalBackground(self, command);
     if (NSThread.isMainThread && PHValidated)
         [PHTimerTracker onFrame:PHTimerFrameContext() atTime:CFAbsoluteTimeGetCurrent() force:YES];
@@ -860,6 +860,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             [NSString stringWithFormat:@"位置 %@：#%@ · 武裝 #%@ · Lv.%@ · 充能 %@%@", member[@"slot"], member[@"current"],
                 member[@"assist"], member[@"level"], member[@"charge"], [member[@"temporary"] boolValue] ? @" · 暫時變身" : @""]];
     }
+    for (NSDictionary *failure in battle[@"restoreFailures"]) {
+        [battleLines addObject:[NSString stringWithFormat:@"位置 %@ 還原失敗：%@", failure[@"slot"], failure[@"reason"]]];
+    }
     [battleLines addObject:[NSString stringWithFormat:@"替換 %@ 次 · 還原 %@ 次 · 回復 %@ 次", battle[@"applyCount"], battle[@"restoreCount"], battle[@"rollbackCount"]]];
     NSString *battleSummary = [battleLines componentsJoinedByString:@"\n"];
     NSString *frameState = PHFrameMainThread ? @"主執行緒" :
@@ -939,6 +942,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"spinnerMask"], orbs[@"spinnerColors"], orbs[@"spinnerVariants"], orbs[@"spinnerTurns"], orbs[@"spinnerPeriodFrames"],
         orbs[@"blockedMask"], orbs[@"tapeMask"], orbs[@"cloudMask"], orbs[@"fixedStart"], orbs[@"unmatchableColors"],
         orbs[@"minErase"], orbs[@"minMatch"]];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nSpinner read: %@ / stored count %@ / cells %@ / raw period %@ / raw colors %@ / rows %@\nUnmatchable known: %@\nThorns: HP known %@ / HP %@ / maximum %@ / pending damage %@ / route contacts %@ / damage upper bound %@ / first-wave heart fours %@ (healing and resistance not credited)",
+        orbs[@"spinnerReadStatus"], orbs[@"spinnerRawCount"], orbs[@"spinnerStoredCells"], orbs[@"spinnerRawPeriod"],
+        orbs[@"spinnerRawColors"], orbs[@"spinnerRawRows"], orbs[@"unmatchableKnown"],
+        orbs[@"thornHPKnown"], orbs[@"thornHP"], orbs[@"thornMaximumHP"], orbs[@"pendingOrbDamage"],
+        orbs[@"thornContacts"], orbs[@"thornDamage"], orbs[@"heartFours"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
@@ -959,6 +968,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             @" / skill stages %@ / cached stages %@ / levels %@ / use counts %@ / assist catalog %@",
             decision[@"skillStages"], decision[@"cachedSkillStages"], decision[@"skillLevels"],
             decision[@"memberSkillUses"], decision[@"assistCatalogID"]];
+        diagnostics = [diagnostics stringByAppendingFormat:
+            @"\n  Observation: %@ / phase %@ / wave %@ / skill uses %@ / board %@×%@ / spinners %@ / orb counts [fire,water,wood,light,dark,heart,jammer,poison,mortal,bomb]: [%@]",
+            [decision[@"nativeAttempt"] boolValue] ? @"native attempt" : @"rule scan", decision[@"observedPhase"],
+            decision[@"observedWave"], decision[@"observedSkillUses"], decision[@"boardWidth"], decision[@"boardHeight"],
+            decision[@"spinnerMask"], [decision[@"orbCounts"] componentsJoinedByString:@","]];
     }
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
@@ -1287,7 +1301,7 @@ static void PADCheaperInitialize(void) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationWillResignActiveNotification object:nil
                 queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
-                    [PHOrbTracker queueStop:@"遊戲離開前景，已停止自動轉珠"];
+                    [PHOrbTracker stopForLifecycle:@"遊戲離開前景，已停止自動轉珠"];
                 }];
             PHBootstrap(0, PHBootstrapGeneration);
         });

@@ -108,6 +108,8 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     NSTimeInterval _time, _lastProbe, _queuedTime;
     NSString *_message, *_gateMessage;
     NSString *_automaticMessage;
+    NSString *_restoreReasons[6];
+    PHBattleIdentity _faultIdentity;
 }
 - (instancetype)initWithEngine:(id<PHBattleEngine>)engine {
     if ((self = [super init])) {
@@ -137,7 +139,21 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
 - (void)recordFailure:(PHBattleMutationResult)result reason:(NSString *)reason {
     _rollbackCount += result == PHBattleMutationRolledBack;
     _fault |= result == PHBattleMutationUncertain;
+    if (result == PHBattleMutationUncertain) _faultIdentity = _state.identity;
     _message = reason ?: @"操作未完成，剩餘位置已取消；已套用的位置仍可還原";
+}
+- (NSString *)restoreFailureSummary {
+    NSMutableArray *positions = [NSMutableArray array];
+    NSUInteger pending = 0;
+    for (NSUInteger i = 0; i < 6; ++i) if (_leases[i].active) {
+        pending += _leases[i].restorePending;
+        if (_leases[i].restoreFailed) [positions addObject:@(_leases[i].slot + 1).stringValue];
+    }
+    if (!positions.count) return nil;
+    NSString *next = _fault ? @"原生狀態未能確認，停止本場後複製診斷" : pending ?
+        [NSString stringWithFormat:@"其餘 %lu 個位置仍在還原", (unsigned long)pending] :
+        @"請按「重試未完成還原」；完成後即可套用另一隊";
+    return [NSString stringWithFormat:@"還原未完成：位置 %@；%@", [positions componentsJoinedByString:@"、"], next];
 }
 - (void)configureAutomaticLoadouts:(const PHBattleLoadout *)loadouts mask:(uint8_t)mask {
     NSCAssert(NSThread.isMainThread, @"Automatic team config requires main");
@@ -192,6 +208,10 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         !PHBattleIsSinglePlayer(next.mode, next.multiplayer));
     next.multiplayerDisabled = _multiplayerDisabled;
     _state = next; _state.policy = frame.policy; _hasState = YES;
+    // An uncertain mutation blocks its original battle. Only an observed exit
+    // or a different validated battle may retire that fault, never a retry.
+    if (_fault && (!_state.present || (_state.protectedValuesValid &&
+        !PHBattleSameIdentity(&_faultIdentity, &_state.identity)))) _fault = NO;
     PHBattleGate gate = PHBattleStateGate(&_state);
     _gateMessage = PHBattleGateMessage(gate, &_state);
     if (gate == PHBattleGateMultiplayer) {
@@ -318,6 +338,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
                 providerWaiting = YES; continue;
             }
             if (current->temporaryID || current->temporaryTurns) { temporary = YES; continue; }
+            reason = nil;
             PHBattleMutationResult result = lease->applied.providerToken ?
                 [_engine restoreLoadout:&lease->original state:&restoreState slot:lease->slot reason:&reason] :
                 [_engine changeState:&restoreState slot:lease->slot form:lease->original.formID
@@ -325,16 +346,20 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             lease->restorePending = NO;
             if (result == PHBattleMutationApplied) {
                 lease->active = NO; lease->restoreFailed = NO; _restoreCount++;
+                _restoreReasons[i] = nil;
                 NSUInteger remaining = 0;
                 for (NSUInteger j = 0; j < 6; ++j) remaining += _leases[j].active && _leases[j].restorePending;
                 _message = [NSString stringWithFormat:@"位置 %lu 已還原為 #%u%@", (unsigned long)lease->slot + 1,
                     Number(lease->original.catalogID), remaining ? [NSString stringWithFormat:@"；尚有 %lu 個位置等待還原", (unsigned long)remaining] : @""];
-                if (lease->automatic) _automaticMessage = _message;
             } else {
                 lease->restoreFailed = YES;
+                _restoreReasons[i] = reason ?: @"原生檢查未通過";
                 [self recordFailure:result reason:[NSString stringWithFormat:@"位置 %lu 還原未完成：%@", (unsigned long)lease->slot + 1,
-                    reason ?: @"原生檢查未通過"]];
+                    _restoreReasons[i]]];
             }
+            NSString *restoreSummary = [self restoreFailureSummary];
+            if (restoreSummary) _message = restoreSummary;
+            if (lease->automatic) _automaticMessage = _message;
             [self didMutate]; return;
         }
         if (providerWaiting) _gateMessage = @"等待關卡腳本結束或參數來源確認；剩餘還原排程保留";
@@ -421,7 +446,10 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         if (!(mask & (1u << i))) continue;
         const PHBattleMember *m = &_state.members[i];
         uint16_t catalog;
-        if ([self hasLeaseAtSlot:i]) { _message = @"要修改的位置已套用，請先還原該位置"; return; }
+        if ([self hasLeaseAtSlot:i]) {
+            _message = [self restoreFailureSummary] ?: @"要修改的位置已套用，請先還原該位置";
+            return;
+        }
         if (!PHBattleCatalogIDForNumber(loadouts[i].bodyNumber, &catalog) || !m->active || !m->readable ||
             m->sourceSlot < 0 || m->sourceSlot > 5 || m->scriptSlot > 0 || m->providerToken ||
             m->temporaryID || m->temporaryTurns || !Number(m->catalogID) ||
@@ -446,6 +474,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     for (NSUInteger i = 0; i < 6; ++i) {
         if (_leases[i].active && (slot >= 6 || (_leases[i].visible && _leases[i].slot == slot))) {
             _leases[i].restorePending = YES; _leases[i].restoreFailed = NO; found = YES;
+            _restoreReasons[i] = nil;
         }
     }
     _message = found ? @"已排入還原，等待相同戰鬥的操作階段" :
@@ -457,6 +486,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     NSUInteger activeCount = [self activeCount];
     NSUInteger offscreenCount = 0;
     uint8_t restorePendingMask = 0, restoreFailedMask = 0, providerUncertainMask = 0;
+    NSMutableArray *restoreFailures = [NSMutableArray array];
     for (NSUInteger i = 0; i < 6; ++i) offscreenCount += _leases[i].active && !_leases[i].visible;
     for (NSUInteger i = 0; i < 6; ++i) {
         if (_leases[i].active && _leases[i].visible && _leases[i].slot < 6) {
@@ -464,6 +494,8 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             restoreFailedMask |= _leases[i].restoreFailed ? (uint8_t)(1u << _leases[i].slot) : 0;
         }
         if (_hasState && _state.members[i].providerUncertain) providerUncertainMask |= (uint8_t)(1u << i);
+        if (_leases[i].active && _leases[i].restoreFailed) [restoreFailures addObject:@{
+            @"slot":@(_leases[i].slot + 1), @"reason":_restoreReasons[i] ?: @"原生檢查未通過"}];
     }
     BOOL restoring = [self restorePending];
     NSMutableArray *members = [NSMutableArray array];
@@ -488,13 +520,14 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     BOOL canApply = _hasState && _frame.ready && _frame.enabled && activeCount < 6 && !_pending && !restoring && !_fault &&
                     PHBattleStateGate(&_state) == PHBattleGateReady;
     NSString *phase = _multiplayerDisabled ? @"multiplayer_disabled" : _fault ? @"fault" : restoring ? @"restore_pending" : _autoWaiting ? @"entry_pending" :
-        _pending ? @"apply_pending" : activeCount ? @"applied" : @"idle";
+        _pending ? @"apply_pending" : restoreFailures.count ? @"restore_failed" : activeCount ? @"applied" : @"idle";
     return @{@"implemented": @YES, @"phase": phase, @"enabled": @(_frame.enabled),
         @"present": @(_hasState && _state.present),
         @"singlePlayerOnly": @YES, @"multiplayerDisabled": @(_multiplayerDisabled),
         @"canApply": @(canApply), @"canRestore": @(!_multiplayerDisabled && (activeCount || _pending || _autoWaiting) && !_fault), @"applied": @(activeCount > 0),
         @"activeCount": @(activeCount), @"pendingMask": @(_pending), @"restorePending": @(restoring), @"fault": @(_fault),
         @"restorePendingMask": @(restorePendingMask), @"restoreFailedMask": @(restoreFailedMask),
+        @"restoreFailures":restoreFailures, @"canRetryRestore":@(!_fault && !_multiplayerDisabled && restoreFailures.count > 0 && !restoring),
         @"providerUncertainMask": @(providerUncertainMask),
         @"message": _message ?: @"", @"gate": _gateMessage ?: @"", @"members": members,
         @"mode": @(_state.mode), @"sourceMode": @(_state.sourceMode), @"multiplayer": @(_state.multiplayer),

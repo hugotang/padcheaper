@@ -57,27 +57,35 @@ bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
 }
 
 bool ReadSpinner(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t key2) {
-    uint32_t count = 0, period = 0, colors = 0;
-    if (!Decode(impl + PHOrbSpinnerCountOffset, key1, key2, 0x6a875a8bu, count) || !count || count > PHOrbMaxCells ||
-        !Decode(impl + PHOrbSpinnerPeriodOffset, key1, key2, 0x6a875a8bu, period) || !period || period > 30000 ||
-        !Decode(impl + PHOrbSpinnerColorsOffset, key1, key2, 0x6a875a8bu, colors) || colors > 0x7ffu) return false;
+    auto &count = state.spinnerRawCount, &period = state.spinnerRawPeriod, &colors = state.spinnerRawColors;
+    state.spinnerReadStatus = PHOrbSpinnerBadCount;
+    if (!Decode(impl + PHOrbSpinnerCountOffset, key1, key2, 0x6a875a8bu, count) || count > PHOrbMaxCells) return false;
+    state.spinnerReadStatus = PHOrbSpinnerBadPeriod;
+    if (!Decode(impl + PHOrbSpinnerPeriodOffset, key1, key2, 0x6a875a8bu, period) || !period || period > 30000) return false;
+    state.spinnerReadStatus = PHOrbSpinnerBadColors;
+    if (!Decode(impl + PHOrbSpinnerColorsOffset, key1, key2, 0x6a875a8bu, colors) || colors >= (1u << PHOrbTypes)) return false;
     uint64_t mask = 0;
-    unsigned found = 0;
+    state.spinnerReadStatus = PHOrbSpinnerBadRows;
     for (unsigned row = 0; row < 6; ++row) {
         uint32_t columns = 0;
         if (!Decode(impl + PHOrbSpinnerRowsOffset + 16 * row, key1, key2, 0x6a875a8bu, columns) ||
-            columns > 255 || (columns >> state.board.width) || (row >= state.board.height && columns)) return false;
+            columns > 127) return false;
+        state.spinnerRawRows[row] = uint8_t(columns);
+        state.spinnerStoredCells += uint8_t(__builtin_popcount(columns));
+        // 0x1005AB350 clips updates to current width/height after resizing.
+        // The setter's count and six native row masks retain offscreen cells.
         if (row >= state.board.height) continue;
         for (unsigned column = 0; column < state.board.width; ++column) if (columns & (1u << column)) {
             mask |= UINT64_C(1) << ((state.board.height - 1 - row) * state.board.width + column);
-            ++found;
         }
     }
-    if (found != count) return false;
+    state.spinnerReadStatus = PHOrbSpinnerCountMismatch;
+    if (state.spinnerStoredCells != count) return false;
     state.board.spinnerMask = mask;
-    state.board.spinnerColors = uint16_t(colors ? colors : 63);
+    state.board.spinnerColors = mask ? uint16_t(colors ? colors : 63) : 0;
     state.spinnerPeriodFrames = uint16_t(period);
-    return PHOrbSpinnerSupported(&state.board);
+    state.spinnerReadStatus = PHOrbSpinnerSupported(&state.board) ? PHOrbSpinnerReady : PHOrbSpinnerBadPhase;
+    return state.spinnerReadStatus == PHOrbSpinnerReady;
 }
 
 bool ReadBoardEffects(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t key2, uint32_t fixedX) {
@@ -103,16 +111,17 @@ bool ReadBoardEffects(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint3
         if (turns) state.obstacles |= obstacle;
         return turns <= 511;
     };
-    if (!duration(PHOrbUnmatchableDurationOffset, state.unmatchableTurns, PHOrbObstacleUnmatchable) ||
-        !duration(PHOrbTapeRowDurationOffset, state.tapeRowTurns, PHOrbObstacleTape) ||
-        !duration(PHOrbTapeColumnDurationOffset, state.tapeColumnTurns, PHOrbObstacleTape) ||
-        !duration(PHOrbCloudDurationOffset, state.cloudTurns, PHOrbObstacleCloud) ||
-        !duration(PHOrbSpinnerDurationOffset, state.spinnerTurns, PHOrbObstacleSpinner)) return false;
+    if (!duration(PHOrbUnmatchableDurationOffset, state.unmatchableTurns, PHOrbObstacleUnmatchable)) return false;
     if (state.unmatchableTurns) {
         uint32_t colors = 0;
         if (!Decode(impl + PHOrbUnmatchableColorsOffset, key1, key2, 0x6a875a8bu, colors) || !colors || colors >= (1u << PHOrbTypes)) return false;
         board.unmatchableColors = uint16_t(colors);
     }
+    state.unmatchableKnown = true;
+    if (!duration(PHOrbTapeRowDurationOffset, state.tapeRowTurns, PHOrbObstacleTape) ||
+        !duration(PHOrbTapeColumnDurationOffset, state.tapeColumnTurns, PHOrbObstacleTape) ||
+        !duration(PHOrbCloudDurationOffset, state.cloudTurns, PHOrbObstacleCloud) ||
+        !duration(PHOrbSpinnerDurationOffset, state.spinnerTurns, PHOrbObstacleSpinner)) return false;
     uint32_t rows = 0, columns = 0;
     if (state.tapeRowTurns && (!Decode(impl + PHOrbTapeRowsOffset, key1, key2, 0x6a875a8bu, rows) || !rows || (rows >> height))) return false;
     if (state.tapeColumnTurns && (!Decode(impl + PHOrbTapeColumnsOffset, key1, key2, 0x6a875a8bu, columns) || !columns || (columns >> width))) return false;
@@ -251,6 +260,26 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
 }
 
 #include "PHOrbSkills.inc"
+#include "PHOrbSkillDiagnostics.inc"
+
+void ReadThornBudget(PHOrbSnapshot &state) {
+    if (!state.valid || state.multiplayerDisabled || state.phase != 2) return;
+    bool needed = false;
+    for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
+        needed |= (state.board.flags[i] & PHOrbFlagThorn) && state.board.thornDamage[i];
+    if (!needed) return;
+    uint32_t key1 = 0, key2 = 0, hp = 0, shadow = 0, maximum = 0, pending = 0, thornPending = 0;
+    uintptr_t dungeon = 0;
+    const auto header = state.identity.header, impl = state.identity.impl;
+    if (!PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
+        !Decode(impl + PHBattleHPOffset, key1, key2, 0x766cfc6du, hp) ||
+        !PHReadU32(impl + PHBattleHPShadowOffset, &shadow) || (shadow ^ hp) != 0x8085a6beu ||
+        !PHReadPointer(impl + PHOrbSkillDungeonRulesOffset, &dungeon) ||
+        !ReadMaximumHP(state, dungeon, key1, key2, maximum) || !hp || hp > maximum ||
+        !PHReadU32(impl + PHOrbPendingDamageOffset, &pending) || pending > INT32_MAX ||
+        !PHReadU32(impl + PHOrbPendingThornDamageOffset, &thornPending) || thornPending > pending) return;
+    state.thorns = {hp, maximum, pending, true};
+}
 
 // sub_10006924C is a pure affine raw-to-frame transform. Invert its measured
 // basis; never assume UIKit screen points equal the native 640-wide board.
@@ -292,6 +321,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (!CheckCode(frame.header, reason)) { state->valid = false; return NO; }
         _verifiedHeader = frame.header;
     }
+    if (state->valid && !state->multiplayerDisabled) ReadThornBudget(*state);
     if (_multiplayerDisabled && reason) *reason = @"本場曾進入多人；離開關卡後才可讀盤";
     return YES;
 }
@@ -368,6 +398,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         NSString *cause = !known ? @"遊戲判定技能不可用，冷卻明細未取得" :
             !readiness.baseSkill || !readiness.totalCooldown ? @"未取得可使用的本體技能" :
             observed.charge < readiness.baseCooldown ? @"冷卻尚未完成" : @"冷卻已足，遊戲仍判定技能不可用";
+        if (known && readiness.baseSkill > 0 && readiness.totalCooldown > 0 && observed.charge >= readiness.baseCooldown) {
+            NSString *condition = SkillOrbCondition(diagnosed, unsigned(slot), readiness,
+                PHOrbSameBoard(&live.board, &diagnosed.board));
+            if (condition) cause = condition;
+        }
         NSString *cooldown = known ? [NSString stringWithFormat:@"；本體技能 %d／CD %d，武裝技能 %d／合計 CD %d",
             readiness.baseSkill, readiness.baseCooldown, readiness.assistSkill, readiness.totalCooldown] : @"";
         if (reason) *reason = [NSString stringWithFormat:@"%@（充能 %u%@；階段 %u／%u，快取 %u／%u）", cause,
@@ -427,6 +462,10 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||
         (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) {
         if (reason) *reason = @"輸入前盤面或操作條件已改變";
+        return NO;
+    }
+    if (down && !PHOrbCanEnterThorn(&live, unsigned(cell))) {
+        if (reason) *reason = @"目前 HP 或荊棘傷害無法確認，或這一步會超過可承受傷害";
         return NO;
     }
     uintptr_t real = 0;

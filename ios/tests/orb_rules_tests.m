@@ -63,7 +63,7 @@ int main(void) {
         id saved = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
         Check(PHOrbSkillRulesValid(saved) && [saved isEqual:@[rule]], "all conditions and Boolean enabled state survive persistence");
         NSMutableDictionary *legacy = [PHOrbDefaultSkillRule() mutableCopy];
-        [legacy removeObjectsForKeys:@[@"group",@"once",@"reserveUntil",@"obstacle",@"hpAtMost",@"status",@"required"]];
+        [legacy removeObjectsForKeys:@[@"group",@"once",@"reserveUntil",@"obstacle",@"unmatchableColors",@"hpAtMost",@"status",@"required"]];
         Check(PHOrbSkillRulesValid(@[legacy]) && [PHOrbNormalizedSkillRule(legacy) isEqual:PHOrbDefaultSkillRule()],
             "legacy rules gain no grouping, reservation, once or obstacle condition");
         for (NSDictionary *change in @[@{@"group":@7},@{@"group":@YES},@{@"once":@1},@{@"reserveUntil":@1000},

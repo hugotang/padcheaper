@@ -352,7 +352,7 @@ static BOOL ReleaseProfile(BattleProvider *provider, ProviderLease *lease, const
 static BOOL ProfileMatchesMember(const PHBattleProfile &profile, const PHBattleMember &member) {
     return member.level == Profile16(profile, 6) && member.skillLevel == Profile16(profile, 8) &&
         !std::memcmp(member.extra, profile.bytes + 24, sizeof(member.extra)) &&
-        !std::memcmp(member.assist, profile.bytes + 14, sizeof(member.assist));
+        !std::memcmp(member.assist, profile.bytes + 14, 7);
 }
 
 static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *nextToken,
@@ -390,8 +390,19 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
     } else {
         uint64_t token = old.providerToken ? old.providerToken : old.rebindToken;
         for (ProviderLease &candidate : provider->leases) if (candidate.active && candidate.token == token) { lease = &candidate; break; }
-        if (!lease || !original || !PHBattleSameSource(&lease->original, original) || original->formID != lease->original.formID ||
-            original->catalogID != lease->original.catalogID || !ProfileOwned(provider, *lease, frame.header)) return PHBattleMutationRejected;
+        if (!lease) {
+            if (reason) *reason = @"目前隊員的套用記錄未能確認，保留原始還原記錄";
+            return PHBattleMutationRejected;
+        }
+        if (!original || !PHBattleSameSource(&lease->original, original) || original->formID != lease->original.formID ||
+            original->catalogID != lease->original.catalogID) {
+            if (reason) *reason = @"原始隊員與還原記錄不符，未寫入";
+            return PHBattleMutationRejected;
+        }
+        if (!ProfileOwned(provider, *lease, frame.header)) {
+            if (reason) *reason = @"已套用的原生參數未能確認，保留原始還原記錄";
+            return PHBattleMutationRejected;
+        }
     }
     uintptr_t address = before.identity.impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
     BOOL changed = NO, touched = NO, bound = NO;
@@ -429,11 +440,19 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
                 old.charge, YES, &changed, &charge, &failure, &wanted, entry);
             uint32_t audit = UINT32_MAX;
             success = success && ReadLive(&after, frame, &failure) &&
-                PHReadU32(frame.header + PHSaveRVA + PHBattleAuditOffset, &audit) && !(audit & ~before.auditFlags) &&
-                (loadout ? ProfileMatchesMember(profile, after.members[slot]) :
+                PHReadU32(frame.header + PHSaveRVA + PHBattleAuditOffset, &audit) && !(audit & ~before.auditFlags);
+            if (success && !(loadout ? ProfileMatchesMember(profile, after.members[slot]) :
                  after.members[slot].level == original->level && after.members[slot].skillLevel == original->skillLevel &&
                  !std::memcmp(after.members[slot].extra, original->extra, sizeof(original->extra)) &&
-                 !std::memcmp(after.members[slot].assist, original->assist, sizeof(original->assist)));
+                 !std::memcmp(after.members[slot].assist, original->assist, 7))) {
+                const PHBattleMember &m = after.members[slot];
+                failure = loadout ? @"套用後的培養或武裝欄位不符" : [NSString stringWithFormat:
+                    @"還原培養不符：Lv %u→%u、技能等級 %u→%u、加值／覺醒／潛覺 %@、武裝 %@",
+                    original->level, m.level, original->skillLevel, m.skillLevel,
+                    std::memcmp(m.extra, original->extra, sizeof(m.extra)) ? @"不同" : @"相同",
+                    std::memcmp(m.assist, original->assist, 7) ? @"不同" : @"相同"];
+                success = NO;
+            }
             if (success) {
                 if (loadout) {
                     TagProviderMembers(provider, &after);
@@ -445,8 +464,9 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
                 }
                 return PHBattleMutationApplied;
             }
-        } @catch (NSException *exception) { (void)exception; }
-    } catch (...) { }
+        } @catch (NSException *exception) { failure = exception.name; }
+    } catch (const std::exception &error) { failure = [NSString stringWithUTF8String:error.what()]; }
+      catch (...) { failure = @"原生操作發生未知例外"; }
     if (!touched) {
         if (reason) *reason = @"完整隊伍設定在寫入前被取消";
         return PHBattleMutationRejected;
@@ -481,7 +501,7 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
             }
         } @catch (NSException *exception) { (void)exception; }
     } catch (...) { restored = NO; }
-    if (reason) *reason = restored ? @"設定未通過原生校驗；本次操作已回復，已套用的位置仍可還原" :
-        @"完整隊伍操作未能確認還原，已停止後續寫入；請複製診斷";
+    if (reason) *reason = [NSString stringWithFormat:@"%@；%@", failure ?: @"設定未通過原生校驗",
+        restored ? @"本次操作已回復，可重試還原" : @"未能確認回復，已停止後續寫入；請複製診斷"];
     return restored ? PHBattleMutationRolledBack : PHBattleMutationUncertain;
 }

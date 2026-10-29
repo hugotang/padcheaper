@@ -24,7 +24,9 @@ def generate(manifest):
                              'spinner_colors': list(range(10)), 'board_constraints': ['tape', 'fixed_start', 'unmatchable'],
                              'visual_effects': ['cloud', 'blind', 'super_blind', 'weakened', 'nail', 'combo_orb'],
                              'hazards': {'jammer': 'ordinary-match', 'poison': 'no-deterministic-match',
-                                         'mortal_poison': 'no-deterministic-match', 'bomb': 'all-first-wave', 'thorn': 'avoid-cells'},
+                                         'mortal_poison': 'no-deterministic-match', 'bomb': 'all-first-wave',
+                                         'thorn': 'bounded-contact-with-first-wave-heart-four'},
+                             'unmatchable_color_condition': 'any-selected-basic-color',
                              'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened',
                                                      'jammer', 'poison', 'mortal_poison', 'bomb', 'cloud', 'tape', 'blind',
                                                      'super_blind', 'nail', 'thorn', 'fixed_start', 'combo_orb', 'match_rule'],
@@ -38,13 +40,16 @@ def generate(manifest):
                 'PHOrbSwapRVA', 'PHOrbInputUpdateRVA', 'PHOrbInputGetRVA', 'PHOrbInputTransformRVA',
                 'PHOrbInputHistoryRVA', 'PHOrbFlagsRVA', 'PHOrbCanUseSkillRVA', 'PHOrbStartSkillRVA',
                 'PHOrbSkillSelectionResetRVA',
+                'PHOrbSkillConditionRVA', 'PHOrbSkillOrbConditionRVA', 'PHOrbSkillCompositeRVA',
+                'PHOrbSkillTableLoadRVA', 'PHOrbSkillBoardSizeRVA',
                 'PHOrbBaseSkillRVA', 'PHOrbAssistSkillRVA', 'PHOrbBaseCooldownRVA', 'PHOrbTotalCooldownRVA',
                 'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
                 'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA',
                 'PHOrbMaximumHPRVA', 'PHOrbDungeonHPRVA', 'PHOrbDungeonOptionRVA', 'PHOrbDungeonOptionParseRVA',
                 'PHOrbAwakeningCheckRVA', 'PHOrbSpinnerUpdateRVA', 'PHOrbBombResolveRVA', 'PHOrbTapeProjectRVA',
                 'PHOrbBlindSetRVA', 'PHOrbSuperBlindSetRVA', 'PHOrbBlindTurnRVA', 'PHOrbFixedStartClearRVA',
-                'PHOrbShapeMatchRVA', 'PHOrbLineMatchRVA', 'PHOrbCloudRVA'}
+                'PHOrbShapeMatchRVA', 'PHOrbLineMatchRVA', 'PHOrbCloudRVA',
+                'PHOrbThornDamageGuardRVA', 'PHOrbPendingDamageGuardRVA', 'PHOrbOrbDamageResolveGuardRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',

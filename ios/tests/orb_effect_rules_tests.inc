@@ -52,4 +52,35 @@ static void OrbEffectRulesTests(void) {
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "locked spinners contribute a fixed color while unlocked cells still rotate");
     state.board.spinnerColors = 0x400;
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "unsupported cycles cannot supply a guessed inventory");
+    state.board.spinnerMask = state.board.spinnerColors = 0;
+    rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"obstacle"] = @"unmatchable";
+    state.unmatchableKnown = true; state.board.unmatchableColors = 9;
+    for (unsigned mask = 0; mask < 64; ++mask) {
+        rule[@"unmatchableColors"] = @(mask);
+        Check(PHOrbSkillRulesValid(@[rule]) && PHOrbTriggerSkillRule(rule,&state,1,NULL) ==
+              (!mask || (mask & 9) ? PHOrbRuleYes : PHOrbRuleNo),
+              "selected unmatchable colors use any intersection, including the reported fire plus light case");
+        NSData *data = [NSJSONSerialization dataWithJSONObject:@[rule] options:0 error:NULL];
+        NSArray *saved = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+        Check(PHOrbSkillRulesValid(saved) && [saved[0][@"unmatchableColors"] isEqual:@(mask)],
+              "every selected color combination survives JSON persistence");
+    }
+    for (id mask in @[@YES,@-1,@64,@1.5,@"8"]) {
+        rule[@"unmatchableColors"] = mask;
+        Check(!PHOrbSkillRulesValid(@[rule]),"unmatchable selections reject booleans, out-of-range values and coercion");
+    }
+    rule[@"unmatchableColors"] = @8; state.unmatchableKnown = false;
+    Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleUnknown,
+          "missing unmatchable data never authorizes a color-specific skill");
+    state.unmatchableKnown = true; state.ordinary = false; state.spinnerTurns = 1;
+    state.spinnerReadStatus = PHOrbSpinnerCountMismatch;
+    Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes &&
+          [PHOrbObstacleDescription(&state) containsString:@"數量與保存位置不符"],
+          "known unmatchable color still permits a remedy when independent spinner validation fails");
+    rule[@"status"] = @"awoken_bind"; state.automation.statusKnown = true; state.automation.playerEffects = 0;
+    Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleNo,"status plus unmatchable in one rule remains AND");
+    state.automation.playerEffects = PHOrbPlayerAwokenBind;
+    Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes,"both status and color requirements can trigger together");
+    rule[@"obstacle"] = @"thorn";
+    Check(!PHOrbSkillRulesValid(@[rule]),"color masks cannot accidentally attach to an unrelated obstacle condition");
 }

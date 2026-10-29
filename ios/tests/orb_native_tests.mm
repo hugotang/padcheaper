@@ -102,6 +102,7 @@ static void NativeInputFrame() {
 
 #include "orb_skill_native_tests.inc"
 #include "orb_effect_native_tests.inc"
+#include "orb_thorn_native_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -249,6 +250,7 @@ int main() {
         SkillNativeTests();
         SurvivalNativeTests();
         OrbEffectNativeTests();
+        ThornNativeTests();
         std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

@@ -28,8 +28,13 @@ typedef struct { uint8_t kind, colors, count, length; } PHOrbGoal;
 typedef struct { uint8_t count; PHOrbGoal items[PHOrbMaxGoals]; } PHOrbGoalSet;
 
 typedef struct {
+    uint32_t hp, maximumHP, pendingDamage;
+    bool known;
+} PHOrbThornState;
+
+typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
-    uint8_t poisonErased, unmatchedBombs;
+    uint8_t poisonErased, unmatchedBombs, heartFours;
     bool goalsMet, hazardsSafe;
 } PHOrbEvaluation;
 
@@ -86,6 +91,12 @@ typedef struct {
     bool valid, window, busy, enemiesKnown, boardKnown, hpKnown, statusKnown, awakeningRestricted;
 } PHOrbAutomationState;
 
+typedef enum {
+    PHOrbSpinnerInactive, PHOrbSpinnerReady, PHOrbSpinnerBadCount,
+    PHOrbSpinnerBadPeriod, PHOrbSpinnerBadColors, PHOrbSpinnerBadRows,
+    PHOrbSpinnerCountMismatch, PHOrbSpinnerBadPhase
+} PHOrbSpinnerReadStatus;
+
 typedef struct {
     PHBattleIdentity identity;
     PHOrbBoard board;
@@ -96,9 +107,13 @@ typedef struct {
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
     uint32_t obstacles;
     uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
+    uint32_t spinnerRawCount, spinnerRawPeriod, spinnerRawColors;
+    uint8_t spinnerRawRows[6], spinnerStoredCells;
+    PHOrbSpinnerReadStatus spinnerReadStatus;
     uint8_t fps, minErase, freeMovement;
-    bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid;
+    bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid, unmatchableKnown;
     PHOrbAutomationState automation;
+    PHOrbThornState thorns;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -106,6 +121,8 @@ typedef struct {
     uint8_t combos, erased;
     uint8_t goalHits[PHOrbMaxGoals], goalCount, matchedGoals;
     uint8_t poisonErased, unmatchedBombs;
+    uint8_t thornContacts, heartFours;
+    uint32_t thornDamage;
     uint32_t evaluated, elapsedMS;
     bool deadlineReached, goalsMet, hazardsSafe;
 } PHOrbRoute;
@@ -117,6 +134,8 @@ unsigned PHOrbSpinnerVariants(const PHOrbBoard *board);
 uint8_t PHOrbSpinnerType(const PHOrbBoard *board, unsigned cell, unsigned phase);
 uint64_t PHOrbBlockedCells(const PHOrbBoard *board);
 bool PHOrbCanStartAt(const PHOrbBoard *board, unsigned cell);
+uint32_t PHOrbThornDamage(unsigned percent, uint32_t maximumHP);
+bool PHOrbCanEnterThorn(const PHOrbSnapshot *state, unsigned cell);
 void PHOrbColorCountRange(const PHOrbBoard *board, unsigned color, unsigned *minimum, unsigned *maximum);
 bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 // Spinner colors may advance only by a shared phase. Tokens, gameplay flags,

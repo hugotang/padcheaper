@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.4-orbs",
+  "prototype_version": "0.5.5-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -20,7 +20,10 @@
         4
       ]
     ],
-    "min_erase": [3, 7],
+    "min_erase": [
+      3,
+      7
+    ],
     "connected_match": true,
     "continuous": true,
     "input": "scoped-private-manager",
@@ -50,10 +53,38 @@
     "locked_orbs": true,
     "timed_spinners": false,
     "spinner_strategy": "avoid-cells-all-shared-cycle-phases",
-    "spinner_colors": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-    "board_constraints": ["tape", "fixed_start", "unmatchable"],
-    "visual_effects": ["cloud", "blind", "super_blind", "weakened", "nail", "combo_orb"],
-    "hazards": {"jammer": "ordinary-match", "poison": "no-deterministic-match", "mortal_poison": "no-deterministic-match", "bomb": "all-first-wave", "thorn": "avoid-cells"},
+    "spinner_colors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "board_constraints": [
+      "tape",
+      "fixed_start",
+      "unmatchable"
+    ],
+    "visual_effects": [
+      "cloud",
+      "blind",
+      "super_blind",
+      "weakened",
+      "nail",
+      "combo_orb"
+    ],
+    "hazards": {
+      "jammer": "ordinary-match",
+      "poison": "no-deterministic-match",
+      "mortal_poison": "no-deterministic-match",
+      "bomb": "all-first-wave",
+      "thorn": "bounded-contact-with-first-wave-heart-four"
+    },
     "obstacle_conditions": [
       "unmatchable",
       "special_orbs",
@@ -61,8 +92,20 @@
       "board_effect",
       "spinner",
       "locked",
-      "weakened", "jammer", "poison", "mortal_poison", "bomb", "cloud", "tape", "blind",
-      "super_blind", "nail", "thorn", "fixed_start", "combo_orb", "match_rule"
+      "weakened",
+      "jammer",
+      "poison",
+      "mortal_poison",
+      "bomb",
+      "cloud",
+      "tape",
+      "blind",
+      "super_blind",
+      "nail",
+      "thorn",
+      "fixed_start",
+      "combo_orb",
+      "match_rule"
     ],
     "survival_conditions": [
       "hp_at_most",
@@ -75,11 +118,21 @@
     "decision_reasons": true,
     "recovery_goal": {
       "mode": "continuous-only",
-      "hp_percent": [1, 100],
-      "groups": [1, 3],
-      "shapes": ["match", "four"],
+      "hp_percent": [
+        1,
+        100
+      ],
+      "groups": [
+        1,
+        3
+      ],
+      "shapes": [
+        "match",
+        "four"
+      ],
       "combine": "post-skill-conjunction"
-    }
+    },
+    "unmatchable_color_condition": "any-selected-basic-color"
   },
   "user_report": {
     "date": "2026-10-28",
@@ -122,6 +175,8 @@
     "PHOrbEnemyStride": "0xba8",
     "PHOrbSkillMemberStateOffset": "0x4c8",
     "PHOrbSkillOverrideOffset": "0x4c4",
+    "PHOrbSkillCountOffset": "0xc761b4",
+    "PHOrbSkillBoardResizeOffset": "0xb7c14",
     "PHOrbSkillBindOffset": "0x48",
     "PHOrbSkillSealOffset": "0xb43d8",
     "PHOrbSkillSealExtraOffset": "0xb4a78",
@@ -137,7 +192,9 @@
     "PHOrbHPBaseLowOffset": "0xb7e10",
     "PHOrbHPBaseHighOffset": "0xb7e20",
     "PHOrbHPModifierTurnsOffset": "0xb480c",
-    "PHOrbHPModifierOffset": "0xb4810"
+    "PHOrbHPModifierOffset": "0xb4810",
+    "PHOrbPendingDamageOffset": "0xb7e68",
+    "PHOrbPendingThornDamageOffset": "0xb7e6c"
   },
   "guards": [
     {
@@ -299,6 +356,46 @@
       "length": 64,
       "bytes": "ffc301d1e923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa193840f938d34291081b537908651a53083d00131f050071",
       "sha256": "848804a442eb414fda1358cbd19c8a0d1a4dd2d008e6e17885b4f0cff6664eab"
+    },
+    {
+      "name": "PHOrbSkillConditionRVA",
+      "va": "0x1005c3974",
+      "rva": "0x5c3974",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30302aaf40300aa481840791ff90371ad0600541ffd0371200a00541f4d0471401000541f5d0471",
+      "sha256": "7faa59291f981c5eb52935d28bd8ef14a2c5c4d9cc985e0f203a38c2abcb10fc"
+    },
+    {
+      "name": "PHOrbSkillOrbConditionRVA",
+      "va": "0x1005c3ae8",
+      "rva": "0x5c3ae8",
+      "length": 64,
+      "bytes": "630000b42800805268000039e13b0091e00314aa72abff97080080520c008052691640b9ea3f8039eb3b80392d25cc1a0d0400365f0500714b0300540e0080d2",
+      "sha256": "4be32e6534a3f69ccc97882bbe2834ca8d89ccf780e9ecb7b70541f6cf415ac4"
+    },
+    {
+      "name": "PHOrbSkillCompositeRVA",
+      "va": "0x1005c3f14",
+      "rva": "0x5c3f14",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa431840797fe00171a00400547fd00171a1060054170080d2",
+      "sha256": "fc908c59423835e686e483ceccea34a0720b2f39cf605b19823a4dd4a53a8780"
+    },
+    {
+      "name": "PHOrbSkillTableLoadRVA",
+      "va": "0x100534f28",
+      "rva": "0x534f28",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f5b000b0b5c21e91e0e5002f08368c52e818a072a06a28fc000580522cb52494",
+      "sha256": "b8a0b89a3286ee150f861e8787ea89033f899327f792703e1d40b2bbb2a1ce3c"
+    },
+    {
+      "name": "PHOrbSkillBoardSizeRVA",
+      "va": "0x1005ae8c4",
+      "rva": "0x5ae8c4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa083840f909dd429120194cbd21154cbd0020211e80010054952f89527501a0720001158b3609ff97",
+      "sha256": "2b474c5834c1b21ba8c96068aa6b790673ecaf146dd8a319c80edccb154b3732"
     },
     {
       "name": "PHOrbCanUseSkillRVA",
@@ -467,6 +564,40 @@
       "length": 64,
       "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291e3130329f60301aaf70300aae21b00f95f0000393f50007160000054dfce0171",
       "sha256": "27c22c1930b98566eb3465e10b28e18960a26fba9babdf8e0f3d184cb6af1937"
+    },
+    {
+      "name": "PHOrbThornDamageGuardRVA",
+      "va": "0x100608838",
+      "rva": "0x608838",
+      "length": 64,
+      "bytes": "a91a403929071836a932403929190072c00600542001231e0959a8522101271e0018211e08c0221e08cd4291004116918acbff970000621e0009601e1bfee897",
+      "sha256": "96529089665fa812f10db1561870b47248b847a3cd7fe9fb67a753804bcfc109"
+    },
+    {
+      "name": "PHOrbPendingDamageGuardRVA",
+      "va": "0x10059efb8",
+      "rva": "0x59efb8",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc300911410409188e26139680000360000805221000014f30300aa88da48b90801010b0900b0121f01096b0831891a",
+      "sha256": "292ce4e3929863a8108496264b4a0a8159dd782888409f723cc2a35a8e143a78"
+    },
+    {
+      "name": "PHOrbOrbDamageResolveGuardRVA",
+      "va": "0x100604b24",
+      "rva": "0x604b24",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa153840f9a8de4291003147fd0820601e2d020054007d47bde30be997753a40f91f040071ab010054",
+      "sha256": "7796b185e0dc992fa47b49e02d3cfb412a5162096e57c901c6c389a7249739c3"
     }
-  ]
+  ],
+  "thorn_budget": {
+    "damage": "native-float-percent-rounded-effective-maximum",
+    "pending_damage": 753256,
+    "pending_thorn_damage": 753260,
+    "survival": "current-HP-greater-than-pending-plus-route-upper-bound",
+    "healing": "not-credited",
+    "awakening_resistance": "not-credited",
+    "contact": "target-token-after-swap-only",
+    "heart_requirement": "first-removal-exact-four"
+  }
 }

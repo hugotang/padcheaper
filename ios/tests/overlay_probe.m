@@ -652,6 +652,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             if (ruleDraft.count) {
                 ruleDraft[0][@"status"] = @"awoken_bind"; ruleDraft[0][@"required"] = @YES;
                 ruleDraft[0][@"group"] = @1; ruleDraft[0][@"reserveUntil"] = @2;
+                ruleDraft[0][@"obstacle"] = @"unmatchable";
             }
             UITextField *ruleEvery = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleevery0");
             ruleEvery.text = @"2"; [ruleEvery sendActionsForControlEvents:UIControlEventEditingChanged];
@@ -662,11 +663,28 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             ruleEvery = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleevery0");
             PHProbeCheck(readyButton && ruleDraft.count && [ruleDraft[0] isEqual:readyExpected] && [ruleEvery.text isEqual:@"1"],
                 @"Ready-cast shortcut sets every turn while retaining all rescue, group and reservation conditions");
+            [ruleEditor.view layoutIfNeeded];
+            for (NSUInteger color = 0; color < 6; ++color) {
+                UIButton *choice = (UIButton *)PHProbeFind(ruleEditor.view,
+                    [NSString stringWithFormat:@"padcheaper.orbsRuleUnmatchable%lu-0", (unsigned long)color]);
+                PHProbeCheck(choice && CGRectGetHeight(choice.bounds) >= 44, @"Every unmatchable color has a tappable selector");
+            }
+            [(UIButton *)PHProbeFind(ruleEditor.view,@"padcheaper.orbsRuleUnmatchable3-0") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            [(UIButton *)PHProbeFind(ruleEditor.view,@"padcheaper.orbsRuleUnmatchable5-0") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            [ruleEditor.view layoutIfNeeded];
+            UILabel *colorTitle = (UILabel *)PHProbeFind(ruleEditor.view,@"padcheaper.orbsRuleUnmatchableTitle0");
+            PHProbeCheck([ruleDraft[0][@"unmatchableColors"] isEqual:@40] &&
+                [colorTitle.text containsString:@"光／心"] && [colorTitle.text containsString:@"任一"],
+                @"Real color button actions select light or heart with ANY semantics");
+            UIScrollView *colorScroll = PHProbeScrollParent(colorTitle);
+            [colorScroll scrollRectToVisible:CGRectInset([colorTitle convertRect:colorTitle.bounds toView:colorScroll],0,-90) animated:NO];
+            PHProbeRender(self.window,orbWindow,@"orbs-unmatchable-colors");
             [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(orbController.presentedViewController == ruleEditor && [orbAction isEqual:@"orbsRules"] &&
                 [orbValue count] == 1 && ruleDraft.count && [ruleDraft[0][@"floor"] isEqual:@3] &&
                 [orbValue[0][@"hpAtMost"] isEqual:@40] && [orbValue[0][@"status"] isEqual:@"awoken_bind"] && [orbValue[0][@"required"] boolValue] &&
                 [orbValue[0][@"every"] isEqual:@1] && [orbValue[0][@"group"] isEqual:@1] && [orbValue[0][@"reserveUntil"] isEqual:@2] &&
+                [orbValue[0][@"unmatchableColors"] isEqual:@40] && [orbValue[0][@"obstacle"] isEqual:@"unmatchable"] &&
                 [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"未能儲存"],
                 @"Failed skill-rule saves preserve the draft and editor with a fixed error notice");
             UIScrollView *ruleScroll = (UIScrollView *)((UIStackView *)[ruleEditor valueForKey:@"rows"]).superview;
@@ -776,6 +794,24 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [overlay.rootViewController setValue:[^{ return shortcutState; } copy] forKey:@"snapshot"];
             __block NSString *shortcutAction = nil;
             [overlay.rootViewController setValue:[^(NSString *action, id value) { shortcutAction = action; } copy] forKey:@"action"];
+            NSMutableDictionary *restoreState = [shortcutState[@"battleState"] mutableCopy];
+            restoreState[@"canRestore"] = @YES; restoreState[@"canRetryRestore"] = @YES;
+            restoreState[@"message"] = @"還原未完成：位置 1、2、3、4、5；請按「重試未完成還原」";
+            shortcutState[@"battleState"] = restoreState;
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            UIButton *retryRestore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+            [retryRestore sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(retryRestore.enabled && [retryRestore.currentTitle isEqual:@"重試未完成還原"] &&
+                [shortcutAction isEqual:@"battleRestore"], @"Failed restoration exposes the existing retry action with an explicit title");
+            UIScrollView *restoreScroll = PHProbeScrollParent(retryRestore);
+            [overlay layoutIfNeeded];
+            [restoreScroll scrollRectToVisible:[retryRestore convertRect:retryRestore.bounds toView:restoreScroll] animated:NO];
+            PHProbeRender(self.window, overlay, @"battle-restore-retry");
+            shortcutState[@"battleState"] = originalSnapshot()[@"battleState"];
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(!retryRestore.enabled && [retryRestore.currentTitle isEqual:@"全部還原／取消"],
+                @"A later idle snapshot clears the restore retry title and availability");
+            shortcutAction = nil;
             [overlay.rootViewController setValue:@NO forKey:@"expanded"];
             PHProbeFind(overlay, @"padcheaper.panel").hidden = YES; bubble.hidden = NO;
             [overlay.rootViewController updateWithSnapshot:shortcutState];

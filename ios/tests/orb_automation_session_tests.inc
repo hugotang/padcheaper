@@ -131,10 +131,71 @@ static void EvolvedSkillTurnSessionTests() {
         "the next native orb turn clears old refusals and casts the newly ready evolved skill exactly once");
     [session queueStop:@"end evolved skill turn fixture"];
 }
+static void ConditionalSkillSessionTests() {
+    NSMutableDictionary *leader = [PHOrbDefaultSkillRule() mutableCopy];
+    NSMutableDictionary *byakuya = [PHOrbDefaultSkillRule() mutableCopy]; byakuya[@"slot"] = @5;
+    for (unsigned light : {8u, 9u}) for (bool leaderLast : {false, true}) {
+        FakeOrbEngine *engine = [FakeOrbEngine new];
+        engine->requireNineLight = YES; engine->lightAfterByakuya = light;
+        engine->live.automation.members[0].number = 14038;
+        engine->live.automation.members[0].charge = 4;
+        for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = i < 4 ? 3 : 5;
+        PHOrbSession *session = AutomaticSession(engine, leaderLast ? @[byakuya, leader] : @[leader, byakuya]);
+        Check(UntilPhase(session, engine, @"turnWaiting") && engine->skillOrder.front() == 4 &&
+            engine->skillOrder.size() == (light >= 9 ? 2u : 1u) &&
+            (light < 9 || engine->skillOrder.back() == 0),
+            "conditional leader is retried after orb generation and succeeds at nine light regardless of rule order");
+        if (light < 9) {
+            NSDictionary *detail = [session snapshot][@"ruleDecisionDetails"][leaderLast ? 1 : 0];
+            Check([detail[@"decision"] containsString:@"目前 8 顆"] && [detail[@"orbCounts"][3] unsignedIntegerValue] == 8 &&
+                [detail[@"charge"] unsignedIntegerValue] == 4,
+                "Byakuya's generation does not guarantee Uryu's requirement and the last refusal retains exact counts");
+        }
+        [session queueStop:@"end conditional leader order fixture"];
+    }
+    leader[@"required"] = @YES;
+    FakeOrbEngine *engine = [FakeOrbEngine new]; engine->requireNineLight = YES; engine->lightAfterByakuya = 8;
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = i < 4 ? 3 : 5;
+    PHOrbSession *session = AutomaticSession(engine, @[leader, byakuya]);
+    for (unsigned i = 0; i < 400 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session, engine, Frame());
+    Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.size() == 1 &&
+        [[session snapshot][@"message"] containsString:@"必要規則"],
+        "a required conditional leader still blocks the route when generation leaves only eight light");
+
+    // The old implementation rebuilt every detail from the newest rule scan,
+    // attaching a later spinner count/charge to an earlier native refusal.
+    leader[@"required"] = @NO;
+    engine = [FakeOrbEngine new]; engine->requireNineLight = YES;
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = i < 8 ? 3 : 5;
+    engine->live.board.spinnerMask = UINT64_C(1) << 8; engine->live.board.spinnerColors = 63;
+    engine->live.automation.members[0].charge = 4;
+    session = AutomaticSession(engine, @[leader]);
+    Check(UntilPhase(session, engine, @"skillArming"), "conditional refusal context fixture armed");
+    Tick(session, engine, Frame());
+    Check(engine->skillAttempts == 1 && engine->skillOrder.empty(), "eight-light refusal was actually attempted");
+    engine->live.board.types[8] = 3; engine->live.automation.members[0].charge = 5;
+    Check(UntilSolveStarts(session, engine), "later scan reaches the solver without another native skill attempt");
+    NSDictionary *detail = [session snapshot][@"ruleDecisionDetails"][0];
+    Check([detail[@"decision"] containsString:@"目前 8 顆"] && [detail[@"orbCounts"][3] unsignedIntegerValue] == 8 &&
+        [detail[@"charge"] unsignedIntegerValue] == 4 && [detail[@"nativeAttempt"] boolValue] && engine->skillAttempts == 1,
+        "cached refusal text and structured observation retain the same attempted board and charge");
+    [session queueStop:@"end exact refusal observation fixture"];
+    engine->live.automation = {};
+    for (unsigned i = 0; i < 12; ++i) Tick(session, engine, Frame());
+    detail = [session snapshot][@"ruleDecisionDetails"][0];
+    Check([detail[@"orbCounts"][3] unsignedIntegerValue] == 8 && [detail[@"charge"] unsignedIntegerValue] == 4,
+        "stopped diagnostics keep the refusal's orb counts through subsequent idle reads");
+    engine->live.present = false;
+    for (unsigned i = 0; i < 12; ++i) Tick(session, engine, Frame());
+    detail = [session snapshot][@"ruleDecisionDetails"][0];
+    Check([detail[@"orbCounts"][3] unsignedIntegerValue] == 8 && [detail[@"charge"] unsignedIntegerValue] == 4 &&
+        [detail[@"nativeAttempt"] boolValue], "leaving battle clears scheduling history without rewriting saved decision evidence");
+}
 static void AutomationSessionTests() {
     SkillSelectionSessionTests();
     RouteProgressSessionTests();
     EvolvedSkillTurnSessionTests();
+    ConditionalSkillSessionTests();
     FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = AutomaticSession(engine, @[]);
     Check([[session snapshot][@"busy"] boolValue] && [[session snapshot][@"canStop"] boolValue] &&
         ![session configureQuality:@"thorough"], "automatic waiting exposes stop and captures immutable settings");

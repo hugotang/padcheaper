@@ -55,6 +55,27 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"tape":tape, @"cloud":cloud, @"blocked":blockedCells, @"fixedStart":@(board.fixedStart),
         @"unmatchableColors":@(board.unmatchableColors), @"minErase":@(board.minErase ?: 3), @"minMatch":@(board.minMatch)};
 }
+NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, bool attempted = false) {
+    const auto &member = state.automation.members[slot];
+    unsigned counts[PHOrbTypes]{};
+    bool known = state.automation.boardKnown && PHOrbDimensionsSupported(state.board.width, state.board.height);
+    if (known) for (unsigned i = 0; i < state.board.width * state.board.height; ++i) {
+        if (state.board.types[i] >= PHOrbTypes) known = false;
+        else ++counts[state.board.types[i]];
+    }
+    NSMutableArray *orbCounts = [NSMutableArray array];
+    if (known) for (unsigned count : counts) [orbCounts addObject:@(count)];
+    return @{@"number":@(member.number), @"state":@(member.state), @"charge":@(member.charge),
+        @"selection":@(member.selection), @"active":@(member.active), @"bound":@(member.bound),
+        @"skillStages":@[@(member.skillStage[0]), @(member.skillStage[1])],
+        @"cachedSkillStages":@[@(member.cachedSkillStage[0]), @(member.cachedSkillStage[1])],
+        @"skillLevels":@[@(member.skillLevel[0]), @(member.skillLevel[1])],
+        @"memberSkillUses":@[@(member.skillUses[0]), @(member.skillUses[1])],
+        @"assistCatalogID":@(member.assistCatalogID), @"orbCounts":orbCounts,
+        @"boardWidth":@(state.board.width), @"boardHeight":@(state.board.height),
+        @"spinnerMask":@(state.board.spinnerMask), @"observedPhase":@(state.phase),
+        @"observedWave":@(state.wave), @"observedSkillUses":@(state.automation.skillUses), @"nativeAttempt":@(attempted)};
+}
 }
 
 @implementation PHOrbSession {
@@ -70,6 +91,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     NSMutableArray *_automationLog;
     NSMutableArray<NSString *> *_ruleDecisions;
     NSMutableDictionary<NSNumber *, NSString *> *_unavailableReasons;
+    NSMutableDictionary<NSNumber *, NSDictionary *> *_skillAttemptContexts;
+    NSMutableArray<NSDictionary *> *_decisionContexts;
     NSDictionary *_goalPlan, *_recovery;
     NSDictionary *_profileLibrary, *_activeProfile;
     PHOrbSolveOptions _solveOptions;
@@ -100,6 +123,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _skillRules = @[]; _automationLog = [NSMutableArray array]; _onceRules = [NSMutableSet set];
         _recovery = PHOrbDefaultRecovery();
         _ruleDecisions = [NSMutableArray array]; _unavailableReasons = [NSMutableDictionary dictionary]; _decisionRules = @[];
+        _skillAttemptContexts = [NSMutableDictionary dictionary];
+        _decisionContexts = [NSMutableArray array];
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
     }
     return self;
@@ -159,6 +184,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _phase = @"idle"; _message = @"策略已儲存；按開始時核對隊伍與關卡";
     return YES;
 }
+- (void)stopForLifecycle:(NSString *)reason {
+    const bool intent = _automatic || _oneShot || _readQueued || [_phase isEqual:@"solving"] ||
+        [_phase isEqual:@"preview"] || [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] ||
+        ([_phase isEqual:@"releasing"] && _releaseComplete);
+    if (intent) [self queueStop:reason];
+    // An aborted gesture may still await release. Keep that state and its
+    // original error; the next native frame will complete the release.
+}
 - (void)queueStop:(NSString *)reason {
     const bool wasAutomatic = _automatic;
     const bool skillRunning = [_phase isEqual:@"skillWaiting"];
@@ -200,6 +233,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     _activeProfile = @{};
     [_automationLog removeAllObjects];
     [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects];
+    [_skillAttemptContexts removeAllObjects];
+    [_decisionContexts removeAllObjects];
     _decisionRules = @[]; _decisionState = {}; _decisionTurn = _recoveryTurn = 0;
     _phase = @"autoWaiting"; _message = @"連續模式準備中；點浮動「停止」可隨時中斷";
 }
@@ -326,9 +361,16 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu 技能完成", (unsigned long)_autoTurn, (unsigned long)_skillRule + 1]];
         [self waitForAutomationBoard]; return;
     }
+    if (_decisionTurn != _autoTurn) [_skillAttemptContexts removeAllObjects];
     [_ruleDecisions removeAllObjects]; _decisionTurn = _autoTurn;
     _decisionRules = _skillRules; _decisionState = _live;
-    for (NSUInteger i = 0; i < _skillRules.count; ++i) [_ruleDecisions addObject:@"尚未判斷"];
+    [_decisionContexts removeAllObjects];
+    for (NSUInteger i = 0; i < _skillRules.count; ++i) {
+        [_ruleDecisions addObject:@"尚未判斷"];
+        NSUInteger slot = [_skillRules[i][@"slot"] unsignedIntegerValue] - 1;
+        NSDictionary *attempt = ((_unavailableRules | _usedRules) & (1u << i)) ? _skillAttemptContexts[@(i)] : nil;
+        [_decisionContexts addObject:attempt ?: SkillDecisionContext(_live, slot)];
+    }
     uint16_t unmetRequired = 0;
     for (NSNumber *index in PHOrbSkillRuleOrder(_skillRules, _groupNext)) {
         NSUInteger i = index.unsignedIntegerValue;
@@ -404,10 +446,21 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         _message = @"操作時間不足，請重新讀盤取得較短路徑";
         return;
     }
+    if (![self hasThornBudget:&_live]) {
+        [self queueStop:@"荊棘路徑的 HP 或待結算傷害已改變，請重新求路"]; return;
+    }
     _expected = _preview; _target = _confirmed = 0; _ownedOrb = 0;
     _awaitingStart = true; _startSent = false; _phase = @"arming"; _requestedAt = _now;
     _message = _automatic ? [NSString stringWithFormat:@"連續第 %lu 回合 · 準備轉珠；點浮動「停止」可中斷", (unsigned long)_autoTurn] :
         @"準備執行一次；點浮動「停止」即可中斷";
+}
+- (BOOL)hasThornBudget:(const PHOrbSnapshot *)state {
+    if (!_route.thornContacts) return YES;
+    PHOrbSolveOptions options; options.thorns = state->thorns;
+    if (!PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) return NO;
+    PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
+    return PHOrbEvaluateRoute(state->board, _route, options, evaluation, damage, contacts) &&
+        evaluation.goalsMet && evaluation.hazardsSafe && contacts == _route.thornContacts;
 }
 - (void)beginSolve {
     if (_automatic) [self cancelWorker]; // Each automatic route has its own UI/worker generation.
@@ -416,6 +469,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     [self clearRoute];
     _readQueued = false; _preview = _live;
     PHOrbSolveOptions options = OptionsForQuality(_quality);
+    options.thorns = _preview.thorns;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
@@ -455,7 +509,10 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             }
             PHOrbBoard replay{};
             PHOrbEvaluation evaluation{};
-            if (!PHOrbReplay(&board, &route, route.count - 1, &replay) || !PHOrbEvaluate(replay, options.goals, evaluation) ||
+            uint32_t thornDamage = 0; uint8_t thornContacts = 0;
+            if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
+                !PHOrbEvaluateRoute(board, route, options, evaluation, thornDamage, thornContacts) ||
+                route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
                 evaluation.unmatchedBombs != route.unmatchedBombs ||
@@ -469,8 +526,10 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
             if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
-            if (board.tapeMask || PHOrbBlockedCells(&board) != (board.tapeMask | board.spinnerMask))
-                summary = [summary stringByAppendingString:@"\n已繞開封條及刺珠。"];
+            if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];
+            if (route.thornContacts) summary = [summary stringByAppendingFormat:
+                @"\n荊棘碰觸 %u 次 · 傷害上限 %u · 首批心四連 %u 組；未把回血與抗性計入可承受傷害。",
+                route.thornContacts, route.thornDamage, route.heartFours];
             summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
                 route.elapsedMS, options.milliseconds, route.deadlineReached ? @"已到時間上限" : @"未到時間上限", options.steps];
             if (!route.goalsMet) {
@@ -482,8 +541,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
                 summary = [NSString stringWithFormat:@"%@\n%@", [missing componentsJoinedByString:@"\n"], summary];
             }
             session->_message = !route.hazardsSafe ? [NSString stringWithFormat:
-                @"未找到符合妨礙處理條件的路徑：會消除毒／猛毒 %u 顆、首批未消爆彈 %u 顆。未開放執行；可先用技能改盤。\n%@",
-                route.poisonErased, route.unmatchedBombs, summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
+                @"未找到符合妨礙處理條件的路徑：毒／猛毒 %u 顆、首批未消爆彈 %u 顆%@。未開放執行；可先用技能改盤。\n%@",
+                route.poisonErased, route.unmatchedBombs, route.thornContacts && !route.heartFours ? @"、荊棘路徑未消出心四連" : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
                 route.matchedGoals, route.goalCount, summary] : route.goalCount ?
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
             if ((session->_automatic || session->_oneShot) && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
@@ -522,6 +581,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
                 return;
             }
             // The engine rereads once more immediately before its native call.
+            _skillAttemptContexts[@(_skillRule)] = SkillDecisionContext(current, slot, true);
+            _decisionContexts[_skillRule] = _skillAttemptContexts[@(_skillRule)];
             PHOrbSkillResult result = [_engine useSkill:slot expected:&_skillBefore frame:frame reason:&reason];
             NSDictionary *rule = _skillRules[_skillRule];
             // Rejection can include an uncertain native start. A once rule
@@ -576,6 +637,9 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if ([_phase isEqual:@"arming"]) {
         if (!frame.enabled || !PHOrbCanPreview(&current) || !SamePosition(current, _preview)) {
             [self queueStop:@"執行前盤面或開關已改變，請重新讀盤"]; return;
+        }
+        if (![self hasThornBudget:&current]) {
+            [self queueStop:@"執行前荊棘傷害預算已不符合，已停止"]; return;
         }
         if (time - _requestedAt < 0.35) return;
         if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
@@ -740,26 +804,23 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
 - (NSDictionary *)snapshot {
     NSMutableArray *path = [NSMutableArray array], *goalHits = [NSMutableArray array];
     NSMutableArray *decisionDetails = [NSMutableArray array];
-    // Preserve the member context that produced these decisions. Ordinary
-    // idle reads after stopping do not contain automation fields.
+    // A retained native refusal must keep its own observation, even when a
+    // later scan sees another spinner phase or charge. Unattempted decisions
+    // use the current scan; successful attempts keep their pre-cast context.
     for (NSUInteger i = 0; i < _ruleDecisions.count && i < _decisionRules.count; ++i) {
         NSUInteger slot = [_decisionRules[i][@"slot"] unsignedIntegerValue] - 1;
         if (slot >= 6) continue;
-        const auto &member = _decisionState.automation.members[slot];
-        [decisionDetails addObject:@{@"rule":@(i + 1), @"slot":@(slot + 1), @"number":@(member.number),
-            @"decision":_ruleDecisions[i], @"state":@(member.state), @"charge":@(member.charge),
-            @"selection":@(member.selection), @"active":@(member.active), @"bound":@(member.bound),
-            @"skillStages":@[@(member.skillStage[0]), @(member.skillStage[1])],
-            @"cachedSkillStages":@[@(member.cachedSkillStage[0]), @(member.cachedSkillStage[1])],
-            @"skillLevels":@[@(member.skillLevel[0]), @(member.skillLevel[1])],
-            @"memberSkillUses":@[@(member.skillUses[0]), @(member.skillUses[1])],
-            @"assistCatalogID":@(member.assistCatalogID)}];
+        NSMutableDictionary *detail = [(i < _decisionContexts.count ? _decisionContexts[i] :
+            SkillDecisionContext(_decisionState, slot)) mutableCopy];
+        [detail addEntriesFromDictionary:@{@"rule":@(i + 1), @"slot":@(slot + 1),
+            @"decision":_ruleDecisions[i]}];
+        [decisionDetails addObject:detail];
     }
     for (unsigned i = 0; i < _route.count; ++i) [path addObject:@(_route.cells[i])];
     for (unsigned i = 0; i < _route.goalCount && i < PHOrbMaxGoals; ++i) [goalHits addObject:@(_route.goalHits[i])];
     BOOL preview = [_phase isEqual:@"preview"];
     BOOL canExecute = preview && _route.goalsMet && _route.hazardsSafe && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
-        SamePosition(_live, _preview) && HasRouteTime(_live, _route);
+        SamePosition(_live, _preview) && HasRouteTime(_live, _route) && [self hasThornBudget:&_live];
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && !_automatic && !_oneShot && ![self executing] && !_inputFault), @"canExecute":@(canExecute && !_automatic && !_oneShot),
         @"canStart":@(_frame.ready && _frame.enabled && !_automatic && !_oneShot && ![self executing] && !_inputFault),
@@ -785,11 +846,20 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
         @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
         @"hazardsSafe":@(_route.hazardsSafe), @"poisonErased":@(_route.poisonErased), @"unmatchedBombs":@(_route.unmatchedBombs),
+        @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage), @"heartFours":@(_route.heartFours),
+        @"thornHPKnown":@(_live.thorns.known), @"thornHP":@(_live.thorns.hp), @"thornMaximumHP":@(_live.thorns.maximumHP),
+        @"pendingOrbDamage":@(_live.thorns.pendingDamage),
         @"spinnerMask":@(_live.board.spinnerMask), @"spinnerColors":@(_live.board.spinnerColors),
         @"spinnerTurns":@(_live.spinnerTurns), @"spinnerPeriodFrames":@(_live.spinnerPeriodFrames),
+        @"spinnerReadStatus":PHOrbSpinnerReadDescription(&_live),
+        @"spinnerRawCount":@(_live.spinnerRawCount), @"spinnerRawPeriod":@(_live.spinnerRawPeriod),
+        @"spinnerRawColors":@(_live.spinnerRawColors), @"spinnerStoredCells":@(_live.spinnerStoredCells),
+        @"spinnerRawRows":@[@(_live.spinnerRawRows[0]), @(_live.spinnerRawRows[1]), @(_live.spinnerRawRows[2]),
+            @(_live.spinnerRawRows[3]), @(_live.spinnerRawRows[4]), @(_live.spinnerRawRows[5])],
         @"spinnerVariants":@(PHOrbSpinnerVariants(&_live.board)), @"blockedMask":@(PHOrbBlockedCells(&_live.board)),
         @"tapeMask":@(_live.board.tapeMask), @"cloudMask":@(_live.board.cloudMask), @"fixedStart":@(_live.board.fixedStart),
         @"unmatchableColors":@(_live.board.unmatchableColors), @"unmatchableTurns":@(_live.unmatchableTurns),
+        @"unmatchableKnown":@(_live.unmatchableKnown),
         @"tapeRowTurns":@(_live.tapeRowTurns), @"tapeColumnTurns":@(_live.tapeColumnTurns), @"cloudTurns":@(_live.cloudTurns),
         @"minErase":@(_live.minErase), @"minMatch":@(_live.board.minMatch),
         @"goalHits":goalHits,

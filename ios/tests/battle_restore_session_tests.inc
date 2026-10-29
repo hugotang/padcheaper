@@ -57,5 +57,57 @@ static void TestRestoreContinuity(void) {
         [session onFrame:Frame() atTime:100.4];
         Check(engine->fullRestores == 1 && [session.snapshot[@"restoreFailedMask"] isEqual:@1],
               "a later successful restore does not erase another position's failure diagnostic");
+        Check([session.snapshot[@"message"] containsString:@"位置 1"] &&
+              [session.snapshot[@"phase"] isEqual:@"restore_failed"] &&
+              [session.snapshot[@"canRetryRestore"] boolValue] &&
+              [session.snapshot[@"restoreFailures"][0][@"reason"] isEqual:@"verified rollback"],
+              "later successes retain the failed slot, exact reason and explicit retry control");
+    }
+    {
+        FakeBattleEngine *engine = [FakeBattleEngine new]; PHBattleSession *session = Session(engine);
+        [session queueLoadouts:loadouts mask:63];
+        for (NSUInteger i = 0; i < 6; ++i) [session onFrame:Frame() atTime:100.1 + i * .1];
+        [session queueRestore];
+        for (NSUInteger i = 0; i < 6; ++i) {
+            if (i < 5) engine->nextResult = PHBattleMutationRolledBack;
+            [session onFrame:Frame() atTime:101 + i * .1];
+        }
+        [session onFrame:Frame() atTime:101.8];
+        Check(engine->fullRestores == 1 && [session.snapshot[@"restoreFailedMask"] isEqual:@31] &&
+              [session.snapshot[@"restoreFailures"] count] == 5 && [session.snapshot[@"message"] containsString:@"1、2、3、4、5"],
+              "reported failure pattern preserves five rolled-back slots when only helper restore succeeds");
+        PHBattleLoadout another[6]; FullTeam(another);
+        for (NSUInteger i = 0; i < 6; ++i) another[i].bodyNumber += 100;
+        [session queueLoadouts:another mask:63];
+        Check([session.snapshot[@"pendingMask"] isEqual:@0] &&
+              [session.snapshot[@"message"] containsString:@"重試未完成還原"],
+              "another team cannot silently replace the original restore ownership and explains how to recover");
+        [session queueRestore];
+        for (NSUInteger i = 0; i < 5; ++i) [session onFrame:Frame() atTime:102 + i * .1];
+        [session onFrame:Frame() atTime:102.8];
+        Check(engine->fullRestores == 6 && [session.snapshot[@"activeCount"] isEqual:@0] &&
+              [session.snapshot[@"restoreFailures"] count] == 0 && [session.snapshot[@"canApply"] boolValue],
+              "retry restores only the unfinished five slots and clears all failed ownership");
+        [session queueLoadouts:another mask:63];
+        for (NSUInteger i = 0; i < 6; ++i) [session onFrame:Frame() atTime:103 + i * .1];
+        Check(engine->fullApplies == 12 && [session.snapshot[@"activeCount"] isEqual:@6],
+              "a different complete team applies after failed restoration is successfully retried");
+    }
+    {
+        FakeBattleEngine *engine = [FakeBattleEngine new]; PHBattleSession *session = Session(engine);
+        [session queueLoadouts:loadouts mask:1]; [session onFrame:Frame() atTime:100.1];
+        [session queueRestore]; engine->nextResult = PHBattleMutationUncertain;
+        [session onFrame:Frame() atTime:100.2]; [session onFrame:Frame() atTime:100.5];
+        NSUInteger calls = engine->changes;
+        [session queueRestore]; [session queueLoadouts:loadouts mask:2];
+        [session onFrame:Frame() atTime:101];
+        Check([session.snapshot[@"fault"] boolValue] && engine->changes == calls,
+              "unconfirmed rollback cannot be bypassed by retrying or applying another slot in the same battle");
+        engine->live.present = false; [session onFrame:Frame() atTime:102];
+        engine->live.present = true; ++engine->live.identity.entryHash[0];
+        [session onFrame:Frame() atTime:103]; [session queueLoadouts:loadouts mask:2];
+        [session onFrame:Frame() atTime:103.1];
+        Check(![session.snapshot[@"fault"] boolValue] && engine->changes == calls + 1,
+              "an observed battle exit retires the old fault and permits a new single-player battle");
     }
 }

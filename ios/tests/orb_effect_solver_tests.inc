@@ -112,7 +112,8 @@ static void OrbEffectSolverTests() {
         PHOrbRoute bad{}; bad.count = 2; bad.cells[0] = 3; bad.cells[1] = 4;
         Check(!PHOrbReplay(&board, &bad, 1, &replay), "replay independently rejects the wrong fixed start");
         board.fixedStart = 0; bad.cells[0] = 3; bad.cells[1] = 2;
-        Check(!PHOrbReplay(&board, &bad, 1, &replay), "replay rejects touching a thorn");
+        Check(PHOrbReplay(&board, &bad, 1, &replay) && replay.thornDamage[3] == 4,
+            "replay tracks a thorn moving with its token; route validation separately checks damage");
         bad.cells[0] = uint8_t(board.width + 1); bad.cells[1] = 1;
         Check(!PHOrbReplay(&board, &bad, 1, &replay), "replay rejects entering tape even along an adjacent edge");
         bad.cells[0] = uint8_t(board.width); bad.cells[1] = 0;

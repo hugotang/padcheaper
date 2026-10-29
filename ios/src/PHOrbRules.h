@@ -8,6 +8,8 @@ FOUNDATION_EXPORT NSArray<NSString *> *PHOrbEnemyConditions(void);
 FOUNDATION_EXPORT NSString *PHOrbEnemyConditionTitle(NSString *condition);
 FOUNDATION_EXPORT NSArray<NSString *> *PHOrbObstacleConditions(void);
 FOUNDATION_EXPORT NSString *PHOrbObstacleConditionTitle(NSString *condition);
+FOUNDATION_EXPORT NSString *PHOrbUnmatchableConditionTitle(unsigned colors);
+FOUNDATION_EXPORT NSString *PHOrbSpinnerReadDescription(const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSString *PHOrbObstacleDescription(const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSArray<NSString *> *PHOrbPlayerConditions(void);
 FOUNDATION_EXPORT NSString *PHOrbPlayerConditionTitle(NSString *condition);

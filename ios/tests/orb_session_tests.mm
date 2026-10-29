@@ -20,6 +20,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
+    BOOL requireNineLight;
+    unsigned lightAfterByakuya;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
@@ -37,6 +39,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.automation.valid = live.automation.window = live.automation.enemiesKnown = live.automation.boardKnown = true;
         live.automation.hpKnown = live.automation.statusKnown = true;
         live.automation.hp = live.automation.maximumHP = 1000;
+        live.thorns = {1000,1000,0,true}; live.unmatchableKnown = true;
         live.automation.activeEnemies = 1;
         for (unsigned i = 0; i < 6; ++i) {
             live.automation.members[i].active = true; live.automation.members[i].number = uint16_t(100 + i);
@@ -70,6 +73,14 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     const PHOrbSkillMember &member = live.automation.members[slot];
     if (unavailableSkills[slot] || !live.automation.window || live.automation.busy || !member.active ||
         member.bound || member.state) return PHOrbSkillUnavailable;
+    if (requireNineLight && slot == 0) {
+        unsigned light = 0;
+        for (unsigned i = 0; i < live.board.width * live.board.height; ++i) light += live.board.types[i] == 3;
+        if (light < 9) {
+            if (reason) *reason = [NSString stringWithFormat:@"本體使用條件未滿足：光珠至少 9 顆，目前 %u 顆", light];
+            return PHOrbSkillUnavailable;
+        }
+    }
     Check(!live.dragged && !staged && !live.automation.busy, "skills and orb gestures never overlap");
     activeSkill = slot; skillOrder.push_back(slot); skillFrames = 4;
     live.automation.members[slot].selection = UINT32_MAX;
@@ -83,6 +94,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
         (hold && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << target))) ||
+        (hold && !PHOrbCanEnterThorn(&live,unsigned(target))) ||
         (hold && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(target)))) return NO;
     ++stages; cell = target; down = hold; beginning = begin; staged = YES;
     if (!down) ++releases;
@@ -101,6 +113,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (!failSkillAck) ++live.automation.skillUses;
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
+        if (lightAfterByakuya && activeSkill == 4)
+            for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = i < lightAfterByakuya ? 3 : 5;
         if (clearObstaclesWithSkill) { live.obstacles = 0; live.ordinary = true; }
         if (createSpinnerWithSkill) {
             live.board.spinnerMask = 1 | (UINT64_C(1) << live.board.width); live.board.spinnerColors = 63;
@@ -149,6 +163,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     while (from < cells && live.board.tokens[from] != live.dragged) ++from;
     if (from == cell || from == cells) return;
     Check(PHOrbAdjacent(from, unsigned(cell), live.board.width, live.board.height), "executor never skips to a nonadjacent cell");
+    if ((live.board.flags[cell] & PHOrbFlagThorn) && live.board.thornDamage[cell])
+        live.thorns.pendingDamage += PHOrbThornDamage(live.board.thornDamage[cell],live.thorns.maximumHP);
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
     std::swap(live.board.flags[from], live.board.flags[cell]); std::swap(live.board.enhancement[from], live.board.enhancement[cell]);
     std::swap(live.board.blindTurns[from], live.board.blindTurns[cell]); std::swap(live.board.thornDamage[from], live.board.thornDamage[cell]);
@@ -204,6 +220,9 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_effect_session_tests.inc"
 
 #include "orb_shortcut_session_tests.inc"
+#include "orb_thorn_session_tests.inc"
+#include "orb_lifecycle_session_tests.inc"
+#include "orb_color_condition_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -476,6 +495,9 @@ int main() {
         SurvivalSessionTests();
         RecoverySessionTests();
         OrbEffectSessionTests();
+        ThornSessionTests();
+        LifecycleSessionTests();
+        ColorConditionSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

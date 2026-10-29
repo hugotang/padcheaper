@@ -1,6 +1,6 @@
 static unsigned canUseCalls, skillStartCalls, readinessCalls;
 static bool skillAvailable, switchMultiInCanUse, changeSelectionInCanUse, changeStageInCanUse;
-static bool switchMultiInReadiness, readinessKnown;
+static bool switchMultiInReadiness, readinessKnown, checkOrbCountInCanUse;
 static NativeSkillReadiness readinessFixture;
 static uint32_t selectionAtCanUse, selectionAtStart, effectiveStartedSkill;
 static constexpr uint32_t CurrentFixtureSkill = 64863;
@@ -26,6 +26,14 @@ static void SetSurvivalOptions(const char *options) {
     if (switchMultiInCanUse) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
     if (changeSelectionInCanUse) Put<uint32_t>(member + PHOrbSkillOverrideOffset, selectionAtCanUse + 1);
     if (changeStageInCanUse) Protected(member + 344, 1, 0x6a875a8b);
+    if (checkOrbCountInCanUse) {
+        unsigned light = 0;
+        for (unsigned row = 0; row < 5; ++row) for (unsigned col = 0; col < 6; ++col) {
+            auto token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset + (row * 16 + col) * 8));
+            light += Load<uint8_t>(reinterpret_cast<uint8_t *>(token)) == 3;
+        }
+        return skillAvailable && light >= 9;
+    }
     return skillAvailable;
 }
 - (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
@@ -47,6 +55,7 @@ static void SetSurvivalOptions(const char *options) {
 static void SkillFixture() {
     Reset(); canUseCalls = skillStartCalls = readinessCalls = 0; skillAvailable = readinessKnown = true;
     switchMultiInCanUse = changeSelectionInCanUse = changeStageInCanUse = switchMultiInReadiness = false;
+    checkOrbCountInCanUse = false;
     readinessFixture = {CurrentFixtureSkill, 0, 4, 4};
     selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = 0;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);
@@ -70,6 +79,112 @@ static void SkillFixture() {
     Put<uint8_t>(enemy + 23, 255);
     for (uintptr_t offset : {uintptr_t(2400), uintptr_t(2192), uintptr_t(2256), uintptr_t(2224), uintptr_t(2176), uintptr_t(2240)})
         Protected(enemy + offset, 0, 0x6a875a8b);
+}
+
+static void SetSkillRecord(uint32_t id, uint16_t type, std::initializer_list<int32_t> params) {
+    const uintptr_t table = Header + 0x2000000;
+    Put<uintptr_t>(Header + PHSaveRVA + PHBattleSkillPointerOffset, table);
+    Put<uint32_t>(Header + PHSaveRVA + PHOrbSkillCountOffset, 70000);
+    SkillDiagnosticRecord record{};
+    record.type = type;
+    std::copy(params.begin(), params.end(), record.params);
+    Put<SkillDiagnosticRecord>(table + id * sizeof(record), record);
+}
+static void SkillOrbConditionTests() {
+    const uintptr_t member = Impl + PHBattleMemberOffset;
+    auto fixture = [&]() {
+        SkillFixture(); skillAvailable = false;
+        SetLeader(0, 14038);
+        Put<uint16_t>(member + 1438, 14139);
+        Protected(member + PHBattleChargeOffset, 4, 0x6a875a8b);
+        Put<uint32_t>(member + PHBattleChargeShadowOffset, 4u ^ 0x68fb65ceu);
+        readinessFixture = {64787, 65021, 4, 18};
+        // 64787 is conditional even though its charge is exactly its CD.
+        SetSkillRecord(64787, 116, {64788, 64789, 64790, 64820});
+        SetSkillRecord(64788, 255, {8, 9});
+        SetSkillRecord(64789, 191, {4});
+        SetSkillRecord(64790, 173, {4, 0, 0, 1});
+        SetSkillRecord(64820, 258, {4, 350, 1});
+        SetSkillRecord(65021, 116, {65022});
+        SetSkillRecord(65022, 172, {});
+    };
+    auto lightBoard = [](unsigned light) {
+        for (unsigned row = 0; row < 5; ++row) for (unsigned col = 0; col < 6; ++col) {
+            uintptr_t token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset + (row * 16 + col) * 8));
+            Put<uint8_t>(token, row * 6 + col < light ? 3 : 5);
+        }
+    };
+    PHOrbSnapshot state{}; NSString *reason = nil;
+    for (unsigned light : {5u, 8u, 9u, 12u}) {
+        fixture(); lightBoard(light);
+        FixtureSkillEngine *engine = [FixtureSkillEngine new];
+        Check([engine readAutomation:&state frame:Frame() reason:&reason] && !readinessCalls && !writes,
+            "live conditional skill metadata is never consulted by ordinary automation reads");
+        Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+            [reason containsString:@"光珠至少 9 顆"] &&
+            [reason containsString:[NSString stringWithFormat:@"目前 %u 顆", light]] &&
+            [reason containsString:light < 9 ? @"本體使用條件未滿足" : @"珠數條件已滿足，遊戲仍判定不可用"] &&
+            [reason containsString:@"充能 4"] && !skillStartCalls && !writes,
+            "full-CD Uryu reports the exact board requirement without overriding a native refusal");
+    }
+    fixture(); lightBoard(8); skillAvailable = checkOrbCountInCanUse = true;
+    FixtureSkillEngine *engine = [FixtureSkillEngine new];
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable && !skillStartCalls,
+        "independent native count fixture refuses eight light orbs at full cooldown");
+    lightBoard(9); [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted && skillStartCalls == 1 &&
+        canUseCalls == 2 && readinessCalls == 1 && !writes,
+        "a later native approval at nine light orbs starts normally without diagnostic getters or charge writes");
+
+    for (bool assistDisabled : {false, true}) {
+        fixture(); lightBoard(5);
+        Protected(member + PHBattleChargeOffset, 18, 0x6a875a8b);
+        Put<uint32_t>(member + PHBattleChargeShadowOffset, 18u ^ 0x68fb65ceu);
+        if (assistDisabled) Put<uint8_t>(SurvivalDungeon + 33, 8);
+        engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+            [reason containsString:@"光珠至少 9 顆"] == assistDisabled && !skillStartCalls && !writes,
+            "conditional base requirements are not misattributed to a charged assist; dungeon assist disable selects the base");
+    }
+    fixture(); lightBoard(5);
+    Protected(member + PHBattleChargeOffset, 18, 0x6a875a8b);
+    Put<uint32_t>(member + PHBattleChargeShadowOffset, 18u ^ 0x68fb65ceu);
+    SetSkillRecord(65021, 116, {66001}); SetSkillRecord(66001, 255, {32, 26});
+    engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+        [reason containsString:@"武裝使用條件未滿足"] && [reason containsString:@"心珠至少 26 顆，目前 25 顆"] && !writes,
+        "the charged assist uses its own condition and full 32-bit child ID");
+
+    for (unsigned fault = 0; fault < 8; ++fault) {
+        fixture(); lightBoard(5);
+        if (fault == 0) Put<uintptr_t>(Header + PHSaveRVA + PHBattleSkillPointerOffset, 0);
+        if (fault == 1) Put<uint32_t>(Header + PHSaveRVA + PHOrbSkillCountOffset, 64787);
+        if (fault == 2) SetSkillRecord(64787, 116, {70000});
+        if (fault == 3) SetSkillRecord(64788, 255, {1024, 9});
+        if (fault == 4) SetSkillRecord(64788, 255, {8, -1});
+        if (fault == 5) SetSkillRecord(64787, 118, {64788});
+        if (fault == 6) SetSkillRecord(64787, 120, {64789, 64788});
+        if (fault == 7) Put<uint32_t>(Header + PHSaveRVA + PHOrbSkillCountOffset, UINT32_MAX);
+        engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+            [reason containsString:@"冷卻已足"] && ![reason containsString:@"光珠至少"] && !writes && !skillStartCalls,
+            "missing, out-of-bounds or unsupported native condition metadata stays unknown and cannot authorize activation");
+    }
+    fixture(); lightBoard(5); SetSkillRecord(64787, 120, {64788}); SetSkillRecord(64788, 255, {40, 9});
+    engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+        [reason containsString:@"光珠至少 9 顆，目前 5 顆"] && [reason containsString:@"心珠至少 9 顆，目前 25 顆"],
+        "native first-child wrapper and multi-color thresholds require each selected color independently");
+    fixture(); lightBoard(5); Put<float>(Impl + PHOrbSkillBoardResizeOffset, 0.5f);
+    engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+        [reason containsString:@"目前珠數未能確認"] && ![reason containsString:@"目前 5 顆"] && !writes,
+        "a resizing native board preserves the requirement but does not claim an incorrect current count");
+    fixture(); lightBoard(5); engine = [FixtureSkillEngine new];
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([SkillOrbCondition(state, 0, readinessFixture, false) containsString:@"目前珠數未能確認"],
+        "a changed spinner sample does not mislabel its later color as the refused native observation");
 }
 
 static void SurvivalNativeTests() {
@@ -144,6 +259,7 @@ static void SurvivalNativeTests() {
 }
 
 static void SkillNativeTests() {
+    SkillOrbConditionTests();
     SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.valid && state.automation.window &&
         !state.automation.busy && state.automation.members[0].number == 100 && canUseCalls == 0 && skillStartCalls == 0 && writes == 0,
@@ -283,7 +399,8 @@ static void SkillNativeTests() {
     Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !canUseCalls && !skillStartCalls,
         "multiplayer refusal happens before native calls");
     for (uintptr_t guard : {PHOrbStartSkillRVA, PHOrbSkillSelectionResetRVA, PHOrbBaseSkillRVA,
-        PHOrbAssistSkillRVA, PHOrbBaseCooldownRVA, PHOrbTotalCooldownRVA}) {
+        PHOrbAssistSkillRVA, PHOrbBaseCooldownRVA, PHOrbTotalCooldownRVA, PHOrbSkillConditionRVA,
+        PHOrbSkillOrbConditionRVA, PHOrbSkillCompositeRVA, PHOrbSkillTableLoadRVA, PHOrbSkillBoardSizeRVA}) {
         SkillFixture(); engine = [FixtureSkillEngine new];
         Put<uint32_t>(Impl + PHBattleMemberOffset + PHOrbSkillOverrideOffset, 65063);
         [engine readAutomation:&state frame:Frame() reason:&reason];

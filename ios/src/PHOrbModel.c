@@ -52,9 +52,25 @@ uint8_t PHOrbSpinnerType(const PHOrbBoard *board, unsigned cell, unsigned phase)
 uint64_t PHOrbBlockedCells(const PHOrbBoard *board) {
     if (!board || !PHOrbDimensionsSupported(board->width, board->height)) return UINT64_MAX;
     uint64_t blocked = board->spinnerMask | board->tapeMask;
-    for (unsigned i = 0; i < board->width * board->height; ++i)
-        if (board->flags[i] & PHOrbFlagThorn) blocked |= UINT64_C(1) << i;
     return blocked;
+}
+
+uint32_t PHOrbThornDamage(unsigned percent, uint32_t maximumHP) {
+    if (!percent) return 0;
+    if (percent > 127 || !maximumHP || maximumHP > INT32_MAX) return UINT32_MAX;
+    // Native swap rounds float32 percent -> float64 HP. Ignore awakening
+    // reductions so this is an upper bound, never optimistic damage.
+    double damage = floor((double)((float)percent / 100.0f) * maximumHP + 0.5);
+    return damage >= INT32_MAX ? INT32_MAX : damage < 1 ? 1 : (uint32_t)damage;
+}
+
+bool PHOrbCanEnterThorn(const PHOrbSnapshot *state, unsigned cell) {
+    if (!state || cell >= state->board.width * state->board.height || cell >= PHOrbMaxCells) return false;
+    if (!(state->board.flags[cell] & PHOrbFlagThorn) || !state->board.thornDamage[cell] ||
+        !state->dragged || state->dragged == state->board.tokens[cell]) return true;
+    const PHOrbThornState *t = &state->thorns;
+    return t->known && t->hp > 0 && t->hp <= t->maximumHP && t->maximumHP <= INT32_MAX &&
+        (uint64_t)t->pendingDamage + PHOrbThornDamage(state->board.thornDamage[cell], t->maximumHP) < t->hp;
 }
 
 bool PHOrbCanStartAt(const PHOrbBoard *board, unsigned cell) {
@@ -138,7 +154,7 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
 
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!PHOrbSameTurn(a, b) || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
-        a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary ||
+        a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary || a->unmatchableKnown != b->unmatchableKnown ||
         !PHOrbSamePlanBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
@@ -257,6 +273,6 @@ bool PHOrbCanPreview(const PHOrbSnapshot *state) {
     return state && state->present && state->valid && state->settled && state->ordinary &&
         !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) &&
         state->identity.sourceMode == 0 && state->phase == 2 && !state->dragged && PHInputIsQuiet(&state->input) &&
-        (!(state->obstacles & PHOrbObstacleSpinner) || state->board.spinnerMask) &&
+        (!(state->obstacles & PHOrbObstacleSpinner) || state->board.spinnerMask || state->spinnerReadStatus == PHOrbSpinnerReady) &&
         PHOrbBoardValid(&state->board);
 }

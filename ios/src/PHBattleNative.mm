@@ -141,6 +141,12 @@ static BOOL ReadMember(uintptr_t address, const PHBattleState *state, uint32_t k
     std::memcpy(&member->skillLevel, bytes + 0x512, sizeof(member->skillLevel));
     std::memcpy(member->extra, bytes + 0x4f0, sizeof(member->extra));
     std::memcpy(member->assist, bytes + 0x59e, sizeof(member->assist));
+    // Native 0x100531AEC fills ID, awakenings/+297, level, skill and byte 6.
+    // Byte 7 is stack padding copied by 0x10048127C, not an assist property.
+    member->assist[7] = 0;
+    // The no-assist initializer also leaves the skill-level word untouched.
+    // It has no meaning when the descriptor's assist ID is zero.
+    if (!member->assist[0] && !member->assist[1]) member->assist[4] = member->assist[5] = 0;
     uintptr_t parameter = 0;
     std::memcpy(&parameter, bytes + PHBattleCardParamOffset, sizeof(parameter));
     member->readable = DecodeByte(bytes, PHBattleSourceSlotOffset, key1, key2, &member->sourceSlot) &&
@@ -389,8 +395,10 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
             (void)exception;
             if (reason) *reason = @"原生重建發生 Objective-C 例外";
         }
+    } catch (const std::exception &error) {
+        if (reason) *reason = [NSString stringWithFormat:@"原生重建或操作後校驗未通過（%s）", error.what()];
     } catch (...) {
-        if (reason && !*reason) *reason = @"原生重建或操作後校驗未通過";
+        if (reason) *reason = @"原生重建發生未知例外";
     }
     return NO;
 }
@@ -407,6 +415,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     BattleProvider _provider;
     uint64_t _nextToken;
     PHBattleIdentity _entryIdentity;
+    PHBattleIdentity _faultIdentity;
     BOOL _entryAttempted;
     BOOL _multiplayerDisabled;
     PHBattleFrame _lastFrame;
@@ -422,6 +431,8 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
         _multiplayerDisabled = NO;
     _lastFrame = frame;
     if (!ReadLive(state, frame, reason, nullptr, 6, _multiplayerDisabled)) return NO;
+    if (_faulted && (!state->present || (state->protectedValuesValid &&
+        !PHBattleSameIdentity(&_faultIdentity, &state->identity)))) _faulted = NO;
     _multiplayerDisabled = state->present && state->multiplayerDisabled;
     TagProviderMembers(&_provider, state);
     ReadProviderDiagnostics(state);
@@ -462,6 +473,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, loadout, nullptr, member, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
+    if (result == PHBattleMutationUncertain) _faultIdentity = expected->identity;
     return result;
 }
 
@@ -473,6 +485,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     PHBattleMutationResult result = MutateProfile(&_provider, &_nextToken, expected, slot, nullptr, original, nullptr, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
+    if (result == PHBattleMutationUncertain) _faultIdentity = expected->identity;
     return result;
 }
 
@@ -491,6 +504,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     PHBattleMutationResult result = ApplyEntryTeam(&_provider, &_nextToken, loadouts, mask, expected, members, boost, reason);
     _busy = NO;
     _faulted |= result == PHBattleMutationUncertain;
+    if (result == PHBattleMutationUncertain) _faultIdentity = expected->identity;
     return result;
 }
 
@@ -561,6 +575,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     restored = restored && ReadLive(&rolledBack, frame, NULL) && StoredTeamsUnchanged(&before, &rolledBack);
     _busy = NO;
     _faulted = !restored;
+    if (_faulted) _faultIdentity = before.identity;
     if (reason) *reason = restored ? @"替換未通過校驗；已還原原有形態與技能充能" :
                                      @"原生操作未能確認還原，已停止後續寫入；請複製診斷";
     NSLog(@"[PADCheaper] Battle mutation failed; rollback %@", restored ? @"verified" : @"unconfirmed");

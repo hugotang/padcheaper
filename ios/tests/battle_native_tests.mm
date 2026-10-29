@@ -30,6 +30,8 @@ struct Fixture {
     unsigned failRebuild = 0;
     bool changeOtherViewOnFailedRebuild = false;
     bool auditOnRefresh = false;
+    bool unstableAssistPadding = false;
+    int corruptRestoredAssistByte = -1;
     unsigned advances = 0, memberAdvances = 0, failAdvanceTick = 0, closeWindowAtTick = 0;
     uint16_t chargeCaps[6] = {6,6,6,6,6,6};
     bool awakeningsDisabled = false, chargingDisabled = false, invalidAwakeningCount = false;
@@ -279,6 +281,15 @@ struct Fixture {
             std::memcpy((void *)(m + 0x510), (void *)(saved + 0x510), 4);
             std::memcpy((void *)(m + 0x4f0), (void *)(saved + 0x4f0), 20);
             std::memcpy((void *)(m + 0x59e), (void *)(saved + 0x59e), 8);
+            if (f.unstableAssistPadding && source < 5) {
+                put<uint8_t>(m + 0x59e + 7, uint8_t(23 + f.rebuilds));
+                if (!get<uint16_t>(m + 0x59e)) put<uint16_t>(m + 0x59e + 4, uint16_t(1000 + f.rebuilds));
+            }
+            if (f.corruptRestoredAssistByte >= 0) {
+                const uintptr_t field = m + 0x59e + f.corruptRestoredAssistByte;
+                put<uint8_t>(field, uint8_t(get<uint8_t>(field) ^ 1u));
+                f.corruptRestoredAssistByte = -1;
+            }
         }
         uint32_t catalogID = form ? form : base;
         put<uint16_t>(m + PHBattleBaseIDOffset, base); put<uint16_t>(m + PHBattleAssistIDOffset, assist);
@@ -500,11 +511,13 @@ static PHBattleLoadout Loadout(unsigned slot = 0) {
 
 #include "battle_multiplayer_tests.inc"
 #include "battle_script_native_tests.inc"
+#include "battle_restore_native_tests.inc"
 
 int main() {
     @autoreleasepool {
         TestMultiplayerDisabled();
         TestScriptedProvider();
+        TestRestoreAssistPadding();
         {
             Fixture f; id<PHBattleEngine> engine = PHCreateBattleEngine();
             PHBattleMember originals[6], applied[6];

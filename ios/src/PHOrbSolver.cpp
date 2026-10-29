@@ -43,7 +43,10 @@ struct Score {
 };
 struct Node {
     Cells cells{};
+    Cells thorns{};
     std::array<uint8_t, PHOrbMaxSteps + 1> path{};
+    uint32_t thornDamage = 0;
+    uint8_t thornContacts = 0;
     uint8_t length = 1;
     Score score;
 };
@@ -414,6 +417,14 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                     seen[next] = true; queue[tail++] = unsigned(next);
                 }
             }
+            if (wave == 0 && cells[start] == 5 && tail == 4) {
+                bool horizontal = true, vertical = true;
+                for (unsigned i = 1; i < tail; ++i) {
+                    horizontal &= queue[i] / width == start / width;
+                    vertical &= queue[i] % width == start % width;
+                }
+                result.heartFours += horizontal || vertical;
+            }
             for (unsigned g = 0; g < context.goals.count; ++g) {
                 const auto &goal = context.goals.items[g];
                 if (!(goal.colors & (1u << cells[start]))) continue;
@@ -500,6 +511,7 @@ Score Evaluate(Cells cells, const Context &context) {
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.poisonErased = std::max(a.poisonErased, b.poisonErased);
         a.unmatchedBombs = std::max(a.unmatchedBombs, b.unmatchedBombs);
+        a.heartFours = std::min(a.heartFours, b.heartFours);
         a.hazardsSafe &= b.hazardsSafe;
         for (unsigned g = 0; g < context.goals.count; ++g) {
             a.goalHits[g] = std::min(a.goalHits[g], b.goalHits[g]);
@@ -525,6 +537,7 @@ bool Better(const Node &a, const Node &b) {
     if (ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
+    if (a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (ar.combos != br.combos) return ar.combos > br.combos;
     if (ar.erased != br.erased) return ar.erased > br.erased;
     if (a.length != b.length) return a.length < b.length;
@@ -534,7 +547,10 @@ bool Better(const Node &a, const Node &b) {
 
 uint64_t Hash(const Node &node, unsigned size) {
     uint64_t hash = 14695981039346656037ULL;
-    for (unsigned i = 0; i < size; ++i) { hash ^= node.cells[i]; hash *= 1099511628211ULL; }
+    for (unsigned i = 0; i < size; ++i) {
+        hash ^= node.cells[i] | (unsigned(node.thorns[i]) << 8); hash *= 1099511628211ULL;
+    }
+    hash ^= node.thornDamage; hash *= 1099511628211ULL;
     hash ^= node.path[node.length - 1]; hash *= 1099511628211ULL;
     // The forbidden immediate reverse depends on the preceding position.
     hash ^= node.length > 1 ? node.path[node.length - 2] : 255;
@@ -626,6 +642,29 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
     } catch (...) { return false; }
 }
 
+bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
+                        PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept {
+    result = {}; thornDamage = 0; thornContacts = 0;
+    PHOrbBoard replay{};
+    if (!route.count || !PHOrbReplay(&board, &route, route.count - 1, &replay) || !PHOrbEvaluate(replay, options.goals, result)) return false;
+    Cells thorns{};
+    for (unsigned i = 0; i < board.width * board.height; ++i)
+        thorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
+    uint64_t damage = 0;
+    for (unsigned i = 1; i < route.count; ++i) {
+        const unsigned a = route.cells[i - 1], b = route.cells[i];
+        if (thorns[b]) { ++thornContacts; damage += PHOrbThornDamage(thorns[b], options.thorns.maximumHP); }
+        std::swap(thorns[a], thorns[b]);
+    }
+    thornDamage = uint32_t(std::min(damage, uint64_t(UINT32_MAX)));
+    if (thornContacts) {
+        const auto &t = options.thorns;
+        result.hazardsSafe &= t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX &&
+            uint64_t(t.pendingDamage) + damage < t.hp && result.heartFours > 0;
+    }
+    return true;
+}
+
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
     route = {};
@@ -637,6 +676,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const unsigned size = board.width * board.height;
         Cells initial{};
         std::copy(board.types, board.types + size, initial.begin());
+        Cells initialThorns{};
+        for (unsigned i = 0; i < size; ++i) initialThorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
+        const auto &t = options.thorns;
+        const bool budgetKnown = t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX && t.pendingDamage < t.hp;
+        const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
+        std::array<uint32_t, 128> damageTable{};
+        for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
         const Context context = MakeContext(board, options.goals);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
@@ -647,7 +693,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * 4);
         for (unsigned i = 0; i < size; ++i) {
             if (!PHOrbCanStartAt(&board, i)) continue;
-            Node node; node.cells = initial; node.path[0] = uint8_t(i); beam.push_back(node);
+            Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); beam.push_back(node);
         }
         Node best;
         bool found = false, timedOut = false;
@@ -665,10 +711,17 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         (blocked & (Bits(1) << cell)) ||
                         (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
                     Node child = parent;
+                    if (child.thorns[cell]) {
+                        const uint32_t damage = damageTable[child.thorns[cell]];
+                        if (!budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
+                        child.thornDamage += damage; ++child.thornContacts;
+                    }
                     child.path[child.length++] = uint8_t(cell);
                     std::swap(child.cells[current], child.cells[cell]);
+                    std::swap(child.thorns[current], child.thorns[cell]);
                     if (!visited.insert(Hash(child, size)).second) continue;
                     child.score = Evaluate(child.cells, context);
+                    if (child.thornContacts && !child.score.result.heartFours) child.score.result.hazardsSafe = false;
                     ++evaluated;
                     if (!found || Better(child, best)) { best = child; found = true; }
                     next.push_back(child);
@@ -687,6 +740,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         route.goalsMet = best.score.result.goalsMet;
         route.hazardsSafe = best.score.result.hazardsSafe;
         route.poisonErased = best.score.result.poisonErased; route.unmatchedBombs = best.score.result.unmatchedBombs;
+        route.thornDamage = best.thornDamage; route.thornContacts = best.thornContacts;
+        route.heartFours = best.score.result.heartFours;
         std::copy(std::begin(best.score.result.goalHits), std::end(best.score.result.goalHits), route.goalHits);
         const auto finished = Clock::now();
         route.evaluated = evaluated; route.deadlineReached = timedOut || finished >= deadline;

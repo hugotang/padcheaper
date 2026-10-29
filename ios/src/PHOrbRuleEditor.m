@@ -97,6 +97,7 @@
             PHOrbRuleEditor *editor = weakSelf; if (!editor || index >= editor.draft.count) return;
             editor.draft[index][field] = value;
             if ([field isEqual:@"color"]) editor.draft[index][@"below"] = [value integerValue] < 0 ? @0 : @3;
+            if ([field isEqual:@"obstacle"] && ![value isEqual:@"unmatchable"]) editor.draft[index][@"unmatchableColors"] = @0;
             [editor rebuild];
         }];
         action.state = [selected isEqual:value] ? UIMenuElementStateOn : UIMenuElementStateOff; [actions addObject:action];
@@ -175,6 +176,32 @@
         NSMutableArray *obstacleTitles = [NSMutableArray array];
         for (NSString *condition in PHOrbObstacleConditions()) [obstacleTitles addObject:PHOrbObstacleConditionTitle(condition)];
         [card addArrangedSubview:[self menu:i field:@"obstacle" values:PHOrbObstacleConditions() titles:obstacleTitles]];
+        if ([rule[@"obstacle"] isEqual:@"unmatchable"]) {
+            const unsigned colors = [rule[@"unmatchableColors"] unsignedIntValue];
+            UILabel *chosen = [self label:PHOrbUnmatchableConditionTitle(colors)];
+            chosen.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRuleUnmatchableTitle%lu", (unsigned long)i];
+            [card addArrangedSubview:chosen];
+            for (unsigned row = 0; row < 2; ++row) {
+                NSMutableArray *choices = [NSMutableArray array];
+                for (unsigned column = 0; column < 3; ++column) {
+                    const unsigned color = row * 3 + column, bit = 1u << color;
+                    NSString *name = @[@"火", @"水", @"木", @"光", @"暗", @"心"][color];
+                    UIButton *choice = [self button:[NSString stringWithFormat:@"%@%@", colors & bit ? @"✓ " : @"", name]];
+                    choice.accessibilityLabel = [NSString stringWithFormat:@"%@不可消時觸發", name];
+                    choice.accessibilityTraits |= colors & bit ? UIAccessibilityTraitSelected : 0;
+                    choice.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRuleUnmatchable%u-%lu", color, (unsigned long)i];
+                    [choice addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+                        PHOrbRuleEditor *editor = weakSelf; if (!editor || i >= editor.draft.count) return;
+                        editor.draft[i][@"unmatchableColors"] = @([editor.draft[i][@"unmatchableColors"] unsignedIntValue] ^ bit);
+                        [editor rebuild];
+                    }] forControlEvents:UIControlEventTouchUpInside];
+                    [choices addObject:choice];
+                }
+                UIStackView *line = [[UIStackView alloc] initWithArrangedSubviews:choices];
+                line.spacing = 8; line.distribution = UIStackViewDistributionFillEqually; [card addArrangedSubview:line];
+            }
+            [card addArrangedSubview:[self label:@"可複選，任一所選珠色不可消就觸發；全部不選表示任意珠色。其他條件仍須同時成立。"]];
+        }
         NSMutableArray *buttons = [NSMutableArray array];
         for (NSUInteger actionIndex = 0; actionIndex < 3; ++actionIndex) {
             UIButton *button = [self button:@[@"上移", @"下移", @"刪除"][actionIndex]];
@@ -198,7 +225,8 @@
     [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能。一般規則不可用時略過；必要規則會先讓其他技能或同組替補嘗試補救，條件仍成立而未確認施放完成時停止轉珠。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
     [self.rows addArrangedSubview:[self label:@"「技能就緒就放」把回合間隔設為 1：連續模式在每次轉珠前檢查，遊戲確認可用才施放；其他條件、輪替組、本場一次與保留樓層仍生效。\n\n兩個 2 回合技能要輪流用：兩條都選同一輪替組、間隔 1，關閉本場一次。冷卻由遊戲判斷；間隔 2 會讓兩條都只在第 1、3、5…回合檢查。"]];
     [self.rows addArrangedSubview:[self label:@"HP 條件以目前有效上限計算，含固定／比例關卡及臨時上限修正；無法確認就停止，不把未知當成滿血。HP 與異常條件同時設定時，兩者都要成立。\n\n暫時覺醒無效與關卡禁止覺醒分開判斷；隊員綁定條件檢查全隊。技能封印期間不能靠施放技能自行解除，必要規則會停止並提示。\n\n同組任何一條確認完成，即滿足該組本回合的必要要求。必要設定不會越過保留樓層、本場一次或每位置限制；不同必要技能請分組。確認施放不等於保證回到 HP 門檻或解除所有異常，請指定合適的技能。"]];
-    [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下回合從下一條開始，未就緒者可略過。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件只決定何時嘗試你指定的技能；技能完成後仍會重讀，效果未解除就停止。"]];
+    [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下回合從下一條開始，未就緒者可略過。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件決定何時嘗試技能；技能後會重新讀盤，路徑仍須符合所有目標與傷害限制。已支援的效果可以留在盤面。"]];
+    [self.rows addArrangedSubview:[self label:@"同一條規則的條件全部都要符合（AND）。要在「暫時覺醒無效或光不可消」時放同一隻，建立兩條相同位置、獨立施放的規則：一條只設暫時覺醒無效，另一條只設光不可消。任一符合即可嘗試，同位置每回合最多施放一次。\n\n不可消選擇多種珠色時，任一所選珠色不可消便符合；全部不選表示任意珠色。其他條件仍須同時符合。"]];
 }
 - (void)add {
     if (self.draft.count >= PHOrbMaxSkillRules) return;

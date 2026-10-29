@@ -84,8 +84,8 @@ static void OrbEffectNativeTests() {
     Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
         state.board.types[1] == 1 && state.board.blindTurns[1] == 5 && state.board.thornDamage[3] == 4,
         "normal darkness, timed superdarkness, weak orbs, nails and thorns retain actual native metadata");
-    Check(![engine stageCell:3 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] && writes == 0,
-        "thorn damage is prevented by the native input boundary as well as the solver");
+    Check([engine stageCell:3 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] &&
+        [engine finishInput:&reason], "starting on a thorn token causes no contact damage");
     Put<uint32_t>(OrbCell(0) + 4, PHOrbFlagEffectFresh);
     Check([engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] &&
         [engine finishInput:&reason], "ordinary darkness clearing does not invalidate an otherwise identical guarded start");
@@ -110,6 +110,33 @@ static void OrbEffectNativeTests() {
         Check([engine read:&state frame:Frame() reason:&reason] && !PHOrbCanPreview(&state) && !writes,
             "bad spinner count, row mask, period, color, protected data or duration never enables input");
     }
+    // Resize keeps native spinner rows in the 7-column / 6-row storage grid.
+    // Only cells intersecting the current board belong in the solver mask.
+    for (auto dimensions : {std::pair<unsigned,unsigned>{6,5}, {7,6}, {5,4}}) {
+        unsigned w = dimensions.first, h = dimensions.second;
+        Reset(w,h); engine = PHCreateOrbEngine(); SpinnerFixture(7,6,{0,6,35,41});
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
+              state.spinnerRawCount == 4 && state.spinnerStoredCells == 4 &&
+              state.spinnerReadStatus == PHOrbSpinnerReady &&
+              state.board.spinnerMask == (w == 7 ? (UINT64_C(1)|UINT64_C(1)<<6|UINT64_C(1)<<35|UINT64_C(1)<<41) :
+                  UINT64_C(1) << ((h-1)*w)),
+              "retained spinner rows and columns outside a resized board are counted then clipped");
+    }
+    Reset(5,4); engine = PHCreateOrbEngine(); SpinnerFixture(7,6,{0,6});
+    Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
+          state.spinnerTurns == 4 && !state.board.spinnerMask && !state.board.spinnerColors && state.spinnerStoredCells == 2,
+          "an active effect entirely outside the smaller board does not block ordinary input");
+    Protected(Impl + PHOrbSpinnerRowsOffset, 128, 0x6a875a8b);
+    [engine read:&state frame:Frame() reason:&reason];
+    Check(!PHOrbCanPreview(&state) && state.spinnerReadStatus == PHOrbSpinnerBadRows,
+          "clipping never accepts row bits outside the native seven-column capacity");
+    Reset(); engine = PHCreateOrbEngine(); SpinnerFixture(6,5,{0});
+    Put<uint16_t>(Impl + PHOrbUnmatchableDurationOffset, 0x401);
+    Protected(Impl + PHOrbUnmatchableColorsOffset, 9, 0x6a875a8b);
+    Protected(Impl + PHOrbSpinnerCountOffset, 2, 0x6a875a8b);
+    Check([engine read:&state frame:Frame() reason:&reason] && state.unmatchableKnown &&
+          state.board.unmatchableColors == 9 && state.spinnerReadStatus == PHOrbSpinnerCountMismatch,
+          "a spinner failure preserves independently decoded fire/light unmatchable state for skill rules");
     for (unsigned fault = 0; fault < 11; ++fault) {
         Reset(); engine = PHCreateOrbEngine();
         if (fault < 2) {

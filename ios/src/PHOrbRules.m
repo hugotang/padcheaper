@@ -5,7 +5,8 @@
 NSDictionary *PHOrbDefaultSkillRule(void) {
     return @{@"enabled":@YES, @"slot":@1, @"monster":@0, @"every":@1, @"floor":@0,
              @"color":@-1, @"below":@0, @"enemy":@"none", @"group":@0, @"once":@NO,
-             @"reserveUntil":@0, @"obstacle":@"none", @"hpAtMost":@0, @"status":@"none", @"required":@NO};
+             @"reserveUntil":@0, @"obstacle":@"none", @"unmatchableColors":@0,
+             @"hpAtMost":@0, @"status":@"none", @"required":@NO};
 }
 
 NSDictionary *PHOrbNormalizedSkillRule(NSDictionary *rule) {
@@ -41,6 +42,29 @@ static unsigned ObstacleFlag(NSString *condition) {
         @"match_rule":@(PHOrbObstacleMatchRule)}[condition] unsignedIntValue];
 }
 
+NSString *PHOrbUnmatchableConditionTitle(unsigned colors) {
+    if (!colors) return @"任意珠色不可消";
+    NSMutableArray *names = [NSMutableArray array];
+    for (unsigned color = 0; color < 6; ++color)
+        if (colors & (1u << color)) [names addObject:@[@"火", @"水", @"木", @"光", @"暗", @"心"][color]];
+    return [NSString stringWithFormat:@"%@不可消%@", [names componentsJoinedByString:@"／"],
+        names.count > 1 ? @"（任一符合）" : @""];
+}
+
+NSString *PHOrbSpinnerReadDescription(const PHOrbSnapshot *state) {
+    if (!state || !state->spinnerTurns) return @"";
+    switch (state->spinnerReadStatus) {
+        case PHOrbSpinnerReady: return state->board.spinnerMask ? @"轉轉資料已確認" : @"轉轉位置均在目前盤面外";
+        case PHOrbSpinnerBadCount: return @"轉轉數量無法確認";
+        case PHOrbSpinnerBadPeriod: return @"轉轉週期無法確認";
+        case PHOrbSpinnerBadColors: return @"轉轉色序未支援或無法確認";
+        case PHOrbSpinnerBadRows: return @"轉轉位置無法確認";
+        case PHOrbSpinnerCountMismatch: return @"轉轉數量與保存位置不符";
+        case PHOrbSpinnerBadPhase: return @"等待轉轉進入可驗證的色序與珠子狀態";
+        default: return @"轉轉尚未完成讀取校驗";
+    }
+}
+
 NSString *PHOrbObstacleDescription(const PHOrbSnapshot *state) {
     if (!state || !state->valid || state->phase != 2) return @"";
     unsigned flags = PHOrbBoardObstacles(state);
@@ -54,6 +78,8 @@ NSString *PHOrbObstacleDescription(const PHOrbSnapshot *state) {
             PHOrbObstacleMortalPoison | PHOrbObstacleBomb))) continue;
         if (flags & flag) [parts addObject:PHOrbObstacleConditionTitle(PHOrbObstacleConditions()[i])];
     }
+    if (state->spinnerTurns && state->spinnerReadStatus != PHOrbSpinnerReady)
+        [parts addObject:PHOrbSpinnerReadDescription(state)];
     if (!state->ordinary) [parts addObject:@"盤面資料、操作規則或動畫尚未就緒"];
     return [parts componentsJoinedByString:@"、"];
 }
@@ -123,6 +149,8 @@ BOOL PHOrbSkillRulesValid(id rules) {
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
             !PHOrbRuleIsBoolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
             ![rule[@"obstacle"] isKindOfClass:NSString.class] || ![PHOrbObstacleConditions() containsObject:rule[@"obstacle"]] ||
+            !Integer(rule[@"unmatchableColors"], 0, 63) ||
+            ([rule[@"unmatchableColors"] unsignedIntValue] && ![rule[@"obstacle"] isEqual:@"unmatchable"]) ||
             !Integer(rule[@"hpAtMost"], 0, 100) || !PHOrbRuleIsBoolean(rule[@"required"]) ||
             ![rule[@"status"] isKindOfClass:NSString.class] || ![PHOrbPlayerConditions() containsObject:rule[@"status"]] ||
             ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] < [rule[@"reserveUntil"] unsignedIntValue])) return NO;
@@ -222,8 +250,14 @@ PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *st
     if (![obstacle isEqual:@"none"]) {
         if (!state->automation.boardKnown) return Explained(PHOrbRuleUnknown, @"盤面妨礙無法確認", reason);
         unsigned flag = ObstacleFlag(obstacle);
+        const unsigned colors = [rule[@"unmatchableColors"] unsignedIntValue];
+        if ([obstacle isEqual:@"unmatchable"] && colors) {
+            if (!state->unmatchableKnown) return Explained(PHOrbRuleUnknown, @"不可消珠色無法確認", reason);
+            if (!(state->board.unmatchableColors & colors))
+                return Explained(PHOrbRuleNo, @"所選珠色沒有不可消效果", reason);
+        }
         if (!(PHOrbBoardObstacles(state) & flag)) return Explained(PHOrbRuleNo, @"沒有指定的盤面妨礙", reason);
-        [matched addObject:PHOrbObstacleConditionTitle(obstacle)];
+        [matched addObject:[obstacle isEqual:@"unmatchable"] ? PHOrbUnmatchableConditionTitle(colors) : PHOrbObstacleConditionTitle(obstacle)];
     }
     return Explained(PHOrbRuleYes, matched.count ? [matched componentsJoinedByString:@"、"] : @"角色、回合與樓層條件符合", reason);
 }
@@ -253,7 +287,9 @@ NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
     if ([rule[@"group"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"輪替組 %@", rule[@"group"]]];
     if ([rule[@"once"] boolValue]) [parts addObject:@"本場一次"];
     if ([rule[@"reserveUntil"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"此位置保留至第 %@ 層", rule[@"reserveUntil"]]];
-    if (rule[@"obstacle"] && ![rule[@"obstacle"] isEqual:@"none"]) [parts addObject:PHOrbObstacleConditionTitle(rule[@"obstacle"])];
+    if (rule[@"obstacle"] && ![rule[@"obstacle"] isEqual:@"none"])
+        [parts addObject:[rule[@"obstacle"] isEqual:@"unmatchable"] ?
+            PHOrbUnmatchableConditionTitle([rule[@"unmatchableColors"] unsignedIntValue]) : PHOrbObstacleConditionTitle(rule[@"obstacle"])];
     if ([rule[@"hpAtMost"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"HP ≤ %@%%", rule[@"hpAtMost"]]];
     if (rule[@"status"] && ![rule[@"status"] isEqual:@"none"]) [parts addObject:PHOrbPlayerConditionTitle(rule[@"status"])];
     if ([rule[@"required"] boolValue]) [parts addObject:@"必要：未確認施放就停止轉珠"];
