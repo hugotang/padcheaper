@@ -2,9 +2,11 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.5.1-orbs` 源碼加入普通單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。技能按位置、回合間隔、樓層、缺珠及四種敵人效果判斷，目標未完整達成時停止轉珠。這批尚未編譯測試，等使用者指示後集中建置。用法見 [自動轉珠](docs/auto-orbs.md) 與 [連續／技能規則](docs/orb-automation.md)，解析界線見 [形狀與隊長盤面](docs/orb-goals.md)，狀態見 [待驗證清單](docs/development.md)。
+`0.5.1-orbs` 支援普通單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
 使用者已於 2026-10-28 回報 `0.5.0-orbs` 測試通過，記錄為單人 6×5 基準版本的真機通過回報。
+
+`0.5.1-orbs` 已通過 [CI 53](https://github.com/hugotang/padcheaper/actions/runs/40748683671)，二進位來源 `96f5b2ffbbdaea273dba887aa9d8f73ff546ee99`。新版包與設定保留方式見 [0.5.1 安裝說明](docs/release-0.5.1.md)；新增功能的真機驗收順序見 [device-testing.md](docs/device-testing.md)。
 
 第六批源碼加入低血時的心珠目標：技能後仍低於門檻才要求 1–3 組心珠，與原有形狀／隊長目標同時滿足；不足或未達標停止。預設關閉，設定隨策略保存，詳見 [低血心珠](docs/orb-recovery.md)。尚待集中編譯測試。
 
@@ -48,11 +50,11 @@ bash ios/build.sh
 
 ## LiveContainer 安裝
 
-1. 完整關閉 PAD，移除舊版或重複的 PADCheaper.dylib。
+1. 完整關閉 PAD，移除舊版或重複的 PADCheaper.dylib。保留 guest 容器內原有 config.json、隊伍庫及帳號檔；更新只替換 dylib，不用範例設定覆蓋舊設定。
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 新版完成建置後，面板標頭會顯示 `0.5.1-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示 `0.5.1-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
