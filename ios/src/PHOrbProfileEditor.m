@@ -9,6 +9,8 @@
 @property(nonatomic, copy) NSString *(^saveProfiles)(NSDictionary *, NSDictionary *);
 @property(nonatomic, strong) UIStackView *rows;
 @property(nonatomic, strong) UILabel *notice;
+@property(nonatomic, strong) UITextView *planText;
+@property(nonatomic, copy) NSString *planDraftText;
 @property(nonatomic, weak) UIWindow *previousWindow;
 @property(nonatomic, weak) UIWindow *editorWindow;
 - (void)rebuild;
@@ -99,6 +101,7 @@
     return button;
 }
 - (void)rebuild {
+    if (self.planText) self.planDraftText = self.planText.text;
     [self.view endEditing:YES]; self.notice.text = @"";
     for (UIView *view in self.rows.arrangedSubviews) { [self.rows removeArrangedSubview:view]; [view removeFromSuperview]; }
     NSMutableDictionary *record = self.selected;
@@ -148,13 +151,15 @@
                 editor.selected[@"team"] = [binding mutableCopy]; [editor rebuild];
             }]];
         }
-        team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0;
+        team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0 && !record[@"formation"];
         [self.rows addArrangedSubview:team];
         [self.rows addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"formation"]) { editor.notice.text = @"整包會核對六格本體與武裝；請在匯入 JSON 一併修改隊伍及開場。"; return; }
             NSMutableArray *members = [editor.selected[@"team"] mutableCopy]; members[5] = @0;
             editor.selected[@"team"] = members; [editor rebuild];
         }]];
         [self.rows addArrangedSubview:[self action:@"取消隊伍限制" identifier:@"padcheaper.orbsProfileAnyTeam" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"formation"]) { editor.notice.text = @"整包開場需要固定隊伍；請另存通用策略。"; return; }
             editor.selected[@"team"] = [@[@0,@0,@0,@0,@0,@0] mutableCopy]; [editor rebuild];
         }]];
         [self.rows addArrangedSubview:[self label:[record[@"dungeon"] unsignedIntValue] ?
@@ -169,6 +174,16 @@
             editor.selected[@"dungeon"] = @0; editor.selected[@"floor"] = @0; [editor rebuild];
         }]];
         NSDictionary *settings = record[@"settings"];
+        if (record[@"formation"]) {
+            [self.rows addArrangedSubview:[self label:PHOrbPlanDescription(PHOrbPlanFromProfile(record))]];
+            [self.rows addArrangedSubview:[self action:@"複製整包 config" identifier:@"padcheaper.orbsPlanExport" handler:^(PHOrbProfileEditor *editor) {
+                NSDictionary *plan = PHOrbPlanFromProfile(editor.selected);
+                NSData *data = plan ? [NSJSONSerialization dataWithJSONObject:plan options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL] : nil;
+                if (!data) { editor.notice.text = @"目前設定無效，無法匯出。"; return; }
+                UIPasteboard.generalPasteboard.string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                editor.notice.text = @"已複製隊伍、開場、循環與盤面目標。";
+            }]];
+        }
         [self.rows addArrangedSubview:[self label:[NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
             (unsigned long)[settings[@"rules"] count], (unsigned long)[settings[@"goals"] count]]]];
         [self.rows addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
@@ -184,7 +199,36 @@
     UIButton *add = [self action:@"＋ 將目前轉珠設定另存為策略" identifier:@"padcheaper.orbsProfileAdd" handler:^(PHOrbProfileEditor *editor) {
         [editor addProfile:NO];
     }]; add.enabled = [self.draft[@"profiles"] count] < PHOrbMaxProfiles; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"最多 64 份，儲存成功才生效。策略包含技能規則、盤面目標與求路品質。\n\n隊伍核對的是開始時各位置的本體圖鑑編號；不核對武裝、等級與覺醒。變身與切層後保持本次策略。\n\n自動配對優先選更具體的關卡，再比較限定的角色數；同等候選或沒有符合者會停止。這個開關不會自行開始遊戲或進入關卡。\n\n關卡限制取自最近成功讀盤，與技能規則中的第幾層不同。"]];
+    [self.rows addArrangedSubview:[self label:@"匯入隊伍＋開場＋循環＋盤面目標 config"]];
+    self.planText = [UITextView new]; self.planText.text = self.planDraftText ?: @"";
+    self.planText.font = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightRegular];
+    self.planText.backgroundColor = UIColor.secondarySystemBackgroundColor; self.planText.layer.cornerRadius = 8;
+    self.planText.autocorrectionType = UITextAutocorrectionTypeNo; self.planText.spellCheckingType = UITextSpellCheckingTypeNo;
+    self.planText.accessibilityIdentifier = @"padcheaper.orbsPlanJSON";
+    self.planText.accessibilityLabel = @"貼入整包 JSON";
+    [self.planText.heightAnchor constraintEqualToConstant:180].active = YES;
+    [self.rows addArrangedSubview:self.planText];
+    [self.rows addArrangedSubview:[self action:@"貼上 config" identifier:@"padcheaper.orbsPlanPaste" handler:^(PHOrbProfileEditor *editor) {
+        NSString *text = UIPasteboard.generalPasteboard.string;
+        if (text.length > 131072) { editor.notice.text = @"單份 config 上限 128 KiB。"; return; }
+        editor.planText.text = text ?: @"";
+    }]];
+    [self.rows addArrangedSubview:[self action:@"驗證並預覽匯入" identifier:@"padcheaper.orbsPlanImport" handler:^(PHOrbProfileEditor *editor) {
+        NSData *data = [editor.planText.text dataUsingEncoding:NSUTF8StringEncoding];
+        if (!data.length || data.length > 131072) { editor.notice.text = @"請貼入完整 JSON，單份上限 128 KiB。"; return; }
+        id plan = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]; NSString *reason = nil;
+        NSDictionary *library = PHOrbProfilesImportingPlan(editor.draft, plan, &reason);
+        if (!library) { editor.notice.text = reason ?: @"JSON 無法解析；未更動隊伍與策略。"; return; }
+        NSData *saved = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
+        editor.draft = [NSJSONSerialization JSONObjectWithData:saved options:NSJSONReadingMutableContainers error:NULL];
+        editor.planText.text = @""; [editor rebuild];
+        editor.notice.text = @"已驗證並加入草稿。請檢查上方隊伍與流程，按「儲存並選用」才會套用設定。";
+        [editor.view layoutIfNeeded];
+        UIScrollView *scroll = (UIScrollView *)editor.rows.superview;
+        [scroll setContentOffset:CGPointMake(0, -scroll.adjustedContentInset.top) animated:NO];
+        UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, editor.rows.arrangedSubviews.firstObject);
+    }]];
+    [self.rows addArrangedSubview:[self label:@"最多 64 份，儲存成功才生效。一般策略包含技能規則、盤面目標與求路品質，開始時核對本體圖鑑編號。\n\n整包 config 另含配裝與開場；執行時核對六格本體、武裝及開場變身進度，不以等級與覺醒作配對條件。切層後保持本次策略。\n\n自動配對優先選更具體的關卡，再比較限定的角色數；同等候選或沒有符合者會停止。這個開關不會自行開始遊戲或進入關卡。\n\n關卡限制取自最近成功讀盤，與技能規則中的第幾層不同。"]];
 }
 - (void)addProfile:(BOOL)duplicate {
     NSMutableArray *profiles = self.draft[@"profiles"];

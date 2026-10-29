@@ -1,6 +1,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
+#import "PHFormationModel.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 
@@ -53,7 +54,9 @@ BOOL PHOrbProfilesValid(id library) {
         [library[@"profiles"] count] > PHOrbMaxProfiles) return NO;
     NSMutableSet *ids = [NSMutableSet set];
     for (id record in library[@"profiles"]) {
-        if (![record isKindOfClass:NSDictionary.class] || !Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings"]) ||
+        if (![record isKindOfClass:NSDictionary.class] ||
+            !(Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings"]) ||
+              Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"formation", @"opening", @"source"])) ||
             !Identifier(record[@"id"], NO) || [ids containsObject:record[@"id"]] ||
             ![record[@"name"] isKindOfClass:NSString.class] || [record[@"name"] length] > 60 ||
             ![[record[@"name"] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] length] ||
@@ -67,6 +70,13 @@ BOOL PHOrbProfilesValid(id library) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
                 !PHBattleCatalogIDForNumber([number unsignedIntValue], &catalogID))) return NO;
+        }
+        if (record[@"formation"]) {
+            if (!PHFormationReadTeam(record[@"formation"], NULL, NULL) ||
+                !PHOrbOpeningValid(record[@"opening"], record[@"formation"]) ||
+                ![record[@"source"] isKindOfClass:NSString.class] || [record[@"source"] length] > 2048) return NO;
+            for (NSUInteger i = 0; i < 6; ++i)
+                if (![record[@"team"][i] isEqual:record[@"formation"][@"slots"][i][@"body"][@"id"]]) return NO;
         }
         [ids addObject:record[@"id"]];
     }
@@ -90,11 +100,136 @@ NSDictionary *PHOrbProfilesUpdatingSettings(NSDictionary *library, NSDictionary 
 static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
     if ([record[@"dungeon"] unsignedIntValue] && [record[@"dungeon"] unsignedIntValue] != state->identity.dungeon) return NO;
     if ([record[@"floor"] unsignedIntValue] && [record[@"floor"] unsignedIntValue] != state->identity.floor) return NO;
+    if (record[@"formation"]) return PHOrbProfileMatchesOpeningTeam(record, state, 0);
     for (NSUInteger i = 0; i < 6; ++i) {
         unsigned number = [record[@"team"][i] unsignedIntValue];
         if (number && (!state->automation.members[i].active || number != state->automation.members[i].number)) return NO;
     }
     return YES;
+}
+
+BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
+    if (![opening isKindOfClass:NSArray.class] || [opening count] > 24 || !PHFormationReadTeam(formation, NULL, NULL)) return NO;
+    if (!Keys(formation, @[@"schema", @"title", @"slots"])) return NO;
+    NSMutableArray *bodies = [NSMutableArray array];
+    for (NSDictionary *slot in formation[@"slots"]) {
+        if (!Keys(slot, @[@"body", @"assist"]) || ![slot[@"body"][@"id"] unsignedIntValue]) return NO;
+        for (NSString *kind in @[@"body", @"assist"]) {
+            NSDictionary *card = slot[kind]; uint16_t catalogID = 0;
+            if (!Keys(card, @[@"id", @"level", @"skill", @"awakenings", @"plus", @"superAwakening", @"latents"]) ||
+                ([card[@"id"] unsignedIntValue] && !PHBattleCatalogIDForNumber([card[@"id"] unsignedIntValue], &catalogID))) return NO;
+        }
+        [bodies addObject:slot[@"body"][@"id"]];
+    }
+    for (id step in opening) {
+        if (![step isKindOfClass:NSDictionary.class] || !Keys(step, @[@"slot", @"source", @"monster", @"assist", @"skill", @"afterMonster"]) ||
+            !Integer(step[@"slot"], 6) || ![step[@"slot"] unsignedIntValue] ||
+            ![step[@"source"] isKindOfClass:NSString.class] || ![@[@"body", @"assist"] containsObject:step[@"source"]] ||
+            !Integer(step[@"monster"], UINT16_MAX) || !Integer(step[@"assist"], UINT16_MAX) ||
+            !Integer(step[@"skill"], 0x1ffff) || ![step[@"skill"] unsignedIntValue] || !Integer(step[@"afterMonster"], UINT16_MAX)) return NO;
+        NSUInteger slot = [step[@"slot"] unsignedIntegerValue] - 1;
+        uint16_t catalogID = 0;
+        if (![step[@"monster"] isEqual:bodies[slot]] ||
+            ![step[@"assist"] isEqual:formation[@"slots"][slot][@"assist"][@"id"]] ||
+            ([step[@"source"] isEqual:@"assist"] && ![step[@"assist"] unsignedIntValue]) ||
+            ([step[@"afterMonster"] unsignedIntValue] && !PHBattleCatalogIDForNumber([step[@"afterMonster"] unsignedIntValue], &catalogID))) return NO;
+        if ([step[@"afterMonster"] unsignedIntValue]) bodies[slot] = step[@"afterMonster"];
+    }
+    return YES;
+}
+
+BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed) {
+    if (!state || !state->automation.valid || !profile[@"formation"] || completed > [profile[@"opening"] count]) return NO;
+    NSMutableArray *bodies = [NSMutableArray array];
+    for (NSDictionary *slot in profile[@"formation"][@"slots"]) [bodies addObject:slot[@"body"][@"id"]];
+    for (NSUInteger i = 0; i < completed; ++i) {
+        NSDictionary *step = profile[@"opening"][i];
+        if ([step[@"afterMonster"] unsignedIntValue]) bodies[[step[@"slot"] unsignedIntegerValue] - 1] = step[@"afterMonster"];
+    }
+    for (NSUInteger i = 0; i < 6; ++i) {
+        const PHOrbSkillMember *member = &state->automation.members[i];
+        uint16_t assist = 0;
+        unsigned number = [profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue];
+        if (number && !PHBattleCatalogIDForNumber(number, &assist)) return NO;
+        if (!member->active || member->number != [bodies[i] unsignedIntValue] || member->assistCatalogID != assist) return NO;
+    }
+    return YES;
+}
+
+NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
+    if (reason) *reason = @"整包設定格式、版本、隊伍或開場步驟無效；未匯入";
+    if (![plan isKindOfClass:NSDictionary.class] || !Keys(plan, @[@"format", @"schema", @"target", @"id", @"name", @"formation",
+            @"opening", @"rotation", @"board", @"dungeon", @"floor", @"source"]) ||
+        ![plan[@"format"] isEqual:@"padcheaper-team-plan"] || !Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1] ||
+        ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
+        !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
+        ![plan[@"board"] isKindOfClass:NSDictionary.class] || !Keys(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"])) return nil;
+    NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
+    NSDictionary *canonical = PHOrbCanonicalSettings(settings);
+    if (!canonical) return nil;
+    NSMutableArray *team = [NSMutableArray array];
+    for (NSDictionary *slot in plan[@"formation"][@"slots"]) [team addObject:slot[@"body"][@"id"]];
+    NSDictionary *profile = @{@"id":plan[@"id"], @"name":plan[@"name"], @"team":team, @"dungeon":plan[@"dungeon"],
+        @"floor":plan[@"floor"], @"settings":canonical, @"formation":plan[@"formation"], @"opening":plan[@"opening"], @"source":plan[@"source"]};
+    if (!PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:profile options:0 error:NULL];
+    if (reason) *reason = nil;
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+}
+
+NSDictionary *PHOrbPlanFromProfile(NSDictionary *profile) {
+    if (!profile[@"formation"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    NSMutableDictionary *board = [PHOrbCanonicalSettings(profile[@"settings"]) mutableCopy]; [board removeObjectForKey:@"rules"];
+    return @{@"format":@"padcheaper-team-plan", @"schema":@1, @"target":@"jp.gungho.pad-ios-23.6.0-106878",
+        @"id":profile[@"id"], @"name":profile[@"name"], @"formation":profile[@"formation"], @"opening":profile[@"opening"],
+        @"rotation":profile[@"settings"][@"rules"], @"board":board, @"dungeon":profile[@"dungeon"],
+        @"floor":profile[@"floor"], @"source":profile[@"source"]};
+}
+
+NSDictionary *PHOrbProfilesImportingPlan(NSDictionary *library, id plan, NSString **reason) {
+    NSDictionary *profile = PHOrbProfileFromPlan(plan, reason);
+    if (!profile || !PHOrbProfilesValid(library)) return nil;
+    if (PHOrbProfileNamed(library, profile[@"id"])) {
+        if (reason) *reason = @"相同 ID 的策略已存在；請先刪除舊版或修改匯入 ID，避免覆蓋設定";
+        return nil;
+    }
+    if ([library[@"profiles"] count] >= PHOrbMaxProfiles) { if (reason) *reason = @"策略庫已滿（64 份）"; return nil; }
+    NSMutableArray *profiles = [library[@"profiles"] mutableCopy]; [profiles addObject:profile];
+    return @{@"schema":@1, @"selected":profile[@"id"], @"autoSelect":@NO, @"profiles":profiles};
+}
+
+NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictionary *profile) {
+    if (!PHFormationReadLibrary(formations, NULL, NULL) || !profile[@"formation"]) return nil;
+    NSMutableArray *teams = [formations[@"teams"] mutableCopy]; NSString *identifier = nil;
+    for (NSDictionary *record in teams) if ([record[@"team"] isEqual:profile[@"formation"]]) { identifier = record[@"id"]; break; }
+    if (!identifier) {
+        if (teams.count >= PHFormationLibraryCapacity) return nil;
+        identifier = NSUUID.UUID.UUIDString.lowercaseString;
+        [teams addObject:@{@"id":identifier, @"team":profile[@"formation"]}];
+    }
+    return @{@"schema":@1, @"selected":identifier, @"teams":teams};
+}
+
+NSString *PHOrbPlanDescription(NSDictionary *plan) {
+    NSDictionary *profile = PHOrbProfileFromPlan(plan, NULL);
+    if (!profile) return @"無效整包設定";
+    NSMutableArray *lines = [NSMutableArray arrayWithObject:profile[@"name"]];
+    for (NSUInteger i = 0; i < 6; ++i) {
+        NSDictionary *slot = profile[@"formation"][@"slots"][i];
+        [lines addObject:[NSString stringWithFormat:@"位置 %lu：#%@／武裝 #%@ · Lv.%@", (unsigned long)i + 1,
+            slot[@"body"][@"id"], slot[@"assist"][@"id"], slot[@"body"][@"level"]]];
+    }
+    [lines addObject:@"\n開場（依序完成）："];
+    NSUInteger index = 0;
+    for (NSDictionary *step in profile[@"opening"]) [lines addObject:[NSString stringWithFormat:@"%lu. 位置 %@ %@技能 %@%@",
+        (unsigned long)++index, step[@"slot"], [step[@"source"] isEqual:@"body"] ? @"本體" : @"武裝", step[@"skill"],
+        [step[@"afterMonster"] unsignedIntValue] ? [NSString stringWithFormat:@" → #%@", step[@"afterMonster"]] : @""]];
+    if (!index) [lines addObject:@"沒有開場步驟，開始後使用循環規則"];
+    [lines addObject:@"\n循環（依優先順序）："];
+    for (NSDictionary *rule in profile[@"settings"][@"rules"]) [lines addObject:PHOrbSkillRuleDescription(rule)];
+    [lines addObject:[NSString stringWithFormat:@"\n盤面目標：%@\n求路品質：%@", PHOrbGoalsDescription(profile[@"settings"][@"goals"]), profile[@"settings"][@"quality"]]];
+    [lines addObject:@"\n儲存並選用會同時選取隊伍與策略；入場套隊沿用既有開關。按「開始自動轉」才執行開場及循環。"];
+    return [lines componentsJoinedByString:@"\n"];
 }
 
 NSDictionary *PHOrbResolveProfile(NSDictionary *library, const PHOrbSnapshot *state) {

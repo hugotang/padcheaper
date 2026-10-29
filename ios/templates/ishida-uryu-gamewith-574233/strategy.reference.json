@@ -1,0 +1,414 @@
+{
+  "format": "padcheaper-template-reference",
+  "schemaVersion": 1,
+  "status": "reference-not-executable",
+  "id": "ishida-uryu-gamewith-574233-basic",
+  "name": "石田雨龍 × 白哉｜GameWith 基本模板",
+  "source": {
+    "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/574233",
+    "section": "basic",
+    "snapshotDate": "2026-10-29",
+    "snapshotSHA256": "34836dd3a2b4b0626c5733d2314b6ddda0bfe6f3a17b1295969a8912dbe87d68",
+    "catalogSource": "https://github.com/Mapaler/PADDashFormation",
+    "catalogRevision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+    "cardSHA256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
+    "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7"
+  },
+  "compatibility": {
+    "region": "ja",
+    "gameVersion": "23.6.0",
+    "gameBuild": "106878",
+    "researchedPADCheaperVersion": "0.5.5-orbs",
+    "formationImportSupported": true,
+    "combinedImportSupported": false,
+    "automaticOpeningSupported": false
+  },
+  "formationFile": "formation.json",
+  "existingProfileLibraryFile": "post-opening.orbProfiles.json",
+  "assumptions": {
+    "bodyPlus": [
+      297,
+      297,
+      297
+    ],
+    "assistPlus": [
+      99,
+      99,
+      99
+    ],
+    "bodySkillLevel": "maximum",
+    "assistSkillLevel": 1,
+    "note": "加值及技能等級採此專案的模板設定，文章基本表格沒有逐格列出；不要把它們當作原文精確數值。",
+    "unspecifiedLatents": "leave-empty",
+    "badge": "manual-choice",
+    "badgeChoices": [
+      "T字消し攻撃",
+      "BLEACH"
+    ]
+  },
+  "members": [
+    {
+      "slot": 1,
+      "body": {
+        "number": 14037,
+        "name": "聖文字“A”・石田雨竜",
+        "skillId": 64780,
+        "skillName": "これが僕の――覚悟だ",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 20
+      },
+      "assist": {
+        "number": 14039,
+        "name": "滅却師の弓",
+        "skillId": 65021,
+        "skillName": "霊子を固めた弓矢",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 14
+      },
+      "transformedBody": {
+        "number": 14038,
+        "name": "滅却師完聖体・石田雨竜",
+        "skillId": 64787,
+        "skillName": "フェーダーツヴィンガー",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 4
+      },
+      "transformTo": 14038
+    },
+    {
+      "slot": 2,
+      "body": {
+        "number": 14055,
+        "name": "瞬神・四楓院夜一",
+        "skillId": 64863,
+        "skillName": "瞬閧 雷神戦形",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 4
+      },
+      "assist": {
+        "number": 14056,
+        "name": "夜一の髪留め",
+        "skillId": 65063,
+        "skillName": "歩法の達人",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 12
+      }
+    },
+    {
+      "slot": 3,
+      "body": {
+        "number": 14060,
+        "name": "卯ノ花烈",
+        "skillId": 64720,
+        "skillName": "感情に任せて口走ってはいけません",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 5
+      },
+      "assist": {
+        "number": 13893,
+        "name": "まどかのノート",
+        "skillId": 63581,
+        "skillName": "変身の構想が描かれたノート",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 16
+      }
+    },
+    {
+      "slot": 4,
+      "body": {
+        "number": 14048,
+        "name": "ユーグラム・ハッシュヴァルト",
+        "skillId": 64795,
+        "skillName": "身代わりの盾",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 5
+      },
+      "assist": {
+        "number": 13510,
+        "name": "霊妙鍵の装具・霊泉の薙刀",
+        "skillId": 60998,
+        "skillName": "霊泉の一薙ぎ",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 16
+      }
+    },
+    {
+      "slot": 5,
+      "body": {
+        "number": 14065,
+        "name": "卍解・朽木白哉",
+        "skillId": 64914,
+        "skillName": "一咬千刃花",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 2
+      },
+      "assist": {
+        "number": 13105,
+        "name": "希望のデジメンタル",
+        "skillId": 58344,
+        "skillName": "邪悪なものに対して絶対的な強さを発揮",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 13
+      }
+    },
+    {
+      "slot": 6,
+      "body": {
+        "number": 14065,
+        "name": "卍解・朽木白哉",
+        "skillId": 64914,
+        "skillName": "一咬千刃花",
+        "maximumSkillLevel": 5,
+        "minimumCooldown": 2
+      },
+      "assist": {
+        "number": 13654,
+        "name": "白護龍・セイテンサイの式札",
+        "skillId": 61891,
+        "skillName": "生天の護封陣",
+        "maximumSkillLevel": 1,
+        "minimumCooldown": 18
+      }
+    }
+  ],
+  "opening": {
+    "source": "article-basic-opening",
+    "mode": "ordered",
+    "oncePerBattle": true,
+    "onUnavailable": "pause-with-step-reason",
+    "onUncertainCompletion": "pause-no-retry",
+    "allowUnlistedSkills": false,
+    "steps": [
+      {
+        "step": 1,
+        "slot": 5,
+        "source": "assist",
+        "bodyNumber": 14065,
+        "assistNumber": 13105,
+        "expectedSkillId": 58344,
+        "completion": {
+          "nativeSkillUseConfirmed": true
+        }
+      },
+      {
+        "step": 2,
+        "slot": 1,
+        "source": "body",
+        "bodyNumber": 14037,
+        "assistNumber": 14039,
+        "expectedSkillId": 64780,
+        "completion": {
+          "nativeSkillUseConfirmed": true,
+          "bodyNumber": 14038
+        }
+      },
+      {
+        "step": 3,
+        "slot": 4,
+        "source": "assist",
+        "bodyNumber": 14048,
+        "assistNumber": 13510,
+        "expectedSkillId": 60998,
+        "completion": {
+          "nativeSkillUseConfirmed": true
+        }
+      },
+      {
+        "step": 4,
+        "slot": 2,
+        "source": "assist",
+        "bodyNumber": 14055,
+        "assistNumber": 14056,
+        "expectedSkillId": 65063,
+        "completion": {
+          "nativeSkillUseConfirmed": true
+        }
+      },
+      {
+        "step": 5,
+        "slot": 3,
+        "source": "assist",
+        "bodyNumber": 14060,
+        "assistNumber": 13893,
+        "expectedSkillId": 63581,
+        "completion": {
+          "nativeSkillUseConfirmed": true
+        }
+      },
+      {
+        "step": 6,
+        "slot": 6,
+        "source": "assist",
+        "bodyNumber": 14065,
+        "assistNumber": 13654,
+        "expectedSkillId": 61891,
+        "completion": {
+          "nativeSkillUseConfirmed": true
+        }
+      }
+    ]
+  },
+  "rotation": {
+    "source": "article-guidance-with-proposed-evaluation-order",
+    "evaluationOrder": [
+      "yoruichi",
+      "byakuya-pair",
+      "haschwalth",
+      "unohana-rescue",
+      "uryu"
+    ],
+    "rules": [
+      {
+        "id": "yoruichi",
+        "slot": 2,
+        "source": "body",
+        "bodyNumber": 14055,
+        "skillId": 64863,
+        "when": "native-ready",
+        "before": [
+          "uryu",
+          "unohana-rescue"
+        ]
+      },
+      {
+        "id": "byakuya-pair",
+        "slots": [
+          5,
+          6
+        ],
+        "source": "body",
+        "bodyNumber": 14065,
+        "skillId": 64914,
+        "when": "native-ready",
+        "group": "alternating",
+        "maximumPerOrbTurn": 1,
+        "before": [
+          "unohana-rescue",
+          "uryu"
+        ]
+      },
+      {
+        "id": "haschwalth",
+        "slot": 4,
+        "source": "body",
+        "bodyNumber": 14048,
+        "skillId": 64795,
+        "when": "native-ready",
+        "before": [
+          "unohana-rescue"
+        ]
+      },
+      {
+        "id": "unohana-rescue",
+        "slot": 3,
+        "source": "body",
+        "bodyNumber": 14060,
+        "skillId": 64720,
+        "when": {
+          "any": [
+            {
+              "playerEffect": "temporary-awoken-bind"
+            },
+            {
+              "unmatchableColors": [
+                "light",
+                "heart"
+              ]
+            },
+            {
+              "playerEffect": "recovery-down"
+            },
+            {
+              "playerEffect": "board-shrunk"
+            }
+          ]
+        },
+        "note": "基本範本只自動回應隊長所需的光／心不可消；其他珠色與指定高傷害前施放應由關卡策略補充。"
+      },
+      {
+        "id": "uryu",
+        "slot": 1,
+        "source": "body",
+        "bodyNumber": 14038,
+        "skillId": 64787,
+        "when": {
+          "all": [
+            {
+              "nativeReady": true
+            },
+            {
+              "orbCount": {
+                "color": "light",
+                "atLeast": 9,
+                "spinnerPolicy": "minimum-over-phases"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "board": {
+    "alternatives": [
+      {
+        "name": "光 T ＋心四連",
+        "goals": [
+          {
+            "kind": "t",
+            "colors": 8,
+            "count": 1,
+            "length": 0
+          },
+          {
+            "kind": "four",
+            "colors": 32,
+            "count": 1,
+            "length": 0
+          }
+        ]
+      },
+      {
+        "name": "光 T ＋心 L",
+        "goals": [
+          {
+            "kind": "t",
+            "colors": 8,
+            "count": 1,
+            "length": 0
+          },
+          {
+            "kind": "l",
+            "colors": 32,
+            "count": 1,
+            "length": 0
+          }
+        ]
+      }
+    ],
+    "automaticAlternativeSelection": false,
+    "poisonPolicy": "do-not-erase-poison-or-mortal-poison",
+    "bombsPolicy": "erase-all-in-first-wave",
+    "spinnersPolicy": "avoid-spinner-cells-and-check-all-shared-phases"
+  },
+  "limitations": [
+    "這是資料及設計參考，0.5.5 不接受此完整檔案作匯入，也不會執行 opening 或 rotation。",
+    "post-opening.orbProfiles.json 只包含現版欄位，必須由完整 config 合併後使用；不是可貼入編隊頁的檔案。",
+    "現版技能規則不能指定本體／武裝；武裝重新蓄滿時可能由遊戲選用武裝，無法由此設定保證只用本體。",
+    "現版同位置每轉珠回合最多使用一次，不能完整執行加速後同回合再放本體的開場。",
+    "現版策略比對開始時的精確形態；本附檔綁定變身後 14038，必須手動完成全部開場再選用。",
+    "現版無 recovery-down／board-shrunk 觸發欄位；這兩類卯之花救援仍需手動。",
+    "現版無至少九光的規則欄位，附檔靠遊戲原生可用性檢查；雨龍沒放出不代表全隊已獲得吸收／無效對策。",
+    "心四連和心 L 是兩份手動選用策略，不能同時要求，也沒有自動擇一。",
+    "此基本模板不包含關卡逐層腳本、轉轉抓色、傷害／回復精算或毒抗性生存保證。"
+  ],
+  "proposedImporter": {
+    "importAddsNewRecords": true,
+    "previewBeforeSave": true,
+    "preserveUnrelatedSettings": true,
+    "persistFormationAndStrategyTogether": true,
+    "startAutomatically": false,
+    "applyBattleAutomatically": false,
+    "forbidUnsupportedExecutionFields": true,
+    "mode": "single-player-only"
+  }
+}

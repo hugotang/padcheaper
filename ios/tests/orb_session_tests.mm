@@ -20,7 +20,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
-    BOOL requireNineLight;
+    BOOL requireNineLight, omitResolvingBoard;
+    PHOrbSkillSource chosenSource[6];
+    uint32_t chosenSkill[6];
+    uint16_t transformAfterSkill[6];
     unsigned lightAfterByakuya;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
@@ -60,7 +63,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!frame.ready || staged || failRead) return NO;
     if (!live.present) multiplayerLatched = NO;
     if (live.multiplayerDisabled) multiplayerLatched = YES;
-    *state = live; state->multiplayerDisabled |= multiplayerLatched; return YES;
+    *state = live; state->multiplayerDisabled |= multiplayerLatched;
+    if (omitResolvingBoard && live.phase != 2) {
+        std::fill(std::begin(state->board.types), std::end(state->board.types), 0);
+        std::fill(std::begin(state->board.tokens), std::end(state->board.tokens), 0);
+    }
+    return YES;
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     return [self read:state frame:frame reason:reason];
@@ -87,6 +95,16 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     live.phase = 22; live.automation.members[slot].state = 2; live.automation.busy = true;
     return rejectStartedSkill ? PHOrbSkillRejected : PHOrbSkillStarted;
 }
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (slot >= 6) return PHOrbSkillRejected;
+    if ((request.source != PHOrbSkillAutomatic && request.source != chosenSource[slot]) ||
+        (request.skill && request.skill != chosenSkill[slot])) {
+        if (reason) *reason = @"fixture source or skill mismatch";
+        return PHOrbSkillUnavailable;
+    }
+    return [self useSkill:slot expected:expected frame:frame reason:reason];
+}
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled || multiplayerLatched ||
@@ -110,6 +128,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         Check(!staged, "no synthetic input is staged during a native skill");
         if (hangSkill || --skillFrames) return;
         live.phase = 2; live.automation.members[activeSkill].state = 0; live.automation.busy = false;
+        if (transformAfterSkill[activeSkill]) {
+            live.automation.members[activeSkill].number = transformAfterSkill[activeSkill];
+            transformAfterSkill[activeSkill] = 0;
+        }
+        chosenSource[activeSkill] = PHOrbSkillBody;
         if (!failSkillAck) ++live.automation.skillUses;
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
@@ -223,6 +246,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_thorn_session_tests.inc"
 #include "orb_lifecycle_session_tests.inc"
 #include "orb_color_condition_session_tests.inc"
+#include "orb_plan_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -498,6 +522,8 @@ int main() {
         ThornSessionTests();
         LifecycleSessionTests();
         ColorConditionSessionTests();
+        PlanSessionTests();
+        ExecutionTraceSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

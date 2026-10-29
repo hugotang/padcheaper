@@ -6,7 +6,15 @@ NSDictionary *PHOrbDefaultSkillRule(void) {
     return @{@"enabled":@YES, @"slot":@1, @"monster":@0, @"every":@1, @"floor":@0,
              @"color":@-1, @"below":@0, @"enemy":@"none", @"group":@0, @"once":@NO,
              @"reserveUntil":@0, @"obstacle":@"none", @"unmatchableColors":@0,
-             @"hpAtMost":@0, @"status":@"none", @"required":@NO};
+             @"hpAtMost":@0, @"status":@"none", @"required":@NO,
+             @"source":@"auto", @"skill":@0, @"atLeast":@0};
+}
+
+PHOrbSkillRequest PHOrbRequestForRule(NSDictionary *rule) {
+    PHOrbSkillRequest request = {PHOrbSkillAutomatic, [rule[@"skill"] unsignedIntValue]};
+    if ([rule[@"source"] isEqual:@"body"]) request.source = PHOrbSkillBody;
+    if ([rule[@"source"] isEqual:@"assist"]) request.source = PHOrbSkillAssist;
+    return request;
 }
 
 NSDictionary *PHOrbNormalizedSkillRule(NSDictionary *rule) {
@@ -146,6 +154,8 @@ BOOL PHOrbSkillRulesValid(id rules) {
             !PHOrbRuleIsBoolean(rule[@"enabled"]) || !Integer(rule[@"slot"], 1, 6) || !Integer(rule[@"monster"], 0, UINT16_MAX) ||
             !Integer(rule[@"every"], 1, 999) || !Integer(rule[@"floor"], 0, 999) || !Integer(rule[@"color"], -1, 5) ||
             !Integer(rule[@"below"], 0, PHOrbMaxCells + 1) || ![rule[@"enemy"] isKindOfClass:NSString.class] ||
+            !Integer(rule[@"atLeast"], 0, PHOrbMaxCells) || !Integer(rule[@"skill"], 0, 0x1ffff) ||
+            ![rule[@"source"] isKindOfClass:NSString.class] || ![@[@"auto", @"body", @"assist"] containsObject:rule[@"source"]] ||
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
             !PHOrbRuleIsBoolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
             ![rule[@"obstacle"] isKindOfClass:NSString.class] || ![PHOrbObstacleConditions() containsObject:rule[@"obstacle"]] ||
@@ -156,7 +166,8 @@ BOOL PHOrbSkillRulesValid(id rules) {
             ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] < [rule[@"reserveUntil"] unsignedIntValue])) return NO;
         uint16_t catalogID = 0;
         if ([rule[@"monster"] unsignedIntValue] && !PHBattleCatalogIDForNumber([rule[@"monster"] unsignedIntValue], &catalogID)) return NO;
-        if ([rule[@"color"] integerValue] < 0 ? [rule[@"below"] integerValue] != 0 : [rule[@"below"] integerValue] < 1) return NO;
+        if ([rule[@"color"] integerValue] < 0 ? ([rule[@"below"] unsignedIntValue] || [rule[@"atLeast"] unsignedIntValue]) :
+            (([rule[@"below"] unsignedIntValue] > 0) == ([rule[@"atLeast"] unsignedIntValue] > 0))) return NO;
     }
     return YES;
 }
@@ -233,10 +244,16 @@ PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *st
             return Explained(PHOrbRuleUnknown, @"盤面珠數無法確認", reason);
         unsigned minimum = 0, maximum = 0;
         PHOrbColorCountRange(&state->board, (unsigned)color, &minimum, &maximum);
-        if (minimum >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
-        if (maximum >= [rule[@"below"] unsignedIntValue])
-            return Explained(PHOrbRuleUnknown, @"缺珠門檻會隨轉轉變色，請先手動處理或調整規則", reason);
-        [matched addObject:[NSString stringWithFormat:@"指定珠色最多 %u 顆 < %@ 顆", maximum, rule[@"below"]]];
+        if ([rule[@"atLeast"] unsignedIntValue]) {
+            if (minimum < [rule[@"atLeast"] unsignedIntValue])
+                return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"指定珠色保證 %u 顆，未達至少 %@ 顆", minimum, rule[@"atLeast"]], reason);
+            [matched addObject:[NSString stringWithFormat:@"指定珠色至少 %u 顆 ≥ %@ 顆", minimum, rule[@"atLeast"]]];
+        } else {
+            if (minimum >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
+            if (maximum >= [rule[@"below"] unsignedIntValue])
+                return Explained(PHOrbRuleUnknown, @"缺珠門檻會隨轉轉變色，請先手動處理或調整規則", reason);
+            [matched addObject:[NSString stringWithFormat:@"指定珠色最多 %u 顆 < %@ 顆", maximum, rule[@"below"]]];
+        }
     }
     NSUInteger enemy = [PHOrbEnemyConditions() indexOfObject:rule[@"enemy"]];
     if (enemy) {
@@ -276,13 +293,17 @@ PHOrbRuleMatch PHOrbMatchSkillRule(NSDictionary *rule, const PHOrbSnapshot *stat
 
 NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
     if (!PHOrbSkillRulesValid(@[rule ?: @{}])) return @"無效技能規則";
+    rule = PHOrbNormalizedSkillRule(rule);
     NSMutableArray *parts = [NSMutableArray array];
     [parts addObject:[NSString stringWithFormat:@"位置 %@%@", rule[@"slot"], [rule[@"monster"] unsignedIntValue] ?
         [NSString stringWithFormat:@"（No.%@）", rule[@"monster"]] : @""]];
     [parts addObject:[rule[@"every"] unsignedIntValue] == 1 ? @"每回合" : [NSString stringWithFormat:@"每 %@ 回合", rule[@"every"]]];
     if ([rule[@"floor"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"第 %@ 層", rule[@"floor"]]];
-    if ([rule[@"color"] integerValue] >= 0) [parts addObject:[NSString stringWithFormat:@"%@珠少於 %@ 顆",
-        @[@"火", @"水", @"木", @"光", @"暗", @"心"][[rule[@"color"] unsignedIntegerValue]], rule[@"below"]]];
+    if (![rule[@"source"] isEqual:@"auto"]) [parts addObject:[rule[@"source"] isEqual:@"body"] ? @"僅本體技能" : @"僅武裝技能"];
+    if ([rule[@"skill"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"技能 %@", rule[@"skill"]]];
+    if ([rule[@"color"] integerValue] >= 0) [parts addObject:[NSString stringWithFormat:@"%@珠%@ %@ 顆",
+        @[@"火", @"水", @"木", @"光", @"暗", @"心"][[rule[@"color"] unsignedIntegerValue]],
+        [rule[@"atLeast"] unsignedIntValue] ? @"至少" : @"少於", [rule[@"atLeast"] unsignedIntValue] ? rule[@"atLeast"] : rule[@"below"]]];
     if (![rule[@"enemy"] isEqual:@"none"]) [parts addObject:PHOrbEnemyConditionTitle(rule[@"enemy"])];
     if ([rule[@"group"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"輪替組 %@", rule[@"group"]]];
     if ([rule[@"once"] boolValue]) [parts addObject:@"本場一次"];

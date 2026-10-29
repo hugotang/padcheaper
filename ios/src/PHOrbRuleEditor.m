@@ -96,7 +96,10 @@
         UIAction *action = [UIAction actionWithTitle:titles[i] image:nil identifier:nil handler:^(__kindof UIAction *sender) {
             PHOrbRuleEditor *editor = weakSelf; if (!editor || index >= editor.draft.count) return;
             editor.draft[index][field] = value;
-            if ([field isEqual:@"color"]) editor.draft[index][@"below"] = [value integerValue] < 0 ? @0 : @3;
+            if ([field isEqual:@"color"]) {
+                editor.draft[index][@"below"] = [value integerValue] < 0 ? @0 : @3;
+                editor.draft[index][@"atLeast"] = @0;
+            }
             if ([field isEqual:@"obstacle"] && ![value isEqual:@"unmatchable"]) editor.draft[index][@"unmatchableColors"] = @0;
             [editor rebuild];
         }];
@@ -118,7 +121,7 @@
     [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
         PHOrbRuleEditor *editor = weakSelf; if (!editor || index >= editor.draft.count) return;
         NSString *text = weakField.text ?: @"";
-        BOOL digits = text.length > 0 && text.length <= 5 &&
+        BOOL digits = text.length > 0 && text.length <= 6 &&
             [text rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"0123456789"].invertedSet].location == NSNotFound;
         editor.draft[index][key] = digits ? (id)@(text.integerValue) : (id)text;
     }] forControlEvents:UIControlEventEditingChanged];
@@ -147,6 +150,9 @@
         [card addArrangedSubview:[self menu:i field:@"slot" values:@[@1,@2,@3,@4,@5,@6]
             titles:@[@"位置 1 · 隊長", @"位置 2", @"位置 3", @"位置 4", @"位置 5", @"位置 6 · 助人"]]];
         [card addArrangedSubview:[self number:i field:@"monster" title:@"角色圖鑑編號（0 不限定）"]];
+        [card addArrangedSubview:[self menu:i field:@"source" values:@[@"auto", @"body", @"assist"]
+            titles:@[@"遊戲目前技能", @"僅本體技能", @"僅武裝技能"]]];
+        [card addArrangedSubview:[self number:i field:@"skill" title:@"指定技能 ID（0 不限定）"]];
         [card addArrangedSubview:[self number:i field:@"every" title:@"回合間隔（1 每回合）"]];
         UIButton *ready = [self button:@"技能就緒就放"];
         ready.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRuleReady%lu", (unsigned long)i];
@@ -169,8 +175,11 @@
         [card addArrangedSubview:[self menu:i field:@"required" values:@[@NO,@YES]
             titles:@[@"不可用時略過", @"必要：未確認完成就停止"]]];
         [card addArrangedSubview:[self menu:i field:@"color" values:@[@-1,@0,@1,@2,@3,@4,@5]
-            titles:@[@"不限定盤面", @"缺火珠", @"缺水珠", @"缺木珠", @"缺光珠", @"缺暗珠", @"缺心珠"]]];
-        if ([rule[@"color"] integerValue] >= 0) [card addArrangedSubview:[self number:i field:@"below" title:@"珠數少於此數才觸發"]];
+            titles:@[@"不限定盤面", @"火珠數量", @"水珠數量", @"木珠數量", @"光珠數量", @"暗珠數量", @"心珠數量"]]];
+        if ([rule[@"color"] integerValue] >= 0) {
+            [card addArrangedSubview:[self number:i field:@"below" title:@"珠數少於（0 停用）"]];
+            [card addArrangedSubview:[self number:i field:@"atLeast" title:@"珠數至少（與少於擇一）"]];
+        }
         NSMutableArray *titles = [NSMutableArray array]; for (NSString *effect in PHOrbEnemyConditions()) [titles addObject:PHOrbEnemyConditionTitle(effect)];
         [card addArrangedSubview:[self menu:i field:@"enemy" values:PHOrbEnemyConditions() titles:titles]];
         NSMutableArray *obstacleTitles = [NSMutableArray array];

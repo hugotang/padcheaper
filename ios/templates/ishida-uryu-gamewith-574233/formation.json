@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "title": "石田雨龍 × 白哉｜GameWith 基本模板",
+  "slots": [
+    {
+      "body": {
+        "id": 14037,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 4,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 14039,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14055,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 142,
+        "latents": []
+      },
+      "assist": {
+        "id": 14056,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14060,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": [
+          48
+        ]
+      },
+      "assist": {
+        "id": 13893,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14048,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 13510,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 6,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14065,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 13105,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14065,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 13654,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    }
+  ]
+}

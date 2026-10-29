@@ -258,7 +258,34 @@ static void SurvivalNativeTests() {
     }
 }
 
+static void SkillSourceNativeTests() {
+    for (bool chargedAssist : {false,true}) for (PHOrbSkillSource requested : {PHOrbSkillBody,PHOrbSkillAssist}) {
+        SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
+        const uintptr_t member = Impl + PHBattleMemberOffset;
+        Put<uint16_t>(member + 1438, 14139);
+        const unsigned charge = chargedAssist ? 18 : 4;
+        Protected(member + PHBattleChargeOffset, charge, 0x6a875a8b);
+        Put<uint32_t>(member + PHBattleChargeShadowOffset, charge ^ 0x68fb65ceu);
+        readinessFixture = {64787,65021,4,18};
+        Check([engine readAutomation:&state frame:Frame() reason:&reason], "skill source native fixture reads without getters");
+        Check(!readinessCalls, "passive reads never invoke cooldown getters for plan constraints");
+        PHOrbSkillRequest request{requested, requested == PHOrbSkillBody ? 64787u : 65021u};
+        PHOrbSkillResult result = [engine useSkill:0 request:request expected:&state frame:Frame() reason:&reason];
+        const bool matches = chargedAssist == (requested == PHOrbSkillAssist);
+        Check(result == (matches ? PHOrbSkillStarted : PHOrbSkillUnavailable) && skillStartCalls == unsigned(matches) && !writes,
+            "body/assist request checks the naturally charged choice without forcing a skill ID or charge");
+    }
+    SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBody,CurrentFixtureSkill + 1} expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable && !skillStartCalls && !writes,
+        "wrong expected skill ID refuses even a ready native skill");
+    SkillFixture(); engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+    switchMultiInReadiness = true;
+    Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBody,CurrentFixtureSkill} expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !skillStartCalls && !writes,
+        "source getter race into multiplayer cancels before selection preparation and activation");
+}
 static void SkillNativeTests() {
+    SkillSourceNativeTests();
     SkillOrbConditionTests();
     SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.valid && state.automation.window &&

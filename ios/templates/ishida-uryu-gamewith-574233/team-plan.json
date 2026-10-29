@@ -1,0 +1,408 @@
+{
+  "format": "padcheaper-team-plan",
+  "schema": 1,
+  "target": "jp.gungho.pad-ios-23.6.0-106878",
+  "id": "uryu-gw574233-full-four",
+  "name": "雨龍 × 白哉｜開場＋循環・光 T 心四連",
+  "formation": {
+    "schema": 1,
+    "title": "石田雨龍 × 白哉｜GameWith 基本模板",
+    "slots": [
+      {
+        "body": {
+          "id": 14037,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 4,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 14039,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14055,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 142,
+          "latents": []
+        },
+        "assist": {
+          "id": 14056,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14060,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            48
+          ]
+        },
+        "assist": {
+          "id": 13893,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14048,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 13510,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 6,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14065,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 13105,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14065,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 13654,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      }
+    ]
+  },
+  "opening": [
+    {
+      "slot": 5,
+      "source": "assist",
+      "monster": 14065,
+      "assist": 13105,
+      "skill": 58344,
+      "afterMonster": 0
+    },
+    {
+      "slot": 1,
+      "source": "body",
+      "monster": 14037,
+      "assist": 14039,
+      "skill": 64780,
+      "afterMonster": 14038
+    },
+    {
+      "slot": 4,
+      "source": "assist",
+      "monster": 14048,
+      "assist": 13510,
+      "skill": 60998,
+      "afterMonster": 0
+    },
+    {
+      "slot": 2,
+      "source": "assist",
+      "monster": 14055,
+      "assist": 14056,
+      "skill": 65063,
+      "afterMonster": 0
+    },
+    {
+      "slot": 3,
+      "source": "assist",
+      "monster": 14060,
+      "assist": 13893,
+      "skill": 63581,
+      "afterMonster": 0
+    },
+    {
+      "slot": 6,
+      "source": "assist",
+      "monster": 14065,
+      "assist": 13654,
+      "skill": 61891,
+      "afterMonster": 0
+    }
+  ],
+  "rotation": [
+    {
+      "enabled": true,
+      "slot": 2,
+      "monster": 14055,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64863,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 5,
+      "monster": 14065,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64914,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 6,
+      "monster": 14065,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64914,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 4,
+      "monster": 14048,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64795,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 3,
+      "monster": 14060,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "awoken_bind",
+      "required": true,
+      "source": "body",
+      "skill": 64720,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 3,
+      "monster": 14060,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "unmatchable",
+      "unmatchableColors": 40,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 64720,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 1,
+      "monster": 14038,
+      "every": 1,
+      "floor": 0,
+      "color": 3,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64787,
+      "atLeast": 9
+    }
+  ],
+  "board": {
+    "quality": "thorough",
+    "mode": "manual",
+    "goals": [
+      {
+        "kind": "t",
+        "colors": 8,
+        "count": 1,
+        "length": 0
+      },
+      {
+        "kind": "four",
+        "colors": 32,
+        "count": 1,
+        "length": 0
+      }
+    ],
+    "recovery": {
+      "hpAtMost": 0,
+      "groups": 1,
+      "shape": "match"
+    }
+  },
+  "dungeon": 0,
+  "floor": 0,
+  "source": "https://xn--0ck4aw2h.gamewith.jp/article/show/574233"
+}

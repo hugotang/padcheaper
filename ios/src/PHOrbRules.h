@@ -4,6 +4,7 @@
 typedef NS_ENUM(NSInteger, PHOrbRuleMatch) { PHOrbRuleUnknown = -1, PHOrbRuleNo, PHOrbRuleYes };
 
 FOUNDATION_EXPORT NSDictionary *PHOrbDefaultSkillRule(void);
+FOUNDATION_EXPORT PHOrbSkillRequest PHOrbRequestForRule(NSDictionary *rule);
 FOUNDATION_EXPORT NSArray<NSString *> *PHOrbEnemyConditions(void);
 FOUNDATION_EXPORT NSString *PHOrbEnemyConditionTitle(NSString *condition);
 FOUNDATION_EXPORT NSArray<NSString *> *PHOrbObstacleConditions(void);

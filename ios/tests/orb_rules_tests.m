@@ -135,6 +135,22 @@ int main(void) {
         state = before; state.automation.awakeningRestricted = false;
         Check(!PHOrbSamePlayerState(&before,&state), "changed fixed awakening restriction invalidates player context");
         OrbEffectRulesTests();
+        rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"color"] = @3; rule[@"below"] = @0; rule[@"atLeast"] = @9;
+        state = (PHOrbSnapshot){0}; state.valid = state.present = state.settled = state.automation.valid = state.automation.boardKnown = true;
+        state.automation.members[0].active = true; state.board.width = 6; state.board.height = 5;
+        for (unsigned i = 0; i < 30; ++i) state.board.types[i] = i < 8 ? 3 : 5;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleNo, "at-least-nine light rejects eight light");
+        state.board.types[8] = 3;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "at-least-nine light accepts its exact threshold");
+        state.board.spinnerMask = 1; state.board.spinnerColors = 63;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleNo, "at-least threshold uses the spinner lower bound");
+        state.board.flags[0] = PHOrbFlagLocked;
+        Check(PHOrbTriggerSkillRule(rule,&state,1,NULL) == PHOrbRuleYes, "locked light retains the guaranteed threshold");
+        rule[@"below"] = @10;
+        Check(!PHOrbSkillRulesValid(@[rule]), "a color condition cannot ambiguously specify both below and at-least");
+        rule[@"below"] = @0; rule[@"source"] = @"body"; rule[@"skill"] = @64787;
+        Check(PHOrbSkillRulesValid(@[rule]) && PHOrbRequestForRule(rule).source == PHOrbSkillBody &&
+            PHOrbRequestForRule(rule).skill == 64787, "skill source and ID preserve the specified request");
         printf("Orb rules tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

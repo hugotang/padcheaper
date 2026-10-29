@@ -3,6 +3,9 @@
 #import "PHOverlay.h"
 #import "PHOrbController.h"
 #import "PHOrbModel.h"
+#import "PHOrbProfiles.h"
+#import "PHConfiguration.h"
+#import "PHFormationModel.h"
 #import <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <math.h>
@@ -30,6 +33,8 @@ static BOOL PHProbeLegacy(void) {
 static void PHProbeCheck(BOOL condition, NSString *message) {
     if (!condition) [PHProbeFailures addObject:message];
 }
+
+#include "orb_plan_storage_probe.inc"
 
 static void PHProbeReport(NSString *phase) {
     NSDictionary *report = @{@"phase": phase, @"success": @(PHProbeFailures.count == 0), @"failures": PHProbeFailures,
@@ -759,6 +764,28 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         }),
         PHProbeStep(@"profile-editor-keyboard-ready", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsProfileEditor", YES); }, ^{
             UIViewController *profileEditor = orbController.presentedViewController; [profileEditor loadViewIfNeeded];
+            UITextView *planInput = (UITextView *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanJSON");
+            PHProbeCheck(planInput && PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanImport"), @"Complete-plan JSON input and validation action are available");
+            planInput.text = @"{\"schema\":99}";
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanImport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([[[profileEditor valueForKey:@"draft"] objectForKey:@"profiles"] count] == 0,
+                @"Unsupported plan import changes no strategy draft");
+            NSString *path = [NSBundle.mainBundle pathForResource:@"team-plan" ofType:@"json"];
+            planInput.text = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL];
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanImport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            NSDictionary *planDraft = [profileEditor valueForKey:@"draft"];
+            PHProbeCheck([planDraft[@"profiles"] count] == 1 && [planDraft[@"profiles"][0][@"opening"] count] == 6 &&
+                PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanExport"), @"Valid Uryu import previews all six opening steps and enables export");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanExport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            NSData *exported = [UIPasteboard.generalPasteboard.string dataUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary *exportedPlan = exported ? [NSJSONSerialization JSONObjectWithData:exported options:0 error:NULL] : nil;
+            PHProbeCheck([exportedPlan[@"format"] isEqual:@"padcheaper-team-plan"] && [exportedPlan[@"opening"] count] == 6 &&
+                [exportedPlan[@"rotation"] count] == 7, @"UI export preserves opening and independent rescue rules");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(orbController.presentedViewController == profileEditor && [orbValue[@"library"][@"profiles"][0][@"formation"] isEqual:exportedPlan[@"formation"]],
+                @"Failed full-plan save keeps the reviewable formation and opening draft open");
+            PHProbeRender(self.window, orbWindow, @"orbs-team-plan-import");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileDelete") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [profileEditor.view layoutIfNeeded];
             UITextField *profileName = (UITextField *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileName");
@@ -936,6 +963,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [overlay.rootViewController valueForKey:@"orbWindow"] == nil && self.window.isKeyWindow,
                 @"Execute passes the displayed preview generation and returns to game");
             if (PHProbeLegacy()) PHProbeLegacyOverlay = overlay;
+            PHProbePlanStorage(overlay);
             [(UIButton *)PHProbeFind(overlay, @"padcheaper.bubble") sendActionsForControlEvents:UIControlEventTouchUpInside];
             UIButton *formation = (UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen");
             [formation sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -992,11 +1020,11 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 - (void)exerciseFailedFormationSave {
     NSFileManager *files = NSFileManager.defaultManager;
     NSString *folder = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
-    NSString *path = [folder stringByAppendingPathComponent:@"formations.json"];
-    NSString *backup = [folder stringByAppendingPathComponent:@"formations.probe-backup.json"];
+    NSString *path = [folder stringByAppendingPathComponent:@"config.json"];
+    NSString *backup = [folder stringByAppendingPathComponent:@"config.probe-backup.json"];
     BOOL moved = [files moveItemAtPath:path toPath:backup error:NULL];
     BOOL blocked = moved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
-    PHProbeCheck(blocked, @"Save-failure fixture must block only the probe library file");
+    PHProbeCheck(blocked, @"Save-failure fixture must block the canonical team/config commit file");
     if (!blocked) {
         if (moved) [files moveItemAtPath:backup toPath:path error:NULL];
         [self exerciseLibrary]; return;

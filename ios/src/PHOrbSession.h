@@ -10,6 +10,9 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUna
 // check. Unavailable means the game refused this skill, so another rule may run.
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason;
+// Constraints on the game's current choice; never force an uncharged source.
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Scoped to one original native drawFrame. Must always pair with finishInput,
 // including exceptions. The real manager and its UIKit records are untouched.
 - (BOOL)stageCell:(NSUInteger)cell down:(BOOL)down beginning:(BOOL)beginning

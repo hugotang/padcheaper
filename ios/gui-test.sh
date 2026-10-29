@@ -6,6 +6,7 @@ cd "$repo_dir"
 build_dir="$repo_dir/build/ios-ui-tests"
 app_dir="$build_dir/OverlayProbe.app"
 mkdir -p "$app_dir/Frameworks"
+cp ios/templates/ishida-uryu-gamewith-574233/team-plan.json "$app_dir/team-plan.json"
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py

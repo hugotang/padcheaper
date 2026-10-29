@@ -4,6 +4,7 @@
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
 #import "PHOrbPlanning.h"
+#import "PHFormationModel.h"
 #include <stdio.h>
 
 static NSUInteger failures;
@@ -213,6 +214,21 @@ int main(void) {
             Check(!PHConfigurationReadFilterText(invalid, UINT16_MAX), "invalid GUI text cannot alter config");
         }
         Check(!PHConfigurationIsValid(nil), "missing config is rejected");
+        NSMutableDictionary *atomic = [PHDefaultConfiguration() mutableCopy];
+        atomic[@"formations"] = PHFormationLibraryFromTeam(nil);
+        Check(PHConfigurationIsValid(atomic), "formation library can share the config atomic commit with profiles");
+        NSData *planData = [NSData dataWithContentsOfFile:@"ios/templates/ishida-uryu-gamewith-574233/team-plan.json"];
+        NSDictionary *plan = [NSJSONSerialization JSONObjectWithData:planData options:0 error:NULL];
+        NSDictionary *planLibrary = PHOrbProfilesImportingPlan(PHOrbDefaultProfiles(),plan,NULL);
+        NSDictionary *planProfile = PHOrbProfileNamed(planLibrary,planLibrary[@"selected"]);
+        atomic[@"orbProfiles"] = planLibrary; atomic[@"orbs"] = planProfile[@"settings"];
+        atomic[@"formations"] = PHOrbFormationsSelectingProfile(atomic[@"formations"],planProfile);
+        NSData *committed = [NSJSONSerialization dataWithJSONObject:atomic options:0 error:NULL];
+        NSDictionary *restoredPlan = [NSJSONSerialization JSONObjectWithData:committed options:0 error:NULL];
+        Check(PHConfigurationIsValid(restoredPlan) && [restoredPlan isEqual:atomic],
+            "one config roundtrip retains the full team, opener, loop and goals together");
+        atomic[@"formations"] = @{};
+        Check(!PHConfigurationIsValid(atomic), "invalid embedded formation library rejects the full config");
         printf("Bundle identity and configuration tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

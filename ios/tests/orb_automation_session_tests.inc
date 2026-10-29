@@ -91,10 +91,13 @@ static void RouteProgressSessionTests() {
         "first successful route has observed progress before the next search");
     NSUInteger completed = [[session snapshot][@"completed"] unsignedIntegerValue];
     const NSUInteger stages = engine->stages;
+    NSDictionary *executed = [[session snapshot][@"executionHistory"] lastObject];
     engine->live.phase = 2; engine->live.moves = 0; engine->live.board.fixedStart = 0;
     for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = 0;
     for (unsigned i = 0; i < 2000 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session, engine, Frame());
     NSDictionary *result = [session snapshot];
+    Check([executed[@"releaseConfirmed"] boolValue] && [[result[@"executionHistory"] lastObject] isEqual:executed],
+        "next failed search cannot overwrite the previous accepted route and release board");
     Check(![result[@"automatic"] boolValue] && ![result[@"goalsMet"] boolValue] &&
         [result[@"confirmed"] unsignedIntegerValue] == 0 && ![result[@"startSent"] boolValue] && ![result[@"startAccepted"] boolValue] &&
         [result[@"completed"] unsignedIntegerValue] == completed && engine->stages == stages,

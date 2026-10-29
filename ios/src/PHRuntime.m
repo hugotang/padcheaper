@@ -93,6 +93,7 @@ static BOOL PHWriteJSON(NSDictionary *object, NSString *name) {
     if (!PHFolder.length || !object || !name.length) return NO;
     NSData *data = [NSJSONSerialization dataWithJSONObject:object
                     options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL];
+    if ([name isEqual:@"config.json"] && data.length > 4 * 1024 * 1024) return NO;
     NSString *path = [PHFolder stringByAppendingPathComponent:name];
     if (!data || ![data writeToFile:path options:NSDataWritingAtomic error:NULL]) {
         return NO;
@@ -106,7 +107,7 @@ static NSDictionary *PHReadJSON(NSString *name) {
     if (!PHFolder.length) return nil;
     NSString *path = [PHFolder stringByAppendingPathComponent:name];
     NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL];
-    NSUInteger limit = [name isEqual:@"formations.json"] ? 2 * 1024 * 1024 : 65536;
+    NSUInteger limit = [name isEqual:@"config.json"] ? 4 * 1024 * 1024 : [name isEqual:@"formations.json"] ? 2 * 1024 * 1024 : 65536;
     if ([attributes[NSFileSize] unsignedLongLongValue] > limit) return nil;
     NSData *data = [NSData dataWithContentsOfFile:path];
     id object = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
@@ -177,14 +178,6 @@ static BOOL PHStoreBanks(NSDictionary *banks) {
     return PHWriteJSON(store, [NSString stringWithFormat:@"account-%u.json", PHPlayer]);
 }
 
-static void PHReloadConfig(void) {
-    NSDictionary *next = PHReadJSON(@"config.json");
-    PHConfigValid = PHConfigurationIsValid(next);
-    PHConfig = PHConfigValid ? next : PHDefaultConfiguration();
-    [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
-    [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
-}
-
 static void PHConfigureAutomaticTeam(NSDictionary *team) {
     PHBattleLoadout loadouts[6] = {0};
     uint8_t mask = 0;
@@ -194,22 +187,39 @@ static void PHConfigureAutomaticTeam(NSDictionary *team) {
     [PHBattleTracker configureAutomaticLoadouts:loadouts mask:mask];
 }
 
+static void PHPublishFormationLibrary(NSDictionary *library) {
+    NSDictionary *selected = nil;
+    if (!PHFormationReadLibrary(library, &selected, NULL)) return;
+    const BOOL changed = ![PHFormationLibrary isEqual:library];
+    PHFormationLibrary = library; PHFormationDraft = selected; PHFormationLibraryStored = YES;
+    if (changed) PHConfigureAutomaticTeam(selected);
+}
+
+static void PHReloadConfig(void) {
+    NSDictionary *next = PHReadJSON(@"config.json");
+    PHConfigValid = PHConfigurationIsValid(next);
+    PHConfig = PHConfigValid ? next : PHConfig ?: PHDefaultConfiguration();
+    if (PHConfigValid && next[@"formations"]) PHPublishFormationLibrary(next[@"formations"]);
+    [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
+    [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
+}
+
 static BOOL PHSaveFormationLibrary(NSDictionary *library) {
     NSDictionary *selected = nil;
     NSString *reason = nil;
     if (!PHFormationReadLibrary(library, &selected, &reason)) { PHFeedback = reason; return NO; }
-    if (!PHStorageReady || !PHWriteJSON(library, @"formations.json")) {
+    NSMutableDictionary *next = [PHConfig mutableCopy]; next[@"formations"] = library;
+    if (!PHStorageReady || !PHConfigurationIsValid(next) || !PHWriteJSON(next, @"config.json")) {
         PHFeedback = @"儲存失敗；草稿仍在編輯器，下次入場隊伍未變更。請檢查可用空間後重試。";
         return NO;
     }
     // Publish the selection only after the canonical file was written. A
     // failed save must not silently change the next automatic entry team.
-    PHFormationLibrary = library;
-    PHFormationLibraryStored = YES;
-    PHFormationDraft = selected;
-    PHConfigureAutomaticTeam(selected);
-    // Keep the selected draft as a backward-compatible backup. The library is
-    // the canonical store, so changing selection never replaces other teams.
+    PHConfig = [next copy]; PHConfigValid = YES;
+    PHPublishFormationLibrary(library);
+    // Legacy files are backups. Config is the single commit point for the
+    // library and profiles, so a partial backup cannot split a plan import.
+    PHWriteJSON(library, @"formations.json");
     PHWriteJSON(selected, @"formation.json");
     PHFeedback = @"隊伍庫與目前選取隊伍已儲存";
     return YES;
@@ -228,7 +238,7 @@ static void PHPrepareStorage(void) {
         PHStorageMessage = @"無法寫入 config.json；面板仍可顯示診斷。";
     }
     PHReloadConfig();
-    NSDictionary *library = PHReadJSON(@"formations.json"), *selected = nil;
+    NSDictionary *library = PHConfig[@"formations"] ?: PHReadJSON(@"formations.json"), *selected = nil;
     PHFormationLibraryStored = NO;
     if (PHFormationReadLibrary(library, &selected, NULL)) {
         PHFormationLibrary = library; PHFormationDraft = selected; PHFormationLibraryStored = YES;
@@ -937,7 +947,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb execution: %@ ms / limit %@ ms",
         orbs[@"executionElapsedMS"], orbs[@"executionLimitMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:
-        @"\nOrb effects: %@\nOrb hazard policy: met %@ / poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
+        @"\nOrb effects: %@\nOrb hazard policy (candidate only): met %@ / poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
         orbs[@"obstacles"], orbs[@"hazardsSafe"], orbs[@"poisonErased"], orbs[@"unmatchedBombs"],
         orbs[@"spinnerMask"], orbs[@"spinnerColors"], orbs[@"spinnerVariants"], orbs[@"spinnerTurns"], orbs[@"spinnerPeriodFrames"],
         orbs[@"blockedMask"], orbs[@"tapeMask"], orbs[@"cloudMask"], orbs[@"fixedStart"], orbs[@"unmatchableColors"],
@@ -951,6 +961,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
+    for (NSString *key in @[@"searchTrace", @"executionHistory", @"opening"]) {
+        id trace = orbs[key];
+        NSData *data = trace ? [NSJSONSerialization dataWithJSONObject:trace options:NSJSONWritingSortedKeys error:NULL] : nil;
+        NSString *json = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null";
+        diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb %@ (row-major, zero-based path): %@", key, json];
+    }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nContinuous orbs: %@ / turn %@ / moves %@ / skills %@ / skill window %@\nSkill rules: %@\nSkill log: %@\nEnemy effects: %@ / player bypass: %@",
         orbs[@"automatic"], orbs[@"autoTurn"], orbs[@"autoMoves"], orbs[@"autoSkills"], orbs[@"skillWindow"],
         orbs[@"rules"], [orbs[@"automationLog"] componentsJoinedByString:@"\n"], orbs[@"enemyEffects"], orbs[@"playerBypass"]];
@@ -1136,6 +1152,11 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         NSDictionary *selected = PHOrbProfileNamed(library, library[@"selected"]);
         NSDictionary *settings = PHOrbCanonicalSettings(selected ? selected[@"settings"] : value[@"settings"]);
         next[@"orbProfiles"] = library; next[@"orbs"] = settings;
+        if (selected[@"formation"]) {
+            NSDictionary *formations = PHOrbFormationsSelectingProfile(PHFormationLibrary, selected);
+            if (!formations) { PHOrbProfileNotice = @"隊伍庫已滿或資料無效；整包未儲存，請先整理隊伍庫。"; return; }
+            next[@"formations"] = formations;
+        }
     } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"] || [action isEqual:@"orbsRecovery"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) return;
@@ -1202,6 +1223,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if (PHConfigurationIsValid(next) && PHWriteJSON(next, @"config.json")) {
         PHConfig = next;
         PHConfigValid = YES;
+        if (next[@"formations"]) PHPublishFormationLibrary(next[@"formations"]);
         [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
         PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbRecoveryNotice = nil; PHOrbProfileNotice = nil;

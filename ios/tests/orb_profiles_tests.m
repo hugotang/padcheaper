@@ -1,6 +1,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbRules.h"
 #import "PHOrbPlanning.h"
+#import "PHFormationModel.h"
 #include <stdio.h>
 
 static unsigned failures;
@@ -13,8 +14,10 @@ static NSMutableDictionary *Profile(NSString *identifier) {
 static NSDictionary *Library(NSArray *profiles, NSString *selected, BOOL automatic) {
     return @{@"schema":@1, @"profiles":profiles, @"selected":selected, @"autoSelect":@(automatic)};
 }
+#include "orb_plan_tests.inc"
 int main(void) {
     @autoreleasepool {
+        PlanTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
         NSMutableDictionary *generic = Profile(@"generic"), *team = Profile(@"team"), *stage = Profile(@"stage");
         team[@"team"] = @[@100,@101,@102,@103,@104,@0];

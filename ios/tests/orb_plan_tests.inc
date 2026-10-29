@@ -1,0 +1,44 @@
+static NSMutableDictionary *ReadPlanFixture(void) {
+    NSData *data = [NSData dataWithContentsOfFile:@"ios/templates/ishida-uryu-gamewith-574233/team-plan.json"];
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
+}
+static void PlanTests(void) {
+    NSMutableDictionary *plan = ReadPlanFixture(); NSString *reason = nil;
+    NSDictionary *profile = PHOrbProfileFromPlan(plan, &reason);
+    Check(profile && !reason && [profile[@"opening"] count] == 6, "complete Uryu template validates all six opening steps");
+    if (!profile) return;
+    NSDictionary *roundtrip = PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile), &reason);
+    Check([profile isEqual:roundtrip], "plan export/import preserves formation, opening, rotation and goals");
+    NSDictionary *library = PHOrbProfilesImportingPlan(PHOrbDefaultProfiles(),plan,&reason);
+    Check(PHOrbProfilesValid(library) && [library[@"selected"] isEqual:plan[@"id"]] && ![library[@"autoSelect"] boolValue],
+        "import selects an explicitly reviewed plan without automatic start");
+    Check(!PHOrbProfilesImportingPlan(library,plan,&reason) && [reason containsString:@"ID"], "duplicate import cannot overwrite an existing strategy");
+    NSDictionary *formations = PHFormationLibraryFromTeam(nil);
+    NSDictionary *selected = PHOrbFormationsSelectingProfile(formations,profile);
+    NSDictionary *selectedTeam = nil;
+    Check(PHFormationReadLibrary(selected,&selectedTeam,NULL) && [selected[@"teams"] count] == 2 &&
+        [selectedTeam isEqual:plan[@"formation"]] && [formations[@"teams"] count] == 1,
+        "plan selection adds a team without mutating or replacing an existing team");
+    Check([PHOrbFormationsSelectingProfile(selected,profile) isEqual:selected], "selecting the same plan reuses its saved team");
+    for (NSDictionary *change in @[@{@"format":@"other"}, @{@"schema":@2}, @{@"target":@"unknown"},
+        @{@"opening":@[@{@"action":@"tap"}]}, @{@"unknown":@YES}, @{@"rotation":@[@{@"action":@"use"}]}]) {
+        NSMutableDictionary *bad = ReadPlanFixture(); [bad addEntriesFromDictionary:change];
+        Check(!PHOrbProfileFromPlan(bad,NULL), "unsupported format, version, action or conditions reject the entire import");
+    }
+    NSMutableDictionary *bad = ReadPlanFixture(); bad[@"opening"][1][@"monster"] = @14038;
+    Check(!PHOrbProfileFromPlan(bad,NULL), "opening precondition must match the formation and preceding transformations");
+    bad = ReadPlanFixture(); bad[@"opening"][0][@"assist"] = @0;
+    Check(!PHOrbProfileFromPlan(bad,NULL), "assist steps require the exact equipped assist");
+    PHOrbSnapshot state = {0}; state.present = state.valid = state.automation.valid = true;
+    for (unsigned i = 0; i < 6; ++i) {
+        state.automation.members[i].active = true;
+        state.automation.members[i].number = [plan[@"formation"][@"slots"][i][@"body"][@"id"] unsignedIntValue];
+        PHBattleCatalogIDForNumber([plan[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue], &state.automation.members[i].assistCatalogID);
+    }
+    Check(PHOrbProfileMatchesOpeningTeam(profile,&state,0), "opening binds six bodies and assists");
+    state.automation.members[0].number = 14038;
+    Check(!PHOrbProfileMatchesOpeningTeam(profile,&state,0) && PHOrbProfileMatchesOpeningTeam(profile,&state,2),
+        "transformation only matches the confirmed opening progress, never a fresh opening");
+    ++state.automation.members[5].assistCatalogID;
+    Check(!PHOrbProfileMatchesOpeningTeam(profile,&state,2), "same body with a different assist cannot resume a plan");
+}

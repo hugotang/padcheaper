@@ -469,6 +469,9 @@
     self.profileDescription.text = profileMessage.length ? profileMessage : [NSString stringWithFormat:@"%@%@",
         profile[@"name"] ?: @"通用設定", [profiles[@"autoSelect"] boolValue] ? @" · 開始時自動配對" : @""];
     self.profileDescription.textColor = profileMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    if ([state[@"opening"][@"count"] unsignedIntegerValue]) self.profileDescription.text =
+        [self.profileDescription.text stringByAppendingFormat:@"\n開場進度 %@／%@%@", state[@"opening"][@"completed"],
+            state[@"opening"][@"count"], [state[@"opening"][@"inFlight"] boolValue] ? @" · 等待確認" : @""];
     self.editRules.enabled = [state[@"canSetRules"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSMutableArray *ruleLines = [NSMutableArray array];
     for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];

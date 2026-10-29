@@ -2,6 +2,7 @@
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
+#import "PHFormationModel.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 
@@ -97,6 +98,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     if (features[@"battleSwap"] && !PHIsBoolean(features[@"battleSwap"])) return NO;
     if (features[@"badge"] && !PHIsBoolean(features[@"badge"])) return NO;
     if (configuration[@"orbs"] && ![configuration[@"orbs"] isKindOfClass:NSDictionary.class]) return NO;
+    if (configuration[@"formations"] && !PHFormationReadLibrary(configuration[@"formations"], NULL, NULL)) return NO;
     if (!PHOrbProfilesValid(PHConfigurationOrbProfiles(configuration))) return NO;
     NSDictionary *orbs = PHConfigurationOrbSettings(configuration);
     id quality = orbs[@"quality"], mode = orbs[@"mode"];

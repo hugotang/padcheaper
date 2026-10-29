@@ -165,9 +165,11 @@ static void ShapeTests() {
 #include "orb_effect_solver_tests.inc"
 #include "orb_thorn_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
+#include "orb_t_boundary_solver_tests.inc"
 
 int main() {
     ShapeTests();
+    TBoundarySolverTests();
     OrbEffectSolverTests();
     ThornSolverTests();
     OrbShapeSolverTests();

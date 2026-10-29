@@ -81,6 +81,9 @@ typedef struct {
     bool active, bound;
 } PHOrbSkillMember;
 
+typedef enum { PHOrbSkillAutomatic, PHOrbSkillBody, PHOrbSkillAssist } PHOrbSkillSource;
+typedef struct { PHOrbSkillSource source; uint32_t skill; } PHOrbSkillRequest;
+
 // Populated only by the explicit automation reader. Ordinary previews do not
 // call skill getters (some native getters lazily mutate cooldown caches).
 typedef struct {

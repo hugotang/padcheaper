@@ -68,6 +68,10 @@ cp ios/docs/orb-effects.md "$build_dir/orb-effects.md"
 cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
 cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
 cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
+cp ios/docs/release-0.5.6.md "$build_dir/release-0.5.6.md"
+cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
+mkdir -p "$build_dir/templates"
+cp -R ios/templates/ishida-uryu-gamewith-574233 "$build_dir/templates/"
 cp ios/docs/release-0.5.5.md "$build_dir/release-0.5.5.md"
 cp ios/docs/release-0.5.4.md "$build_dir/release-0.5.4.md"
 cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
@@ -110,6 +114,12 @@ for name in ("orb-shape-search.md", "development.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
+plan_notes = directory / "team-plan-config.md"
+plan_notes.write_text(plan_notes.read_text(encoding="utf-8").replace(
+    "](../templates/", "](templates/"), encoding="utf-8")
+template_notes = directory / "templates/ishida-uryu-gamewith-574233/README.md"
+template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(
+    "](../../docs/", "](../../"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
                     Path("ios/src/PHOverlay.h").read_text()).group(1)
@@ -121,6 +131,8 @@ metadata = {
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
+    "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; atomic single-file config commit; source/skill constraints never force a native choice; explicit start; in-process opening progress",
+    "orb_release_trace": "fresh actual-board evaluation before release; bounded last-three accepted routes and search trace; poison-stop counts; no device first-wave confirmation",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
     "skill_selection_reset": "only an idle member passing native readiness may reset a retained selection to the native default sentinel; exact ID and fresh snapshot checked, no charge writes",

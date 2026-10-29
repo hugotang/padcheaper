@@ -338,8 +338,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, -1) & 1) != 0;
 }
 - (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
-    // These getters may update a native cooldown cache. Call only following
-    // a guarded, refused skill attempt; never from a preview or polling read.
+    // These getters may update a native cooldown cache. Call only during a
+    // guarded skill attempt (diagnosis or source/ID constraint), never polling.
     uint16_t assist = 0;
     if (!out || !PHReadU16(member + 1438, &assist)) return NO;
     out->baseSkill = reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHOrbBaseSkillRVA)(member + 1248);
@@ -355,7 +355,14 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 }
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    return [self useSkill:slot request:PHOrbSkillRequest{PHOrbSkillAutomatic, 0}
+        expected:expected frame:frame reason:reason];
+}
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !expected || slot >= 6 || !frame.ready || !frame.enabled)
+        return PHOrbSkillRejected;
+    if (request.source < PHOrbSkillAutomatic || request.source > PHOrbSkillAssist || request.skill >= 0x20000)
         return PHOrbSkillRejected;
     PHOrbSnapshot live{};
     if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
@@ -409,6 +416,36 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             observed.charge, cooldown, observed.skillStage[0], observed.skillStage[1],
             observed.cachedSkillStage[0], observed.cachedSkillStage[1]];
         return PHOrbSkillUnavailable;
+    }
+    if (request.source != PHOrbSkillAutomatic || request.skill) {
+        NativeSkillReadiness readiness{};
+        if (![self nativeSkillReadiness:&readiness member:address header:frame.header]) {
+            if (reason) *reason = @"無法核對指定的本體／武裝技能，未施放";
+            return PHOrbSkillRejected;
+        }
+        PHOrbSnapshot constrained{};
+        if (![self readAutomation:&constrained frame:frame reason:reason] || constrained.multiplayerDisabled ||
+            !constrained.automation.window || constrained.automation.busy || constrained.dragged || !constrained.settled ||
+            !PHInputIsQuiet(&constrained.input) || !PHOrbSameAutomation(&checked, &constrained)) {
+            if (reason) *reason = @"核對技能種類後狀態已改變，未施放";
+            return PHOrbSkillRejected;
+        }
+        uintptr_t rules = 0; uint8_t flags = 0;
+        if (!PHReadPointer(live.identity.impl + PHOrbSkillDungeonRulesOffset, &rules) ||
+            (rules && (rules > UINTPTR_MAX - 34 || !PHReadU8(rules + 33, &flags)))) return PHOrbSkillRejected;
+        // Native can-use(-1) and native start must agree. Do not use selector
+        // 0/1 to bypass a charged assist, and never write a requested skill ID.
+        const bool chargedAssist = int16_t(member.assistCatalogID) > 0 && readiness.totalCooldown > 0 &&
+            member.charge >= readiness.totalCooldown;
+        const bool chosenAssist = chargedAssist && !(flags & 8u);
+        const uint32_t chosenSkill = chosenAssist ? readiness.assistSkill : readiness.baseSkill;
+        if (chargedAssist != chosenAssist || !chosenSkill || chosenSkill >= 0x20000 ||
+            (request.source == PHOrbSkillBody && chosenAssist) ||
+            (request.source == PHOrbSkillAssist && !chosenAssist) || (request.skill && request.skill != chosenSkill)) {
+            if (reason) *reason = [NSString stringWithFormat:@"指定技能不符：目前為%@技能 %u；未施放其他技能",
+                chosenAssist ? @"武裝" : @"本體", chosenSkill];
+            return PHOrbSkillUnavailable;
+        }
     }
     if (member.selection != UINT32_MAX) {
         // The normal tap path (0x1005CCD40, store at 0x1005CCDC0)
