@@ -532,13 +532,28 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"HP"],
                 @"Out-of-range rescue percentage keeps the draft and a fixed validation notice");
             ruleHP.text = @"40"; [ruleHP sendActionsForControlEvents:UIControlEventEditingChanged]; [ruleHP resignFirstResponder];
-            if (ruleDraft.count) { ruleDraft[0][@"status"] = @"awoken_bind"; ruleDraft[0][@"required"] = @YES; }
+            if (ruleDraft.count) {
+                ruleDraft[0][@"status"] = @"awoken_bind"; ruleDraft[0][@"required"] = @YES;
+                ruleDraft[0][@"group"] = @1; ruleDraft[0][@"reserveUntil"] = @2;
+            }
+            UITextField *ruleEvery = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleevery0");
+            ruleEvery.text = @"2"; [ruleEvery sendActionsForControlEvents:UIControlEventEditingChanged];
+            NSMutableDictionary *readyExpected = ruleDraft.count ? [ruleDraft[0] mutableCopy] : nil;
+            readyExpected[@"every"] = @1;
+            UIButton *readyButton = (UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleReady0");
+            [readyButton sendActionsForControlEvents:UIControlEventTouchUpInside];
+            ruleEvery = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleevery0");
+            PHProbeCheck(readyButton && ruleDraft.count && [ruleDraft[0] isEqual:readyExpected] && [ruleEvery.text isEqual:@"1"],
+                @"Ready-cast shortcut sets every turn while retaining all rescue, group and reservation conditions");
             [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(orbController.presentedViewController == ruleEditor && [orbAction isEqual:@"orbsRules"] &&
                 [orbValue count] == 1 && ruleDraft.count && [ruleDraft[0][@"floor"] isEqual:@3] &&
                 [orbValue[0][@"hpAtMost"] isEqual:@40] && [orbValue[0][@"status"] isEqual:@"awoken_bind"] && [orbValue[0][@"required"] boolValue] &&
+                [orbValue[0][@"every"] isEqual:@1] && [orbValue[0][@"group"] isEqual:@1] && [orbValue[0][@"reserveUntil"] isEqual:@2] &&
                 [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleNotice")).text containsString:@"未能儲存"],
                 @"Failed skill-rule saves preserve the draft and editor with a fixed error notice");
+            UIScrollView *ruleScroll = (UIScrollView *)((UIStackView *)[ruleEditor valueForKey:@"rows"]).superview;
+            [ruleScroll setContentOffset:CGPointZero animated:NO]; [ruleEditor.view layoutIfNeeded];
             PHProbeRender(self.window, orbWindow, @"orbs-skill-rules");
             rescuePayload = orbValue;
             [orbController setValue:[^(NSString *action, id value) {

@@ -920,6 +920,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"inputFault"], orbs[@"board"][@"width"], orbs[@"board"][@"height"], orbs[@"settled"], orbs[@"ordinary"],
         orbs[@"nativePhase"], orbs[@"wave"], orbs[@"moves"], orbs[@"remainingFrames"], orbs[@"fps"], orbs[@"quality"],
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
+        orbs[@"startSent"], orbs[@"startAccepted"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];

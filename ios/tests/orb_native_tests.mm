@@ -111,6 +111,28 @@ int main() {
         Check(reinterpret_cast<uint8_t *>(GlobalInput())[1320 + 219] == 1, "private frame held tracking survives between draws");
         NativeInputFrame(); Check([engine finishInput:&reason] && realInput == manual, "release does not consume real finger events");
 
+        Reset(); engine = PHCreateOrbEngine();
+        Check([engine read:&state frame:Frame() reason:&reason], "deferred native start setup");
+        const auto originalInput = realInput;
+        Check([engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason],
+            "deferred start sends one began");
+        const uintptr_t heldManager = GlobalInput();
+        NativeInputFrame(); // Tall phone layouts leave the orb unselected on began.
+        Check([engine finishInput:&reason] && GlobalInput() == Input && realInput == originalInput,
+            "deferred began restores the entire original input without selecting an orb");
+        Check([engine read:&state frame:Frame() reason:&reason] && !state.dragged,
+            "held continuation may wait for selection without an owned orb");
+        Check([engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:&reason] &&
+            GlobalInput() == heldManager && reinterpret_cast<uint8_t *>(heldManager)[213] == 0 &&
+            reinterpret_cast<uint8_t *>(heldManager)[214] == 1 &&
+            reinterpret_cast<uint8_t *>(heldManager)[1320 + 219] == 1,
+            "held start reuses its private input bank with no repeated began and retained frame tracking");
+        NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, state.board.tokens[0]);
+        Check([engine finishInput:&reason] && GlobalInput() == Input && realInput == originalInput,
+            "accepted held start restores every byte of real input");
+        Check([engine read:&state frame:Frame() reason:&reason] && state.dragged == state.board.tokens[0],
+            "native selection is visible after the held frame");
+
         Reset(); SetLeader(0, 14242); SetLeader(5, 13834); engine = PHCreateOrbEngine();
         Check([engine read:&state frame:Frame() reason:&reason] && state.leadersValid &&
               state.leaderNumbers[0] == 14242 && state.leaderNumbers[1] == 13834 && writes == 0,

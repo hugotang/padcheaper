@@ -63,7 +63,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     uintptr_t _ownedOrb;
     double _now, _lastRead, _requestedAt, _stableAt, _previewAt, _startedAt, _stepAt, _sentAt;
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
-    bool _inputFault, _awaitingStart, _monitoring;
+    bool _inputFault, _awaitingStart, _startSent, _monitoring;
     PHOrbSnapshot _autoOrigin, _skillBefore;
     NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn, _recoveryTurn;
     uint16_t _usedRules, _unavailableRules, _confirmedRules;
@@ -369,7 +369,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         return;
     }
     _expected = _preview; _target = _confirmed = 0; _ownedOrb = 0;
-    _awaitingStart = true; _phase = @"arming"; _requestedAt = _now;
+    _awaitingStart = true; _startSent = false; _phase = @"arming"; _requestedAt = _now;
     _message = _automatic ? [NSString stringWithFormat:@"連續第 %lu 回合 · 準備轉珠；點浮動「停止」可中斷", (unsigned long)_autoTurn] :
         @"準備執行一次；點浮動「停止」即可中斷";
 }
@@ -488,7 +488,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         !PHOrbSameTurn(&_expected, &current) || current.phase != 2) {
         // The private manager has already been removed. Never inject stale
         // cleanup into a new scene/multiplayer; native input now owns release.
-        [self queueStop:@"回合、場景或可操作狀態已改變，已停止"];
+        if (![_phase isEqual:@"releasing"] || _releaseComplete)
+            [self queueStop:@"回合、場景或可操作狀態已改變，已停止"];
         _ownedOrb = 0; _phase = @"stopped";
         return;
     }
@@ -524,7 +525,9 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     }
     if ([_phase isEqual:@"releasing"]) {
         if (!current.dragged || !_ownedOrb || current.dragged != _ownedOrb) {
-            _ownedOrb = 0; [self queueStop:@"遊戲已接管放開，已停止"]; return;
+            if (_releaseComplete) [self queueStop:@"遊戲已接管放開，已停止"];
+            _ownedOrb = 0; _phase = @"stopped";
+            return;
         }
         _expected = current;
         // Use the dragged orb's actual cell when a partial move was rejected.
@@ -537,11 +540,13 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         return;
     }
     if (![_phase isEqual:@"running"]) return;
-    // Every native frame needs a hold, even when waiting for the next cell.
-    _staged = [_engine stageCell:_route.cells[_target] down:YES beginning:_awaitingStart
+    // Tall phone layouts defer selection from began to the following held
+    // frame. Send began once, then retain the private input bank while waiting.
+    // Every native frame still needs a hold, including between route cells.
+    _staged = [_engine stageCell:_route.cells[_target] down:YES beginning:(_awaitingStart && !_startSent)
         expected:&current frame:frame reason:&reason];
     if (!_staged) [self queueStop:reason ?: @"輸入前校驗失敗，已停止"];
-    else ++_sentFrames;
+    else { _startSent = true; ++_sentFrames; }
 }
 - (void)afterFrame:(PHBattleFrame)frame time:(NSTimeInterval)time {
     _frame = frame; _now = time;
@@ -560,7 +565,9 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     if (_automatic && ![self observeAutomation:&current read:read reason:reason]) return;
     if (active && _staged) {
         if (!read || !current.valid || current.multiplayerDisabled || !PHOrbSameTurn(&_expected, &current)) {
-            [self queueStop:@"原生執行後場景已改變，已停止"]; _ownedOrb = 0; _phase = @"stopped"; return;
+            if (![_phase isEqual:@"releasing"] || _releaseComplete)
+                [self queueStop:@"原生執行後場景已改變，已停止"];
+            _ownedOrb = 0; _phase = @"stopped"; return;
         }
         if (_releaseStaged) {
             if (current.dragged == 0) {
@@ -663,6 +670,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),
         @"completed":@(_completed), @"cancelled":@(_cancelled), @"inputFrames":@(_sentFrames), @"inputFault":@(_inputFault),
+        @"startSent":@(_startSent), @"startAccepted":@(_startSent && !_awaitingStart),
         @"multiplayerDisabled":@(_live.multiplayerDisabled), @"nativePhase":@(_live.phase), @"wave":@(_live.wave),
         @"moves":@(_live.moves), @"remainingFrames":@(_live.remainingFrames), @"fps":@(_live.fps),
         @"settled":@(_live.settled), @"ordinary":@(_live.ordinary), @"deviceVerified":@NO};

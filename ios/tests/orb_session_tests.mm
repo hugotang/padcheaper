@@ -14,8 +14,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 @interface FakeOrbEngine : NSObject <PHOrbEngine> {
 @public
     PHOrbSnapshot live;
-    NSUInteger stages, releases, cell, reads;
-    BOOL down, beginning, staged, ignoreStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
+    NSUInteger stages, releases, cell, reads, beginFrames;
+    BOOL down, beginning, staged, ignoreStart, requireHoldForStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
@@ -108,6 +108,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!staged) return;
     if (!down) { live.dragged = 0; live.settled = true; live.phase = 3; return; }
     if (beginning) {
+        ++beginFrames;
+        if (requireHoldForStart) return; // Native tall-layout began gate.
+    }
+    if (beginning || !live.dragged) {
         if (!ignoreStart) { live.dragged = live.board.tokens[cell]; live.settled = false; }
         if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
         if (dropHPOnStart) { live.automation.hp = 100; dropHPOnStart = NO; }
@@ -130,8 +134,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 
 static double now = 100;
 static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = 1; frame.player = 42; frame.epoch = 1; frame.ready = frame.enabled = true; return frame; }
-static void Tick(PHOrbSession *session, FakeOrbEngine *engine, PHBattleFrame frame) {
-    now += 0.02;
+static void Tick(PHOrbSession *session, FakeOrbEngine *engine, PHBattleFrame frame, double interval = 0.02) {
+    now += interval;
     [session beforeFrame:frame time:now];
     @try { [engine nativeFrame]; } @finally { [session finishNativeFrame]; }
     [session afterFrame:frame time:now];
@@ -186,6 +190,33 @@ int main() {
             Check([[session snapshot][@"phase"] isEqual:@"complete"] && engine->releases == 1,
                 "expanded-board route acknowledges every swap and releases once");
         }
+
+        for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
+            engine = [[FakeOrbEngine alloc] initWithWidth:dimensions.first height:dimensions.second];
+            engine->requireHoldForStart = YES; engine->live.fps = 30;
+            session = [[PHOrbSession alloc] initWithEngine:engine];
+            Check(Preview(session, engine), "tall-layout held-start preview at 30 fps");
+            Execute(session);
+            for (unsigned i = 0; i < 180 && [[session snapshot][@"busy"] boolValue]; ++i)
+                Tick(session, engine, Frame(), 1.0 / 30);
+            NSDictionary *result = [session snapshot];
+            Check([result[@"phase"] isEqual:@"complete"] && engine->beginFrames == 1 && engine->releases == 1 &&
+                engine->live.moves == [result[@"steps"] unsignedIntegerValue] &&
+                [result[@"confirmed"] isEqual:result[@"steps"]] && [result[@"completed"] unsignedIntegerValue] == 1 &&
+                [result[@"startSent"] boolValue] && [result[@"startAccepted"] boolValue],
+                "one began followed by held input accepts the start, confirms every swap and releases once");
+        }
+
+        engine = [FakeOrbEngine new]; engine->ignoreStart = YES; engine->live.fps = 30;
+        session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check(Preview(session, engine), "permanently rejected native start setup"); Execute(session);
+        for (unsigned i = 0; i < 90 && [[session snapshot][@"busy"] boolValue]; ++i)
+            Tick(session, engine, Frame(), 1.0 / 30);
+        Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->beginFrames == 1 &&
+            engine->live.moves == 0 && engine->releases == 0 && [[session snapshot][@"completed"] unsignedIntegerValue] == 0 &&
+            ![[session snapshot][@"startAccepted"] boolValue] &&
+            [[session snapshot][@"message"] containsString:@"遊戲未接受起點"],
+            "start timeout preserves its cause and never releases an unowned orb");
 
         engine = [[FakeOrbEngine alloc] initWithWidth:7 height:6]; session = [[PHOrbSession alloc] initWithEngine:engine];
         Check(Preview(session, engine), "last-cell manual-release setup"); Execute(session); UntilDragging(session, engine);
@@ -368,7 +399,8 @@ int main() {
         stages = engine->stages; [session queueStop:@"background"]; PHBattleFrame background = Frame(); background.ready = false;
         Tick(session, engine, background); engine->live.dragged = 0;
         for (unsigned i = 0; i < 20; ++i) Tick(session, engine, Frame());
-        Check(engine->stages == stages, "background cancellation does not resume path");
+        Check(engine->stages == stages && [[session snapshot][@"message"] isEqual:@"background"],
+            "background cleanup preserves the original cancellation and does not resume the path");
 
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
         Check(Preview(session, engine), "restore failure setup"); Execute(session); engine->failRestore = YES;

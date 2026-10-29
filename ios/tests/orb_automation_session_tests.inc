@@ -34,6 +34,27 @@ static void AutomationSessionTests() {
     for (unsigned i = 0; i < 40; ++i) Tick(session, engine, Frame());
     Check(engine->releases == releases + 1 && ![[session snapshot][@"busy"] boolValue], "stop waiting never resumes on the next turn");
 
+    engine = [FakeOrbEngine new]; engine->requireHoldForStart = YES; engine->live.fps = 30;
+    session = AutomaticSession(engine, @[]);
+    for (NSUInteger turn = 1; turn <= 2; ++turn) {
+        if (turn > 1) { engine->live.phase = 2; engine->live.moves = 0; }
+        for (unsigned i = 0; i < 2000 && [[session snapshot][@"automatic"] boolValue] &&
+            [[session snapshot][@"autoMoves"] unsignedIntegerValue] < turn; ++i)
+            Tick(session, engine, Frame(), 1.0 / 30);
+        Check([[session snapshot][@"phase"] isEqual:@"turnWaiting"] && engine->beginFrames == turn &&
+            engine->releases == turn && [[session snapshot][@"autoTurn"] unsignedIntegerValue] == turn,
+            "continuous held-start execution emits one fresh began and one release per orb turn");
+    }
+    [session queueStop:@"end continuous held-start fixture"];
+
+    engine = [FakeOrbEngine new]; engine->ignoreStart = YES; session = AutomaticSession(engine, @[]);
+    for (unsigned i = 0; i < 2000 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
+    NSString *startLog = [[session snapshot][@"automationLog"] componentsJoinedByString:@"\n"];
+    Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->beginFrames == 1 && engine->releases == 0 &&
+        [[session snapshot][@"autoMoves"] unsignedIntegerValue] == 0 &&
+        [[session snapshot][@"message"] containsString:@"遊戲未接受起點"] && [startLog containsString:@"遊戲未接受起點"],
+        "continuous start rejection retains the same cause in both status and skill log after cleanup");
+
     NSArray *oneRule = @[PHOrbDefaultSkillRule()];
     engine = [FakeOrbEngine new]; session = AutomaticSession(engine, oneRule);
     Check(UntilPhase(session, engine, @"skillWaiting") && engine->stages == 0, "skills precede the solver and synthetic drag");
