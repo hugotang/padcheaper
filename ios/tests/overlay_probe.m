@@ -212,8 +212,11 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 
 - (void)exerciseOverlay {
     UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
+    [self.window layoutIfNeeded];
+    [overlay layoutIfNeeded];
     UIButton *readyBubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
-    if (!overlay || overlay.hidden || readyBubble.window != overlay) {
+    if (!overlay || overlay.hidden || readyBubble.window != overlay ||
+        CGRectGetWidth(readyBubble.bounds) < 44 || CGRectGetHeight(readyBubble.bounds) < 44) {
         if (NSProcessInfo.processInfo.systemUptime < self.overlayDeadline) {
             PHProbeReport(@"waiting_overlay");
             [self performSelector:@selector(exerciseOverlay) withObject:nil afterDelay:0.1];
@@ -249,8 +252,12 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     PHProbeCheck([status[@"saveState"][@"localSaveCount"] isEqual:@0] &&
                  [status[@"saveState"][@"acceptedCount"] isEqual:@0], @"GUI must not invent successful saves before a real request");
     UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
-    CGPoint point = [bubble convertPoint:CGPointMake(28, 28) toView:overlay];
-    PHProbeCheck([overlay hitTest:point withEvent:nil] == bubble, @"Floating button must receive touches");
+    CGPoint point = [bubble convertPoint:CGPointMake(CGRectGetMidX(bubble.bounds), CGRectGetMidY(bubble.bounds)) toView:overlay];
+    UIView *bubbleHit = [overlay hitTest:point withEvent:nil];
+    PHProbeCheck(bubbleHit == bubble, [NSString stringWithFormat:
+        @"Floating button must receive touches (frame=%@ bounds=%@ point=%@ hit=%@)",
+        NSStringFromCGRect(bubble.frame), NSStringFromCGRect(bubble.bounds), NSStringFromCGPoint(point),
+        NSStringFromClass(bubbleHit.class) ?: @"nil"]);
     PHProbeCheck([overlay hitTest:CGPointMake(20, CGRectGetHeight(overlay.bounds) - 50) withEvent:nil] == nil,
                  @"Touches outside the button must pass through");
     PHProbeRender(self.window, overlay, @"bubble");

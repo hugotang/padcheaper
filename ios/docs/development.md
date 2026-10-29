@@ -4,9 +4,9 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 0.5.2-orbs：iPhone 起點輸入修正，GUI 回歸修正待重跑
+## 0.5.2-orbs：iPhone 起點輸入修正，GUI 佈局同步待重跑
 
-2026-10-29，使用者回報 0.5.1 在 iPad 可正常自動轉珠，但 iPhone 剛開始就停止。診斷顯示普通單人 6×5、phase 2、30 fps、輸入安靜且版本校驗通過；路徑 0/29，原生日誌原因為「遊戲未接受起點」。完整裝置診斷不加入 repo。這次是已授權集中編譯測試的缺陷後續修復。
+2026-10-29，使用者回報 iPad 可正常自動轉珠，未指定其版本、尺寸或其他新增功能；iPhone 的 0.5.1 剛開始就停止。iPhone 診斷顯示普通單人 6×5、phase 2、30 fps、輸入安靜且版本校驗通過；路徑 0/29，原生日誌原因為「遊戲未接受起點」。完整裝置診斷不加入 repo。這次是已授權集中編譯測試的缺陷後續修復。
 
 原生 `0x10060D1F0` 在螢幕比例至少 2.0 的 phone layout 3，略過帶有 began 的第一幀，下一幀 held 才選珠；layout 由 `0x1004D5A6C` 設定。舊 executor 等待起點時每幀重送 began 並清空私有 input bank。修正版每條路徑只送一次 began，之後保留私有 bank 並持續 held；仍確認起點及每格交換，不更改原生位址、26 筆指紋、逾時、輸入還原及單人限制。清理沒有持有的珠或已改變的場景時保留最初停止原因；診斷增加起點 sent／accepted。
 
@@ -17,6 +17,8 @@
 [CI 54](https://github.com/hugotang/padcheaper/actions/runs/40813241076)，來源 `481ff9cd371256de2d876b0edf7a00867635af66`，原生／模型／規則／策略與既有回歸、arm64 iPhoneOS 編譯、Mach-O／嚴格簽章及瀏覽器檢查通過，GUI 未完全通過。Scene 首次啟動與重啟兩份報告成功；舊式視窗首次啟動的 13 項失敗集中於最初浮動按鈕及其衍生操作，新增技能快捷鍵、保留條件與儲存失敗草稿沒有失敗，legacy 重啟尚未執行。
 
 原有 startup probe 固定等待 3 秒，legacy discovery 又只保存最後出現的高層視窗，可能被鍵盤等其他視窗覆蓋。probe 改為保存弱參考候選視窗，依實際 bubble hierarchy 找到浮窗，並在最初與重啟都等待按鈕已掛到可見視窗；15 秒上限，失敗仍回報，既有斷言保留。這是測試同步／視窗查找修正，沒有改動 runtime 輸入或 feature gate。新版待手動 CI 重跑；CI 54 產物未交付，既有 `E:\ipa` 交付檔保持不變，真機 iPhone 修復仍待回報。
+
+[CI 55](https://github.com/hugotang/padcheaper/actions/runs/40814761457)，來源 `95e3ef9d358c11eb83224782054b7417412725b8`，原生、arm64 編譯、簽章及瀏覽器再次通過。Scene 首次啟動完成全部流程，僅最初「Floating button must receive touches」失敗，後續 GUI／新增快捷設定沒有失敗；其餘三份報告未執行。新的早期等待只檢查 view 已掛到 window，尚未保證 Auto Layout 已完成；probe 改為先佈局並等待至少 44×44 的按鈕 bounds，以實際中心點核對 hitTest，保留原斷言並附 frame／bounds／point／hit 類別供失敗診斷。CI 55 產物未交付，待重跑完整流程。
 
 ## 已確認基準
 
