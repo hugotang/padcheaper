@@ -20,6 +20,10 @@ IDA 確認原生新一次點擊於 `0x1005CCDC0` 清除 `member +1220` 的舊技
 
 使用者要求快捷「自動轉一次／開始自動轉」。PC 旁新增兩個 44pt 按鈕，沿用既有目標／品質及連續技能規則；一次模式自動讀盤求路但不施放技能，通過目標、時間及盤面檢查後執行一條路徑。求路期間鎖住連點與設定變更，可隨時停止；不接續其他關卡。補 session／GUI 案例，待本批執行。
 
+[CI 60](https://github.com/hugotang/padcheaper/actions/runs/40862953604)，來源 `4a3510635a3529b180142fce352ce0e0c14bd24c`：原生／session／model／設定全部回歸、arm64 iPhoneOS 編譯、瀏覽器及嚴格簽章通過。Scene GUI 完成新增快捷按鈕與技能位置診斷檢查，但最後旋轉請求回報 `BSActionErrorDomain error 2`，guest 及 overlay 都未轉為橫向；兩個旋轉斷言失敗，其他三份 GUI 報告未執行。已查看快捷按鈕及失敗時截圖，未交付此產物；以相同來源手動重跑 [CI 61](https://github.com/hugotang/padcheaper/actions/runs/40864616441)，保留旋轉檢查，尚不推定為產品問題或 runner 問題。
+
+CI 61 的 model／solver／orb native 通過，但 session 的既有求路取消案例偶發失敗：`Tick` 先跑主執行緒回呼，快速求路可能已從 solving 進到 preview，之後才輪詢 solving 會永遠錯過。測試改為在回呼前觀察同步進入 solving 的時點，再取消並正常排空回呼，保留「不能產生任何輸入或恢復自動」斷言；目標變更的取消案例也使用相同方式。這是測試同步修正，沒有更改產品的求路或取消邏輯。待新來源重跑完整 CI，旋轉仍需完成核對。
+
 ## 0.5.3-orbs：集中編譯測試完成，CI 59 通過
 
 2026-10-29，使用者明確回覆「開始編譯測試」，集中驗證下面的盤面效果及光 T／心四連批次。新版定為 `0.5.3-orbs`；既有版本交付檔保持原樣。

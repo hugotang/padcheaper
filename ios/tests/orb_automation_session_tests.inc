@@ -245,7 +245,7 @@ static void AutomationSessionTests() {
         "skill or interactive dialog timeout clears continuous intent");
 
     engine = [FakeOrbEngine new]; session = AutomaticSession(engine, @[]);
-    Check(UntilPhase(session, engine, @"solving"), "automatic worker cancellation fixture ready");
+    Check(UntilSolveStarts(session, engine), "automatic worker cancellation fixture ready");
     [session queueStop:@"cancel automatic solver"];
     for (unsigned i = 0; i < 250; ++i) Tick(session, engine, Frame());
     Check(engine->stages == 0 && ![[session snapshot][@"automatic"] boolValue], "late automatic solve cannot revive a stopped run");
@@ -295,6 +295,8 @@ static void FramePacingSessionTests() {
         [result[@"confirmed"] unsignedIntegerValue] == steps && engine->releases == 1 && !engine->live.dragged &&
         [result[@"executionElapsedMS"] unsignedIntegerValue] < 4000,
         "native render latency does not accumulate an extra frame per swap or truncate an acknowledged long route");
+    std::printf("Frame pacing: 30 fps / 12 ms native render / %lu steps / %u ms / %s\n",
+        (unsigned long)steps, [result[@"executionElapsedMS"] unsignedIntValue], [result[@"phase"] UTF8String]);
 
     engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
     Check(Preview(session, engine), "execution deadline diagnostic setup"); Execute(session); UntilDragging(session, engine);

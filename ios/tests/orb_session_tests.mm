@@ -163,13 +163,24 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 static double now = 100;
 static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = 1; frame.player = 42; frame.epoch = 1; frame.ready = frame.enabled = true; return frame; }
 static void Tick(PHOrbSession *session, FakeOrbEngine *engine, PHBattleFrame frame, double interval = 0.02,
-                 double nativeDuration = 0) {
+                 double nativeDuration = 0, bool dispatchCallbacks = true) {
     now += interval;
     [session beforeFrame:frame time:now];
     @try { [engine nativeFrame]; } @finally { [session finishNativeFrame]; }
     // Runtime samples separate uptimes before and after rendering/maintenance.
     [session afterFrame:frame time:now + nativeDuration];
-    [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.001]];
+    if (dispatchCallbacks) [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.001]];
+}
+static bool UntilSolveStarts(PHOrbSession *session, FakeOrbEngine *engine) {
+    // Observe the synchronous transition before servicing worker completions
+    // on the main queue. A fast solve may otherwise publish its preview inside
+    // Tick's run-loop drain, so polling only after Tick can miss "solving".
+    // After cancellation the ordinary ticks drain all queued completions.
+    for (unsigned i = 0; i < 100; ++i) {
+        Tick(session, engine, Frame(), 0.02, 0, false);
+        if ([session.snapshot[@"phase"] isEqual:@"solving"]) return true;
+    }
+    return false;
 }
 static bool Preview(PHOrbSession *session, FakeOrbEngine *engine) {
     Tick(session, engine, Frame()); [session queueRead];
@@ -305,8 +316,7 @@ int main() {
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
         [session configureSettings:@{@"quality":@"thorough", @"mode":@"manual", @"goals":simpleGoal}];
         Tick(session, engine, Frame()); [session queueRead];
-        for (unsigned i = 0; i < 100 && ![[session snapshot][@"phase"] isEqual:@"solving"]; ++i) Tick(session, engine, Frame());
-        Check([[session snapshot][@"phase"] isEqual:@"solving"], "in-flight goal cancellation setup");
+        Check(UntilSolveStarts(session, engine), "in-flight goal cancellation setup");
         generation = [[session snapshot][@"generation"] unsignedIntegerValue];
         [session configureSettings:@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[]}];
         for (unsigned i = 0; i < 100; ++i) Tick(session, engine, Frame());
