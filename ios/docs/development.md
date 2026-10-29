@@ -4,7 +4,7 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 0.5.3-orbs：集中編譯測試進行中
+## 0.5.3-orbs：集中編譯測試完成，CI 59 通過
 
 2026-10-29，使用者明確回覆「開始編譯測試」，集中驗證下面的盤面效果及光 T／心四連批次。新版定為 `0.5.3-orbs`；既有版本交付檔保持原樣。
 
@@ -16,7 +16,11 @@ Windows x64 的 GCC／G++ `-O2 -Wall -Wextra -Werror` 已編譯通過，求解�
 
 [CI 58](https://github.com/hugotang/padcheaper/actions/runs/40841796580)，來源 `f810b57c262f864480a7e06770a605f10564322c`，全部步驟成功，四份 GUI 報告均為 `phase=done`、`success=1`、零 failures。macOS 上 IMG_0407 心四連三檔均達標，22／30／44 步、23／66／215 ms；這不是 iPhone 耗時。下載後檢視截圖發現效果盤面位於可見範圍下方，未能核對全盤標記。probe 已加入捲到盤面的操作，確認全部行列及固定操作列可見後再截圖；待下一次手動 CI，CI 58 尚未交付。
 
-原始 IPA 的 bundle／版本／build／arm64／UUID／執行檔雜湊及 36 筆指紋已全部核對。修正後畫面及最終交付驗證仍待完成；通過後再核對下載 dylib 雜湊與來源。下列「未編譯測試」段落保留各批原始開發狀態，最新驗證以本節為準。
+2026-10-29，[CI 59](https://github.com/hugotang/padcheaper/actions/runs/40843708271) 全部成功，二進位來源 `b3b0af8d2b9788b9d7b4b6146cdeca723d02d230`。原生／session／rules／profiles／planning／設定與既有回歸、arm64 iPhoneOS 編譯、瀏覽器、Mach-O／嚴格簽章及四份模擬器／重啟報告均通過。四份報告都是 `phase=done`、`success=1`、零 failures；已檢視 Scene 及舊式視窗的三種尺寸完整效果盤面、禁用執行提示、缺項訊息與技能規則失敗草稿。較密集的複合效果標記會縮小字級，真機可讀性仍需核對。
+
+IMG_0407 的光 T＋心四連在 CI 59 三檔均達成 3／3，22／30／44 步、20／58／176 ms，未到期限；macOS runner 的時間不代表 iPhone 效能。下載 dylib 為 4,746,800 bytes，SHA-256 `7f8b5f55968a2cf97453d4e3fb532064f4771bb3ee814641fc7b7eb31df9c56d`，與 CI、`build-info.json` 及 `SHA256SUMS` 一致。原始 IPA 的 bundle／版本／build／arm64／UUID／執行檔雜湊及 36 筆指紋亦全部核對；三份下載 manifest 與來源 JSON 內容相同。
+
+交付使用 CI 59 的二進位與 manifests，更新說明及驗證記錄另以純文件提交保存。Windows 對照報告的 solver／probe 雜湊仍與本次來源一致；先前 456 次量測無須因 GUI probe 變更重跑。安裝方式見 [0.5.3 更新說明](release-0.5.3.md)。CI 使用替身資料，實際效果位置、四連回血、轉轉時序及技能結算仍待真機，`device_verified` 維持 false。下列「未編譯測試」段落保留各批原始開發狀態，最新驗證以本節為準。
 
 ## 光 T／心四連：判定與搜尋已修改，未編譯測試
 

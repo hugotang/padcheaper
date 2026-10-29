@@ -20,6 +20,10 @@
 
 ## 驗證狀態
 
-2026-10-29，已獲授權集中編譯測試。Windows 求解器／model 回歸通過；IMG_0407 的光 T＋心四連三檔在桌面均達成 3／3，路徑經獨立消除／四連 oracle 及重播核對。首次量測為快速 22 步、均衡 30 步、深入 44 步。
+2026-10-29，[CI 59](https://github.com/hugotang/padcheaper/actions/runs/40843708271) 全部成功，二進位來源 `b3b0af8d2b9788b9d7b4b6146cdeca723d02d230`。完整原生／model／session／規則／設定測試、arm64 iPhoneOS 編譯、Mach-O／嚴格簽章、瀏覽器，以及 Scene／舊式視窗首次啟動與重啟均通過；四份 GUI 報告零 failures。已檢視三種尺寸的完整效果盤面、停用執行提示及設定頁。
 
-完整 iOS CI 與交付驗證進行中，完成結果見 [開發紀錄](development.md)。圖片轉錄不是原生快照，上述結果不代表真機耗時或技能結算；`device_verified` 維持 false，真機驗收見 [裝置清單](device-testing.md)。
+Windows 求解器／model 回歸通過，新舊版共 456 次獨立路徑／消除核對均有效。IMG_0407 的光 T＋心四連在 Windows 及 macOS 三檔均達成 3／3：快速 22 步、均衡 30 步、深入 44 步。CI 59 的搜尋耗時分別為 20／58／176 ms，並非 iPhone 耗時；更高搜尋成本換得本樣本較高達標率，不保證每盤成功或更快。完整對照見 [四連搜尋](orb-shape-search.md)。
+
+dylib SHA-256：`7f8b5f55968a2cf97453d4e3fb532064f4771bb3ee814641fc7b7eb31df9c56d`。下載檔與 CI、`build-info.json`、`SHA256SUMS` 一致；原始 IPA 的 UUID、執行檔雜湊及 36 筆指紋均已核對。交付使用 CI 59 的二進位與 manifests，附更新後的文件及驗證資料；既有版本交付檔保持原樣。
+
+圖片轉錄與模擬器替身資料不代表真機耗時、效果位置或技能結算；`device_verified` 維持 false。真機驗收見 [裝置清單](device-testing.md)，完整建置紀錄見 [開發紀錄](development.md)。
