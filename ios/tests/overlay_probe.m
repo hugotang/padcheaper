@@ -442,6 +442,11 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     __block NSMutableDictionary *goalFailure = nil, *ruleFailure = nil, *recoveryFailure = nil, *profileFailure = nil;
     __block NSString *orbAction = nil;
     __block id orbValue = nil;
+    __block PHOverlaySnapshot restoreOriginalSnapshot = nil;
+    __block PHOverlayAction restoreOriginalAction = nil;
+    __block NSMutableDictionary *restoreFixture = nil;
+    __block NSString *restoreAction = nil;
+    __block NSTimeInterval restoreReadyAt = 0;
     NSArray<NSDictionary *> *steps = @[
         PHProbeStep(@"open-goal-editor", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
             goalMode.selectedSegmentIndex = 1; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
@@ -777,6 +782,44 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             } copy] forKey:@"action"];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
+        PHProbeStep(@"restore-retry-prepared", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            restoreOriginalSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
+            restoreOriginalAction = [overlay.rootViewController valueForKey:@"action"];
+            restoreFixture = [restoreOriginalSnapshot() mutableCopy];
+            NSMutableDictionary *battle = [restoreFixture[@"battleState"] mutableCopy];
+            battle[@"canRestore"] = @YES; battle[@"canRetryRestore"] = @YES;
+            battle[@"message"] = @"還原未完成：位置 1、2、3、4、5；請按「重試未完成還原」";
+            restoreFixture[@"battleState"] = battle;
+            [overlay.rootViewController setValue:[^{ return restoreFixture; } copy] forKey:@"snapshot"];
+            [overlay.rootViewController setValue:[^(NSString *action, id value) { restoreAction = action; } copy] forKey:@"action"];
+            [overlay.rootViewController updateWithSnapshot:restoreFixture];
+            UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+            UIScrollView *scroll = PHProbeScrollParent(retry);
+            [overlay layoutIfNeeded];
+            [scroll scrollRectToVisible:[retry convertRect:retry.bounds toView:scroll] animated:NO];
+            // UIButton fades its title when enabled changes. Let UIKit finish
+            // that real transition before inspecting or rendering the label.
+            restoreReadyAt = NSProcessInfo.processInfo.systemUptime + 0.35;
+        }),
+        PHProbeStep(@"restore-retry-visible", ^BOOL {
+            UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+            return NSProcessInfo.processInfo.systemUptime >= restoreReadyAt &&
+                [retry.titleLabel.text isEqual:@"重試未完成還原"] && !retry.titleLabel.layer.animationKeys.count;
+        }, ^{
+            UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+            CGRect title = [retry.titleLabel convertRect:retry.titleLabel.bounds toView:overlay];
+            PHProbeCheck(retry.enabled && !retry.titleLabel.hidden && retry.titleLabel.alpha > 0.9 &&
+                CGRectGetWidth(title) > 0 && CGRectContainsRect(overlay.bounds, title),
+                @"Restore retry title is visibly laid out after the button state transition");
+            PHProbeRender(self.window, overlay, @"battle-restore-retry");
+            [retry sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([restoreAction isEqual:@"battleRestore"], @"Visible restore retry invokes the existing restoration action");
+            [overlay.rootViewController setValue:restoreOriginalSnapshot forKey:@"snapshot"];
+            [overlay.rootViewController setValue:restoreOriginalAction forKey:@"action"];
+            [overlay.rootViewController updateWithSnapshot:restoreOriginalSnapshot()];
+            PHProbeCheck(!retry.enabled && [retry.currentTitle isEqual:@"全部還原／取消"],
+                @"A later idle snapshot clears the restore retry title and availability");
+        }),
         PHProbeStep(@"profile-save-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
             PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:profilePayload],
                 @"Acknowledged strategy save publishes the retained draft and restores game focus");
@@ -794,24 +837,6 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [overlay.rootViewController setValue:[^{ return shortcutState; } copy] forKey:@"snapshot"];
             __block NSString *shortcutAction = nil;
             [overlay.rootViewController setValue:[^(NSString *action, id value) { shortcutAction = action; } copy] forKey:@"action"];
-            NSMutableDictionary *restoreState = [shortcutState[@"battleState"] mutableCopy];
-            restoreState[@"canRestore"] = @YES; restoreState[@"canRetryRestore"] = @YES;
-            restoreState[@"message"] = @"還原未完成：位置 1、2、3、4、5；請按「重試未完成還原」";
-            shortcutState[@"battleState"] = restoreState;
-            [overlay.rootViewController updateWithSnapshot:shortcutState];
-            UIButton *retryRestore = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
-            [retryRestore sendActionsForControlEvents:UIControlEventTouchUpInside];
-            PHProbeCheck(retryRestore.enabled && [retryRestore.currentTitle isEqual:@"重試未完成還原"] &&
-                [shortcutAction isEqual:@"battleRestore"], @"Failed restoration exposes the existing retry action with an explicit title");
-            UIScrollView *restoreScroll = PHProbeScrollParent(retryRestore);
-            [overlay layoutIfNeeded];
-            [restoreScroll scrollRectToVisible:[retryRestore convertRect:retryRestore.bounds toView:restoreScroll] animated:NO];
-            PHProbeRender(self.window, overlay, @"battle-restore-retry");
-            shortcutState[@"battleState"] = originalSnapshot()[@"battleState"];
-            [overlay.rootViewController updateWithSnapshot:shortcutState];
-            PHProbeCheck(!retryRestore.enabled && [retryRestore.currentTitle isEqual:@"全部還原／取消"],
-                @"A later idle snapshot clears the restore retry title and availability");
-            shortcutAction = nil;
             [overlay.rootViewController setValue:@NO forKey:@"expanded"];
             PHProbeFind(overlay, @"padcheaper.panel").hidden = YES; bubble.hidden = NO;
             [overlay.rootViewController updateWithSnapshot:shortcutState];

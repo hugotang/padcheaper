@@ -14,6 +14,8 @@ Windows GCC／G++ `-O2 -Wall -Wextra -Werror` 求解器／model 回歸通過，�
 
 第一輪 [CI 64](https://github.com/hugotang/padcheaper/actions/runs/40881366507) 通過規則、profiles、solver、轉珠 native／session 與 planning；44 步渲染延遲案例 3033 ms 完成。戰鬥 native 的新離場案例只清場景指標、未切換 save 場景編號，因此正確被 reader 拒絕，造成一項 fixture 失敗；已改為先確認這種讀取失敗不解除故障，再模擬真正離場。原生六格還原、五格失敗後重試與另一隊套用的其餘檢查無失敗輸出；整份套件仍須修正後重新通過，iPhoneOS／GUI 尚未執行。
 
+[CI 65](https://github.com/hugotang/padcheaper/actions/runs/40882076824) 功能、原生／session、iPhoneOS、簽章、瀏覽器及四份 GUI 報告全部通過。看圖時發現重試按鈕於 enabled／title 切換後立即截圖，標題呈空白，雖然 currentTitle 與 action 均正確；尚不作交付。GUI 案例改為返回 UIKit，等待按鈕文字過場完成後核對實際 titleLabel 的文字、位置及可見性，再截圖及點擊；功能原始碼不變。
+
 ## 0.5.4-orbs：集中編譯測試完成，CI 63 通過
 
 2026-10-29，[CI 63](https://github.com/hugotang/padcheaper/actions/runs/40867358095) 全部成功，二進位來源 `90839427b54f3546bede33de226424c726b5277d`。原生／session／solver／規則／設定與既有回歸、arm64 iPhoneOS 編譯、瀏覽器、Mach-O／嚴格簽章及四份模擬器初次啟動／重啟報告均通過；四份都是 `phase=done`、`success=1`、零 failures。已檢視 Scene／舊式視窗的快捷按鈕、技能位置診斷及橫向畫面。旋轉在第一個前景、無過場的請求即完成；不能只憑這次成功斷言先前錯誤的唯一原因。
