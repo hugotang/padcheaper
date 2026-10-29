@@ -803,6 +803,13 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         }),
         PHProbeStep(@"restore-retry-visible", ^BOOL {
             UIButton *retry = (UIButton *)PHProbeFind(overlay, @"padcheaper.battleRestore");
+            // The real host refreshes diagnostic state once per second. A
+            // tick may overwrite this isolated GUI fixture while we yield.
+            if (!retry.enabled || ![retry.currentTitle isEqual:@"重試未完成還原"]) {
+                [overlay.rootViewController updateWithSnapshot:restoreFixture];
+                restoreReadyAt = NSProcessInfo.processInfo.systemUptime + 0.35;
+                return NO;
+            }
             return NSProcessInfo.processInfo.systemUptime >= restoreReadyAt &&
                 [retry.titleLabel.text isEqual:@"重試未完成還原"] && !retry.titleLabel.layer.animationKeys.count;
         }, ^{
