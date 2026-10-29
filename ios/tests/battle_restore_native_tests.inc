@@ -65,8 +65,15 @@ static void TestRestoreAssistPadding() {
         state = f.state(engine);
         Check([engine applyLoadout:&loadout state:&state slot:1 member:&applied reason:nullptr] == PHBattleMutationRejected &&
               f.writeCalls == writes, "same-battle reads never clear an uncertain native fault");
-        Fixture::put<uintptr_t>(f.header() + PHSceneTableRVA + 24, 0); state = f.state(engine);
+        Fixture::put<uintptr_t>(f.header() + PHSceneTableRVA + 24, 0);
+        Check(![engine readState:&state frame:f.frame() reason:nullptr] &&
+              [engine applyLoadout:&loadout state:&state slot:1 member:&applied reason:nullptr] == PHBattleMutationRejected &&
+              f.writeCalls == writes, "an unreadable battle object cannot be mistaken for a confirmed scene exit");
+        Fixture::put<uint8_t>(f.header() + PHSaveRVA, 0);
+        Fixture::put<uint8_t>(f.header() + PHSaveRVA + 1, 0); state = f.state(engine);
         Check(!state.present, "fault reset observes a real scene exit");
+        Fixture::put<uint8_t>(f.header() + PHSaveRVA, 1);
+        Fixture::put<uint8_t>(f.header() + PHSaveRVA + 1, 1);
         Fixture::put<uintptr_t>(f.header() + PHSceneTableRVA + 24, f.game());
         Fixture::put<uint8_t>(f.header() + PHBattleEntryHashRVA, 2);
         Fixture::put<uintptr_t>(f.header() + PHBattleScriptRVA + 8, 0);
