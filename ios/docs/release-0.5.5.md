@@ -28,6 +28,16 @@
 
 已停止或發生故障的原因不再被「從背景返回」蓋掉；仍在工作的預覽、自動或輸入會正常取消。
 
+## 編譯與驗證
+
+[CI 67](https://github.com/hugotang/padcheaper/actions/runs/40885179006) 全部通過，來源 `fabe7a79abbaceddc15ece7202206150fe288b97`。原生六格還原、五格失敗後重試再套另一隊、荊棘／技能／不可消／改尺寸及既有回歸均通過；arm64 iPhoneOS、嚴格簽章、瀏覽器和四份模擬器報告通過。重試文字及不可消多選畫面已檢視。
+
+`PADCheaper.dylib` 為 4,800,784 bytes，SHA-256：
+
+`53f811ad77d9adee99c061dbc55141fad76a8b8bdb78b0fa70050210acc3b1e8`
+
+34＋49＝83 組原生指紋已逐一核對原始 IPA。真機驗證尚未完成；詳細結果及證據界線見 [開發記錄](development.md)。
+
 ## 安裝
 
 完整關閉遊戲及 LiveContainer 內該 guest，換成新的 `PADCheaper.dylib`，重新簽署後啟動。保留 `config.json` 與隊伍庫；面板應顯示 `0.5.5-orbs`。原場還原記錄只存在程序記憶體，重啟不會找回舊記錄；使用新一場單人測試。
