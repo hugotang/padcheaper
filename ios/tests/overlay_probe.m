@@ -9,6 +9,7 @@
 static NSString *PHProbeRoot;
 static NSMutableArray<NSString *> *PHProbeFailures;
 static UIWindow *PHProbeLegacyOverlay;
+static NSHashTable<UIWindow *> *PHProbeLegacyWindows;
 static NSDictionary *PHProbeRestartLibrary;
 
 @interface UIViewController (PHProbeOverlayState)
@@ -45,7 +46,15 @@ static UIView *PHProbeFind(UIView *root, NSString *identifier) {
 
 static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     if (PHProbeLegacy()) {
-        if (PHProbeFind(PHProbeLegacyOverlay, @"padcheaper.bubble")) return PHProbeLegacyOverlay;
+        if (!PHProbeLegacyOverlay.hidden && PHProbeFind(PHProbeLegacyOverlay, @"padcheaper.bubble")) return PHProbeLegacyOverlay;
+        // Keyboard and other alert windows can arrive after the overlay. Keep
+        // all observed candidates and select by the actual control hierarchy.
+        for (UIWindow *window in PHProbeLegacyWindows) {
+            if (!window.hidden && PHProbeFind(window, @"padcheaper.bubble")) {
+                PHProbeLegacyOverlay = window;
+                return window;
+            }
+        }
     }
     for (UIWindow *window in scene.windows) {
         if (PHProbeFind(window, @"padcheaper.bubble")) return window;
@@ -138,6 +147,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 @property(nonatomic) NSUInteger landscapeAttempts;
 @property(nonatomic, copy) NSString *landscapeError;
 @property(nonatomic) NSTimeInterval targetDeadline;
+@property(nonatomic) NSTimeInterval overlayDeadline;
 @property(nonatomic) NSUInteger formationAttempts;
 @property(nonatomic, strong) WKWebView *formationWeb;
 - (void)startWithWindowScene:(UIWindowScene * _Nullable)scene;
@@ -164,10 +174,13 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     self.window.rootViewController = [PHProbeController new];
     [self.window makeKeyAndVisible];
     if (PHProbeLegacy()) {
+        PHProbeLegacyOverlay = nil;
+        PHProbeLegacyWindows = [NSHashTable weakObjectsHashTable];
         [NSNotificationCenter.defaultCenter addObserverForName:UIWindowDidBecomeVisibleNotification object:nil
             queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *notification) {
                 UIWindow *window = notification.object;
-                if (window != self.window && window.windowLevel > UIWindowLevelNormal) PHProbeLegacyOverlay = window;
+                if (window != self.window && window.windowLevel > UIWindowLevelNormal)
+                    [PHProbeLegacyWindows addObject:window];
             }];
     }
     PHProbeRoot = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper"];
@@ -193,11 +206,24 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     const char *error = handle ? NULL : dlerror();
     PHProbeCheck(handle != NULL, error ? @(error) : @"Simulator dylib could not be loaded");
     self.targetDeadline = NSProcessInfo.processInfo.systemUptime + 90;
-    [self performSelector:@selector(exerciseOverlay) withObject:nil afterDelay:3];
+    self.overlayDeadline = NSProcessInfo.processInfo.systemUptime + 15;
+    [self performSelector:@selector(exerciseOverlay) withObject:nil afterDelay:0.1];
 }
 
 - (void)exerciseOverlay {
     UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
+    UIButton *readyBubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
+    if (!overlay || overlay.hidden || readyBubble.window != overlay) {
+        if (NSProcessInfo.processInfo.systemUptime < self.overlayDeadline) {
+            PHProbeReport(@"waiting_overlay");
+            [self performSelector:@selector(exerciseOverlay) withObject:nil afterDelay:0.1];
+        } else {
+            PHProbeCheck(NO, @"Timed out waiting for the initialized floating overlay");
+            PHProbeRender(self.window, overlay, @"startup-timeout");
+            PHProbeReport(@"done");
+        }
+        return;
+    }
     if (PHProbeRestartLibrary) {
         PHProbeCheck([PHProbeJSON(@"formations.json") isEqual:PHProbeRestartLibrary], @"Restart keeps the saved library file intact");
         PHProbeCheck([PHProbeJSON(@"config.json")[@"battle"][@"autoApplyTeam"] isEqual:@YES], @"Automatic entry option survives a process restart");
