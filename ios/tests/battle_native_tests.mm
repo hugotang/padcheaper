@@ -39,6 +39,7 @@ struct Fixture {
     bool invalidHPMaximum = false;
     int32_t badgeSkillBoost = 2;
     uintptr_t failWriteAddress = 0;
+    uintptr_t failReadAddress = 0;
     size_t failWriteLength = 0, partialWrite = 0;
     unsigned failWriteOccurrence = 1;
     // The native second protection key shares the player's save field.
@@ -466,7 +467,7 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
            !(forbidden & (VM_PROT_READ | VM_PROT_WRITE));
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
-    if (!fixture || !output || !fixture->mapped(address, length)) return NO;
+    if (!fixture || !output || !fixture->mapped(address, length) || fixture->failReadAddress == address) return NO;
     std::memcpy(output, (void *)address, length); return YES;
 }
 BOOL PHWriteData(uintptr_t address, const void *input, size_t length) {
@@ -498,10 +499,12 @@ static PHBattleLoadout Loadout(unsigned slot = 0) {
 }
 
 #include "battle_multiplayer_tests.inc"
+#include "battle_script_native_tests.inc"
 
 int main() {
     @autoreleasepool {
         TestMultiplayerDisabled();
+        TestScriptedProvider();
         {
             Fixture f; id<PHBattleEngine> engine = PHCreateBattleEngine();
             PHBattleMember originals[6], applied[6];

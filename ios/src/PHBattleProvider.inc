@@ -1,9 +1,11 @@
-// Included inside PHBattleNative's private namespace. This provider leases only
-// an event-free native script context. Account-owned card records are never a
-// parameter source written by this code.
+// Included inside PHBattleNative's private namespace. A native script with
+// events may share its empty parameter records only after every entry has
+// been checked for #party commands. Account-owned records are never written.
 struct ProviderContext {
     uintptr_t program, pool, runner;
     uint32_t sourceLength;
+    uint32_t events[PHBattleEventCount];
+    uint16_t eventCount;
 };
 struct ProviderLease {
     bool active;
@@ -15,6 +17,7 @@ struct ProviderLease {
 struct BattleProvider {
     PHBattleIdentity identity;
     ProviderContext context;
+    std::vector<uint8_t> bytecode;
     bool allocatedProgram;
     ProviderLease leases[6];
 };
@@ -87,27 +90,78 @@ static BOOL PrepareProfile(const PHBattleLoadout *loadout, const PHBattleState *
     return YES;
 }
 
-static BOOL ReadIdleContext(uintptr_t header, ProviderContext *context) {
+static BOOL ReadProviderContext(uintptr_t header, ProviderContext *context) {
+    *context = {};
     uintptr_t address = header + PHBattleScriptRVA;
     if (!PHMemoryHasProtection(address, 18120, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE) ||
         !PHReadU32(address, &context->sourceLength) || !PHReadPointer(address + 8, &context->program) ||
         !PHReadPointer(address + 16, &context->pool) ||
-        !PHReadPointer(address + PHBattleScriptRunnerOffset, &context->runner) || context->runner) return NO;
+        !PHReadPointer(address + PHBattleScriptRunnerOffset, &context->runner)) return NO;
     uint8_t events[PHBattleEventCount * 8];
     if (!PHReadMemory(address + PHBattleScriptEventsOffset, events, sizeof(events))) return NO;
     for (unsigned i = 0; i < PHBattleEventCount; ++i) {
-        uint32_t offset = 0;
-        std::memcpy(&offset, events + i * 8, sizeof(offset));
-        if (offset != UINT32_MAX) return NO;
+        std::memcpy(&context->events[i], events + i * 8, sizeof(uint32_t));
+        context->eventCount += context->events[i] != UINT32_MAX;
     }
     return YES;
 }
 
-static BOOL ContextMatches(const BattleProvider *provider, uintptr_t header) {
+static BOOL ReadScriptBytecode(const ProviderContext &context, std::vector<uint8_t> *bytes, NSString **reason) {
+    // 0x10058E5AC returns allocation +56; +4 is the requested size and +8
+    // the category/tag. The compiler requests float(sourceLength) * 1.5.
+    // Read only this proven allocation, never an inferred readable page tail.
+    uint32_t allocation[3] = {};
+    BOOL valid = context.program >= 56 && context.sourceLength > 0 && context.sourceLength <= 1024u * 1024u &&
+        PHReadMemory(context.program - 56, allocation, sizeof(allocation));
+    uint32_t magic = allocation[0] & ~0x2000u;
+    valid = valid && (magic == 0x494d0001u || magic == 0x4e690001u) && allocation[2] == 0x0400002cu &&
+        allocation[1] == static_cast<uint32_t>(static_cast<float>(context.sourceLength) * 1.5f) &&
+        allocation[1] > 0 && allocation[1] <= 1024u * 1024u && context.program <= UINTPTR_MAX - allocation[1] &&
+        PHMemoryHasProtection(context.program, allocation[1], VM_PROT_READ, VM_PROT_EXECUTE);
+    if (valid) {
+        bytes->resize(allocation[1]);
+        valid = PHReadMemory(context.program, bytes->data(), bytes->size());
+    }
+    if (!valid && reason) *reason = @"關卡腳本長度或原生記憶體配置未通過檢查，暫不能套用完整隊伍";
+    return valid;
+}
+
+static BOOL CompatibleContext(uintptr_t header, ProviderContext *context, std::vector<uint8_t> *bytes, NSString **reason) {
+    if (!ReadProviderContext(header, context)) {
+        if (reason) *reason = @"關卡腳本狀態暫時無法讀取，等待後重試";
+        return NO;
+    }
+    if (context->runner) {
+        if (reason) *reason = @"關卡腳本正在執行，等待演出結束後套用完整隊伍";
+        return NO;
+    }
+    if (!context->program && (context->pool || context->sourceLength || context->eventCount)) {
+        if (reason) *reason = @"關卡腳本仍在載入或卸載，暫不能套用完整隊伍";
+        return NO;
+    }
+    if (!context->eventCount && !context->sourceLength) return YES;
+    if (!ReadScriptBytecode(*context, bytes, reason)) return NO;
+    uint32_t offset = 0;
+    PHBattleScriptCheck check = PHBattleCheckScript(bytes->data(), bytes->size(), context->events, &offset);
+    if (check != PHBattleScriptCompatible) {
+        if (reason) *reason = [NSString stringWithFormat:check == PHBattleScriptPartyCommand ?
+            @"關卡含原生編隊指令（party，offset %u），保留關卡參數，未套用完整隊伍" :
+            @"關卡腳本格式或事件入口未通過檢查（offset %u），未套用完整隊伍", offset];
+        return NO;
+    }
+    return YES;
+}
+
+static BOOL ContextMatches(const BattleProvider *provider, uintptr_t header, BOOL idle = YES) {
     ProviderContext live = {};
-    if (!provider->context.program || !ReadIdleContext(header, &live)) return NO;
+    if (!provider->context.program || !ReadProviderContext(header, &live) || (idle && live.runner)) return NO;
     BOOL matches = live.program == provider->context.program && live.pool == provider->context.pool &&
-                   live.sourceLength == provider->context.sourceLength;
+                   live.sourceLength == provider->context.sourceLength &&
+                   !std::memcmp(live.events, provider->context.events, sizeof(live.events));
+    if (matches && !provider->bytecode.empty()) {
+        std::vector<uint8_t> current;
+        matches = ReadScriptBytecode(live, &current, nullptr) && current == provider->bytecode;
+    }
     if (matches && provider->allocatedProgram) {
         uint8_t program[16] = {}, empty[16] = {};
         matches = PHReadMemory(live.program, program, sizeof(program)) && !std::memcmp(program, empty, sizeof(program));
@@ -132,9 +186,14 @@ static void TagProviderMembers(BattleProvider *provider, PHBattleState *state) {
     // Never free a cached pointer after the battle/context identity changes.
     if (!state->present || state->multiplayerDisabled || !PHBattleIsSinglePlayer(state->mode, state->multiplayer) ||
         !PHBattleSameIdentity(&provider->identity, &state->identity)) { *provider = {}; return; }
-    if (!ContextMatches(provider, state->identity.header)) return;
+    BOOL contextMatches = ContextMatches(provider, state->identity.header, NO);
     for (const ProviderLease &lease : provider->leases) {
-        if (!ProfileOwned(provider, lease, state->identity.header)) continue;
+        if (!lease.active) continue;
+        PHBattleProfile live = {};
+        BOOL readable = PHReadMemory(ParameterAddress(state->identity.header, lease.parameter), &live, sizeof(live));
+        // Different record contents prove that ownership was lost. A failed
+        // read/context check proves only that ownership is not yet confirmed.
+        if (readable && std::memcmp(&live, &lease.installed, sizeof(live))) continue;
         auto tag = [&](PHBattleMember *members) {
             int matches = 0, position = -1;
             for (unsigned i = 0; i < 6; ++i) {
@@ -144,7 +203,10 @@ static void TagProviderMembers(BattleProvider *provider, PHBattleState *state) {
                     ++matches; position = i;
                 }
             }
-            if (matches == 1) members[position].providerToken = lease.token;
+            if (matches == 1) {
+                if (contextMatches && readable) members[position].providerToken = lease.token;
+                else members[position].providerUncertain = true;
+            }
         };
         tag(state->members);
         for (unsigned team = 0; team < state->teamCount; ++team) tag(state->storedMembers[team]);
@@ -162,34 +224,62 @@ static int FreeParameter(const PHBattleState *state) {
     return -1;
 }
 
+static void ReadProviderDiagnostics(PHBattleState *state) {
+    if (!state->present || state->multiplayerDisabled || !PHBattleIsSinglePlayer(state->mode, state->multiplayer)) return;
+    ProviderContext context = {};
+    state->scriptReadable = ReadProviderContext(state->identity.header, &context);
+    if (!state->scriptReadable) return;
+    state->scriptProgram = context.program != 0;
+    state->scriptRunning = context.runner != 0;
+    state->scriptEventCount = context.eventCount;
+    state->scriptSourceBytes = context.sourceLength;
+    PHBattleProfile empty = {}, live = {};
+    for (unsigned i = 0; i < PHBattleParameterSlots; ++i) {
+        if (!ParameterReferenced(state, static_cast<int>(i + 1)) &&
+            PHReadMemory(ParameterAddress(state->identity.header, i), &live, sizeof(live)) &&
+            !std::memcmp(&live, &empty, sizeof(live))) state->parameterEmptyMask |= static_cast<uint16_t>(1u << i);
+    }
+}
+
 static BOOL ProviderAvailable(const BattleProvider *provider, const PHBattleState *state, NSString **reason) {
     ProviderContext context = {};
-    BOOL available = state && ReadIdleContext(state->identity.header, &context) &&
-        (!provider->context.program || (PHBattleSameIdentity(&provider->identity, &state->identity) &&
-                                       ContextMatches(provider, state->identity.header))) && FreeParameter(state) >= 0;
-    // An absent script must be completely unloaded before publishing a program.
-    if (available && !context.program && (context.pool || context.sourceLength)) available = NO;
-    if (available && !context.program) {
+    std::vector<uint8_t> bytecode;
+    if (!state || !CompatibleContext(state->identity.header, &context, &bytecode, reason)) return NO;
+    if (provider->context.program && (!PHBattleSameIdentity(&provider->identity, &state->identity) ||
+        !ContextMatches(provider, state->identity.header))) {
+        if (reason) *reason = @"既有隊伍的參數來源已變更，暫停完整隊伍寫入";
+        return NO;
+    }
+    if (FreeParameter(state) < 0) {
+        if (reason) *reason = @"十個原生編隊參數槽均非空閒，無法再套用隊員";
+        return NO;
+    }
+    if (!context.program) {
         uint32_t key1 = 0, key2 = 0, enemies = 0;
-        available = PHReadU32(state->identity.header + PHBattleKey1RVA, &key1) &&
+        BOOL available = PHReadU32(state->identity.header + PHBattleKey1RVA, &key1) &&
             PHReadU32(state->identity.header + PHBattleKey2RVA, &key2) &&
             DecodeAt(state->identity.impl + PHBattleEnemyCountOffset, key1, key2, 0x766cfc6du, &enemies) && enemies <= 8;
         for (unsigned i = 0; available && i < enemies; ++i) {
             uint16_t flags = 0;
             available = PHReadU16(state->identity.impl + PHBattleEnemyFlagsOffset + i * PHBattleEnemyStride, &flags) && !(flags & 0x40u);
         }
+        if (!available) {
+            if (reason) *reason = @"敵人腳本狀態不相容或未通過檢查，未建立完整隊伍參數來源";
+            return NO;
+        }
     }
-    if (!available && reason) *reason = @"此關卡的編隊腳本正在使用參數，暫不能套用武裝與完整培養設定";
-    return available;
+    return YES;
 }
 
 static void EnsureProvider(BattleProvider *provider, const PHBattleState *state, BOOL *touched) {
     RequireSinglePlayer(state);
     if (provider->context.program) return;
     ProviderContext context = {};
-    if (!ReadIdleContext(state->identity.header, &context)) throw std::runtime_error("Script context changed");
+    std::vector<uint8_t> bytecode;
+    if (!CompatibleContext(state->identity.header, &context, &bytecode, nullptr)) throw std::runtime_error("Script context changed");
     provider->identity = state->identity;
     provider->context = context;
+    provider->bytecode = std::move(bytecode);
     if (context.program) return;
     // Zero is the real compiler's end-of-program opcode (0x100595098).
     // Use the matching native allocator/tag, so native scene cleanup can free

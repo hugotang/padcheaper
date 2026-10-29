@@ -8,6 +8,7 @@
 
 static unsigned failures, writes, failWrite, guardChecks;
 static bool codeValid = true;
+static bool ignoreSelectionWrite, switchMultiInSelectionWrite;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -30,8 +31,17 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
 }
 BOOL PHWriteData(uintptr_t address, const void *input, size_t length) {
     ++writes;
-    if (writes == failWrite || address != Header + PHBattleInputRVA || length != sizeof(uintptr_t)) return NO;
-    std::memcpy(reinterpret_cast<void *>(address), input, length); return YES;
+    if (writes == failWrite) return NO;
+    bool selectionWrite = false;
+    for (unsigned slot = 0; slot < 6; ++slot)
+        selectionWrite |= address == Impl + PHBattleMemberOffset + slot * PHBattleMemberStride + PHOrbSkillOverrideOffset &&
+            length == sizeof(uint32_t);
+    if (!selectionWrite && (address != Header + PHBattleInputRVA || length != sizeof(uintptr_t))) return NO;
+    if (selectionWrite && ignoreSelectionWrite) return YES;
+    std::memcpy(reinterpret_cast<void *>(address), input, length);
+    if (selectionWrite && switchMultiInSelectionWrite)
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHBattleMultiplayerRVA), 1);
+    return YES;
 }
 BOOL PHValidateGuest(const mach_header_64 *header, NSString **reason) { ++guardChecks; return codeValid; }
 BOOL PHAddressIsGuestCode(uintptr_t address, const mach_header_64 *header) { return address >= Header && address < Header + 0x1110000; }
@@ -44,6 +54,7 @@ static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = Header; fra
 static void Reset(unsigned width = 6, unsigned height = 5) {
     std::fill(guest.begin(), guest.end(), 0); std::fill(implBytes.begin(), implBytes.end(), 0); std::fill(realInput.begin(), realInput.end(), 0);
     writes = failWrite = guardChecks = 0; codeValid = true;
+    ignoreSelectionWrite = switchMultiInSelectionWrite = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);

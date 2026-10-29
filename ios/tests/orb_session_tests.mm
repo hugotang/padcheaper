@@ -41,6 +41,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         for (unsigned i = 0; i < 6; ++i) {
             live.automation.members[i].active = true; live.automation.members[i].number = uint16_t(100 + i);
             live.automation.members[i].charge = 5;
+            live.automation.members[i].selection = UINT32_MAX;
         }
         uint32_t random = 731;
         for (unsigned i = 0; i < width * height; ++i) {
@@ -68,9 +69,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     ++skillAttempts;
     const PHOrbSkillMember &member = live.automation.members[slot];
     if (unavailableSkills[slot] || !live.automation.window || live.automation.busy || !member.active ||
-        member.bound || member.state || member.overridden) return PHOrbSkillUnavailable;
+        member.bound || member.state) return PHOrbSkillUnavailable;
     Check(!live.dragged && !staged && !live.automation.busy, "skills and orb gestures never overlap");
     activeSkill = slot; skillOrder.push_back(slot); skillFrames = 4;
+    live.automation.members[slot].selection = UINT32_MAX;
     live.phase = 22; live.automation.members[slot].state = 2; live.automation.busy = true;
     return rejectStartedSkill ? PHOrbSkillRejected : PHOrbSkillStarted;
 }
@@ -160,11 +162,13 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 
 static double now = 100;
 static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = 1; frame.player = 42; frame.epoch = 1; frame.ready = frame.enabled = true; return frame; }
-static void Tick(PHOrbSession *session, FakeOrbEngine *engine, PHBattleFrame frame, double interval = 0.02) {
+static void Tick(PHOrbSession *session, FakeOrbEngine *engine, PHBattleFrame frame, double interval = 0.02,
+                 double nativeDuration = 0) {
     now += interval;
     [session beforeFrame:frame time:now];
     @try { [engine nativeFrame]; } @finally { [session finishNativeFrame]; }
-    [session afterFrame:frame time:now];
+    // Runtime samples separate uptimes before and after rendering/maintenance.
+    [session afterFrame:frame time:now + nativeDuration];
     [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.001]];
 }
 static bool Preview(PHOrbSession *session, FakeOrbEngine *engine) {
@@ -188,8 +192,12 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_recovery_session_tests.inc"
 #include "orb_effect_session_tests.inc"
 
+#include "orb_shortcut_session_tests.inc"
+
 int main() {
     @autoreleasepool {
+        ShortcutSessionTests();
+        FramePacingSessionTests();
         FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
         for (unsigned i = 0; i < 20; ++i) Tick(session, engine, Frame());
         [session queueStop:@"idle background"];

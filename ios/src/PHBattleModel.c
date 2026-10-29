@@ -1,6 +1,63 @@
 #include "PHBattleModel.h"
 #include <string.h>
 
+PHBattleScriptCheck PHBattleCheckScript(const uint8_t *program, size_t length,
+    const uint32_t events[PHBattleEventCount], uint32_t *failureOffset) {
+    if (failureOffset) *failureOffset = 0;
+    if (!program || !events || !length || length > 1024u * 1024u) return PHBattleScriptMalformed;
+    uint32_t roots[PHBattleEventCount + 1] = {0};
+    size_t count = 1;
+    for (size_t i = 0; i < PHBattleEventCount; ++i) {
+        uint32_t offset = events[i];
+        if (offset == UINT32_MAX) continue;
+        if (offset >= length) {
+            if (failureOffset) *failureOffset = offset;
+            return PHBattleScriptMalformed;
+        }
+        size_t at = 0;
+        while (at < count && roots[at] < offset) ++at;
+        if (at < count && roots[at] == offset) continue;
+        memmove(roots + at + 1, roots + at, (count - at) * sizeof(*roots));
+        roots[at] = offset; ++count;
+    }
+    size_t at = 0, nextRoot = 1;
+    while (at < length) {
+        if (failureOffset) *failureOffset = (uint32_t)at;
+        while (nextRoot < count && roots[nextRoot] == at) ++nextRoot;
+        uint8_t opcode = program[at];
+        if (opcode == 26) return PHBattleScriptPartyCommand;
+        size_t end = at + 1;
+        if (opcode == 5) {
+            // Native text: opcode, uint16 total bytes, two metadata bytes,
+            // then an opaque, zero-terminated UTF-8 payload.
+            if (length - at < 6) return PHBattleScriptMalformed;
+            size_t bytes = program[at + 1] | ((size_t)program[at + 2] << 8);
+            if (bytes < 6 || bytes > length - at || program[at + bytes - 1]) return PHBattleScriptMalformed;
+            end = at + bytes;
+        } else if (opcode != 0 && opcode != 19) {
+            if (opcode > 25) return PHBattleScriptMalformed;
+            // Other directives have newline-terminated arguments. Reject
+            // embedded binary control bytes rather than interpreting them as
+            // harmless text and potentially hiding another command.
+            while (end < length && program[end] != 10) {
+                if (program[end] < 32 && program[end] != 9) return PHBattleScriptMalformed;
+                ++end;
+            }
+            if (end == length) return PHBattleScriptMalformed;
+            ++end;
+        }
+        if (nextRoot < count && roots[nextRoot] < end) {
+            if (failureOffset) *failureOffset = roots[nextRoot];
+            return PHBattleScriptMalformed;
+        }
+        if (opcode == 0) {
+            if (nextRoot == count) return PHBattleScriptCompatible;
+            at = roots[nextRoot++];
+        } else at = end;
+    }
+    return PHBattleScriptMalformed;
+}
+
 bool PHBattleCatalogIDForNumber(uint32_t number, uint16_t *catalogID) {
     // PAD 23.6.0 numeric search: 0x1004CADFC adds 100 above No.9899.
     if (!catalogID || !number || number > UINT16_MAX - 100u) return false;

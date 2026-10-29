@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.3-orbs",
+  "prototype_version": "0.5.4-orbs",
   "device_verified": false,
   "server_acceptance_verified": false,
   "provenance": "IDA 9.4; local pad.i64; original executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
@@ -97,6 +97,38 @@
     "PHBattleHPControllerOffset": "0xb3590"
   },
   "guards": [
+    {
+      "name": "PHBattleScriptCompileGuardRVA",
+      "va": "0x100595098",
+      "rva": "0x595098",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191fb0301aaf50300aa180040b96bffff970003231e01102f1e0008211e0000391e",
+      "sha256": "5933a7e3e361c40ff6f696f1787d86ca59deb9234bb070bb9de97bb60d11e332"
+    },
+    {
+      "name": "PHBattleScriptDispatchGuardRVA",
+      "va": "0x10059b5a4",
+      "rva": "0x59b5a4",
+      "length": 64,
+      "bytes": "f40308aa9c164038740621f99f4f0071000100549c140034e9e25a3949010837fc2204799f17007101020054ae000014e826447908050011e8260479e80314aa",
+      "sha256": "55328ca7d89cd497f8a436f77c655a0b1b1d078204af0849a0c53edd1a312839"
+    },
+    {
+      "name": "PHBattleScriptPartyGuardRVA",
+      "va": "0x10059a848",
+      "rva": "0x59a848",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa1810409108abd8391f050071cb000054085b8c79094588526902098b",
+      "sha256": "c6d03ea2d00b6f2624669d01cfba01f8e33f2a455a590f7215e5e2bfd9dd4c6a"
+    },
+    {
+      "name": "PHBattleAllocatorLayoutGuardRVA",
+      "va": "0x10058e5ac",
+      "rva": "0x58e5ac",
+      "length": 64,
+      "bytes": "fa67bba9f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30304aaf70303aaf80302aaf90301aaf60300aa3a008052ba29a972083c0011086d1c1208210111",
+      "sha256": "ec58e72377f1ed74a933af0ae49dcc9ca22afaa4a40bddb6cc830577b883b0a1"
+    },
     {
       "name": "PHBattleSwitchTeamRVA",
       "va": "0x10000cee0",

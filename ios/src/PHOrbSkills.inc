@@ -43,17 +43,24 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
             !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID)) return false;
         m.bound = int8_t(uint8_t(bind)) > 0; m.charge = uint16_t(charge);
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
-        // These are decoded by native can-use before it refreshes CardParam.
-        for (uintptr_t offset : {uintptr_t(344), uintptr_t(360), uintptr_t(488), uintptr_t(504)}) {
-            uint32_t value = 0;
-            if (!SmallProtected(member + offset, key1, key2, offset < 400 ? UINT8_MAX : UINT16_MAX, value)) return false;
+        // Keep authoritative stages/use counts and the derived stage cache
+        // separately: can-use refreshes the cache only after basic readiness.
+        if (!PHReadU16(member + 1438, &m.assistCatalogID)) return false;
+        for (unsigned skill = 0; skill < 2; ++skill) {
+            uint32_t stage = 0, uses = 0;
+            if (!SmallProtected(member + 344 + 16 * skill, key1, key2, UINT8_MAX, stage) ||
+                !SmallProtected(member + 488 + 16 * skill, key1, key2, UINT16_MAX, uses) ||
+                !PHReadU8(member + 1290 + skill, &m.cachedSkillStage[skill]) ||
+                !PHReadU16(member + (skill ? 1442 : 1298), &m.skillLevel[skill])) return false;
+            m.skillStage[skill] = uint8_t(stage); m.skillUses[skill] = uint16_t(uses);
         }
         float motion = 0, target = 0;
         if (!PHReadMemory(member + 1116, &motion, sizeof(motion)) || !PHReadMemory(member + 1120, &target, sizeof(target)) ||
             !std::isfinite(motion) || !std::isfinite(target)) return false;
-        // A retained manual skill choice blocks only that member. A moving
-        // team animation still prevents automation from acting on any slot.
-        m.overridden = overrideID != UINT32_MAX;
+        // Native preparation clears an old choice when starting a new use.
+        // Keep its exact value for race checks; state, not this retained ID,
+        // tells us whether a selection dialog or skill is still in progress.
+        m.selection = overrideID;
         out.window &= motion == target;
         out.busy |= motion != target;
     }

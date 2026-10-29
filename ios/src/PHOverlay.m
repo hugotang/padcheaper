@@ -23,6 +23,9 @@
 @property(nonatomic, copy) PHOverlayAction action;
 @property(nonatomic, strong) NSDictionary *state;
 @property(nonatomic, strong) UIButton *bubble;
+@property(nonatomic, strong) UIButton *orbOnceShortcut;
+@property(nonatomic, strong) UIButton *orbAutoShortcut;
+@property(nonatomic, strong) UILabel *orbShortcutStatus;
 @property(nonatomic, strong) UIView *panel;
 @property(nonatomic, strong) UILabel *statusLabel;
 @property(nonatomic, strong) UILabel *reasonLabel;
@@ -139,6 +142,29 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(drag:)];
     [self.bubble addGestureRecognizer:pan];
     [self.view addSubview:self.bubble];
+
+    self.orbOnceShortcut = [self button:@"轉一次" action:@selector(runOrbsOnce) identifier:@"padcheaper.orbsOnceShortcut"];
+    self.orbAutoShortcut = [self button:@"開始自動" action:@selector(runOrbsAutomatically) identifier:@"padcheaper.orbsAutoShortcut"];
+    for (UIButton *shortcut in @[self.orbOnceShortcut, self.orbAutoShortcut]) {
+        shortcut.backgroundColor = [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
+        shortcut.layer.borderWidth = 1;
+        shortcut.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
+        shortcut.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+        for (NSLayoutConstraint *constraint in shortcut.constraints) if (constraint.firstAttribute == NSLayoutAttributeHeight)
+            constraint.constant = 44;
+        [self.view addSubview:shortcut];
+    }
+    self.orbOnceShortcut.accessibilityLabel = @"自動轉一次，使用目前盤面目標";
+    self.orbAutoShortcut.accessibilityLabel = @"開始自動轉珠，沿用目前技能規則";
+    self.orbShortcutStatus = PHLabel(11, UIFontWeightMedium);
+    self.orbShortcutStatus.numberOfLines = 1;
+    self.orbShortcutStatus.lineBreakMode = NSLineBreakByTruncatingTail;
+    self.orbShortcutStatus.backgroundColor = [UIColor colorWithWhite:0.06 alpha:0.9];
+    self.orbShortcutStatus.textAlignment = NSTextAlignmentCenter;
+    self.orbShortcutStatus.layer.cornerRadius = 6;
+    self.orbShortcutStatus.clipsToBounds = YES;
+    self.orbShortcutStatus.accessibilityIdentifier = @"padcheaper.orbsShortcutStatus";
+    [self.view addSubview:self.orbShortcutStatus];
 
     self.panel = [UIView new];
     self.panel.hidden = YES;
@@ -292,6 +318,15 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     CGFloat x = CGRectGetMinX(safe) + 28 + MAX(0, width - 56) * self.position.x;
     CGFloat y = CGRectGetMinY(safe) + 28 + MAX(0, height - 56) * self.position.y;
     self.bubble.frame = CGRectMake(x - 28, y - 28, 56, 56);
+    const CGFloat shortcutsWidth = 146;
+    CGFloat shortcutsX = x >= CGRectGetMidX(safe) ? x - 28 - 6 - shortcutsWidth : x + 28 + 6;
+    shortcutsX = PHClamp(shortcutsX, CGRectGetMinX(safe), CGRectGetMaxX(safe) - shortcutsWidth);
+    self.orbOnceShortcut.frame = CGRectMake(shortcutsX, y - 22, 64, 44);
+    self.orbAutoShortcut.frame = CGRectMake(shortcutsX + 70, y - 22, 76, 44);
+    CGFloat statusY = y + 31 + 22 <= CGRectGetMaxY(safe) ? y + 31 : y - 53;
+    CGFloat statusWidth = MIN(208, width);
+    CGFloat statusX = PHClamp(MIN(shortcutsX, x - 28), CGRectGetMinX(safe), CGRectGetMaxX(safe) - statusWidth);
+    self.orbShortcutStatus.frame = CGRectMake(statusX, statusY, statusWidth, 22);
     CGFloat panelWidth = MIN(352, width), panelHeight = MIN(600, height);
     CGFloat panelX = PHClamp(x - panelWidth / 2, CGRectGetMinX(safe), CGRectGetMaxX(safe) - panelWidth);
     CGFloat panelY = PHClamp(y - 90, CGRectGetMinY(safe), CGRectGetMaxY(safe) - panelHeight);
@@ -339,6 +374,21 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.expanded = NO;
     self.panel.hidden = YES;
     self.bubble.hidden = NO;
+    [self updateWithSnapshot:self.snapshot()];
+}
+
+- (void)runOrbsOnce {
+    NSDictionary *state = self.snapshot();
+    if (![state[@"orbState"][@"canOnce"] boolValue]) return;
+    self.action(@"orbsOnce", nil);
+    [self updateWithSnapshot:self.snapshot()];
+}
+
+- (void)runOrbsAutomatically {
+    NSDictionary *state = self.snapshot();
+    if ([state[@"orbState"][@"busy"] boolValue]) self.action(@"orbsStop", nil);
+    else if ([state[@"orbState"][@"canStart"] boolValue]) self.action(@"orbsStart", nil);
+    [self updateWithSnapshot:self.snapshot()];
 }
 
 - (void)toggleFeature:(UISwitch *)toggle {
@@ -509,6 +559,19 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.bubble setTitleColor:color forState:UIControlStateNormal];
     self.bubble.layer.borderColor = color.CGColor;
     self.bubble.accessibilityLabel = [NSString stringWithFormat:@"PADCheaper 已載入，%@，點擊開啟面板", shortStatus];
+    NSDictionary *orbs = state[@"orbState"];
+    BOOL orbBusy = [orbs[@"busy"] boolValue];
+    self.orbOnceShortcut.hidden = self.orbAutoShortcut.hidden = self.expanded;
+    self.orbOnceShortcut.enabled = [orbs[@"canOnce"] boolValue];
+    self.orbAutoShortcut.enabled = orbBusy || [orbs[@"canStart"] boolValue];
+    [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"開始自動" forState:UIControlStateNormal];
+    self.orbAutoShortcut.accessibilityLabel = orbBusy ? @"停止自動轉珠" : @"開始自動轉珠，沿用目前技能規則";
+    self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor colorWithRed:0.62 green:0.12 blue:0.15 alpha:0.96] :
+        [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
+    NSString *orbMessage = [orbs[@"message"] isKindOfClass:NSString.class] ? orbs[@"message"] : @"";
+    self.orbShortcutStatus.text = [[orbMessage componentsSeparatedByString:@"\n"] firstObject];
+    self.orbShortcutStatus.accessibilityLabel = orbMessage;
+    self.orbShortcutStatus.hidden = self.expanded || !orbMessage.length || [orbs[@"phase"] isEqual:@"idle"];
     if ([state[@"orbState"][@"busy"] boolValue]) {
         [self.bubble setTitle:[state[@"orbState"][@"automatic"] boolValue] ? @"停止\n自動" : @"停止\n轉珠" forState:UIControlStateNormal];
         [self.bubble setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];

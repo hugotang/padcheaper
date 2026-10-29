@@ -21,13 +21,13 @@ static void SurvivalSessionTests() {
         NSMutableDictionary *rule = [rescue mutableCopy];
         if (unavailable == 0) engine->unavailableSkills[0] = YES;
         if (unavailable == 1) engine->live.automation.members[0].bound = true;
-        if (unavailable == 2) engine->live.automation.members[0].overridden = true;
+        if (unavailable == 2) engine->live.automation.members[0].active = false;
         if (unavailable == 3) rule[@"reserveUntil"] = @5;
         if (unavailable == 4) { engine->live.automation.window = false; engine->live.automation.playerEffects = PHOrbPlayerSkillSeal; }
         session = AutomaticSession(engine,@[rule]); FinishSurvivalAttempt(session,engine);
         Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.empty() &&
             [[session snapshot][@"message"] containsString:@"必要規則"],
-            "required unavailable, bound, manual-selected, reserved or sealed rescue cannot silently fall through to dragging");
+            "required unavailable, bound, absent, reserved or sealed rescue cannot silently fall through to dragging");
     }
     engine = [FakeOrbEngine new]; engine->live.automation.hp = 100; engine->unavailableSkills[0] = YES;
     NSMutableDictionary *optional = [rescue mutableCopy]; optional[@"required"] = @NO;

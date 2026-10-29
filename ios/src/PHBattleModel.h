@@ -32,6 +32,8 @@ typedef struct {
     uint8_t flags, radius;
     uint16_t previousID;
     uint64_t providerToken;
+    // A temporary failure to verify the provider is not proof of takeover.
+    bool providerUncertain;
     // Legacy diagnostic field; multiplayer profiles are no longer retained.
     uint64_t rebindToken;
     uint16_t level, skillLevel;
@@ -45,6 +47,9 @@ typedef struct {
     bool multiplayerDisabled;
     bool entryWindow, entryChargesValid;
     bool teamBanksValid, turnInfoValid;
+    bool scriptReadable, scriptProgram, scriptRunning;
+    uint16_t scriptEventCount, parameterEmptyMask;
+    uint32_t scriptSourceBytes;
     uint8_t teamCount, currentTeam, teamSize, playerTeam, turnTeam;
     uint32_t turnSerial;
     uintptr_t teamBanks[PHBattleTeamCapacity];
@@ -78,6 +83,16 @@ typedef enum {
 typedef enum {
     PHBattleMutationApplied, PHBattleMutationRolledBack, PHBattleMutationRejected, PHBattleMutationUncertain
 } PHBattleMutationResult;
+
+typedef enum {
+    PHBattleScriptCompatible, PHBattleScriptMalformed, PHBattleScriptPartyCommand
+} PHBattleScriptCheck;
+
+// Inspect every registered entry and the initial entry using the native
+// bytecode grammar. Text payloads cannot execute commands. Any #party command
+// is refused, including commands which would acquire currently empty slots.
+PHBattleScriptCheck PHBattleCheckScript(const uint8_t *program, size_t length,
+    const uint32_t events[PHBattleEventCount], uint32_t *failureOffset);
 
 // UI numbers follow the in-game encyclopedia. Member fields and engine calls
 // use native catalog IDs; native 9900..9999 are reserved and have no UI number.

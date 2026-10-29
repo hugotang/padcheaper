@@ -70,9 +70,10 @@ enum {
 };
 
 typedef struct {
-    uint16_t number, charge;
-    uint8_t state;
-    bool active, bound, overridden;
+    uint32_t selection; // Raw native skill choice; UINT32_MAX means automatic base/assist selection.
+    uint16_t number, charge, assistCatalogID, skillLevel[2], skillUses[2];
+    uint8_t state, skillStage[2], cachedSkillStage[2];
+    bool active, bound;
 } PHOrbSkillMember;
 
 // Populated only by the explicit automation reader. Ordinary previews do not

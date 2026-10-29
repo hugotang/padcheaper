@@ -148,7 +148,13 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     for (unsigned i = 0; i < 6; ++i) {
         const PHOrbSkillMember *m = &x->members[i], *n = &y->members[i];
         if (m->active != n->active || m->number != n->number || m->charge != n->charge ||
-            m->state != n->state || m->bound != n->bound || m->overridden != n->overridden) return false;
+            m->state != n->state || m->bound != n->bound || m->selection != n->selection ||
+            m->assistCatalogID != n->assistCatalogID ||
+            memcmp(m->skillLevel, n->skillLevel, sizeof(m->skillLevel)) ||
+            memcmp(m->skillUses, n->skillUses, sizeof(m->skillUses)) ||
+            memcmp(m->skillStage, n->skillStage, sizeof(m->skillStage))) return false;
+        // Native can-use refreshes the derived stage bytes on explicit use.
+        // Compare the protected stages above, not their mutable cache.
     }
     return true;
 }

@@ -1,5 +1,9 @@
-static unsigned canUseCalls, skillStartCalls;
-static bool skillAvailable, switchMultiInCanUse;
+static unsigned canUseCalls, skillStartCalls, readinessCalls;
+static bool skillAvailable, switchMultiInCanUse, changeSelectionInCanUse, changeStageInCanUse;
+static bool switchMultiInReadiness, readinessKnown;
+static NativeSkillReadiness readinessFixture;
+static uint32_t selectionAtCanUse, selectionAtStart, effectiveStartedSkill;
+static constexpr uint32_t CurrentFixtureSkill = 64863;
 static const uintptr_t SurvivalDungeon = Header + 0x1800000;
 static void SetSurvivalHP(uint32_t hp, uint64_t maximum) {
     Protected(Impl + PHBattleHPOffset, hp, 0x766cfc6d);
@@ -18,18 +22,33 @@ static void SetSurvivalOptions(const char *options) {
 @implementation FixtureSkillEngine
 - (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
     ++canUseCalls;
+    selectionAtCanUse = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHOrbSkillOverrideOffset));
     if (switchMultiInCanUse) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
+    if (changeSelectionInCanUse) Put<uint32_t>(member + PHOrbSkillOverrideOffset, selectionAtCanUse + 1);
+    if (changeStageInCanUse) Protected(member + 344, 1, 0x6a875a8b);
     return skillAvailable;
+}
+- (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
+    ++readinessCalls; *out = readinessFixture;
+    if (switchMultiInReadiness) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
+    return readinessKnown;
 }
 - (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
     ++skillStartCalls;
+    selectionAtStart = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHOrbSkillOverrideOffset));
+    // Native 0x10059F8DC consumes a retained positive ID before the current
+    // base/charged-assist choice. This exposes a removed-gate-only regression.
+    effectiveStartedSkill = int32_t(selectionAtStart) > 0 ? selectionAtStart : CurrentFixtureSkill;
     Put<uint32_t>(member + PHOrbSkillMemberStateOffset, 2);
     Protected(Impl + PHBattlePhaseOffset, 22, 0x766cfc6d);
 }
 @end
 
 static void SkillFixture() {
-    Reset(); canUseCalls = skillStartCalls = 0; skillAvailable = true; switchMultiInCanUse = false;
+    Reset(); canUseCalls = skillStartCalls = readinessCalls = 0; skillAvailable = readinessKnown = true;
+    switchMultiInCanUse = changeSelectionInCanUse = changeStageInCanUse = switchMultiInReadiness = false;
+    readinessFixture = {CurrentFixtureSkill, 0, 4, 4};
+    selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = 0;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);
     SetSurvivalHP(100, 1000);
     Put<uintptr_t>(Impl + PHOrbSkillDungeonRulesOffset, SurvivalDungeon);
@@ -136,12 +155,104 @@ static void SkillNativeTests() {
     [engine readAutomation:&state frame:Frame() reason:&reason];
     Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable && canUseCalls == 1 && !skillStartCalls,
         "game readiness refusal never enters native activation");
+    Check(readinessCalls == 1 && [reason containsString:@"冷卻已足"] && [reason containsString:@"充能 5"],
+        "a native refusal with sufficient charge is distinct from actual cooldown");
+    for (int cooldown : {5, 6}) {
+        SkillFixture(); engine = [FixtureSkillEngine new]; skillAvailable = false;
+        const uintptr_t member = Impl + PHBattleMemberOffset + 2 * PHBattleMemberStride;
+        SetLeader(2, 14175);
+        Put<uint16_t>(member + 1438, 11698); Put<uint16_t>(member + 1298, 5); Put<uint16_t>(member + 1442, 1);
+        Protected(member + 344, 1, 0x6a875a8b); Put<uint8_t>(member + 1290, 1);
+        readinessFixture = {65778, 47509, cooldown, cooldown + 20};
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check(state.automation.members[2].skillStage[0] == 1 && state.automation.members[2].cachedSkillStage[0] == 1 &&
+            !readinessCalls && !writes, "evolved stages are read without invoking native cooldown getters");
+        Check([engine useSkill:2 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+            readinessCalls == 1 && !skillStartCalls && !writes && [reason containsString:@"65778"] &&
+            [reason containsString:@"47509"] && [reason containsString:@"階段 1／0"] &&
+            [reason containsString:cooldown == 5 ? @"冷卻已足" : @"冷卻尚未完成"],
+            "evolved base readiness uses its five-turn CD, not the assist's total CD, and retains full 32-bit skill IDs");
+    }
+    SkillFixture(); engine = [FixtureSkillEngine new]; skillAvailable = false; readinessKnown = false;
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+        [reason containsString:@"冷卻明細未取得"] && !skillStartCalls && !writes,
+        "unavailable diagnostic data never invents a cooldown or permits a refused skill");
+    SkillFixture(); engine = [FixtureSkillEngine new]; skillAvailable = false; switchMultiInReadiness = true;
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+        readinessCalls == 1 && !skillStartCalls && !writes,
+        "changed multiplayer context after refusal diagnostics never reaches activation or selector writes");
+    SkillFixture(); engine = [FixtureSkillEngine new]; changeStageInCanUse = true;
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+        canUseCalls == 1 && !readinessCalls && !skillStartCalls && !writes,
+        "an authoritative skill-stage change during can-use invalidates the attempted skill");
     SkillFixture(); engine = [FixtureSkillEngine new];
     Put<uint32_t>(Impl + PHBattleMemberOffset + PHOrbSkillOverrideOffset, 123);
     [engine readAutomation:&state frame:Frame() reason:&reason];
-    Check(state.automation.members[0].overridden &&
-        [engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted,
-        "a retained manual selection on another member does not disable this member's skill");
+    Check(state.automation.members[0].selection == 123 &&
+        [engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted && writes == 0 &&
+        Load<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleMemberOffset + PHOrbSkillOverrideOffset)) == 123,
+        "a retained selection on another idle member neither blocks nor gets changed by this member's skill");
+    const uintptr_t secondMember = Impl + PHBattleMemberOffset + PHBattleMemberStride;
+    for (uint32_t selection : {0u, 123u, 65063u}) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, selection);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check(state.automation.members[1].selection == selection && !writes && !canUseCalls &&
+            !state.automation.members[1].state, "retained idle selection is read exactly without preparing or polling native skills");
+        const auto before = implBytes;
+        Check([engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted &&
+            canUseCalls == 1 && skillStartCalls == 1 && writes == 1 && selectionAtCanUse == selection &&
+            selectionAtStart == UINT32_MAX && effectiveStartedSkill == CurrentFixtureSkill,
+            "a ready idle position clears the old choice before native start consumes the current skill");
+        for (unsigned slot = 0; slot < 6; ++slot) {
+            const size_t memberOffset = PHBattleMemberOffset + slot * PHBattleMemberStride;
+            Check(std::memcmp(before.data() + memberOffset + PHBattleChargeOffset,
+                implBytes.data() + memberOffset + PHBattleChargeOffset, 16) == 0 &&
+                std::memcmp(before.data() + memberOffset + PHBattleChargeShadowOffset,
+                implBytes.data() + memberOffset + PHBattleChargeShadowOffset, 4) == 0,
+                "selection preparation never rewrites a member's accumulated charge or shadow");
+        }
+    }
+    SkillFixture(); engine = [FixtureSkillEngine new]; skillAvailable = false;
+    Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, 65063);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+        canUseCalls == 1 && !skillStartCalls && !writes &&
+        Load<uint32_t>(reinterpret_cast<uint8_t *>(secondMember + PHOrbSkillOverrideOffset)) == 65063,
+        "a cooldown or native-effect refusal leaves the retained selection untouched");
+    for (bool duringCheck : {false, true}) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, 65063);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        if (duringCheck) changeSelectionInCanUse = true;
+        else Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, 65064);
+        Check([engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+            canUseCalls == (duringCheck ? 1u : 0u) && !skillStartCalls && !writes,
+            "a changed selection ID is rejected even when both old and new values are non-default");
+    }
+    for (unsigned fault = 0; fault < 3; ++fault) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, 65063);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        if (fault == 0) failWrite = 1;
+        if (fault == 1) ignoreSelectionWrite = true;
+        if (fault == 2) switchMultiInSelectionWrite = true;
+        Check([engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+            canUseCalls == 1 && !skillStartCalls && writes == 1,
+            "selection write failure, failed read-back and changed multiplayer context stop before native activation");
+    }
+    for (unsigned stateValue = 1; stateValue <= 7; ++stateValue) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(secondMember + PHOrbSkillOverrideOffset, 65063);
+        Put<uint32_t>(secondMember + PHOrbSkillMemberStateOffset, stateValue);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check([engine useSkill:1 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
+            !canUseCalls && !skillStartCalls && !writes,
+            "every in-progress member state, including an active selection dialog, prevents preparation and start");
+    }
     SkillFixture(); engine = [FixtureSkillEngine new]; switchMultiInCanUse = true;
     [engine readAutomation:&state frame:Frame() reason:&reason];
     Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && canUseCalls == 1 && !skillStartCalls,
@@ -154,7 +265,7 @@ static void SkillNativeTests() {
         if (change == 1) Put<uint16_t>(Impl + PHOrbSkillSealOffset, 1);
         if (change == 2) Put<uint8_t>(Impl + PHOrbEnemyOffset + 23, 0);
         if (change == 3) Put<uint32_t>(member + PHOrbSkillMemberStateOffset, 1);
-        if (change == 4) Put<uint32_t>(member + PHOrbSkillOverrideOffset, 123);
+        if (change == 4) Put<uint32_t>(member + PHBattleMemberStride + PHOrbSkillMemberStateOffset, 4);
         if (change == 5) { Protected(Impl + PHOrbSkillLimitOffset, 0, 0x766cfc6d); Protected(Impl + PHOrbSkillLimitRemainingOffset, 0, 0x6a875a8b); }
         if (change == 6) Put<uint32_t>(Impl + PHOrbSkillSpecialModeOffset, 0x12345678);
         if (change == 7) Put<uint8_t>(Header + PHOrbTutorialTableRVA + 2, 75);
@@ -171,10 +282,16 @@ static void SkillNativeTests() {
     Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
     Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !canUseCalls && !skillStartCalls,
         "multiplayer refusal happens before native calls");
-    SkillFixture(); engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
-    Put<uint8_t>(Header + PHOrbStartSkillRVA, 0);
-    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !canUseCalls && !skillStartCalls,
-        "skill activation rechecks instruction fingerprints even after an earlier successful read");
+    for (uintptr_t guard : {PHOrbStartSkillRVA, PHOrbSkillSelectionResetRVA, PHOrbBaseSkillRVA,
+        PHOrbAssistSkillRVA, PHOrbBaseCooldownRVA, PHOrbTotalCooldownRVA}) {
+        SkillFixture(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(Impl + PHBattleMemberOffset + PHOrbSkillOverrideOffset, 65063);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        Put<uint8_t>(Header + guard, 0);
+        Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+            !canUseCalls && !skillStartCalls && !writes,
+            "skill activation rechecks start and selection-reset fingerprints before calls or writes");
+    }
 
     for (unsigned effect = 0; effect < 4; ++effect) {
         SkillFixture(); engine = [FixtureSkillEngine new];

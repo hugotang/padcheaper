@@ -621,6 +621,12 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsDecisions")).text containsString:@"施放者被綁定"],
                 @"Rescue status and latest per-rule explanation have dedicated visible labels");
             PHProbeRender(self.window, orbWindow, @"orbs-survival-decisions");
+            ruleFailure[@"ruleDecisionDetails"] = @[@{@"rule":@6, @"slot":@2,
+                @"decision":@"HP 10.0% ≤ 40% · 施放者被綁定"}];
+            [orbController refresh];
+            PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsDecisions")).text containsString:@"規則 6（位置 2）"],
+                @"Captured decisions identify the real position independently of rule order");
+            PHProbeRender(self.window, orbWindow, @"orbs-skill-position-decisions");
             [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
         PHProbeStep(@"rule-editor-keyboard-ready", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsRuleEditor", YES); }, ^{
@@ -760,6 +766,41 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Unacknowledged continuous start leaves the page open to show its status");
             PHOverlaySnapshot originalSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
             PHOverlayAction originalAction = [overlay.rootViewController valueForKey:@"action"];
+            UIButton *onceShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsOnceShortcut");
+            UIButton *autoShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsAutoShortcut");
+            NSMutableDictionary *shortcutState = [originalSnapshot() mutableCopy];
+            shortcutState[@"orbState"] = @{@"phase":@"idle",@"canOnce":@YES,@"canStart":@YES,@"busy":@NO};
+            [overlay.rootViewController setValue:[^{ return shortcutState; } copy] forKey:@"snapshot"];
+            __block NSString *shortcutAction = nil;
+            [overlay.rootViewController setValue:[^(NSString *action, id value) { shortcutAction = action; } copy] forKey:@"action"];
+            [overlay.rootViewController setValue:@NO forKey:@"expanded"];
+            PHProbeFind(overlay, @"padcheaper.panel").hidden = YES; bubble.hidden = NO;
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            for (NSArray<NSNumber *> *position in @[@[@0,@0], @[@1,@0], @[@0,@1], @[@1,@1]]) {
+                [overlay.rootViewController setValue:[NSValue valueWithCGPoint:CGPointMake(position[0].doubleValue, position[1].doubleValue)] forKey:@"position"];
+                [overlay.rootViewController.view setNeedsLayout]; [overlay.rootViewController.view layoutIfNeeded];
+                PHProbeCheck(onceShortcut && autoShortcut && !onceShortcut.hidden && !autoShortcut.hidden &&
+                    CGRectContainsRect(overlay.bounds, onceShortcut.frame) && CGRectContainsRect(overlay.bounds, autoShortcut.frame) &&
+                    CGRectGetHeight(onceShortcut.bounds) >= 44 && CGRectGetHeight(autoShortcut.bounds) >= 44 &&
+                    !CGRectIntersectsRect(onceShortcut.frame, bubble.frame) && !CGRectIntersectsRect(autoShortcut.frame, bubble.frame),
+                    @"Both floating shortcuts remain separate 44-point targets at every docked corner");
+            }
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([shortcutAction isEqual:@"orbsOnce"] && PHProbeFind(overlay, @"padcheaper.panel").hidden,
+                @"One-shot shortcut queues read/solve/execute without opening settings");
+            shortcutAction = nil; [autoShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([shortcutAction isEqual:@"orbsStart"], @"Continuous shortcut uses the existing explicit-start action");
+            shortcutState[@"orbState"] = @{@"phase":@"stopped",@"message":@"目標未達成，未開始轉珠",@"canOnce":@NO,@"canStart":@NO,@"busy":@NO};
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled &&
+                !PHProbeFind(overlay, @"padcheaper.orbsShortcutStatus").hidden,
+                @"Disabled shortcuts retain a visible result without requiring the settings page");
+            [overlay.rootViewController setValue:[NSValue valueWithCGPoint:CGPointMake(1, .20)] forKey:@"position"];
+            [overlay.rootViewController.view setNeedsLayout]; [overlay.rootViewController.view layoutIfNeeded];
+            BOOL orbWasHidden = orbWindow.hidden; orbWindow.hidden = YES;
+            PHProbeRender(self.window, overlay, @"orb-shortcuts"); orbWindow.hidden = orbWasHidden;
+            [overlay.rootViewController setValue:@YES forKey:@"expanded"];
+            PHProbeFind(overlay, @"padcheaper.panel").hidden = NO; bubble.hidden = YES;
             for (NSString *phase in @[@"autoWaiting", @"solving", @"skillWaiting", @"turnWaiting"]) {
                 NSMutableDictionary *continuous = [baseOrbFixture[@"orbState"] mutableCopy];
                 continuous[@"phase"] = phase; continuous[@"automatic"] = @YES; continuous[@"busy"] = @YES;
@@ -775,6 +816,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 __block NSString *bubbleAction = nil;
                 [overlay.rootViewController setValue:[^(NSString *action, id value) { bubbleAction = action; } copy] forKey:@"action"];
                 [overlay.rootViewController updateWithSnapshot:bubbleState];
+                [autoShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+                PHProbeCheck([autoShortcut.currentTitle isEqual:@"停止"] && [bubbleAction isEqual:@"orbsStop"] && !onceShortcut.enabled,
+                    @"The continuous shortcut becomes stop and prevents a competing one-shot route while busy");
                 PHProbeCheck([bubble.currentTitle containsString:@"停止"], @"Floating button is stop during waiting, solving and skill animation");
                 [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
                 PHProbeCheck([bubbleAction isEqual:@"orbsStop"], @"Floating stop acts immediately instead of opening the panel");

@@ -12,6 +12,7 @@
 namespace {
 constexpr size_t PoolStride = 172, PoolCount = 256;
 using Manager = std::array<uint8_t, PHOrbInputBytes>;
+struct NativeSkillReadiness { int32_t baseSkill, assistSkill, baseCooldown, totalCooldown; };
 template<typename T> T Load(const uint8_t *p) { T value; std::memcpy(&value, p, sizeof(value)); return value; }
 template<typename T> void Store(uint8_t *p, T value) { std::memcpy(p, &value, sizeof(value)); }
 
@@ -306,6 +307,19 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 - (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
     return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, -1) & 1) != 0;
 }
+- (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
+    // These getters may update a native cooldown cache. Call only following
+    // a guarded, refused skill attempt; never from a preview or polling read.
+    uint16_t assist = 0;
+    if (!out || !PHReadU16(member + 1438, &assist)) return NO;
+    out->baseSkill = reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHOrbBaseSkillRVA)(member + 1248);
+    out->assistSkill = int16_t(assist) > 0 ? reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHOrbAssistSkillRVA)(member + 1248) : 0;
+    out->baseCooldown = reinterpret_cast<int32_t (*)(uintptr_t, int)>(header + PHOrbBaseCooldownRVA)(member, 0);
+    out->totalCooldown = reinterpret_cast<int32_t (*)(uintptr_t, int)>(header + PHOrbTotalCooldownRVA)(member, 0);
+    return out->baseSkill >= 0 && out->baseSkill <= 500000 && out->assistSkill >= 0 && out->assistSkill <= 500000 &&
+        out->baseCooldown >= 0 && out->baseCooldown <= UINT16_MAX &&
+        out->totalCooldown >= out->baseCooldown && out->totalCooldown <= UINT16_MAX;
+}
 - (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
     reinterpret_cast<void (*)(uintptr_t, uintptr_t)>(header + PHOrbStartSkillRVA)(game, member);
 }
@@ -323,10 +337,6 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     if (!CheckCode(frame.header, reason)) return PHOrbSkillRejected;
     const auto &member = live.automation.members[slot];
-    if (member.overridden) {
-        if (reason) *reason = @"此位置保留了手動技能選項，未自動改動選擇";
-        return PHOrbSkillUnavailable;
-    }
     if (!live.automation.window || live.automation.busy || !member.active || member.bound || member.state ||
         live.automation.skillUses >= 255) {
         if (reason) *reason = @"技能目前不可使用";
@@ -344,7 +354,52 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (reason) *reason = @"技能檢查後狀態已改變，未啟動技能";
         return PHOrbSkillRejected;
     }
-    if (!available) { if (reason) *reason = @"冷卻尚未完成或遊戲判定技能無效"; return PHOrbSkillUnavailable; }
+    if (!available) {
+        NativeSkillReadiness readiness{};
+        BOOL known = [self nativeSkillReadiness:&readiness member:address header:frame.header];
+        PHOrbSnapshot diagnosed{};
+        if (![self readAutomation:&diagnosed frame:frame reason:reason] || diagnosed.multiplayerDisabled ||
+            !diagnosed.settled || diagnosed.dragged || !PHInputIsQuiet(&diagnosed.input) ||
+            !PHOrbSameAutomation(&checked, &diagnosed)) {
+            if (reason) *reason = @"技能拒絕後狀態已改變，已停止";
+            return PHOrbSkillRejected;
+        }
+        const auto &observed = diagnosed.automation.members[slot];
+        NSString *cause = !known ? @"遊戲判定技能不可用，冷卻明細未取得" :
+            !readiness.baseSkill || !readiness.totalCooldown ? @"未取得可使用的本體技能" :
+            observed.charge < readiness.baseCooldown ? @"冷卻尚未完成" : @"冷卻已足，遊戲仍判定技能不可用";
+        NSString *cooldown = known ? [NSString stringWithFormat:@"；本體技能 %d／CD %d，武裝技能 %d／合計 CD %d",
+            readiness.baseSkill, readiness.baseCooldown, readiness.assistSkill, readiness.totalCooldown] : @"";
+        if (reason) *reason = [NSString stringWithFormat:@"%@（充能 %u%@；階段 %u／%u，快取 %u／%u）", cause,
+            observed.charge, cooldown, observed.skillStage[0], observed.skillStage[1],
+            observed.cachedSkillStage[0], observed.cachedSkillStage[1]];
+        return PHOrbSkillUnavailable;
+    }
+    if (member.selection != UINT32_MAX) {
+        // The normal tap path (0x1005CCD40, store at 0x1005CCDC0)
+        // clears this field before confirming a new skill. Cancel/completion
+        // can leave it behind while state is already zero. Can-use(-1) checks
+        // the current base/charged-assist skill, but native start/effects can
+        // still consume the old ID through 0x10059F8DC. Reset only this idle
+        // member after readiness and race checks, never while polling or when
+        // the game refuses the skill. Leave charge and skill data to native
+        // code; this writes only the default-selection sentinel.
+        const uint32_t automaticSelection = UINT32_MAX;
+        uint32_t written = 0;
+        if (!PHWriteData(address + PHOrbSkillOverrideOffset, &automaticSelection, sizeof(automaticSelection)) ||
+            !PHReadU32(address + PHOrbSkillOverrideOffset, &written) || written != automaticSelection) {
+            if (reason) *reason = @"舊技能選擇未能清除或確認，未啟動技能";
+            return PHOrbSkillRejected;
+        }
+        PHOrbSnapshot prepared{}, expectedPrepared = checked;
+        expectedPrepared.automation.members[slot].selection = automaticSelection;
+        if (![self readAutomation:&prepared frame:frame reason:reason] || prepared.multiplayerDisabled ||
+            !prepared.automation.window || prepared.automation.busy || prepared.dragged || !prepared.settled ||
+            !PHInputIsQuiet(&prepared.input) || !PHOrbSameAutomation(&expectedPrepared, &prepared)) {
+            if (reason) *reason = @"清除舊技能選擇後狀態已改變，未啟動技能";
+            return PHOrbSkillRejected;
+        }
+    }
     [self nativeStartGame:live.identity.game member:address header:frame.header];
     PHOrbSnapshot accepted{};
     if (![self readAutomation:&accepted frame:frame reason:reason] || accepted.multiplayerDisabled ||

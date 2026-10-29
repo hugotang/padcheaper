@@ -484,8 +484,12 @@
     NSMutableArray *decisions = [NSMutableArray array];
     NSArray *rows = state[@"ruleDecisions"] ?: @[];
     if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];
-    for (NSUInteger i = 0; i < rows.count; ++i)
-        [decisions addObject:[NSString stringWithFormat:@"規則 %lu：%@", (unsigned long)i + 1, rows[i]]];
+    NSArray *details = state[@"ruleDecisionDetails"] ?: @[];
+    for (NSUInteger i = 0; i < rows.count; ++i) {
+        NSUInteger rule = i < details.count ? [details[i][@"rule"] unsignedIntegerValue] : i + 1;
+        NSString *position = i < details.count ? [NSString stringWithFormat:@"（位置 %@）", details[i][@"slot"]] : @"";
+        [decisions addObject:[NSString stringWithFormat:@"規則 %lu%@：%@", (unsigned long)rule, position, rows[i]]];
+    }
     if ([state[@"automationLog"] count]) {
         [decisions addObject:@"近期事件"];
         [decisions addObjectsFromArray:state[@"automationLog"]];

@@ -9,7 +9,10 @@ static void Check(bool condition, const char *message) {
 
 static uint32_t rol32(uint32_t value, unsigned shift) { return (value << shift) | (value >> (32 - shift)); }
 
+#include "battle_script_model_tests.inc"
+
 int main(void) {
+    TestBattleScripts();
     uint16_t target = 0;
     Check(PHBattleParseTarget("12345", &target) && target == 12345, "ordinary ID parses");
     Check(PHBattleParseTarget("65435", &target) && target == 65435, "highest representable encyclopedia number parses");

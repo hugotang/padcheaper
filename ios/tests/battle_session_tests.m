@@ -237,10 +237,12 @@ static void FreshEntry(FakeBattleEngine *engine) {
 }
 
 #include "battle_multiplayer_session_tests.inc"
+#include "battle_restore_session_tests.inc"
 
 int main(void) {
     @autoreleasepool {
         TestMultiplayerSessionDisabled();
+        TestRestoreContinuity();
         FakeBattleEngine *engine = [FakeBattleEngine new];
         // Reproduce the real-device report: mode 1 / source 0 / multi 0.
         engine->live.mode = 1;

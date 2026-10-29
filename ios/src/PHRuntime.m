@@ -763,6 +763,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
     NSMutableDictionary *battle = [[PHBattleTracker snapshot] mutableCopy];
+    if ([battle[@"restorePending"] boolValue] || [battle[@"pendingMask"] unsignedIntegerValue]) {
+        orbs[@"canOnce"] = @NO; orbs[@"canStart"] = @NO; orbs[@"canExecute"] = @NO;
+    }
     battle[@"automaticConfigured"] = @([PHConfigurationBattleFilters(PHConfig)[@"autoApplyTeam"] boolValue]);
     battle[@"automaticSwitchesReady"] = @(PHEnabled(@"battleSwap"));
     battle[@"automaticTeamID"] = PHFormationLibrary[@"selected"] ?: @"";
@@ -898,6 +901,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"entryRebindCount"], battle[@"lastLossPhase"], battle[@"lastLossSerial"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle writes: single-player only %@ / multiplayer disabled %@",
         battle[@"singlePlayerOnly"], battle[@"multiplayerDisabled"]];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nBattle script: readable %@ / program %@ / running %@ / events %@ / source bytes %@ / empty parameters 0x%03x\nBattle restore: pending 0x%02x / failed 0x%02x / provider uncertain 0x%02x",
+        battle[@"scriptReadable"], battle[@"scriptProgram"], battle[@"scriptRunning"], battle[@"scriptEventCount"],
+        battle[@"scriptSourceBytes"], [battle[@"parameterEmptyMask"] unsignedIntValue],
+        [battle[@"restorePendingMask"] unsignedIntValue], [battle[@"restoreFailedMask"] unsignedIntValue],
+        [battle[@"providerUncertainMask"] unsignedIntValue]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nCurrent HP: %@ / local team HP: %@ / valid %@",
         battle[@"currentHP"], battle[@"localTeamHP"], battle[@"hpKnown"]];
     for (NSDictionary *member in battle[@"members"]) if ([member[@"active"] boolValue]) {
@@ -922,6 +931,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
         orbs[@"startSent"], orbs[@"startAccepted"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb execution: %@ ms / limit %@ ms",
+        orbs[@"executionElapsedMS"], orbs[@"executionLimitMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:
         @"\nOrb effects: %@\nOrb hazard policy: met %@ / poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
         orbs[@"obstacles"], orbs[@"hazardsSafe"], orbs[@"poisonErased"], orbs[@"unmatchedBombs"],
@@ -933,7 +944,22 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nContinuous orbs: %@ / turn %@ / moves %@ / skills %@ / skill window %@\nSkill rules: %@\nSkill log: %@\nEnemy effects: %@ / player bypass: %@",
         orbs[@"automatic"], orbs[@"autoTurn"], orbs[@"autoMoves"], orbs[@"autoSkills"], orbs[@"skillWindow"],
-        orbs[@"rules"], orbs[@"automationLog"], orbs[@"enemyEffects"], orbs[@"playerBypass"]];
+        orbs[@"rules"], [orbs[@"automationLog"] componentsJoinedByString:@"\n"], orbs[@"enemyEffects"], orbs[@"playerBypass"]];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nSkill decisions: turn %@ / observed phase %@ / skill window %@ / busy %@",
+        orbs[@"decisionTurn"], orbs[@"decisionPhase"], orbs[@"decisionSkillWindow"], orbs[@"decisionSkillBusy"]];
+    for (NSDictionary *decision in orbs[@"ruleDecisionDetails"]) {
+        NSString *selection = [decision[@"selection"] unsignedIntValue] == UINT32_MAX ? @"auto" :
+            [decision[@"selection"] description];
+        diagnostics = [diagnostics stringByAppendingFormat:
+            @"\nRule %@ -> position %@ (#%@): %@ / state %@ / accumulated charge %@ / selection %@ / active %@ / bound %@",
+            decision[@"rule"], decision[@"slot"], decision[@"number"], decision[@"decision"], decision[@"state"],
+            decision[@"charge"], selection, decision[@"active"], decision[@"bound"]];
+        diagnostics = [diagnostics stringByAppendingFormat:
+            @" / skill stages %@ / cached stages %@ / levels %@ / use counts %@ / assist catalog %@",
+            decision[@"skillStages"], decision[@"cachedSkillStages"], decision[@"skillLevels"],
+            decision[@"memberSkillUses"], decision[@"assistCatalogID"]];
+    }
     NSDictionary *snapshot = @{
         @"schema": @1, @"dylibVersion": PH_RUNTIME_VERSION, @"loaded": @YES, @"overlayVisible": @(PHOverlayVisible),
         @"tone": tone, @"title": title, @"reason": reason ?: @"", @"validation": PHValidationMessage ?: @"",
@@ -969,6 +995,17 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqual:@"orbsOnce"] || [action isEqual:@"orbsStart"] || [action isEqual:@"orbsExecute"]) {
+        NSDictionary *battle = [PHBattleTracker snapshot];
+        if ([battle[@"restorePending"] boolValue] || [battle[@"pendingMask"] unsignedIntegerValue]) {
+            [PHOrbTracker queueStop:@"隊伍正在套用或還原，完成後可開始轉珠"];
+            PHLastStatus = 0; return;
+        }
+    }
+    if ([action isEqual:@"orbsOnce"]) {
+        [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
+        [PHOrbTracker queueOnce]; return;
+    }
     if ([action isEqual:@"orbsStart"]) {
         [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
@@ -1013,7 +1050,10 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     }
     if ([action isEqualToString:@"battleRestoreSlot"]) {
         NSUInteger slot = 0;
-        if (PHFormationReadRestoreSlot(value, &slot)) [PHBattleTracker queueRestoreSlot:slot];
+        if (PHFormationReadRestoreSlot(value, &slot)) {
+            [PHOrbTracker queueStop:@"已要求還原隊伍，停止自動轉珠與技能，等待還原"];
+            [PHBattleTracker queueRestoreSlot:slot];
+        }
         PHLastStatus = 0;
         return;
     }
@@ -1035,6 +1075,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         return;
     }
     if ([action isEqualToString:@"battleRestore"]) {
+        [PHOrbTracker queueStop:@"已要求還原隊伍，停止自動轉珠與技能，等待還原"];
         [PHBattleTracker queueRestore];
         PHLastStatus = 0;
         return;

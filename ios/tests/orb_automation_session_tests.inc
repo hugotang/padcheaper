@@ -11,7 +11,130 @@ static PHOrbSession *AutomaticSession(FakeOrbEngine *engine, NSArray *rules) {
     Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":rules}], "automation rules accepted");
     Tick(session, engine, Frame()); [session queueAutomatic]; return session;
 }
+static void SkillSelectionSessionTests() {
+    NSMutableArray *rules = [NSMutableArray array];
+    for (NSUInteger slot : {1u, 5u, 6u, 4u, 3u, 2u}) {
+        NSMutableDictionary *rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"slot"] = @(slot);
+        if (slot == 5 || slot == 6) rule[@"group"] = @1;
+        [rules addObject:rule];
+    }
+    FakeOrbEngine *engine = [FakeOrbEngine new];
+    for (unsigned slot = 0; slot < 6; ++slot) engine->unavailableSkills[slot] = slot != 1;
+    engine->live.automation.members[1].number = 14055;
+    engine->live.automation.members[1].charge = 7;
+    engine->live.automation.members[1].selection = 65063;
+    PHOrbSession *session = AutomaticSession(engine, rules);
+    Check(UntilPhase(session, engine, @"skillArming") &&
+        [[[session snapshot][@"ruleDecisionDetails"] firstObject][@"slot"] unsignedIntegerValue] == 1,
+        "rule decisions start in configured rule order rather than position order");
+    Check(UntilPhase(session, engine, @"skillWaiting") && engine->skillOrder.size() == 1 && engine->skillOrder[0] == 1,
+        "rule six reaches ready position two despite a retained old assist choice and five preceding unavailable rules");
+    NSDictionary *detail = [session snapshot][@"ruleDecisionDetails"][5];
+    Check([detail[@"rule"] unsignedIntegerValue] == 6 && [detail[@"slot"] unsignedIntegerValue] == 2 &&
+        [detail[@"number"] unsignedIntegerValue] == 14055 && [detail[@"charge"] unsignedIntegerValue] == 7 &&
+        [detail[@"selection"] unsignedIntValue] == 65063 && [detail[@"decision"] containsString:@"已啟動"],
+        "diagnostics preserve the exact rule-to-position mapping and member context that led to the skill attempt");
+    Check(UntilPhase(session, engine, @"turnWaiting") && engine->skillOrder.size() == 1 &&
+        [[[session snapshot][@"ruleDecisions"] lastObject] containsString:@"本回合已確認完成"],
+        "a still-ready position remains limited to one confirmed use per orb turn after selection preparation");
+    [session queueStop:@"end retained selection fixture"];
+    // Real idle reads omit automation context; copied decisions must keep the
+    // observation which caused them, rather than report zeroed current fields.
+    engine->live.automation = {};
+    for (unsigned i = 0; i < 12; ++i) Tick(session, engine, Frame());
+    detail = [session snapshot][@"ruleDecisionDetails"][5];
+    Check([detail[@"number"] unsignedIntegerValue] == 14055 && [detail[@"charge"] unsignedIntegerValue] == 7 &&
+        [detail[@"decision"] containsString:@"本回合已確認完成"], "stopping and subsequent idle reads retain the recorded decision context");
+    Check([session configureSettings:@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[]}],
+        "idle common settings can be restored after the run");
+    detail = [session snapshot][@"ruleDecisionDetails"][5];
+    Check([detail[@"rule"] unsignedIntegerValue] == 6 && [detail[@"slot"] unsignedIntegerValue] == 2 &&
+        [detail[@"number"] unsignedIntegerValue] == 14055,
+        "restoring different idle settings preserves the prior run's decisions and rule-position mapping");
+
+    NSMutableDictionary *second = [PHOrbDefaultSkillRule() mutableCopy]; second[@"slot"] = @2;
+    for (bool required : {false, true}) {
+        engine = [FakeOrbEngine new]; engine->live.automation.members[1].selection = 65063;
+        engine->unavailableSkills[1] = YES; second[@"required"] = @(required);
+        session = AutomaticSession(engine, @[second]);
+        if (required) {
+            for (unsigned i = 0; i < 120 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session, engine, Frame());
+            Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages &&
+                [[session snapshot][@"message"] containsString:@"必要規則"], "required retained-choice skill still blocks dragging when native readiness refuses");
+        } else {
+            Check(UntilPhase(session, engine, @"turnWaiting"), "optional retained-choice skill may be skipped on actual native refusal");
+            [session queueStop:@"end unavailable selection fixture"];
+        }
+        Check(engine->skillAttempts == 1 && engine->skillOrder.empty() &&
+            engine->live.automation.members[1].selection == 65063,
+            "native refusal is not retried and does not prepare or consume the unavailable skill");
+    }
+    engine = [FakeOrbEngine new]; engine->live.automation.members[1].selection = 65063;
+    engine->live.automation.members[1].state = 4; engine->live.automation.busy = true;
+    session = AutomaticSession(engine, @[second]);
+    for (unsigned i = 0; i < 40; ++i) Tick(session, engine, Frame());
+    Check(!engine->skillAttempts && !engine->stages && engine->live.automation.members[1].selection == 65063,
+        "an open native selection dialog prevents all automatic skill and orb input");
+    [session queueStop:@"end open selection fixture"];
+}
+static void RouteProgressSessionTests() {
+    FakeOrbEngine *engine = [FakeOrbEngine new];
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Check([session configureSettings:@{@"quality":@"fast", @"mode":@"manual", @"rules":@[],
+        @"goals":@[@{@"kind":@"four", @"colors":@32, @"count":@1, @"length":@0}]}], "progress regression uses a heart-four objective");
+    // One movable fire orb leaves an isolated heart four after its first swap.
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = 0;
+    engine->live.board.types[6] = engine->live.board.types[12] = engine->live.board.types[18] = engine->live.board.types[25] = 5;
+    engine->live.board.fixedStart = 25;
+    Tick(session, engine, Frame()); [session queueAutomatic];
+    Check(UntilPhase(session, engine, @"turnWaiting") && [[session snapshot][@"confirmed"] unsignedIntegerValue] > 0,
+        "first successful route has observed progress before the next search");
+    NSUInteger completed = [[session snapshot][@"completed"] unsignedIntegerValue];
+    const NSUInteger stages = engine->stages;
+    engine->live.phase = 2; engine->live.moves = 0; engine->live.board.fixedStart = 0;
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = 0;
+    for (unsigned i = 0; i < 2000 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session, engine, Frame());
+    NSDictionary *result = [session snapshot];
+    Check(![result[@"automatic"] boolValue] && ![result[@"goalsMet"] boolValue] &&
+        [result[@"confirmed"] unsignedIntegerValue] == 0 && ![result[@"startSent"] boolValue] && ![result[@"startAccepted"] boolValue] &&
+        [result[@"completed"] unsignedIntegerValue] == completed && engine->stages == stages,
+        "an unsuccessful second search shows zero route progress without losing the completed count or sending new input");
+    [session queueRead];
+    Check([[session snapshot][@"confirmed"] unsignedIntegerValue] == 0 && [[session snapshot][@"steps"] unsignedIntegerValue] == 0,
+        "starting another manual read clears the previous candidate and its progress together");
+    [session queueStop:@"end progress fixture"];
+}
+static void EvolvedSkillTurnSessionTests() {
+    NSMutableArray *rules = [NSMutableArray array];
+    for (unsigned slot = 1; slot <= 6; ++slot) {
+        NSMutableDictionary *rule = [PHOrbDefaultSkillRule() mutableCopy]; rule[@"slot"] = @(slot);
+        [rules addObject:rule];
+    }
+    FakeOrbEngine *engine = [FakeOrbEngine new];
+    engine->live.automation.members[2].number = 14175;
+    engine->live.automation.members[2].charge = 4;
+    engine->live.automation.members[2].skillStage[0] = engine->live.automation.members[2].cachedSkillStage[0] = 1;
+    engine->unavailableSkills[2] = YES;
+    PHOrbSession *session = AutomaticSession(engine, rules);
+    Check(UntilPhase(session, engine, @"turnWaiting") && engine->skillOrder.size() == 5,
+        "five independent ready skills finish while the evolved third position is still one turn short");
+    for (NSUInteger slot : engine->skillOrder) Check(slot != 2, "no cast bypasses the third position's native cooldown refusal");
+    NSDictionary *detail = [session snapshot][@"ruleDecisionDetails"][2];
+    engine->live.automation.members[2].charge = 5; // Native orb resolution charges the next turn.
+    Check([detail[@"charge"] unsignedIntegerValue] == 4 &&
+        [[[session snapshot][@"ruleDecisionDetails"][2] objectForKey:@"charge"] unsignedIntegerValue] == 4,
+        "the previous skill decision keeps four charge even when post-resolution live charge is five");
+    for (unsigned slot = 0; slot < 6; ++slot) engine->unavailableSkills[slot] = slot != 2;
+    engine->live.phase = 2; engine->live.moves = 0;
+    Check(UntilPhase(session, engine, @"skillWaiting") && engine->skillOrder.size() == 6 && engine->skillOrder.back() == 2 &&
+        [[session snapshot][@"autoTurn"] unsignedIntegerValue] == 2,
+        "the next native orb turn clears old refusals and casts the newly ready evolved skill exactly once");
+    [session queueStop:@"end evolved skill turn fixture"];
+}
 static void AutomationSessionTests() {
+    SkillSelectionSessionTests();
+    RouteProgressSessionTests();
+    EvolvedSkillTurnSessionTests();
     FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = AutomaticSession(engine, @[]);
     Check([[session snapshot][@"busy"] boolValue] && [[session snapshot][@"canStop"] boolValue] &&
         ![session configureQuality:@"thorough"], "automatic waiting exposes stop and captures immutable settings");
@@ -144,4 +267,41 @@ static void AutomationSessionTests() {
     for (unsigned i = 0; i < 60; ++i) Tick(session, engine, Frame());
     Check(![[session snapshot][@"automatic"] boolValue] && engine->skillOrder.empty() && engine->stages == 0,
         "a needed unknown enemy condition stops before skills or solver input");
+}
+
+static void FramePacingSessionTests() {
+    FakeOrbEngine *engine = [[FakeOrbEngine alloc] initWithWidth:7 height:6];
+    engine->requireHoldForStart = YES; engine->live.fps = 30; engine->live.remainingFrames = 330;
+    // The existing IMG_0407 regression produces a long, fully verified route.
+    constexpr uint8_t board[]{3,1,0,0,3,4,5, 3,5,5,0,3,3,5, 5,3,0,5,1,5,2,
+        3,4,5,5,3,5,4, 1,3,5,0,3,1,2, 0,5,2,0,3,5,4};
+    std::copy(std::begin(board), std::end(board), engine->live.board.types);
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Check([session configureSettings:@{@"quality":@"thorough", @"mode":@"manual", @"rules":@[],
+        @"goals":@[@{@"kind":@"t", @"colors":@8, @"count":@1},
+                    @{@"kind":@"four", @"colors":@32, @"count":@1},
+                    @{@"kind":@"combo", @"colors":@0, @"count":@1}]}], "render-latency pacing goals");
+    Check(Preview(session, engine), "long route preview for 30-fps rendering fixture");
+    const NSUInteger steps = [[session snapshot][@"steps"] unsignedIntegerValue];
+    Check(steps > 40 && [[session snapshot][@"goalsMet"] boolValue],
+        "pacing regression exercises a valid route longer than the old render-latency cutoff");
+    Execute(session);
+    // Twelve ms of native rendering/read work causes old confirmation-based
+    // timing to require three frames per step despite budgeting only two.
+    for (unsigned i = 0; i < 180 && [[session snapshot][@"busy"] boolValue]; ++i)
+        Tick(session, engine, Frame(), 1.0 / 30, 0.012);
+    NSDictionary *result = [session snapshot];
+    Check([result[@"phase"] isEqual:@"complete"] && engine->live.moves == steps &&
+        [result[@"confirmed"] unsignedIntegerValue] == steps && engine->releases == 1 && !engine->live.dragged &&
+        [result[@"executionElapsedMS"] unsignedIntegerValue] < 4000,
+        "native render latency does not accumulate an extra frame per swap or truncate an acknowledged long route");
+
+    engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
+    Check(Preview(session, engine), "execution deadline diagnostic setup"); Execute(session); UntilDragging(session, engine);
+    Tick(session, engine, Frame(), 4.1);
+    result = [session snapshot];
+    Check([result[@"phase"] isEqual:@"stopped"] && [result[@"message"] containsString:@"4.0 秒上限"] &&
+        [result[@"executionElapsedMS"] unsignedIntegerValue] > 4000 && !engine->live.dragged && engine->releases == 1 &&
+        [result[@"completed"] unsignedIntegerValue] == 0,
+        "a real execution stall still releases once and preserves the specific deadline cause");
 }

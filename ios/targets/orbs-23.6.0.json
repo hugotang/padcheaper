@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.3-orbs",
+  "prototype_version": "0.5.4-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -315,6 +315,46 @@
       "length": 64,
       "bytes": "ffc306d1fc6f16a9f85f17a9f65718a9f44f19a9fd7b1aa9fd830691f40301aa285a00d008b142f9080140f9a8831bf8083840f9092787526901a072096969b8",
       "sha256": "5a13a7a1e0febdcf4fed3167cdffa62dd8a944ae9b56590fe887428e0e6ec992"
+    },
+    {
+      "name": "PHOrbBaseSkillRVA",
+      "va": "0x100482cfc",
+      "rva": "0x482cfc",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa080040f969b600f029c11e91085580b90a388c52ea18a07229696af88a06805200252a9b2ad30294e80300aa690240f9",
+      "sha256": "b678b2c450d4a06991438009971fe71750d83c93c85c2b817649e70672fb55d1"
+    },
+    {
+      "name": "PHOrbAssistSkillRVA",
+      "va": "0x100482e24",
+      "rva": "0x482e24",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30300aa087cc1791f0100710d030054691243390a488852ea01a07221210a1b75b600f0b5c21e9108f09152a002088b",
+      "sha256": "05735c8b3ec682c340bbe5c927c3f95ddd1195b179b7d46440b903a32f4ac955"
+    },
+    {
+      "name": "PHOrbBaseCooldownRVA",
+      "va": "0x10059fb34",
+      "rva": "0x59fb34",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801b008c13791003940f9e3ffff97f50300aa80821391e10313aaa68bfb970800150b1f000071",
+      "sha256": "5f7dea3726524208e6bb97349daa3d98a619fd7ab24aa75cf393ac0b0a80e6a3"
+    },
+    {
+      "name": "PHOrbTotalCooldownRVA",
+      "va": "0x10059f95c",
+      "rva": "0x59f95c",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801b008c13791003940f959000094f50300aa883ecb791f010071f6d79f1a80821391e10313aa",
+      "sha256": "e5bbdf3709cf2ef167d94cc6e48bcc1fe18160610750709edb26d878e04342c2"
+    },
+    {
+      "name": "PHOrbSkillSelectionResetRVA",
+      "va": "0x1005ccdbc",
+      "rva": "0x5ccdbc",
+      "length": 64,
+      "bytes": "0800801288c604b9e00313aae10314aa81ffff97a00100348800805288ca04b9683a40f90849429100e12591c10280525a8ffe97e00313aae10314aafd7b41a9",
+      "sha256": "2174c971dc89d7610ef5b344dc02e17992ff3c02ed4436ac4e0d12c4a4062d81"
     },
     {
       "name": "PHOrbSkillUpdateRVA",

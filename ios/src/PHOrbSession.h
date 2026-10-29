@@ -25,6 +25,8 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUna
 - (BOOL)configureSettings:(NSDictionary *)settings;
 - (BOOL)configureProfiles:(NSDictionary *)library;
 - (void)queueRead;
+// Explicit one-click read/solve/execute, without continuous skill rules.
+- (void)queueOnce;
 - (void)queueAutomatic;
 - (void)queueExecute:(NSUInteger)generation;
 - (void)queueStop:(NSString *)reason;

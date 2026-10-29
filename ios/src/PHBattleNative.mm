@@ -8,6 +8,8 @@
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
+#include <vector>
+#include <utility>
 
 namespace {
 struct NativeCalls {
@@ -422,6 +424,7 @@ static BOOL Perform(const PHBattleState *state, NSUInteger slot, uint16_t form, 
     if (!ReadLive(state, frame, reason, nullptr, 6, _multiplayerDisabled)) return NO;
     _multiplayerDisabled = state->present && state->multiplayerDisabled;
     TagProviderMembers(&_provider, state);
+    ReadProviderDiagnostics(state);
     if (!state->present || !PHBattleSameIdentity(&_entryIdentity, &state->identity)) _entryAttempted = NO;
     return YES;
 }

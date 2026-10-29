@@ -39,6 +39,18 @@ typedef struct {
     PHBattlePolicy policy;
 } PHBattleLease;
 
+static NSInteger FindUncertainProvider(const PHBattleState *state, const PHBattleMember *expected) {
+    if (!expected->providerToken) return -1;
+    NSInteger found = -1;
+    for (NSUInteger i = 0; i < 6; ++i) {
+        const PHBattleMember *member = &state->members[i];
+        if (!member->providerUncertain || !PHBattleSameSource(expected, member)) continue;
+        if (found >= 0) return -2;
+        found = (NSInteger)i;
+    }
+    return found;
+}
+
 // The accepted recipe belongs to the lease, not to the editor's current team.
 // Keep the requested values immutable while the game may transform a member.
 static NSDictionary *RecipeSnapshot(const PHBattleLoadout *v) {
@@ -219,6 +231,15 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         }
         if (!_state.protectedValuesValid || !PHBattleTeamLayoutValid(&_state)) continue;
         NSInteger position = FindMember(&_state, &lease->applied);
+        NSInteger uncertainPosition = position < 0 ? FindUncertainProvider(&_state, &lease->applied) : -1;
+        if (uncertainPosition >= 0) {
+            // The native engine could not verify the parameter source. Keep
+            // the accepted recipe and pending restore until a later read can
+            // distinguish recovery from a real takeover.
+            lease->visible = YES; lease->slot = (NSUInteger)uncertainPosition;
+            _gateMessage = @"隊伍參數來源暫時未能確認；已保留剩餘還原排程";
+            continue;
+        }
         const PHBattleMember *m = position >= 0 ? &_state.members[position] : NULL;
         BOOL superseded = !m;
         if (!superseded && !lease->applied.providerToken) {
@@ -282,7 +303,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
     }
     // Manual Apply/Restore still performs exactly one member per fresh frame.
     if ([self restorePending]) {
-        BOOL temporary = NO, offscreen = NO;
+        BOOL temporary = NO, offscreen = NO, providerWaiting = NO;
         for (NSUInteger i = 0; i < 6; ++i) {
             PHBattleLease *lease = &_leases[i];
             if (!lease->active || !lease->restorePending) continue;
@@ -293,6 +314,9 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             PHBattleGate restoreGate = PHBattleStateGate(&restoreState);
             if (restoreGate != PHBattleGateReady) { _gateMessage = PHBattleGateMessage(restoreGate, &restoreState); continue; }
             PHBattleMember *current = &_state.members[lease->slot];
+            if (current->providerUncertain || (lease->applied.providerToken && _state.scriptRunning)) {
+                providerWaiting = YES; continue;
+            }
             if (current->temporaryID || current->temporaryTurns) { temporary = YES; continue; }
             PHBattleMutationResult result = lease->applied.providerToken ?
                 [_engine restoreLoadout:&lease->original state:&restoreState slot:lease->slot reason:&reason] :
@@ -301,12 +325,20 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             lease->restorePending = NO;
             if (result == PHBattleMutationApplied) {
                 lease->active = NO; lease->restoreFailed = NO; _restoreCount++;
-                _message = [NSString stringWithFormat:@"位置 %lu 已還原為 #%u", (unsigned long)lease->slot + 1, Number(lease->original.catalogID)];
+                NSUInteger remaining = 0;
+                for (NSUInteger j = 0; j < 6; ++j) remaining += _leases[j].active && _leases[j].restorePending;
+                _message = [NSString stringWithFormat:@"位置 %lu 已還原為 #%u%@", (unsigned long)lease->slot + 1,
+                    Number(lease->original.catalogID), remaining ? [NSString stringWithFormat:@"；尚有 %lu 個位置等待還原", (unsigned long)remaining] : @""];
                 if (lease->automatic) _automaticMessage = _message;
-            } else { lease->restoreFailed = YES; [self recordFailure:result reason:reason]; }
+            } else {
+                lease->restoreFailed = YES;
+                [self recordFailure:result reason:[NSString stringWithFormat:@"位置 %lu 還原未完成：%@", (unsigned long)lease->slot + 1,
+                    reason ?: @"原生檢查未通過"]];
+            }
             [self didMutate]; return;
         }
-        if (temporary) _gateMessage = @"等待遊戲的暫時變身結束後還原";
+        if (providerWaiting) _gateMessage = @"等待關卡腳本結束或參數來源確認；剩餘還原排程保留";
+        else if (temporary) _gateMessage = @"等待遊戲的暫時變身結束後還原";
         else if (offscreen) _gateMessage = @"等待切回包含待還原隊員的隊伍";
         return;
     }
@@ -424,7 +456,15 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
 - (NSDictionary *)snapshot {
     NSUInteger activeCount = [self activeCount];
     NSUInteger offscreenCount = 0;
+    uint8_t restorePendingMask = 0, restoreFailedMask = 0, providerUncertainMask = 0;
     for (NSUInteger i = 0; i < 6; ++i) offscreenCount += _leases[i].active && !_leases[i].visible;
+    for (NSUInteger i = 0; i < 6; ++i) {
+        if (_leases[i].active && _leases[i].visible && _leases[i].slot < 6) {
+            restorePendingMask |= _leases[i].restorePending ? (uint8_t)(1u << _leases[i].slot) : 0;
+            restoreFailedMask |= _leases[i].restoreFailed ? (uint8_t)(1u << _leases[i].slot) : 0;
+        }
+        if (_hasState && _state.members[i].providerUncertain) providerUncertainMask |= (uint8_t)(1u << i);
+    }
     BOOL restoring = [self restorePending];
     NSMutableArray *members = [NSMutableArray array];
     if (_hasState && _state.present) for (NSUInteger slot = 0; slot < 6; ++slot) {
@@ -438,6 +478,7 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
             @"assist": @(Number(m.assistID)), @"nativeID": @(m.catalogID), @"charge": @(m.charge),
             @"sourceTeam": @(m.sourceTeam + 1), @"sourceSlot": @(m.sourceSlot + 1), @"scriptSlot": @(m.scriptSlot),
             @"providerToken": @(m.providerToken), @"rebindToken": @(m.rebindToken),
+            @"providerUncertain": @(m.providerUncertain),
             @"level": @(m.level), @"skillLevel": @(m.skillLevel), @"leased": @(leased),
             @"appliedRecipe": recipe,
             @"temporary": @(m.temporaryID != 0 || m.temporaryTurns != 0),
@@ -453,6 +494,8 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         @"singlePlayerOnly": @YES, @"multiplayerDisabled": @(_multiplayerDisabled),
         @"canApply": @(canApply), @"canRestore": @(!_multiplayerDisabled && (activeCount || _pending || _autoWaiting) && !_fault), @"applied": @(activeCount > 0),
         @"activeCount": @(activeCount), @"pendingMask": @(_pending), @"restorePending": @(restoring), @"fault": @(_fault),
+        @"restorePendingMask": @(restorePendingMask), @"restoreFailedMask": @(restoreFailedMask),
+        @"providerUncertainMask": @(providerUncertainMask),
         @"message": _message ?: @"", @"gate": _gateMessage ?: @"", @"members": members,
         @"mode": @(_state.mode), @"sourceMode": @(_state.sourceMode), @"multiplayer": @(_state.multiplayer),
         @"teamCount": @(_state.teamCount), @"currentTeam": @(_state.currentTeam + 1),
@@ -461,6 +504,9 @@ static NSInteger FindMember(const PHBattleState *state, const PHBattleMember *ex
         @"turnTeam": @(_state.turnInfoValid ? _state.turnTeam + 1 : 0),
         @"teamBanksValid": @(_state.teamBanksValid), @"offscreenCount": @(offscreenCount),
         @"battlePhase": @(_state.phase), @"auditFlags": @(_state.auditFlags),
+        @"scriptReadable": @(_hasState && _state.scriptReadable), @"scriptProgram": @(_state.scriptProgram),
+        @"scriptRunning": @(_state.scriptRunning), @"scriptEventCount": @(_state.scriptEventCount),
+        @"scriptSourceBytes": @(_state.scriptSourceBytes), @"parameterEmptyMask": @(_state.parameterEmptyMask),
         @"inputValid": @(_hasState && _state.input.valid), @"inputQuiet": @(_hasState && PHInputIsQuiet(&_state.input)),
         @"rawInputCount": @(_state.input.rawCount), @"frameInputCount": @(_state.input.frameCount),
         @"rawInputMask": @(_state.input.rawActiveMask), @"frameInputMask": @(_state.input.frameActiveMask),

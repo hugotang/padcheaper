@@ -66,6 +66,9 @@ cp ios/docs/orb-survival.md "$build_dir/orb-survival.md"
 cp ios/docs/orb-recovery.md "$build_dir/orb-recovery.md"
 cp ios/docs/orb-effects.md "$build_dir/orb-effects.md"
 cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
+cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
+cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
+cp ios/docs/release-0.5.4.md "$build_dir/release-0.5.4.md"
 cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
 cp ios/docs/uryu-byakuya-0.5.2.md "$build_dir/uryu-byakuya-0.5.2.md"
 cp ios/docs/development.md "$build_dir/development.md"
@@ -118,6 +121,12 @@ metadata = {
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
+    "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
+    "skill_selection_reset": "only an idle member passing native readiness may reset a retained selection to the native default sentinel; exact ID and fresh snapshot checked, no charge writes",
+    "floating_orb_shortcuts": "read/solve/execute once using saved goals and quality, or explicit continuous start using existing skill rules; stop available throughout; no duplicate starts, no writes on failed goals",
+    "scripted_team_provider": "inspect native bounded bytecode from initial and all event roots; share empty records only when no party opcode exists; preserve native script and events; refuse malformed/unknown/running contexts",
+    "team_restore_continuity": "unknown provider reads retain pending restores; running scripts retain ownership but defer writes; explicit restore stops orb automation; pending and failed positions remain diagnostic",
+    "orb_frame_pacing": "65 ms target submission spacing includes native render time; every swap must still be acknowledged; unchanged four-second execution deadline and native time budget, with specific stop cause and elapsed time",
     "automatic_orb_input": "one began per route followed by held frames in the same private input bank; accepts tall iPhone layouts that defer selection; initial cancellation cause survives unowned/scene cleanup; start sent/accepted diagnostics; device repair pending",
     "automatic_skill_ready_shortcut": "rule editor sets every=1 while preserving all conditions, rotation group and floor reservation; checks before each orb turn only in continuous mode",
     "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
