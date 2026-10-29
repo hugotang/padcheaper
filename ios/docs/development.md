@@ -14,7 +14,9 @@ Windows x64 的 GCC／G++ `-O2 -Wall -Wextra -Werror` 已編譯通過，求解�
 
 [CI 57](https://github.com/hugotang/padcheaper/actions/runs/40840899767)，來源 `a4eca7cdfc9f5b594ed4c5109ad5a408b83d4153`：完整原生／session／規則／設定測試、arm64 iPhoneOS 編譯、瀏覽器與嚴格簽章檢查通過。GUI probe 的新增效果案例未引入 `PHOrbModel.h`，造成 `PHOrbTypes` 與效果旗標未宣告；已補上引用，待手動 CI 重跑。此錯誤在測試程式，未改動求解器或執行邏輯；CI 57 產物未交付。
 
-原始 IPA 的 bundle／版本／build／arm64／UUID／執行檔雜湊及 36 筆指紋已全部核對。四份模擬器／重啟報告及最終交付驗證仍待完成；通過後再核對下載 dylib 雜湊與來源。下列「未編譯測試」段落保留各批原始開發狀態，最新驗證以本節為準。
+[CI 58](https://github.com/hugotang/padcheaper/actions/runs/40841796580)，來源 `f810b57c262f864480a7e06770a605f10564322c`，全部步驟成功，四份 GUI 報告均為 `phase=done`、`success=1`、零 failures。macOS 上 IMG_0407 心四連三檔均達標，22／30／44 步、23／66／215 ms；這不是 iPhone 耗時。下載後檢視截圖發現效果盤面位於可見範圍下方，未能核對全盤標記。probe 已加入捲到盤面的操作，確認全部行列及固定操作列可見後再截圖；待下一次手動 CI，CI 58 尚未交付。
+
+原始 IPA 的 bundle／版本／build／arm64／UUID／執行檔雜湊及 36 筆指紋已全部核對。修正後畫面及最終交付驗證仍待完成；通過後再核對下載 dylib 雜湊與來源。下列「未編譯測試」段落保留各批原始開發狀態，最新驗證以本節為準。
 
 ## 光 T／心四連：判定與搜尋已修改，未編譯測試
 

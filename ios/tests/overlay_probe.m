@@ -63,6 +63,38 @@ static UIWindow *PHProbeOverlay(UIWindowScene *scene) {
     return nil;
 }
 
+static UIScrollView *PHProbeScrollParent(UIView *view) {
+    UIView *parent = view.superview;
+    while (parent && ![parent isKindOfClass:UIScrollView.class]) parent = parent.superview;
+    return (UIScrollView *)parent;
+}
+
+static void PHProbeRevealBoard(UIWindow *overlay) {
+    [overlay layoutIfNeeded];
+    UIView *board = PHProbeFind(overlay, @"padcheaper.orbsBoard");
+    UIScrollView *scroll = PHProbeScrollParent(board);
+    PHProbeCheck(board && scroll, @"Board screenshot requires its scroll container");
+    if (!board || !scroll) return;
+    // The settings can push the entire board below the fixed action bar. A
+    // screenshot is useful only after the board is visible, as after a swipe.
+    CGRect boardRect = [board convertRect:board.bounds toView:scroll];
+    CGFloat minimum = -scroll.adjustedContentInset.top;
+    CGFloat maximum = MAX(minimum, scroll.contentSize.height - CGRectGetHeight(scroll.bounds) + scroll.adjustedContentInset.bottom);
+    CGFloat desired = CGRectGetMinY(boardRect) - scroll.adjustedContentInset.top - 8;
+    [scroll setContentOffset:CGPointMake(scroll.contentOffset.x, MIN(maximum, MAX(minimum, desired))) animated:NO];
+    [overlay layoutIfNeeded];
+    CGRect visible = UIEdgeInsetsInsetRect(scroll.bounds, scroll.adjustedContentInset);
+    boardRect = [board convertRect:board.bounds toView:scroll];
+    PHProbeCheck(!board.hidden && board.alpha > 0 && CGRectGetWidth(board.bounds) > 0 && CGRectGetHeight(board.bounds) > 0 &&
+        CGRectContainsRect(CGRectInset(visible, -0.5, -0.5), boardRect),
+        @"Board screenshot must show every row and column inside the scroll viewport");
+    for (NSString *identifier in @[@"padcheaper.orbsClose", @"padcheaper.orbsRead", @"padcheaper.orbsExecute", @"padcheaper.orbsStart", @"padcheaper.orbsStop"]) {
+        UIView *control = PHProbeFind(overlay, identifier);
+        PHProbeCheck(control && CGRectContainsRect(overlay.bounds, [control convertRect:control.bounds toView:overlay]),
+            @"Fixed orb actions remain visible after scrolling to the board");
+    }
+}
+
 static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
     UIView *gameView = guest.rootViewController.view;
     // Presented sheets live beside the root view in UIKit's window hierarchy.
@@ -474,6 +506,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             orbSlider.value = 3; [orbSlider sendActionsForControlEvents:UIControlEventValueChanged];
             PHProbeCheck([PHProbeFind(orbWindow, @"padcheaper.orbsBoard").accessibilityLabel containsString:@"第 3／6 步"],
                 @"Native preview describes the selected step and starting cell");
+            PHProbeRevealBoard(orbWindow);
             PHProbeRender(self.window, orbWindow, @"orbs-preview");
             for (NSArray<NSNumber *> *dimensions in @[@[@7,@6], @[@5,@4]]) {
                 const NSUInteger width = dimensions[0].unsignedIntegerValue, height = dimensions[1].unsignedIntegerValue;
@@ -489,6 +522,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 PHProbeCheck([boardView.accessibilityLabel containsString:@"目前：上起 2 列、左起 3 格"] &&
                     fabs(CGRectGetHeight(boardView.bounds) - CGRectGetWidth(boardView.bounds) * height / width) < 1,
                     @"Expanded board preview uses its actual columns and aspect ratio");
+                PHProbeRevealBoard(orbWindow);
                 PHProbeRender(self.window, orbWindow, [NSString stringWithFormat:@"orbs-%lux%lu-preview", (unsigned long)width, (unsigned long)height]);
                 for (NSString *identifier in @[@"padcheaper.orbsClose", @"padcheaper.orbsRead", @"padcheaper.orbsExecute", @"padcheaper.orbsStart", @"padcheaper.orbsStop"]) {
                     UIView *control = PHProbeFind(orbWindow, identifier);
@@ -529,6 +563,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
                 PHProbeCheck(orbAction == nil && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
                     @"Hazard previews remain visible without dispatching an execute action");
+                PHProbeRevealBoard(orbWindow);
                 PHProbeRender(self.window, orbWindow, [NSString stringWithFormat:@"orbs-effects-%lux%lu", (unsigned long)width, (unsigned long)height]);
                 orbSlider.value = 1; [orbSlider sendActionsForControlEvents:UIControlEventValueChanged];
                 PHProbeCheck([boardView.accessibilityLabel containsString:@"第 1／1 步"], @"Effect previews support ordinary step navigation");
@@ -570,6 +605,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             goalFailure[@"canExecute"] = @NO;
             goalFailure[@"goalPlan"] = @{@"available":@YES, @"goals":savedGoals, @"message":@"木 整直行 × 1 組", @"warning":@""};
             orbAction = nil; [orbController refresh];
+            UIScrollView *orbScroll = PHProbeScrollParent(PHProbeFind(orbWindow, @"padcheaper.orbsBoard"));
+            [orbScroll setContentOffset:CGPointZero animated:NO]; [orbController.view layoutIfNeeded];
             [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(orbAction == nil && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled] &&
                 [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalDescription")).text containsString:@"未達成"],
