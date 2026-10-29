@@ -19,6 +19,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
+    BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
     NSUInteger skillFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
@@ -76,9 +77,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled || multiplayerLatched ||
-        !PHOrbSameTurn(&live, expected) || !PHOrbSameBoard(&live.board, &expected->board) ||
+        !PHOrbSameTurn(&live, expected) || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (hold && !PHOrbSameLeaders(&live, expected)) ||
-        (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height) return NO;
+        (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
+        (hold && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << target))) ||
+        (hold && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(target)))) return NO;
     ++stages; cell = target; down = hold; beginning = begin; staged = YES;
     if (!down) ++releases;
     return YES;
@@ -97,6 +100,14 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
         if (clearObstaclesWithSkill) { live.obstacles = 0; live.ordinary = true; }
+        if (createSpinnerWithSkill) {
+            live.board.spinnerMask = 1 | (UINT64_C(1) << live.board.width); live.board.spinnerColors = 63;
+            live.spinnerTurns = 4; live.spinnerPeriodFrames = 30; tickSpinners = YES;
+        }
+        if (removeSpinnerWithSkill) {
+            live.board.spinnerMask = live.board.spinnerColors = live.spinnerTurns = live.spinnerPeriodFrames = 0;
+            live.obstacles = 0; live.ordinary = true; tickSpinners = NO;
+        }
         if (healWithSkill) live.automation.hp = live.automation.maximumHP;
         if (makeHeartsWithSkill) for (unsigned i = 0; i < 4; ++i) live.board.types[i] = 5;
         if (clearPlayerStatusWithSkill) {
@@ -105,6 +116,16 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         }
         return;
     }
+    if (tickSpinners && live.phase == 2) {
+        // Independent fake of the native shared countdown, deliberately fast
+        // enough to cross colors during stability sampling and every gesture.
+        for (unsigned i = 0; i < live.board.width * live.board.height; ++i)
+            if ((live.board.spinnerMask & (UINT64_C(1) << i)) && !(live.board.flags[i] & PHOrbFlagLocked))
+                for (unsigned next = 1; next <= PHOrbTypes; ++next) {
+                    unsigned color = (live.board.types[i] + next) % PHOrbTypes;
+                    if (live.board.spinnerColors & (1u << color)) { live.board.types[i] = uint8_t(color); break; }
+                }
+    }
     if (!staged) return;
     if (!down) { live.dragged = 0; live.settled = true; live.phase = 3; return; }
     if (beginning) {
@@ -112,7 +133,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (requireHoldForStart) return; // Native tall-layout began gate.
     }
     if (beginning || !live.dragged) {
-        if (!ignoreStart) { live.dragged = live.board.tokens[cell]; live.settled = false; }
+        if (!ignoreStart) {
+            live.dragged = live.board.tokens[cell]; live.settled = false;
+            for (auto &flags : live.board.flags) flags &= ~PHOrbFlagStartDim;
+        }
         if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
         if (dropHPOnStart) { live.automation.hp = 100; dropHPOnStart = NO; }
         return;
@@ -125,6 +149,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     Check(PHOrbAdjacent(from, unsigned(cell), live.board.width, live.board.height), "executor never skips to a nonadjacent cell");
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
     std::swap(live.board.flags[from], live.board.flags[cell]); std::swap(live.board.enhancement[from], live.board.enhancement[cell]);
+    std::swap(live.board.blindTurns[from], live.board.blindTurns[cell]); std::swap(live.board.thornDamage[from], live.board.thornDamage[cell]);
+    live.board.flags[from] &= ~PHOrbFlagBlindTouch; live.board.flags[cell] &= ~PHOrbFlagBlindTouch;
     ++live.moves;
     if (dropHPOnMove) { live.automation.hp = 100; dropHPOnMove = NO; }
     if (replaceLeaderOnMove) { live.leaderNumbers[0] = 14242; replaceLeaderOnMove = NO; }
@@ -160,6 +186,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_strategy_session_tests.inc"
 #include "orb_survival_session_tests.inc"
 #include "orb_recovery_session_tests.inc"
+#include "orb_effect_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -288,6 +315,16 @@ int main() {
         Check(Preview(session, engine) && ![[session snapshot][@"goalsMet"] boolValue] &&
               ![[session snapshot][@"canExecute"] boolValue] && [[session snapshot][@"goalCount"] unsignedIntegerValue] == 2,
               "conflicting shapes yield a labelled non-executable partial preview");
+        NSDictionary *partial = [session snapshot];
+        NSString *partialMessage = partial[@"message"];
+        NSArray *partialGoals = partial[@"goalPlan"][@"goals"], *partialHits = partial[@"goalHits"];
+        Check(partialGoals.count == partialHits.count, "partial preview retains every goal result");
+        for (NSUInteger i = 0; i < MIN(partialGoals.count, partialHits.count); ++i) if ([partialHits[i] unsignedIntegerValue] < [partialGoals[i][@"count"] unsignedIntegerValue])
+            Check([partialMessage containsString:PHOrbGoalDescription(partialGoals[i])],
+                "partial preview names each unmet goal so failure logs identify the missing condition");
+        Check([partialMessage containsString:@"求路耗時"] && [partialMessage containsString:@"ms"] &&
+            [partialMessage containsString:[partial[@"deadline"] boolValue] ? @"已到時間上限" : @"未到時間上限"],
+            "partial preview distinguishes search elapsed time and deadline from drag duration");
         Execute(session); for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
         Check(engine->stages == 0, "even a direct execute request cannot bypass unmet goals");
 
@@ -420,6 +457,7 @@ int main() {
         StrategySessionTests();
         SurvivalSessionTests();
         RecoverySessionTests();
+        OrbEffectSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

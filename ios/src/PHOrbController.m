@@ -159,7 +159,7 @@
     UIButton *add = [self button:@"＋ 新增條件"]; add.enabled = self.draft.count < PHOrbMaxGoals;
     add.accessibilityIdentifier = @"padcheaper.orbsGoalAdd";
     [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"所有條件需同時達成。相同條件請增加組數，最多 6 項。\n\nL／十字／T 須獨立 5 顆，3×3 須獨立 9 顆，四連須直線 4 顆，周邊不連同色珠；形狀以首批消除為準。橫排與直行依實際盤面寬高判定。多組目標需分成不同 Combo。\n\nCombo 與多色可包含盤內連鎖，不含天降或隊長加算。"]];
+    [self.rows addArrangedSubview:[self label:@"所有條件需同時達成。相同條件請增加組數，最多 6 項。\n\nL／十字／T 須獨立 5 顆，3×3 須獨立 9 顆，周邊不連同色珠。四連須實際消除的一組直線 4 顆；未消同色鄰珠可保留，合併成五顆以上不符合。形狀以首批消除為準。橫排與直行依實際盤面寬高判定。多組目標需分成不同 Combo。\n\nCombo、多色與連消可包含盤內連鎖，不含天降或隊長加算。"]];
 }
 - (void)add {
     if (self.draft.count >= PHOrbMaxGoals) return;
@@ -195,37 +195,79 @@
         return;
     }
     NSMutableArray *types = source.mutableCopy, *plus = enhanced.mutableCopy;
-    NSMutableArray *locks = [NSMutableArray array];
-    for (NSUInteger i = 0; i < cells; ++i) [locks addObject:locked.count == cells ? locked[i] : @NO];
+    NSMutableArray *locks = [NSMutableArray array], *weak = [NSMutableArray array], *effects = [NSMutableArray array];
+    NSMutableArray *blindTurns = [NSMutableArray array];
+    NSArray *rawWeak = self.board[@"weakened"], *rawEffects = self.board[@"effects"], *rawBlind = self.board[@"blindTurns"];
+    NSArray *spinners = self.board[@"spinners"], *tape = self.board[@"tape"], *cloud = self.board[@"cloud"];
+    unsigned unmatchable = [self.board[@"unmatchableColors"] unsignedIntValue];
+    NSUInteger fixedStart = [self.board[@"fixedStart"] unsignedIntegerValue];
+    for (NSUInteger i = 0; i < cells; ++i) {
+        [locks addObject:locked.count == cells ? locked[i] : @NO];
+        [weak addObject:rawWeak.count == cells ? rawWeak[i] : @NO];
+        [effects addObject:rawEffects.count == cells ? rawEffects[i] : @0];
+        [blindTurns addObject:rawBlind.count == cells ? rawBlind[i] : @0];
+    }
     NSUInteger through = MIN(self.step, self.path.count ? self.path.count - 1 : 0);
     for (NSUInteger i = 1; i <= through; ++i) {
         NSUInteger a = self.path[i - 1].unsignedIntegerValue, b = self.path[i].unsignedIntegerValue;
         if (a >= cells || b >= cells) return;
         [types exchangeObjectAtIndex:a withObjectAtIndex:b]; [plus exchangeObjectAtIndex:a withObjectAtIndex:b];
         [locks exchangeObjectAtIndex:a withObjectAtIndex:b];
+        [weak exchangeObjectAtIndex:a withObjectAtIndex:b]; [effects exchangeObjectAtIndex:a withObjectAtIndex:b];
+        [blindTurns exchangeObjectAtIndex:a withObjectAtIndex:b];
+        effects[a] = @([effects[a] unsignedIntValue] & ~PHOrbFlagBlindTouch);
+        effects[b] = @([effects[b] unsignedIntValue] & ~PHOrbFlagBlindTouch);
     }
     NSArray *colors = @[[UIColor colorWithRed:0.91 green:0.24 blue:0.27 alpha:1],
         [UIColor colorWithRed:0.15 green:0.56 blue:0.95 alpha:1], [UIColor colorWithRed:0.13 green:0.66 blue:0.40 alpha:1],
         [UIColor colorWithRed:0.98 green:0.77 blue:0.22 alpha:1], [UIColor colorWithRed:0.55 green:0.35 blue:0.80 alpha:1],
-        [UIColor colorWithRed:0.94 green:0.40 blue:0.64 alpha:1]];
-    NSArray *names = @[@"火", @"水", @"木", @"光", @"暗", @"心"];
+        [UIColor colorWithRed:0.94 green:0.40 blue:0.64 alpha:1], UIColor.systemGrayColor,
+        [UIColor colorWithRed:0.50 green:0.20 blue:0.58 alpha:1], [UIColor colorWithRed:0.29 green:0.09 blue:0.35 alpha:1],
+        [UIColor colorWithRed:0.32 green:0.22 blue:0.16 alpha:1]];
+    NSArray *names = @[@"火", @"水", @"木", @"光", @"暗", @"心", @"邪", @"毒", @"猛", @"爆"];
     CGFloat cell = MIN(self.bounds.size.width / width, self.bounds.size.height / height);
     CGPoint origin = CGPointMake((self.bounds.size.width - width * cell) / 2, (self.bounds.size.height - height * cell) / 2);
     for (NSUInteger i = 0; i < cells; ++i) {
         NSUInteger type = [types[i] unsignedIntegerValue];
         CGRect square = CGRectMake(origin.x + i % width * cell, origin.y + i / width * cell, cell, cell);
         [[UIColor colorWithWhite:(i % width + i / width) % 2 ? 0.20 : 0.16 alpha:1] setFill]; UIRectFill(square);
-        UIColor *color = type < 6 ? colors[type] : UIColor.grayColor;
+        UIColor *color = type < colors.count ? colors[type] : UIColor.grayColor;
         [color setFill]; [[UIBezierPath bezierPathWithOvalInRect:CGRectInset(square, 4, 4)] fill];
-        NSString *label = type < 6 ? names[type] : @"?";
+        NSString *label = type < names.count ? names[type] : @"?";
         NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:MAX(12, cell * 0.30) weight:UIFontWeightBold],
             NSForegroundColorAttributeName:type == 3 ? UIColor.blackColor : UIColor.whiteColor};
         CGSize size = [label sizeWithAttributes:attributes];
         [label drawAtPoint:CGPointMake(CGRectGetMidX(square) - size.width / 2, CGRectGetMidY(square) - size.height / 2) withAttributes:attributes];
-        if ([plus[i] boolValue]) [@"+" drawAtPoint:CGPointMake(CGRectGetMaxX(square) - 15, square.origin.y + 3)
+        NSString *modifier = [weak[i] boolValue] ? @"−" : [plus[i] boolValue] ? @"+" : @"";
+        [modifier drawAtPoint:CGPointMake(CGRectGetMaxX(square) - 15, square.origin.y + 3)
             withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:14], NSForegroundColorAttributeName:UIColor.whiteColor}];
         if ([locks[i] boolValue]) [@"鎖" drawAtPoint:CGPointMake(square.origin.x + 4, square.origin.y + 3)
             withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:11], NSForegroundColorAttributeName:UIColor.whiteColor}];
+        NSMutableArray *markers = [NSMutableArray array];
+        unsigned flags = [effects[i] unsignedIntValue];
+        if (spinners.count == cells && [spinners[i] boolValue]) [markers addObject:@"轉"];
+        if (tape.count == cells && [tape[i] boolValue]) [markers addObject:@"封"];
+        if (cloud.count == cells && [cloud[i] boolValue]) [markers addObject:@"雲"];
+        if (flags & PHOrbFlagBlindTouch) [markers addObject:@"闇"];
+        if (flags & PHOrbFlagBlind) [markers addObject:[blindTurns[i] unsignedIntValue] ? @"超闇" : @"闇"];
+        if (flags & PHOrbFlagThorn) [markers addObject:@"刺"];
+        if (flags & PHOrbFlagNail) [markers addObject:@"釘"];
+        if (flags & PHOrbFlagCombo) [markers addObject:@"C"];
+        if (type < PHOrbTypes && (unmatchable & (1u << type))) [markers addObject:@"禁消"];
+        if (fixedStart == i + 1) [markers addObject:@"起"];
+        NSString *marker = [markers componentsJoinedByString:@"·"];
+        CGFloat markerSize = 10;
+        NSDictionary *markerAttributes = @{NSFontAttributeName:[UIFont boldSystemFontOfSize:markerSize],
+            NSForegroundColorAttributeName:UIColor.whiteColor};
+        CGFloat markerWidth = [marker sizeWithAttributes:markerAttributes].width;
+        if (markerWidth > cell - 4) markerSize *= (cell - 4) / markerWidth;
+        [marker drawAtPoint:CGPointMake(square.origin.x + 2, CGRectGetMaxY(square) - 13)
+            withAttributes:@{NSFontAttributeName:[UIFont boldSystemFontOfSize:markerSize], NSForegroundColorAttributeName:UIColor.whiteColor}];
+        if ((tape.count == cells && [tape[i] boolValue]) || (flags & PHOrbFlagThorn)) {
+            [UIColor.systemOrangeColor setStroke];
+            UIBezierPath *border = [UIBezierPath bezierPathWithRect:CGRectInset(square, 1, 1)];
+            border.lineWidth = 2; [border stroke];
+        }
     }
     if (!self.path.count || self.path[0].unsignedIntegerValue >= cells) return;
     UIBezierPath *line = [UIBezierPath bezierPath];
@@ -364,7 +406,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n可先用「讀盤並求路／執行一次」核對。盤面需符合所選目標；技能處理後仍有未支援的珠型、轉轉或特殊規則會停止。預計 Combo 不含天降。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；橙框為封條或刺珠，路徑會避開。轉轉也會避開，按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒不得在盤內連鎖消除，爆彈須首批全消，否則不開放執行。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -502,6 +544,8 @@
     self.availability.text = [state[@"inputFault"] boolValue] ? @"輸入恢復未通過，請完整重啟遊戲後再試。" :
         ![state[@"canRead"] boolValue] && ![state[@"busy"] boolValue] ? @"等待遊戲校驗與登入後即可讀盤。" :
         ![state[@"enabled"] boolValue] ? @"預覽可使用；執行需要先開啟 PC 面板的功能總開關。" :
+        [state[@"phase"] isEqual:@"preview"] && state[@"hazardsSafe"] && ![state[@"hazardsSafe"] boolValue] ?
+            @"這條路徑會消毒／猛毒或留下爆彈，只供預覽；先用技能改盤後重新讀取。" :
         [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
             @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
@@ -531,6 +575,7 @@
             (unsigned long)(start % width + 1), (unsigned long)(current / width + 1), (unsigned long)(current % width + 1)];
     } else self.position.text = @"由畫面頂部向下、左邊向右讀取";
     self.boardView.accessibilityLabel = self.position.text;
+    self.boardView.accessibilityValue = self.state[@"obstacles"] ?: @"";
     [self.boardView setNeedsDisplay];
 }
 - (void)readBoard { self.action(@"orbsRead", nil); [self refresh]; }

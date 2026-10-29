@@ -162,8 +162,13 @@ static void ShapeTests() {
     Check(PHOrbReplay(&conflict, &route, route.count - 1, &replay), "an unmet route remains usable for explanatory preview only");
 }
 
+#include "orb_effect_solver_tests.inc"
+#include "orb_shape_solver_tests.inc"
+
 int main() {
     ShapeTests();
+    OrbEffectSolverTests();
+    OrbShapeSolverTests();
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
         PHOrbSnapshot snapshot{}; snapshot.board = Board(dimensions.first, dimensions.second, 7);
@@ -201,11 +206,11 @@ int main() {
     auto same = board;
     std::swap(same.tokens[0], same.tokens[1]);
     Check(!PHOrbSameBoard(&board, &same), "same-color token swaps invalidate stale previews");
-    same = board; same.flags[0] = 0x1000;
+    same = board; same.flags[0] = 0x40000000;
     Check(!PHOrbBoardValid(&same), "unmodeled flags fail closed");
     same = board; same.flags[0] = PHOrbFlagLocked;
     Check(PHOrbBoardValid(&same) && !PHOrbSameBoard(&same,&board), "locked basic orbs are matchable but not interchangeable with unlocked snapshots");
-    same = board; same.types[0] = 9;
+    same = board; same.types[0] = 10;
     Check(PHOrbSolve(same, {}, cancel, route) == PHOrbSolveStatus::Invalid, "unsupported orb rejected without process exit");
     Check(PHOrbSolve(board, {49, 64, 100}, cancel, route) == PHOrbSolveStatus::Invalid, "depth bounded");
     Check(PHOrbSolve(board, {20, 513, 100}, cancel, route) == PHOrbSolveStatus::Invalid, "beam memory bounded");

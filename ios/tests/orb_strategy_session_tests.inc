@@ -61,7 +61,7 @@ static void StrategySessionTests() {
     session = AutomaticSession(engine,@[a]);
     for (unsigned i = 0; i < 100 && [[session snapshot][@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
     Check(![[session snapshot][@"automatic"] boolValue] && engine->skillOrder.size() == 1 && engine->stages == 0 &&
-        [[session snapshot][@"message"] containsString:@"轉轉"], "a skill that leaves the spinner active cannot authorize a static route");
+        [[session snapshot][@"message"] containsString:@"轉轉"], "a skill that leaves an unsupported spinner layout cannot authorize a route");
     engine = [FakeOrbEngine new]; engine->live.obstacles = PHOrbObstacleSpinner; engine->live.ordinary = false;
     session = AutomaticSession(engine,@[a]);
     for (unsigned i = 0; i < 700 && [[session snapshot][@"automatic"] boolValue]; ++i) {
@@ -69,7 +69,7 @@ static void StrategySessionTests() {
         Tick(session,engine,Frame());
     }
     Check(engine->skillOrder.empty() && engine->stages == 0 && ![[session snapshot][@"automatic"] boolValue],
-        "continuously changing spinner never produces a fake stable skill or drag snapshot");
+        "an unknown spinner layout never excuses arbitrary color changes during skill or drag stabilization");
 
     NSMutableDictionary *profileRule = [PHOrbDefaultSkillRule() mutableCopy]; profileRule[@"slot"] = @2;
     NSDictionary *profile = @{@"id":@"bound",@"name":@"指定隊伍",@"dungeon":@1,@"floor":@2,

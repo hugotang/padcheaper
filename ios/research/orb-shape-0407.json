@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "source": "IMG_0407.PNG",
+  "source_image": "E:/ipa/IMG_0407.PNG",
+  "captured_runtime_snapshot": false,
+  "transcription": "Manually transcribed preview at slider step zero; native tokens, timer, effects and generated routes were not captured.",
+  "width": 7,
+  "height": 6,
+  "type_order": [
+    "火",
+    "水",
+    "木",
+    "光",
+    "暗",
+    "心"
+  ],
+  "rows": [
+    [
+      3,
+      1,
+      0,
+      0,
+      3,
+      4,
+      5
+    ],
+    [
+      3,
+      5,
+      5,
+      0,
+      3,
+      3,
+      5
+    ],
+    [
+      5,
+      3,
+      0,
+      5,
+      1,
+      5,
+      2
+    ],
+    [
+      3,
+      4,
+      5,
+      5,
+      3,
+      5,
+      4
+    ],
+    [
+      1,
+      3,
+      5,
+      0,
+      3,
+      1,
+      2
+    ],
+    [
+      0,
+      5,
+      2,
+      0,
+      3,
+      5,
+      4
+    ]
+  ],
+  "counts": {
+    "火": 7,
+    "水": 4,
+    "木": 3,
+    "光": 11,
+    "暗": 4,
+    "心": 13
+  },
+  "comparisons": [
+    {
+      "name": "light_t_heart_at_least_four",
+      "goals": [
+        {
+          "kind": "t",
+          "colors": 8,
+          "count": 1,
+          "length": 0
+        },
+        {
+          "kind": "match",
+          "colors": 32,
+          "count": 1,
+          "length": 4
+        },
+        {
+          "kind": "combo",
+          "colors": 0,
+          "count": 1,
+          "length": 0
+        }
+      ],
+      "user_report": "Automatic route found; quality not specified for this successful case."
+    },
+    {
+      "name": "light_t_heart_exact_four",
+      "goals": [
+        {
+          "kind": "t",
+          "colors": 8,
+          "count": 1,
+          "length": 0
+        },
+        {
+          "kind": "four",
+          "colors": 32,
+          "count": 1,
+          "length": 0
+        },
+        {
+          "kind": "combo",
+          "colors": 0,
+          "count": 1,
+          "length": 0
+        }
+      ],
+      "user_report": "No fully satisfied route found in fast, balanced or thorough quality."
+    }
+  ],
+  "visible_history": {
+    "matched_goals": 2,
+    "total_goals": 3,
+    "combos": 6,
+    "steps": 48
+  },
+  "visible_current": {
+    "matched_goals": 3,
+    "total_goals": 3,
+    "combos": 6,
+    "steps": 46
+  },
+  "verification": "Fixture only; no solver, tests or benchmark executed. No route or solvability claim."
+}

@@ -64,12 +64,18 @@ cp ios/docs/orb-automation.md "$build_dir/orb-automation.md"
 cp ios/docs/orb-strategies.md "$build_dir/orb-strategies.md"
 cp ios/docs/orb-survival.md "$build_dir/orb-survival.md"
 cp ios/docs/orb-recovery.md "$build_dir/orb-recovery.md"
+cp ios/docs/orb-effects.md "$build_dir/orb-effects.md"
+cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
+cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
+cp ios/docs/uryu-byakuya-0.5.2.md "$build_dir/uryu-byakuya-0.5.2.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
 cp ios/third_party/pazusoba/LICENSE ios/third_party/pazusoba/NOTICE.md "$build_dir/third_party/pazusoba/"
 mkdir -p "$build_dir/research"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
+cp ios/research/orb-shape-0407.json "$build_dir/research/"
+cp ios/research/orb_shape_probe.cpp ios/research/orb_shape_benchmark.py ios/research/orb-shape-results.json "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -96,6 +102,10 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
+for name in ("orb-shape-search.md", "development.md"):
+    notes = directory / name
+    notes.write_text(notes.read_text(encoding="utf-8").replace(
+        "](../research/", "](research/"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
                     Path("ios/src/PHOverlay.h").read_text()).group(1)
@@ -113,7 +123,9 @@ metadata = {
     "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
     "orb_survival": "read-only effective HP thresholds and temporary awakening/member bind or skill-seal conditions; required rules/groups need confirmed completion before a route while allowing other skills to remedy or haste; uncertain attempts never count as success; captured HP/player-state changes cancel the route; per-rule reasons shown; device verification pending",
     "orb_recovery": "optional continuous-only post-skill HP threshold adds one to three heart groups, at least three connected or exactly four in a straight line; conjoins base goals without overriding required skills; unknown HP, insufficient hearts or unmet goals stop; atomic profile persistence; no recovery-amount or damage estimate; device verification pending",
-    "orb_obstacles": "locked basic orbs preserve their native flag through ordinary matching; spinner, unmatchable, weakened and other unsupported effects may trigger user-chosen remedy skills, then require a fresh board; no timed spinner solver",
+    "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable, minimum-run and connected-group rules applied; jammer ordinary combos, no deterministic poison/mortal matches, all bombs must clear first wave, no thorn traversal; unknown effects still block; device verification pending",
+    "orb_spinners": "single or multiple validated shared-cycle cells, custom types 0-9; avoid all spinner cells including locked ones; every shared phase must satisfy goals and hazard policy, minimum result shown; no timed color capture; skill shortage and recovery use shared-phase inventory ranges; pending device verification",
+    "orb_shape_search": "first-wave exact four uses actual marked groups, permitting unmarked same-color neighbors; other exact shapes retain conservative borders; bounded repair-distance and joint-template guidance, weakest-goal progress and interleaved diverse beam candidates; unchanged quality budgets; per-goal failure and search-time diagnostics; performance and device verification pending",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",

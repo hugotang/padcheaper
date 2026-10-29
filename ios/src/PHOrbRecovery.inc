@@ -71,9 +71,14 @@ NSDictionary *PHOrbPlanWithRecovery(NSDictionary *plan, NSDictionary *settings, 
         // The same matches may meet both requirements; retain the stronger count.
         heart.count = MAX(heart.count, base.items[same].count); base.items[same] = heart;
     }
-    unsigned hearts = 0;
-    for (unsigned i = 0; i < state->board.width * state->board.height; ++i) hearts += state->board.types[i] == 5;
-    unsigned minimum = heart.count * (four ? 4u : 3u);
+    if (state->board.unmatchableColors & 32u)
+        return RecoveryBlocked(result, @"低血心珠：心珠目前不可消，請先解除效果");
+    unsigned erase = state->board.minErase ? state->board.minErase : 3;
+    if (four && (erase > 4 || state->board.minMatch > 4))
+        return RecoveryBlocked(result, @"低血心珠：最少消珠限制無法達成獨立心四連");
+    unsigned hearts = 0, maximumHearts = 0;
+    PHOrbColorCountRange(&state->board, 5, &hearts, &maximumHearts);
+    unsigned minimum = heart.count * MAX(MAX(four ? 4u : 3u, erase), state->board.minMatch);
     if (hearts < minimum)
         return RecoveryBlocked(result, [NSString stringWithFormat:@"低血心珠不足：目前 %u 顆，合併後目標至少需要 %u 顆，已停止", hearts, minimum]);
     result[@"goals"] = PHOrbGoalsJSON(&base);

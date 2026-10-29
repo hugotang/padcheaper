@@ -922,6 +922,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
         orbs[@"startSent"], orbs[@"startAccepted"]];
+    diagnostics = [diagnostics stringByAppendingFormat:
+        @"\nOrb effects: %@\nOrb hazard policy: met %@ / poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
+        orbs[@"obstacles"], orbs[@"hazardsSafe"], orbs[@"poisonErased"], orbs[@"unmatchedBombs"],
+        orbs[@"spinnerMask"], orbs[@"spinnerColors"], orbs[@"spinnerVariants"], orbs[@"spinnerTurns"], orbs[@"spinnerPeriodFrames"],
+        orbs[@"blockedMask"], orbs[@"tapeMask"], orbs[@"cloudMask"], orbs[@"fixedStart"], orbs[@"unmatchableColors"],
+        orbs[@"minErase"], orbs[@"minMatch"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];

@@ -5,6 +5,7 @@
 #include "PHOrbSolver.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <iterator>
 #include <memory>
 
@@ -13,7 +14,7 @@ constexpr double StepSeconds = 0.065, PreviewLifetime = 45, ExecutionLimit = 4, 
 constexpr double AutomationSettle = 0.20, SkillTimeout = 30, TurnTimeout = 90;
 bool ResolvingOrbs(uint32_t phase) { return phase >= 3 && phase <= 6; }
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
-    return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSameBoard(&a.board, &b.board);
+    return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSamePlanBoard(&a.board, &b.board);
 }
 double TimeAvailable(const PHOrbSnapshot &state) {
     return state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
@@ -33,12 +34,26 @@ PHOrbSolveOptions OptionsForQuality(NSString *quality) {
 }
 NSDictionary *BoardJSON(const PHOrbBoard &board) {
     NSMutableArray *types = [NSMutableArray array], *enhanced = [NSMutableArray array], *locked = [NSMutableArray array];
+    NSMutableArray *spinners = [NSMutableArray array], *effects = [NSMutableArray array], *blindTurns = [NSMutableArray array];
+    NSMutableArray *weakened = [NSMutableArray array], *thornDamage = [NSMutableArray array];
+    const uint64_t blocked = PHOrbBlockedCells(&board);
+    NSMutableArray *tape = [NSMutableArray array], *cloud = [NSMutableArray array], *blockedCells = [NSMutableArray array];
     const unsigned size = std::min(unsigned(PHOrbMaxCells), unsigned(board.width) * board.height);
     for (unsigned i = 0; i < size; ++i) {
-        [types addObject:@(board.types[i])]; [enhanced addObject:@(board.enhancement[i] != 0)];
+        float enhancement = 0; std::memcpy(&enhancement, &board.enhancement[i], sizeof(enhancement));
+        [types addObject:@(board.types[i])]; [enhanced addObject:@(enhancement > 0)];
+        [weakened addObject:@(enhancement < 0)]; [effects addObject:@(board.flags[i])];
+        [blindTurns addObject:@(board.blindTurns[i])]; [thornDamage addObject:@(board.thornDamage[i])];
         [locked addObject:@((board.flags[i] & PHOrbFlagLocked) != 0)];
+        [spinners addObject:@((board.spinnerMask & (UINT64_C(1) << i)) != 0)];
+        [tape addObject:@((board.tapeMask & (UINT64_C(1) << i)) != 0)];
+        [cloud addObject:@((board.cloudMask & (UINT64_C(1) << i)) != 0)];
+        [blockedCells addObject:@((blocked & (UINT64_C(1) << i)) != 0)];
     }
-    return @{@"width":@(board.width), @"height":@(board.height), @"types":types, @"enhanced":enhanced, @"locked":locked};
+    return @{@"width":@(board.width), @"height":@(board.height), @"types":types, @"enhanced":enhanced, @"locked":locked,
+        @"spinners":spinners, @"weakened":weakened, @"effects":effects, @"blindTurns":blindTurns, @"thornDamage":thornDamage,
+        @"tape":tape, @"cloud":cloud, @"blocked":blockedCells, @"fixedStart":@(board.fixedStart),
+        @"unmatchableColors":@(board.unmatchableColors), @"minErase":@(board.minErase ?: 3), @"minMatch":@(board.minMatch)};
 }
 }
 
@@ -359,7 +374,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     [self beginSolve];
 }
 - (void)queueExecute:(NSUInteger)generation {
-    if (![_phase isEqual:@"preview"] || generation != _generation || !_frame.enabled || _inputFault || !_route.goalsMet) return;
+    if (![_phase isEqual:@"preview"] || generation != _generation || !_frame.enabled || _inputFault || !_route.goalsMet || !_route.hazardsSafe) return;
     if (_now - _previewAt > PreviewLifetime || !_hasLive || !PHOrbCanPreview(&_live) || !SamePosition(_live, _preview)) {
         [self queueStop:@"盤面或回合已改變，請重新讀盤"];
         return;
@@ -407,7 +422,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             PHOrbSession *session = weakSelf;
             if (!session || generation != session->_generation || ![session->_phase isEqual:@"solving"] ||
                 cancel->load(std::memory_order_relaxed)) return;
-            if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet) || route.count < 2) {
+            if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";
                 session->_message = result == PHOrbSolveStatus::InsufficientOrbs ?
                     @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" : @"本次未取得有效路徑，請重新讀盤";
@@ -418,6 +433,8 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             PHOrbEvaluation evaluation{};
             if (!PHOrbReplay(&board, &route, route.count - 1, &replay) || !PHOrbEvaluate(replay, options.goals, evaluation) ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
+                evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
+                evaluation.unmatchedBombs != route.unmatchedBombs ||
                 evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != options.goals.count ||
                 !std::equal(std::begin(evaluation.goalHits), std::end(evaluation.goalHits), route.goalHits)) {
                 [session queueStop:@"路徑重播校驗失敗，已停止"]; session->_phase = @"fault";
@@ -426,10 +443,26 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
             session->_route = route; session->_phase = @"preview"; session->_previewAt = session->_now;
             NSString *summary = [NSString stringWithFormat:@"預計 %u Combo（不含天降／加算）· %u 步 · 約 %.1f 秒",
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
-            session->_message = !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。可提高求路品質或調整目標。\n%@",
+            if (board.spinnerMask) summary = [summary stringByAppendingFormat:
+                @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
+            if (board.tapeMask || PHOrbBlockedCells(&board) != (board.tapeMask | board.spinnerMask))
+                summary = [summary stringByAppendingString:@"\n已繞開封條及刺珠。"];
+            summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
+                route.elapsedMS, options.milliseconds, route.deadlineReached ? @"已到時間上限" : @"未到時間上限", options.steps];
+            if (!route.goalsMet) {
+                NSArray<NSDictionary *> *goals = PHOrbGoalsJSON(&options.goals);
+                NSMutableArray<NSString *> *missing = [NSMutableArray array];
+                for (unsigned g = 0; g < options.goals.count; ++g) if (route.goalHits[g] < options.goals.items[g].count)
+                    [missing addObject:[NSString stringWithFormat:@"未達成：%@（%u／%u）",
+                        PHOrbGoalDescription(goals[g]), route.goalHits[g], options.goals.items[g].count]];
+                summary = [NSString stringWithFormat:@"%@\n%@", [missing componentsJoinedByString:@"\n"], summary];
+            }
+            session->_message = !route.hazardsSafe ? [NSString stringWithFormat:
+                @"未找到符合妨礙處理條件的路徑：會消除毒／猛毒 %u 顆、首批未消爆彈 %u 顆。未開放執行；可先用技能改盤。\n%@",
+                route.poisonErased, route.unmatchedBombs, summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
                 route.matchedGoals, route.goalCount, summary] : route.goalCount ?
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
-            if (session->_automatic && !route.goalsMet) [session queueStop:session->_message];
+            if (session->_automatic && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
         });
     });
 }
@@ -451,6 +484,18 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         if (![self observeAutomation:&current read:read reason:reason]) return;
         if ([_phase isEqual:@"skillArming"]) {
             NSUInteger slot = [_skillRules[_skillRule][@"slot"] unsignedIntegerValue] - 1;
+            // Recheck color-count conditions on the frame that starts a skill.
+            // Spinner-dependent thresholds are unknown, never guessed from a
+            // previously sampled color. The native engine rechecks state again.
+            if (!PHOrbSameAutomation(&_skillBefore, &current)) {
+                [self queueStop:@"技能施放前盤面、隊員或戰鬥狀態已改變，已停止"]; return;
+            }
+            PHOrbRuleMatch trigger = PHOrbTriggerSkillRule(_skillRules[_skillRule], &current, _autoTurn, &reason);
+            if (trigger != PHOrbRuleYes) {
+                if (trigger == PHOrbRuleUnknown) [self queueStop:reason ?: @"技能觸發條件無法確認"];
+                else [self waitForAutomationBoard];
+                return;
+            }
             // The engine rereads once more immediately before its native call.
             PHOrbSkillResult result = [_engine useSkill:slot expected:&_skillBefore frame:frame reason:&reason];
             NSDictionary *rule = _skillRules[_skillRule];
@@ -606,7 +651,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         }
         PHOrbBoard expectedBoard{};
         PHOrbReplay(&_preview.board, &_route, unsigned(_target), &expectedBoard);
-        if (current.dragged == _ownedOrb && current.phase == 2 && PHOrbSameBoard(&current.board, &expectedBoard) &&
+        if (current.dragged == _ownedOrb && current.phase == 2 && PHOrbSamePlanBoard(&current.board, &expectedBoard) &&
             current.moves == _preview.moves + _target) {
             if (_confirmed != _target) _stepAt = time;
             _confirmed = _target; _expected = current;
@@ -643,7 +688,7 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
     for (unsigned i = 0; i < _route.count; ++i) [path addObject:@(_route.cells[i])];
     for (unsigned i = 0; i < _route.goalCount && i < PHOrbMaxGoals; ++i) [goalHits addObject:@(_route.goalHits[i])];
     BOOL preview = [_phase isEqual:@"preview"];
-    BOOL canExecute = preview && _route.goalsMet && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
+    BOOL canExecute = preview && _route.goalsMet && _route.hazardsSafe && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
         SamePosition(_live, _preview) && HasRouteTime(_live, _route);
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && !_automatic && ![self executing] && !_inputFault), @"canExecute":@(canExecute && !_automatic),
@@ -664,6 +709,14 @@ NSDictionary *BoardJSON(const PHOrbBoard &board) {
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
         @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
+        @"hazardsSafe":@(_route.hazardsSafe), @"poisonErased":@(_route.poisonErased), @"unmatchedBombs":@(_route.unmatchedBombs),
+        @"spinnerMask":@(_live.board.spinnerMask), @"spinnerColors":@(_live.board.spinnerColors),
+        @"spinnerTurns":@(_live.spinnerTurns), @"spinnerPeriodFrames":@(_live.spinnerPeriodFrames),
+        @"spinnerVariants":@(PHOrbSpinnerVariants(&_live.board)), @"blockedMask":@(PHOrbBlockedCells(&_live.board)),
+        @"tapeMask":@(_live.board.tapeMask), @"cloudMask":@(_live.board.cloudMask), @"fixedStart":@(_live.board.fixedStart),
+        @"unmatchableColors":@(_live.board.unmatchableColors), @"unmatchableTurns":@(_live.unmatchableTurns),
+        @"tapeRowTurns":@(_live.tapeRowTurns), @"tapeColumnTurns":@(_live.tapeColumnTurns), @"cloudTurns":@(_live.cloudTurns),
+        @"minErase":@(_live.minErase), @"minMatch":@(_live.board.minMatch),
         @"goalHits":goalHits,
         @"leadersValid":@(_live.leadersValid), @"leaderNumbers":@[@(_live.leaderNumbers[0]), @(_live.leaderNumbers[1])],
         @"searchBudgetMS":@(_solveOptions.milliseconds),

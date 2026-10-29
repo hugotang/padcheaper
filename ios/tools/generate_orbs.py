@@ -9,7 +9,8 @@ import re
 def generate(manifest):
     if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.0-106878':
         raise ValueError('Unsupported orb target')
-    if manifest['scope'] != {'multiplayer': False, 'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': 3,
+    if manifest['scope'] != {'multiplayer': False, 'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': [3, 7],
+                             'connected_match': True,
                              'continuous': True, 'input': 'scoped-private-manager',
                              'goal_modes': ['combo', 'manual', 'leaders'], 'max_goals': 6,
                              'shape_wave': 'first-removal-only', 'leader_planning': 'minimum-board-conditions-only',
@@ -19,7 +20,14 @@ def generate(manifest):
                              'skill_groups': 'round-robin-one-per-orb-turn', 'once_rules': 'current-battle-memory',
                              'reserved_skills': True, 'strategy_profiles': 64, 'profile_selection': 'explicit-start-only',
                              'locked_orbs': True, 'timed_spinners': False,
-                             'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened'],
+                             'spinner_strategy': 'avoid-cells-all-shared-cycle-phases',
+                             'spinner_colors': list(range(10)), 'board_constraints': ['tape', 'fixed_start', 'unmatchable'],
+                             'visual_effects': ['cloud', 'blind', 'super_blind', 'weakened', 'nail', 'combo_orb'],
+                             'hazards': {'jammer': 'ordinary-match', 'poison': 'no-deterministic-match',
+                                         'mortal_poison': 'no-deterministic-match', 'bomb': 'all-first-wave', 'thorn': 'avoid-cells'},
+                             'obstacle_conditions': ['unmatchable', 'special_orbs', 'orb_effect', 'board_effect', 'spinner', 'locked', 'weakened',
+                                                     'jammer', 'poison', 'mortal_poison', 'bomb', 'cloud', 'tape', 'blind',
+                                                     'super_blind', 'nail', 'thorn', 'fixed_start', 'combo_orb', 'match_rule'],
                              'survival_conditions': ['hp_at_most', 'awoken_bind', 'member_bind', 'skill_seal'],
                              'required_skills': 'confirmed-rule-or-group-before-route',
                              'hp_read': 'read-only-effective-cap', 'decision_reasons': True,
@@ -32,7 +40,9 @@ def generate(manifest):
                 'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
                 'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA',
                 'PHOrbMaximumHPRVA', 'PHOrbDungeonHPRVA', 'PHOrbDungeonOptionRVA', 'PHOrbDungeonOptionParseRVA',
-                'PHOrbAwakeningCheckRVA'}
+                'PHOrbAwakeningCheckRVA', 'PHOrbSpinnerUpdateRVA', 'PHOrbBombResolveRVA', 'PHOrbTapeProjectRVA',
+                'PHOrbBlindSetRVA', 'PHOrbSuperBlindSetRVA', 'PHOrbBlindTurnRVA', 'PHOrbFixedStartClearRVA',
+                'PHOrbShapeMatchRVA', 'PHOrbLineMatchRVA', 'PHOrbCloudRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',

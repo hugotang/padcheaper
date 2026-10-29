@@ -55,6 +55,83 @@ bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
     return true;
 }
 
+bool ReadSpinner(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t key2) {
+    uint32_t count = 0, period = 0, colors = 0;
+    if (!Decode(impl + PHOrbSpinnerCountOffset, key1, key2, 0x6a875a8bu, count) || !count || count > PHOrbMaxCells ||
+        !Decode(impl + PHOrbSpinnerPeriodOffset, key1, key2, 0x6a875a8bu, period) || !period || period > 30000 ||
+        !Decode(impl + PHOrbSpinnerColorsOffset, key1, key2, 0x6a875a8bu, colors) || colors > 0x7ffu) return false;
+    uint64_t mask = 0;
+    unsigned found = 0;
+    for (unsigned row = 0; row < 6; ++row) {
+        uint32_t columns = 0;
+        if (!Decode(impl + PHOrbSpinnerRowsOffset + 16 * row, key1, key2, 0x6a875a8bu, columns) ||
+            columns > 255 || (columns >> state.board.width) || (row >= state.board.height && columns)) return false;
+        if (row >= state.board.height) continue;
+        for (unsigned column = 0; column < state.board.width; ++column) if (columns & (1u << column)) {
+            mask |= UINT64_C(1) << ((state.board.height - 1 - row) * state.board.width + column);
+            ++found;
+        }
+    }
+    if (found != count) return false;
+    state.board.spinnerMask = mask;
+    state.board.spinnerColors = uint16_t(colors ? colors : 63);
+    state.spinnerPeriodFrames = uint16_t(period);
+    return PHOrbSpinnerSupported(&state.board);
+}
+
+bool ReadBoardEffects(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t key2, uint32_t fixedX) {
+    auto &board = state.board;
+    const unsigned width = board.width, height = board.height;
+    if (fixedX > 255) return false;
+    if (int8_t(fixedX) >= 0) {
+        uint32_t fixedY = 0;
+        if (!Decode(impl + PHOrbFixedStartYOffset, key1, key2, 0x6a875a8bu, fixedY) || fixedX >= width || fixedY >= height) return false;
+        board.fixedStart = uint8_t((height - 1 - fixedY) * width + fixedX + 1);
+    } else if (fixedX != 255) return false;
+    board.minErase = state.minErase;
+    uint16_t connectedA = 0, connectedB = 0;
+    if (!PHReadU16(impl + PHOrbMinMatchOffset, &connectedA) || !PHReadU16(impl + PHOrbMinMatchExtraOffset, &connectedB) ||
+        connectedA > width * height || connectedB > width * height) return false;
+    board.minMatch = uint8_t(std::max(connectedA, connectedB));
+    // All durations use signed ten-bit turns. Preserve a nonzero invalid
+    // encoding as an explicit blocker; never silently treat it as inactive.
+    auto duration = [&](uintptr_t offset, uint16_t &turns, uint32_t obstacle) {
+        uint16_t raw = 0;
+        if (!PHReadU16(impl + offset, &raw)) return false;
+        turns = raw & 0x3ffu;
+        if (turns) state.obstacles |= obstacle;
+        return turns <= 511;
+    };
+    if (!duration(PHOrbUnmatchableDurationOffset, state.unmatchableTurns, PHOrbObstacleUnmatchable) ||
+        !duration(PHOrbTapeRowDurationOffset, state.tapeRowTurns, PHOrbObstacleTape) ||
+        !duration(PHOrbTapeColumnDurationOffset, state.tapeColumnTurns, PHOrbObstacleTape) ||
+        !duration(PHOrbCloudDurationOffset, state.cloudTurns, PHOrbObstacleCloud) ||
+        !duration(PHOrbSpinnerDurationOffset, state.spinnerTurns, PHOrbObstacleSpinner)) return false;
+    if (state.unmatchableTurns) {
+        uint32_t colors = 0;
+        if (!Decode(impl + PHOrbUnmatchableColorsOffset, key1, key2, 0x6a875a8bu, colors) || !colors || colors >= (1u << PHOrbTypes)) return false;
+        board.unmatchableColors = uint16_t(colors);
+    }
+    uint32_t rows = 0, columns = 0;
+    if (state.tapeRowTurns && (!Decode(impl + PHOrbTapeRowsOffset, key1, key2, 0x6a875a8bu, rows) || !rows || (rows >> height))) return false;
+    if (state.tapeColumnTurns && (!Decode(impl + PHOrbTapeColumnsOffset, key1, key2, 0x6a875a8bu, columns) || !columns || (columns >> width))) return false;
+    // Tape row bits are top-first (sub_100608DB8), unlike spinner/native Y.
+    for (unsigned row = 0; row < height; ++row) for (unsigned column = 0; column < width; ++column)
+        if ((rows & (1u << row)) || (columns & (1u << column))) board.tapeMask |= UINT64_C(1) << (row * width + column);
+    if (state.cloudTurns) {
+        uint32_t x = 0, y = 0, w = 0, h = 0;
+        if (!Decode(impl + PHOrbCloudXOffset, key1, key2, 0x6a875a8bu, x) || x >= width ||
+            !Decode(impl + PHOrbCloudYOffset, key1, key2, 0x6a875a8bu, y) || y >= height ||
+            !Decode(impl + PHOrbCloudWidthOffset, key1, key2, 0x6a875a8bu, w) || !w || w > 7 ||
+            !Decode(impl + PHOrbCloudHeightOffset, key1, key2, 0x6a875a8bu, h) || !h || h > 6) return false;
+        // Native clouds clip at the current board bounds after a resize.
+        for (unsigned nativeY = y; nativeY < std::min(y + h, height); ++nativeY)
+            for (unsigned column = x; column < std::min(x + w, width); ++column)
+                board.cloudMask |= UINT64_C(1) << ((height - 1 - nativeY) * width + column);
+    }
+    return !state.spinnerTurns || ReadSpinner(state, impl, key1, key2);
+}
+
 bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     state = {};
     if (!NSThread.isMainThread || !frame.ready || !frame.header || !frame.player || frame.header > UINTPTR_MAX - 0x3000000u) {
@@ -118,22 +195,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         if (reason) *reason = @"等待自己的操作階段";
         return true;
     }
-    state.ordinary = source == 0 && state.minErase == 3 && state.freeMovement == 1 &&
-        int8_t(fixedX) == -1 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
-    // Active board effects examined by the native player/match routines.
-    // In particular +739268 gates the unmatchable-color mask at +739272.
-    for (uintptr_t offset : {uintptr_t(739268), uintptr_t(739360), uintptr_t(738980), uintptr_t(739000)}) {
-        uint16_t effect = 0;
-        if (!PHReadU16(impl + offset, &effect)) return false;
-        if (effect & 0x3ffu) {
-            state.ordinary = false;
-            state.obstacles |= offset == 739268 ? PHOrbObstacleUnmatchable :
-                offset == 739360 ? PHOrbObstacleSpinner : PHOrbObstacleBoardEffect;
-        }
-    }
-    uint16_t connectedA = 0, connectedB = 0;
-    if (!PHReadU16(impl + 746068, &connectedA) || !PHReadU16(impl + 746076, &connectedB)) return false;
-    if (connectedA || connectedB) { state.ordinary = false; state.obstacles |= PHOrbObstacleBoardEffect; }
+    state.ordinary = source == 0 && state.minErase >= 3 && state.minErase <= 7 && state.freeMovement == 1 &&
+        !audit && !dialog && !specialDrag && !moveBlocked && !intro;
     const unsigned width = state.board.width, height = state.board.height;
     if (!PHOrbDimensionsSupported(width, height)) {
         if (reason) *reason = @"本版支援 6×5、7×6 及 5×4 盤面";
@@ -154,6 +217,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         const uint16_t motion = Load<uint16_t>(block + 18);
         state.board.tokens[i] = token; state.board.types[i] = block[0];
         state.board.flags[i] = Load<uint32_t>(block + 4); state.board.enhancement[i] = Load<uint32_t>(block + 8);
+        state.board.blindTurns[i] = block[1] & 0x7fu;
+        state.board.thornDamage[i] = block[12] & 0x7fu;
         state.board.x[i] = Load<int16_t>(block + 28); state.board.y[i] = Load<int16_t>(block + 30);
         state.settled &= motion == 0 && Load<int16_t>(block + 24) == state.board.x[i] && Load<int16_t>(block + 26) == state.board.y[i];
         if (motion != 0 && motion != 3 && motion != 4) state.ordinary = false;
@@ -166,6 +231,9 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         if (state.board.x[i] != state.board.x[0] + int(col) * spacing ||
             state.board.y[i] != state.board.y[0] + int(row) * spacing) return false;
     }
+    if (!ReadBoardEffects(state, impl, key1, key2, fixedX)) {
+        state.ordinary = false; state.obstacles |= PHOrbObstacleBoardEffect;
+    }
     uint32_t lastKey1 = 0, lastKey2 = 0; uintptr_t lastImpl = 0;
     if (!PHReadMemory(impl + PHOrbTableOffset, lastTable.data(), sizeof(lastTable)) || table != lastTable ||
         !PHReadPointer(game + 0x70, &lastImpl) || lastImpl != impl ||
@@ -173,11 +241,11 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2) return false;
     state.leadersValid = ReadLeaders(state, save, impl);
     state.valid = true;
-    if (!state.ordinary) { if (reason) *reason = @"特殊規則、固定起點、彈窗或入場動畫尚未結束"; }
-    else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型或效果；本版接受六種基本珠、強化珠及鎖珠"; }
+    if (!state.ordinary) { if (reason) *reason = @"盤面效果未通過校驗、特殊操作規則、彈窗或入場動畫尚未結束"; }
+    else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型、旗標或轉轉模式"; }
     else if (!state.settled && !state.dragged) { if (reason) *reason = @"等待盤面動畫停止"; }
     else if (!PHInputIsQuiet(&state.input)) { if (reason) *reason = @"請先放開手指"; }
-    else if (reason) *reason = @"可以讀盤及求路";
+    else if (reason) *reason = state.board.spinnerMask ? @"轉轉：避開變色格並檢查全部可能色序後求路" : @"可以讀盤及求路";
     return true;
 }
 
@@ -297,7 +365,9 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return NO;
     }
     if (!PHOrbSameTurn(expected, &live) || live.phase != 2 || live.moves != expected->moves ||
-        cell >= live.board.width * live.board.height || !PHOrbSameBoard(&live.board, &expected->board) ||
+        cell >= live.board.width * live.board.height || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
+        (down && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << cell))) ||
+        (down && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(cell))) ||
         (down && !PHOrbSameLeaders(expected, &live)) ||
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||
         (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) {

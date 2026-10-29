@@ -66,7 +66,7 @@
         [self label:@"每回合要求的心珠組數"], self.groups, [self label:@"每組形狀"], self.shape,
         [self label:@"只在連續轉珠啟用。每回合先處理技能，再用目前 HP 與有效上限判斷；高於門檻就沿用原有目標。"],
         [self label:@"心珠要求會與形狀或隊長目標一起求解；相同條件取較高組數。心珠不足、合共超過 6 項或路徑未達標都會停止。必要技能仍須先確認完成。"],
-        [self label:@"至少三連可計入現有珠子的盤內連鎖；四顆直線須在首批消除，周邊不可連同色珠。不計隨機天降。"],
+        [self label:@"至少三連可計入現有珠子的盤內連鎖；四顆直線須在首批實際消除，未消同色鄰珠可保留，合併成五顆以上不符合。不計隨機天降。"],
         [self label:@"這是心珠消除要求，不估算回復量或有效覺醒，也不保證能承受下一次攻擊。手動讀盤與執行一次維持原有目標。"]]];
     rows.axis = UILayoutConstraintAxisVertical; rows.spacing = 12; rows.translatesAutoresizingMaskIntoConstraints = NO; [scroll addSubview:rows];
     self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;

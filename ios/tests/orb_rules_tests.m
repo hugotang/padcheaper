@@ -4,6 +4,8 @@
 static unsigned failures;
 static void Check(BOOL ok, const char *message) { if (!ok) { fprintf(stderr, "FAIL: %s\n", message); ++failures; } }
 
+#include "orb_effect_rules_tests.inc"
+
 int main(void) {
     @autoreleasepool {
         Check(PHOrbSkillRulesValid(@[]), "empty rules enable continuous orbs without skills");
@@ -86,7 +88,7 @@ int main(void) {
         Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleNo, "removed spinner no longer requests the same remedy");
         rule[@"obstacle"] = @"locked"; state.board.flags[29] = PHOrbFlagLocked;
         Check(PHOrbMatchSkillRule(rule,&state,1) == PHOrbRuleYes && PHOrbBoardValid(&state.board), "locked basic orb is a skill condition but still supports ordinary matching");
-        state.board.flags[29] |= 0x1000;
+        state.board.flags[29] |= 0x40000000u;
         Check(!PHOrbBoardValid(&state.board) && (PHOrbBoardObstacles(&state) & PHOrbObstacleOrbEffect), "lock acceptance does not authorize other combined effects");
         for (NSDictionary *change in @[@{@"hpAtMost":@101}, @{@"hpAtMost":@-1}, @{@"hpAtMost":@YES},
             @{@"hpAtMost":@40.5}, @{@"hpAtMost":@"40"}, @{@"required":@1}, @{@"status":@"unknown"}]) {
@@ -132,6 +134,7 @@ int main(void) {
         Check(!PHOrbSamePlayerState(&before,&state), "new HP invalidates captured rescue decisions");
         state = before; state.automation.awakeningRestricted = false;
         Check(!PHOrbSamePlayerState(&before,&state), "changed fixed awakening restriction invalidates player context");
+        OrbEffectRulesTests();
         printf("Orb rules tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

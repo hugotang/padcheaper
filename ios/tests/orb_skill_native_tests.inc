@@ -196,7 +196,7 @@ static void SkillNativeTests() {
     Check([engine readAutomation:&state frame:Frame() reason:&reason] && !state.automation.enemiesKnown && !state.automation.window,
         "unmodeled enemy parts never pretend to be a known effect-free enemy");
     SkillFixture(); engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
-    Put<uint8_t>(state.board.tokens[0], 6); [engine readAutomation:&state frame:Frame() reason:&reason];
+    Put<uint8_t>(state.board.tokens[0], 10); [engine readAutomation:&state frame:Frame() reason:&reason];
     Check(!PHOrbCanPreview(&state) && state.automation.window &&
         [engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted,
         "skill remediation does not weaken the unsupported-orb drag restriction");

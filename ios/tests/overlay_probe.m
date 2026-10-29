@@ -495,6 +495,43 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                     PHProbeCheck(control && CGRectContainsRect(orbWindow.bounds, bounds), @"Fixed return and action buttons remain on screen for every board size");
                 }
             }
+            for (NSArray<NSNumber *> *dimensions in @[@[@6,@5], @[@7,@6], @[@5,@4]]) {
+                const NSUInteger width = dimensions[0].unsignedIntegerValue, height = dimensions[1].unsignedIntegerValue, cells = width * height;
+                NSMutableArray *types = [NSMutableArray array], *enhanced = [NSMutableArray array], *locks = [NSMutableArray array];
+                NSMutableArray *weak = [NSMutableArray array], *effects = [NSMutableArray array], *blind = [NSMutableArray array];
+                NSMutableArray *spinners = [NSMutableArray array], *tape = [NSMutableArray array], *cloud = [NSMutableArray array];
+                for (NSUInteger i = 0; i < cells; ++i) {
+                    [types addObject:@(i % PHOrbTypes)]; [enhanced addObject:@(i == 0)]; [locks addObject:@(i == 1)];
+                    [weak addObject:@(i == 1)]; [blind addObject:@(i == 3 ? 5 : 0)];
+                    unsigned flags = i == 2 ? PHOrbFlagBlindTouch : i == 3 ? PHOrbFlagBlind :
+                        i == 4 ? PHOrbFlagThorn : i == 5 ? PHOrbFlagNail | PHOrbFlagCombo : 0;
+                    if (i == 1) flags |= PHOrbFlagLocked;
+                    if (i < width) flags |= PHOrbFlagTape;
+                    [effects addObject:@(flags)]; [spinners addObject:@(i == width || i == width * 2)];
+                    [tape addObject:@(i < width)]; [cloud addObject:@(i >= cells - width)];
+                }
+                NSMutableDictionary *state = [baseOrbFixture[@"orbState"] mutableCopy];
+                state[@"board"] = @{@"width":@(width), @"height":@(height), @"types":types, @"enhanced":enhanced,
+                    @"locked":locks, @"weakened":weak, @"effects":effects, @"blindTurns":blind,
+                    @"spinners":spinners, @"tape":tape, @"cloud":cloud, @"fixedStart":@(cells - 1), @"unmatchableColors":@32};
+                state[@"path"] = @[@(cells - 2), @(cells - 1)]; state[@"generation"] = @(100 + cells);
+                state[@"obstacles"] = @"有雲、封條、普通暗闇、超暗闇、弱化珠、轉轉、毒珠、爆彈";
+                state[@"hazardsSafe"] = @NO; state[@"canExecute"] = @NO;
+                state[@"poisonErased"] = @3; state[@"unmatchedBombs"] = @1;
+                state[@"message"] = @"未找到符合妨礙處理條件的路徑：毒／猛毒 3 顆、首批未消爆彈 1 顆。可先用技能改盤。";
+                orbFixture = @{@"orbState":state}; [orbController refresh];
+                UIView *boardView = PHProbeFind(orbWindow, @"padcheaper.orbsBoard");
+                PHProbeCheck([boardView.accessibilityValue containsString:@"超暗闇"] &&
+                    [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAvailability")).text containsString:@"毒"],
+                    @"Effect previews expose their annotations and the reason hazardous routes cannot execute");
+                orbAction = nil;
+                [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") sendActionsForControlEvents:UIControlEventTouchUpInside];
+                PHProbeCheck(orbAction == nil && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
+                    @"Hazard previews remain visible without dispatching an execute action");
+                PHProbeRender(self.window, orbWindow, [NSString stringWithFormat:@"orbs-effects-%lux%lu", (unsigned long)width, (unsigned long)height]);
+                orbSlider.value = 1; [orbSlider sendActionsForControlEvents:UIControlEventValueChanged];
+                PHProbeCheck([boardView.accessibilityLabel containsString:@"第 1／1 步"], @"Effect previews support ordinary step navigation");
+            }
             NSMutableDictionary *qualityFailure = [baseOrbFixture[@"orbState"] mutableCopy];
             qualityFailure[@"qualityMessage"] = @"品質未能儲存，仍保留原設定";
             orbFixture = @{@"orbState":qualityFailure}; [orbController refresh];

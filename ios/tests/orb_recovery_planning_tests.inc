@@ -68,6 +68,35 @@ static void RecoveryPlanningTests(void) {
         Check(![PHOrbPlanWithRecovery(base,two,&state,YES)[@"available"] boolValue], "recovery cannot relax an unsupported board or spinner restriction");
     }
     state = RecoveryBoard();
+    state.board.unmatchableColors = 32;
+    Check(![PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue] &&
+        [PHOrbPlanWithRecovery(base,settings,&state,YES)[@"message"] containsString:@"不可消"],
+        "many unmatchable hearts cannot satisfy low-HP recovery");
+    state = RecoverySizedBoard(6,5,3); state.board.minErase = state.minErase = 4;
+    Check(![PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue],
+        "recovery inventory respects the native minimum straight run");
+    state.board.types[3] = 5;
+    Check([PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue],
+        "four hearts can satisfy an at-least-three recovery goal under a four-orb minimum");
+    state.board.minMatch = 5;
+    Check(![PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue],
+        "connected-group minimum is also included in recovery inventory");
+    state = RecoveryBoard(); state.board.minErase = state.minErase = 5;
+    Check(![PHOrbPlanWithRecovery(base,two,&state,YES)[@"available"] boolValue],
+        "exact heart fours remain impossible under a five-orb straight-run minimum");
+    state.board.minErase = state.minErase = 3; state.board.minMatch = 5;
+    Check(![PHOrbPlanWithRecovery(base,two,&state,YES)[@"available"] boolValue],
+        "a connected-group minimum above four blocks exact heart fours even with enough hearts");
+    state = RecoverySizedBoard(6,5,2); state.board.types[29] = 5;
+    state.board.spinnerMask = UINT64_C(1) << 29; state.board.spinnerColors = 33;
+    Check(![PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue],
+        "one sampled spinner heart cannot complete a guaranteed recovery inventory");
+    state.board.spinnerMask |= UINT64_C(1) << 28; state.board.types[28] = 0;
+    Check([PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue],
+        "two opposite shared-phase spinners can guarantee one heart for inventory planning");
+    state.board.spinnerMask = UINT64_C(1) << 29; state.board.flags[29] = PHOrbFlagLocked;
+    Check([PHOrbPlanWithRecovery(base,settings,&state,YES)[@"available"] boolValue], "a locked spinner heart stays in the guaranteed inventory");
+    state = RecoveryBoard();
     NSArray *six = @[Goal(@"match",32,3,3), Goal(@"combo",0,5,0), Goal(@"colors",31,3,0),
         Goal(@"l",1,1,0), Goal(@"cross",2,1,0), Goal(@"column",4,1,0)];
     base = RecoveryBase(six); plan = PHOrbPlanWithRecovery(base,settings,&state,YES);

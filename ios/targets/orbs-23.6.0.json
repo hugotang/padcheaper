@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.2-orbs",
+  "prototype_version": "0.5.3-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -20,7 +20,8 @@
         4
       ]
     ],
-    "min_erase": 3,
+    "min_erase": [3, 7],
+    "connected_match": true,
     "continuous": true,
     "input": "scoped-private-manager",
     "goal_modes": [
@@ -48,6 +49,11 @@
     "profile_selection": "explicit-start-only",
     "locked_orbs": true,
     "timed_spinners": false,
+    "spinner_strategy": "avoid-cells-all-shared-cycle-phases",
+    "spinner_colors": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "board_constraints": ["tape", "fixed_start", "unmatchable"],
+    "visual_effects": ["cloud", "blind", "super_blind", "weakened", "nail", "combo_orb"],
+    "hazards": {"jammer": "ordinary-match", "poison": "no-deterministic-match", "mortal_poison": "no-deterministic-match", "bomb": "all-first-wave", "thorn": "avoid-cells"},
     "obstacle_conditions": [
       "unmatchable",
       "special_orbs",
@@ -55,7 +61,8 @@
       "board_effect",
       "spinner",
       "locked",
-      "weakened"
+      "weakened", "jammer", "poison", "mortal_poison", "bomb", "cloud", "tape", "blind",
+      "super_blind", "nail", "thorn", "fixed_start", "combo_orb", "match_rule"
     ],
     "survival_conditions": [
       "hp_at_most",
@@ -81,6 +88,25 @@
     "result": "passed, reported by user; expanded geometry and quality settings pending"
   },
   "fields": {
+    "PHOrbFixedStartYOffset": "0xb4684",
+    "PHOrbMinMatchOffset": "0xb6254",
+    "PHOrbMinMatchExtraOffset": "0xb625c",
+    "PHOrbSpinnerDurationOffset": "0xb4820",
+    "PHOrbSpinnerCountOffset": "0xb4824",
+    "PHOrbSpinnerPeriodOffset": "0xb4834",
+    "PHOrbSpinnerRowsOffset": "0xb4854",
+    "PHOrbSpinnerColorsOffset": "0xb4fc0",
+    "PHOrbUnmatchableDurationOffset": "0xb47c4",
+    "PHOrbUnmatchableColorsOffset": "0xb47c8",
+    "PHOrbTapeRowDurationOffset": "0xb46a4",
+    "PHOrbTapeRowsOffset": "0xb4694",
+    "PHOrbTapeColumnDurationOffset": "0xb46b8",
+    "PHOrbTapeColumnsOffset": "0xb46a8",
+    "PHOrbCloudDurationOffset": "0xb4740",
+    "PHOrbCloudXOffset": "0xb46e0",
+    "PHOrbCloudYOffset": "0xb46f0",
+    "PHOrbCloudWidthOffset": "0xb4700",
+    "PHOrbCloudHeightOffset": "0xb4710",
     "PHOrbPoolOffset": "0x988c0",
     "PHOrbTableOffset": "0xa34c0",
     "PHOrbMoveSerialOffset": "0x92e44",
@@ -114,6 +140,86 @@
     "PHOrbHPModifierOffset": "0xb4810"
   },
   "guards": [
+    {
+      "name": "PHOrbSpinnerUpdateRVA",
+      "va": "0x1005ab350",
+      "rva": "0x5ab350",
+      "length": 64,
+      "bytes": "ff0303d1ef3b026ded33036deb2b046de923056dfc6f06a9fa6707a9f85f08a9f65709a9f44f0aa9fd7b0ba9fdc30291f30300aa173840f908c786526801a072",
+      "sha256": "f21c142324d70f0138ead232e73898ccc1a29d03bc20d2846bbe88dfbe0b5549"
+    },
+    {
+      "name": "PHOrbBombResolveRVA",
+      "va": "0x1005fae4c",
+      "rva": "0x5fae4c",
+      "length": 64,
+      "bytes": "ff4303d1eb2b056de923066dfc6f07a9fa6708a9f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391f30300aa086481391f0500f1eb0300540a0080d209008052",
+      "sha256": "11459f4a7374bb42c4a277c7b14f339c50c9f5c46366d02c132877ed9818f165"
+    },
+    {
+      "name": "PHOrbTapeProjectRVA",
+      "va": "0x100608db8",
+      "rva": "0x608db8",
+      "length": 64,
+      "bytes": "0860c1391f050071eb0b0054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aa140080d2178886525701a0727b66c1397f070071",
+      "sha256": "49c76755c2ef29161bf935e3f73864d41a22d9a27bf66e077c632abbfd334637"
+    },
+    {
+      "name": "PHOrbBlindSetRVA",
+      "va": "0x100564758",
+      "rva": "0x564758",
+      "length": 64,
+      "bytes": "080080d269ff8f52a9ffbf720a0090524a00a0720b3840f96b8d42916b0113910c0080d26d696cf8ae0540b9af014039f01900514e0110371f12007122020054",
+      "sha256": "fe275ebcd67bbed592aa216789d7b4d99a4c6e3995d2cd97194970cd600730ec"
+    },
+    {
+      "name": "PHOrbSuperBlindSetRVA",
+      "va": "0x10056588c",
+      "rva": "0x56588c",
+      "length": 64,
+      "bytes": "0964c1393f0500714b090054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30303aaf40302aaf50301aaf60300aa170080d2f8ff8f52",
+      "sha256": "e13cfd2166c5a191c17df8ec641dd942fc8a09d5b96ad43ad7640cad8ac6b647"
+    },
+    {
+      "name": "PHOrbBlindTurnRVA",
+      "va": "0x1006061fc",
+      "rva": "0x6061fc",
+      "length": 64,
+      "bytes": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f40301aaf30300aa083840f989b286526901a0722a0080520a69297889be8552",
+      "sha256": "0b93db754cb8457b790dba15e32d12d085cbe0ee079914c4e01af3da52c5dede"
+    },
+    {
+      "name": "PHOrbFixedStartClearRVA",
+      "va": "0x1005600a0",
+      "rva": "0x5600a0",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa083840f908d1429100d11991464300942007f837686681391f0500f1cb020054090080d26a6281390b988652",
+      "sha256": "bff7586474f11b3c0df2aa754ae55f17f34a4a43118f412d963fa9140727adcf"
+    },
+    {
+      "name": "PHOrbShapeMatchRVA",
+      "va": "0x1005f7954",
+      "rva": "0x5f7954",
+      "length": 64,
+      "bytes": "ffc302d1e923046dfc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291e40700f90840201ef40300aae38b01a95f0000b97f0000b9083840f9",
+      "sha256": "23a3c4a31b3412b9d75b1aa01bf676d769b61e042fcca5a7bc46021cb8d70ac9"
+    },
+    {
+      "name": "PHOrbLineMatchRVA",
+      "va": "0x1005f8aa4",
+      "rva": "0x5f8aa4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f40303aaf30300aa0b64c1397f050071eb0f0054080080d2099886524901a0726c6241390a9886524a01a0728d1d0013",
+      "sha256": "d53b5420d156ac0e101ab6080c93fac846db1658aab27c77568407def252e422"
+    },
+    {
+      "name": "PHOrbCloudRVA",
+      "va": "0x1005ac054",
+      "rva": "0x5ac054",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30302aaf40300aa183840f908e888526801a072096b68782a250013",
+      "sha256": "411539a29ddc4d53b9ba81bdbfd4e00c730129e82154984fbcc46969944ebf44"
+    },
     {
       "name": "PHOrbInitRVA",
       "va": "0x1005f3d54",

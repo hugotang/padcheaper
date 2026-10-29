@@ -15,30 +15,46 @@ NSDictionary *PHOrbNormalizedSkillRule(NSDictionary *rule) {
 }
 
 NSArray<NSString *> *PHOrbObstacleConditions(void) {
-    return @[@"none", @"unmatchable", @"special_orbs", @"orb_effect", @"board_effect", @"spinner", @"locked", @"weakened"];
+    return @[@"none", @"unmatchable", @"special_orbs", @"orb_effect", @"board_effect", @"spinner", @"locked", @"weakened",
+        @"jammer", @"poison", @"mortal_poison", @"bomb", @"cloud", @"tape", @"blind", @"super_blind",
+        @"nail", @"thorn", @"fixed_start", @"combo_orb", @"match_rule"];
 }
 
 NSString *PHOrbObstacleConditionTitle(NSString *condition) {
     return @{@"none":@"不限定盤面妨礙", @"unmatchable":@"有不可消效果",
         @"special_orbs":@"有基本六色以外的珠", @"orb_effect":@"有未支援的珠子效果",
-        @"board_effect":@"有特殊盤面效果", @"spinner":@"有轉轉珠", @"locked":@"有鎖珠", @"weakened":@"有弱化珠"}[condition] ?: @"未知盤面條件";
+        @"board_effect":@"有特殊盤面效果", @"spinner":@"有轉轉珠", @"locked":@"有鎖珠", @"weakened":@"有弱化珠",
+        @"jammer":@"有邪魔珠", @"poison":@"有毒珠", @"mortal_poison":@"有猛毒珠", @"bomb":@"有爆彈珠",
+        @"cloud":@"有雲", @"tape":@"有封條", @"blind":@"有普通暗闇", @"super_blind":@"有超暗闇",
+        @"nail":@"有釘珠", @"thorn":@"有刺珠", @"fixed_start":@"有固定起點", @"combo_orb":@"有 Combo 珠",
+        @"match_rule":@"有最少消珠限制"}[condition] ?: @"未知盤面條件";
 }
 
 static unsigned ObstacleFlag(NSString *condition) {
     return [@{@"unmatchable":@(PHOrbObstacleUnmatchable), @"special_orbs":@(PHOrbObstacleSpecialOrbs),
         @"orb_effect":@(PHOrbObstacleOrbEffect), @"board_effect":@(PHOrbObstacleBoardEffect),
-        @"spinner":@(PHOrbObstacleSpinner), @"locked":@(PHOrbObstacleLocked), @"weakened":@(PHOrbObstacleWeakened)}[condition] unsignedIntValue];
+        @"spinner":@(PHOrbObstacleSpinner), @"locked":@(PHOrbObstacleLocked), @"weakened":@(PHOrbObstacleWeakened),
+        @"jammer":@(PHOrbObstacleJammer), @"poison":@(PHOrbObstaclePoison), @"mortal_poison":@(PHOrbObstacleMortalPoison),
+        @"bomb":@(PHOrbObstacleBomb), @"cloud":@(PHOrbObstacleCloud), @"tape":@(PHOrbObstacleTape),
+        @"blind":@(PHOrbObstacleBlind), @"super_blind":@(PHOrbObstacleSuperBlind), @"nail":@(PHOrbObstacleNail),
+        @"thorn":@(PHOrbObstacleThorn), @"fixed_start":@(PHOrbObstacleFixedStart), @"combo_orb":@(PHOrbObstacleCombo),
+        @"match_rule":@(PHOrbObstacleMatchRule)}[condition] unsignedIntValue];
 }
 
 NSString *PHOrbObstacleDescription(const PHOrbSnapshot *state) {
     if (!state || !state->valid || state->phase != 2) return @"";
     unsigned flags = PHOrbBoardObstacles(state);
+    BOOL unknownType = NO;
+    if (PHOrbDimensionsSupported(state->board.width, state->board.height))
+        for (unsigned i = 0; i < state->board.width * state->board.height; ++i) unknownType |= state->board.types[i] >= PHOrbTypes;
     NSMutableArray *parts = [NSMutableArray array];
     for (NSUInteger i = 1; i < PHOrbObstacleConditions().count; ++i) {
         unsigned flag = ObstacleFlag(PHOrbObstacleConditions()[i]);
+        if (flag == PHOrbObstacleSpecialOrbs && !unknownType && (flags & (PHOrbObstacleJammer | PHOrbObstaclePoison |
+            PHOrbObstacleMortalPoison | PHOrbObstacleBomb))) continue;
         if (flags & flag) [parts addObject:PHOrbObstacleConditionTitle(PHOrbObstacleConditions()[i])];
     }
-    if (!state->ordinary && !(flags & ~PHOrbObstacleLocked)) [parts addObject:@"特殊操作規則或動畫尚未結束"];
+    if (!state->ordinary) [parts addObject:@"盤面資料、操作規則或動畫尚未就緒"];
     return [parts componentsJoinedByString:@"、"];
 }
 
@@ -187,10 +203,12 @@ PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *st
         if (!state->automation.boardKnown || !state->settled ||
             !PHOrbDimensionsSupported(state->board.width, state->board.height))
             return Explained(PHOrbRuleUnknown, @"盤面珠數無法確認", reason);
-        unsigned count = 0;
-        for (unsigned i = 0; i < state->board.width * state->board.height; ++i) count += state->board.types[i] == color;
-        if (count >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
-        [matched addObject:[NSString stringWithFormat:@"指定珠色 %u 顆 < %@ 顆", count, rule[@"below"]]];
+        unsigned minimum = 0, maximum = 0;
+        PHOrbColorCountRange(&state->board, (unsigned)color, &minimum, &maximum);
+        if (minimum >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
+        if (maximum >= [rule[@"below"] unsignedIntValue])
+            return Explained(PHOrbRuleUnknown, @"缺珠門檻會隨轉轉變色，請先手動處理或調整規則", reason);
+        [matched addObject:[NSString stringWithFormat:@"指定珠色最多 %u 顆 < %@ 顆", maximum, rule[@"below"]]];
     }
     NSUInteger enemy = [PHOrbEnemyConditions() indexOfObject:rule[@"enemy"]];
     if (enemy) {

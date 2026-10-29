@@ -6,7 +6,14 @@ extern "C" {
 #endif
 
 enum { PHOrbMaxCells = 42, PHOrbMaxSteps = 48, PHOrbInputBytes = 2672, PHOrbMaxGoals = 6 };
-enum { PHOrbFlagSwapping = 0x4, PHOrbFlagLocked = 0x800 };
+enum {
+    PHOrbFlagBlindTouch = 0x4, PHOrbFlagEffectFresh = 0x8, PHOrbFlagLocked = 0x800, PHOrbFlagBlind = 0x1000,
+    PHOrbFlagStartDim = 0x2000, PHOrbFlagTape = 0x4000, PHOrbFlagCombo = 0x8000,
+    PHOrbFlagBlindFresh = 0x10000, PHOrbFlagNail = 0x20000, PHOrbFlagThorn = 0x80000,
+    PHOrbKnownFlags = PHOrbFlagBlindTouch | PHOrbFlagEffectFresh | PHOrbFlagLocked | PHOrbFlagBlind | PHOrbFlagStartDim |
+        PHOrbFlagTape | PHOrbFlagCombo | PHOrbFlagBlindFresh | PHOrbFlagNail | PHOrbFlagThorn
+};
+enum { PHOrbBasicTypes = 6, PHOrbJammer = 6, PHOrbPoison = 7, PHOrbMortalPoison = 8, PHOrbBomb = 9, PHOrbTypes = 10 };
 
 typedef enum {
     PHOrbGoalCombo, PHOrbGoalColors, PHOrbGoalMatch, PHOrbGoalL,
@@ -22,7 +29,8 @@ typedef struct { uint8_t count; PHOrbGoal items[PHOrbMaxGoals]; } PHOrbGoalSet;
 
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
-    bool goalsMet;
+    uint8_t poisonErased, unmatchedBombs;
+    bool goalsMet, hazardsSafe;
 } PHOrbEvaluation;
 
 // Top row first. Coordinates belong to cells; tokens and orb data move.
@@ -31,6 +39,12 @@ typedef struct {
     uint32_t flags[PHOrbMaxCells], enhancement[PHOrbMaxCells];
     uintptr_t tokens[PHOrbMaxCells];
     int16_t x[PHOrbMaxCells], y[PHOrbMaxCells];
+    uint8_t blindTurns[PHOrbMaxCells], thornDamage[PHOrbMaxCells];
+    // Cell-anchored restrictions never move with tokens. Start is one-based;
+    // zero means unrestricted. minErase zero means the default of three.
+    uint64_t spinnerMask, tapeMask, cloudMask;
+    uint16_t spinnerColors, unmatchableColors;
+    uint8_t fixedStart, minErase, minMatch;
 } PHOrbBoard;
 
 enum {
@@ -42,7 +56,13 @@ enum {
 enum {
     PHOrbObstacleUnmatchable = 1, PHOrbObstacleBoardEffect = 2,
     PHOrbObstacleOrbEffect = 4, PHOrbObstacleSpecialOrbs = 8,
-    PHOrbObstacleSpinner = 16, PHOrbObstacleLocked = 32, PHOrbObstacleWeakened = 64
+    PHOrbObstacleSpinner = 16, PHOrbObstacleLocked = 32, PHOrbObstacleWeakened = 64,
+    PHOrbObstacleJammer = 128, PHOrbObstaclePoison = 256,
+    PHOrbObstacleMortalPoison = 512, PHOrbObstacleBomb = 1024,
+    PHOrbObstacleCloud = 2048, PHOrbObstacleTape = 4096, PHOrbObstacleBlind = 8192,
+    PHOrbObstacleSuperBlind = 16384, PHOrbObstacleNail = 32768,
+    PHOrbObstacleThorn = 65536, PHOrbObstacleFixedStart = 131072,
+    PHOrbObstacleCombo = 262144, PHOrbObstacleMatchRule = 524288
 };
 
 enum {
@@ -73,7 +93,9 @@ typedef struct {
     uint32_t phase, wave, moves;
     uint16_t remainingFrames;
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
-    uint8_t fps, minErase, freeMovement, obstacles;
+    uint32_t obstacles;
+    uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
+    uint8_t fps, minErase, freeMovement;
     bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid;
     PHOrbAutomationState automation;
 } PHOrbSnapshot;
@@ -82,13 +104,24 @@ typedef struct {
     uint8_t count, cells[PHOrbMaxSteps + 1]; // Includes the starting cell.
     uint8_t combos, erased;
     uint8_t goalHits[PHOrbMaxGoals], goalCount, matchedGoals;
+    uint8_t poisonErased, unmatchedBombs;
     uint32_t evaluated, elapsedMS;
-    bool deadlineReached, goalsMet;
+    bool deadlineReached, goalsMet, hazardsSafe;
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);
 bool PHOrbBoardValid(const PHOrbBoard *board);
+bool PHOrbSpinnerSupported(const PHOrbBoard *board);
+unsigned PHOrbSpinnerVariants(const PHOrbBoard *board);
+uint8_t PHOrbSpinnerType(const PHOrbBoard *board, unsigned cell, unsigned phase);
+uint64_t PHOrbBlockedCells(const PHOrbBoard *board);
+bool PHOrbCanStartAt(const PHOrbBoard *board, unsigned cell);
+void PHOrbColorCountRange(const PHOrbBoard *board, unsigned color, unsigned *minimum, unsigned *maximum);
 bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
+// Spinner colors may advance only by a shared phase. Tokens, gameplay flags,
+// enhancement, geometry and all restrictions must still agree. Fixed-start
+// dimming is visual and is cleared by native start acceptance.
+bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
@@ -97,7 +130,7 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSamePlayerState(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
-uint8_t PHOrbBoardObstacles(const PHOrbSnapshot *state);
+uint32_t PHOrbBoardObstacles(const PHOrbSnapshot *state);
 
 #ifdef __cplusplus
 }
