@@ -70,6 +70,8 @@ cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
 cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
 cp ios/docs/release-0.5.8.md "$build_dir/release-0.5.8.md"
 cp ios/docs/release-0.5.9.md "$build_dir/release-0.5.9.md"
+cp ios/docs/release-0.5.10.md "$build_dir/release-0.5.10.md"
+cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
 cp ios/docs/persistence-music-sharing.md "$build_dir/persistence-music-sharing.md"
 cp ios/docs/autocombo-review.md "$build_dir/autocombo-review.md"
@@ -95,6 +97,8 @@ cp ios/research/orb-shape-0407.json "$build_dir/research/"
 cp ios/research/orb_shape_probe.cpp ios/research/orb_shape_benchmark.py ios/research/orb-shape-results.json "$build_dir/research/"
 cp ios/research/orb-spinner-20261030.json ios/research/orb-shape-results-057.json "$build_dir/research/"
 cp ios/research/orb_thorn_probe.cpp ios/research/orb_thorn_benchmark.py ios/research/orb-thorn-results-058.json "$build_dir/research/"
+cp ios/research/orb-shape-thorn-20261030.json ios/research/orb-shape-thorn-feasibility-0510.json ios/research/orb-shape-thorn-results-0510.json ios/research/orb-shape-results-0510.json "$build_dir/research/"
+cp ios/research/orb_recorded_shape_probe.cpp ios/research/orb_recorded_shape_benchmark.py ios/research/orb_lowhp_reachability_probe.cpp ios/research/orb_dense_heart_probe.cpp "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -121,7 +125,7 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "opening-resize-music.md"):
+for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "release-0.5.10.md", "orb-spinner-thorn-search.md", "opening-resize-music.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
@@ -169,7 +173,7 @@ metadata = {
     "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable and removal rules applied; jammer ordinary combos, no deterministic poison/mortal matches, all bombs must clear first wave; thorn target contacts require current HP above pending plus route damage upper bound and first-wave heart four, without crediting healing/resistance; unknown effects still block",
     "skill_orb_conditions": "native refusal may explain direct composite type-255 color counts; only actual attempt context retained; no bypass of native readiness; color-specific unmatchable rule uses ANY selected basic color, other predicates remain AND",
     "orb_spinners": "validate all six stored row masks before clipping to the current board after resize; offscreen cells do not block; custom types 0-9; avoid every visible spinner cell; all shared phases must meet goals and hazards; no timed color capture; raw read diagnostics retained; pending device verification",
-    "orb_shape_search": "exact four uses first-wave marked groups; other exact shapes retain conservative borders; phase-stable primary hints with alternate missing-goal recovery and at most two discarded-frontier revisits in thorough mode; original total time and path budgets; exact all-phase validation unchanged; passes/backtracks/deepest diagnostics; device verification pending",
+    "orb_shape_search": "bitset runs/groups/gravity preserve exact four and conservative shape borders; spinner/thorn primary search focuses costly exact shapes and intermediate thorn repairs can complete heart fours later; final HP/damage/heart/hazard gates unchanged; phase-stable hints, missing-goal recovery, two discarded-frontier revisits and zero-contact pass share original time/path budgets; device verification pending",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",

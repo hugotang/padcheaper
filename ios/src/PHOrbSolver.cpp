@@ -377,84 +377,60 @@ Score EvaluateStatic(Cells cells, const Context &context) {
         if (i % width + 2 < width && cells[i] == cells[i + 2]) ++score.potential;
         if (i + 2 * width < size && cells[i] == cells[i + 2 * width]) ++score.potential;
     }
+    auto waveColors = colors;
     for (unsigned wave = 0; wave < size / 3; ++wave) {
-        std::array<bool, PHOrbMaxCells> marked{}, seen{};
-        bool any = false;
-        for (unsigned i = 0; i < size; ++i) {
-            if (cells[i] == Empty || (context.unmatchable & (1u << cells[i]))) continue;
-            for (unsigned stride : {1u, width}) {
-                if ((stride == 1 && i % width + context.minErase > width) ||
-                    (stride == width && i / width + context.minErase > height)) continue;
-                bool run = true;
-                for (unsigned k = 1; k < context.minErase; ++k) run &= cells[i] == cells[i + k * stride];
-                if (run) for (unsigned k = 0; k < context.minErase; ++k) marked[i + k * stride] = any = true;
-            }
-        }
-        // The native connected-match restriction is applied to the marked
-        // connected group after the minimum straight run has been found.
-        if (context.minMatch > context.minErase) {
-            std::array<bool, PHOrbMaxCells> visited{};
-            any = false;
-            for (unsigned start = 0; start < size; ++start) if (marked[start] && !visited[start]) {
-                std::array<unsigned, PHOrbMaxCells> group{};
-                unsigned head = 0, tail = 1; group[0] = start; visited[start] = true;
-                while (head < tail) {
-                    unsigned cell = group[head++];
-                    for (int next : {int(cell) - int(width), int(cell) + int(width), int(cell) - 1, int(cell) + 1}) {
-                        if (next < 0 || !PHOrbAdjacent(cell, unsigned(next), width, height) ||
-                            !marked[next] || visited[next] || cells[next] != cells[start]) continue;
-                        visited[next] = true; group[tail++] = unsigned(next);
-                    }
-                }
-                if (tail < context.minMatch) for (unsigned i = 0; i < tail; ++i) marked[group[i]] = false;
-                else any = true;
-            }
-        }
-        if (wave == 0) {
-            for (unsigned i = 0; i < size; ++i)
-                if (cells[i] == PHOrbBomb && !marked[i]) ++result.unmatchedBombs;
-        }
-        if (!any) break;
-        for (unsigned start = 0; start < size; ++start) {
-            if (!marked[start] || seen[start]) continue;
-            ++result.combos;
-            matchedColors |= 1u << cells[start];
-            Bits group = 0;
-            std::array<unsigned, PHOrbMaxCells> queue{};
-            unsigned head = 0, tail = 1;
-            queue[0] = start; seen[start] = true;
-            while (head < tail) {
-                unsigned index = queue[head++];
-                group |= Bits(1) << index; ++result.erased;
-                if (cells[index] == PHOrbPoison || cells[index] == PHOrbMortalPoison) ++result.poisonErased;
-                for (int next : {int(index) - int(width), int(index) + int(width), int(index) - 1, int(index) + 1}) {
-                    if (next < 0 || unsigned(next) >= size || !PHOrbAdjacent(index, unsigned(next), width, height) ||
-                        !marked[next] || seen[next] || cells[next] != cells[start]) continue;
-                    seen[next] = true; queue[tail++] = unsigned(next);
+        Bits marked = 0;
+        for (unsigned c = 0; c < PHOrbTypes; ++c) {
+            if (context.unmatchable & (1u << c)) continue;
+            Bits matches = MarkedRuns(waveColors[c], context);
+            if (context.minMatch > context.minErase) {
+                Bits pending = matches; matches = 0;
+                while (pending) {
+                    Bits group = pending & (~pending + 1), frontier = group;
+                    while (frontier) { frontier = Neighbours(frontier, context) & pending & ~group; group |= frontier; }
+                    pending &= ~group;
+                    if (Count(group) >= context.minMatch) matches |= group;
                 }
             }
-            if (wave == 0 && cells[start] == 5 && tail == 4) {
-                bool horizontal = true, vertical = true;
-                for (unsigned i = 1; i < tail; ++i) {
-                    horizontal &= queue[i] / width == start / width;
-                    vertical &= queue[i] % width == start % width;
+            marked |= matches;
+        }
+        if (!wave) result.unmatchedBombs = uint8_t(Count(waveColors[PHOrbBomb] & ~marked));
+        if (!marked) break;
+        Bits pending = marked;
+        while (pending) {
+            const unsigned start = unsigned(__builtin_ctzll(pending)), color = cells[start];
+            Bits group = Bits(1) << start, frontier = group;
+            while (frontier) { frontier = Neighbours(frontier, context) & pending & waveColors[color] & ~group; group |= frontier; }
+            pending &= ~group;
+            const unsigned count = Count(group);
+            ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
+            if (color == PHOrbPoison || color == PHOrbMortalPoison) result.poisonErased += uint8_t(count);
+            if (!wave && color == 5 && count == 4) {
+                bool horizontal = true, vertical = true; Bits rest = group & ~(Bits(1) << start);
+                while (rest) {
+                    unsigned cell = unsigned(__builtin_ctzll(rest)); rest &= rest - 1;
+                    horizontal &= cell / width == start / width; vertical &= cell % width == start % width;
                 }
                 result.heartFours += horizontal || vertical;
             }
             for (unsigned g = 0; g < context.goals.count; ++g) {
                 const auto &goal = context.goals.items[g];
-                if (!(goal.colors & (1u << cells[start]))) continue;
-                bool hit = goal.kind == PHOrbGoalMatch ? tail >= goal.length :
-                    wave == 0 && goal.kind >= PHOrbGoalL && ShapeMatches(group, colors[cells[start]], goal, context.patterns[g]);
-                if (hit) { ++result.goalHits[g]; if (wave == 0) used[g] |= group; }
+                if (!(goal.colors & (1u << color))) continue;
+                bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
+                    !wave && goal.kind >= PHOrbGoalL && ShapeMatches(group, colors[color], goal, context.patterns[g]);
+                if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
         }
-        for (unsigned i = 0; i < size; ++i) if (marked[i]) cells[i] = Empty;
+        Bits erased = marked;
+        while (erased) { cells[unsigned(__builtin_ctzll(erased))] = Empty; erased &= erased - 1; }
+        waveColors.fill(0);
         for (unsigned column = 0; column < width; ++column) {
             int target = int(height) - 1;
             for (int row = int(height) - 1; row >= 0; --row) {
                 uint8_t value = cells[unsigned(row) * width + column];
-                if (value != Empty) cells[unsigned(target--) * width + column] = value;
+                if (value == Empty) continue;
+                unsigned cell = unsigned(target--) * width + column;
+                cells[cell] = value; waveColors[value] |= Bits(1) << cell;
             }
             while (target >= 0) cells[unsigned(target--) * width + column] = Empty;
         }
@@ -776,10 +752,16 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         std::swap(child.thorns[current], child.thorns[cell]);
                         if (!visited.insert(Hash(child, size)).second) continue;
                         child.score = Evaluate(child.cells, scoring);
-                        if (child.thornContacts && !child.score.result.heartFours) child.score.result.hazardsSafe = false;
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
+                        // A branch can finish its heart four later. Keep the
+                        // exact thorn survival gate on released candidates,
+                        // without using it to discard intermediate repairs.
+                        const bool heartPending = child.thornContacts && !child.score.result.heartFours;
+                        if (heartPending) child.score.result.hazardsSafe = false;
                         if (!found || Better(child, best, options.thornComboPriority)) { best = child; found = true; }
+                        if (heartPending) child.score.result.hazardsSafe = child.score.result.poisonErased == 0 &&
+                            child.score.result.unmatchedBombs == 0;
                         next.push_back(child);
                     }
                     if (passEnded || timedOut) break;
@@ -797,8 +779,23 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 } else SelectBeam(next, beam, options.beam, depth, scoring, focus, options.thornComboPriority);
             }
         };
+        // A spinner/thorn board can make an early easy four crowd out the
+        // harder exact shape. Start with that shape's progress while keeping
+        // every original goal and release gate. Other passes retain the
+        // ordinary objective, so the focused score does not authorize a move.
+        unsigned primaryFocus = PHOrbMaxGoals, largestShape = 0;
+        if (context.variants > 1 && context.shapeGoals > 1 &&
+            std::any_of(initialThorns.begin(), initialThorns.end(), [](uint8_t value) { return value != 0; })) {
+            for (unsigned g = 0; g < options.goals.count; ++g) {
+                const auto &goal = options.goals.items[g];
+                if (goal.kind < PHOrbGoalL || goal.kind == PHOrbGoalFour ||
+                    goal.kind == PHOrbGoalRow || goal.kind == PHOrbGoalColumn) continue;
+                const unsigned needed = Needed(goal, board.width, board.height) * goal.count;
+                if (needed > largestShape) { largestShape = needed; primaryFocus = g; }
+            }
+        }
         beam = starts;
-        search(context, 0, PHOrbMaxGoals, primaryDeadline, retain);
+        search(context, 0, primaryFocus, primaryDeadline, retain);
         if (recover && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
             Context recovery = context;
             // Alternate layouts can collectively satisfy all phases even

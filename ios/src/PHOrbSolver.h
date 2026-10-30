@@ -36,5 +36,7 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // One caller-owned worker, immutable input, no native/game calls or process exit.
 // Recovery passes and at most two saved, discarded frontiers share the original
 // deadline; neither changes exact evaluation or the maximum gesture length.
+// Intermediate shape repairs may defer their required heart four, but every
+// returned candidate still applies the complete release/survival policy.
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

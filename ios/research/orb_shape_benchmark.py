@@ -103,8 +103,8 @@ def main():
         "schema": 1, "platform": platform.platform(), "machine": platform.machine(),
         "scope": "Ordinary screenshot transcription and synthetic basic boards; no native timer/effects or device performance claim.",
         "baseline_commit": args.baseline_commit,
-        "candidate_source_sha256": hashlib.sha256((root / "ios/src/PHOrbSolver.cpp").read_bytes()).hexdigest(),
-        "probe_source_sha256": hashlib.sha256((root / "ios/research/orb_shape_probe.cpp").read_bytes()).hexdigest(),
+        "candidate_source_sha256": hashlib.sha256((root / "ios/src/PHOrbSolver.cpp").read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
+        "probe_source_sha256": hashlib.sha256((root / "ios/research/orb_shape_probe.cpp").read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
         "binaries": {name: {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                      for name, path in binaries.items()},
         "cases": dataset, "summary": summarize(rows), "measurements": rows,

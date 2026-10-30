@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-30",
+  "scope": "Exact stopped board inputs; optimistic four-direction low-HP reachability and unrestricted release-layout analysis for avoided cell-anchored spinners. No universal game impossibility claim.",
+  "fixture": "orb-shape-thorn-20261030.json",
+  "fixture_sha256": "22faf01bc04ffa40930373a8eb2e41225ecbf22ef7c8d1bd6f74245a77d67087",
+  "proofs": {
+    "lowhp-proof": {
+      "source": "orb_lowhp_reachability_probe.cpp",
+      "source_sha256": "ed1583eee0ec86cce11f9623c2206d2c27b9d3cb9b6877e184c260d04eac1728",
+      "result": {
+        "turn": 1,
+        "max_contacts": 1,
+        "contact_damage": 27913,
+        "states_summed_over_starts": 7971,
+        "all_phase_T_states": 0,
+        "complete": true,
+        "directions": 4,
+        "heart_requirement": false,
+        "states_by_start": [
+          140,
+          140,
+          313,
+          99,
+          450,
+          99,
+          604,
+          140,
+          839,
+          99,
+          75,
+          99,
+          314,
+          937,
+          158,
+          1067,
+          75,
+          0,
+          314,
+          86,
+          158,
+          265,
+          264,
+          22,
+          314,
+          314,
+          471,
+          71,
+          22,
+          22
+        ]
+      }
+    },
+    "dense-heart-proof": {
+      "source": "orb_dense_heart_probe.cpp",
+      "source_sha256": "eb86191d433a4eead092bde052b3c659a4786de085879db7d0ac033f3b627ddd",
+      "result": {
+        "turn": 3,
+        "fixed_lights": 6,
+        "fixed_hearts": 23,
+        "relevant_release_placements": 816,
+        "all_phase_T_placements": 290,
+        "all_phase_T_four_placements": 0,
+        "complete": true,
+        "path_and_thorn_limits": false,
+        "witness_light_mask": 0
+      }
+    }
+  }
+}
