@@ -150,11 +150,13 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     }
     const uintptr_t header = frame.header, save = header + PHSaveRVA, game = header + PHGameMainRVA;
     uint8_t scene[2]; uint32_t player = 0;
+    if (reason) *reason = @"登入或場景資料未通過讀取校驗";
     if (!PHReadMemory(save, scene, sizeof(scene)) || !PHReadU32(save + PHPlayerIDOffset, &player) || player != frame.player) return false;
     if (scene[0] != 1) { if (reason) *reason = @"進入單人關卡後，輪到操作時讀盤"; return true; }
     if (scene[1] != 1) { if (reason) *reason = @"場景切換中"; return false; }
     uint16_t mode = 0, source = 0, ids[2]{};
     uint32_t multi = 0;
+    if (reason) *reason = @"單人模式資料未通過讀取校驗";
     if (!PHReadU16(header + PHBattleModeRVA, &mode) || !PHReadU32(header + PHBattleMultiplayerRVA, &multi) ||
         !PHReadU16(save + PHBattleSourceModeOffset, &source)) return false;
     state.present = true;
@@ -165,6 +167,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         return true;
     }
     uintptr_t object = 0, impl = 0, active = 0;
+    if (reason) *reason = @"戰鬥物件或記憶體範圍未通過讀取校驗";
     if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game ||
         !PHReadPointer(game + 0x70, &impl) || !impl || (impl & 7u) || impl > UINTPTR_MAX - 0xc4000 ||
         !PHReadPointer(header + PHBattleImplRVA, &active) || active != impl ||
@@ -175,6 +178,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     uintptr_t dialog = 0;
     uint16_t specialDrag = 0;
     uint8_t moveBlocked = 0, intro = 0;
+    if (reason) *reason = @"戰鬥身分、受保護階段或輸入資料未通過讀取校驗";
     if (!PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) || !ids[0] || !ids[1] ||
         !PHReadMemory(header + PHBattleEntryHashRVA, state.identity.entryHash, sizeof(state.identity.entryHash)) ||
         !PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
@@ -192,6 +196,15 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     bool hashPresent = false;
     for (uint8_t byte : state.identity.entryHash) hashPresent |= byte != 0;
     if (!hashPresent) return false;
+    if (reason) *reason = @"改盤動畫資料未通過讀取校驗";
+    float resize[2]{};
+    if (!PHReadMemory(impl + PHOrbResizeProgressOffset, resize, sizeof(resize)) ||
+        !std::isfinite(resize[0]) || !std::isfinite(resize[1]) ||
+        resize[0] < 0 || resize[0] > 1 || resize[1] < 0 || resize[1] > 1) return false;
+    state.resizeProgress = resize[0]; state.resizeTarget = resize[1];
+    // 0x1005AB350 finalizes dimensions/centers on the frame after progress
+    // reaches one, then resets this interpolator to zero. Phase may still be 2.
+    state.boardTransition = resize[0] != resize[1] || resize[0] >= 1;
     state.minErase = shape[4]; state.freeMovement = shape[5];
     state.board.width = shape[0]; state.board.height = shape[1];
     // Skills may remove unmatchable/locked/special orbs. Their window is
@@ -200,9 +213,30 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     // Release may enter the resolve phase and start removing orb objects in
     // this same native frame. Identity + drag metadata is sufficient to
     // acknowledge release; a resolving board must never be used for a route.
-    if (state.phase != 2) {
+    if (state.phase != 2 || state.boardTransition) {
+        uint32_t lastKey1 = 0, lastKey2 = 0, lastPhase = 0, lastWave = 0;
+        uintptr_t lastImpl = 0, lastActive = 0, lastInput = 0;
+        uint8_t lastScene[2]{}, lastHash[32]{}; uint16_t lastMode = 0, lastSource = 0, lastIDs[2]{};
+        uint32_t lastPlayer = 0, lastMulti = 0;
+        if (reason) *reason = @"動畫期間戰鬥身分或階段已改變，未採用快照";
+        if (!PHReadMemory(save, lastScene, sizeof(lastScene)) || std::memcmp(scene,lastScene,sizeof(scene)) ||
+            !PHReadU32(save + PHPlayerIDOffset, &lastPlayer) || lastPlayer != player ||
+            !PHReadMemory(save + PHBattleDungeonOffset, lastIDs, sizeof(lastIDs)) || std::memcmp(ids,lastIDs,sizeof(ids)) ||
+            !PHReadU16(header + PHBattleModeRVA, &lastMode) || lastMode != mode ||
+            !PHReadU16(save + PHBattleSourceModeOffset, &lastSource) || lastSource != source ||
+            !PHReadU32(header + PHBattleMultiplayerRVA, &lastMulti) || lastMulti != multi ||
+            !PHReadMemory(header + PHBattleEntryHashRVA, lastHash, sizeof(lastHash)) ||
+            std::memcmp(lastHash,state.identity.entryHash,sizeof(lastHash)) ||
+            !PHReadPointer(game + 0x70, &lastImpl) || lastImpl != impl ||
+            !PHReadPointer(header + PHBattleImplRVA, &lastActive) || lastActive != impl ||
+            !PHReadPointer(header + PHBattleInputRVA, &lastInput) || lastInput != state.inputManager ||
+            !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
+            !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2 ||
+            !Decode(impl + PHBattlePhaseOffset,key1,key2,0x766cfc6du,lastPhase) || lastPhase != state.phase ||
+            !Decode(impl + PHBattleWaveOffset,key1,key2,0x766cfc6du,lastWave) || lastWave != state.wave) return false;
         state.valid = true;
-        if (reason) *reason = @"等待自己的操作階段";
+        if (state.boardTransition) { state.automation.window = false; state.automation.busy = true; }
+        if (reason) *reason = state.boardTransition ? @"等待原生改盤動畫完成；尚未讀取珠子與座標" : @"等待自己的操作階段";
         return true;
     }
     state.ordinary = source == 0 && state.minErase >= 3 && state.minErase <= 7 && state.freeMovement == 1 &&
@@ -214,6 +248,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     }
     std::array<uint8_t, PoolStride * PoolCount> pool;
     std::array<uintptr_t, PoolCount> table, lastTable;
+    if (reason) *reason = @"盤面物件池或索引表無法讀取";
     if (!PHReadMemory(impl + PHOrbPoolOffset, pool.data(), pool.size()) ||
         !PHReadMemory(impl + PHOrbTableOffset, table.data(), sizeof(table))) return false;
     const uintptr_t start = impl + PHOrbPoolOffset, end = start + pool.size();
@@ -221,6 +256,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     for (unsigned row = 0; row < height; ++row) for (unsigned col = 0; col < width; ++col) {
         const unsigned i = row * width + col;
         const uintptr_t token = table[(height - 1 - row) * 16 + col];
+        if (reason) *reason = @"盤面珠子指標不在物件池內或指標重複";
         if (token < start || token >= end || (token - start) % PoolStride) return false;
         for (unsigned previous = 0; previous < i; ++previous) if (state.board.tokens[previous] == token) return false;
         const uint8_t *block = pool.data() + token - start;
@@ -232,9 +268,12 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         state.board.x[i] = Load<int16_t>(block + 28); state.board.y[i] = Load<int16_t>(block + 30);
         state.settled &= motion == 0 && Load<int16_t>(block + 24) == state.board.x[i] && Load<int16_t>(block + 26) == state.board.y[i];
         if (motion != 0 && motion != 3 && motion != 4) state.ordinary = false;
-        if (state.board.x[i] < 0 || state.board.x[i] > 4096 || state.board.y[i] < 0 || state.board.y[i] > 4096) return false;
+        if (state.board.x[i] < 0 || state.board.x[i] > 4096 || state.board.y[i] < 0 || state.board.y[i] > 4096) {
+            if (reason) *reason = @"珠子座標超出支援範圍"; return false;
+        }
     }
     const int spacing = state.board.x[1] - state.board.x[0];
+    if (reason) *reason = @"盤面格心或間距不一致，未採用此盤面";
     if (spacing < 20 || spacing > 160) return false;
     for (unsigned row = 0; row < height; ++row) for (unsigned col = 0; col < width; ++col) {
         unsigned i = row * width + col;
@@ -245,6 +284,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         state.ordinary = false; state.obstacles |= PHOrbObstacleBoardEffect;
     }
     uint32_t lastKey1 = 0, lastKey2 = 0; uintptr_t lastImpl = 0;
+    if (reason) *reason = @"讀盤期間索引表、戰鬥物件或解碼金鑰已改變";
     if (!PHReadMemory(impl + PHOrbTableOffset, lastTable.data(), sizeof(lastTable)) || table != lastTable ||
         !PHReadPointer(game + 0x70, &lastImpl) || lastImpl != impl ||
         !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
@@ -264,7 +304,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
 #include "PHOrbSkillDiagnostics.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
-    if (!state.valid || state.multiplayerDisabled || state.phase != 2) return;
+    if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
     bool needed = false;
     for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
         needed |= (state.board.flags[i] & PHOrbFlagThorn) && state.board.thornDamage[i];
@@ -529,7 +569,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (reason) *reason = readReason ?: @"輸入前狀態無法確認";
         return NO;
     }
-    if (!PHOrbSameTurn(expected, &live) || live.phase != 2 || live.moves != expected->moves ||
+    if (!PHOrbSameTurn(expected, &live) || live.boardTransition || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (down && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << cell))) ||
         (down && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(cell))) ||

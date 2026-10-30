@@ -8,7 +8,7 @@ static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), dataBytes(3276
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data()), Impl = reinterpret_cast<uintptr_t>(implBytes.data()),
     Data = reinterpret_cast<uintptr_t>(dataBytes.data());
 static unsigned failures, writes, sets, refreshes, checks;
-static bool validCode = true, failWrite, ignoreSet;
+static bool validCode = true, failWrite, ignoreSet, changeTableDuringRead, reorderTableDuringRead, mutableNames;
 static void Check(bool ok,const char *why) { if (!ok) { std::fprintf(stderr,"FAIL: %s\n",why); ++failures; } }
 static bool Range(uintptr_t address,size_t length) {
     for (auto *v : {&guest,&implBytes,&dataBytes}) {
@@ -18,7 +18,20 @@ static bool Range(uintptr_t address,size_t length) {
     return false;
 }
 BOOL PHReadMemory(uintptr_t address,void *out,size_t length) {
-    if (!Range(address,length)) return NO; std::memcpy(out,reinterpret_cast<void *>(address),length); return YES;
+    if (!Range(address,length)) return NO; std::memcpy(out,reinterpret_cast<void *>(address),length);
+    if (changeTableDuringRead && address==Data+2304) {
+        changeTableDuringRead=false; const uintptr_t replaced=Data+2560;
+        std::memcpy(reinterpret_cast<void *>(Data+2048+16),&replaced,sizeof(replaced));
+    }
+    if (reorderTableDuringRead && address==Data+2304) {
+        reorderTableDuringRead=false;
+        uintptr_t names[2];
+        std::memcpy(&names[0],reinterpret_cast<void *>(Data+2304+8),sizeof(uintptr_t));
+        std::memcpy(&names[1],reinterpret_cast<void *>(Data+2304+24),sizeof(uintptr_t));
+        std::memcpy(reinterpret_cast<void *>(Data+2304+8),&names[1],sizeof(uintptr_t));
+        std::memcpy(reinterpret_cast<void *>(Data+2304+24),&names[0],sizeof(uintptr_t));
+    }
+    return YES;
 }
 BOOL PHWriteData(uintptr_t address,const void *input,size_t length) {
     ++writes;
@@ -26,7 +39,7 @@ BOOL PHWriteData(uintptr_t address,const void *input,size_t length) {
     std::memcpy(reinterpret_cast<void *>(address),input,length); return YES;
 }
 BOOL PHMemoryHasProtection(uintptr_t address,size_t length,vm_prot_t required,vm_prot_t forbidden) {
-    (void)required; (void)forbidden; return Range(address,length);
+    (void)required; return Range(address,length) && !(mutableNames && (forbidden & VM_PROT_WRITE));
 }
 BOOL PHValidateGuest(const mach_header_64 *header,NSString **reason) { (void)header; (void)reason; ++checks; return validCode; }
 template<class T> static void Put(uintptr_t address,T value) { std::memcpy(reinterpret_cast<void *>(address),&value,sizeof(value)); }
@@ -46,7 +59,8 @@ static uint64_t Refresh(uintptr_t game) {
 static PHBattleFrame Frame(void) { PHBattleFrame frame{}; frame.header=Header; frame.player=42; frame.epoch=1; frame.ready=frame.enabled=true; return frame; }
 static void Seed(void) {
     std::fill(guest.begin(),guest.end(),0); std::fill(implBytes.begin(),implBytes.end(),0); std::fill(dataBytes.begin(),dataBytes.end(),0);
-    writes=sets=refreshes=checks=0; validCode=true; failWrite=ignoreSet=false; TestCalls={Set,Refresh};
+    writes=sets=refreshes=checks=0; validCode=true;
+    failWrite=ignoreSet=changeTableDuringRead=reorderTableDuringRead=mutableNames=false; TestCalls={Set,Refresh};
     const uintptr_t save=Header+PHSaveRVA;
     Put<uint16_t>(save,0x0101); Put<uint32_t>(save+PHPlayerIDOffset,42);
     Put<uintptr_t>(Header+PHSceneTableRVA+24,Header+PHGameMainRVA);
@@ -81,6 +95,49 @@ int main(void) { @autoreleasepool {
     frame.enabled=false; [music onFrame:frame time:4];
     Check(Current()==-1&&refreshes==1&&writes==1,"disable restores only our temporary music override");
     Check(guest==saveBefore,"music never changes account, clear flags, rewards, audit or request state");
+    Seed(); music=[PHMusic new]; frame=Frame();
+    std::strcpy(reinterpret_cast<char *>(Data+1024),"BGM_972");
+    std::strcpy(reinterpret_cast<char *>(Data+1152),"bgm_972.caf"); Put<uintptr_t>(Data+2304+24,Data+1152);
+    std::strcpy(reinterpret_cast<char *>(Data+1056),"bgm_973");
+    std::strcpy(reinterpret_cast<char *>(Data+1216),"BGM_973.CAF"); Put<uintptr_t>(Data+2304+40,Data+1216);
+    [music onFrame:frame time:1];
+    Check(sets==1&&Current()==1&&[[music snapshot][@"selection"][@"registered"] isEqual:@"bgm_972.caf"],
+        "native case-insensitive prefix resolves descriptor name without CAF suffix");
+    Protected(Impl+PHBattleWaveOffset,4); [music onFrame:frame time:2];
+    Check(sets==2&&Current()==2,"boss track follows the same native name matching");
+    Seed(); music=[PHMusic new]; frame=Frame(); mutableNames=true;
+    std::strcpy(reinterpret_cast<char *>(Data+1024),"BGM_12");
+    std::strcpy(reinterpret_cast<char *>(Data+1152),"bgm_123.caf"); Put<uintptr_t>(Data+2304+24,Data+1152);
+    std::strcpy(reinterpret_cast<char *>(Data+1216),"bgm_12.caf"); Put<uintptr_t>(Data+2304+40,Data+1216);
+    [music onFrame:frame time:1];
+    Check(sets==1&&Current()==1,"ambiguous prefix uses native first registry entry, not a preferred exact match");
+    std::strcpy(reinterpret_cast<char *>(Data+1100),"BGM_12-first.caf");
+    [music onFrame:frame time:2];
+    Check(sets==2&&Current()==0,"mutable earlier resource names are rescanned before a cached later match");
+    Seed(); music=[PHMusic new]; frame=Frame();
+    std::strcpy(reinterpret_cast<char *>(Data+1100),"bgm_999.caf");
+    std::strcpy(reinterpret_cast<char *>(Data+1024),"BGM_972");
+    std::strcpy(reinterpret_cast<char *>(Data+1152),"bgm_972.caf"); Put<uintptr_t>(Data+2304+24,Data+1152);
+    [music onFrame:frame time:1];
+    const uintptr_t firstName=Data+1152, unrelated=Data+1100;
+    Put<uintptr_t>(Data+2304+8,firstName); Put<uintptr_t>(Data+2304+24,unrelated);
+    [music onFrame:frame time:2];
+    Check(sets==2&&Current()==0,"registry reordering invalidates cache and selects the new native first index");
+    Seed(); music=[PHMusic new]; frame=Frame(); changeTableDuringRead=true;
+    [music onFrame:frame time:1];
+    Check(!sets&&!writes&&[[music snapshot][@"message"] containsString:@"資源表已改變"],
+        "a registry replacement during lookup cannot select an index from the former table");
+    Seed(); music=[PHMusic new]; frame=Frame(); reorderTableDuringRead=true;
+    [music onFrame:frame time:1];
+    Check(!sets&&!writes&&[[music snapshot][@"message"] containsString:@"資源表已改變"],
+        "an in-place registry reorder during lookup cannot select a stale native index");
+    [music onFrame:frame time:2];
+    Check(sets==1&&Current()==0,"the next stable lookup uses the reordered registry's first match");
+    Seed(); music=[PHMusic new]; frame=Frame(); Put<uintptr_t>(Data+2304+8,0);
+    [music onFrame:frame time:1]; Check(!sets&&!writes,"unreadable earlier resource cannot be skipped in native first-match order");
+    Check(!ResourceMatches(@"",@"bgm_972.caf")&&!ResourceMatches(@"BGM_972",@"bgm_97.caf")&&
+        !ResourceMatches(@"BGM_972",@"xbgm_972.caf"),"empty and nonprefix names do not resolve to a registered track");
+    std::printf("Music resource matching regressions: case, suffix, first-match order and registry races checked\n");
     Seed(); music=[PHMusic new]; frame=Frame(); [music onFrame:frame time:1];
     Put<int16_t>(Impl+PHMusicOverrideOffset,9); Put<int16_t>(Impl+PHMusicTargetOffset,9);
     [music onFrame:frame time:2]; frame.enabled=false; [music onFrame:frame time:3];
@@ -113,8 +170,8 @@ int main(void) { @autoreleasepool {
     Seed(); music=[PHMusic new]; frame=Frame(); std::strcpy(reinterpret_cast<char *>(Data+1056),"RND");
     [music onFrame:frame time:1]; Check(!sets,"random music is not approximated or allowed to alter random history");
     Seed(); music=[PHMusic new]; frame=Frame(); Put<uint16_t>(Data+2048+24,1); [music onFrame:frame time:1];
-    Check(!sets,"a missing loaded resource leaves music alone");
-    Put<uint16_t>(Data+2048+24,3); [music onFrame:frame time:2]; Check(sets==1,"deferred audio resource availability is retried");
+    Check(!sets,"a missing registered resource leaves music alone");
+    Put<uint16_t>(Data+2048+24,3); [music onFrame:frame time:2]; Check(sets==1,"deferred audio resource registration is retried");
     Seed(); music=[PHMusic new]; frame=Frame(); Put<uint32_t>(Data+124,1);
     Put<uintptr_t>(Header+PHSaveRVA+PHBattleDungeonRulePoolOffset,Data+4096); Put<uintptr_t>(Data+4096+16,Data+8192);
     std::strcpy(reinterpret_cast<char *>(Data+8193),"fc1:1|fc2:1|fc3:1|fc4:1|fc5:1|fc6:1");

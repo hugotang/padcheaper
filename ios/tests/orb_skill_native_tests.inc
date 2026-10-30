@@ -375,6 +375,43 @@ static void TemporarySkillNativeTests() {
 #include "orb_skill_choice_tests.inc"
 
 static void SkillNativeTests() {
+    for (unsigned scenario = 0; scenario < 8; ++scenario) {
+        SkillFixture(); FixtureSkillEngine *resizeEngine = [FixtureSkillEngine new];
+        PHOrbSnapshot stable{}, transition{}; NSString *resizeReason = nil;
+        Check([resizeEngine readAutomation:&stable frame:Frame() reason:&resizeReason],"resize regression has a validated initial skill board");
+        Put<float>(Impl + PHOrbResizeProgressOffset,scenario == 1 ? 1 : 0.5f);
+        Put<float>(Impl + PHOrbResizeProgressOffset + 4,1);
+        // This table is deliberately unusable for a route. Animation identity
+        // and skill receipts may be observed without following these pointers.
+        std::memset(reinterpret_cast<void *>(Impl + PHOrbTableOffset),0,256 * sizeof(uintptr_t));
+        Protected(Impl + PHOrbSkillUsesOffset,1,0x6a875a8b);
+        if (scenario == 2) Put<float>(Impl + PHOrbResizeProgressOffset,NAN);
+        if (scenario == 3) Put<float>(Impl + PHOrbResizeProgressOffset + 4,2);
+        if (scenario == 4) Put<uint32_t>(Impl + PHBattlePhaseOffset,0);
+        if (scenario == 5) replaceHashDuringResizeRead = true;
+        if (scenario == 6) Put<uint32_t>(Impl + PHOrbSkillUsesOffset,0);
+        if (scenario == 7) Put<uint32_t>(Header + PHBattleMultiplayerRVA,1);
+        const BOOL readable = [resizeEngine readAutomation:&transition frame:Frame() reason:&resizeReason];
+        if (scenario < 2) {
+            Check(readable && transition.valid && transition.boardTransition && transition.automation.valid &&
+                transition.automation.skillUses == 1 && transition.automation.busy && !transition.automation.window &&
+                !transition.automation.boardKnown && !transition.settled && !transition.ordinary && !transition.board.tokens[0] &&
+                !PHOrbCanPreview(&transition) && !PHOrbSameAutomation(&transition,&transition) && writes == 0,
+                "native resize returns validated identity and skill receipt with unavailable geometry, including progress-one finalization frame");
+            Check([resizeEngine useSkill:0 expected:&transition frame:Frame() reason:&resizeReason] == PHOrbSkillRejected &&
+                !skillStartCalls && !writes,"animation identity snapshot cannot authorize a native skill");
+            Check(![resizeEngine stageCell:0 down:YES beginning:YES expected:&stable frame:Frame() reason:&resizeReason] && !writes,
+                "an old preview cannot inject a drag during native resizing");
+            Put<float>(Impl + PHOrbResizeProgressOffset,0); Put<float>(Impl + PHOrbResizeProgressOffset + 4,0);
+            Check(![resizeEngine readAutomation:&transition frame:Frame() reason:&resizeReason] && resizeReason.length,
+                "invalid board after resize marker clears still fails with a specific diagnostic");
+        } else if (scenario == 7) {
+            Check(readable && transition.multiplayerDisabled && !transition.valid && !writes,
+                "multiplayer cannot obtain the resize observation exception");
+        } else Check(!readable && resizeReason.length && !skillStartCalls && !writes,
+            "invalid interpolator, protected phase, identity race or protected skill receipt is never accepted as an animation");
+    }
+    std::printf("Native resize regressions: 8 scenarios checked\n");
     TemporarySkillNativeTests();
     SkillSourceNativeTests();
     SkillOrbConditionTests();

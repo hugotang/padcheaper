@@ -153,7 +153,7 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
 }
 
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
-    if (!PHOrbSameTurn(a, b) || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
+    if (!PHOrbSameTurn(a, b) || a->boardTransition || b->boardTransition || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
         a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary || a->unmatchableKnown != b->unmatchableKnown ||
         !PHOrbSamePlanBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
@@ -275,6 +275,7 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
 
 bool PHOrbCanPreview(const PHOrbSnapshot *state) {
     return state && state->present && state->valid && state->settled && state->ordinary &&
+        !state->boardTransition &&
         !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) &&
         state->identity.sourceMode == 0 && state->phase == 2 && !state->dragged && PHInputIsQuiet(&state->input) &&
         (!(state->obstacles & PHOrbObstacleSpinner) || state->board.spinnerMask || state->spinnerReadStatus == PHOrbSpinnerReady) &&

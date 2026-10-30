@@ -4,6 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 0.5.9-orbs：開場擴盤與 BGM 裝置回報修正，待本次驗證
+
+2026-10-30，使用者確認開場 5／6 停止及未通關隊伍 BGM 未播放，並補充當次環境是 Dopamine rootless 越獄 iPhone 直接注入，沒有使用 LiveContainer。讀取、frame 與技能啟動已成功，不能把這份 log 歸因於 LiveContainer 載入。沿用對話已有「開始編譯測試」授權處理必要的回報修正，先集中完成來源與回歸，再執行本次 build／test；不覆寫 0.5.8 交付。
+
+已接入原生擴盤插值的身分快照等待及第一個 native BGM 前綴匹配，詳見 [分析](opening-resize-music.md)。新增 native／六步開場 session／music 回歸與持續診斷。源碼與案例已寫，尚未以執行或 CI 證明通過；原 log 無逐幀失敗欄位／曲目名稱，新版需在 Dopamine 上驗收 6／6、盤面與音樂實際結果。`device_verified=false`。
+
+本機已通過 JSON／Python／shell 語法與來源差異檢查，三份 manifest 的 113 組指紋均與原始解密 IPA 相符。這些靜態檢查不等於編譯、回歸或真機結果，完整驗證由本次手動 CI 執行。
+
 ## 0.5.8-orbs：保存、BGM、分享、技能選擇及求路，CI 74 完成
 
 2026-10-30，[CI 74](https://github.com/hugotang/padcheaper/actions/runs/41011326922) 的原生／session／求解器／規則／config、iPhoneOS 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視未通關 BGM 開關、荊棘偏好、原生分享面板、檔案選擇器及匯入預覽。

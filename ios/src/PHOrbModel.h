@@ -119,6 +119,10 @@ typedef struct {
     uint8_t spinnerRawRows[6], spinnerStoredCells;
     PHOrbSpinnerReadStatus spinnerReadStatus;
     uint8_t fps, minErase, freeMovement;
+    // Native resize interpolation is independent of battle phase. Identity
+    // remains readable while the orb geometry is unavailable for planning.
+    float resizeProgress, resizeTarget;
+    bool boardTransition;
     bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid, unmatchableKnown;
     PHOrbAutomationState automation;
     PHOrbThornState thorns;

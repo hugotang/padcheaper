@@ -876,6 +876,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"startSent"], orbs[@"startAccepted"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb execution: %@ ms / limit %@ ms",
         orbs[@"executionElapsedMS"], orbs[@"executionLimitMS"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb board transition: %@ / observed frames %@ / progress %@ / target %@\nOrb last read issue: %@",
+        orbs[@"boardTransition"], orbs[@"boardTransitionFrames"], orbs[@"resizeProgress"], orbs[@"resizeTarget"], orbs[@"lastReadIssue"]];
     diagnostics = [diagnostics stringByAppendingFormat:
         @"\nOrb effects: %@\nOrb hazard policy (candidate only): met %@ / poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
         orbs[@"obstacles"], orbs[@"hazardsSafe"], orbs[@"poisonErased"], orbs[@"unmatchedBombs"],

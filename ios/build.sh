@@ -69,6 +69,8 @@ cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
 cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
 cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
 cp ios/docs/release-0.5.8.md "$build_dir/release-0.5.8.md"
+cp ios/docs/release-0.5.9.md "$build_dir/release-0.5.9.md"
+cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
 cp ios/docs/persistence-music-sharing.md "$build_dir/persistence-music-sharing.md"
 cp ios/docs/autocombo-review.md "$build_dir/autocombo-review.md"
 cp ios/docs/ad-revival.md "$build_dir/ad-revival.md"
@@ -119,7 +121,7 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md"):
+for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "opening-resize-music.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
@@ -144,7 +146,8 @@ metadata = {
     "profile_file_sharing": "selected ordinary profile or complete team plan as bounded JSON file; native share sheet and document picker; preview before atomic save; duplicate IDs refused; no account/API/master switches",
     "deck_persistence": "save_decks ID 58 native commit; exact queued raw record correlation recovers serializer-defaulted badges and respects confirmed explicit zero; account-bound per-field deferred restore with readback and cancellation",
     "unlock_restoration": "disabled cosmetic ownership and descriptor restoration retains failed work until readback; changed table, ID or native descriptor value revokes old lease",
-    "uncleared_team_music": "optional default-off single-player named loaded tracks; read-only clear predicate; native temporary music override, boss selection and event/script priority; no clear-flag writes",
+    "uncleared_team_music": "optional default-off single-player named registered tracks; native ASCII case-insensitive prefix and first-match order; named-track diagnostics; read-only clear predicate; native temporary music override, boss selection and event/script priority",
+    "opening_board_resize": "validated native resize interpolation preserves in-flight skill receipts; no geometry, planning, next skill or input during resizing; stable full board required to continue; original identity/input/multiplayer guards and bounded timeout retained",
     "skill_body_choice": "native same-evolution-family base/assist choice only; body still passes native cooldown, board and status conditions; source/stage/family rechecks; no forced readiness or charge writes",
     "thorn_combo_priority": "optional default-off, atomically saved with profile and team plan; goals/hazards then combos before thorn damage when enabled; exact first-wave heart four and verified surviving HP still mandatory",
     "thorn_zero_contact_search": "contact candidates can trigger a bounded zero-contact pass within the original deadline; independent replay fixture records comparison, not device timing",
@@ -181,7 +184,7 @@ metadata = {
     "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",
     "platform": "iPhoneOS",
     "minimum_ios": "15.0",
-    "signing": "ad-hoc; re-sign in LiveContainer",
+    "signing": "ad-hoc; use the existing Dopamine rootless injection setup, or re-sign in LiveContainer",
     "mode": "diagnostic by default; experimental writes opt in",
     "device_verified": False,
     "sha256": sha,

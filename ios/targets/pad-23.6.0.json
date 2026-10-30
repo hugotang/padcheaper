@@ -215,6 +215,15 @@
         "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f53001d0a85e47f909314079e9010034f40300aa130080d216018052080940f9016976f8e00314aa1a1af59700010034",
         "sha256": "90cb723c4d64da608d091179f1abba0ddf8c808fbec085a9c46715bc2ffd1d6e",
         "file_offset": "0x4eedd4"
+      },
+      {
+        "id": "music_resource_compare",
+        "va": "0x100235674",
+        "rva": "0x235674",
+        "length_bytes": 64,
+        "bytes_hex": "0800403988020034f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa8002c039b6b33094081c085388010034157d18136016c03894060091b0b33094",
+        "sha256": "b0620668018a607bb9c01be2a50149edf97ccaf5384f45446bb71107b7f7ca61",
+        "file_offset": "0x235674"
       }
     ]
   },
@@ -1441,6 +1450,7 @@
     "device_verified": false,
     "single_player_only": true,
     "named_tracks_only": true,
+    "resource_matching": "native ASCII case-insensitive prefix, first registered match; resource registry is not loaded-file status",
     "writes": "temporary native music override; no cleared flag, rewards, or network changes",
     "native_script_precedence": true,
     "symbols": {

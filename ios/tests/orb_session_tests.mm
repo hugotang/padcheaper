@@ -21,11 +21,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
     BOOL requireNineLight, omitResolvingBoard;
+    BOOL resizeWithSkill, hangResize;
     PHOrbSkillSource chosenSource[6];
     uint32_t chosenSkill[6];
     uint16_t transformAfterSkill[6];
     unsigned lightAfterByakuya;
-    NSUInteger skillFrames, activeSkill, skillAttempts;
+    NSUInteger skillFrames, resizeFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
 }
 - (instancetype)initWithWidth:(unsigned)width height:(unsigned)height;
@@ -64,9 +65,14 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!live.present) multiplayerLatched = NO;
     if (live.multiplayerDisabled) multiplayerLatched = YES;
     *state = live; state->multiplayerDisabled |= multiplayerLatched;
-    if (omitResolvingBoard && live.phase != 2) {
+    if ((omitResolvingBoard && live.phase != 2) || live.boardTransition) {
         std::fill(std::begin(state->board.types), std::end(state->board.types), 0);
         std::fill(std::begin(state->board.tokens), std::end(state->board.tokens), 0);
+        if (live.boardTransition) {
+            state->ordinary = state->settled = state->automation.window = state->automation.boardKnown = false;
+            state->automation.busy = true;
+            if (reason) *reason = @"等待原生改盤動畫完成";
+        }
     }
     return YES;
 }
@@ -124,6 +130,20 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     staged = NO; return YES;
 }
 - (void)nativeFrame {
+    if (resizeFrames) {
+        Check(!staged,"no synthetic input is staged during phase-2 native resizing");
+        live.resizeProgress = resizeFrames == 1 ? 1 : 0.5f;
+        if (hangResize || --resizeFrames) return;
+        live.board.width = 7; live.board.height = 6;
+        for (unsigned i = 0; i < 42; ++i) {
+            live.board.types[i] = uint8_t((i * 7 + i / 7) % 6); live.board.tokens[i] = 200 + i;
+            live.board.x[i] = int16_t(50 + i % 7 * 90); live.board.y[i] = int16_t(400 + i / 7 * 90);
+        }
+        live.resizeProgress = live.resizeTarget = 0; live.boardTransition = false;
+        live.settled = live.ordinary = live.automation.window = live.automation.boardKnown = true;
+        live.automation.busy = false;
+        return;
+    }
     if (skillFrames) {
         Check(!staged, "no synthetic input is staged during a native skill");
         if (hangSkill || --skillFrames) return;
@@ -152,6 +172,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (clearPlayerStatusWithSkill) {
             live.automation.playerEffects = 0;
             for (auto &member : live.automation.members) member.bound = false;
+        }
+        if (resizeWithSkill && chosenSkill[activeSkill] == 63581) {
+            resizeFrames = 8; live.boardTransition = true; live.resizeTarget = 1;
+            live.settled = false; live.automation.busy = true;
         }
         return;
     }

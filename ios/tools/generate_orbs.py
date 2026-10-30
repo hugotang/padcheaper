@@ -45,7 +45,7 @@ def generate(manifest):
                 'PHOrbSkillChoiceCheckRVA', 'PHOrbSkillBodyCheckRVA', 'PHOrbSkillCanUseSelectorRVA',
                 'PHOrbSkillChooseBodyRVA', 'PHOrbSkillChosenSourceRVA', 'PHOrbSkillSourceEffectsRVA',
                 'PHOrbSkillConditionRVA', 'PHOrbSkillOrbConditionRVA', 'PHOrbSkillCompositeRVA',
-                'PHOrbSkillTableLoadRVA', 'PHOrbSkillBoardSizeRVA',
+                'PHOrbSkillTableLoadRVA', 'PHOrbSkillBoardSizeRVA', 'PHOrbResizeRVA', 'PHOrbResizeSkillRVA',
                 'PHOrbBaseSkillRVA', 'PHOrbAssistSkillRVA', 'PHOrbBaseCooldownRVA', 'PHOrbTotalCooldownRVA',
                 'PHOrbSkillUpdateRVA', 'PHOrbBattleUpdateRVA', 'PHOrbEnemyDamageRVA', 'PHOrbMemberTapRVA',
                 'PHOrbSkillEffectsRVA', 'PHOrbSpinnerSetRVA', 'PHOrbLockedRVA', 'PHOrbChangeRVA', 'PHOrbMatchRVA',

@@ -130,6 +130,62 @@ static void TemporaryPlanSessionTests() {
 static void PlanSessionTests() {
     TemporaryPlanSessionTests();
     NSDictionary *profile = PlanSessionProfile();
+    // The fifth real opening skill resizes the board without necessarily
+    // changing phase away from two. Acknowledge it, then await full geometry.
+    for (unsigned scenario = 0; scenario < 9; ++scenario) {
+        FakeOrbEngine *resizeEngine = [FakeOrbEngine new]; resizeEngine->resizeWithSkill = YES;
+        PHOrbSession *resizeSession = PlanSession(resizeEngine,profile);
+        for (unsigned i = 0; i < 3000 && !resizeEngine->live.boardTransition &&
+            [[resizeSession snapshot][@"automatic"] boolValue]; ++i) Tick(resizeSession,resizeEngine,Frame());
+        Check(resizeEngine->live.boardTransition && resizeEngine->skillOrder.size() == 5 &&
+            [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 4 &&
+            !resizeEngine->stages && [[resizeSession snapshot][@"automatic"] boolValue],
+            "phase-2 resize keeps fifth opening skill in flight with no orb input or sixth activation");
+        if (scenario == 0) {
+            for (unsigned i = 0; i < 3000 && [[resizeSession snapshot][@"automatic"] boolValue] &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] < 6; ++i)
+                Tick(resizeSession,resizeEngine,Frame());
+            Check(resizeEngine->skillOrder == std::vector<NSUInteger>({4,0,3,1,2,5}) &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6 &&
+                resizeEngine->live.board.width == 7 && resizeEngine->live.board.height == 6 &&
+                [[resizeSession snapshot][@"boardTransitionFrames"] unsignedIntegerValue] > 0 && !resizeEngine->stages,
+                "six-step opening continues exactly once after resize returns a stable 7x6 board");
+        } else if (scenario == 1) {
+            [resizeSession queueStop:@"manual stop while resizing"];
+            for (unsigned i = 0; i < 40; ++i) Tick(resizeSession,resizeEngine,Frame());
+            Check(![[resizeSession snapshot][@"automatic"] boolValue] && resizeEngine->skillOrder.size() == 5 &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 5 && !resizeEngine->stages,
+                "manual stop during resize records the finished fifth skill without starting the sixth");
+            [resizeSession queueAutomatic];
+            for (unsigned i = 0; i < 3000 && [[resizeSession snapshot][@"automatic"] boolValue] &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] < 6; ++i)
+                Tick(resizeSession,resizeEngine,Frame());
+            Check(resizeEngine->skillOrder.size() == 6 && resizeEngine->skillOrder.back() == 5 &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6,
+                "explicit resume after resizing starts only the sixth, never repeats the fifth");
+        } else if (scenario == 2) {
+            resizeEngine->hangResize = YES;
+            for (unsigned i = 0; i < 1700 && [[resizeSession snapshot][@"automatic"] boolValue]; ++i)
+                Tick(resizeSession,resizeEngine,Frame());
+            Check(![[resizeSession snapshot][@"automatic"] boolValue] &&
+                [[resizeSession snapshot][@"message"] containsString:@"逾時"] && resizeEngine->skillOrder.size() == 5 &&
+                [[resizeSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 4 && !resizeEngine->stages,
+                "stuck resizing retains unconfirmed progress and stops at the bounded skill timeout");
+        } else {
+            PHBattleFrame changed = Frame();
+            if (scenario == 3) changed.ready = false;
+            if (scenario == 4) resizeEngine->live.input.rawActiveMask = 1;
+            if (scenario == 5) ++resizeEngine->live.identity.entryHash[0];
+            if (scenario == 6) resizeEngine->live.identity.multiplayer = 1;
+            if (scenario == 7) resizeEngine->failRead = YES;
+            if (scenario == 8) resizeEngine->live.present = false;
+            Tick(resizeSession,resizeEngine,changed);
+            Check(![[resizeSession snapshot][@"automatic"] boolValue] && resizeEngine->skillOrder.size() == 5 && !resizeEngine->stages,
+                "foreground, input, identity, multiplayer, unreadable data and exit guards still stop during resizing");
+        }
+        [resizeSession queueStop:@"end resize regression fixture"];
+    }
+    std::printf("Opening resize regressions: 9 scenarios checked\n");
     FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = PlanSession(engine,profile);
     const std::vector<NSUInteger> expected{4,0,3,1,2,5};
     for (unsigned i = 0; i < 3000 && [[session snapshot][@"automatic"] boolValue] &&

@@ -156,7 +156,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         if (!PHReadU16(impl + bypassOffsets[effect], &turns) || !PHReadU16(impl + bypassOffsets[effect] + 2, &delay)) return false;
         if (PositiveDuration(turns) && !PositiveDuration(delay)) out.playerBypass |= 1u << effect;
     }
-    out.boardKnown = state.phase == 2 && PHOrbDimensionsSupported(state.board.width, state.board.height);
+    out.boardKnown = state.phase == 2 && !state.boardTransition && PHOrbDimensionsSupported(state.board.width, state.board.height);
     for (unsigned i = 0; out.boardKnown && i < state.board.width * state.board.height; ++i)
         if (state.board.types[i] > 9) out.boardKnown = false;
     uint32_t lastKey1 = 0, lastKey2 = 0; uintptr_t lastImpl = 0;

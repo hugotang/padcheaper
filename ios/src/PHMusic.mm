@@ -6,6 +6,7 @@
 #include <array>
 #include <algorithm>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -19,6 +20,12 @@ struct MusicState {
 struct MusicCalls {
     void (*set)(uintptr_t, int, int);
     uint64_t (*refresh)(uintptr_t);
+};
+struct MusicTrackCache {
+    uintptr_t audio = 0, table = 0;
+    std::vector<uintptr_t> records;
+    NSString *requested = nil;
+    uint16_t track = UINT16_MAX;
 };
 #ifdef PH_MUSIC_TESTS
 static MusicCalls TestCalls;
@@ -132,14 +139,32 @@ bool CanSelect(const MusicState &state, NSString **reason) {
     }
     return true;
 }
-int Track(const MusicState &state, NSString **reason, int cachedTrack) {
+bool ResourceMatches(NSString *name, NSString *resource) {
+    // Native 0x100235674 compares the nonempty requested prefix, folding
+    // ASCII case. Registered resources include extensions (bgm_123.caf).
+    const unsigned char *wanted = reinterpret_cast<const unsigned char *>(name.UTF8String);
+    const unsigned char *candidate = reinterpret_cast<const unsigned char *>(resource.UTF8String);
+    if (!wanted || !candidate || !*wanted) return false;
+    for (; *wanted; ++wanted, ++candidate) {
+        const unsigned a = *wanted >= 'a' && *wanted <= 'z' ? *wanted - 'a' + 'A' : *wanted;
+        const unsigned b = *candidate >= 'a' && *candidate <= 'z' ? *candidate - 'a' + 'A' : *candidate;
+        if (a != b) return false;
+    }
+    return true;
+}
+int Track(const MusicState &state, NSString **reason, NSDictionary **diagnostic, MusicTrackCache &cache) {
     const uintptr_t save = state.identity.header + PHSaveRVA;
     uint16_t selected = 0, count = 0, encoded = 0;
+    if (diagnostic) *diagnostic = @{};
     if (!PHReadU16(save + PHMusicSelectedDeckOffset, &selected) ||
         !PHReadU16(save + PHMaxDecksOffset, &count) || !count || count > 32 || selected >= count ||
         !PHReadU16(save + PHPrimaryDecksOffset + 96u * selected + (state.boss ? 26u : 24u), &encoded) || !encoded) {
         *reason = state.boss ? @"隊伍未指定頭目 BGM" : @"隊伍未指定道中 BGM"; return -1;
     }
+    NSMutableDictionary *details = [@{@"deck":@(selected + 1), @"encoded":@(encoded), @"boss":@(state.boss),
+        @"descriptor":@((encoded >> 1) + 10000), @"match":@"ascii-case-insensitive-prefix", @"track":@(-1)} mutableCopy];
+    if (diagnostic) *diagnostic = details;
+    *reason = @"隊伍 BGM 資源描述資料未就緒";
     uintptr_t entries = 0, strings = 0, base = 0; uint32_t entryCount = 0;
     if (!PHReadU32(save + PHEntryCountOffset, &entryCount) || !entryCount || entryCount > 2048 ||
         !PHReadPointer(save + PHEntryPointerOffset, &entries) || !entries || entries > UINTPTR_MAX - entryCount * 52u ||
@@ -160,25 +185,49 @@ int Track(const MusicState &state, NSString **reason, int cachedTrack) {
         if ([bossName.uppercaseString isEqual:@"RND"]) { *reason = @"未通關選曲請指定曲目；隨機 BGM 沿用原生處理"; return -1; }
         name = (encoded & 1u) ? bossName : ReadString(base + normal, 1024); break;
     }
-    if (!name.length) return -1;
+    if (!name.length) { *reason = @"隊伍 BGM 未找到有效的曲目名稱"; return -1; }
+    details[@"requested"] = name;
+    *reason = @"原生 BGM 資源表未就緒";
     uintptr_t audio = 0, table = 0; uint16_t audioCount = 0;
     if (!PHReadPointer(state.identity.header + PHMusicAudioRVA, &audio) || !audio || audio > UINTPTR_MAX - 80 ||
-        !PHReadU16(audio + 24, &audioCount) || !audioCount || audioCount > 32767 ||
+        !PHReadU16(audio + 24, &audioCount) || audioCount > 32767) return -1;
+    details[@"resourceCount"] = @(audioCount);
+    if (!audioCount ||
         !PHReadPointer(audio + 16, &table) || !table || table > UINTPTR_MAX - size_t(audioCount) * 16) return -1;
-    // Recheck the actual resource name at our current index before reusing it.
-    // Ordinary maintenance avoids rescanning all loaded names four times/sec.
-    if (cachedTrack >= 0 && cachedTrack < audioCount) {
-        uintptr_t address = 0;
-        if (PHReadPointer(table + 16u * unsigned(cachedTrack) + 8,&address) && [ReadString(address,1024) isEqual:name])
-            return cachedTrack;
-    }
     std::vector<uintptr_t> loaded(size_t(audioCount) * 2);
     if (!PHReadMemory(table,loaded.data(),loaded.size() * sizeof(uintptr_t))) return -1;
-    for (uint16_t i = 0; i < audioCount; ++i) {
-        NSString *candidate = ReadString(loaded[2u * i + 1], 1024);
-        if ([candidate isEqual:name]) return i;
+    uint16_t matched = UINT16_MAX; NSString *registeredName = nil;
+    bool immutable = true;
+    if (cache.audio == audio && cache.table == table && cache.records == loaded && cache.track < audioCount &&
+        [cache.requested isEqual:name]) {
+        registeredName = ReadString(loaded[2u * cache.track + 1],1024);
+        if (ResourceMatches(name,registeredName)) matched = cache.track;
     }
-    *reason = @"選定 BGM 尚未載入，沿用原生音樂"; return -1;
+    if (matched == UINT16_MAX) for (uint16_t i = 0; i < audioCount; ++i) {
+        const uintptr_t address = loaded[2u * i + 1];
+        NSString *candidate = ReadString(address, 1024);
+        // An unreadable earlier entry could be the native first match. Do
+        // not skip it and silently choose a later, ambiguous prefix match.
+        if (!candidate) { *reason = @"原生 BGM 資源名稱無法校驗"; return -1; }
+        // Cache first-match order only for immutable native names. Mutable
+        // registries rescan, and a changed table invalidates the whole cache.
+        immutable &= PHMemoryHasProtection(address,[candidate lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1,
+            VM_PROT_READ,VM_PROT_WRITE);
+        if (ResourceMatches(name,candidate)) { matched = i; registeredName = candidate; break; }
+    }
+    uintptr_t lastAudio = 0, lastTable = 0; uint16_t lastCount = 0;
+    std::vector<uintptr_t> lastRecords(loaded.size());
+    if (!PHReadPointer(state.identity.header + PHMusicAudioRVA,&lastAudio) || lastAudio != audio ||
+        !PHReadPointer(audio + 16,&lastTable) || lastTable != table ||
+        !PHReadU16(audio + 24,&lastCount) || lastCount != audioCount ||
+        !PHReadMemory(table,lastRecords.data(),lastRecords.size() * sizeof(uintptr_t)) || lastRecords != loaded) {
+        *reason = @"查找期間 BGM 資源表已改變，等待下一次更新"; return -1;
+    }
+    if (matched == UINT16_MAX) { *reason = @"選定 BGM 未在原生資源表中找到，沿用原生音樂"; return -1; }
+    if (immutable) { cache = {audio,table,std::move(loaded),name,matched}; }
+    else cache = {};
+    details[@"registered"] = registeredName; details[@"track"] = @(matched);
+    return matched;
 }
 bool SameMusic(const MusicState &a, const MusicState &b) {
     return PHBattleSameIdentity(&a.identity, &b.identity) && a.dungeon == b.dungeon && a.parent == b.parent &&
@@ -210,6 +259,8 @@ bool SetTrack(PHBattleFrame frame, const MusicState &expected, int16_t track, bo
     NSTimeInterval _lastTime;
     NSUInteger _changes;
     NSString *_message;
+    NSDictionary *_selection;
+    MusicTrackCache _cache;
 }
 - (instancetype)init { if ((self = [super init])) _message = @"關閉"; return self; }
 - (void)onFrame:(PHBattleFrame)frame time:(NSTimeInterval)time {
@@ -223,10 +274,12 @@ bool SetTrack(PHBattleFrame frame, const MusicState &expected, int16_t track, bo
     if (!ReadState(frame,state)) { _message = @"等待選曲資料就緒"; return; }
     if (!state.present) {
         _known = _owned = _suspended = _fault = _multiplayer = NO;
+        _selection = @{}; _cache = {};
         _message = frame.enabled ? @"等待單人未通關關卡" : @"關閉"; return;
     }
     if (!_known || !PHBattleSameIdentity(&_last.identity,&state.identity)) {
         _owned = _suspended = _fault = NO;
+        _selection = @{};
         // A selector transition within the same battle cannot re-enable writes.
         if (!_known || _last.identity.epoch != state.identity.epoch || _last.identity.impl != state.identity.impl ||
             std::memcmp(_last.identity.entryHash,state.identity.entryHash,32)) _multiplayer = NO;
@@ -244,7 +297,9 @@ bool SetTrack(PHBattleFrame frame, const MusicState &expected, int16_t track, bo
     if (state.phase != 2) { _message = @"等待操作階段更新 BGM"; return; }
     NSString *reason = @"等待曲目資料就緒";
     const bool effect = state.effectTrack >= 0;
-    int wanted = frame.enabled && !effect && CanSelect(state,&reason) ? Track(state,&reason,_owned ? _track : -1) : -1;
+    NSDictionary *selection = nil;
+    int wanted = frame.enabled && !effect && CanSelect(state,&reason) ? Track(state,&reason,&selection,_cache) : -1;
+    if (selection) _selection = selection;
     if (effect) reason = @"關卡事件已指定 BGM，保留原生選曲";
     if (!frame.enabled) reason = @"關閉";
     if (wanted < 0 && !_owned) { _message = reason; return; }
@@ -262,6 +317,6 @@ bool SetTrack(PHBattleFrame frame, const MusicState &expected, int16_t track, bo
 }
 - (NSDictionary *)snapshot {
     return @{@"enabled":@(_frame.enabled), @"active":@(_owned && !_fault), @"fault":@(_fault),
-        @"changes":@(_changes), @"message":_message ?: @"", @"deviceVerified":@NO};
+        @"changes":@(_changes), @"message":_message ?: @"", @"selection":_selection ?: @{}, @"deviceVerified":@NO};
 }
 @end

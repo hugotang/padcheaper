@@ -9,6 +9,7 @@
 static unsigned failures, writes, failWrite, guardChecks;
 static bool codeValid = true;
 static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSelectionWrite;
+static bool replaceHashDuringResizeRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -27,7 +28,12 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (!Range(address, length)) return NO;
-    std::memcpy(output, reinterpret_cast<void *>(address), length); return YES;
+    std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (replaceHashDuringResizeRead && address == Impl + PHOrbResizeProgressOffset) {
+        replaceHashDuringResizeRead = false;
+        reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
+    }
+    return YES;
 }
 BOOL PHWriteData(uintptr_t address, const void *input, size_t length) {
     ++writes;
@@ -57,6 +63,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     std::fill(guest.begin(), guest.end(), 0); std::fill(implBytes.begin(), implBytes.end(), 0); std::fill(realInput.begin(), realInput.end(), 0);
     writes = failWrite = guardChecks = 0; codeValid = true;
     ignoreSelectionWrite = switchMultiInSelectionWrite = changeSourceInSelectionWrite = false;
+    replaceHashDuringResizeRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);

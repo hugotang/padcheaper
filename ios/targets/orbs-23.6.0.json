@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.8-orbs",
+  "prototype_version": "0.5.9-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -142,6 +142,7 @@
     "result": "passed, reported by user; expanded geometry and quality settings pending"
   },
   "fields": {
+    "PHOrbResizeProgressOffset": "0xb7c14",
     "PHOrbFixedStartYOffset": "0xb4684",
     "PHOrbMinMatchOffset": "0xb6254",
     "PHOrbMinMatchExtraOffset": "0xb625c",
@@ -200,6 +201,22 @@
     "PHOrbSkillFamilyOffset": "0x300"
   },
   "guards": [
+    {
+      "name": "PHOrbResizeRVA",
+      "va": "0x10055b6b4",
+      "rva": "0x55b6b4",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc301910840201ee10b0029f30300aa08644139096041392811080b093840f9",
+      "sha256": "85aaa37a9bfd2072372cc8995800cf5a60a9706ba26467f6ace1e670c18590f2"
+    },
+    {
+      "name": "PHOrbResizeSkillRVA",
+      "va": "0x1005c5d18",
+      "rva": "0x5c5d18",
+      "length": 64,
+      "bytes": "fa67bba9f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30304aaf40303aaf60302aaf70301aaf50300aa083840f909d1429138a125913910022a08d14291",
+      "sha256": "9e5fc3cede14761c1d2a8c73b9bdf0dc2ad017a9ce7552d5d26ebe6d2aadb1a9"
+    },
     {
       "name": "PHOrbSpinnerUpdateRVA",
       "va": "0x1005ab350",

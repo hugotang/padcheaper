@@ -154,6 +154,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     bool _openingInFlight, _openingAcknowledged, _openingStarted;
     PHOrbSnapshot _openingBefore;
     NSDictionary *_searchTrace;
+    NSDictionary *_lastReadIssue;
+    NSUInteger _boardTransitionFrames;
     NSMutableArray<NSDictionary *> *_executionHistory;
     bool _recordingExecution;
     PHOrbSolveOptions _solveOptions;
@@ -189,6 +191,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
         _openingLog = [NSMutableArray array];
         _searchTrace = @{}; _executionHistory = [NSMutableArray array];
+        _lastReadIssue = @{};
     }
     return self;
 }
@@ -336,6 +339,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _automatic = _monitoring = true; _autoBound = _sawResolve = _hasStable = _readQueued = false;
     _autoTurn = 1; _autoMoves = _autoSkills = 0; _unavailableRules = 0;
     _autoStartAt = _autoPhaseAt = _now; _autoOrigin = {}; [self clearRoute]; _goalPlan = @{};
+    _boardTransitionFrames = 0; _lastReadIssue = @{};
     _activeProfile = @{};
     [_automationLog removeAllObjects];
     [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects];
@@ -393,6 +397,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     }
     if (!read || !state->present || !state->valid || !state->automation.valid || state->multiplayerDisabled ||
         !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) || state->identity.sourceMode != 0 || state->wave >= 999) {
+        _lastReadIssue = @{@"reason":reason ?: @"戰鬥資料無法確認", @"phase":@(state->phase),
+            @"valid":@(state->valid), @"automationValid":@(state->automation.valid),
+            @"width":@(state->board.width), @"height":@(state->board.height),
+            @"resizeProgress":@(state->resizeProgress), @"resizeTarget":@(state->resizeTarget),
+            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0))};
         [self queueStop:reason ?: @"關卡已結束或戰鬥資料無法確認，已停止連續模式"]; return NO;
     }
     if (!_autoBound) {
@@ -463,10 +472,20 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _skillAcknowledged = true; // Preserve acknowledgement if a skill clears the floor and the counter later resets.
     if (_openingInFlight && _openingStarted && state->automation.skillUses == _openingBefore.automation.skillUses + 1)
         _openingAcknowledged = true;
+    if (state->boardTransition) {
+        ++_boardTransitionFrames; _hasStable = false;
+        _lastReadIssue = @{@"reason":@"等待原生改盤動畫完成", @"phase":@(state->phase),
+            @"valid":@YES, @"automationValid":@YES, @"width":@(state->board.width), @"height":@(state->board.height),
+            @"resizeProgress":@(state->resizeProgress), @"resizeTarget":@(state->resizeTarget),
+            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0))};
+        _message = _openingInFlight ? [NSString stringWithFormat:@"開場第 %lu 步：等待原生改盤動畫完成…", (unsigned long)_openingStep + 1] :
+            @"等待原生改盤動畫完成…";
+    }
     return YES;
 }
 - (BOOL)finishOpeningIfConfirmed:(const PHOrbSnapshot *)state {
-    if (!_openingInFlight || !_openingStarted || !_openingAcknowledged || state->phase != 2 || !state->settled ||
+    if (!_openingInFlight || !_openingStarted || !_openingAcknowledged || !state->valid || !state->automation.valid ||
+        state->boardTransition || state->phase != 2 || !state->settled ||
         state->automation.busy || state->dragged ||
         (state->wave == _openingBefore.wave && state->automation.skillUses != _openingBefore.automation.skillUses + 1) ||
         !PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep + 1)) return NO;
@@ -484,12 +503,12 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if ([_phase isEqual:@"turnWaiting"]) {
         _sawResolve |= ResolvingOrbs(_live.phase);
         if (_now - _autoPhaseAt > TurnTimeout) { [self queueStop:@"等候下一回合逾時，請檢查遊戲畫面"]; return; }
-        if (!_sawResolve || _live.phase != 2 || _live.moves != 0 || _live.automation.busy || !_live.settled) {
+        if (!_sawResolve || _live.boardTransition || _live.phase != 2 || _live.moves != 0 || _live.automation.busy || !_live.settled) {
             _hasStable = false; return;
         }
     } else if ([_phase isEqual:@"openingWaiting"]) {
         if (_now - _autoPhaseAt > SkillTimeout) { [self queueStop:@"開場技能等候逾時；保留進度，不會重複施放"]; return; }
-        if (_live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
+        if (_live.boardTransition || _live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
         if (!_openingAcknowledged) {
             _openingStarted = false;
             NSMutableDictionary *record = [_openingLog.lastObject mutableCopy]; record[@"status"] = @"unconfirmed";
@@ -498,7 +517,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         }
     } else if ([_phase isEqual:@"skillWaiting"]) {
         if (_now - _autoPhaseAt > SkillTimeout) { [self queueStop:@"技能等候逾時或需要手動選擇，已停止"]; return; }
-        if (_live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
+        if (_live.boardTransition || _live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
         if (!_skillAcknowledged) {
             [self queueStop:@"技能使用次數未確認，已停止以免重複施放"]; return;
         }
@@ -507,7 +526,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             [self queueStop:(PHOrbBoardObstacles(&_live) & PHOrbObstacleSpinner) ?
                 @"轉轉盤面持續變色，未取得可確認的技能快照；請先手動處理後再開始" : @"尚未進入穩定的單人操作階段，已停止"]; return;
         }
-        if (_live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
+        if (_live.boardTransition || _live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
     } else return;
     if (!_hasStable || !PHOrbSameAutomation(&_live, &_stable)) {
         _stable = _live; _stableAt = _now; _hasStable = true; return;
@@ -982,7 +1001,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!_automatic && _openingInFlight && _openingStarted && read && current.valid && current.automation.valid && !current.multiplayerDisabled &&
         PHBattleSameIdentity(&_openingBefore.identity, &current.identity)) {
         if (current.automation.skillUses == _openingBefore.automation.skillUses + 1) _openingAcknowledged = true;
-        if (!_openingAcknowledged && current.phase == 2 && current.settled && !current.automation.busy && !current.dragged) {
+        if (!_openingAcknowledged && !current.boardTransition && current.phase == 2 && current.settled && !current.automation.busy && !current.dragged) {
             _openingStarted = false;
             NSMutableDictionary *record = [_openingLog.lastObject mutableCopy]; record[@"status"] = @"unconfirmed";
             _openingLog[_openingLog.count - 1] = [record copy];
@@ -1119,6 +1138,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),
             @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight), @"steps":[_openingLog copy]},
         @"searchTrace":_searchTrace, @"executionHistory":[_executionHistory copy],
+        @"boardTransition":@(_live.boardTransition), @"boardTransitionFrames":@(_boardTransitionFrames),
+        @"resizeProgress":@(_live.resizeProgress), @"resizeTarget":@(_live.resizeTarget), @"lastReadIssue":_lastReadIssue,
         @"profileContext":@{@"known":@(_hasLive && _live.valid && _live.present && !_live.multiplayerDisabled),
             @"dungeon":@(_live.identity.dungeon), @"floor":@(_live.identity.floor)},
         @"playerBypass":@(_live.automation.playerBypass), @"skillWindow":@(_live.automation.window),

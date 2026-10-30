@@ -2,7 +2,9 @@
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.5.8-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
+`0.5.9-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
+
+0.5.9 修正開場擴盤時中斷及未通關隊伍 BGM 名稱查找。2026-10-30 的問題回報來自 **Dopamine rootless 越獄 iPhone 直接注入**，當次沒有使用 LiveContainer；新版驗證狀態以 [開發紀錄](docs/development.md) 為準。[更新說明](docs/release-0.5.9.md) 與 [原生依據](docs/opening-resize-music.md) 列出改盤等待、曲目比對與驗收範圍。
 
 0.5.8 修正徽章重啟選擇及失敗還原待辦，增加未通關隊伍 BGM、策略 JSON 分享／檔案匯入、同進化鏈武裝滿充能時原生本體選擇、荊棘 Combo 偏好與零接觸補搜。[CI 74](https://github.com/hugotang/padcheaper/actions/runs/41011326922) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機驗收待回報；[更新說明](docs/release-0.5.8.md)、[保存與分享](docs/persistence-music-sharing.md)、[AutoCombo 參考](docs/autocombo-review.md) 及 [通關回傳](docs/clear-dungeon-audit.md) 分別列出行為與證據限制。
 
@@ -60,13 +62,17 @@ bash ios/build.sh
 
 輸出在 build/ios/。預設最低 iOS 15.0，只生成 arm64 slice；無需 Theos、Substrate、JIT、第三方 Hook framework 或 GitHub secrets。
 
+## Dopamine rootless 安裝
+
+完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.9 的重測順序見 [更新說明](docs/release-0.5.9.md)。
+
 ## LiveContainer 安裝
 
 1. 完整關閉 PAD，移除舊版或重複的 PADCheaper.dylib。保留 guest 容器內原有 config.json、隊伍庫及帳號檔；更新只替換 dylib，不用範例設定覆蓋舊設定。
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示 `0.5.8-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示 `0.5.9-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
