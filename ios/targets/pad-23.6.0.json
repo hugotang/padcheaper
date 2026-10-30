@@ -116,6 +116,105 @@
         "length_bytes": 64,
         "bytes_hex": "f44fbea9fd7b01a9fd430091f30300aa148300f0802a42f92081319480000034e00313aa3505329486970094288300f0081180b9606a68f8400000b4cf4e3194",
         "sha256": "02379acbcfe1f91d8a6d5f93779b8da4357eb1918ab36b288c20e3b1f16a94dc"
+      },
+      {
+        "id": "save_decks_request",
+        "va": "0x1006981d0",
+        "rva": "0x6981d0",
+        "length_bytes": 64,
+        "bytes_hex": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa170040f9351040f900008452d1d9fb97f40300aad8a500b018c31e91",
+        "sha256": "37a920687b0d358804e14f8b9ee0fe1c02dd5005f2f4dd3a38bb0e5c9a87a4a4",
+        "file_offset": "0x6981d0"
+      },
+      {
+        "id": "save_decks_record",
+        "va": "0x1006983f8",
+        "rva": "0x6983f8",
+        "length_bytes": 64,
+        "bytes_hex": "ff8301d1fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f40302aaf30300aa180080d237040011680b805208c82138080c8052480c289b16310091",
+        "sha256": "20ced5d87610d40346ad3e8578f58daef3d20d97a4f922b8ff16ea27fe912810",
+        "file_offset": "0x6983f8"
+      },
+      {
+        "id": "send_dispatch",
+        "va": "0x1006bae88",
+        "rva": "0x6bae88",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091130040f948b786520802a0727f6a2838290040b928008052290500513f010371483200540a4300904a492c918b0000104c796978",
+        "sha256": "1b1d12fba908b90467f9aa4b095b11de732be0ae6ffbb8bae519a07889a22483",
+        "file_offset": "0x6bae88"
+      },
+      {
+        "id": "response_dispatch",
+        "va": "0x1006bb50c",
+        "rva": "0x6bb50c",
+        "length_bytes": 64,
+        "bytes_hex": "ff8301d1fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f40300aa280040b91f01037121010054e00314aafd7b45a9f44f44a9f65743a9f85f42a9",
+        "sha256": "e8930cc000e7b6a3a51002b78b517810201ef7da4112ef81552239f9de86a78c",
+        "file_offset": "0x6bb50c"
+      },
+      {
+        "id": "save_decks_commit",
+        "va": "0x100698580",
+        "rva": "0x698580",
+        "length_bytes": 64,
+        "bytes_hex": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191080040f909e982520902a072136969b8f3000034c8a500b008c11e9109f09152",
+        "sha256": "91a7464979904c0c3ef2e1e9cec9aed427101c8aefecdc769175d82c173768b5",
+        "file_offset": "0x698580"
+      },
+      {
+        "id": "music_selection",
+        "va": "0x1005a4d8c",
+        "rva": "0x5a4d8c",
+        "length_bytes": 64,
+        "bytes_hex": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd83019176ad00b0d6c21e9188f69152c86a6838c81f1037f40300aa083840f909e38152",
+        "sha256": "fa6965d087cf336d9a13b83d2368fae00d5b21df4d8b3a5bd5e1c2be918b54fb",
+        "file_offset": "0x5a4d8c"
+      },
+      {
+        "id": "music_refresh",
+        "va": "0x1005a4ca8",
+        "rva": "0x5a4ca8",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f30300aa083840f989b786526901a072156969b80849429100a13d910fe9ff97f40300aabf02006be1c79f1ae00313aa",
+        "sha256": "dd019143430ce90d1f4ce282ac61baa0794f1d6c1f6b31bcc808781ad39be91e",
+        "file_offset": "0x5a4ca8"
+      },
+      {
+        "id": "music_set_override",
+        "va": "0x1005a53b8",
+        "rva": "0x5a53b8",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f50302aaf40301aaf30300aae201f837b5060051683a40f90849429100a13d914ae7ff97bf02006b6c030054683a40f9",
+        "sha256": "3ef68e73feba19fbabb25ca88b5b84d1d872a076ac50582d8ddf3c1e3dd70562",
+        "file_offset": "0x5a53b8"
+      },
+      {
+        "id": "music_clear_predicate",
+        "va": "0x10023b184",
+        "rva": "0x23b184",
+        "length_bytes": 64,
+        "bytes_hex": "487c011b091d0012a8c800d008c11e910945298b0a858a52ea0aa0722d696a78e9ff9f52bf01096b40020054eaff89528b0180520c8592526c0aa072ad21ab9b",
+        "sha256": "397384d71af0e7ec00f5ab5e88f69d85084cd20ea08d233ab08742b03c405ac3",
+        "file_offset": "0x23b184"
+      },
+      {
+        "id": "music_dungeon_policy",
+        "va": "0x1002408dc",
+        "rva": "0x2408dc",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091137c40b9d304003488c800b008c11e9109358c52e918a072086969f8140940f98002138b61028052020080d277ffff9760030034",
+        "sha256": "a2f55e776e9ebc5122530558abfe8aa3814bee82778d43516f0108516a5b45a4",
+        "file_offset": "0x2408dc"
+      },
+      {
+        "id": "music_resource",
+        "va": "0x1004eedd4",
+        "rva": "0x4eedd4",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f53001d0a85e47f909314079e9010034f40300aa130080d216018052080940f9016976f8e00314aa1a1af59700010034",
+        "sha256": "90cb723c4d64da608d091179f1abba0ddf8c808fbec085a9c46715bc2ffd1d6e",
+        "file_offset": "0x4eedd4"
       }
     ]
   },
@@ -719,7 +818,7 @@
       "evidence_file": "decomp-10069c5e0.c",
       "static_confirmed": true,
       "runtime_verified": false,
-      "notes": "writes primary and secondary persisted records; called by login and save_decks handlers"
+      "notes": "writes primary and secondary persisted records from parsed data; called by login and recv_team; save_decks commits editing records separately"
     },
     {
       "role": "deck_record_parse",
@@ -746,7 +845,7 @@
       "notes": "clears 0x80-byte ownership spans and reads skdr/skbgm"
     },
     {
-      "role": "save_decks_response_handler",
+      "role": "recv_team_response_handler",
       "va": "0x1006b3af0",
       "rva": "0x6b3af0",
       "ida_name": "sub_1006B3AF0",
@@ -755,7 +854,18 @@
       "evidence_file": "decomp-1006b3af0.c",
       "static_confirmed": true,
       "runtime_verified": false,
-      "notes": "calls deck_all_parse"
+      "notes": "request 122 recv_team calls deck_all_parse; this was mislabeled as save_decks before 0.5.8"
+    },
+    {
+      "role": "save_decks_response_handler",
+      "va": "0x100698580",
+      "rva": "0x698580",
+      "ida_name": "sub_100698580",
+      "end_va": "0x100698824",
+      "dispatch": "native_direct",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "request 58 commits native editing records, re-encodes secondary badge with bank-local index, and clears dirty only on native success"
     },
     {
       "role": "request_response_dispatch",
@@ -767,7 +877,7 @@
       "evidence_file": "decomp-1006bb50c.c",
       "static_confirmed": true,
       "runtime_verified": false,
-      "notes": "request IDs 33 (login/player parse) and 122 (save_decks)"
+      "notes": "request IDs 33 (login/player parse), 58 (save_decks), 122 (recv_team); corrected by dispatcher cross-check in 0.5.8"
     },
     {
       "role": "request_pump",
@@ -1127,14 +1237,14 @@
     ],
     "static_parser_chain": [
       "0x1006bb50c",
-      "0x100687db0",
-      "0x1005903f0",
+      "0x10069d1e0",
       "0x10069c5e0",
       "0x10069cc78"
     ],
     "request_ids": {
       "login_player_data": 33,
-      "save_decks": 122
+      "save_decks": 58,
+      "recv_team": 122
     },
     "state_machine": [
       "snapshotted",
@@ -1152,7 +1262,7 @@
       "handle restart/login/timeout/retry without learning defaults as local selection"
     ],
     "no_immediate_memory_restore_in_network_completion": true,
-    "native_parser_success_observer_implemented": false,
+    "native_parser_success_observer_implemented": true,
     "runtime_verified": false,
     "evidence": [
       {
@@ -1175,7 +1285,21 @@
         "artifact": "ida-query-delivery.json",
         "note": "response parser and deck-all xrefs"
       }
-    ]
+    ],
+    "static_save_commit_chain": [
+      "0x1006bb50c",
+      "0x100698580"
+    ],
+    "request_snapshot": {
+      "record_pointer": "queue_node+0x28 (request=q=node+8, q+0x20)",
+      "records_offset": 12,
+      "stride": 96,
+      "badge_index": "primary plus secondary local index for requests; bank-local for persisted banks",
+      "secondary_count": "max_decks - primary_count",
+      "native_save_decks_id": 58,
+      "recv_team_id": 122,
+      "wait_for_resources": true
+    }
   },
   "persistence": {
     "directory": "NSHomeDirectory()/Library/Application Support/PADHelper",
@@ -1310,5 +1434,28 @@
     "battle_replacement_implemented": true,
     "manual_timer_popup_implemented": true,
     "additional_target_manifest": "ios/targets/battle-23.6.0.json"
+  },
+  "music_playback": {
+    "implemented": true,
+    "default_enabled": false,
+    "device_verified": false,
+    "single_player_only": true,
+    "named_tracks_only": true,
+    "writes": "temporary native music override; no cleared flag, rewards, or network changes",
+    "native_script_precedence": true,
+    "symbols": {
+      "PHMusicSetRVA": "0x5a53b8",
+      "PHMusicRefreshRVA": "0x5a4ca8",
+      "PHMusicAudioRVA": "0x2b0ceb8",
+      "PHMusicDescriptorOffset": "0xc77390",
+      "PHMusicStringObjectOffset": "0xc773a0",
+      "PHMusicSelectedDeckOffset": "0x52f38a",
+      "PHMusicClearBucketsOffset": "0x575428",
+      "PHMusicClearRecordsOffset": "0x539428",
+      "PHMusicBossWaveOffset": "0xb35bc",
+      "PHMusicEffectOffset": "0xb5004",
+      "PHMusicOverrideOffset": "0x933a4",
+      "PHMusicTargetOffset": "0x933a6"
+    }
   }
 }

@@ -310,7 +310,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     UILabel *persistence = (UILabel *)PHProbeFind(overlay, @"padcheaper.persistence");
     PHProbeCheck([persistence.text containsString:@"尚未儲存隊伍"] &&
                  [persistence.text containsString:@"伺服器接受：0"], @"Panel must separate load/feature status from actual save and response status");
-    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"badge", @"timerFix", @"battleSwap"]) {
+    for (NSString *key in @[@"experimentalWrites", @"skin", @"bgm", @"bgmUncleared", @"badge", @"timerFix", @"battleSwap"]) {
         UISwitch *toggle = (UISwitch *)PHProbeFind(overlay, [@"padcheaper." stringByAppendingString:key]);
         PHProbeCheck(toggle != nil && toggle.enabled, [@"Switch unavailable: " stringByAppendingString:key]);
         toggle.on = YES;
@@ -322,6 +322,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     config = PHProbeJSON(@"config.json");
     PHProbeCheck([config[@"experimentalWrites"] isEqual:@YES] && [config[@"features"][@"skin"] isEqual:@YES] &&
                  [config[@"features"][@"bgm"] isEqual:@YES] && [config[@"features"][@"timerFix"] isEqual:@YES] &&
+                 [config[@"features"][@"bgmUncleared"] isEqual:@YES] &&
                  [config[@"features"][@"battleSwap"] isEqual:@YES] && [config[@"features"][@"badge"] isEqual:@YES],
                  @"GUI switches must persist to config.json");
     PHProbeCheck([config[@"apiHosts"] isEqual:@[@"example.invalid"]] && [config[@"apiPaths"] isEqual:@[@"/api.php"]],
@@ -433,6 +434,14 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         @"Unvalidated guest cannot execute automatic input");
     UISegmentedControl *qualityControl = (UISegmentedControl *)PHProbeFind(orbWindow, @"padcheaper.orbsQuality");
     PHProbeCheck(qualityControl.enabled && qualityControl.numberOfSegments == 3, @"Orb quality can be configured without enabling game input");
+    UISwitch *thornPriority = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsThornPriority");
+    PHProbeCheck(thornPriority.enabled, @"Thorn Combo preference is configurable without enabling game input");
+    for (NSNumber *enabled in @[@YES, @NO]) {
+        thornPriority.on = enabled.boolValue; [thornPriority sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"thornComboPriority"] isEqual:enabled] && thornPriority.on == enabled.boolValue,
+            @"Thorn Combo switch follows the acknowledged real configuration write");
+    }
+    PHProbeRender(self.window, orbWindow, @"orbs-thorn-priority");
     NSArray *qualityIDs = @[@"fast", @"balanced", @"thorough"];
     for (NSUInteger index = 0; index < qualityIDs.count; ++index) {
         qualityControl.selectedSegmentIndex = (NSInteger)index;
@@ -449,6 +458,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     __block NSMutableDictionary *goalFailure = nil, *ruleFailure = nil, *recoveryFailure = nil, *profileFailure = nil;
     __block NSString *orbAction = nil;
     __block id orbValue = nil;
+    __block NSDictionary *shareDraft = nil, *shareConfig = nil;
+    __block NSURL *shareDirectory = nil;
+    __block UIDocumentPickerViewController *profilePicker = nil;
     __block PHOverlaySnapshot restoreOriginalSnapshot = nil;
     __block PHOverlayAction restoreOriginalAction = nil;
     __block NSMutableDictionary *restoreFixture = nil;
@@ -507,6 +519,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             orbFixture = @{@"orbState":@{@"phase":@"preview", @"message":@"預計 5 Combo（不含天降）· 6 步",
                 @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
                 @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
+                @"thornComboPriority":@NO, @"canSetThornPolicy":@YES,
                 @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
                 @"recovery":savedHeartPolicy ?: @{}, @"canSetRecovery":@YES,
                 @"profiles":@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[]}, @"canSetProfiles":@YES,
@@ -590,9 +603,16 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck([orbAction isEqual:@"orbsQuality"] && [orbValue isEqual:@"fast"] && qualityControl.selectedSegmentIndex == 1 &&
                 [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsQualityDescription")).text containsString:@"未能儲存"],
                 @"Unacknowledged quality selection restores the last saved segment and shows the failure");
+            qualityFailure[@"thornPolicyMessage"] = @"荊棘設定未能儲存，仍保留原設定"; [orbController refresh];
+            thornPriority.on = YES; [thornPriority sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck([orbAction isEqual:@"orbsThornPriority"] && [orbValue isEqual:@YES] && !thornPriority.on &&
+                [((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsThornDescription")).text containsString:@"未能儲存"],
+                @"Unacknowledged thorn switch restores the saved value and displays its own error");
             qualityFailure[@"busy"] = @YES; orbAction = nil; [orbController refresh];
             qualityControl.selectedSegmentIndex = 0; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
             PHProbeCheck(!qualityControl.enabled && orbAction == nil, @"Busy session cannot change quality through the control");
+            thornPriority.on = YES; [thornPriority sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck(!thornPriority.enabled && orbAction == nil, @"Busy session cannot change thorn ranking for a running route");
             qualityFailure[@"busy"] = @NO; qualityFailure[@"inputFault"] = @YES; qualityFailure[@"canRead"] = @NO;
             [orbController refresh];
             PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAvailability")).text containsString:@"重啟"],
@@ -816,6 +836,82 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [planSummary.text containsString:@"開場（依序完成）"] && [planSummary.text containsString:@"→ #14038"],
                 @"The imported six-member/opening summary can scroll into view and shows the expected transformation");
             PHProbeRender(self.window, orbWindow, @"orbs-team-plan-summary");
+            shareDraft = [NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:
+                [profileEditor valueForKey:@"draft"] options:0 error:NULL] options:0 error:NULL];
+            shareConfig = PHProbeJSON(@"config.json");
+            UIButton *share = (UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileShare");
+            PHProbeCheck(share.enabled, @"Selected complete plan exposes a native file share action");
+            UIScrollView *shareScroll = PHProbeScrollParent(share);
+            [shareScroll scrollRectToVisible:[share convertRect:share.bounds toView:shareScroll] animated:NO];
+            [share sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"profile-share-sheet-visible", ^BOOL {
+            return PHProbePresented(orbController.presentedViewController, @"padcheaper.orbsProfileShareSheet", NO);
+        }, ^{
+            UIViewController *profileEditor = orbController.presentedViewController;
+            UIActivityViewController *sheet = (UIActivityViewController *)profileEditor.presentedViewController;
+            PHProbeCheck([sheet isKindOfClass:UIActivityViewController.class], @"File sharing presents UIKit's native activity controller");
+            shareDirectory = [profileEditor valueForKey:@"shareDirectory"];
+            NSArray<NSURL *> *files = [NSFileManager.defaultManager contentsOfDirectoryAtURL:shareDirectory
+                includingPropertiesForKeys:nil options:0 error:NULL];
+            NSData *data = files.count == 1 ? [NSData dataWithContentsOfURL:files.firstObject] : nil;
+            NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+            PHProbeCheck(files.count == 1 && [files.firstObject.pathExtension isEqual:@"json"] &&
+                [package[@"format"] isEqual:@"padcheaper-team-plan"] && [package[@"opening"] count] == 6 &&
+                !package[@"pid"] && !package[@"apiHosts"], @"Native share uses a real JSON file with the selected plan only");
+            PHProbeCheck([[profileEditor valueForKey:@"draft"] isEqual:shareDraft] &&
+                [PHProbeJSON(@"config.json") isEqual:shareConfig], @"Opening a share sheet cannot save or alter the strategy");
+            PHProbeRender(self.window, orbWindow, @"orbs-strategy-share");
+            [sheet dismissViewControllerAnimated:YES completion:^{
+                // UIKit's completion contract is exercised without sending a file to another app.
+                if (sheet.completionWithItemsHandler) sheet.completionWithItemsHandler(nil, NO, nil, nil);
+            }];
+        }),
+        PHProbeStep(@"profile-share-cancelled", ^BOOL {
+            return PHProbePresented(orbController, @"padcheaper.orbsProfileEditor", YES) &&
+                !orbController.presentedViewController.presentedViewController &&
+                !orbController.presentedViewController.transitionCoordinator;
+        }, ^{
+            UIViewController *profileEditor = orbController.presentedViewController;
+            PHProbeCheck(![NSFileManager.defaultManager fileExistsAtPath:shareDirectory.path] &&
+                ![profileEditor valueForKey:@"shareDirectory"] && [[profileEditor valueForKey:@"draft"] isEqual:shareDraft],
+                @"Cancelling sharing removes the temporary file and preserves the complete draft");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileFileImport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"profile-file-picker-visible", ^BOOL {
+            UIViewController *editor = orbController.presentedViewController, *picker = editor.presentedViewController;
+            return [picker isKindOfClass:UIDocumentPickerViewController.class] && picker.viewIfLoaded.window &&
+                !picker.isBeingPresented && !picker.transitionCoordinator && !editor.transitionCoordinator;
+        }, ^{
+            UIViewController *profileEditor = orbController.presentedViewController;
+            UIDocumentPickerViewController *picker = (UIDocumentPickerViewController *)profileEditor.presentedViewController;
+            profilePicker = picker;
+            PHProbeCheck(!picker.allowsMultipleSelection && picker.delegate == (id)profileEditor,
+                @"JSON import presents the single-document native file picker");
+            PHProbeRender(self.window, orbWindow, @"orbs-strategy-file-picker");
+            [picker dismissViewControllerAnimated:YES completion:^{
+                [picker.delegate documentPickerWasCancelled:picker];
+            }];
+        }),
+        PHProbeStep(@"profile-file-picker-cancelled", ^BOOL {
+            return PHProbePresented(orbController, @"padcheaper.orbsProfileEditor", YES) &&
+                !orbController.presentedViewController.presentedViewController &&
+                !orbController.presentedViewController.transitionCoordinator;
+        }, ^{
+            UIViewController *profileEditor = orbController.presentedViewController;
+            PHProbeCheck([[profileEditor valueForKey:@"draft"] isEqual:shareDraft] &&
+                [PHProbeJSON(@"config.json") isEqual:shareConfig], @"File-picker cancellation preserves saved settings and unsaved changes");
+            NSURL *fixture = [NSBundle.mainBundle URLForResource:@"team-plan" withExtension:@"json"];
+            [(id<UIDocumentPickerDelegate>)profileEditor documentPicker:profilePicker didPickDocumentsAtURLs:@[fixture]];
+            PHProbeCheck([[profileEditor valueForKey:@"draft"] isEqual:shareDraft] &&
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"ID"],
+                @"A duplicate file import does not replace the reviewed plan");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileDelete") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            [(id<UIDocumentPickerDelegate>)profileEditor documentPicker:profilePicker didPickDocumentsAtURLs:@[fixture]];
+            PHProbeCheck([[[profileEditor valueForKey:@"draft"] objectForKey:@"profiles"] count] == 1 &&
+                [PHProbeJSON(@"config.json") isEqual:shareConfig] &&
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"尚未儲存"],
+                @"A file delegate reads real JSON into preview without publishing the draft");
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileDelete") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [profileEditor.view layoutIfNeeded];

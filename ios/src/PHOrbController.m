@@ -301,6 +301,8 @@
 @property(nonatomic, strong) UILabel *availability;
 @property(nonatomic, strong) UISegmentedControl *qualityControl;
 @property(nonatomic, strong) UILabel *qualityDescription;
+@property(nonatomic, strong) UISwitch *thornPriority;
+@property(nonatomic, strong) UILabel *thornDescription;
 @property(nonatomic, strong) UISegmentedControl *goalMode;
 @property(nonatomic, strong) UIButton *editGoals;
 @property(nonatomic, strong) UILabel *goalDescription;
@@ -396,6 +398,16 @@
     [self.qualityControl addTarget:self action:@selector(changeQuality) forControlEvents:UIControlEventValueChanged];
     self.qualityDescription = [self label:13 weight:UIFontWeightRegular];
     self.qualityDescription.accessibilityIdentifier = @"padcheaper.orbsQualityDescription";
+    UILabel *thornTitle = [self label:15 weight:UIFontWeightMedium]; thornTitle.text = @"荊棘盤優先 Combo";
+    self.thornPriority = [UISwitch new];
+    self.thornPriority.accessibilityIdentifier = @"padcheaper.orbsThornPriority";
+    self.thornPriority.accessibilityLabel = thornTitle.text;
+    [self.thornPriority addTarget:self action:@selector(changeThornPriority) forControlEvents:UIControlEventValueChanged];
+    UIStackView *thornRow = [[UIStackView alloc] initWithArrangedSubviews:@[thornTitle, self.thornPriority]];
+    thornRow.axis = UILayoutConstraintAxisHorizontal; thornRow.alignment = UIStackViewAlignmentCenter; thornRow.spacing = 12;
+    [thornRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    self.thornDescription = [self label:13 weight:UIFontWeightRegular];
+    self.thornDescription.accessibilityIdentifier = @"padcheaper.orbsThornDescription";
     self.goalMode = [[UISegmentedControl alloc] initWithItems:@[@"高 Combo", @"指定形狀", @"隊長盤面"]];
     self.goalMode.accessibilityIdentifier = @"padcheaper.orbsGoalMode"; self.goalMode.accessibilityLabel = @"求路目標";
     [self.goalMode.heightAnchor constraintGreaterThanOrEqualToConstant:36].active = YES;
@@ -406,7 +418,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；橙框為封條或刺珠，路徑會避開。轉轉也會避開，按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒不得在盤內連鎖消除，爆彈須首批全消，否則不開放執行。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒不得在盤內連鎖消除，爆彈須首批全消，否則不開放執行。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -421,7 +433,7 @@
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
-        self.qualityDescription, self.goalMode, self.editGoals, self.goalDescription,
+        self.qualityDescription, thornRow, self.thornDescription, self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -518,6 +530,13 @@
     self.qualityDescription.text = qualityMessage.length ? qualityMessage :
         @[@"較快取得路徑，適合一般回合。", @"兼顧求路速度與搜尋範圍。", @"搜尋更多候選路徑，需要等候較久；不保證 Combo 一定較高。"][quality];
     self.qualityDescription.textColor = qualityMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.thornPriority.on = [state[@"thornComboPriority"] boolValue];
+    self.thornPriority.enabled = [state[@"canSetThornPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSString *thornMessage = state[@"thornPolicyMessage"];
+    self.thornDescription.text = thornMessage.length ? thornMessage : self.thornPriority.on ?
+        @"優先較高 Combo，同 Combo 再選較少傷害。只有首消心四連且目前 HP 撐得過整條路徑才會碰荊棘；不預支消心回血。" :
+        @"目前優先較少荊棘傷害。開啟後可用承受範圍內的接觸換取更多 Combo，適合心四連能充分回血的隊伍。";
+    self.thornDescription.textColor = thornMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSString *mode = state[@"goalMode"] ?: @"combo";
     NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
     self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
@@ -590,6 +609,10 @@
 - (void)changeQuality {
     NSInteger index = self.qualityControl.selectedSegmentIndex;
     if (index >= 0 && index < 3 && self.qualityControl.enabled) self.action(@"orbsQuality", @[@"fast", @"balanced", @"thorough"][(NSUInteger)index]);
+    [self refresh];
+}
+- (void)changeThornPriority {
+    if (self.thornPriority.enabled) self.action(@"orbsThornPriority", @(self.thornPriority.on));
     [self refresh];
 }
 - (void)changeGoalMode {
@@ -666,7 +689,8 @@
     if (!self.editProfiles.enabled || self.presentedViewController) return;
     NSDictionary *state = self.state;
     NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
-        @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery()};
+        @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery(),
+        @"thornComboPriority":state[@"thornComboPriority"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
     PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
@@ -677,7 +701,8 @@
             NSDictionary *selected = PHOrbProfileNamed(library,library[@"selected"]);
             NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
-                @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery()});
+                @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
+                @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO});
             NSString *message = saved[@"profileMessage"];
             const BOOL formationSaved = !selected[@"formation"] ||
                 [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];

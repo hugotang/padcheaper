@@ -1,7 +1,8 @@
 #import "PHOrbProfileEditor.h"
 #import "PHOrbProfiles.h"
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
-@interface PHOrbProfileEditor ()
+@interface PHOrbProfileEditor () <UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate>
 @property(nonatomic, strong) NSMutableDictionary *draft;
 @property(nonatomic, strong) NSDictionary *workingSettings;
 @property(nonatomic, strong) NSDictionary *formations;
@@ -13,7 +14,12 @@
 @property(nonatomic, copy) NSString *planDraftText;
 @property(nonatomic, weak) UIWindow *previousWindow;
 @property(nonatomic, weak) UIWindow *editorWindow;
+@property(nonatomic, strong) NSURL *shareDirectory;
 - (void)rebuild;
+- (void)previewData:(NSData *)data;
+- (void)pickFile;
+- (void)share:(UIButton *)sender;
+- (void)clearShare;
 @end
 
 @implementation PHOrbProfileEditor
@@ -89,6 +95,7 @@
 }
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated]; [self.view endEditing:YES];
+    if (self.presentedViewController && !self.isBeingDismissed) return;
     if (self.editorWindow.isKeyWindow && self.previousWindow && !self.previousWindow.hidden) [self.previousWindow makeKeyWindow];
     self.previousWindow = nil; self.editorWindow = nil;
 }
@@ -174,6 +181,10 @@
             editor.selected[@"dungeon"] = @0; editor.selected[@"floor"] = @0; [editor rebuild];
         }]];
         NSDictionary *settings = record[@"settings"];
+        UIButton *share = [self button:@"分享策略檔案…"];
+        share.accessibilityIdentifier = @"padcheaper.orbsProfileShare";
+        [share addTarget:self action:@selector(share:) forControlEvents:UIControlEventTouchUpInside];
+        [self.rows addArrangedSubview:share];
         if (record[@"formation"]) {
             UILabel *summary = [self label:PHOrbPlanDescription(PHOrbPlanFromProfile(record))];
             summary.accessibilityIdentifier = @"padcheaper.orbsPlanSummary";
@@ -201,7 +212,10 @@
     UIButton *add = [self action:@"＋ 將目前轉珠設定另存為策略" identifier:@"padcheaper.orbsProfileAdd" handler:^(PHOrbProfileEditor *editor) {
         [editor addProfile:NO];
     }]; add.enabled = [self.draft[@"profiles"] count] < PHOrbMaxProfiles; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"匯入隊伍＋開場＋循環＋盤面目標 config"]];
+    [self.rows addArrangedSubview:[self label:@"匯入策略或隊伍＋開場＋循環＋盤面目標 config"]];
+    [self.rows addArrangedSubview:[self action:@"從檔案匯入 JSON…" identifier:@"padcheaper.orbsProfileFileImport" handler:^(PHOrbProfileEditor *editor) {
+        [editor pickFile];
+    }]];
     self.planText = [UITextView new]; self.planText.text = self.planDraftText ?: @"";
     self.planText.font = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightRegular];
     self.planText.backgroundColor = UIColor.secondarySystemBackgroundColor; self.planText.layer.cornerRadius = 8;
@@ -217,20 +231,93 @@
     }]];
     [self.rows addArrangedSubview:[self action:@"驗證並預覽匯入" identifier:@"padcheaper.orbsPlanImport" handler:^(PHOrbProfileEditor *editor) {
         NSData *data = [editor.planText.text dataUsingEncoding:NSUTF8StringEncoding];
-        if (!data.length || data.length > 131072) { editor.notice.text = @"請貼入完整 JSON，單份上限 128 KiB。"; return; }
-        id plan = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL]; NSString *reason = nil;
-        NSDictionary *library = PHOrbProfilesImportingPlan(editor.draft, plan, &reason);
-        if (!library) { editor.notice.text = reason ?: @"JSON 無法解析；未更動隊伍與策略。"; return; }
-        NSData *saved = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
-        editor.draft = [NSJSONSerialization JSONObjectWithData:saved options:NSJSONReadingMutableContainers error:NULL];
-        editor.planText.text = @""; [editor rebuild];
-        editor.notice.text = @"已驗證並加入草稿。請檢查上方隊伍與流程，按「儲存並選用」才會套用設定。";
-        [editor.view layoutIfNeeded];
-        UIScrollView *scroll = (UIScrollView *)editor.rows.superview;
-        [scroll setContentOffset:CGPointMake(0, -scroll.adjustedContentInset.top) animated:NO];
-        UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, editor.rows.arrangedSubviews.firstObject);
+        [editor previewData:data];
     }]];
     [self.rows addArrangedSubview:[self label:@"最多 64 份，儲存成功才生效。一般策略包含技能規則、盤面目標與求路品質，開始時核對本體圖鑑編號。\n\n整包 config 另含配裝與開場；執行時核對六格本體、武裝及開場變身進度，不以等級與覺醒作配對條件。切層後保持本次策略。\n\n自動配對優先選更具體的關卡，再比較限定的角色數；同等候選或沒有符合者會停止。這個開關不會自行開始遊戲或進入關卡。\n\n關卡限制取自最近成功讀盤，與技能規則中的第幾層不同。"]];
+}
+- (void)previewData:(NSData *)data {
+    if (!data.length || data.length > 131072) { self.notice.text = @"請提供完整 JSON，單份上限 128 KiB。"; return; }
+    NSString *reason = nil;
+    NSDictionary *library = PHOrbProfilesImportingData(self.draft,data,&reason);
+    if (!library) { self.notice.text = reason; return; }
+    NSData *saved = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
+    self.draft = [NSJSONSerialization JSONObjectWithData:saved options:NSJSONReadingMutableContainers error:NULL];
+    self.planText.text = @""; [self rebuild];
+    self.notice.text = @"已驗證並加入草稿。檢查上方內容，按「儲存並選用」才會套用設定。";
+    [self.view layoutIfNeeded];
+    UIScrollView *scroll = (UIScrollView *)self.rows.superview;
+    [scroll setContentOffset:CGPointMake(0,-scroll.adjustedContentInset.top) animated:NO];
+    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification,self.rows.arrangedSubviews.firstObject);
+}
+- (void)clearShare {
+    if (self.shareDirectory) [NSFileManager.defaultManager removeItemAtURL:self.shareDirectory error:NULL];
+    self.shareDirectory = nil;
+}
+- (void)dealloc {
+    if (_shareDirectory) [NSFileManager.defaultManager removeItemAtURL:_shareDirectory error:NULL];
+}
+- (void)share:(UIButton *)sender {
+    [self.view endEditing:YES];
+    if (self.presentedViewController) return;
+    NSString *reason = nil; NSData *data = PHOrbExportProfileData(self.selected,&reason);
+    if (!data) { self.notice.text = reason; return; }
+    [self clearShare];
+    NSURL *directory = [[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES]
+        URLByAppendingPathComponent:[@"PADCheaper-share-" stringByAppendingString:NSUUID.UUID.UUIDString] isDirectory:YES];
+    NSCharacterSet *unsafe = [[NSCharacterSet alphanumericCharacterSet] invertedSet];
+    NSString *name = [[self.selected[@"name"] componentsSeparatedByCharactersInSet:unsafe] componentsJoinedByString:@"-"];
+    if (name.length > 48) name = [name substringToIndex:48];
+    if (!name.length) name = @"PADCheaper-strategy";
+    NSURL *file = [directory URLByAppendingPathComponent:[name stringByAppendingPathExtension:@"json"]];
+    if (![NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:NO
+            attributes:@{NSFilePosixPermissions:@0700} error:NULL] ||
+        ![data writeToURL:file options:NSDataWritingAtomic error:NULL]) {
+        [NSFileManager.defaultManager removeItemAtURL:directory error:NULL];
+        self.notice.text = @"無法建立分享檔案，請檢查儲存空間。"; return;
+    }
+    self.shareDirectory = directory;
+    UIActivityViewController *activity = [[UIActivityViewController alloc] initWithActivityItems:@[file] applicationActivities:nil];
+    activity.view.accessibilityIdentifier = @"padcheaper.orbsProfileShareSheet";
+    UIPopoverPresentationController *popover = activity.popoverPresentationController;
+    popover.sourceView = sender; popover.sourceRect = sender.bounds;
+    __weak PHOrbProfileEditor *weakSelf = self;
+    activity.completionWithItemsHandler = ^(UIActivityType type, BOOL completed, NSArray *items, NSError *error) {
+        (void)type; (void)items;
+        PHOrbProfileEditor *editor = weakSelf; [editor clearShare];
+        editor.notice.text = error ? @"分享未完成，可重新嘗試。" : completed ? @"分享已完成。" : @"已取消分享。";
+    };
+    activity.presentationController.delegate = self;
+    [self presentViewController:activity animated:YES completion:nil];
+}
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    if ([presentationController.presentedViewController isKindOfClass:UIActivityViewController.class]) [self clearShare];
+}
+- (void)pickFile {
+    [self.view endEditing:YES];
+    if (self.presentedViewController) return;
+    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeJSON] asCopy:NO];
+    picker.allowsMultipleSelection = NO; picker.delegate = self;
+    [self presentViewController:picker animated:YES completion:nil];
+}
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
+    (void)controller; self.notice.text = @"已取消檔案匯入。";
+}
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
+    (void)controller;
+    NSURL *url = urls.count == 1 ? urls.firstObject : nil;
+    if (!url.isFileURL) { self.notice.text = @"請選擇一個 JSON 檔案。"; return; }
+    BOOL scoped = [url startAccessingSecurityScopedResource];
+    __block NSData *data = nil; NSError *error = nil;
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+    [coordinator coordinateReadingItemAtURL:url options:0 error:&error byAccessor:^(NSURL *readURL) {
+        NSNumber *size = nil; [readURL getResourceValue:&size forKey:NSURLFileSizeKey error:NULL];
+        if (!size || size.unsignedLongLongValue > 131072) return;
+        NSFileHandle *handle = [NSFileHandle fileHandleForReadingFromURL:readURL error:NULL];
+        data = [handle readDataUpToLength:131073 error:NULL]; [handle closeAndReturnError:NULL];
+    }];
+    if (scoped) [url stopAccessingSecurityScopedResource];
+    if (error || !data.length || data.length > 131072) { self.notice.text = @"檔案無法讀取或超過 128 KiB。"; return; }
+    [self previewData:data];
 }
 - (void)addProfile:(BOOL)duplicate {
     NSMutableArray *profiles = self.draft[@"profiles"];

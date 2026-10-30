@@ -137,6 +137,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState;
     PHOrbRoute _route;
     NSString *_phase, *_message, *_quality, *_goalMode;
+    bool _thornComboPriority;
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules, *_decisionRules;
     NSMutableArray *_automationLog;
@@ -228,6 +229,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"status":@"drag-accepted", @"goals":PHOrbGoalsJSON(&_solveOptions.goals),
         @"startBoard":BoardTrace(_preview.board), @"path":RouteCells(_route),
+        @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
+            @"thornComboPriority":@(_solveOptions.thornComboPriority),
+            @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
+            @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
+            @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
         @"predictedBoard":BoardTrace(predicted), @"observedBoard":BoardTrace(state->board),
         @"confirmedSteps":@0, @"releaseEvaluation":@{}, @"releaseConfirmed":@NO};
     if (_executionHistory.count >= 3) [_executionHistory removeObjectAtIndex:0];
@@ -235,14 +241,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (BOOL)configureQuality:(NSString *)quality {
     if (!quality) return NO;
-    return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules, @"recovery":_recovery}];
+    return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
+        @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority)}];
 }
 - (BOOL)configureSettings:(NSDictionary *)settings {
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical || _automatic || _oneShot || [self executing] || _inputFault) return NO;
     if ([_quality isEqual:canonical[@"quality"]] && [_goalMode isEqual:canonical[@"mode"]] &&
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
-        [_recovery isEqual:canonical[@"recovery"]]) return YES;
+        [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue]) return YES;
     [self cancelWorker];
     [self loadSettings:canonical];
     _readQueued = _hasStable = false;
@@ -253,6 +260,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _quality = [settings[@"quality"] copy]; _goalMode = [settings[@"mode"] copy];
     _manualGoals = settings[@"goals"]; _goalPlan = @{}; [self clearRoute];
     _solveOptions = OptionsForQuality(_quality);
+    _thornComboPriority = [settings[@"thornComboPriority"] boolValue];
+    _solveOptions.thornComboPriority = _thornComboPriority;
     _skillRules = settings[@"rules"];
     _recovery = settings[@"recovery"];
     // Keep the last run's decisions with their captured rules. Idle runtime
@@ -662,6 +671,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _readQueued = false; _preview = _live;
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
+    options.thornComboPriority = _thornComboPriority;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
@@ -690,7 +700,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"turn":@(_automatic ? _autoTurn : 0), @"wave":@(_preview.wave),
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"board":BoardTrace(_preview.board), @"goals":PHOrbGoalsJSON(&options.goals),
-        @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds)};
+        @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds),
+        @"thornComboPriority":@(options.thornComboPriority)};
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
@@ -1113,6 +1124,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"playerBypass":@(_live.automation.playerBypass), @"skillWindow":@(_live.automation.window),
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
+        @"thornComboPriority":@(_thornComboPriority),
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,

@@ -14,9 +14,10 @@ static NSDictionary *PHDefaultBattleFilters(void) {
 
 NSDictionary *PHDefaultConfiguration(void) {
     return @{@"schema": @1, @"experimentalWrites": @NO,
-             @"features": @{@"skin": @NO, @"bgm": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
+             @"features": @{@"skin": @NO, @"bgm": @NO, @"bgmUncleared": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
-             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[], @"recovery":PHOrbDefaultRecovery()},
+             @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[],
+                 @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO},
              @"orbProfiles":PHOrbDefaultProfiles()};
 }
 
@@ -47,7 +48,7 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
     NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[],
-        @"recovery":PHOrbDefaultRecovery()} mutableCopy];
+        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
     return settings;
@@ -97,6 +98,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     // Schema 1 files created by older dylibs remain valid; absent means off.
     if (features[@"battleSwap"] && !PHIsBoolean(features[@"battleSwap"])) return NO;
     if (features[@"badge"] && !PHIsBoolean(features[@"badge"])) return NO;
+    if (features[@"bgmUncleared"] && !PHIsBoolean(features[@"bgmUncleared"])) return NO;
     if (configuration[@"orbs"] && ![configuration[@"orbs"] isKindOfClass:NSDictionary.class]) return NO;
     if (configuration[@"formations"] && !PHFormationReadLibrary(configuration[@"formations"], NULL, NULL)) return NO;
     if (!PHOrbProfilesValid(PHConfigurationOrbProfiles(configuration))) return NO;
@@ -105,7 +107,8 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality]) return NO;
     if (![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
-        !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"])) return NO;
+        !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"]) ||
+        !PHIsBoolean(orbs[@"thornComboPriority"])) return NO;
     NSDictionary *profiles = PHConfigurationOrbProfiles(configuration);
     NSDictionary *selectedProfile = PHOrbProfileNamed(profiles, profiles[@"selected"]);
     if (selectedProfile && ![PHOrbCanonicalSettings(orbs) isEqual:PHOrbCanonicalSettings(selectedProfile[@"settings"])]) return NO;

@@ -22,6 +22,12 @@ static BOOL Identifier(id value, BOOL empty) {
 static BOOL Keys(NSDictionary *value, NSArray *keys) {
     return [[NSSet setWithArray:value.allKeys] isEqual:[NSSet setWithArray:keys]];
 }
+static BOOL KeysWithOptional(NSDictionary *value, NSArray *required, NSArray *optional) {
+    if (![value isKindOfClass:NSDictionary.class]) return NO;
+    NSSet *actual = [NSSet setWithArray:value.allKeys];
+    NSMutableSet *allowed = [NSMutableSet setWithArray:required]; [allowed addObjectsFromArray:optional];
+    return [[NSSet setWithArray:required] isSubsetOfSet:actual] && [actual isSubsetOfSet:allowed];
+}
 
 NSDictionary *PHOrbDefaultProfiles(void) {
     return @{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[]};
@@ -33,13 +39,15 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     PHOrbGoalSet goals = {0};
     NSArray *rules = settings[@"rules"] ?: @[];
     NSDictionary *recovery = settings[@"recovery"] ?: PHOrbDefaultRecovery();
+    NSNumber *thornComboPriority = settings[@"thornComboPriority"] ?: @NO;
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
-        !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery)) return nil;
+        !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
-    return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy], @"recovery":[recovery copy]};
+    return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy],
+        @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority};
 }
 
 NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
@@ -64,8 +72,8 @@ BOOL PHOrbProfilesValid(id library) {
             !Integer(record[@"dungeon"], UINT16_MAX) || !Integer(record[@"floor"], UINT16_MAX) ||
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
-            !(Keys(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"]) ||
-              Keys(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules", @"recovery"]))) return NO;
+            !KeysWithOptional(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"],
+                @[@"recovery", @"thornComboPriority"])) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
@@ -176,7 +184,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
         ![plan[@"format"] isEqual:@"padcheaper-team-plan"] || !Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1] ||
         ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
-        ![plan[@"board"] isKindOfClass:NSDictionary.class] || !Keys(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"])) return nil;
+        !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"], @[@"thornComboPriority"])) return nil;
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;
@@ -223,6 +231,39 @@ NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictio
     return @{@"schema":@1, @"selected":identifier, @"teams":teams};
 }
 
+NSData *PHOrbExportProfileData(NSDictionary *profile, NSString **reason) {
+    if (reason) *reason = @"請先選擇一份有效策略";
+    if (![profile isKindOfClass:NSDictionary.class] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"",
+            @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);
+    NSDictionary *package = profile[@"formation"] ? PHOrbPlanFromProfile(canonical) :
+        @{@"format":@"padcheaper-orb-profile", @"schema":@1, @"target":@"jp.gungho.pad-ios-23.6.0-106878", @"profile":canonical};
+    NSData *data = [NSJSONSerialization dataWithJSONObject:package options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL];
+    if (!data.length || data.length > 131072) { if (reason) *reason = @"分享檔案超過單份 128 KiB 上限"; return nil; }
+    if (reason) *reason = nil;
+    return data;
+}
+
+NSDictionary *PHOrbProfilesImportingData(NSDictionary *library, NSData *data, NSString **reason) {
+    if (reason) *reason = @"JSON 格式、版本或內容無效；未更動隊伍與策略";
+    if (!PHOrbProfilesValid(library) || ![data isKindOfClass:NSData.class] || !data.length || data.length > 131072) return nil;
+    id package = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    if (![package isKindOfClass:NSDictionary.class]) return nil;
+    if ([package[@"format"] isEqual:@"padcheaper-team-plan"]) return PHOrbProfilesImportingPlan(library,package,reason);
+    if (!Keys(package,@[@"format",@"schema",@"target",@"profile"]) ||
+        ![package[@"format"] isEqual:@"padcheaper-orb-profile"] || !Integer(package[@"schema"],1) ||
+        ![package[@"schema"] isEqual:@1] || ![package[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
+        ![package[@"profile"] isKindOfClass:NSDictionary.class]) return nil;
+    NSDictionary *profile = package[@"profile"];
+    if (profile[@"formation"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    if (PHOrbProfileNamed(library,profile[@"id"])) { if (reason) *reason = @"相同 ID 的策略已存在；未覆蓋舊設定"; return nil; }
+    if ([library[@"profiles"] count] >= PHOrbMaxProfiles) { if (reason) *reason = @"策略庫已滿（64 份）"; return nil; }
+    NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);
+    NSArray *profiles = [library[@"profiles"] arrayByAddingObject:[canonical copy]];
+    if (reason) *reason = nil;
+    return @{@"schema":@1, @"selected":profile[@"id"], @"autoSelect":@NO, @"profiles":profiles};
+}
+
 NSString *PHOrbPlanDescription(NSDictionary *plan) {
     NSDictionary *profile = PHOrbProfileFromPlan(plan, NULL);
     if (!profile) return @"無效整包設定";
@@ -241,6 +282,8 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     [lines addObject:@"\n循環（依優先順序）："];
     for (NSDictionary *rule in profile[@"settings"][@"rules"]) [lines addObject:PHOrbSkillRuleDescription(rule)];
     [lines addObject:[NSString stringWithFormat:@"\n盤面目標：%@\n求路品質：%@", PHOrbGoalsDescription(profile[@"settings"][@"goals"]), profile[@"settings"][@"quality"]]];
+    [lines addObject:[profile[@"settings"][@"thornComboPriority"] boolValue] ?
+        @"荊棘盤優先 Combo：開啟；首消心四連且拖珠傷害低於目前 HP 才可接觸" : @"荊棘盤優先 Combo：關閉；優先較少傷害"];
     [lines addObject:@"\n儲存並選用會同時選取隊伍與策略；入場套隊沿用既有開關。按「開始自動轉」才執行開場及循環。"];
     return [lines componentsJoinedByString:@"\n"];
 }

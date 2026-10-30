@@ -21,3 +21,6 @@ FOUNDATION_EXPORT NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *fo
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSString *PHOrbPlanDescription(NSDictionary *plan);
+// Single selected profile only; never account state, endpoint or master switches.
+FOUNDATION_EXPORT NSData *PHOrbExportProfileData(NSDictionary *profile, NSString **reason);
+FOUNDATION_EXPORT NSDictionary *PHOrbProfilesImportingData(NSDictionary *library, NSData *data, NSString **reason);

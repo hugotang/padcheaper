@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <CoreFoundation/CoreFoundation.h>
 #import "PHIdentity.h"
 #import "PHConfiguration.h"
 #import "PHOrbRules.h"
@@ -44,6 +45,15 @@ int main(void) {
         Check(PHConfigurationIsValid(defaults) && ![defaults[@"experimentalWrites"] boolValue], "defaults are diagnostic");
         Check([PHConfigurationBattleFilters(defaults)[@"autoApplyTeam"] isEqual:@NO], "entry auto-apply defaults off");
         Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
+        Check([PHConfigurationOrbSettings(defaults)[@"thornComboPriority"] isEqual:@NO],
+            "new and legacy configurations default to lower thorn damage");
+        for (id value in @[@YES, @NO, @1, @"true", NSNull.null]) {
+            NSMutableDictionary *thornConfig = [defaults mutableCopy]; thornConfig[@"orbs"] = @{@"thornComboPriority":value};
+            NSData *json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
+            NSDictionary *readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+            const BOOL valid = [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
+            Check(PHConfigurationIsValid(readback) == valid, "saved thorn setting accepts only true JSON booleans");
+        }
         Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
             [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");
         Check([PHConfigurationOrbSettings(defaults)[@"rules"] isEqual:@[]], "skills are opt-in rules and continuous running is never a saved switch");
@@ -141,6 +151,12 @@ int main(void) {
         Check(PHConfigurationIsValid(config), "GUI switches and observed endpoint produce a valid configuration");
         Check(![config[@"features"][@"battleSwap"] boolValue], "old schema 1 files keep battle replacement off");
         Check(![config[@"features"][@"badge"] boolValue], "old schema 1 files keep badge unlock off");
+        Check(![config[@"features"][@"bgmUncleared"] boolValue], "old schema 1 files keep uncleared music disabled");
+        for (id choice in @[@YES,@NO,@1,@0,@"true",NSNull.null]) {
+            config[@"features"] = @{@"skin":@YES,@"bgm":@YES,@"timerFix":@NO,@"bgmUncleared":choice};
+            BOOL valid = [choice isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)choice) == CFBooleanGetTypeID();
+            Check(PHConfigurationIsValid(config) == valid, "uncleared music is an optional strict Boolean");
+        }
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"badge": @YES};
         Check(PHConfigurationIsValid(config), "badge uses an optional Boolean switch");
         config[@"features"] = @{@"skin": @YES, @"bgm": @YES, @"timerFix": @NO, @"badge": @1};

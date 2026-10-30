@@ -7,6 +7,7 @@ build_dir="${BUILD_DIR:-$repo_dir/build/ios-tests}"
 mkdir -p "$build_dir"
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 clang_path="$(xcrun --sdk macosx --find clang)"
+python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
@@ -122,3 +123,20 @@ done
     -framework Foundation \
     -o "$build_dir/save-state-tests"
 "$build_dir/save-state-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror \
+    -Wno-unused-const-variable -Iios/src -Iios/generated \
+    ios/src/PHCodec.m ios/src/PHBadgeModel.c ios/src/PHDeckPersistence.m ios/tests/deck_persistence_tests.m \
+    -framework Foundation -framework CoreFoundation -o "$build_dir/deck-persistence-tests"
+"$build_dir/deck-persistence-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+    ios/src/PHUnlockRestoration.m ios/tests/unlock_restoration_tests.m \
+    -framework Foundation -o "$build_dir/unlock-restoration-tests"
+"$build_dir/unlock-restoration-tests"
+
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions -Wall -Wextra -Werror \
+    -Wno-unused-const-variable -Iios/src -Iios/generated \
+    ios/tests/music_tests.mm "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
+    -lc++ -framework Foundation -o "$build_dir/music-tests"
+"$build_dir/music-tests"

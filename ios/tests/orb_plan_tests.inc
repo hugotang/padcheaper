@@ -9,6 +9,15 @@ static void PlanTests(void) {
     if (!profile) return;
     NSDictionary *roundtrip = PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile), &reason);
     Check([profile isEqual:roundtrip], "plan export/import preserves formation, opening, rotation and goals");
+    NSMutableDictionary *thornPlan = ReadPlanFixture(); thornPlan[@"board"][@"thornComboPriority"] = @YES;
+    NSDictionary *thornProfile = PHOrbProfileFromPlan(thornPlan, &reason);
+    Check(thornProfile && [PHOrbPlanFromProfile(thornProfile)[@"board"][@"thornComboPriority"] isEqual:@YES] &&
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(thornProfile), NULL) isEqual:thornProfile],
+        "full team-plan roundtrip preserves the optional thorn Combo preference");
+    thornPlan[@"board"][@"thornComboPriority"] = @1;
+    Check(!PHOrbProfileFromPlan(thornPlan, NULL), "plan import rejects numeric or malformed thorn preference");
+    thornPlan[@"board"][@"thornComboPriority"] = @NO; thornPlan[@"board"][@"unknown"] = @YES;
+    Check(!PHOrbProfileFromPlan(thornPlan, NULL), "adding a known optional board key does not allow unknown settings");
     NSDictionary *library = PHOrbProfilesImportingPlan(PHOrbDefaultProfiles(),plan,&reason);
     Check(PHOrbProfilesValid(library) && [library[@"selected"] isEqual:plan[@"id"]] && ![library[@"autoSelect"] boolValue],
         "import selects an explicitly reviewed plan without automatic start");

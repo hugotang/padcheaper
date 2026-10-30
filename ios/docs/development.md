@@ -4,6 +4,22 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 0.5.8-orbs：保存、BGM、分享、技能選擇及求路，驗證中
+
+同批追加徽章重啟保存：IDA 修正 save_decks=58、recv_team=122，從精確 request raw records 核對 wire 0，可靠預設 0 可清舊值；登入／原生 commit 後按欄位延遲回蓋，帳號／新儲存／關閉取消。account 數值嚴格校驗，JSON 有界讀取，關閉 Skin／BGM 的 ownership bits／descriptor flags 還原失敗保留到讀回確認。新增真正記憶體映射替身案例，尚待 macOS 執行。
+
+新增預設關閉的未通關隊伍 BGM：唯讀 clear hash、原生 named audio setter／refresh、同場 override lease、event music 讓權、已載入資源與單人限制。普通／完整策略均可輸出 JSON 至 iOS 原生分享面板，以 document picker 匯入後預覽再原子保存。新增檔案往返／拒絕、原生分享與 picker 呈現／取消、temp 清理、草稿及焦點回復測試，待本批 CI；未實際向他人分享。細節見 [保存、音樂與分享](persistence-music-sharing.md)。
+
+新增 [AutoCombo 唯讀研究](autocombo-review.md) 與 [clear_dungeon 欄位來源](clear-dungeon-audit.md)。上游研究沒有直接移植程式；通關分析明確區分已知計數／audit 與未知欄位，沒有遊戲 API 呼叫、audit 清除或通關 payload 改寫。
+
+2026-10-30，延續使用者「動手」與「開始編譯測試」授權。IDA 確認原生二選一只適用來源本體／武裝同進化鏈，且當前本體仍須通過冷卻、珠數及其他原生可用性檢查。新增來源身分、進化鏈與原生選擇來源的競態核對；指定本體時可走遊戲提供的二選一，非同進化鏈仍略過，不改放武裝。增加 11 組指紋及原生替身案例；尚未完成本批 macOS 編譯、原生／session 測試及 iPhoneOS 建置。
+
+使用者追加要求可選擇在心四連回血隊伍碰荊棘。新增預設關閉的「荊棘盤優先 Combo」開關，開啟後在相同目標及存活門檻下先比 Combo、再比荊棘傷害；不能預支放手後回血。設定隨通用設定／策略／整包匯入匯出保存，舊設定預設較少傷害優先，儲存失敗不發布。新增兩方向有明確取捨的求路案例、相同 Combo 選較少傷害、原 HP／心四連限制、切換策略及真實 config 寫入失敗／成功與 UI 案例，待本批完整驗證。
+
+0.5.7 裝置 log 的第 4 回合在桌面重現 2 Combo／13 步；存活範圍內的荊棘分支排擠了零接觸的更高 Combo 路徑。新增共用原期限的零接觸補搜，獨立重播目前得到 7 Combo／48 步／零荊棘傷害；桌面結果不代表 iPhone 耗時。新回歸盤面的轉錄 fixture 已修正，Windows GCC／G++ `-O2 -Wall -Wextra -Werror` 新編譯的完整 solver／model 套件通過。最近三次轉珠紀錄新增當次耗時、預算、候選數、輪次及深度，避免用下一次失敗求路的統計推論前次品質。
+
+另調查關卡廣告復活：報錯可發生於獨立復活版位的廣告載入階段，正式復活後續另有廣告獎勵／continue／ack 請求，通關送 `clear_dungeon` 及編碼統計／檢查欄位。唯讀分析與證據限制已整理於 [廣告復活](ad-revival.md)。未實作替代復活按鈕或更改網路行為；未交付新 dylib，既有 0.5.7 交付檔保持原樣。
+
 ## 0.5.7-orbs：轉轉形狀補搜與暫時變身，CI 72 完成
 
 2026-10-30，[CI 72](https://github.com/hugotang/padcheaper/actions/runs/40925229351) 的原生／session／求解器／規則／config、iPhoneOS 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視手動目標的暫時隊長提示、整包匯入與浮動快捷畫面。原生解碼、狀態競態取消、暫時變身後繼續／停止重開／恢復、必要自救及當前隊長規劃均通過替身回歸。

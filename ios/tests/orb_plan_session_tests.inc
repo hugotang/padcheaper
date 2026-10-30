@@ -215,6 +215,10 @@ static void ExecutionTraceSessionTests() {
         Check([record[@"status"] isEqual:@"released"] && [record[@"releaseConfirmed"] boolValue] &&
             [record[@"releaseEvaluation"][@"goalsMet"] boolValue] && [record[@"observedBoard"][@"types"] count] == 30,
             "accepted release keeps the pre-release board and validation despite omitted resolving cells");
+        Check([record[@"search"][@"quality"] isEqual:@"fast"] && [record[@"search"][@"budgetMS"] unsignedIntValue] == 120 &&
+            [record[@"search"][@"evaluated"] unsignedIntValue] > 0 && [record[@"search"][@"searchPasses"] unsignedIntValue] > 0 &&
+            [record[@"search"][@"exploredDepth"] unsignedIntValue] >= [record[@"confirmedSteps"] unsignedIntValue],
+            "completed route history keeps its own search budget, effort and depth for later low-combo diagnosis");
         bool equal = true;
         for (unsigned cell = 0; cell < 30; ++cell) equal &= [record[@"observedBoard"][@"types"][cell] unsignedIntValue] == engine->live.board.types[cell];
         Check(equal, "retained release board is the last observed native board, not a zeroed phase-three snapshot");

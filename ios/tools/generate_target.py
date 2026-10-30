@@ -40,7 +40,9 @@ def generate(manifest):
         "PHNetworkStateRVA": "0x2ae8ee8",
         "PHNetworkPhaseRVA": "0x2ae8eec",
         "PHEditDirtyOffset": "0x5305ac",
+        "PHSaveDecksRequestID": manifest["restore"]["request_ids"]["save_decks"],
     }
+    symbols.update(manifest["music_playback"]["symbols"])
     for field in fields.values():
         if integer(field["va"]) - base != integer(field["rva"]):
             raise ValueError(f"RVA mismatch: {field['name']}")

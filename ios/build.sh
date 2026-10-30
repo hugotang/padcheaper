@@ -15,7 +15,7 @@ sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
 min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
 
-for native in PHBattleNative PHTimer PHOrbNative PHOrbSession; do
+for native in PHBattleNative PHTimer PHMusic PHOrbNative PHOrbSession; do
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
     "-miphoneos-version-min=$min_version" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
@@ -30,13 +30,13 @@ done
     -O2 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable \
     -dynamiclib -install_name @rpath/PADCheaper.dylib \
     -Iios/src -Iios/generated \
-    ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
+    ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHDeckPersistence.m ios/src/PHUnlockRestoration.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
     ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m \
     "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
-    "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" -lc++ \
-    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit \
+    "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHMusic.o" -lc++ \
+    -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit -framework UniformTypeIdentifiers \
     -Wl,-dead_strip -o "$build_dir/PADCheaper.dylib"
 
 # This ad-hoc signature is for artifact integrity, not an iPhone install identity.
@@ -68,6 +68,11 @@ cp ios/docs/orb-effects.md "$build_dir/orb-effects.md"
 cp ios/docs/orb-shape-search.md "$build_dir/orb-shape-search.md"
 cp ios/docs/orb-skill-selection.md "$build_dir/orb-skill-selection.md"
 cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
+cp ios/docs/release-0.5.8.md "$build_dir/release-0.5.8.md"
+cp ios/docs/persistence-music-sharing.md "$build_dir/persistence-music-sharing.md"
+cp ios/docs/autocombo-review.md "$build_dir/autocombo-review.md"
+cp ios/docs/ad-revival.md "$build_dir/ad-revival.md"
+cp ios/docs/clear-dungeon-audit.md "$build_dir/clear-dungeon-audit.md"
 cp ios/docs/release-0.5.7.md "$build_dir/release-0.5.7.md"
 cp ios/docs/solver-research-2026-10-30.md "$build_dir/solver-research-2026-10-30.md"
 cp ios/docs/release-0.5.6.md "$build_dir/release-0.5.6.md"
@@ -87,10 +92,11 @@ cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/resear
 cp ios/research/orb-shape-0407.json "$build_dir/research/"
 cp ios/research/orb_shape_probe.cpp ios/research/orb_shape_benchmark.py ios/research/orb-shape-results.json "$build_dir/research/"
 cp ios/research/orb-spinner-20261030.json ios/research/orb-shape-results-057.json "$build_dir/research/"
+cp ios/research/orb_thorn_probe.cpp ios/research/orb_thorn_benchmark.py ios/research/orb-thorn-results-058.json "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
-rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o"
+rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHMusic.o" "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o"
 
 python3 - "$build_dir" <<'PY'
 import hashlib
@@ -113,7 +119,7 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md"):
+for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
@@ -135,6 +141,14 @@ metadata = {
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
     "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; atomic single-file config commit; source/skill constraints never force a native choice; explicit start; in-process opening progress",
+    "profile_file_sharing": "selected ordinary profile or complete team plan as bounded JSON file; native share sheet and document picker; preview before atomic save; duplicate IDs refused; no account/API/master switches",
+    "deck_persistence": "save_decks ID 58 native commit; exact queued raw record correlation recovers serializer-defaulted badges and respects confirmed explicit zero; account-bound per-field deferred restore with readback and cancellation",
+    "unlock_restoration": "disabled cosmetic ownership and descriptor restoration retains failed work until readback; changed table, ID or native descriptor value revokes old lease",
+    "uncleared_team_music": "optional default-off single-player named loaded tracks; read-only clear predicate; native temporary music override, boss selection and event/script priority; no clear-flag writes",
+    "skill_body_choice": "native same-evolution-family base/assist choice only; body still passes native cooldown, board and status conditions; source/stage/family rechecks; no forced readiness or charge writes",
+    "thorn_combo_priority": "optional default-off, atomically saved with profile and team plan; goals/hazards then combos before thorn damage when enabled; exact first-wave heart four and verified surviving HP still mandatory",
+    "thorn_zero_contact_search": "contact candidates can trigger a bounded zero-contact pass within the original deadline; independent replay fixture records comparison, not device timing",
+    "clear_dungeon_audit": "read-only request/statistics analysis documented; no clear payload rewrite, audit clearing or local revival",
     "temporary_team_form": "validated native temporary identity preserves completed opening; original/generic actor skills pause, explicit current-monster rules may run; required rescue remains enforced; actual current leaders determine leader-mode goals",
     "orb_release_trace": "fresh actual-board evaluation before release; bounded last-three accepted routes and search trace; poison-stop counts; no device first-wave confirmation",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",

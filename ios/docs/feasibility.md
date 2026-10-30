@@ -152,7 +152,7 @@ decksb={"fmt":1,"decks":[[...],...]}&decksbs={"fmt":1,"decks":[[...],...]}
 
 已核對的正常路徑：
 
-`NSURLSession completion 0x10045B778` 複製 NSData → 遊戲 request dispatcher `0x1006BB50C` → `0x100687DB0／0x1005903F0` 解析 JSON → 登入（request ID 33）或 save_decks（122）→ `0x10069C5E0` 寫隊伍。
+`NSURLSession completion 0x10045B778` 複製 NSData → 遊戲 request dispatcher `0x1006BB50C` → `0x100687DB0／0x1005903F0` 解析 JSON。0.5.8 更正原先請求標籤：登入（33）與 recv_team（122）可走 `0x10069C5E0` 解析隊伍；save_decks 是 **58**，走 `0x100698580` 提交原生 editing records，並非由 response 預設 JSON 重建。完整修正見 [保存分析](persistence-music-sharing.md)。
 
 0x1005903F0（本機證據檔 decomp-1005903f0.c） 把 bytes range 交給 JSON parser；0x100687DB0（本機證據檔 decomp-100687db0.c） 直接查找 res 欄位；0x10069BCFC（本機證據檔 decomp-10069bcfc.c） 從回應取出 decksb／decksbs 物件。這已補上解析格式證據；實際 NSURLSession 回應仍需確認 gzip 處理、大小及錯誤形狀。
 

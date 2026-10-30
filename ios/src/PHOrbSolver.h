@@ -10,6 +10,7 @@ struct PHOrbSolveOptions {
     PHOrbThornState thorns{};
     unsigned recoveryPasses = 1;
     unsigned backtrackLimit = 0;
+    bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };

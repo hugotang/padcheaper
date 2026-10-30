@@ -54,6 +54,29 @@ static void PHProbePlanStorage(UIWindow *overlay) {
         [team isEqual:plan[@"formation"]] && [committed[@"formationDraft"] isEqual:team] &&
         [committed[@"orbState"][@"profiles"] isEqual:library],
         @"A successful full-plan commit saves all four parts and publishes the selected automatic entry team together");
+    NSString *thornBackup = [path stringByAppendingFormat:@".thorn-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL thornMoved = [files moveItemAtPath:path toPath:thornBackup error:NULL];
+    BOOL thornBlocked = thornMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(thornBlocked, @"Thorn setting test blocks the real canonical file after selecting a plan");
+    if (thornBlocked) {
+        action(@"orbsThornPriority", @YES);
+        NSDictionary *thornFailed = snapshot();
+        PHProbeCheck([thornFailed[@"config"] isEqual:disk] &&
+            [thornFailed[@"orbState"][@"thornComboPriority"] isEqual:@NO] &&
+            [thornFailed[@"orbState"][@"thornPolicyMessage"] length] > 0,
+            @"Failed thorn preference save leaves both active settings and the selected plan unchanged");
+        BOOL thornRepaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:thornBackup toPath:path error:NULL];
+        PHProbeCheck(thornRepaired, @"Thorn fixture restores the canonical file after failed write");
+        if (!thornRepaired) return;
+        action(@"retry", nil); action(@"orbsThornPriority", @YES);
+        NSDictionary *thornCommitted = snapshot(), *thornDisk = PHProbeJSON(@"config.json");
+        NSDictionary *thornProfile = profileNamed(configProfiles(thornDisk), library[@"selected"]);
+        PHProbeCheck([thornDisk[@"orbs"][@"thornComboPriority"] isEqual:@YES] &&
+            [thornProfile[@"settings"][@"thornComboPriority"] isEqual:@YES] &&
+            [thornCommitted[@"orbState"][@"thornComboPriority"] isEqual:@YES] &&
+            ![thornCommitted[@"orbState"][@"thornPolicyMessage"] length],
+            @"Successful thorn preference save updates the selected full plan and published settings atomically");
+    } else if (thornMoved) [files moveItemAtPath:thornBackup toPath:path error:NULL];
     BOOL restored = [original writeToFile:path options:NSDataWritingAtomic error:NULL];
     NSDictionary *reloaded = snapshot();
     PHProbeCheck(restored && [reloaded[@"config"] isEqual:baseline] &&

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.7-orbs",
+  "prototype_version": "0.5.8-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -132,7 +132,8 @@
       ],
       "combine": "post-skill-conjunction"
     },
-    "unmatchable_color_condition": "any-selected-basic-color"
+    "unmatchable_color_condition": "any-selected-basic-color",
+    "skill_source_choice": "native-same-family-body"
   },
   "user_report": {
     "date": "2026-10-28",
@@ -194,7 +195,9 @@
     "PHOrbHPModifierTurnsOffset": "0xb480c",
     "PHOrbHPModifierOffset": "0xb4810",
     "PHOrbPendingDamageOffset": "0xb7e68",
-    "PHOrbPendingThornDamageOffset": "0xb7e6c"
+    "PHOrbPendingThornDamageOffset": "0xb7e6c",
+    "PHOrbSkillSelectedSourceOffset": "0x92e1c",
+    "PHOrbSkillFamilyOffset": "0x300"
   },
   "guards": [
     {
@@ -588,6 +591,94 @@
       "length": 64,
       "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa153840f9a8de4291003147fd0820601e2d020054007d47bde30be997753a40f91f040071ab010054",
       "sha256": "7796b185e0dc992fa47b49e02d3cfb412a5162096e57c901c6c389a7249739c3"
+    },
+    {
+      "name": "PHOrbCanChooseSkillRVA",
+      "va": "0x1005be8a0",
+      "rva": "0x5be8a0",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa00200491e3c9fe97a000003400008052fd7b41a9f44fc2a8c0035fd6683ecb791f0500714bffff5461624b7988ac00f0",
+      "sha256": "ef01efdd5fff4b4d58ec36bdbddd54762f835adda6c4823ba646f58aa9f0487f"
+    },
+    {
+      "name": "PHOrbSkillChoiceSourceRVA",
+      "va": "0x1005be8cc",
+      "rva": "0x5be8cc",
+      "length": 64,
+      "bytes": "683ecb791f0500714bffff5461624b7988ac00f008c11e9109f091520001098bd8c4fd9761664b79fd7b41a9f44fc2a8962ce917fc6fbaa9fa6701a9f85f02a9",
+      "sha256": "db4d0ce054544fe144cd9d8bcbee50c30178ab9763c523667d166163e24e2ff1"
+    },
+    {
+      "name": "PHOrbSkillFamilyRVA",
+      "va": "0x100009adc",
+      "rva": "0x9adc",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aa3f040071cb010054e10300aa55da0090b5c21e9116f09152a002168b50981494f40300aaa002168be10313aa",
+      "sha256": "40be9191716f1c56b9a87a9f61da7c961789fe1b19d1c159617f913c639ba07c"
+    },
+    {
+      "name": "PHOrbSkillFamilyCompareRVA",
+      "va": "0x100009b20",
+      "rva": "0x9b20",
+      "length": 64,
+      "bytes": "9f0200f1041840fa610000540000805205000014880243b9090043b91f01096be0179f1afd7b42a9f44f41a9f657c3a8c0035fd6000040b9e1ffff17f44fbea9",
+      "sha256": "907b9b2b3750f633ebc35b228b245a8b0ee3d95c09813c4426268c5fcb8ca3df"
+    },
+    {
+      "name": "PHOrbSkillChoiceDialogRVA",
+      "va": "0x100584c10",
+      "rva": "0x584c10",
+      "length": 64,
+      "bytes": "e00313aaf16d0094e0030034883ecb791f0500718b030054e00314aa1de70094800c0034e00313aae10314aa020080520cfd0094f56c0090b5a23a91a0460039",
+      "sha256": "4fbeef49393aca9dea71a6c6d807ce50e2b59f8c9bd0543acc1f15f550051195"
+    },
+    {
+      "name": "PHOrbSkillChoiceCheckRVA",
+      "va": "0x100584edc",
+      "rva": "0x584edc",
+      "length": 64,
+      "bytes": "683a40f9006975f8010080529d6a00941f00146bec070054683a40f909aa87526901a072016969f8c029019000c037912200805258fc0094c006003674018052",
+      "sha256": "0c14ed2d90d17836e6968926f1dfebfd46c0e2d93b2a41f4f7f8f8ad083a659f"
+    },
+    {
+      "name": "PHOrbSkillChooseBodyRVA",
+      "va": "0x1005cd058",
+      "rva": "0x5cd058",
+      "length": 64,
+      "bytes": "1403178b8082139127d7fa9780c604b9683a40f989c385522901a0721f692938fd7b47a9f44f46a9f65745a9f85f44a9fa6743a9fc6f42a9e923416dff030291",
+      "sha256": "a4a112378881a0ad2b6bafa95ce5640d775fde84617f860beacbf64801d8920c"
+    },
+    {
+      "name": "PHOrbSkillChosenSourceRVA",
+      "va": "0x1005cd2d8",
+      "rva": "0x5cd2d8",
+      "length": 64,
+      "bytes": "0903178b29c544b9c902f8361f713839e00313aa3b4cff97400200340803178b093dcb793f050071cb010054002107914e8ffe97f60300aae00314aa01008052",
+      "sha256": "59db70f7f1f179509d2c3d9a927178d98f07d8e2f533663cbaa1316f57c96469"
+    },
+    {
+      "name": "PHOrbSkillSourceEffectsRVA",
+      "va": "0x1005cca90",
+      "rva": "0x5cca90",
+      "length": 64,
+      "bytes": "524eff97a0010034683ecb791f0500714b010054883a40f989c385522901a072086969381f0500718100005460821391d9d8fa97f50300aa36ac00b0d6c21e91",
+      "sha256": "d946c4c152c1c3f4f8a70d82b3c47a3c72385df7c8fbbcb21c1792cc2b6d7c72"
+    },
+    {
+      "name": "PHOrbSkillBodyCheckRVA",
+      "va": "0x100584f5c",
+      "rva": "0x584f5c",
+      "length": 64,
+      "bytes": "683a40f909aa87526901a072016969f8c029019000c03791020080523efc009420030036540180520b000014683a40f909aa87526901a072016969f8c0290190",
+      "sha256": "90eb24f7c7af155431c94e7d867cbbba3158811514ba71ac76f70c96da9a1643"
+    },
+    {
+      "name": "PHOrbSkillCanUseSelectorRVA",
+      "va": "0x1005c4140",
+      "rva": "0x5c4140",
+      "length": 64,
+      "bytes": "df060071e0000054d601003560821391ebfafa97f50300aa08008052050000146082139130fbfa97f50300aa28008052893a40f98ac385522a01a07228692a38",
+      "sha256": "713e473c71d9dd02fa43e68c21e1f3d89f6c2cd18711ed9f4ee50ae2c8db89c1"
     }
   ],
   "thorn_budget": {

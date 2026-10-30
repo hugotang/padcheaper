@@ -1,8 +1,12 @@
-static unsigned canUseCalls, skillStartCalls, readinessCalls;
+static unsigned canUseCalls, skillStartCalls, readinessCalls, choiceCalls, bodyCanUseCalls;
 static bool skillAvailable, switchMultiInCanUse, changeSelectionInCanUse, changeStageInCanUse;
 static bool switchMultiInReadiness, readinessKnown, checkOrbCountInCanUse;
+static bool choiceAvailable, bodyAvailable, switchMultiInChoice, changeFamilyInChoice;
+static bool changeSourceCardsInChoice, changeBodySkillInReadiness, invalidSourceInBody, changeAssistRulesInBody;
 static NativeSkillReadiness readinessFixture;
 static uint32_t selectionAtCanUse, selectionAtStart, effectiveStartedSkill;
+static uint32_t effectsStartedSkill;
+static uint8_t sourceAtStart;
 static constexpr uint32_t CurrentFixtureSkill = 64863;
 static const uintptr_t SurvivalDungeon = Header + 0x1800000;
 static void SetSurvivalHP(uint32_t hp, uint64_t maximum) {
@@ -20,44 +24,83 @@ static void SetSurvivalOptions(const char *options) {
 @interface FixtureSkillEngine : PHNativeOrbEngine
 @end
 @implementation FixtureSkillEngine
-- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
+- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header {
     ++canUseCalls;
+    bodyCanUseCalls += selector == 0;
     selectionAtCanUse = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHOrbSkillOverrideOffset));
     if (switchMultiInCanUse) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
     if (changeSelectionInCanUse) Put<uint32_t>(member + PHOrbSkillOverrideOffset, selectionAtCanUse + 1);
     if (changeStageInCanUse) Protected(member + 344, 1, 0x6a875a8b);
+    const unsigned charge = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHBattleChargeOffset + 12));
+    const bool chargedAssist = Load<int16_t>(reinterpret_cast<uint8_t *>(member + 1438)) > 0 &&
+        !(Load<uint8_t>(reinterpret_cast<uint8_t *>(SurvivalDungeon + 33)) & 8) &&
+        readinessFixture.totalCooldown > 0 && charge >= unsigned(readinessFixture.totalCooldown);
+    const bool assist = selector == 1 || (selector == -1 && chargedAssist);
+    Put<uint8_t>(Impl + PHOrbSkillSelectedSourceOffset, assist);
+    if (selector == 0 && invalidSourceInBody) Put<uint8_t>(Impl + PHOrbSkillSelectedSourceOffset, 1);
+    if (selector == 0 && changeAssistRulesInBody) Put<uint8_t>(SurvivalDungeon + 33, 8);
+    const bool usable = (selector == 0 ? bodyAvailable : skillAvailable) && charge >= unsigned(readinessFixture.baseCooldown);
     if (checkOrbCountInCanUse) {
         unsigned light = 0;
         for (unsigned row = 0; row < 5; ++row) for (unsigned col = 0; col < 6; ++col) {
             auto token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset + (row * 16 + col) * 8));
             light += Load<uint8_t>(reinterpret_cast<uint8_t *>(token)) == 3;
         }
-        return skillAvailable && light >= 9;
+        return usable && (assist || light >= 9);
     }
-    return skillAvailable;
+    return usable;
+}
+- (BOOL)nativeCanChooseSkill:(uintptr_t)member header:(uintptr_t)header {
+    ++choiceCalls;
+    SkillChoiceState source;
+    PHOrbSnapshot state{};
+    [self readAutomation:&state frame:Frame() reason:nil];
+    const unsigned slot = unsigned((member - Impl - PHBattleMemberOffset) / PHBattleMemberStride);
+    const bool eligible = ReadSkillChoice(state, slot, source) && source.family[0] == source.family[1];
+    if (switchMultiInChoice) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
+    if (changeFamilyInChoice)
+        Put<uint32_t>(source.catalog + source.cards[1] * PHBattleCatalogStride + PHOrbSkillFamilyOffset, source.family[1] + 1);
+    if (changeSourceCardsInChoice) Put<uint16_t>(member + PHBattleAssistIDOffset, uint16_t(source.cards[1] + 1));
+    return choiceAvailable && eligible;
 }
 - (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
     ++readinessCalls; *out = readinessFixture;
     if (switchMultiInReadiness) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
+    if (changeBodySkillInReadiness && readinessCalls > 1) ++out->baseSkill;
     return readinessKnown;
 }
 - (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
     ++skillStartCalls;
     selectionAtStart = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHOrbSkillOverrideOffset));
+    sourceAtStart = Load<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbSkillSelectedSourceOffset));
     // Native 0x10059F8DC consumes a retained positive ID before the current
     // base/charged-assist choice. This exposes a removed-gate-only regression.
-    effectiveStartedSkill = int32_t(selectionAtStart) > 0 ? selectionAtStart : CurrentFixtureSkill;
+    effectiveStartedSkill = int32_t(selectionAtStart) > 0 ? selectionAtStart :
+        sourceAtStart ? readinessFixture.assistSkill : readinessFixture.baseSkill;
+    // The later state-2 path recomputes default source only for a negative
+    // selection; composite effects consume the source independently of ID.
+    bool assist = sourceAtStart != 0;
+    if (int32_t(selectionAtStart) < 0) {
+        const unsigned charge = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHBattleChargeOffset + 12));
+        assist = Load<int16_t>(reinterpret_cast<uint8_t *>(member + 1438)) > 0 &&
+            !(Load<uint8_t>(reinterpret_cast<uint8_t *>(SurvivalDungeon + 33)) & 8) &&
+            charge >= unsigned(readinessFixture.totalCooldown);
+    }
+    effectsStartedSkill = assist ? readinessFixture.assistSkill : readinessFixture.baseSkill;
     Put<uint32_t>(member + PHOrbSkillMemberStateOffset, 2);
     Protected(Impl + PHBattlePhaseOffset, 22, 0x766cfc6d);
 }
 @end
 
 static void SkillFixture() {
-    Reset(); canUseCalls = skillStartCalls = readinessCalls = 0; skillAvailable = readinessKnown = true;
+    Reset(); canUseCalls = skillStartCalls = readinessCalls = choiceCalls = bodyCanUseCalls = 0;
+    skillAvailable = readinessKnown = choiceAvailable = bodyAvailable = true;
     switchMultiInCanUse = changeSelectionInCanUse = changeStageInCanUse = switchMultiInReadiness = false;
     checkOrbCountInCanUse = false;
+    switchMultiInChoice = changeFamilyInChoice = changeSourceCardsInChoice = changeBodySkillInReadiness = false;
+    invalidSourceInBody = changeAssistRulesInBody = false;
     readinessFixture = {CurrentFixtureSkill, 0, 4, 4};
-    selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = 0;
+    selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = effectsStartedSkill = 0; sourceAtStart = 255;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);
     SetSurvivalHP(100, 1000);
     Put<uintptr_t>(Impl + PHOrbSkillDungeonRulesOffset, SurvivalDungeon);
@@ -265,6 +308,13 @@ static void SkillSourceNativeTests() {
         SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
         const uintptr_t member = Impl + PHBattleMemberOffset;
         Put<uint16_t>(member + 1438, 14139);
+        uint16_t body = 0; PHBattleCatalogIDForNumber(100, &body);
+        Put<uint16_t>(member + PHBattleBaseIDOffset, body);
+        Put<uint16_t>(member + PHBattleAssistIDOffset, 14139);
+        const auto catalog = reinterpret_cast<uintptr_t>(catalogBytes.data());
+        Put<uint32_t>(catalog + 14139 * PHBattleCatalogStride, 14139);
+        Put<uint32_t>(catalog + body * PHBattleCatalogStride + PHOrbSkillFamilyOffset, 100);
+        Put<uint32_t>(catalog + 14139 * PHBattleCatalogStride + PHOrbSkillFamilyOffset, 14037);
         const unsigned charge = chargedAssist ? 18 : 4;
         Protected(member + PHBattleChargeOffset, charge, 0x6a875a8b);
         Put<uint32_t>(member + PHBattleChargeShadowOffset, charge ^ 0x68fb65ceu);
@@ -275,7 +325,7 @@ static void SkillSourceNativeTests() {
         PHOrbSkillResult result = [engine useSkill:0 request:request expected:&state frame:Frame() reason:&reason];
         const bool matches = chargedAssist == (requested == PHOrbSkillAssist);
         Check(result == (matches ? PHOrbSkillStarted : PHOrbSkillUnavailable) && skillStartCalls == unsigned(matches) && !writes,
-            "body/assist request checks the naturally charged choice without forcing a skill ID or charge");
+            "unrelated body/assist request checks the naturally charged choice without changing skill ID or charge");
     }
     SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
     [engine readAutomation:&state frame:Frame() reason:&reason];
@@ -322,10 +372,13 @@ static void TemporarySkillNativeTests() {
         !changed.automation.members[0].temporaryTurns && changed.automation.members[0].identityAssist == assist,
         "expired native temporary duration resumes current body and assist even with retained temporary ID");
 }
+#include "orb_skill_choice_tests.inc"
+
 static void SkillNativeTests() {
     TemporarySkillNativeTests();
     SkillSourceNativeTests();
     SkillOrbConditionTests();
+    SkillChoiceNativeTests();
     SkillFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason = nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] && state.automation.valid && state.automation.window &&
         !state.automation.busy && state.automation.members[0].number == 100 && canUseCalls == 0 && skillStartCalls == 0 && writes == 0,
@@ -466,7 +519,10 @@ static void SkillNativeTests() {
         "multiplayer refusal happens before native calls");
     for (uintptr_t guard : {PHOrbStartSkillRVA, PHOrbSkillSelectionResetRVA, PHOrbBaseSkillRVA,
         PHOrbAssistSkillRVA, PHOrbBaseCooldownRVA, PHOrbTotalCooldownRVA, PHOrbSkillConditionRVA,
-        PHOrbSkillOrbConditionRVA, PHOrbSkillCompositeRVA, PHOrbSkillTableLoadRVA, PHOrbSkillBoardSizeRVA}) {
+        PHOrbSkillOrbConditionRVA, PHOrbSkillCompositeRVA, PHOrbSkillTableLoadRVA, PHOrbSkillBoardSizeRVA,
+        PHOrbCanChooseSkillRVA, PHOrbSkillChoiceSourceRVA, PHOrbSkillFamilyRVA, PHOrbSkillFamilyCompareRVA,
+        PHOrbSkillChoiceDialogRVA, PHOrbSkillChoiceCheckRVA, PHOrbSkillBodyCheckRVA, PHOrbSkillCanUseSelectorRVA,
+        PHOrbSkillChooseBodyRVA, PHOrbSkillChosenSourceRVA, PHOrbSkillSourceEffectsRVA}) {
         SkillFixture(); engine = [FixtureSkillEngine new];
         Put<uint32_t>(Impl + PHBattleMemberOffset + PHOrbSkillOverrideOffset, 65063);
         [engine readAutomation:&state frame:Frame() reason:&reason];

@@ -54,4 +54,65 @@ static void ThornSolverTests() {
         Check(PHOrbSolve(solve,options,cancel,route) == PHOrbSolveStatus::NoRoute,
               "an unavoidable lethal contact is rejected before reaching the native input stage");
     }
+    // Device turn 4: the mixed beam stopped at 2 Combo / 13 steps despite a
+    // zero-contact 7 Combo solution. Known HP must not remove that subspace.
+    auto recorded = ShapeBoard(6,5,{});
+    const uint8_t recordedTypes[] = {3,5,5,3,3,5, 2,1,3,1,5,3, 5,1,5,0,3,5,
+                                    0,3,5,3,5,3, 3,3,0,3,4,4};
+    std::copy(std::begin(recordedTypes),std::end(recordedTypes),recorded.types);
+    for (unsigned cell : {1u,16u,24u,25u,27u}) {
+        recorded.flags[cell] = PHOrbFlagThorn; recorded.thornDamage[cell] = 4;
+    }
+    options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.milliseconds = 1000;
+    options.goals.count = 2;
+    options.goals.items[0] = {PHOrbGoalT,8,1,0}; options.goals.items[1] = {PHOrbGoalFour,32,1,0};
+    options.thorns = {459648,459648,0,true};
+    std::atomic_bool cancel{false};
+    Check(PHOrbSolve(recorded,options,cancel,route) == PHOrbSolveStatus::Solved && route.combos >= 7 &&
+        !route.thornContacts && !route.thornDamage && route.searchPasses >= 2 && route.count <= 49,
+        "remaining-budget contact-free refinement recovers high combos without additional thorn damage");
+    Check(PHOrbEvaluateRoute(recorded,route,options,evaluation,damage,contacts) && evaluation.goalsMet &&
+        evaluation.hazardsSafe && evaluation.combos == route.combos && !damage && !contacts,
+        "refined device route independently replays to both shapes with zero thorn contacts");
+    recorded.tapeMask = UINT64_C(1) << 29;
+    std::fill(std::begin(recorded.flags),std::end(recorded.flags),0);
+    std::fill(std::begin(recorded.thornDamage),std::end(recorded.thornDamage),0);
+    recorded.flags[29] = PHOrbFlagThorn | PHOrbFlagTape; recorded.thornDamage[29] = 4;
+    options.goals = {}; options.steps = 4;
+    Check(PHOrbSolve(recorded,options,cancel,route) == PHOrbSolveStatus::Solved && route.searchPasses == 1 && !route.thornContacts,
+        "an unreachable thorn does not duplicate the already contact-free search");
+
+    auto tradeoff = ShapeBoard(6,5,{});
+    for (unsigned i = 0; i < 4; ++i) tradeoff.types[i] = 5;
+    tradeoff.types[25] = 2; tradeoff.types[26] = 0; tradeoff.types[27] = 1;
+    tradeoff.types[28] = tradeoff.types[29] = 0;
+    TapeExcept(tradeoff,{25,26,27}); tradeoff.fixedStart = 27;
+    tradeoff.flags[27] |= PHOrbFlagThorn; tradeoff.thornDamage[27] = 4;
+    options = {1,32,1000,Goals(PHOrbGoalFour,32)}; options.thorns = {1000,1000,0,true};
+    PHOrbRoute lowerDamage{}, higherCombo{};
+    Check(PHOrbSolve(tradeoff,options,cancel,lowerDamage) == PHOrbSolveStatus::Solved && !lowerDamage.thornContacts,
+        "default priority prefers the safe no-contact direction even when it loses a combo");
+    options.thornComboPriority = true;
+    Check(PHOrbSolve(tradeoff,options,cancel,higherCombo) == PHOrbSolveStatus::Solved && higherCombo.thornContacts == 1 &&
+        higherCombo.combos > lowerDamage.combos && higherCombo.thornDamage == 40 && higherCombo.heartFours == 1,
+        "Combo priority chooses the additional match through an affordable thorn with a first-wave heart four");
+    PHOrbBoard replay{};
+    Check(PHOrbReplay(&tradeoff,&higherCombo,higherCombo.count - 1,&replay) &&
+        Oracle(replay).first == higherCombo.combos && FourOracle(replay,5) == 1,
+        "the Combo-priority tradeoff matches an independent removal and heart-four oracle");
+    for (unsigned fault = 0; fault < 5; ++fault) {
+        auto limited = options; auto changed = tradeoff;
+        if (fault == 0) limited.thorns.known = false;
+        if (fault == 1) limited.thorns.hp = 40;
+        if (fault == 2) limited.thorns.pendingDamage = 960;
+        if (fault == 3) changed.types[3] = 2;
+        if (fault == 4) changed.unmatchableColors = 32;
+        const auto status = PHOrbSolve(changed,limited,cancel,route);
+        Check(status != PHOrbSolveStatus::Solved || (!route.thornContacts && !route.thornDamage),
+            "Combo priority cannot credit later healing, unknown HP or a missing/unmatchable heart four");
+    }
+    tradeoff.types[25] = tradeoff.types[27] = tradeoff.types[26];
+    Check(PHOrbSolve(tradeoff,options,cancel,route) == PHOrbSolveStatus::Solved && !route.thornContacts,
+        "equal-Combo routes still prefer lower thorn damage");
 }

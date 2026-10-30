@@ -41,9 +41,11 @@
 | 接收完成 state／phase | H+0x2AE8EE8／H+0x2AE8EEC 的 u32；正常 ready 為 2／6 |
 | 編成 dirty | S+0x5305AC 的 u8；非零時不回蓋 |
 
-0x10045B908 確認 state=2 時返回 phase；0x100591470 在 phase=6 呼叫 response dispatcher。0x10058FEB8 清除 request 的 array／response 指標並移除 queue node。0x100687DB0 寫 native error；登入（33）及 save_decks（122）會寫隊伍。
+0x10045B908 確認 state=2 時返回 phase；0x100591470 在 phase=6 呼叫 response dispatcher。0x10058FEB8 清除 request 的 array／response 指標並移除 queue node。0x100687DB0 寫 native error。0.5.8 重查 dispatcher 更正：登入是 33，save_decks 是 **58**（0x100698580 提交 editing records），122 是 recv_team（0x1006B3AF0 解析隊伍）。舊文件及實作誤認 122，造成儲存後配對／回蓋逾時。
 
 這些欄位提供可用的解析前後觀察，不等於已驗證 iOS 27 上的所有佇列／執行緒分支。
+
+0.5.8 從同一 request 原始 records 核對 serializer 降為 0 的徽章，可靠的使用者預設 0 仍會保存。回蓋按欄位保留待辦直到資料就緒與讀回成功，新儲存／帳號改變／明確關閉取消舊待辦。關閉外觀功能時的 ownership／descriptor 還原失敗也保留重試，詳見 [保存與 BGM](persistence-music-sharing.md)。
 
 ## 原型限制
 

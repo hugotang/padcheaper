@@ -274,6 +274,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         self.battleRestore, self.battleLabel,
         [self button:@"自動轉珠 · 連續／技能規則" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"],
         [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
+        [self switchRow:@"未通關也使用隊伍 BGM" key:@"bgmUncleared"],
         [self switchRow:@"隊伍徽章" key:@"badge"],
         [self switchRow:@"背景計時修正" key:@"timerFix"],
         self.timerDismiss, self.timerLabel, self.filterToggle, self.filterSettings,

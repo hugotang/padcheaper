@@ -14,12 +14,14 @@
 | formation | 現有 schema 1 編隊格式，六格本體、武裝、等級、技能等級、覺醒、加值及潛覺 |
 | opening | 最多 24 個依序技能步驟；每步 slot、source（body / assist）、monster、assist、skill、afterMonster |
 | rotation | 現有最多 12 條循環規則，加上 source、skill、atLeast |
-| board | quality、mode、goals、recovery |
+| board | quality、mode、goals、recovery，以及可選 Boolean `thornComboPriority` |
 | dungeon / floor | 地下城／子關卡，0 表示不限；不是樓層 wave |
 
 `afterMonster: 0` 表示施放後本體不變；變身步驟填預期圖鑑編號。之後若同一位置還有開場技能，`monster` 必須接續變身後編號。
 
-循環 `source` 預設 `auto`，可選 `body` 或 `assist`；`skill: 0` 表示不限定技能 ID。它們是原生目前技能的約束，不會強制施放未蓄好的武裝或繞過原生冷卻。要求本體卻已蓄滿武裝時會略過，開場則停在當步。需要手動選擇子技能的技能仍可能停止等待使用者處理。
+0.5.8 的 `thornComboPriority: true` 對應「荊棘盤優先 Combo」，缺省／false 保留較少傷害優先。開啟只調整路線排序，所有接觸仍要求首消心四連及目前 HP 大於完整拖珠傷害；不預支回血。可先選隊伍策略，再在轉珠頁切換；會一併保存於該策略與整包匯出。舊版可繼續匯入未加此欄位的範本；含新欄位的匯出檔需 0.5.8 以上。
+
+循環 `source` 預設 `auto`，可選 `body` 或 `assist`；`skill: 0` 表示不限定技能 ID。它們是原生目前技能的約束，不會強制施放未蓄好的武裝或繞過原生冷卻。0.5.8 起，武裝蓄滿而原生允許同進化鏈二選一時，`body` 可選目前本體，仍檢查原生冷卻、珠數與其他使用條件。非同進化鏈會略過本體規則，開場則停在當步；`auto` 保留遊戲預設選擇。需要手動選擇其他子技能的技能仍可能停止等待使用者處理。見 [原生二選一](orb-skill-selection.md)。
 
 循環的樓層保留、輪替組與本場一次條件只作用於 `rotation`，不會取消 `opening` 明列的技能。需要保留的武裝不要列入開場；開場與循環用不同時機，請在預覽時一併核對。
 
@@ -46,5 +48,7 @@
 新隊伍庫與策略同在 `config.json`，一次原子寫入成功才更新執行設定。舊版的隊伍庫會在首次儲存時遷入；舊 `formations.json`／`formation.json` 是兼容備份。不要用舊備份判斷目前選隊，也不要用舊 dylib 編輯新格式後覆蓋它。
 
 選取完整策略後可以按「複製整包 config」。轉珠頁對目標、品質及循環的修改會保存在所選策略，匯出時一併帶出。開場與配裝目前以 JSON 修改再匯入；來源網址僅為文字，不會自動執行或下載指令。
+
+0.5.8 增加「分享策略檔案…」與「從檔案匯入 JSON…」。分享面板可選 AirDrop、儲存到檔案或其他 App；普通策略同樣可分享為單份 `padcheaper-orb-profile`。匯入先預覽，再儲存生效；重複 ID 不覆蓋，檔案不含帳號／API／總開關。詳見 [檔案分享說明](persistence-music-sharing.md#分享與匯入)。
 
 所有戰鬥寫入及自動操作仍只限單人。範本不保證通關；整版毒、特定關卡血線、敵人行動、回復力降低與其他未建模的條件需依關卡調整。

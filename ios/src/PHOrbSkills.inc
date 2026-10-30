@@ -45,7 +45,9 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
         // Keep authoritative stages/use counts and the derived stage cache
         // separately: can-use refreshes the cache only after basic readiness.
-        if (!PHReadU16(member + 1438, &m.assistCatalogID)) return false;
+        if (!PHReadU16(member + 1438, &m.assistCatalogID) ||
+            !PHReadU16(member + PHBattleBaseIDOffset, &m.sourceCatalogIDs[0]) ||
+            !PHReadU16(member + PHBattleAssistIDOffset, &m.sourceCatalogIDs[1])) return false;
         uint32_t temporaryID = 0, temporaryTurns = 0, form = 0;
         if (!SmallProtected(member + PHBattleTempIDOffset, key1, key2, UINT16_MAX, temporaryID) ||
             !SmallProtected(member + PHBattleTempTurnsOffset, key1, key2, UINT16_MAX, temporaryTurns) ||

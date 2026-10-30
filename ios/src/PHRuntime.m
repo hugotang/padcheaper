@@ -7,6 +7,7 @@
 #import "PHConfiguration.h"
 #import "PHOverlay.h"
 #import "PHSaveState.h"
+#import "PHDeckPersistence.h"
 #import "PHBattleSession.h"
 #import "PHOrbSession.h"
 #import "PHOrbPlanning.h"
@@ -15,6 +16,8 @@
 #import "PHFormationModel.h"
 #import "PHBadges.h"
 #import "PHTimer.h"
+#import "PHMusic.h"
+#import "PHUnlockRestoration.h"
 #include "PHBadgeModel.h"
 #include "PHTargetGenerated.h"
 #include <mach-o/dyld.h>
@@ -48,11 +51,14 @@ static atomic_bool PHFrameOffMain;
 static uint32_t PHPlayer;
 static NSUInteger PHAccountEpoch;
 static PHSaveState *PHSaveStateTracker;
+static PHDeckRestorer *PHDeckRestoreTracker;
 static PHBattleSession *PHBattleTracker;
 static PHBadges *PHBadgeTracker;
 static PHTimer *PHTimerTracker;
+static PHMusic *PHMusicTracker;
 static PHOrbSession *PHOrbTracker;
 static NSString *PHOrbQualityNotice;
+static NSString *PHOrbThornNotice;
 static NSString *PHOrbGoalNotice;
 static NSString *PHOrbRuleNotice;
 static NSString *PHOrbRecoveryNotice;
@@ -109,8 +115,10 @@ static NSDictionary *PHReadJSON(NSString *name) {
     NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:path error:NULL];
     NSUInteger limit = [name isEqual:@"config.json"] ? 4 * 1024 * 1024 : [name isEqual:@"formations.json"] ? 2 * 1024 * 1024 : 65536;
     if ([attributes[NSFileSize] unsignedLongLongValue] > limit) return nil;
-    NSData *data = [NSData dataWithContentsOfFile:path];
-    id object = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSFileHandle *handle = [NSFileHandle fileHandleForReadingFromURL:[NSURL fileURLWithPath:path] error:NULL];
+    NSData *data = [handle readDataUpToLength:limit + 1 error:NULL];
+    [handle closeAndReturnError:NULL];
+    id object = data.length && data.length <= limit ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
     return [object isKindOfClass:NSDictionary.class] ? object : nil;
 }
 
@@ -133,6 +141,16 @@ static BOOL PHObservedEndpointConfigured(void) {
            [PHConfig[@"apiPaths"] containsObject:path];
 }
 
+static PHFeatureMask PHConfiguredMask(void) {
+    // A temporarily unreadable config suspends writes in PHRequestedMask;
+    // keep the last valid intent so deferred login restores can still retry.
+    PHFeatureMask mask = 0;
+    if (PHEnabled(@"skin")) mask |= PHFeatureSkin;
+    if (PHEnabled(@"bgm")) mask |= PHFeatureBGM;
+    if (PHEnabled(@"badge")) mask |= PHFeatureBadge;
+    return mask;
+}
+
 static PHFeatureMask PHRequestedMask(void) {
     if (!PHValidated || !PHFrameInstalled || !PHNetworkInstalled || !PHFrameMainThread ||
         atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) ||
@@ -140,11 +158,7 @@ static PHFeatureMask PHRequestedMask(void) {
         (PHObservedEndpoint && !PHObservedEndpointConfigured())) return 0;
     uint32_t player = 0;
     if (!PHReadU32(PHSave() + PHPlayerIDOffset, &player) || player == 0 || player != PHPlayer) return 0;
-    PHFeatureMask mask = 0;
-    if (PHEnabled(@"skin")) mask |= PHFeatureSkin;
-    if (PHEnabled(@"bgm")) mask |= PHFeatureBGM;
-    if (PHEnabled(@"badge")) mask |= PHFeatureBadge;
-    return mask;
+    return PHConfiguredMask();
 }
 
 static PHFeatureMask PHActiveMask(void) {
@@ -155,21 +169,7 @@ static PHFeatureMask PHActiveMask(void) {
 
 static NSDictionary *PHLoadAccount(uint32_t player) {
     NSDictionary *store = PHReadJSON([NSString stringWithFormat:@"account-%u.json", player]);
-    if (![store[@"schema"] isEqual:@1] || [store[@"player"] unsignedIntValue] != player ||
-        ![store[@"target"] isEqualToString:@"jp.gungho.pad-ios-23.6.0-106878"] ||
-        ![store[@"banks"] isKindOfClass:NSDictionary.class]) return @{};
-    // The file must also be valid under the protocol's bank/record bounds.
-    NSDictionary *banks = store[@"banks"];
-    if (![banks[@"decksb"] isKindOfClass:NSArray.class]) return @{};
-    for (NSString *key in @[@"decksb", @"decksbs"]) {
-        id records = banks[key];
-        if (!records) continue;
-        NSUInteger capacity = [key isEqualToString:@"decksb"] ? 32 : 16;
-        if (![records isKindOfClass:NSArray.class] || [records count] > capacity) return @{};
-        for (id record in records) if (!PHValidateDeckRecord(record)) return @{};
-    }
-    if ([banks[@"decksb"] count] + [banks[@"decksbs"] count] > 32) return @{};
-    return banks;
+    return PHDeckAccountBanks(store, player);
 }
 
 static BOOL PHStoreBanks(NSDictionary *banks) {
@@ -296,7 +296,10 @@ static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
         PHStorageFault = NO;
         PHLastBanks = PHAccountReady ? PHLoadAccount(player) : @{};
         [PHSaveStateTracker resetWithBanks:PHLastBanks accountReady:PHAccountReady];
+        [PHDeckRestoreTracker cancel];
         // Login replaced ownership words. Old bit snapshots must not be restored.
+        // Descriptor flags belong to the resource table, not the account. Keep
+        // those leases only while table, ID and our exact flag value still match.
         memset(PHSkinAdded, 0, sizeof(PHSkinAdded));
         memset(PHBGMAdded, 0, sizeof(PHBGMAdded));
         [PHBadgeTracker reset];
@@ -306,90 +309,18 @@ static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
     }
 }
 
-static BOOL PHBankCounts(uint8_t *primary, uint8_t *secondary) {
-    uint16_t maximum = 0;
-    return PHReadU8(PHSave() + PHPrimaryCountOffset, primary) &&
-           PHReadU8(PHSave() + PHSecondaryCountOffset, secondary) &&
-           PHReadU16(PHSave() + PHMaxDecksOffset, &maximum) &&
-           maximum > 0 && maximum <= 32 && *primary > 0 && *primary <= 32 &&
-           *secondary <= 16 && (unsigned)*primary + *secondary <= 32;
+static void PHDrainDeckRestore(void) {
+    NSDictionary *result = [PHDeckRestoreTracker drainHeader:(uintptr_t)PHGuest epoch:PHAccountEpoch
+        enabled:PHConfiguredMask() allowed:PHRequestedMask() badgeReady:PHBadgeTracker.ready
+        canUseBadge:^BOOL(uint8_t badge) { return [PHBadgeTracker canUse:badge]; }];
+    if (result) [PHSaveStateTracker recordRestoreCount:[result[@"restored"] unsignedIntegerValue]
+        reason:result[@"message"]];
 }
 
-static NSArray<NSNumber *> *PHReadDeck(uintptr_t address, NSUInteger index) {
-    uint8_t bytes[96];
-    if (!PHReadMemory(address, bytes, sizeof(bytes))) return nil;
-    uint32_t cards[5], extra;
-    uint16_t bgm1, bgm2, skin;
-    memcpy(cards, bytes, sizeof(cards));
-    memcpy(&extra, bytes + 0x14, sizeof(extra));
-    memcpy(&bgm1, bytes + 0x18, sizeof(bgm1));
-    memcpy(&bgm2, bytes + 0x1a, sizeof(bgm2));
-    memcpy(&skin, bytes + 0x1c, sizeof(skin));
-    uint8_t badge = PHBadgeEncode(bytes[0x5f], index);
-    uint64_t packed = bgm1 + 100000ull * bgm2;
-    if (packed > UINT32_MAX) return nil;
-    return @[@(cards[0]), @(cards[1]), @(cards[2]), @(cards[3]), @(cards[4]),
-             @(badge), @(extra), @(packed), @(skin)];
-}
-
-static void PHRestoreBanks(NSDictionary *banks, PHFeatureMask mask, NSString *source) {
-    uint8_t primary = 0, secondary = 0, editing = 0;
-    NSString *blocked = nil;
-    if (!mask) blocked = @"功能未啟用，已跳過回蓋";
-    else if (!PHBankCounts(&primary, &secondary) ||
-             !PHReadU8(PHSave() + PHEditDirtyOffset, &editing)) blocked = @"無法讀取隊伍資料，已跳過回蓋";
-    else if (editing != 0) blocked = @"正在編輯隊伍，已跳過回蓋";
-    if (blocked) {
-        [PHSaveStateTracker recordRestoreCount:0 reason:[NSString stringWithFormat:@"%@：%@", source, blocked]];
-        return;
-    }
-    NSUInteger restored = 0, mismatched = 0, writeFailures = 0, savedCount = 0;
-    NSArray *keys = @[@"decksb", @"decksbs"];
-    uintptr_t offsets[] = {PHPrimaryDecksOffset, PHSecondaryDecksOffset};
-    NSUInteger counts[] = {primary, secondary};
-    for (NSUInteger bank = 0; bank < 2; bank++) {
-        NSArray *records = banks[keys[bank]];
-        if (![records isKindOfClass:NSArray.class]) continue;
-        savedCount += records.count;
-        if (records.count != counts[bank]) { mismatched += records.count; continue; }
-        for (NSUInteger index = 0; index < records.count; index++) {
-            NSArray *saved = records[index];
-            uintptr_t address = PHSave() + offsets[bank] + index * 96u;
-            NSArray *current = PHReadDeck(address, index);
-            if (!PHValidateDeckRecord(saved) || !current ||
-                ![PHDeckIdentity(saved) isEqual:PHDeckIdentity(current)]) { mismatched++; continue; }
-            // Restore only a matching parser-produced default. A nondefault value
-            // can be a newer user edit and is never overwritten.
-            if ((mask & PHFeatureSkin) && [current[8] unsignedIntValue] == 0 &&
-                [saved[8] unsignedIntValue] != 0) {
-                uint16_t value = [saved[8] unsignedShortValue];
-                if (PHWriteData(address + 0x1c, &value, sizeof(value))) restored++;
-                else writeFailures++;
-            }
-            if ((mask & PHFeatureBGM) && [current[7] unsignedIntValue] == 0 &&
-                [saved[7] unsignedIntValue] != 0) {
-                uint32_t packed = [saved[7] unsignedIntValue];
-                uint16_t values[] = {(uint16_t)(packed % 100000u), (uint16_t)(packed / 100000u)};
-                if (PHWriteData(address + 0x18, values, sizeof(values))) restored++;
-                else writeFailures++;
-            }
-            if ((mask & PHFeatureBadge) && [current[5] unsignedIntValue] == 0 &&
-                [saved[5] unsignedIntValue] != 0 && [PHBadgeTracker canUse:[saved[5] unsignedCharValue]]) {
-                uint8_t value = PHBadgeEncode([saved[5] unsignedCharValue], index);
-                if (PHWriteData(address + 0x5f, &value, sizeof(value))) restored++;
-                else writeFailures++;
-            }
-        }
-    }
-    NSString *result = !savedCount ? @"沒有有效本地選擇，請先儲存隊伍" :
-        [NSString stringWithFormat:@"已回蓋 %lu 欄位；未匹配 %lu 隊；寫入失敗 %lu 欄位",
-         (unsigned long)restored, (unsigned long)mismatched, (unsigned long)writeFailures];
-    if (savedCount && !restored && !mismatched && !writeFailures) result = @"目前欄位無需回蓋；已保留現有選擇";
-    [PHSaveStateTracker recordRestoreCount:restored reason:[NSString stringWithFormat:@"%@：%@", source, result]];
-    if (restored) {
-        PHLog([NSString stringWithFormat:@"Restored %lu selected fields after native parse",
-               (unsigned long)restored]);
-    }
+static void PHQueueDeckRestore(NSDictionary *banks, PHFeatureMask mask, NSString *source) {
+    [PHDeckRestoreTracker enqueue:banks mask:mask epoch:PHAccountEpoch source:source];
+    [PHSaveStateTracker recordRestoreCount:0 reason:[PHDeckRestoreTracker snapshot][@"message"]];
+    PHDrainDeckRestore();
 }
 
 static void PHRevertDisabled(PHFeatureMask mask) {
@@ -398,44 +329,18 @@ static void PHRevertDisabled(PHFeatureMask mask) {
     PHFeatureMask features[] = {PHFeatureSkin, PHFeatureBGM};
     for (NSUInteger i = 0; i < 2; i++) {
         if (!(mask & features[i])) {
-            uint8_t current[128];
-            if (PHReadMemory(PHSave() + offsets[i], current, sizeof(current))) {
-                BOOL changed = NO;
-                for (NSUInteger j = 0; j < sizeof(current); j++) {
-                    uint8_t next = current[j] & (uint8_t)~added[i][j];
-                    changed |= next != current[j];
-                    current[j] = next;
-                }
-                if (changed) PHWriteData(PHSave() + offsets[i], current, sizeof(current));
-            }
-            memset(added[i], 0, 128);
+            if (!PHRestoreOwnershipBits(PHSave() + offsets[i],added[i])) PHOwnershipWriteFault = YES;
         }
     }
-    NSMutableArray *remaining = [NSMutableArray array];
     uintptr_t table = 0;
     uint32_t count = 0;
     BOOL tableValid = PHReadPointer(PHSave() + PHEntryPointerOffset, &table) && table &&
                       PHReadU32(PHSave() + PHEntryCountOffset, &count) && count > 0 && count <= 2048;
-    for (NSDictionary *patch in PHFlagPatches) {
-        uintptr_t address = [patch[@"address"] unsignedLongLongValue];
-        if (!tableValid || [patch[@"table"] unsignedLongLongValue] != table || address < table + 0xe ||
-            address - table >= (uintptr_t)count * 52u || (address - table - 0xe) % 52u != 0) continue;
-        if (mask & [patch[@"feature"] unsignedIntegerValue]) {
-            [remaining addObject:patch];
-            continue;
-        }
-        uint16_t idValue = 0, flags = 0, original = [patch[@"original"] unsignedShortValue];
-        if (PHReadU16(address - 0xe, &idValue) && idValue == [patch[@"id"] unsignedShortValue] &&
-            PHReadU16(address, &flags) && flags == (uint16_t)(original | 1u)) {
-            PHWriteData(address, &original, sizeof(original));
-        }
-    }
-    PHFlagPatches = remaining;
+    PHFlagPatches = [PHRestoreDescriptorFlags(PHFlagPatches,table,count,tableValid,mask,&PHOwnershipWriteFault) mutableCopy];
 }
 
 static void PHApplyUnlocks(PHFeatureMask mask) {
     PHUnlockDataReady = NO;
-    PHOwnershipWriteFault = NO;
     if (!mask) return;
     uint32_t count = 0;
     uintptr_t table = 0;
@@ -496,7 +401,7 @@ static PHParseObservation PHBeforeFrame(void) {
         !PHReadPointer(value.context + PHAPIActiveRequestOffset, &value.requestBlock) || !value.requestBlock ||
         !PHReadU8(value.requestBlock + 32, &flags) || (flags & 3u) != 1u ||
         !PHReadU32(value.requestBlock + 8, &value.requestID) ||
-        (value.requestID != 33 && value.requestID != 122)) return value;
+        (value.requestID != 33 && value.requestID != PHSaveDecksRequestID)) return value;
     value.ready = YES;
     return value;
 }
@@ -515,14 +420,14 @@ static void PHAfterParse(PHParseObservation before) {
         if (nativeError == 0 && PHCurrentPlayer(&player)) {
             PHResetAccount(player, YES);
             [PHBadgeTracker updateHeader:(uintptr_t)PHGuest enabled:(PHRequestedMask() & PHFeatureBadge) != 0];
-            PHRestoreBanks(PHLastBanks, PHActiveMask(), @"登入後");
+            PHQueueDeckRestore(PHLastBanks, PHConfiguredMask(), @"登入後");
         }
         return;
     }
     NSDictionary *transaction = [PHSaveStateTracker consumeForEpoch:PHAccountEpoch
         context:before.context request:before.requestBlock nativeError:nativeError];
-    if (transaction) PHRestoreBanks(transaction[@"banks"],
-                                   PHActiveMask() & [transaction[@"mask"] unsignedIntegerValue], @"儲存後");
+    if (transaction) PHQueueDeckRestore(transaction[@"banks"],
+                                   PHConfiguredMask() & [transaction[@"mask"] unsignedIntegerValue], @"儲存後");
 }
 
 static void PHMaintenance(void) {
@@ -530,9 +435,11 @@ static void PHMaintenance(void) {
     if (PHCurrentPlayer(&player) && player != PHPlayer) PHResetAccount(player, NO);
     PHReloadConfig();
     PHFeatureMask mask = PHRequestedMask();
+    PHOwnershipWriteFault = NO;
     PHRevertDisabled(mask);
     PHApplyUnlocks(mask & (PHFeatureSkin | PHFeatureBGM));
     [PHBadgeTracker updateHeader:(uintptr_t)PHGuest enabled:(mask & PHFeatureBadge) != 0];
+    PHDrainDeckRestore();
     [PHSaveStateTracker expireAtTime:CFAbsoluteTimeGetCurrent()];
     uint32_t count = 0;
     uintptr_t pointer = 0;
@@ -575,6 +482,9 @@ static void PHDrawFrame(id self, SEL command) {
         PHMaintenance();
     }
     [PHBattleTracker onFrame:PHBattleFrameContext() atTime:now];
+    PHBattleFrame musicFrame = PHOrbFrameContext();
+    musicFrame.enabled = musicFrame.enabled && PHEnabled(@"bgmUncleared") && (PHActiveMask() & PHFeatureBGM);
+    [PHMusicTracker onFrame:musicFrame time:NSProcessInfo.processInfo.systemUptime];
     [PHOrbTracker afterFrame:PHOrbFrameContext() time:NSProcessInfo.processInfo.systemUptime];
 }
 
@@ -608,6 +518,7 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
     // disabled-feature request or snapshot write failure. Never resurrect an
     // older selection after the user has submitted a newer one.
     BOOL hasPending = [PHSaveStateTracker beginSave];
+    [PHDeckRestoreTracker cancel];
     PHRewriteResult *probe = PHRewriteDeckBody(request.HTTPBody, 0, NULL);
     if (!probe) {
         [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
@@ -641,19 +552,28 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
         return PHOriginalDataTask(self, command, request, completion);
     }
+    PHDeckRequest native = {0};
+    NSDictionary *nativeBanks = PHReadRequestedDecks((uintptr_t)PHGuest, result.banks, &native);
     if (mask & PHFeatureBadge) {
-        BOOL badgesValid = YES;
-        for (NSArray *records in result.banks.allValues) {
-            for (NSArray *record in records) if (![PHBadgeTracker canUse:[record[5] unsignedCharValue]]) badgesValid = NO;
-        }
+        BOOL badgesValid = nativeBanks != nil;
+        for (NSArray *records in nativeBanks.allValues)
+            for (NSArray *record in records)
+                if (![PHBadgeTracker canUse:[record[5] unsignedCharValue]]) badgesValid = NO;
         if (!badgesValid) {
-            // A table/ownership change can invalidate the native predicate.
-            // Keep prior badge selections until a valid new save is observed.
+            // A wire zero does not distinguish a user default from a rejected
+            // badge. Preserve the previous selection unless this exact native
+            // request and the current badge table both validate it.
             mask &= ~PHFeatureBadge;
             result = PHRewriteDeckBody(request.HTTPBody, mask, NULL);
         }
     }
-    NSDictionary *banks = PHMergeBanks(PHLastBanks ?: @{}, result.banks, mask);
+    BOOL recoveredBadge = NO;
+    if (mask & PHFeatureBadge) for (NSString *key in nativeBanks) {
+        NSArray *records = nativeBanks[key], *wire = result.banks[key];
+        for (NSUInteger i = 0; i < records.count; ++i)
+            recoveredBadge |= ![records[i][5] isEqual:wire[i][5]];
+    }
+    NSDictionary *banks = PHMergeBanks(PHLastBanks ?: @{}, (mask & PHFeatureBadge) ? nativeBanks : result.banks, mask);
     if (!PHStoreBanks(banks)) {
         PHStorageFault = YES;
         [PHSaveStateTracker recordStorageFailure];
@@ -662,23 +582,22 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
     }
     PHLastBanks = banks;
     [PHSaveStateTracker recordLocalBanks:banks];
-    if (!result.changed) {
+    if (!result.changed && !recoveredBadge) {
         [PHSaveStateTracker recordPassthrough:@"本地選擇已保存；此請求無需預設化"];
         return PHOriginalDataTask(self, command, request, completion);
     }
-    NSMutableURLRequest *copy = [request mutableCopy];
-    copy.HTTPBody = result.body;
-    [copy setValue:[NSString stringWithFormat:@"%lu", (unsigned long)result.body.length]
-          forHTTPHeaderField:@"Content-Length"];
-    uintptr_t nativeContext = 0, nativeRequest = 0;
-    uint32_t requestID = 0;
-    BOOL nativeMatch = PHReadPointer(PHSave() + PHAPIContextPointerOffset, &nativeContext) && nativeContext &&
-                       PHReadPointer(nativeContext + PHAPIActiveRequestOffset, &nativeRequest) && nativeRequest &&
-                       PHReadU32(nativeRequest + 8, &requestID) && requestID == 122;
+    NSURLRequest *outgoing = request;
+    if (result.changed) {
+        NSMutableURLRequest *copy = [request mutableCopy]; copy.HTTPBody = result.body;
+        [copy setValue:[NSString stringWithFormat:@"%lu", (unsigned long)result.body.length]
+            forHTTPHeaderField:@"Content-Length"];
+        outgoing = copy;
+    }
+    BOOL nativeMatch = nativeBanks != nil;
     NSDictionary *transaction = [PHSaveStateTracker prepareTransactionWithBanks:banks mask:mask
-        epoch:PHAccountEpoch context:nativeContext request:nativeRequest
+        epoch:PHAccountEpoch context:native.context request:native.request
         restoreAllowed:nativeMatch && !hasPending time:CFAbsoluteTimeGetCurrent()];
-    NSURLSessionDataTask *task = PHOriginalDataTask(self, command, copy,
+    NSURLSessionDataTask *task = PHOriginalDataTask(self, command, outgoing,
                 ^(NSData *data, NSURLResponse *response, NSError *error) {
         id object = (!error && data.length > 0 && data.length <= 4 * 1024 * 1024) ?
              [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
@@ -693,7 +612,8 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         completion(data, response, error);
     });
     [PHSaveStateTracker recordTaskCreated:task != nil transaction:transaction];
-    if (task) PHLog(@"Submitted copied save_decks body with selected fields defaulted");
+    if (task) PHLog(result.changed ? @"Submitted copied save_decks body with selected fields defaulted" :
+        @"Tracked native save_decks selection already defaulted by serializer");
     if (!nativeMatch || hasPending) PHLog(@"Restore correlation unavailable; latest local snapshot preserved for next login");
     return task;
 }
@@ -757,9 +677,12 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     BOOL wantsSkin = PHEnabled(@"skin"), wantsBGM = PHEnabled(@"bgm"), wantsBadge = PHEnabled(@"badge");
     NSDictionary *badge = [PHBadgeTracker snapshot];
     NSDictionary *timer = [PHTimerTracker snapshot];
+    NSDictionary *music = [PHMusicTracker snapshot];
     NSMutableDictionary *orbs = [[PHOrbTracker snapshot] mutableCopy];
     orbs[@"canSetQuality"] = @(PHStorageReady && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue]);
     orbs[@"qualityMessage"] = PHOrbQualityNotice ?: @"";
+    orbs[@"canSetThornPolicy"] = orbs[@"canSetQuality"];
+    orbs[@"thornPolicyMessage"] = PHOrbThornNotice ?: @"";
     orbs[@"canSetGoals"] = orbs[@"canSetQuality"];
     orbs[@"goalMessage"] = PHOrbGoalNotice ?: @"";
     orbs[@"canSetRules"] = orbs[@"canSetQuality"];
@@ -808,7 +731,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         tone = @"ready";
         title = @"已載入 · 診斷模式";
         reason = @"開啟總開關及要使用的功能；設定會自動儲存。";
-    } else if ((PHOwnershipWriteFault && mask) || (wantsBadge && PHBadgeTracker.writeFault)) {
+    } else if (PHOwnershipWriteFault || (wantsBadge && PHBadgeTracker.writeFault)) {
         tone = @"error";
         title = @"已載入 · 遊戲資料寫入失敗";
         reason = @"解鎖資料未完整套用，請複製診斷。";
@@ -841,6 +764,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         reason = @"請開啟要使用的功能。";
     }
     NSMutableDictionary *featureStates = [NSMutableDictionary dictionary];
+    featureStates[@"bgmUncleared"] = !PHEnabled(@"bgmUncleared") ? @"關閉" :
+        !PHEnabled(@"bgm") ? @"請先啟用 BGM" : music[@"message"] ?: @"等待單人未通關關卡";
     for (NSString *key in @[@"skin", @"bgm"]) {
         PHFeatureMask feature = [key isEqualToString:@"skin"] ? PHFeatureSkin : PHFeatureBGM;
         BOOL selected = [PHConfig[@"features"][key] isEqual:@YES];
@@ -899,6 +824,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         battle[@"auditFlags"], battle[@"digestMatches"], battle[@"hpMatches"],
         PHObservedEndpoint[@"host"] ?: @"", PHObservedEndpoint[@"path"] ?: @"", path,
         PHStorageMessage.length ? PHStorageMessage : PHStorageReady ? @"ready" : @"unavailable"];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nDeck restore: %@", [PHDeckRestoreTracker snapshot]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nBGM playback: %@", music];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nBattle filters: %@\nBadge: %@\nTimer: %@",
         PHConfigurationBattleFilters(PHConfig), badge[@"message"], timerSummary];
     diagnostics = [diagnostics stringByAppendingFormat:
@@ -944,6 +871,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb search passes: %@ / backtracks %@ / deepest %@ steps",
         orbs[@"searchPasses"], orbs[@"backtracks"], orbs[@"exploredDepth"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nThorn Combo priority: %@", orbs[@"thornComboPriority"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
         orbs[@"startSent"], orbs[@"startAccepted"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb execution: %@ ms / limit %@ ms",
@@ -1138,6 +1066,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if (!PHStorageReady) {
         PHFeedback = @"設定無法儲存，請按「重新檢查」。";
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = PHFeedback;
+        if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = PHFeedback;
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = PHFeedback;
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = PHFeedback;
         if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = PHFeedback;
@@ -1162,13 +1091,17 @@ static void PHHandleOverlayAction(NSString *action, id value) {
             if (!formations) { PHOrbProfileNotice = @"隊伍庫已滿或資料無效；整包未儲存，請先整理隊伍庫。"; return; }
             next[@"formations"] = formations;
         }
-    } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"] || [action isEqual:@"orbsRecovery"]) {
+    } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"] ||
+        [action isEqual:@"orbsRecovery"] || [action isEqual:@"orbsThornPriority"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) return;
         NSMutableDictionary *settings = [PHConfigurationOrbSettings(next) mutableCopy];
         if ([action isEqual:@"orbsQuality"]) {
             if (![value isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:value]) return;
             settings[@"quality"] = value;
+        } else if ([action isEqual:@"orbsThornPriority"]) {
+            if (!value) return;
+            settings[@"thornComboPriority"] = value;
         } else if ([action isEqual:@"orbsRules"]) {
             if (![value isKindOfClass:NSArray.class]) return;
             settings[@"rules"] = value;
@@ -1182,14 +1115,16 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"orbs"] = settings;
         NSDictionary *profiles = PHOrbProfilesUpdatingSettings(PHConfigurationOrbProfiles(next), settings);
         if (!profiles) {
-            if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定或目前策略無效，未儲存。";
+            if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定或目前策略無效，未儲存。";
+            else if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定或目前策略無效，未儲存。";
             else if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查角色、樓層、群組、HP 百分比及異常條件。";
             else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
             return;
         }
         next[@"orbProfiles"] = profiles;
         if (!PHConfigurationIsValid(next)) {
-            if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定與目前策略無法一致儲存，請重新檢查。";
+            if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定與目前策略無法一致儲存，請重新檢查。";
+            else if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定與目前策略無法一致儲存，請重新檢查。";
             else if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則無效；請檢查位置、角色編號、樓層及缺珠條件。";
             else PHOrbGoalNotice = @"目標設定無效；請檢查數量、珠色及是否有重複條件。";
             return;
@@ -1218,7 +1153,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
             battle[action] = values;
         }
         next[@"battle"] = battle;
-    } else if ([@[@"skin", @"bgm", @"badge", @"timerFix", @"battleSwap"] containsObject:action]) {
+    } else if ([@[@"skin", @"bgm", @"bgmUncleared", @"badge", @"timerFix", @"battleSwap"] containsObject:action]) {
         NSMutableDictionary *features = [next[@"features"] mutableCopy];
         features[action] = @([value boolValue]);
         next[@"features"] = features;
@@ -1232,6 +1167,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
         PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbRecoveryNotice = nil; PHOrbProfileNotice = nil;
+        PHOrbThornNotice = nil;
         PHUnlockDataReady = NO;
         PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
     } else {
@@ -1239,6 +1175,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHStorageMessage = @"config.json 寫入失敗；請按「重新檢查」。";
         PHFeedback = PHStorageMessage;
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = @"品質未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
+        if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = @"目標未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
@@ -1313,8 +1250,10 @@ __attribute__((constructor))
 static void PADCheaperInitialize(void) {
     @autoreleasepool {
         PHSaveStateTracker = [PHSaveState new];
+        PHDeckRestoreTracker = [PHDeckRestorer new];
         PHBattleTracker = [[PHBattleSession alloc] initWithEngine:PHCreateBattleEngine()];
         PHBadgeTracker = [PHBadges new];
+        PHMusicTracker = [PHMusic new];
         PHTimerTracker = [PHTimer new];
         PHOrbTracker = [[PHOrbSession alloc] initWithEngine:PHCreateOrbEngine()];
         PHFlagPatches = [NSMutableArray array];

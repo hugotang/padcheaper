@@ -15,10 +15,42 @@ static NSDictionary *Library(NSArray *profiles, NSString *selected, BOOL automat
     return @{@"schema":@1, @"profiles":profiles, @"selected":selected, @"autoSelect":@(automatic)};
 }
 #include "orb_plan_tests.inc"
+static void SharingTests(void) {
+    NSString *reason = nil;
+    NSDictionary *profile = Profile(@"portable");
+    NSData *data = PHOrbExportProfileData(profile,&reason);
+    NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
+    NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),data,&reason);
+    Check(library && !reason && [package[@"format"] isEqual:@"padcheaper-orb-profile"] &&
+        ![library[@"autoSelect"] boolValue] && [library[@"selected"] isEqual:@"portable"], "ordinary profile shares as a versioned file without automatic start");
+    Check([PHOrbExportProfileData(library[@"profiles"][0],NULL) isEqual:data], "portable profile preserves canonical settings after roundtrip");
+    Check(!PHOrbProfilesImportingData(library,data,&reason) && [reason containsString:@"ID"], "duplicate file import never overwrites existing settings");
+    NSDictionary *planProfile = PHOrbProfileFromPlan(ReadPlanFixture(),NULL);
+    NSData *planData = PHOrbExportProfileData(planProfile,NULL);
+    NSDictionary *planLibrary = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),planData,NULL);
+    Check([planLibrary[@"profiles"][0] isEqual:planProfile], "shared full package preserves all formation, opening, rotation and goal data");
+    for (NSDictionary *changes in @[@{@"schema":@2},@{@"schema":@YES},@{@"target":@"foreign"},@{@"format":@"other"},
+        @{@"apiHosts":@[@"example.invalid"]},@{@"profile":NSNull.null}]) {
+        NSMutableDictionary *bad=[package mutableCopy]; [bad addEntriesFromDictionary:changes];
+        NSData *encoded=[NSJSONSerialization dataWithJSONObject:bad options:0 error:NULL];
+        Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),encoded,NULL), "portable files reject foreign versions, keys and malformed profiles");
+    }
+    Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),[NSMutableData dataWithLength:131073],NULL),"file import enforces byte limit");
+    Check(!PHOrbExportProfileData(nil,NULL),"sharing with no selected profile is a reported error");
+    NSMutableDictionary *badProfile=[profile mutableCopy]; badProfile[@"account"]=@42;
+    Check(!PHOrbExportProfileData(badProfile,NULL),"export cannot include account or private config fields");
+}
 int main(void) {
     @autoreleasepool {
         PlanTests();
+        SharingTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
+        Check([PHOrbCanonicalSettings(Settings())[@"thornComboPriority"] isEqual:@NO],
+            "legacy profile settings keep damage-first thorn ranking");
+        for (id invalid in @[@1, @0, @"true", NSNull.null]) {
+            NSMutableDictionary *settings = [Settings() mutableCopy]; settings[@"thornComboPriority"] = invalid;
+            Check(!PHOrbCanonicalSettings(settings), "thorn priority requires a real JSON Boolean");
+        }
         NSMutableDictionary *generic = Profile(@"generic"), *team = Profile(@"team"), *stage = Profile(@"stage");
         team[@"team"] = @[@100,@101,@102,@103,@104,@0];
         stage[@"dungeon"] = @7; stage[@"floor"] = @2;
@@ -66,13 +98,16 @@ int main(void) {
 
         NSDictionary *original = Library(profiles,@"team",NO);
         NSMutableDictionary *settings = [Settings() mutableCopy]; settings[@"quality"] = @"thorough";
+        settings[@"thornComboPriority"] = @YES;
         NSDictionary *updated = PHOrbProfilesUpdatingSettings(original,settings);
         Check(PHOrbProfilesValid(updated) && [PHOrbProfileNamed(updated,@"team")[@"settings"][@"quality"] isEqual:@"thorough"] &&
             [PHOrbProfileNamed(original,@"team")[@"settings"][@"quality"] isEqual:@"fast"] &&
             [PHOrbProfileNamed(updated,@"stage") isEqual:stage], "working changes update only the selected immutable profile");
         NSData *json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
         NSDictionary *restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
-        Check(PHOrbProfilesValid(restored) && [restored isEqual:updated], "profiles, bindings and Boolean rules survive JSON persistence");
+        Check(PHOrbProfilesValid(restored) && [restored isEqual:updated] &&
+            [PHOrbProfileNamed(restored,@"team")[@"settings"][@"thornComboPriority"] isEqual:@YES],
+            "profiles, bindings, thorn priority and Boolean rules survive JSON persistence");
         NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy];
         rescue[@"hpAtMost"] = @40; rescue[@"status"] = @"awoken_bind"; rescue[@"required"] = @YES;
         settings[@"rules"] = @[rescue];

@@ -166,6 +166,7 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         if (m->active != n->active || m->number != n->number || m->charge != n->charge ||
             m->state != n->state || m->bound != n->bound || m->selection != n->selection ||
             m->assistCatalogID != n->assistCatalogID ||
+            memcmp(m->sourceCatalogIDs, n->sourceCatalogIDs, sizeof(m->sourceCatalogIDs)) ||
             m->identityNumber != n->identityNumber || m->identityAssist != n->identityAssist ||
             m->temporaryID != n->temporaryID || m->temporaryTurns != n->temporaryTurns ||
             m->temporaryKnown != n->temporaryKnown ||

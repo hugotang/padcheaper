@@ -10,12 +10,18 @@ static void SetThornRoute(FakeOrbEngine *engine) {
     engine->live.thorns = {1000,1000,0,true};
 }
 static void ThornSessionTests() {
-    for (unsigned scenario = 0; scenario < 7; ++scenario) {
+    for (bool priority : {false, true}) for (unsigned scenario = 0; scenario < 7; ++scenario) {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetThornRoute(engine);
-        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; [session configureQuality:@"fast"];
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[],
+            @"thornComboPriority":@(priority)}] && [session configureQuality:@"fast"],
+            "changing quality preserves the selected thorn preference");
         Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
               [session.snapshot[@"thornContacts"] isEqual:@1] && [session.snapshot[@"heartFours"] isEqual:@1],
               "thorn route has a verified one-contact preview with first-wave recovery hearts");
+        Check([session.snapshot[@"thornComboPriority"] boolValue] == priority &&
+            [session.snapshot[@"searchTrace"][@"thornComboPriority"] boolValue] == priority,
+            "each pending route records the actual thorn search preference");
         if (scenario == 1) { engine->live.thorns.hp = 40; Tick(session,engine,Frame()); }
         if (scenario == 2) { engine->live.thorns.pendingDamage = 960; Tick(session,engine,Frame()); }
         if (scenario == 3) { engine->live.thorns.known = false; Tick(session,engine,Frame()); }

@@ -77,6 +77,7 @@ enum {
 typedef struct {
     uint32_t selection; // Raw native skill choice; UINT32_MAX means automatic base/assist selection.
     uint16_t number, charge, assistCatalogID, skillLevel[2], skillUses[2];
+    uint16_t sourceCatalogIDs[2]; // Native source body/assist; choice eligibility uses these before transformation.
     // Current usable form is number. During a validated native temporary
     // transformation, identityNumber/identityAssist retain the underlying
     // loadout for plan continuity only; never use them to activate a skill.

@@ -6,19 +6,29 @@
     "bgm": false,
     "badge": false,
     "timerFix": false,
-    "battleSwap": false
+    "battleSwap": false,
+    "bgmUncleared": false
   },
   "battle": {
     "autoApplyTeam": false,
     "allowAllModes": true,
-    "entryModes": [0, 1, 12],
+    "entryModes": [
+      0,
+      1,
+      12
+    ],
     "allowAllSources": false,
-    "sourceModes": [0],
+    "sourceModes": [
+      0
+    ],
     "allowAllMulti": false,
-    "multiModes": [0]
+    "multiModes": [
+      0
+    ]
   },
   "orbs": {
     "quality": "balanced",
+    "thornComboPriority": false,
     "mode": "combo",
     "goals": [],
     "rules": [],

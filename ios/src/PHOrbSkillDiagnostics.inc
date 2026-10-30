@@ -10,17 +10,16 @@ struct SkillDiagnosticRecord {
 static_assert(sizeof(SkillDiagnosticRecord) == 52, "native skill record layout");
 
 static NSString *SkillOrbCondition(const PHOrbSnapshot &state, unsigned slot,
-                                  const NativeSkillReadiness &readiness, bool sameBoard) {
+                                  const NativeSkillReadiness &readiness, bool sameBoard, int selector = -1) {
     if (slot >= 6 || !state.automation.boardKnown || !state.settled || state.dragged ||
         !PHOrbDimensionsSupported(state.board.width, state.board.height)) return nil;
     const auto &member = state.automation.members[slot];
-    uintptr_t rules = 0;
-    uint8_t flags = 0;
-    if (!PHReadPointer(state.identity.impl + PHOrbSkillDungeonRulesOffset, &rules) ||
-        (rules && (rules > UINTPTR_MAX - 34 || !PHReadU8(rules + 33, &flags)))) return nil;
-    // Mirrors can-use(-1), including dungeons which disable charged assists.
-    const bool assist = !(flags & 8u) && int16_t(member.assistCatalogID) > 0 &&
-        member.charge >= readiness.totalCooldown;
+    SkillSourceState source;
+    if (!ReadSkillSource(state, source)) return nil;
+    // Diagnose the source actually checked by can-use, including a permitted
+    // body choice while its same-family assist is already charged.
+    const bool assist = selector == 1 || (selector == -1 && !(source.flags & 8u) &&
+        int16_t(member.assistCatalogID) > 0 && readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown);
     const int32_t selected = assist ? readiness.assistSkill : readiness.baseSkill;
     const uintptr_t save = state.identity.header + PHSaveRVA;
     uintptr_t table = 0;

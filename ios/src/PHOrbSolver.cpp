@@ -546,15 +546,16 @@ Score Evaluate(Cells cells, const Context &context) {
     return worst;
 }
 
-bool Better(const Node &a, const Node &b) {
+bool Better(const Node &a, const Node &b, bool thornComboPriority) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
     if (ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
-    if (a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
+    if (!thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (ar.combos != br.combos) return ar.combos > br.combos;
+    if (thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (ar.erased != br.erased) return ar.erased > br.erased;
     if (a.length != b.length) return a.length < b.length;
     if (a.score.potential != b.score.potential) return a.score.potential > b.score.potential;
@@ -585,7 +586,7 @@ uint64_t LayoutKey(const Node &node, const Context &context) {
     return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals);
 }
 
-bool BetterForSearch(const Node &a, const Node &b, unsigned focus) {
+bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority) {
     if (focus < PHOrbMaxGoals && a.score.result.hazardsSafe == b.score.result.hazardsSafe &&
         !a.score.result.goalsMet && !b.score.result.goalsMet &&
         a.score.result.poisonErased == b.score.result.poisonErased &&
@@ -594,13 +595,13 @@ bool BetterForSearch(const Node &a, const Node &b, unsigned focus) {
         const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
         if (av != bv) return av > bv;
     }
-    return Better(a, b);
+    return Better(a, b, thornComboPriority);
 }
 
 void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth,
-                const Context &context, unsigned focus, std::vector<Node> *discarded = nullptr) {
+                const Context &context, unsigned focus, bool thornComboPriority, std::vector<Node> *discarded = nullptr) {
     const size_t keep = std::min(size_t(limit), next.size());
-    const auto order = [focus](const Node &a, const Node &b) { return BetterForSearch(a, b, focus); };
+    const auto order = [focus, thornComboPriority](const Node &a, const Node &b) { return BetterForSearch(a, b, focus, thornComboPriority); };
     if (!context.shapeGoals || keep < 4 || keep == next.size()) {
         std::partial_sort(next.begin(), next.begin() + keep, next.end(), order);
         next.resize(keep); beam.swap(next); return;
@@ -735,7 +736,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         struct Frontier { unsigned depth; std::vector<Node> nodes; };
         std::vector<Frontier> saved;
         Node best;
-        bool found = false, timedOut = false;
+        bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
         std::unordered_set<uint64_t> visited;
         visited.reserve(options.beam * 4);
@@ -744,7 +745,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const bool retain = context.shapeGoals && options.backtrackLimit && options.steps >= 12;
         const auto primaryDeadline = recover ? start + (deadline - start) * 2 / 3 : deadline;
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
-                          Clock::time_point passDeadline, bool saveFrontiers) {
+                          Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false) {
             ++passes;
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
@@ -767,7 +768,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         Node child = parent;
                         if (child.thorns[cell]) {
                             const uint32_t damage = damageTable[child.thorns[cell]];
-                            if (!budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
+                            if (noContacts || !budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
                             child.thornDamage += damage; ++child.thornContacts;
                         }
                         child.path[child.length++] = uint8_t(cell);
@@ -776,8 +777,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         if (!visited.insert(Hash(child, size)).second) continue;
                         child.score = Evaluate(child.cells, scoring);
                         if (child.thornContacts && !child.score.result.heartFours) child.score.result.hazardsSafe = false;
+                        hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
-                        if (!found || Better(child, best)) { best = child; found = true; }
+                        if (!found || Better(child, best, options.thornComboPriority)) { best = child; found = true; }
                         next.push_back(child);
                     }
                     if (passEnded || timedOut) break;
@@ -790,9 +792,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                     (depth + 1 == options.steps / 4 || depth + 1 == options.steps / 2);
                 if (checkpoint) {
                     Frontier frontier{depth + 1, {}};
-                    SelectBeam(next, beam, options.beam, depth, scoring, focus, &frontier.nodes);
+                    SelectBeam(next, beam, options.beam, depth, scoring, focus, options.thornComboPriority, &frontier.nodes);
                     if (!frontier.nodes.empty()) saved.push_back(std::move(frontier));
-                } else SelectBeam(next, beam, options.beam, depth, scoring, focus);
+                } else SelectBeam(next, beam, options.beam, depth, scoring, focus, options.thornComboPriority);
             }
         };
         beam = starts;
@@ -815,6 +817,17 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             const auto passDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = std::move(frontier.nodes); ++backtracks;
             search(context, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
+        }
+        // Permitting survivable thorn contacts changes beam competition even
+        // if the final best path has no damage: temporary complete shapes can
+        // crowd out contact-free paths with better eventual combos. Explore
+        // that subspace separately using only the original remaining budget.
+        // Keep the selected final ordering and the unchanged survival gates.
+        // Skip the duplicate pass if blocked or unaffordable thorns never
+        // admitted a contact candidate into any of the preceding beams.
+        if (hadContactCandidates && !timedOut && !cancel.load(std::memory_order_relaxed) && Clock::now() < deadline) {
+            beam = starts;
+            search(context, 0, PHOrbMaxGoals, deadline, false, true);
         }
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         if (!found) return PHOrbSolveStatus::NoRoute;

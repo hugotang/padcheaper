@@ -260,6 +260,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
 }
 
 #include "PHOrbSkills.inc"
+#include "PHOrbSkillChoice.inc"
 #include "PHOrbSkillDiagnostics.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
@@ -303,7 +304,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 }
 
 @interface PHNativeOrbEngine : NSObject <PHOrbEngine>
-- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header;
+- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header;
+- (BOOL)nativeCanChooseSkill:(uintptr_t)member header:(uintptr_t)header;
 - (void)nativeStartGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header;
 @end
 @implementation PHNativeOrbEngine {
@@ -334,8 +336,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     return YES;
 }
-- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member header:(uintptr_t)header {
-    return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, -1) & 1) != 0;
+- (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header {
+    return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, selector) & 1) != 0;
+}
+- (BOOL)nativeCanChooseSkill:(uintptr_t)member header:(uintptr_t)header {
+    return (reinterpret_cast<int (*)(uintptr_t)>(header + PHOrbCanChooseSkillRVA)(member) & 1) != 0;
 }
 - (BOOL)nativeSkillReadiness:(NativeSkillReadiness *)out member:(uintptr_t)member header:(uintptr_t)header {
     // These getters may update a native cooldown cache. Call only during a
@@ -380,34 +385,91 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return PHOrbSkillUnavailable;
     }
     const uintptr_t address = live.identity.impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
-    // Native can-use updates skill-stage and assist selection caches. It is
-    // deliberately called only here, after every read-only gate, never while
-    // polling. Selector -1 preserves the game's base/charged-assist choice.
-    BOOL available = [self nativeCanUseGame:live.identity.game member:address header:frame.header];
-    PHOrbSnapshot checked{};
-    if (![self readAutomation:&checked frame:frame reason:reason] || checked.multiplayerDisabled) return PHOrbSkillRejected;
-    if (!checked.automation.window || checked.automation.busy || checked.dragged || !checked.settled ||
-        !PHInputIsQuiet(&checked.input) || !PHOrbSameAutomation(&live, &checked)) {
-        if (reason) *reason = @"技能檢查後狀態已改變，未啟動技能";
-        return PHOrbSkillRejected;
-    }
-    if (!available) {
-        NativeSkillReadiness readiness{};
-        BOOL known = [self nativeSkillReadiness:&readiness member:address header:frame.header];
-        PHOrbSnapshot diagnosed{};
-        if (![self readAutomation:&diagnosed frame:frame reason:reason] || diagnosed.multiplayerDisabled ||
-            !diagnosed.settled || diagnosed.dragged || !PHInputIsQuiet(&diagnosed.input) ||
-            !PHOrbSameAutomation(&checked, &diagnosed)) {
-            if (reason) *reason = @"技能拒絕後狀態已改變，已停止";
+    SkillSourceState source;
+    if (!ReadSkillSource(live, source)) return PHOrbSkillRejected;
+    PHOrbSnapshot checked = live;
+    auto recheck = [&](NSString *message) {
+        PHOrbSnapshot next{}; SkillSourceState current;
+        if (![self readAutomation:&next frame:frame reason:reason] || !next.valid || next.multiplayerDisabled ||
+            !next.automation.window || next.automation.busy || next.dragged || !next.settled ||
+            !PHInputIsQuiet(&next.input) || !PHOrbSameAutomation(&checked, &next) ||
+            !ReadSkillSource(next, current) || !(source == current)) {
+            if (reason) *reason = message;
+            return false;
+        }
+        checked = next;
+        return true;
+    };
+    // Like the dialog, first refresh the native stages with selector -1.
+    // Its refusal must not suppress a separately permitted body choice.
+    BOOL available = [self nativeCanUseGame:live.identity.game member:address selector:-1 header:frame.header];
+    if (!recheck(@"技能檢查後狀態已改變，未啟動技能")) return PHOrbSkillRejected;
+    const bool constrained = request.source != PHOrbSkillAutomatic || request.skill;
+    NativeSkillReadiness readiness{};
+    BOOL known = NO;
+    if (constrained || !available) {
+        known = [self nativeSkillReadiness:&readiness member:address header:frame.header];
+        if (!recheck(@"核對技能與冷卻後狀態已改變，未施放")) return PHOrbSkillRejected;
+        if (constrained && !known) {
+            if (reason) *reason = @"無法核對指定的本體／武裝技能，未施放";
             return PHOrbSkillRejected;
         }
-        const auto &observed = diagnosed.automation.members[slot];
+    }
+    bool chosenAssist = known && !(source.flags & 8u) && int16_t(member.assistCatalogID) > 0 &&
+        readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown;
+    bool chooseBody = false;
+    SkillChoiceState choice;
+    if (request.source == PHOrbSkillBody && chosenAssist) {
+        if (!ReadSkillChoice(checked, unsigned(slot), choice)) {
+            if (reason) *reason = @"無法確認本體／武裝二選一資格，未施放";
+            return PHOrbSkillRejected;
+        }
+        const BOOL allowed = [self nativeCanChooseSkill:address header:frame.header];
+        SkillChoiceState current;
+        if (!recheck(@"核對二選一資格後狀態已改變，未施放") ||
+            !ReadSkillChoice(checked, unsigned(slot), current) || !(choice == current)) {
+            if (reason) *reason = @"本體／武裝二選一資料已改變，未施放";
+            return PHOrbSkillRejected;
+        }
+        if (!allowed || choice.family[0] != choice.family[1]) {
+            if (reason) *reason = choice.family[0] != choice.family[1] ?
+                @"武裝已蓄滿且與本體不同進化鏈，只能使用武裝；本規則指定本體，已略過" :
+                @"遊戲未提供本體／武裝二選一；本規則指定本體，已略過";
+            return PHOrbSkillUnavailable;
+        }
+        chooseBody = true;
+        chosenAssist = false;
+    }
+    const uint32_t chosenSkill = chosenAssist ? readiness.assistSkill : readiness.baseSkill;
+    if (constrained && (!chosenSkill || chosenSkill >= 0x20000 ||
+        (request.source == PHOrbSkillAssist && !chosenAssist) || (request.skill && request.skill != chosenSkill))) {
+        if (reason) *reason = [NSString stringWithFormat:@"指定技能不符：目前為%@技能 %u；未施放其他技能",
+            chosenAssist ? @"武裝" : @"本體", chosenSkill];
+        return PHOrbSkillUnavailable;
+    }
+    if (chooseBody) {
+        // Only the native same-family dialog offers this choice. Selector 0
+        // still checks body cooldown, orb requirements and all native effects.
+        available = [self nativeCanUseGame:live.identity.game member:address selector:0 header:frame.header];
+        if (!recheck(@"選擇本體後狀態已改變，未啟動技能")) return PHOrbSkillRejected;
+        NativeSkillReadiness current{}; SkillChoiceState currentChoice;
+        const BOOL currentKnown = [self nativeSkillReadiness:&current member:address header:frame.header];
+        if (!recheck(@"確認本體技能後狀態已改變，未啟動技能") || !currentKnown ||
+            current.baseSkill != readiness.baseSkill || current.assistSkill != readiness.assistSkill ||
+            current.baseCooldown != readiness.baseCooldown || current.totalCooldown != readiness.totalCooldown ||
+            !ReadSkillChoice(checked, unsigned(slot), currentChoice) || !(choice == currentChoice)) {
+            if (reason) *reason = @"二選一的當前技能或進化鏈已改變，未啟動技能";
+            return PHOrbSkillRejected;
+        }
+    }
+    if (!available) {
+        const auto &observed = checked.automation.members[slot];
         NSString *cause = !known ? @"遊戲判定技能不可用，冷卻明細未取得" :
             !readiness.baseSkill || !readiness.totalCooldown ? @"未取得可使用的本體技能" :
             observed.charge < readiness.baseCooldown ? @"冷卻尚未完成" : @"冷卻已足，遊戲仍判定技能不可用";
         if (known && readiness.baseSkill > 0 && readiness.totalCooldown > 0 && observed.charge >= readiness.baseCooldown) {
-            NSString *condition = SkillOrbCondition(diagnosed, unsigned(slot), readiness,
-                PHOrbSameBoard(&live.board, &diagnosed.board));
+            NSString *condition = SkillOrbCondition(checked, unsigned(slot), readiness,
+                PHOrbSameBoard(&live.board, &checked.board), chooseBody ? 0 : -1);
             if (condition) cause = condition;
         }
         NSString *cooldown = known ? [NSString stringWithFormat:@"；本體技能 %d／CD %d，武裝技能 %d／合計 CD %d",
@@ -417,60 +479,36 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             observed.cachedSkillStage[0], observed.cachedSkillStage[1]];
         return PHOrbSkillUnavailable;
     }
-    if (request.source != PHOrbSkillAutomatic || request.skill) {
-        NativeSkillReadiness readiness{};
-        if (![self nativeSkillReadiness:&readiness member:address header:frame.header]) {
-            if (reason) *reason = @"無法核對指定的本體／武裝技能，未施放";
-            return PHOrbSkillRejected;
-        }
-        PHOrbSnapshot constrained{};
-        if (![self readAutomation:&constrained frame:frame reason:reason] || constrained.multiplayerDisabled ||
-            !constrained.automation.window || constrained.automation.busy || constrained.dragged || !constrained.settled ||
-            !PHInputIsQuiet(&constrained.input) || !PHOrbSameAutomation(&checked, &constrained)) {
-            if (reason) *reason = @"核對技能種類後狀態已改變，未施放";
-            return PHOrbSkillRejected;
-        }
-        uintptr_t rules = 0; uint8_t flags = 0;
-        if (!PHReadPointer(live.identity.impl + PHOrbSkillDungeonRulesOffset, &rules) ||
-            (rules && (rules > UINTPTR_MAX - 34 || !PHReadU8(rules + 33, &flags)))) return PHOrbSkillRejected;
-        // Native can-use(-1) and native start must agree. Do not use selector
-        // 0/1 to bypass a charged assist, and never write a requested skill ID.
-        const bool chargedAssist = int16_t(member.assistCatalogID) > 0 && readiness.totalCooldown > 0 &&
-            member.charge >= readiness.totalCooldown;
-        const bool chosenAssist = chargedAssist && !(flags & 8u);
-        const uint32_t chosenSkill = chosenAssist ? readiness.assistSkill : readiness.baseSkill;
-        if (chargedAssist != chosenAssist || !chosenSkill || chosenSkill >= 0x20000 ||
-            (request.source == PHOrbSkillBody && chosenAssist) ||
-            (request.source == PHOrbSkillAssist && !chosenAssist) || (request.skill && request.skill != chosenSkill)) {
-            if (reason) *reason = [NSString stringWithFormat:@"指定技能不符：目前為%@技能 %u；未施放其他技能",
-                chosenAssist ? @"武裝" : @"本體", chosenSkill];
-            return PHOrbSkillUnavailable;
-        }
+    // can-use writes this source byte itself. Confirm it instead of forcing
+    // it; effects use it independently of the retained skill ID.
+    uint8_t selectedSource = 0;
+    if (!PHReadU8(live.identity.impl + PHOrbSkillSelectedSourceOffset, &selectedSource) || selectedSource > 1 ||
+        (constrained && selectedSource != unsigned(chosenAssist))) {
+        if (reason) *reason = @"遊戲的本體／武裝選擇未能確認，未啟動技能";
+        return PHOrbSkillRejected;
     }
-    if (member.selection != UINT32_MAX) {
-        // The normal tap path (0x1005CCD40, store at 0x1005CCDC0)
-        // clears this field before confirming a new skill. Cancel/completion
-        // can leave it behind while state is already zero. Can-use(-1) checks
-        // the current base/charged-assist skill, but native start/effects can
-        // still consume the old ID through 0x10059F8DC. Reset only this idle
-        // member after readiness and race checks, never while polling or when
-        // the game refuses the skill. Leave charge and skill data to native
-        // code; this writes only the default-selection sentinel.
-        const uint32_t automaticSelection = UINT32_MAX;
+    const uint32_t selection = chooseBody ? chosenSkill : UINT32_MAX;
+    if (member.selection != selection) {
+        // Match the idle tap's reset, or the same-family body choice at
+        // 0x1005CD058: store the native current body ID, never the config ID.
+        // A positive ID preserves can-use(0)'s source through later effects.
         uint32_t written = 0;
-        if (!PHWriteData(address + PHOrbSkillOverrideOffset, &automaticSelection, sizeof(automaticSelection)) ||
-            !PHReadU32(address + PHOrbSkillOverrideOffset, &written) || written != automaticSelection) {
-            if (reason) *reason = @"舊技能選擇未能清除或確認，未啟動技能";
+        if (!PHWriteData(address + PHOrbSkillOverrideOffset, &selection, sizeof(selection)) ||
+            !PHReadU32(address + PHOrbSkillOverrideOffset, &written) || written != selection) {
+            if (reason) *reason = @"技能選擇未能設定或確認，未啟動技能";
             return PHOrbSkillRejected;
         }
-        PHOrbSnapshot prepared{}, expectedPrepared = checked;
-        expectedPrepared.automation.members[slot].selection = automaticSelection;
-        if (![self readAutomation:&prepared frame:frame reason:reason] || prepared.multiplayerDisabled ||
-            !prepared.automation.window || prepared.automation.busy || prepared.dragged || !prepared.settled ||
-            !PHInputIsQuiet(&prepared.input) || !PHOrbSameAutomation(&expectedPrepared, &prepared)) {
-            if (reason) *reason = @"清除舊技能選擇後狀態已改變，未啟動技能";
-            return PHOrbSkillRejected;
-        }
+        checked.automation.members[slot].selection = selection;
+        if (!recheck(@"準備技能選擇後狀態已改變，未啟動技能")) return PHOrbSkillRejected;
+    }
+    uint8_t finalSource = 0;
+    SkillSourceState finalRules;
+    SkillChoiceState finalChoice;
+    if (!ReadSkillSource(checked, finalRules) || !(source == finalRules) ||
+        !PHReadU8(live.identity.impl + PHOrbSkillSelectedSourceOffset, &finalSource) || finalSource != selectedSource ||
+        (chooseBody && (!ReadSkillChoice(checked, unsigned(slot), finalChoice) || !(choice == finalChoice)))) {
+        if (reason) *reason = @"啟動前本體／武裝選擇已改變，未啟動技能";
+        return PHOrbSkillRejected;
     }
     [self nativeStartGame:live.identity.game member:address header:frame.header];
     PHOrbSnapshot accepted{};
