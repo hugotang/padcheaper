@@ -12,6 +12,8 @@
 
 二進位來源 `524c9c64e8e0291fd4d67f22d224bb16d6953408`，大小 4,916,240 bytes，SHA-256 `bdea19331d7c70e06959f86865c3c9f82b1bbafa29e158d1f94cd4b0fa5fbcde`；113 組指紋與原始 IPA 相符，config 範例及兩份雨龍整包保留 CI 原件。`device_verified=false`。
 
+打包時核對到兩份停止盤量測／可達性報告的 `fixture_sha256` 記錄了 Windows CRLF 檔案雜湊 `22faf01bc04ffa40930373a8eb2e41225ecbf22ef7c8d1bd6f74245a77d67087`。commit 與 CI 原件是同一資料的 LF 版本，雜湊 `e0bed326fd62d1a4bc89333a8e9fd36c37948f695bc5f48b2f5212452a4927f9`。已驗證逐位元換行轉換完全相等，四份量測輸入的珠色、轉轉、刺珠、目標及當次 HP／上限／待結算也全部相符；solver／probe 原 LF 雜湊一致。原始報告保留不改，交付 `verification.json` 分別記錄兩種編碼的雜湊及輸入比對結果。
+
 檔案選擇器的 Scene 截圖可見原生頁籤；舊式視窗截圖只有白色內容，不能用它確認完整檔案列表外觀。四份 GUI 測試確認呈現／取消／匯入 delegate 與草稿保存，檔案列表實際載入及外觀仍待真機核對。
 
 下列記錄保留建置前的狀態，最新驗證以本節開頭為準。
