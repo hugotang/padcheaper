@@ -71,6 +71,7 @@ cp ios/docs/scripted-team-restore.md "$build_dir/scripted-team-restore.md"
 cp ios/docs/release-0.5.8.md "$build_dir/release-0.5.8.md"
 cp ios/docs/release-0.5.9.md "$build_dir/release-0.5.9.md"
 cp ios/docs/release-0.5.10.md "$build_dir/release-0.5.10.md"
+cp ios/docs/release-0.5.11.md "$build_dir/release-0.5.11.md"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
 cp ios/docs/persistence-music-sharing.md "$build_dir/persistence-music-sharing.md"
@@ -99,6 +100,7 @@ cp ios/research/orb-spinner-20261030.json ios/research/orb-shape-results-057.jso
 cp ios/research/orb_thorn_probe.cpp ios/research/orb_thorn_benchmark.py ios/research/orb-thorn-results-058.json "$build_dir/research/"
 cp ios/research/orb-shape-thorn-20261030.json ios/research/orb-shape-thorn-feasibility-0510.json ios/research/orb-shape-thorn-results-0510.json ios/research/orb-shape-results-0510.json "$build_dir/research/"
 cp ios/research/orb_recorded_shape_probe.cpp ios/research/orb_recorded_shape_benchmark.py ios/research/orb_lowhp_reachability_probe.cpp ios/research/orb_dense_heart_probe.cpp "$build_dir/research/"
+cp ios/research/orb-poison-20261030.json ios/research/orb-poison-results-0511.json ios/research/orb_poison_probe.cpp ios/research/orb_poison_benchmark.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -125,7 +127,7 @@ research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
 orb_notes = directory / "auto-orbs.md"
 orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
     "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "release-0.5.10.md", "orb-spinner-thorn-search.md", "opening-resize-music.md"):
+for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "release-0.5.10.md", "release-0.5.11.md", "orb-spinner-thorn-search.md", "opening-resize-music.md"):
     notes = directory / name
     notes.write_text(notes.read_text(encoding="utf-8").replace(
         "](../research/", "](research/"), encoding="utf-8")
@@ -154,10 +156,11 @@ metadata = {
     "opening_board_resize": "validated native resize interpolation preserves in-flight skill receipts; no geometry, planning, next skill or input during resizing; stable full board required to continue; original identity/input/multiplayer guards and bounded timeout retained",
     "skill_body_choice": "native same-evolution-family base/assist choice only; body still passes native cooldown, board and status conditions; source/stage/family rechecks; no forced readiness or charge writes",
     "thorn_combo_priority": "optional default-off, atomically saved with profile and team plan; goals/hazards then combos before thorn damage when enabled; exact first-wave heart four and verified surviving HP still mandatory",
+    "normal_poison_with_heart_four": "optional default-off per strategy and full team plan; normal poison matches accepted only with an exact straight first-wave heart four in every shared spinner phase; goals and Combo precede accepted poison count; mortal poison forbidden and all bombs must clear first wave; user-confirmed team recovery, no healing or poison damage calculation",
     "thorn_zero_contact_search": "contact candidates can trigger a bounded zero-contact pass within the original deadline; independent replay fixture records comparison, not device timing",
     "clear_dungeon_audit": "read-only request/statistics analysis documented; no clear payload rewrite, audit clearing or local revival",
     "temporary_team_form": "validated native temporary identity preserves completed opening; original/generic actor skills pause, explicit current-monster rules may run; required rescue remains enforced; actual current leaders determine leader-mode goals",
-    "orb_release_trace": "fresh actual-board evaluation before release; bounded last-three accepted routes and search trace; poison-stop counts; no device first-wave confirmation",
+    "orb_release_trace": "fresh actual-board evaluation before release with captured poison policy; bounded last-three accepted routes and search trace; independent mortal poison maxima and evaluated hazard failure context; no device first-wave confirmation",
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
     "skill_selection_reset": "only an idle member passing native readiness may reset a retained selection to the native default sentinel; exact ID and fresh snapshot checked, no charge writes",
@@ -170,7 +173,7 @@ metadata = {
     "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
     "orb_survival": "read-only effective HP thresholds and temporary awakening/member bind or skill-seal conditions; required rules/groups need confirmed completion before a route while allowing other skills to remedy or haste; uncertain attempts never count as success; captured HP/player-state changes cancel the route; per-rule reasons shown; device verification pending",
     "orb_recovery": "optional continuous-only post-skill HP threshold adds one to three heart groups, at least three connected or exactly four in a straight line; conjoins base goals without overriding required skills; unknown HP, insufficient hearts or unmet goals stop; atomic profile persistence; no recovery-amount or damage estimate; device verification pending",
-    "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable and removal rules applied; jammer ordinary combos, no deterministic poison/mortal matches, all bombs must clear first wave; thorn target contacts require current HP above pending plus route damage upper bound and first-wave heart four, without crediting healing/resistance; unknown effects still block",
+    "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable and removal rules applied; jammer ordinary combos, poison/mortal matches forbidden by default; optional normal poison policy requires first-wave heart four in all phases; mortal poison remains forbidden; all bombs must clear first wave; thorn target contacts require current HP above pending plus route damage upper bound and first-wave heart four, without crediting healing/resistance; unknown effects still block",
     "skill_orb_conditions": "native refusal may explain direct composite type-255 color counts; only actual attempt context retained; no bypass of native readiness; color-specific unmatchable rule uses ANY selected basic color, other predicates remain AND",
     "orb_spinners": "validate all six stored row masks before clipping to the current board after resize; offscreen cells do not block; custom types 0-9; avoid every visible spinner cell; all shared phases must meet goals and hazards; no timed color capture; raw read diagnostics retained; pending device verification",
     "orb_shape_search": "bitset runs/groups/gravity preserve exact four and conservative shape borders; spinner/thorn primary search focuses costly exact shapes and intermediate thorn repairs can complete heart fours later; final HP/damage/heart/hazard gates unchanged; phase-stable hints, missing-goal recovery, two discarded-frontier revisits and zero-contact pass share original time/path budgets; device verification pending",

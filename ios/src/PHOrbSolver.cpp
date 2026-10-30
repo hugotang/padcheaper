@@ -26,7 +26,7 @@ struct Context {
     Bits dynamicSpinners = 0;
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
-    bool guidance = true, stableHints = true;
+    bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
@@ -76,9 +76,11 @@ void AddPattern(std::vector<Pattern> &patterns, Bits cells, unsigned w, unsigned
     patterns.push_back({cells, border & ~cells});
 }
 
-Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true) {
+Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true,
+                    bool allowPoisonWithHeartFour = false) {
     const unsigned w = board.width, h = board.height;
     Context context{w, h, goals, {}};
+    context.allowPoisonWithHeartFour = allowPoisonWithHeartFour;
     context.minErase = board.minErase ? board.minErase : 3;
     context.minMatch = board.minMatch;
     context.unmatchable = board.unmatchableColors;
@@ -361,6 +363,11 @@ void FinishProgress(Score &score, const Context &context) {
 // All matches in a wave are marked together. Only existing orbs fall; no
 // random skyfall or leader-added combos. Exact shapes require an entire
 // first-wave group, so a 3x4 blob is never reported as a 3x3 square.
+bool ReleaseHazardsSafe(const PHOrbEvaluation &result, bool allowPoisonWithHeartFour, bool requireHeart = true) {
+    return !result.unmatchedBombs && !result.mortalPoisonErased &&
+        (!result.poisonErased || (allowPoisonWithHeartFour && (!requireHeart || result.heartFours)));
+}
+
 Score EvaluateStatic(Cells cells, const Context &context) {
     Score score;
     auto &result = score.result;
@@ -405,6 +412,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             const unsigned count = Count(group);
             ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             if (color == PHOrbPoison || color == PHOrbMortalPoison) result.poisonErased += uint8_t(count);
+            if (color == PHOrbMortalPoison) result.mortalPoisonErased += uint8_t(count);
             if (!wave && color == 5 && count == 4) {
                 bool horizontal = true, vertical = true; Bits rest = group & ~(Bits(1) << start);
                 while (rest) {
@@ -483,7 +491,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     if (context.guidance && context.shapeGoals > 1) JointGuidance(score, hints, context);
     FinishProgress(score, context);
     result.goalsMet = result.matchedGoals == context.goals.count;
-    result.hazardsSafe = result.poisonErased == 0 && result.unmatchedBombs == 0;
+    result.hazardsSafe = ReleaseHazardsSafe(result, context.allowPoisonWithHeartFour);
     return score;
 }
 
@@ -502,6 +510,7 @@ Score Evaluate(Cells cells, const Context &context) {
         const auto &b = variant.result;
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.poisonErased = std::max(a.poisonErased, b.poisonErased);
+        a.mortalPoisonErased = std::max(a.mortalPoisonErased, b.mortalPoisonErased);
         a.unmatchedBombs = std::max(a.unmatchedBombs, b.unmatchedBombs);
         a.heartFours = std::min(a.heartFours, b.heartFours);
         a.hazardsSafe &= b.hazardsSafe;
@@ -518,20 +527,26 @@ Score Evaluate(Cells cells, const Context &context) {
     for (unsigned g = 0; g < context.goals.count; ++g)
         worst.result.matchedGoals += worst.result.goalHits[g] >= context.goals.items[g].count;
     worst.result.goalsMet = worst.result.matchedGoals == context.goals.count;
+    // If any phase clears poison, the team policy requires a heart four in
+    // every phase, including those that would not clear poison themselves.
+    worst.result.hazardsSafe = ReleaseHazardsSafe(worst.result, context.allowPoisonWithHeartFour);
     FinishProgress(worst, context);
     return worst;
 }
 
-bool Better(const Node &a, const Node &b, bool thornComboPriority) {
+bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
-    if (ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
+    if (allowPoisonWithHeartFour && ar.mortalPoisonErased != br.mortalPoisonErased)
+        return ar.mortalPoisonErased < br.mortalPoisonErased;
+    if (!allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
     if (!thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (ar.combos != br.combos) return ar.combos > br.combos;
     if (thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
+    if (allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.erased != br.erased) return ar.erased > br.erased;
     if (a.length != b.length) return a.length < b.length;
     if (a.score.potential != b.score.potential) return a.score.potential > b.score.potential;
@@ -562,22 +577,25 @@ uint64_t LayoutKey(const Node &node, const Context &context) {
     return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals);
 }
 
-bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority) {
+bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority, bool allowPoisonWithHeartFour) {
     if (focus < PHOrbMaxGoals && a.score.result.hazardsSafe == b.score.result.hazardsSafe &&
         !a.score.result.goalsMet && !b.score.result.goalsMet &&
-        a.score.result.poisonErased == b.score.result.poisonErased &&
+        (allowPoisonWithHeartFour || a.score.result.poisonErased == b.score.result.poisonErased) &&
+        (!allowPoisonWithHeartFour || a.score.result.mortalPoisonErased == b.score.result.mortalPoisonErased) &&
         a.score.result.unmatchedBombs == b.score.result.unmatchedBombs) {
         const unsigned av = a.score.progress + 3 * a.score.goalProgress[focus];
         const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
         if (av != bv) return av > bv;
     }
-    return Better(a, b, thornComboPriority);
+    return Better(a, b, thornComboPriority, allowPoisonWithHeartFour);
 }
 
 void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth,
                 const Context &context, unsigned focus, bool thornComboPriority, std::vector<Node> *discarded = nullptr) {
     const size_t keep = std::min(size_t(limit), next.size());
-    const auto order = [focus, thornComboPriority](const Node &a, const Node &b) { return BetterForSearch(a, b, focus, thornComboPriority); };
+    const auto order = [focus, thornComboPriority, &context](const Node &a, const Node &b) {
+        return BetterForSearch(a, b, focus, thornComboPriority, context.allowPoisonWithHeartFour);
+    };
     if (!context.shapeGoals || keep < 4 || keep == next.size()) {
         std::partial_sort(next.begin(), next.begin() + keep, next.end(), order);
         next.resize(keep); beam.swap(next); return;
@@ -644,22 +662,28 @@ PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
     return {};
 }
 
-bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept {
+bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
+                   bool allowPoisonWithHeartFour) noexcept {
     result = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&goals)) return false;
     try {
         Cells cells{};
         std::copy(board.types, board.types + board.width * board.height, cells.begin());
-        result = Evaluate(cells, MakeContext(board, goals, false)).result;
+        result = Evaluate(cells, MakeContext(board, goals, false, allowPoisonWithHeartFour)).result;
         return true;
     } catch (...) { return false; }
+}
+
+bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept {
+    return PHOrbEvaluate(board, goals, result, false);
 }
 
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept {
     result = {}; thornDamage = 0; thornContacts = 0;
     PHOrbBoard replay{};
-    if (!route.count || !PHOrbReplay(&board, &route, route.count - 1, &replay) || !PHOrbEvaluate(replay, options.goals, result)) return false;
+    if (!route.count || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
+        !PHOrbEvaluate(replay, options.goals, result, options.allowPoisonWithHeartFour)) return false;
     Cells thorns{};
     for (unsigned i = 0; i < board.width * board.height; ++i)
         thorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
@@ -697,7 +721,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
         std::array<uint32_t, 128> damageTable{};
         for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
-        const Context context = MakeContext(board, options.goals);
+        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
         // evaluation. Check the clock between each such candidate.
@@ -755,13 +779,16 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
                         // A branch can finish its heart four later. Keep the
-                        // exact thorn survival gate on released candidates,
+                        // exact poison/heart and thorn gates on released candidates,
                         // without using it to discard intermediate repairs.
-                        const bool heartPending = child.thornContacts && !child.score.result.heartFours;
+                        const bool heartPending = !child.score.result.heartFours && (child.thornContacts ||
+                            (options.allowPoisonWithHeartFour && child.score.result.poisonErased));
                         if (heartPending) child.score.result.hazardsSafe = false;
-                        if (!found || Better(child, best, options.thornComboPriority)) { best = child; found = true; }
-                        if (heartPending) child.score.result.hazardsSafe = child.score.result.poisonErased == 0 &&
-                            child.score.result.unmatchedBombs == 0;
+                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour)) {
+                            best = child; found = true;
+                        }
+                        if (heartPending) child.score.result.hazardsSafe =
+                            ReleaseHazardsSafe(child.score.result, options.allowPoisonWithHeartFour, false);
                         next.push_back(child);
                     }
                     if (passEnded || timedOut) break;
@@ -835,6 +862,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         route.goalsMet = best.score.result.goalsMet;
         route.hazardsSafe = best.score.result.hazardsSafe;
         route.poisonErased = best.score.result.poisonErased; route.unmatchedBombs = best.score.result.unmatchedBombs;
+        route.mortalPoisonErased = best.score.result.mortalPoisonErased;
         route.thornDamage = best.thornDamage; route.thornContacts = best.thornContacts;
         route.heartFours = best.score.result.heartFours;
         std::copy(std::begin(best.score.result.goalHits), std::end(best.score.result.goalHits), route.goalHits);

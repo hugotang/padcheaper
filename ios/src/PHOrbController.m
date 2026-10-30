@@ -303,6 +303,8 @@
 @property(nonatomic, strong) UILabel *qualityDescription;
 @property(nonatomic, strong) UISwitch *thornPriority;
 @property(nonatomic, strong) UILabel *thornDescription;
+@property(nonatomic, strong) UISwitch *poisonWithHeartFour;
+@property(nonatomic, strong) UILabel *poisonDescription;
 @property(nonatomic, strong) UISegmentedControl *goalMode;
 @property(nonatomic, strong) UIButton *editGoals;
 @property(nonatomic, strong) UILabel *goalDescription;
@@ -408,6 +410,16 @@
     [thornRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     self.thornDescription = [self label:13 weight:UIFontWeightRegular];
     self.thornDescription.accessibilityIdentifier = @"padcheaper.orbsThornDescription";
+    UILabel *poisonTitle = [self label:15 weight:UIFontWeightMedium]; poisonTitle.text = @"心四連時允許消一般毒";
+    self.poisonWithHeartFour = [UISwitch new];
+    self.poisonWithHeartFour.accessibilityIdentifier = @"padcheaper.orbsPoisonWithHeartFour";
+    self.poisonWithHeartFour.accessibilityLabel = poisonTitle.text;
+    [self.poisonWithHeartFour addTarget:self action:@selector(changePoisonPolicy) forControlEvents:UIControlEventValueChanged];
+    UIStackView *poisonRow = [[UIStackView alloc] initWithArrangedSubviews:@[poisonTitle, self.poisonWithHeartFour]];
+    poisonRow.axis = UILayoutConstraintAxisHorizontal; poisonRow.alignment = UIStackViewAlignmentCenter; poisonRow.spacing = 12;
+    [poisonRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    self.poisonDescription = [self label:13 weight:UIFontWeightRegular];
+    self.poisonDescription.accessibilityIdentifier = @"padcheaper.orbsPoisonDescription";
     self.goalMode = [[UISegmentedControl alloc] initWithItems:@[@"高 Combo", @"指定形狀", @"隊長盤面"]];
     self.goalMode.accessibilityIdentifier = @"padcheaper.orbsGoalMode"; self.goalMode.accessibilityLabel = @"求路目標";
     [self.goalMode.heightAnchor constraintGreaterThanOrEqualToConstant:36].active = YES;
@@ -418,7 +430,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒不得在盤內連鎖消除，爆彈須首批全消，否則不開放執行。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。一般毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。猛毒仍避開，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -433,7 +445,8 @@
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
-        self.qualityDescription, thornRow, self.thornDescription, self.goalMode, self.editGoals, self.goalDescription,
+        self.qualityDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
+        self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -537,6 +550,13 @@
         @"優先較高 Combo，同 Combo 再選較少傷害。只有首消心四連且目前 HP 撐得過整條路徑才會碰荊棘；不預支消心回血。" :
         @"目前優先較少荊棘傷害。開啟後可用承受範圍內的接觸換取更多 Combo，適合心四連能充分回血的隊伍。";
     self.thornDescription.textColor = thornMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.poisonWithHeartFour.on = [state[@"allowPoisonWithHeartFour"] boolValue];
+    self.poisonWithHeartFour.enabled = [state[@"canSetPoisonPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSString *poisonMessage = state[@"poisonPolicyMessage"];
+    self.poisonDescription.text = poisonMessage.length ? poisonMessage : self.poisonWithHeartFour.on ?
+        @"全部轉轉相位都有首消心四連時允許消一般毒，優先目標及較高 Combo。採用你確認的隊伍回復能力；猛毒仍避開，爆彈仍須首消全消。" :
+        @"目前避免一般毒及猛毒消除。確認這隊首消心四連可充分回血後開啟；設定會與目前策略一同儲存。";
+    self.poisonDescription.textColor = poisonMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSString *mode = state[@"goalMode"] ?: @"combo";
     NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
     self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
@@ -572,7 +592,7 @@
         ![state[@"canRead"] boolValue] && ![state[@"busy"] boolValue] ? @"等待遊戲校驗與登入後即可讀盤。" :
         ![state[@"enabled"] boolValue] ? @"預覽可使用；執行需要先開啟 PC 面板的功能總開關。" :
         [state[@"phase"] isEqual:@"preview"] && state[@"hazardsSafe"] && ![state[@"hazardsSafe"] boolValue] ?
-            @"這條路徑會消毒／猛毒或留下爆彈，只供預覽；先用技能改盤後重新讀取。" :
+            @"這條路徑未通過目前消毒、爆彈或荊棘條件，只供預覽；請查看上方原因。" :
         [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
             @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
@@ -613,6 +633,10 @@
 }
 - (void)changeThornPriority {
     if (self.thornPriority.enabled) self.action(@"orbsThornPriority", @(self.thornPriority.on));
+    [self refresh];
+}
+- (void)changePoisonPolicy {
+    if (self.poisonWithHeartFour.enabled) self.action(@"orbsPoisonWithHeartFour", @(self.poisonWithHeartFour.on));
     [self refresh];
 }
 - (void)changeGoalMode {
@@ -690,7 +714,8 @@
     NSDictionary *state = self.state;
     NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
         @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery(),
-        @"thornComboPriority":state[@"thornComboPriority"] ?: @NO};
+        @"thornComboPriority":state[@"thornComboPriority"] ?: @NO,
+        @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
     PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
@@ -702,7 +727,8 @@
             NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
-                @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO});
+                @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO,
+                @"allowPoisonWithHeartFour":saved[@"allowPoisonWithHeartFour"] ?: @NO});
             NSString *message = saved[@"profileMessage"];
             const BOOL formationSaved = !selected[@"formation"] ||
                 [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];

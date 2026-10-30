@@ -168,11 +168,13 @@ static void ShapeTests() {
 #include "orb_t_boundary_solver_tests.inc"
 #include "orb_search_recovery_tests.inc"
 #include "orb_recorded_thorn_solver_tests.inc"
+#include "orb_poison_solver_tests.inc"
 
 int main() {
     ShapeTests();
     TBoundarySolverTests();
     OrbEffectSolverTests();
+    PoisonHeartFourSolverTests();
     ThornSolverTests();
     OrbShapeSolverTests();
     SearchRecoveryTests();

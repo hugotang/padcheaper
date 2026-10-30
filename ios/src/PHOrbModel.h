@@ -36,6 +36,7 @@ typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t poisonErased, unmatchedBombs, heartFours;
     bool goalsMet, hazardsSafe;
+    uint8_t mortalPoisonErased; // Subset of poisonErased; maxima are independent across spinner phases.
 } PHOrbEvaluation;
 
 // Top row first. Coordinates belong to cells; tokens and orb data move.
@@ -138,6 +139,7 @@ typedef struct {
     uint32_t evaluated, elapsedMS;
     uint8_t searchPasses, backtracks, exploredDepth;
     bool deadlineReached, goalsMet, hazardsSafe;
+    uint8_t mortalPoisonErased;
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);

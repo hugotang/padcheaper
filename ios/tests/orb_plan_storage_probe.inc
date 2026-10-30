@@ -77,6 +77,33 @@ static void PHProbePlanStorage(UIWindow *overlay) {
             ![thornCommitted[@"orbState"][@"thornPolicyMessage"] length],
             @"Successful thorn preference save updates the selected full plan and published settings atomically");
     } else if (thornMoved) [files moveItemAtPath:thornBackup toPath:path error:NULL];
+    NSDictionary *beforePoison = PHProbeJSON(@"config.json");
+    NSString *poisonBackup = [path stringByAppendingFormat:@".poison-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL poisonMoved = [files moveItemAtPath:path toPath:poisonBackup error:NULL];
+    BOOL poisonBlocked = poisonMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(poisonBlocked, @"Poison policy test blocks the real canonical file for a selected plan");
+    if (poisonBlocked) {
+        action(@"orbsPoisonWithHeartFour", @YES);
+        NSDictionary *poisonFailed = snapshot();
+        PHProbeCheck([poisonFailed[@"config"] isEqual:beforePoison] &&
+            [poisonFailed[@"orbState"][@"allowPoisonWithHeartFour"] isEqual:@NO] &&
+            [poisonFailed[@"orbState"][@"poisonPolicyMessage"] length] > 0,
+            @"Failed poison policy save keeps selected plan and active policy unchanged");
+        BOOL poisonRepaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:poisonBackup toPath:path error:NULL];
+        PHProbeCheck(poisonRepaired, @"Poison fixture restores the canonical file after a failed write");
+        if (!poisonRepaired) return;
+        action(@"retry", nil); action(@"orbsPoisonWithHeartFour", @YES);
+        NSDictionary *poisonCommitted = snapshot(), *poisonDisk = PHProbeJSON(@"config.json");
+        NSDictionary *poisonProfile = profileNamed(configProfiles(poisonDisk), library[@"selected"]);
+        PHProbeCheck([poisonDisk[@"orbs"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
+            [poisonProfile[@"settings"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
+            [poisonCommitted[@"orbState"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
+            ![poisonCommitted[@"orbState"][@"poisonPolicyMessage"] length],
+            @"Successful poison policy save atomically updates the selected plan and active settings");
+        action(@"orbsQuality", @"thorough"); action(@"orbsThornPriority", @NO);
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowPoisonWithHeartFour"] isEqual:@YES],
+            @"Changing quality or thorn preference preserves the selected team's poison policy");
+    } else if (poisonMoved) [files moveItemAtPath:poisonBackup toPath:path error:NULL];
     BOOL restored = [original writeToFile:path options:NSDataWritingAtomic error:NULL];
     NSDictionary *reloaded = snapshot();
     PHProbeCheck(restored && [reloaded[@"config"] isEqual:baseline] &&

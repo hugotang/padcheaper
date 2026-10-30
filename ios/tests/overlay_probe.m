@@ -442,6 +442,15 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             @"Thorn Combo switch follows the acknowledged real configuration write");
     }
     PHProbeRender(self.window, orbWindow, @"orbs-thorn-priority");
+    UISwitch *poisonWithHeart = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsPoisonWithHeartFour");
+    PHProbeCheck(poisonWithHeart.enabled, @"Normal poison with heart four is configurable without enabling game input");
+    for (NSNumber *enabled in @[@YES, @NO]) {
+        poisonWithHeart.on = enabled.boolValue; [poisonWithHeart sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowPoisonWithHeartFour"] isEqual:enabled] &&
+            poisonWithHeart.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
+            @"Poison switch follows the acknowledged disk write without bypassing game validation");
+    }
+    PHProbeRender(self.window, orbWindow, @"orbs-poison-heart-four");
     NSArray *qualityIDs = @[@"fast", @"balanced", @"thorough"];
     for (NSUInteger index = 0; index < qualityIDs.count; ++index) {
         qualityControl.selectedSegmentIndex = (NSInteger)index;
@@ -520,6 +529,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"generation":@19, @"canRead":@YES, @"canExecute":@YES, @"canStop":@NO, @"enabled":@YES,
                 @"quality":@"balanced", @"canSetQuality":@YES, @"goalMode":@"combo", @"canSetGoals":@YES, @"goals":savedGoals,
                 @"thornComboPriority":@NO, @"canSetThornPolicy":@YES,
+                @"allowPoisonWithHeartFour":@NO, @"canSetPoisonPolicy":@YES,
                 @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
                 @"recovery":savedHeartPolicy ?: @{}, @"canSetRecovery":@YES,
                 @"profiles":@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[]}, @"canSetProfiles":@YES,

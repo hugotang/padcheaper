@@ -11,6 +11,7 @@ struct PHOrbSolveOptions {
     unsigned recoveryPasses = 1;
     unsigned backtrackLimit = 0;
     bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
+    bool allowPoisonWithHeartFour = false; // Team policy: normal poison may clear with a first-wave heart four in every phase.
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
@@ -22,7 +23,10 @@ enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Canc
 // Four means exactly four marked, connected orbs in a line; unmarked same-
 // colour neighbours are allowed. L/T/cross/square retain their conservative
 // same-colour border exclusion.
-// Poison/mortal-poison matches are forbidden, and every bomb must participate
+// Poison/mortal-poison matches are forbidden by default. An explicit team
+// policy permits normal poison when every phase has a first-wave heart four;
+// this accepts the team's recovery without estimating healing or poison damage.
+// Mortal poison remains forbidden, and every bomb must participate
 // in the first removal wave. Spinners share a native clock; enumerate every
 // common phase of their validated color cycle (up to ten phases), requiring
 // every result to meet the goals and hazard policy. Native unmatchable colors,
@@ -31,6 +35,8 @@ enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Canc
 // require verified HP, a strict damage budget and a first-wave heart four.
 // The budget ignores healing and resistance; these may improve real outcomes.
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept;
+bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
+                   bool allowPoisonWithHeartFour) noexcept;
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept;
 // One caller-owned worker, immutable input, no native/game calls or process exit.

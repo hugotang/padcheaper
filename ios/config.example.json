@@ -29,6 +29,7 @@
   "orbs": {
     "quality": "balanced",
     "thornComboPriority": false,
+    "allowPoisonWithHeartFour": false,
     "mode": "combo",
     "goals": [],
     "rules": [],

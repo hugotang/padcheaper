@@ -40,14 +40,17 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     NSArray *rules = settings[@"rules"] ?: @[];
     NSDictionary *recovery = settings[@"recovery"] ?: PHOrbDefaultRecovery();
     NSNumber *thornComboPriority = settings[@"thornComboPriority"] ?: @NO;
+    NSNumber *allowPoisonWithHeartFour = settings[@"allowPoisonWithHeartFour"] ?: @NO;
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
-        !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority)) return nil;
+        !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority) ||
+        !PHOrbProfileIsBoolean(allowPoisonWithHeartFour)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
     return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy],
-        @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority};
+        @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority,
+        @"allowPoisonWithHeartFour":allowPoisonWithHeartFour};
 }
 
 NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
@@ -73,7 +76,7 @@ BOOL PHOrbProfilesValid(id library) {
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
             !KeysWithOptional(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"],
-                @[@"recovery", @"thornComboPriority"])) return NO;
+                @[@"recovery", @"thornComboPriority", @"allowPoisonWithHeartFour"])) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
@@ -184,7 +187,8 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
         ![plan[@"format"] isEqual:@"padcheaper-team-plan"] || !Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1] ||
         ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
-        !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"], @[@"thornComboPriority"])) return nil;
+        !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
+            @[@"thornComboPriority", @"allowPoisonWithHeartFour"])) return nil;
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;
@@ -284,6 +288,9 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     [lines addObject:[NSString stringWithFormat:@"\n盤面目標：%@\n求路品質：%@", PHOrbGoalsDescription(profile[@"settings"][@"goals"]), profile[@"settings"][@"quality"]]];
     [lines addObject:[profile[@"settings"][@"thornComboPriority"] boolValue] ?
         @"荊棘盤優先 Combo：開啟；首消心四連且拖珠傷害低於目前 HP 才可接觸" : @"荊棘盤優先 Combo：關閉；優先較少傷害"];
+    [lines addObject:[profile[@"settings"][@"allowPoisonWithHeartFour"] boolValue] ?
+        @"心四連時允許消一般毒：開啟；採用已確認的隊伍回復能力，優先目標與 Combo；猛毒仍避開，爆彈須首消全消" :
+        @"心四連時允許消一般毒：關閉；避免毒／猛毒消除，爆彈須首消全消"];
     [lines addObject:@"\n儲存並選用會同時選取隊伍與策略；入場套隊沿用既有開關。按「開始自動轉」才執行開場及循環。"];
     return [lines componentsJoinedByString:@"\n"];
 }

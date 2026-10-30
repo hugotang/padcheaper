@@ -47,12 +47,18 @@ int main(void) {
         Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
         Check([PHConfigurationOrbSettings(defaults)[@"thornComboPriority"] isEqual:@NO],
             "new and legacy configurations default to lower thorn damage");
+        Check([PHConfigurationOrbSettings(defaults)[@"allowPoisonWithHeartFour"] isEqual:@NO],
+            "new and legacy configurations keep normal poison consumption opt-in");
         for (id value in @[@YES, @NO, @1, @"true", NSNull.null]) {
             NSMutableDictionary *thornConfig = [defaults mutableCopy]; thornConfig[@"orbs"] = @{@"thornComboPriority":value};
             NSData *json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
             NSDictionary *readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
             const BOOL valid = [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
             Check(PHConfigurationIsValid(readback) == valid, "saved thorn setting accepts only true JSON booleans");
+            thornConfig[@"orbs"] = @{@"allowPoisonWithHeartFour":value};
+            json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
+            readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+            Check(PHConfigurationIsValid(readback) == valid, "saved poison policy accepts only true JSON booleans");
         }
         Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
             [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");

@@ -14,12 +14,14 @@
 | formation | 現有 schema 1 編隊格式，六格本體、武裝、等級、技能等級、覺醒、加值及潛覺 |
 | opening | 最多 24 個依序技能步驟；每步 slot、source（body / assist）、monster、assist、skill、afterMonster |
 | rotation | 現有最多 12 條循環規則，加上 source、skill、atLeast |
-| board | quality、mode、goals、recovery，以及可選 Boolean `thornComboPriority` |
+| board | quality、mode、goals、recovery，以及可選 Boolean `thornComboPriority`、`allowPoisonWithHeartFour` |
 | dungeon / floor | 地下城／子關卡，0 表示不限；不是樓層 wave |
 
 `afterMonster: 0` 表示施放後本體不變；變身步驟填預期圖鑑編號。之後若同一位置還有開場技能，`monster` 必須接續變身後編號。
 
 0.5.8 的 `thornComboPriority: true` 對應「荊棘盤優先 Combo」，缺省／false 保留較少傷害優先。開啟只調整路線排序，所有接觸仍要求首消心四連及目前 HP 大於完整拖珠傷害；不預支回血。可先選隊伍策略，再在轉珠頁切換；會一併保存於該策略與整包匯出。舊版可繼續匯入未加此欄位的範本；含新欄位的匯出檔需 0.5.8 以上。
+
+0.5.11 的 `allowPoisonWithHeartFour: true` 對應「心四連時允許消一般毒」，預設／缺省為 false。全部轉轉相位均有首消直線心四連時，允許一般毒消除並優先目標與 Combo；採用使用者已確認的隊伍回復能力，不精算回血或毒傷害。猛毒仍不得消除，爆彈仍須首消全消。此欄位與所選策略原子保存，含欄位的分享檔需 0.5.11 以上；舊範本可照常匯入，再為目前隊伍打開選項。
 
 循環 `source` 預設 `auto`，可選 `body` 或 `assist`；`skill: 0` 表示不限定技能 ID。它們是原生目前技能的約束，不會強制施放未蓄好的武裝或繞過原生冷卻。0.5.8 起，武裝蓄滿而原生允許同進化鏈二選一時，`body` 可選目前本體，仍檢查原生冷卻、珠數與其他使用條件。非同進化鏈會略過本體規則，開場則停在當步；`auto` 保留遊戲預設選擇。需要手動選擇其他子技能的技能仍可能停止等待使用者處理。見 [原生二選一](orb-skill-selection.md)。
 

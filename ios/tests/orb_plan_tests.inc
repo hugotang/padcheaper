@@ -18,6 +18,13 @@ static void PlanTests(void) {
     Check(!PHOrbProfileFromPlan(thornPlan, NULL), "plan import rejects numeric or malformed thorn preference");
     thornPlan[@"board"][@"thornComboPriority"] = @NO; thornPlan[@"board"][@"unknown"] = @YES;
     Check(!PHOrbProfileFromPlan(thornPlan, NULL), "adding a known optional board key does not allow unknown settings");
+    NSMutableDictionary *poisonPlan = ReadPlanFixture(); poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @YES;
+    NSDictionary *poisonProfile = PHOrbProfileFromPlan(poisonPlan, &reason);
+    Check(poisonProfile && [PHOrbPlanFromProfile(poisonProfile)[@"board"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(poisonProfile), NULL) isEqual:poisonProfile],
+        "full team plans retain the optional normal-poison-with-hearts policy on roundtrip");
+    poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @1;
+    Check(!PHOrbProfileFromPlan(poisonPlan, NULL), "plan import rejects numeric poison permission");
     NSDictionary *library = PHOrbProfilesImportingPlan(PHOrbDefaultProfiles(),plan,&reason);
     Check(PHOrbProfilesValid(library) && [library[@"selected"] isEqual:plan[@"id"]] && ![library[@"autoSelect"] boolValue],
         "import selects an explicitly reviewed plan without automatic start");

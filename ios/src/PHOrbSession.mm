@@ -81,6 +81,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
     for (unsigned g = 0; g < goals.count; ++g) [hits addObject:@(value.goalHits[g])];
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
         @"hazardsSafe":@(value.hazardsSafe), @"poisonErased":@(value.poisonErased),
+        @"mortalPoisonErased":@(value.mortalPoisonErased),
         @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours)};
 }
 NSString *SolveStatusName(PHOrbSolveStatus status) {
@@ -96,13 +97,13 @@ NSString *SolveStatusName(PHOrbSolveStatus status) {
     }
     return @"unknown";
 }
-NSString *PoisonFailureContext(const PHOrbBoard &board) {
-    unsigned poison = 0, mortal = 0;
-    for (unsigned i = 0; i < board.width * board.height && i < PHOrbMaxCells; ++i) {
-        poison += board.types[i] == PHOrbPoison; mortal += board.types[i] == PHOrbMortalPoison;
-    }
-    return poison || mortal ? [NSString stringWithFormat:
-        @"讀盤時仍有毒 %u 顆／猛毒 %u 顆；本次未找到同時達成目標且不消毒的路徑。可先使用能轉走毒珠的技能。\n", poison, mortal] : @"";
+NSString *PoisonFailureContext(const PHOrbEvaluation &evaluation, const PHOrbSolveOptions &options) {
+    if (evaluation.mortalPoisonErased) return [NSString stringWithFormat:
+        @"候選路徑會消除猛毒 %u 顆；猛毒消除仍未開放。\n", evaluation.mortalPoisonErased];
+    if (!evaluation.poisonErased) return @"";
+    if (!options.allowPoisonWithHeartFour) return [NSString stringWithFormat:
+        @"候選路徑會消除毒 %u 顆；目前策略設定為避毒。\n", evaluation.poisonErased];
+    return !evaluation.heartFours ? @"候選路徑會消一般毒，但未在全部轉轉相位達成首消心四連；未開放執行。\n" : @"";
 }
 NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, bool attempted = false) {
     const auto &member = state.automation.members[slot];
@@ -137,7 +138,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState;
     PHOrbRoute _route;
     NSString *_phase, *_message, *_quality, *_goalMode;
-    bool _thornComboPriority;
+    bool _thornComboPriority, _allowPoisonWithHeartFour;
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules, *_decisionRules;
     NSMutableArray *_automationLog;
@@ -234,6 +235,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"startBoard":BoardTrace(_preview.board), @"path":RouteCells(_route),
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
+            @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
             @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
             @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
@@ -245,14 +247,16 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 - (BOOL)configureQuality:(NSString *)quality {
     if (!quality) return NO;
     return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
-        @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority)}];
+        @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority),
+        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour)}];
 }
 - (BOOL)configureSettings:(NSDictionary *)settings {
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical || _automatic || _oneShot || [self executing] || _inputFault) return NO;
     if ([_quality isEqual:canonical[@"quality"]] && [_goalMode isEqual:canonical[@"mode"]] &&
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
-        [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue]) return YES;
+        [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue] &&
+        _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue]) return YES;
     [self cancelWorker];
     [self loadSettings:canonical];
     _readQueued = _hasStable = false;
@@ -265,6 +269,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _solveOptions = OptionsForQuality(_quality);
     _thornComboPriority = [settings[@"thornComboPriority"] boolValue];
     _solveOptions.thornComboPriority = _thornComboPriority;
+    _allowPoisonWithHeartFour = [settings[@"allowPoisonWithHeartFour"] boolValue];
+    _solveOptions.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     _skillRules = settings[@"rules"];
     _recovery = settings[@"recovery"];
     // Keep the last run's decisions with their captured rules. Idle runtime
@@ -676,7 +682,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (BOOL)hasThornBudget:(const PHOrbSnapshot *)state {
     if (!_route.thornContacts) return YES;
-    PHOrbSolveOptions options; options.thorns = state->thorns;
+    PHOrbSolveOptions options = _solveOptions; options.thorns = state->thorns;
     if (!PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) return NO;
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
     return PHOrbEvaluateRoute(state->board, _route, options, evaluation, damage, contacts) &&
@@ -691,6 +697,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
+    options.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
@@ -720,7 +727,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"board":BoardTrace(_preview.board), @"goals":PHOrbGoalsJSON(&options.goals),
         @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds),
-        @"thornComboPriority":@(options.thornComboPriority)};
+        @"thornComboPriority":@(options.thornComboPriority),
+        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour)};
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
@@ -744,7 +752,6 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 session->_phase = @"stopped";
                 session->_message = result == PHOrbSolveStatus::InsufficientOrbs ?
                     @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" : @"本次未取得有效路徑，請重新讀盤";
-                session->_message = [PoisonFailureContext(board) stringByAppendingString:session->_message];
                 if (session->_automatic || session->_oneShot) [session queueStop:session->_message];
                 return;
             }
@@ -756,6 +763,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
+                evaluation.mortalPoisonErased != route.mortalPoisonErased ||
                 evaluation.unmatchedBombs != route.unmatchedBombs ||
                 evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != options.goals.count ||
                 !std::equal(std::begin(evaluation.goalHits), std::end(evaluation.goalHits), route.goalHits)) {
@@ -773,6 +781,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             if (route.thornContacts) summary = [summary stringByAppendingFormat:
                 @"\n荊棘碰觸 %u 次 · 傷害上限 %u · 首批心四連 %u 組；未把回血與抗性計入可承受傷害。",
                 route.thornContacts, route.thornDamage, route.heartFours];
+            if (options.allowPoisonWithHeartFour && route.poisonErased && !route.mortalPoisonErased && route.heartFours)
+                summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消一般毒，最多 %u 顆。", route.poisonErased];
             summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
                 route.elapsedMS, options.milliseconds, route.deadlineReached ? @"已到時間上限" : @"未到時間上限", options.steps];
             if (!route.goalsMet) {
@@ -784,12 +794,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 summary = [NSString stringWithFormat:@"%@\n%@", [missing componentsJoinedByString:@"\n"], summary];
             }
             session->_message = !route.hazardsSafe ? [NSString stringWithFormat:
-                @"未找到符合妨礙處理條件的路徑：毒／猛毒 %u 顆、首批未消爆彈 %u 顆%@。未開放執行；可先用技能改盤。\n%@",
-                route.poisonErased, route.unmatchedBombs, route.thornContacts && !route.heartFours ? @"、荊棘路徑未消出心四連" : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
+                @"未找到符合妨礙處理條件的路徑：毒／猛毒消除最多 %u 顆（猛毒最多 %u 顆）、首批未消爆彈最多 %u 顆%@。未開放執行；可先用技能改盤。\n%@",
+                route.poisonErased, route.mortalPoisonErased, route.unmatchedBombs,
+                route.thornContacts && !route.heartFours ? @"、荊棘路徑未消出心四連" : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
                 route.matchedGoals, route.goalCount, summary] : route.goalCount ?
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
-            if (!route.goalsMet || !route.hazardsSafe)
-                session->_message = [PoisonFailureContext(board) stringByAppendingString:session->_message];
+            if (!route.hazardsSafe)
+                session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
             if ((session->_automatic || session->_oneShot) && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
         });
     });
@@ -938,7 +949,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 // Re-evaluate the actual board at the release boundary. Do
                 // not reuse a solver score or credit the dragged orb twice.
                 PHOrbEvaluation evaluation{};
-                const bool valid = PHOrbEvaluate(current.board, _solveOptions.goals, evaluation);
+                const bool valid = PHOrbEvaluate(current.board, _solveOptions.goals, evaluation,
+                    _solveOptions.allowPoisonWithHeartFour);
                 [self recordExecution:@"release-check" state:&current evaluation:valid ?
                     EvaluationTrace(evaluation, _solveOptions.goals) : @{@"valid":@NO}];
                 if (!valid || !evaluation.goalsMet || !evaluation.hazardsSafe ||
@@ -1146,11 +1158,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
         @"thornComboPriority":@(_thornComboPriority),
+        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
         @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
         @"hazardsSafe":@(_route.hazardsSafe), @"poisonErased":@(_route.poisonErased), @"unmatchedBombs":@(_route.unmatchedBombs),
+        @"mortalPoisonErased":@(_route.mortalPoisonErased),
         @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage), @"heartFours":@(_route.heartFours),
         @"thornHPKnown":@(_live.thorns.known), @"thornHP":@(_live.thorns.hp), @"thornMaximumHP":@(_live.thorns.maximumHP),
         @"pendingOrbDamage":@(_live.thorns.pendingDamage),
