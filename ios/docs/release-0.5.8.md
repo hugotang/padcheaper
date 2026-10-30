@@ -12,6 +12,12 @@
 
 [AutoCombo 研究](autocombo-review.md) 建議優先試驗原盤重播的局部縮路；本版未複製上游核心。另完成 [通關回傳分析](clear-dungeon-audit.md)，確認上傳包括過程統計與一致性結果，未修改通關請求或清除累積旗標；修正本機 bug 不等於免偵測保證。
 
+2026-10-30，[CI 74](https://github.com/hugotang/padcheaper/actions/runs/41011326922) 的原生／session／求解器／規則／config、iPhoneOS 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視未通關 BGM 開關、荊棘偏好、原生分享面板、檔案選擇器及匯入預覽。
+
+二進位來源 `725c3da8f80574bec3c04b7b9e99e65b0f611067`，大小 4,915,584 bytes，SHA-256 `2a80387c575bec44c193f91dfd213a49fd73b9d0ff86a64fae841784881f75f8`；110 組指紋與原始 IPA 相符，config 範例及兩份雨龍整包保留 CI 原件。50 次荊棘盤桌面重播的獨立 oracle 全部通過，候選 solver 雜湊與本次 commit 相符；桌面結果不等於 iPhone 效能。`device_verified=false`。
+
 既有隊伍＋開場＋循環＋目標 config 可直接沿用，不必重匯入。仍限單人，`device_verified=false`。關卡復活廣告載入失敗尚未定位，本版未新增免費復活或更改廣告／續關請求；[調查](ad-revival.md) 列出已確認的服務端流程。
 
 安裝全新 0.5.8 dylib 前停用舊版，以 LiveContainer 重新簽署並完整重啟。保留原設定、隊伍庫及舊交付包；新單人關卡再驗收開場、技能選擇與實際消除。
+
+更新後先重新選一次徽章並在遊戲正常保存，再完整重啟檢查。原生分享與取消／匯入預覽已通過模擬器；實際向其他裝置 AirDrop 仍待真機。
