@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.10-orbs",
+  "prototype_version": "0.5.11-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -80,7 +80,7 @@
     ],
     "hazards": {
       "jammer": "ordinary-match",
-      "poison": "no-deterministic-match",
+      "poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
       "mortal_poison": "no-deterministic-match",
       "bomb": "all-first-wave",
       "thorn": "bounded-contact-with-first-wave-heart-four"

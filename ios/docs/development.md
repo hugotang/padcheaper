@@ -18,6 +18,8 @@
 
 本批 Windows GCC／G++ `-Wall -Wextra -Werror` 編譯及完整 solver／model 回歸已通過，新增毒／心四連案例亦通過。五份盤面×兩種政策×三次交錯對照共 30 次全部獨立驗證一致；三個成功毒盤從 3／4／5 Combo 提升到 4／5／6，均消三一般毒且光 T／首消心四連各 3／3。單毒及 7×6 低血盤仍未達成 T，各政策 0／3。完整來源／探針／fixture 雜湊見 [毒盤報告](../research/orb-poison-results-0511.json)。macOS session／設定／原生／GUI 及 iPhoneOS 建置仍待本批手動 CI。
 
+第一輪手動 CI 的原生／session、iPhoneOS 編譯及簽章已通過，GUI 尚在執行。發佈審查發現 orb／battle manifest 仍標 0.5.10，orb scope 也未描述可選心四連消一般毒；已更新 manifest 及 generator 的 scope 契約，原生欄位、RVA／113 組指紋與產生的 header 保持一致。完成這項 metadata 修正後須再跑完整手動 CI，第一輪產物不交付。
+
 ## 0.5.10-orbs：轉轉／刺珠多形狀求路，CI 77 完成
 
 2026-10-30，[CI 77](https://github.com/hugotang/padcheaper/actions/runs/41027272995) 的原生／session／求解器／規則／config、iPhoneOS arm64 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視面板、BGM 開關、刺珠偏好、策略頁及分享／匯入畫面。
