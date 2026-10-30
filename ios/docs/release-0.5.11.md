@@ -14,6 +14,10 @@
 
 全部 30 次路徑／消除／心四連／T／毒與刺珠 oracle 驗證通過。單毒停轉盤和最新 7×6 低血盤仍未找到光 T，兩個策略各 0／3；這些停止沒有消毒，已修正「盤上有毒就提示先轉走」的誤導訊息。最新盤當次 HP 241329、四次刺珠傷害上限 238968；沒有把這筆 HP 借用到先前成功盤。完整 [對照報告](../research/orb-poison-results-0511.json) 保留去識別盤面來源及路徑，桌面時間不代表 iPhone 時間。
 
-Windows 求解器／model 回歸已通過，新增一般毒、猛毒、心五連、落珠心四連、轉轉相位與爆彈案例亦通過。macOS session／設定／原生及 GUI、arm64 編譯與簽章待本版手動 CI；`device_verified=false`。現有四方向、0.5.10 形狀修正、0.5.9 開場及 BGM、Dopamine rootless／LiveContainer 載入方式沿用。
+Windows 完整求解器／model 回歸與新增一般毒、猛毒、心五連、落珠心四連、轉轉相位、爆彈及荊棘案例通過。2026-10-30，[CI 79](https://github.com/hugotang/padcheaper/actions/runs/41046955701) 的原生／session／求解器／規則／config、iPhoneOS arm64 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視一般毒／心四連開關、BGM、荊棘偏好、策略保存及分享／匯入畫面。
+
+二進位來源 `d9f84daadbff9af41bdd8a64f43594c4ed1fa697`，大小 4,933,600 bytes，SHA-256 `023a022a351793881219932beb5593bfbcb883e7f3ed253028ff50eb2683a67e`；兩份 target manifest 均為 0.5.11，113 組原生指紋與原始 IPA 相符，config 範例及兩份雨龍整包保留 CI 原件。`device_verified=false`。
+
+真機回血與首消仍待驗收；現有四方向、0.5.10 形狀修正、0.5.9 開場及 BGM、Dopamine rootless／LiveContainer 載入方式沿用。完整驗證見 [開發紀錄](development.md)。
 
 更新後先停止自動轉珠並完整關閉 PAD，使用原載入方式換入新版。開啟轉珠頁、選取目前隊伍策略，再打開「心四連時允許消一般毒」；保持深入品質及光 T＋心四連目標，觀察真正首消、Combo、消毒及回血。一般毒留在盤上不會爆炸；放寬一般毒不能保證解決低血、珠數或形狀配置造成的停轉。
