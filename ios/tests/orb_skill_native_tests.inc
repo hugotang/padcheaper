@@ -221,11 +221,16 @@ static void SkillOrbConditionTests() {
     Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
         [reason containsString:@"光珠至少 9 顆，目前 5 顆"] && [reason containsString:@"心珠至少 9 顆，目前 25 顆"],
         "native first-child wrapper and multi-color thresholds require each selected color independently");
-    fixture(); lightBoard(5); Put<float>(Impl + PHOrbSkillBoardResizeOffset, 0.5f);
-    engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
-    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillUnavailable &&
-        [reason containsString:@"目前珠數未能確認"] && ![reason containsString:@"目前 5 顆"] && !writes,
-        "a resizing native board preserves the requirement but does not claim an incorrect current count");
+    fixture(); lightBoard(5); engine = [FixtureSkillEngine new];
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Put<float>(Impl + PHOrbSkillBoardResizeOffset, 0.5f);
+    Put<float>(Impl + PHOrbSkillBoardResizeOffset + 4, 1);
+    NSString *changedCount = SkillOrbCondition(state, 0, readinessFixture, true);
+    Check([changedCount containsString:@"目前珠數未能確認"] && ![changedCount containsString:@"目前 5 顆"],
+        "resize after a stable sample preserves the requirement without claiming a stale current count");
+    Check([engine useSkill:0 expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected &&
+        !writes && !canUseCalls && !readinessCalls && !skillStartCalls,
+        "resize detected before a native skill attempt rejects it before readiness getters or activation");
     fixture(); lightBoard(5); engine = [FixtureSkillEngine new];
     [engine readAutomation:&state frame:Frame() reason:&reason];
     Check([SkillOrbCondition(state, 0, readinessFixture, false) containsString:@"目前珠數未能確認"],
