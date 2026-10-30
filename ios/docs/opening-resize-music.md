@@ -2,6 +2,8 @@
 
 2026-10-30，使用者回報 0.5.8 的開場只完成五步，連續模式在第 5 步技能期間停止，尚無轉珠輸入；另啟用未通關隊伍 BGM，但診斷顯示未找到曲目。使用者確認兩者都有，測試環境是 **Dopamine rootless 越獄的 iPhone 直接注入，沒有使用 LiveContainer**。新版 build 與真機狀態見 [開發紀錄](development.md)。
 
+使用者另確認 Dopamine rootless 與 LiveContainer 目前都能載入使用，兩種環境都需維持兼容。本次修正保留相同 dylib、guest 辨識與 frame hook；本次故障環境紀錄不限制 LiveContainer 的使用。
+
 ## 開場
 
 已確認順序是五格武裝 → 雨龍變身 → 四格武裝 → 二格武裝 → 三格武裝；第五個 native 使用次數由 4 到 5，已停止的 session 之後才補記確認，第六步未嘗試。沒有當時逐幀讀取資料，舊 log 無法證明是哪一個指標或座標校驗失敗。

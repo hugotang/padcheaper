@@ -4,7 +4,9 @@
 
 `0.5.9-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
-0.5.9 修正開場擴盤時中斷及未通關隊伍 BGM 名稱查找。2026-10-30 的問題回報來自 **Dopamine rootless 越獄 iPhone 直接注入**，當次沒有使用 LiveContainer；新版驗證狀態以 [開發紀錄](docs/development.md) 為準。[更新說明](docs/release-0.5.9.md) 與 [原生依據](docs/opening-resize-music.md) 列出改盤等待、曲目比對與驗收範圍。
+0.5.9 修正開場擴盤時中斷及未通關隊伍 BGM 名稱查找。[CI 76](https://github.com/hugotang/padcheaper/actions/runs/41017566656) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI 報告；Dopamine 真機結果仍待驗收。2026-10-30 的問題回報來自 **Dopamine rootless 越獄 iPhone 直接注入**，當次沒有使用 LiveContainer；新版驗證狀態以 [開發紀錄](docs/development.md) 為準。[更新說明](docs/release-0.5.9.md) 與 [原生依據](docs/opening-resize-music.md) 列出改盤等待、曲目比對與驗收範圍。
+
+同一份 dylib 保留 **Dopamine rootless 與 LiveContainer** 兩種載入方式。使用者確認兩者目前都能使用；本次改盤與 BGM 修正共用同一套原生讀取及 frame hook，載入說明分列於下方。
 
 0.5.8 修正徽章重啟選擇及失敗還原待辦，增加未通關隊伍 BGM、策略 JSON 分享／檔案匯入、同進化鏈武裝滿充能時原生本體選擇、荊棘 Combo 偏好與零接觸補搜。[CI 74](https://github.com/hugotang/padcheaper/actions/runs/41011326922) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機驗收待回報；[更新說明](docs/release-0.5.8.md)、[保存與分享](docs/persistence-music-sharing.md)、[AutoCombo 參考](docs/autocombo-review.md) 及 [通關回傳](docs/clear-dungeon-audit.md) 分別列出行為與證據限制。
 
