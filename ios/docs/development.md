@@ -6,6 +6,8 @@
 
 ## 0.5.8-orbs：保存、BGM、分享、技能選擇及求路，驗證中
 
+2026-10-30，[CI 73](https://github.com/hugotang/padcheaper/actions/runs/41010018751)，來源 `728020896deb0aa9ac446cd87438855c5c8afcfe`：原生／session／求解器／規則／config、iPhoneOS 編譯、簽章及瀏覽器全部通過。Scene 模擬器完成流程，僅檔案匯入的提示文字斷言失敗：測試查找「尚未儲存」，介面實際顯示「已驗證並加入草稿」及「儲存並選用」；草稿數量及 config 未發布的兩項檢查保留。現已核對實際成功提示與保存指示，待下一輪完整 CI，未交付此輪產物。另更新 README 的版本標頭及 config.json 隊伍庫保存位置。
+
 同批追加徽章重啟保存：IDA 修正 save_decks=58、recv_team=122，從精確 request raw records 核對 wire 0，可靠預設 0 可清舊值；登入／原生 commit 後按欄位延遲回蓋，帳號／新儲存／關閉取消。account 數值嚴格校驗，JSON 有界讀取，關閉 Skin／BGM 的 ownership bits／descriptor flags 還原失敗保留到讀回確認。新增真正記憶體映射替身案例，尚待 macOS 執行。
 
 新增預設關閉的未通關隊伍 BGM：唯讀 clear hash、原生 named audio setter／refresh、同場 override lease、event music 讓權、已載入資源與單人限制。普通／完整策略均可輸出 JSON 至 iOS 原生分享面板，以 document picker 匯入後預覽再原子保存。新增檔案往返／拒絕、原生分享與 picker 呈現／取消、temp 清理、草稿及焦點回復測試，待本批 CI；未實際向他人分享。細節見 [保存、音樂與分享](persistence-music-sharing.md)。

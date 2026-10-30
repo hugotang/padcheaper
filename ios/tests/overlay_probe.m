@@ -910,7 +910,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [(id<UIDocumentPickerDelegate>)profileEditor documentPicker:profilePicker didPickDocumentsAtURLs:@[fixture]];
             PHProbeCheck([[[profileEditor valueForKey:@"draft"] objectForKey:@"profiles"] count] == 1 &&
                 [PHProbeJSON(@"config.json") isEqual:shareConfig] &&
-                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"尚未儲存"],
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"已驗證並加入草稿"] &&
+                [((UILabel *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileNotice")).text containsString:@"儲存並選用"],
                 @"A file delegate reads real JSON into preview without publishing the draft");
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileDelete") sendActionsForControlEvents:UIControlEventTouchUpInside];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
