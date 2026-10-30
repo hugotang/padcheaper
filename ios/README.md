@@ -4,7 +4,7 @@
 
 `0.5.10-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
-0.5.10 改善轉轉／刺珠盤的多形狀求路：允許中途繼續補心四連，最終仍須通過完整目標與存活限制。四份停止盤中，第二盤已在桌面三次找到光 T＋心四連；其他盤受低血可達範圍、光心配置或缺心限制，詳見 [分析](docs/orb-spinner-thorn-search.md) 與 [更新說明](docs/release-0.5.10.md)。本機回歸及新舊對照已完成，這版完整 CI／iPhone 驗收狀態以 [開發紀錄](docs/development.md) 為準。
+0.5.10 改善轉轉／刺珠盤的多形狀求路：允許中途繼續補心四連，最終仍須通過完整目標與存活限制。四份停止盤中，第二盤已在桌面三次找到光 T＋心四連；其他盤受低血可達範圍、光心配置或缺心限制，詳見 [分析](docs/orb-spinner-thorn-search.md) 與 [更新說明](docs/release-0.5.10.md)。[CI 77](https://github.com/hugotang/padcheaper/actions/runs/41027272995) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI 報告；iPhone 求路及首消／HP 仍待驗收，完整記錄見 [開發紀錄](docs/development.md)。
 
 使用者已確認 0.5.9 開場 6／6 及 BGM 實際正常播放，這次仍保留兩項修正。[CI 76](https://github.com/hugotang/padcheaper/actions/runs/41017566656) 為 0.5.9 的驗證，不代替 0.5.10。問題回報来自 **Dopamine rootless 越獄 iPhone 直接注入**，同一份 dylib 保留目前已可用的 LiveContainer 與 Dopamine rootless 載入方式。
 

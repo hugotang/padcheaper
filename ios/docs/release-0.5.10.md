@@ -8,7 +8,13 @@
 
 第一盤在原四方向／避轉轉策略及僅能碰一次刺珠的預算下沒有跨相位光 T；第三盤固定六光／23 心存在 T＋獨立心四連配置衝突；第四盤只有三顆固定心，立即缺珠。這版不能靠普通求路解決這三種限制，仍保留停止。具體範圍及 diagonal／轉轉補珠建議見 [分析](orb-spinner-thorn-search.md)。diagonal 與按時取轉轉顏色尚未加入本版。
 
-本機求解器／model 回歸及對照量測已完成，完整 macOS／原生／session／arm64／簽章／GUI CI 待執行；目前不宣稱新 dylib 已完成。最新來源與驗證結果見 [開發紀錄](development.md)，`device_verified=false`。
+2026-10-30，[CI 77](https://github.com/hugotang/padcheaper/actions/runs/41027272995) 的原生／session／求解器／規則／config、iPhoneOS arm64 編譯、嚴格簽章、瀏覽器及四份 Scene／舊式視窗啟動／重啟報告全部通過，GUI 零 failures。已檢視面板、BGM 開關、刺珠偏好、策略頁及分享／匯入畫面。
+
+本次 macOS 轉轉／刺珠新回歸達標 2／2，45 步、5 Combo、547 ms、15 次接觸、傷害上限 418695；完整原生與 session 回歸仍驗證未達標禁止輸入、逐格 token／HP／場景取消及單人限制。桌面 24 次停止盤和 456 次一般盤對照的候選 solver／probe 雜湊與本次建置 commit 一致，舊 0.5.8 報告只作歷史資料。iPhone 耗時與實際首消／HP 尚待驗收。
+
+二進位來源 `524c9c64e8e0291fd4d67f22d224bb16d6953408`，大小 4,916,240 bytes，SHA-256 `bdea19331d7c70e06959f86865c3c9f82b1bbafa29e158d1f94cd4b0fa5fbcde`；113 組指紋與原始 IPA 相符，config 範例及兩份雨龍整包保留 CI 原件。`device_verified=false`。
+
+最新結果見 [開發紀錄](development.md)，iPhone 求路／首消及刺珠 HP 仍待裝置驗收。
 
 同一份 dylib 保留 **Dopamine rootless 與 LiveContainer** 兩種載入方式；使用者確認兩者目前均可用。既有隊伍與 config 可沿用。正式交付後先停止連續模式、完整關閉 PAD，Dopamine 沿用現有 rootless 注入方式替換；LiveContainer 在原 PAD Tweak Folder 換入新版並重新簽署。重新啟動確認面板 `0.5.10-orbs`，確保只載入一份版本，步驟見 [README](../README.md)。
 
