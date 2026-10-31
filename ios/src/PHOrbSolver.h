@@ -12,6 +12,7 @@ struct PHOrbSolveOptions {
     unsigned backtrackLimit = 0;
     bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
     bool allowPoisonWithHeartFour = false; // Team policy: normal poison may clear with a first-wave heart four in every phase.
+    bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };

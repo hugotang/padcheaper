@@ -1,0 +1,1849 @@
+{
+  "schema": 1,
+  "scope": "Independent analysis of recorded 0.5.11 data; no verification of the unbuilt source batch",
+  "provenance": {
+    "encoding": "UTF-8 with normalized LF newlines",
+    "input_sha256": "b1de9251626c9a5f943b6e9469d5b9035d1a68b5ae88fa7ba96c16d9555b9aa2",
+    "analysis_source_sha256": "68849698c93c2507ec1cfffc805a67b6a8ece6067d19980bd5d34a6117ef5f19"
+  },
+  "logs": [
+    {
+      "id": "log-1",
+      "source_sha256": "ba9c228c45c0bd5318a66d18d81749a4e21535d3d881307d315e5c574a27497a",
+      "trace": {
+        "fixedInventory": [
+          4,
+          5,
+          7,
+          8,
+          6,
+          6
+        ],
+        "minimumInventory": [
+          4,
+          5,
+          7,
+          8,
+          6,
+          6
+        ],
+        "steps": 19,
+        "spinnerPhases": 6,
+        "metadataReplayMatches": true,
+        "thornContacts": 0,
+        "minimumCombos": 2,
+        "goalHits": [
+          0,
+          0
+        ],
+        "evaluationMatches": true,
+        "phaseResults": [
+          {
+            "combos": 3,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              0,
+              0
+            ],
+            "firstWaveWitnesses": []
+          },
+          {
+            "combos": 3,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "history": [
+        {
+          "generation": 4,
+          "turn": 1,
+          "fixedInventory": [
+            3,
+            8,
+            5,
+            16,
+            2,
+            7
+          ],
+          "minimumInventory": [
+            3,
+            8,
+            5,
+            16,
+            2,
+            7
+          ],
+          "steps": 34,
+          "spinnerPhases": 6,
+          "metadataReplayMatches": true,
+          "thornContacts": 0,
+          "minimumCombos": 7,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": []
+        }
+      ]
+    },
+    {
+      "id": "log-2",
+      "source_sha256": "801363bf61cb1cc867f78718410f7489d30b333bb58d73784b7658947a183cd1",
+      "trace": {
+        "fixedInventory": [
+          4,
+          5,
+          7,
+          8,
+          6,
+          6
+        ],
+        "minimumInventory": [
+          4,
+          5,
+          7,
+          8,
+          6,
+          6
+        ],
+        "steps": 19,
+        "spinnerPhases": 6,
+        "metadataReplayMatches": true,
+        "thornContacts": 0,
+        "minimumCombos": 2,
+        "goalHits": [
+          0,
+          0
+        ],
+        "evaluationMatches": true,
+        "phaseResults": [
+          {
+            "combos": 3,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              0,
+              0
+            ],
+            "firstWaveWitnesses": []
+          },
+          {
+            "combos": 3,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          },
+          {
+            "combos": 2,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              0
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 3,
+                "cells": [
+                  25,
+                  26,
+                  27,
+                  33,
+                  40
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "history": [
+        {
+          "generation": 4,
+          "turn": 1,
+          "fixedInventory": [
+            3,
+            8,
+            5,
+            16,
+            2,
+            7
+          ],
+          "minimumInventory": [
+            3,
+            8,
+            5,
+            16,
+            2,
+            7
+          ],
+          "steps": 34,
+          "spinnerPhases": 6,
+          "metadataReplayMatches": true,
+          "thornContacts": 0,
+          "minimumCombos": 7,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    9,
+                    10,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    17,
+                    18,
+                    19,
+                    25,
+                    32
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": []
+        }
+      ]
+    },
+    {
+      "id": "log-3",
+      "source_sha256": "e72f7d61ac9feb420f926c2cac5786076509cf26fafe95e865100db6be2002b5",
+      "trace": {
+        "fixedInventory": [
+          5,
+          2,
+          5,
+          7,
+          3,
+          2
+        ],
+        "minimumInventory": [
+          5,
+          2,
+          5,
+          7,
+          3,
+          2
+        ],
+        "steps": 0,
+        "spinnerPhases": 6
+      },
+      "history": [
+        {
+          "generation": 23,
+          "turn": 5,
+          "fixedInventory": [
+            4,
+            7,
+            3,
+            5,
+            1,
+            9
+          ],
+          "minimumInventory": [
+            4,
+            7,
+            3,
+            5,
+            1,
+            9
+          ],
+          "steps": 46,
+          "spinnerPhases": 6,
+          "metadataReplayMatches": true,
+          "thornContacts": 4,
+          "minimumCombos": 6,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    0,
+                    6,
+                    12,
+                    18
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    8,
+                    9,
+                    10,
+                    15,
+                    21
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": [
+            25
+          ]
+        },
+        {
+          "generation": 24,
+          "turn": 6,
+          "fixedInventory": [
+            3,
+            5,
+            2,
+            8,
+            2,
+            9
+          ],
+          "minimumInventory": [
+            3,
+            5,
+            2,
+            8,
+            2,
+            9
+          ],
+          "steps": 44,
+          "spinnerPhases": 6,
+          "metadataReplayMatches": true,
+          "thornContacts": 3,
+          "minimumCombos": 6,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    4,
+                    10,
+                    15,
+                    16,
+                    17
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    6,
+                    12,
+                    18,
+                    24
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": [
+            25
+          ]
+        },
+        {
+          "generation": 25,
+          "turn": 7,
+          "fixedInventory": [
+            3,
+            2,
+            5,
+            9,
+            3,
+            7
+          ],
+          "minimumInventory": [
+            3,
+            2,
+            5,
+            9,
+            3,
+            7
+          ],
+          "steps": 35,
+          "spinnerPhases": 6,
+          "metadataReplayMatches": true,
+          "thornContacts": 5,
+          "minimumCombos": 7,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            },
+            {
+              "combos": 7,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 1,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 1,
+                  "color": 5,
+                  "cells": [
+                    5,
+                    11,
+                    17,
+                    23
+                  ]
+                },
+                {
+                  "goal": 0,
+                  "color": 3,
+                  "cells": [
+                    16,
+                    20,
+                    21,
+                    22,
+                    28
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": [
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "log-4",
+      "source_sha256": "553c7c49fa9fb51fc98740bac9453dec50f07ea1c3a52fd3eadf3c808c911263",
+      "trace": {
+        "fixedInventory": [
+          0,
+          7,
+          0,
+          0,
+          13,
+          10
+        ],
+        "minimumInventory": [
+          0,
+          7,
+          0,
+          0,
+          13,
+          10
+        ],
+        "steps": 42,
+        "spinnerPhases": 1,
+        "metadataReplayMatches": true,
+        "thornContacts": 0,
+        "minimumCombos": 8,
+        "goalHits": [
+          1,
+          1
+        ],
+        "evaluationMatches": true,
+        "phaseResults": [
+          {
+            "combos": 8,
+            "poisonErased": 0,
+            "mortalPoisonErased": 0,
+            "unmatchedBombs": 0,
+            "heartFours": 0,
+            "goalHits": [
+              1,
+              1
+            ],
+            "firstWaveWitnesses": [
+              {
+                "goal": 0,
+                "color": 1,
+                "cells": [
+                  1,
+                  6,
+                  7,
+                  8,
+                  13
+                ]
+              },
+              {
+                "goal": 1,
+                "color": 1,
+                "cells": [
+                  1,
+                  6,
+                  7,
+                  8,
+                  13
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "history": [
+        {
+          "generation": 61,
+          "turn": 0,
+          "fixedInventory": [
+            7,
+            2,
+            9,
+            3,
+            1,
+            8
+          ],
+          "minimumInventory": [
+            7,
+            2,
+            9,
+            3,
+            1,
+            8
+          ],
+          "steps": 31,
+          "spinnerPhases": 1,
+          "metadataReplayMatches": true,
+          "thornContacts": 0,
+          "minimumCombos": 6,
+          "goalHits": [
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 6,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 0,
+              "goalHits": [
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 0,
+                  "cells": [
+                    18,
+                    19,
+                    20,
+                    21,
+                    22,
+                    23
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": []
+        },
+        {
+          "generation": 62,
+          "turn": 0,
+          "fixedInventory": [
+            12,
+            0,
+            8,
+            0,
+            0,
+            10
+          ],
+          "minimumInventory": [
+            12,
+            0,
+            8,
+            0,
+            0,
+            10
+          ],
+          "steps": 29,
+          "spinnerPhases": 1,
+          "metadataReplayMatches": true,
+          "thornContacts": 0,
+          "minimumCombos": 8,
+          "goalHits": [
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 8,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 0,
+              "goalHits": [
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 0,
+                  "cells": [
+                    18,
+                    19,
+                    20,
+                    21,
+                    22,
+                    23
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": []
+        },
+        {
+          "generation": 63,
+          "turn": 0,
+          "fixedInventory": [
+            0,
+            7,
+            0,
+            0,
+            13,
+            10
+          ],
+          "minimumInventory": [
+            0,
+            7,
+            0,
+            0,
+            13,
+            10
+          ],
+          "steps": 42,
+          "spinnerPhases": 1,
+          "metadataReplayMatches": true,
+          "thornContacts": 0,
+          "minimumCombos": 8,
+          "goalHits": [
+            1,
+            1
+          ],
+          "evaluationMatches": true,
+          "phaseResults": [
+            {
+              "combos": 8,
+              "poisonErased": 0,
+              "mortalPoisonErased": 0,
+              "unmatchedBombs": 0,
+              "heartFours": 0,
+              "goalHits": [
+                1,
+                1
+              ],
+              "firstWaveWitnesses": [
+                {
+                  "goal": 0,
+                  "color": 1,
+                  "cells": [
+                    1,
+                    6,
+                    7,
+                    8,
+                    13
+                  ]
+                },
+                {
+                  "goal": 1,
+                  "color": 1,
+                  "cells": [
+                    1,
+                    6,
+                    7,
+                    8,
+                    13
+                  ]
+                }
+              ]
+            }
+          ],
+          "observedMetadataAndSharedPhaseMatch": true,
+          "observedTypeDifferences": []
+        }
+      ]
+    }
+  ],
+  "firstTwoRetainIdenticalTraceAndHistory": true,
+  "firstBoardTConfigurationProof": {
+    "model": "arbitrary fixed-cell permutations; one independently placed conservative-border T per shared phase; no route, heart or move limit",
+    "availableFixedLight": 8,
+    "templateCount": 80,
+    "templatesAvoidingSpinners": 20,
+    "templatesAvoidingSpinnersAndBorder": 0,
+    "viablePerPhase": [
+      23,
+      20,
+      23,
+      22,
+      20,
+      21
+    ],
+    "compatibleFrontierSizes": [
+      23,
+      18,
+      16,
+      11,
+      11,
+      0
+    ],
+    "recursiveNodes": 80,
+    "configurationExists": false
+  }
+}

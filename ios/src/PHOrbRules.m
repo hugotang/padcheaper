@@ -7,7 +7,8 @@ NSDictionary *PHOrbDefaultSkillRule(void) {
              @"color":@-1, @"below":@0, @"enemy":@"none", @"group":@0, @"once":@NO,
              @"reserveUntil":@0, @"obstacle":@"none", @"unmatchableColors":@0,
              @"hpAtMost":@0, @"status":@"none", @"required":@NO,
-             @"source":@"auto", @"skill":@0, @"atLeast":@0};
+             @"source":@"auto", @"skill":@0, @"atLeast":@0,
+             @"intervalMode":@"run", @"startAfter":@0};
 }
 
 PHOrbSkillRequest PHOrbRequestForRule(NSDictionary *rule) {
@@ -156,6 +157,8 @@ BOOL PHOrbSkillRulesValid(id rules) {
             !Integer(rule[@"below"], 0, PHOrbMaxCells + 1) || ![rule[@"enemy"] isKindOfClass:NSString.class] ||
             !Integer(rule[@"atLeast"], 0, PHOrbMaxCells) || !Integer(rule[@"skill"], 0, 0x1ffff) ||
             ![rule[@"source"] isKindOfClass:NSString.class] || ![@[@"auto", @"body", @"assist"] containsObject:rule[@"source"]] ||
+            ![rule[@"intervalMode"] isKindOfClass:NSString.class] || ![@[@"run", @"accepted"] containsObject:rule[@"intervalMode"]] ||
+            !Integer(rule[@"startAfter"], 0, 999) ||
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
             !PHOrbRuleIsBoolean(rule[@"once"]) || !Integer(rule[@"reserveUntil"], 0, 999) ||
             ![rule[@"obstacle"] isKindOfClass:NSString.class] || ![PHOrbObstacleConditions() containsObject:rule[@"obstacle"]] ||
@@ -191,6 +194,24 @@ NSArray<NSNumber *> *PHOrbSkillRuleOrder(NSArray *rules, const uint8_t next[PHOr
         // The first row sets the group's priority. Within it, resume after
         // the last accepted member, wrap once, and allow unavailable fallback.
         NSUInteger start = next[group - 1] % rules.count;
+        BOOL timed = NO;
+        for (NSDictionary *rule in rules) if ([rule[@"enabled"] boolValue] &&
+            [rule[@"group"] unsignedIntegerValue] == group && [rule[@"intervalMode"] isEqual:@"accepted"]) timed = YES;
+        if (timed) {
+            // Rescue rows can repeat the same member. Try all conditions for
+            // the next position before falling back to the previous caster.
+            unsigned slots = 0;
+            for (NSUInteger step = 0; step < rules.count; ++step) {
+                NSDictionary *rule = rules[(start + step) % rules.count];
+                const NSUInteger slot = [rule[@"slot"] unsignedIntegerValue] - 1;
+                if ([rule[@"group"] unsignedIntegerValue] != group || (slots & (1u << slot))) continue;
+                slots |= 1u << slot;
+                for (NSUInteger index = 0; index < rules.count; ++index)
+                    if ([rules[index][@"group"] unsignedIntegerValue] == group &&
+                        [rules[index][@"slot"] unsignedIntegerValue] == slot + 1) [order addObject:@(index)];
+            }
+            continue;
+        }
         for (NSUInteger step = 0; step < rules.count; ++step) {
             NSUInteger index = (start + step) % rules.count;
             if ([rules[index][@"group"] unsignedIntegerValue] == group) [order addObject:@(index)];
@@ -205,12 +226,27 @@ static PHOrbRuleMatch Explained(PHOrbRuleMatch match, NSString *message, NSStrin
 }
 
 PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *state, NSUInteger turn, NSString **reason) {
-    if (!PHOrbSkillRulesValid(@[rule ?: @{}]) || !state || !turn)
+    return PHOrbTriggerSkillRuleWithTiming(rule, state, turn, 0, 0, reason);
+}
+
+PHOrbRuleMatch PHOrbTriggerSkillRuleWithTiming(NSDictionary *rule, const PHOrbSnapshot *state,
+    NSUInteger runTurn, NSUInteger observedTurn, NSUInteger lastUseTurn, NSString **reason) {
+    if (!PHOrbSkillRulesValid(@[rule ?: @{}]) || !state || !runTurn)
         return Explained(PHOrbRuleUnknown, @"規則或回合資料無效", reason);
     rule = PHOrbNormalizedSkillRule(rule);
     if (![rule[@"enabled"] boolValue]) return Explained(PHOrbRuleNo, @"已停用", reason);
-    if ((turn - 1) % [rule[@"every"] unsignedIntegerValue])
-        return Explained(PHOrbRuleNo, @"目前回合不符合間隔", reason);
+    const NSUInteger every = [rule[@"every"] unsignedIntegerValue];
+    const NSUInteger startAfter = [rule[@"startAfter"] unsignedIntegerValue];
+    const BOOL accepted = [rule[@"intervalMode"] isEqual:@"accepted"];
+    if (accepted && (!observedTurn || lastUseTurn > observedTurn))
+        return Explained(PHOrbRuleUnknown, @"同場已觀察回合或上次施放紀錄無法確認", reason);
+    const NSUInteger turn = accepted ? observedTurn : runTurn;
+    if (turn <= startAfter)
+        return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"先轉 %@ 回合：已確認 %lu／%@ 回合",
+            rule[@"startAfter"], (unsigned long)(turn - 1), rule[@"startAfter"]], reason);
+    if (accepted ? (lastUseTurn && turn - lastUseTurn < every) : ((turn - startAfter - 1) % every))
+        return Explained(PHOrbRuleNo, accepted ? [NSString stringWithFormat:@"距上次施放 %lu／%@ 回合，等待間隔",
+            (unsigned long)(turn - lastUseTurn), rule[@"every"]] : @"目前回合不符合間隔", reason);
     if ([rule[@"floor"] unsignedIntValue] && [rule[@"floor"] unsignedIntValue] != state->wave + 1)
         return Explained(PHOrbRuleNo, [NSString stringWithFormat:@"目前第 %u 層，不是指定的第 %@ 層", state->wave + 1, rule[@"floor"]], reason);
     if (!state->automation.valid) return Explained(PHOrbRuleUnknown, @"技能與隊伍資料無法確認", reason);
@@ -224,6 +260,8 @@ PHOrbRuleMatch PHOrbTriggerSkillRule(NSDictionary *rule, const PHOrbSnapshot *st
             return Explained(PHOrbRuleNo, @"目前角色形態不符合指定編號", reason);
     }
     NSMutableArray *matched = [NSMutableArray array];
+    if (accepted) [matched addObject:lastUseTurn ? [NSString stringWithFormat:@"距上次施放 %lu 回合",
+        (unsigned long)(turn - lastUseTurn)] : @"起步回合已完成，等待原生技能就緒"];
     NSUInteger hpLimit = [rule[@"hpAtMost"] unsignedIntegerValue];
     if (hpLimit) {
         const PHOrbAutomationState *player = &state->automation;
@@ -304,6 +342,10 @@ NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
     [parts addObject:[NSString stringWithFormat:@"位置 %@%@", rule[@"slot"], [rule[@"monster"] unsignedIntValue] ?
         [NSString stringWithFormat:@"（No.%@）", rule[@"monster"]] : @""]];
     [parts addObject:[rule[@"every"] unsignedIntValue] == 1 ? @"每回合" : [NSString stringWithFormat:@"每 %@ 回合", rule[@"every"]]];
+    if ([rule[@"intervalMode"] isEqual:@"accepted"])
+        [parts addObject:[rule[@"group"] unsignedIntValue] ? @"從同組上次施放計算，停止重開保留" : @"從上次施放計算，停止重開保留"];
+    if ([rule[@"startAfter"] unsignedIntValue])
+        [parts addObject:[NSString stringWithFormat:@"先轉 %@ 回合再啟用", rule[@"startAfter"]]];
     if ([rule[@"floor"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"第 %@ 層", rule[@"floor"]]];
     if (![rule[@"source"] isEqual:@"auto"]) [parts addObject:[rule[@"source"] isEqual:@"body"] ? @"僅本體技能" : @"僅武裝技能"];
     if ([rule[@"skill"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"技能 %@", rule[@"skill"]]];

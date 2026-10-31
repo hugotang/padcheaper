@@ -41,16 +41,17 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     NSDictionary *recovery = settings[@"recovery"] ?: PHOrbDefaultRecovery();
     NSNumber *thornComboPriority = settings[@"thornComboPriority"] ?: @NO;
     NSNumber *allowPoisonWithHeartFour = settings[@"allowPoisonWithHeartFour"] ?: @NO;
+    NSNumber *diagonal = settings[@"diagonal"] ?: @NO;
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
         !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority) ||
-        !PHOrbProfileIsBoolean(allowPoisonWithHeartFour)) return nil;
+        !PHOrbProfileIsBoolean(allowPoisonWithHeartFour) || !PHOrbProfileIsBoolean(diagonal)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
     return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy],
         @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority,
-        @"allowPoisonWithHeartFour":allowPoisonWithHeartFour};
+        @"allowPoisonWithHeartFour":allowPoisonWithHeartFour, @"diagonal":diagonal};
 }
 
 NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
@@ -76,7 +77,7 @@ BOOL PHOrbProfilesValid(id library) {
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
             !KeysWithOptional(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"],
-                @[@"recovery", @"thornComboPriority", @"allowPoisonWithHeartFour"])) return NO;
+                @[@"recovery", @"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal"])) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
@@ -122,7 +123,7 @@ static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
 BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
     if (![opening isKindOfClass:NSArray.class] || [opening count] > 24 || !PHFormationReadTeam(formation, NULL, NULL)) return NO;
     if (!Keys(formation, @[@"schema", @"title", @"slots"])) return NO;
-    NSMutableArray *bodies = [NSMutableArray array];
+    NSMutableArray *bodies = [NSMutableArray array], *assists = [NSMutableArray array];
     for (NSDictionary *slot in formation[@"slots"]) {
         if (!Keys(slot, @[@"body", @"assist"]) || ![slot[@"body"][@"id"] unsignedIntValue]) return NO;
         for (NSString *kind in @[@"body", @"assist"]) {
@@ -131,22 +132,40 @@ BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
                 ([card[@"id"] unsignedIntValue] && !PHBattleCatalogIDForNumber([card[@"id"] unsignedIntValue], &catalogID))) return NO;
         }
         [bodies addObject:slot[@"body"][@"id"]];
+        [assists addObject:slot[@"assist"][@"id"]];
     }
+    NSUInteger index = 0;
     for (id step in opening) {
-        if (![step isKindOfClass:NSDictionary.class] || !Keys(step, @[@"slot", @"source", @"monster", @"assist", @"skill", @"afterMonster"]) ||
+        if (!KeysWithOptional(step, @[@"slot", @"source", @"monster", @"assist", @"skill", @"afterMonster"],
+                @[@"consumeAssist", @"puzzleAfter"]) ||
             !Integer(step[@"slot"], 6) || ![step[@"slot"] unsignedIntValue] ||
             ![step[@"source"] isKindOfClass:NSString.class] || ![@[@"body", @"assist"] containsObject:step[@"source"]] ||
             !Integer(step[@"monster"], UINT16_MAX) || !Integer(step[@"assist"], UINT16_MAX) ||
-            !Integer(step[@"skill"], 0x1ffff) || ![step[@"skill"] unsignedIntValue] || !Integer(step[@"afterMonster"], UINT16_MAX)) return NO;
+            !Integer(step[@"skill"], 0x1ffff) || ![step[@"skill"] unsignedIntValue] || !Integer(step[@"afterMonster"], UINT16_MAX) ||
+            (step[@"consumeAssist"] && !PHOrbProfileIsBoolean(step[@"consumeAssist"])) ||
+            (step[@"puzzleAfter"] && !PHOrbProfileIsBoolean(step[@"puzzleAfter"]))) return NO;
         NSUInteger slot = [step[@"slot"] unsignedIntegerValue] - 1;
         uint16_t catalogID = 0;
         if (![step[@"monster"] isEqual:bodies[slot]] ||
-            ![step[@"assist"] isEqual:formation[@"slots"][slot][@"assist"][@"id"]] ||
+            ![step[@"assist"] isEqual:assists[slot]] ||
             ([step[@"source"] isEqual:@"assist"] && ![step[@"assist"] unsignedIntValue]) ||
-            ([step[@"afterMonster"] unsignedIntValue] && !PHBattleCatalogIDForNumber([step[@"afterMonster"] unsignedIntValue], &catalogID))) return NO;
+            ([step[@"afterMonster"] unsignedIntValue] && !PHBattleCatalogIDForNumber([step[@"afterMonster"] unsignedIntValue], &catalogID)) ||
+            ([step[@"consumeAssist"] boolValue] && (![step[@"source"] isEqual:@"assist"] || [step[@"afterMonster"] unsignedIntValue])) ||
+            ([step[@"puzzleAfter"] boolValue] && index + 1 != [opening count])) return NO;
         if ([step[@"afterMonster"] unsignedIntValue]) bodies[slot] = step[@"afterMonster"];
+        if ([step[@"consumeAssist"] boolValue]) assists[slot] = @0;
+        ++index;
     }
     return YES;
+}
+
+static uint8_t OpeningConsumedAssists(NSDictionary *profile, NSUInteger completed) {
+    uint8_t mask = 0;
+    for (NSUInteger i = 0; i < completed; ++i) {
+        NSDictionary *step = profile[@"opening"][i];
+        if ([step[@"consumeAssist"] boolValue]) mask |= 1u << ([step[@"slot"] unsignedIntegerValue] - 1);
+    }
+    return mask;
 }
 
 BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed) {
@@ -157,12 +176,19 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
         NSDictionary *step = profile[@"opening"][i];
         if ([step[@"afterMonster"] unsignedIntValue]) bodies[[step[@"slot"] unsignedIntegerValue] - 1] = step[@"afterMonster"];
     }
+    const uint8_t consumed = OpeningConsumedAssists(profile, completed);
     for (NSUInteger i = 0; i < 6; ++i) {
         const PHOrbSkillMember *member = &state->automation.members[i];
         uint16_t assist = 0;
         unsigned number = [profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue];
         if (number && !PHBattleCatalogIDForNumber(number, &assist)) return NO;
-        if (!member->active || member->temporaryTurns || member->number != [bodies[i] unsignedIntValue] || member->assistCatalogID != assist) return NO;
+        if (!member->active || member->temporaryTurns || member->number != [bodies[i] unsignedIntValue]) return NO;
+        if (consumed & (1u << i)) {
+            // Native type 250 clears the protected assist state and active
+            // assist, retaining its source ID. Missing equipment alone is
+            // insufficient evidence that this exact weapon was consumed.
+            if (member->assistCatalogID || member->assistState || member->sourceCatalogIDs[1] != assist) return NO;
+        } else if (member->assistCatalogID != assist) return NO;
     }
     return YES;
 }
@@ -170,11 +196,18 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
 BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state) {
     if (!state || !state->automation.valid) return NO;
     PHOrbSnapshot identity = *state;
+    const uint8_t consumed = OpeningConsumedAssists(profile, [profile[@"opening"] count]);
     for (NSUInteger i = 0; i < 6; ++i) {
         PHOrbSkillMember *member = &identity.automation.members[i];
         if (!member->temporaryTurns) continue;
         if (!member->temporaryKnown || !member->temporaryID || !member->identityNumber) return NO;
         member->number = member->identityNumber; member->assistCatalogID = member->identityAssist;
+        if (consumed & (1u << i)) {
+            uint16_t source = 0;
+            if (!PHBattleCatalogIDForNumber([profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue], &source) ||
+                member->identityAssist != source || member->assistState) return NO;
+            member->assistCatalogID = 0;
+        }
         member->temporaryTurns = 0;
     }
     return PHOrbProfileMatchesOpeningTeam(profile, &identity, [profile[@"opening"] count]);
@@ -188,7 +221,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
         ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
         !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
-            @[@"thornComboPriority", @"allowPoisonWithHeartFour"])) return nil;
+            @[@"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal"])) return nil;
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;
@@ -279,13 +312,17 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     }
     [lines addObject:@"\n開場（依序完成）："];
     NSUInteger index = 0;
-    for (NSDictionary *step in profile[@"opening"]) [lines addObject:[NSString stringWithFormat:@"%lu. 位置 %@ %@技能 %@%@",
+    for (NSDictionary *step in profile[@"opening"]) [lines addObject:[NSString stringWithFormat:@"%lu. 位置 %@ %@技能 %@%@%@%@",
         (unsigned long)++index, step[@"slot"], [step[@"source"] isEqual:@"body"] ? @"本體" : @"武裝", step[@"skill"],
-        [step[@"afterMonster"] unsignedIntValue] ? [NSString stringWithFormat:@" → #%@", step[@"afterMonster"]] : @""]];
+        [step[@"afterMonster"] unsignedIntValue] ? [NSString stringWithFormat:@" → #%@", step[@"afterMonster"]] : @"",
+        [step[@"consumeAssist"] boolValue] ? @" · 確認武裝消耗" : @"",
+        [step[@"puzzleAfter"] boolValue] ? @" · 先轉此盤再接循環" : @""]];
     if (!index) [lines addObject:@"沒有開場步驟，開始後使用循環規則"];
     [lines addObject:@"\n循環（依優先順序）："];
     for (NSDictionary *rule in profile[@"settings"][@"rules"]) [lines addObject:PHOrbSkillRuleDescription(rule)];
     [lines addObject:[NSString stringWithFormat:@"\n盤面目標：%@\n求路品質：%@", PHOrbGoalsDescription(profile[@"settings"][@"goals"]), profile[@"settings"][@"quality"]]];
+    [lines addObject:[profile[@"settings"][@"diagonal"] boolValue] ?
+        @"斜向轉珠：開啟；可走相鄰八方向，消除仍按橫直規則" : @"斜向轉珠：關閉；只走上下左右"];
     [lines addObject:[profile[@"settings"][@"thornComboPriority"] boolValue] ?
         @"荊棘盤優先 Combo：開啟；首消心四連且拖珠傷害低於目前 HP 才可接觸" : @"荊棘盤優先 Combo：關閉；優先較少傷害"];
     [lines addObject:[profile[@"settings"][@"allowPoisonWithHeartFour"] boolValue] ?

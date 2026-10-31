@@ -33,9 +33,9 @@ static inline bool PHBattlePolicyAllows(const PHBattlePolicy *policy, int16_t mo
 }
 
 // This is an engine restriction, independent of legacy allow-all filters.
-// Mode 7 remains multiplayer even while its multi selector is transitioning.
+// Co-op and both versus categories remain multiplayer during selector resets.
 static inline bool PHBattleIsSinglePlayer(int16_t mode, uint32_t multiplayer) {
-    return multiplayer == 0 && mode != 7;
+    return multiplayer == 0 && mode != 7 && mode != 10 && mode != 11;
 }
 
 // Describes native storage only; it must never authorize battle writes.

@@ -154,9 +154,14 @@
             titles:@[@"遊戲目前技能", @"僅本體技能", @"僅武裝技能"]]];
         [card addArrangedSubview:[self number:i field:@"skill" title:@"指定技能 ID（0 不限定）"]];
         [card addArrangedSubview:[self number:i field:@"every" title:@"回合間隔（1 每回合）"]];
+        [card addArrangedSubview:[self menu:i field:@"intervalMode" values:@[@"run", @"accepted"]
+            titles:@[@"從每次開始計算", @"從上次施放計算（同組共享）"]]];
+        [card addArrangedSubview:[self number:i field:@"startAfter" title:@"先轉幾回合再啟用（0 立即）"]];
+        if ([rule[@"intervalMode"] isEqual:@"accepted"]) [card addArrangedSubview:[self label:
+            @"保留同場已觀察回合與施放間隔，停止重開不重算。先轉盤期間仍會處理其他必要規則。"]];
         UIButton *ready = [self button:@"技能就緒就放"];
         ready.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRuleReady%lu", (unsigned long)i];
-        ready.accessibilityHint = @"設為每個轉珠回合檢查；仍需符合其他條件與輪替、保留設定";
+        ready.accessibilityHint = @"設為每個轉珠回合檢查；仍需符合先轉回合、其他條件與輪替、保留設定";
         [ready addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
             PHOrbRuleEditor *editor = weakSelf; if (!editor || i >= editor.draft.count) return;
             editor.draft[i][@"every"] = @1;
@@ -231,10 +236,10 @@
     UIButton *add = [self button:@"＋ 新增技能規則"]; add.enabled = self.draft.count < PHOrbMaxSkillRules;
     add.accessibilityIdentifier = @"padcheaper.orbsRuleAdd";
     [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能。一般規則不可用時略過；必要規則會先讓其他技能或同組替補嘗試補救，條件仍成立而未確認施放完成時停止轉珠。\n\n回合從按下開始算第 1 回合；間隔 2 會在第 1、3、5…回合判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
-    [self.rows addArrangedSubview:[self label:@"「技能就緒就放」把回合間隔設為 1：連續模式在每次轉珠前檢查，遊戲確認可用才施放；其他條件、輪替組、本場一次與保留樓層仍生效。\n\n兩個 2 回合技能要輪流用：兩條都選同一輪替組、間隔 1，關閉本場一次。冷卻由遊戲判斷；間隔 2 會讓兩條都只在第 1、3、5…回合檢查。"]];
+    [self.rows addArrangedSubview:[self label:@"最多 12 條，從上到下判斷；同一條中的條件需全部成立。每個位置每回合最多放一次技能。一般規則不可用時略過；必要規則會先讓其他技能或同組替補嘗試補救，條件仍成立而未確認施放完成時停止轉珠。\n\n「從每次開始計算」以按下開始為第 1 回合，間隔 2 在第 1、3、5…回合判斷。「從上次施放計算」保留同場同策略的已觀察回合；同組共用上次施放，停止重開不重算。先轉 2 回合表示第三盤才啟用，其他必要規則照常判斷。樓層為遊戲顯示的第幾層（1–999）。\n\n使用該位置當前可用的技能，包含已蓄好的繼承；角色編號比對當前形態，0 表示只限定位置。敵人條件僅在效果存在且我方尚未開啟對應全隊無效化時觸發；不計個別覺醒。留空規則只會連續轉珠。"]];
+    [self.rows addArrangedSubview:[self label:@"「技能就緒就放」把回合間隔設為 1：連續模式在每次轉珠前檢查，遊戲確認可用才施放；其他條件、輪替組、本場一次與保留樓層仍生效。\n\n兩個 2 回合技能要輪流用：兩條都選同一輪替組、間隔 1，關閉本場一次。冷卻由遊戲判斷。「從每次開始計算」的間隔 2 只在第 1、3、5…回合檢查；「從上次施放計算」則需距離同組上次啟動至少兩回合，錯過時會在下一回合重查。"]];
     [self.rows addArrangedSubview:[self label:@"HP 條件以目前有效上限計算，含固定／比例關卡及臨時上限修正；無法確認就停止，不把未知當成滿血。HP 與異常條件同時設定時，兩者都要成立。\n\n暫時覺醒無效與關卡禁止覺醒分開判斷；隊員綁定條件檢查全隊。技能封印期間不能靠施放技能自行解除，必要規則會停止並提示。\n\n同組任何一條確認完成，即滿足該組本回合的必要要求。必要設定不會越過保留樓層、本場一次或每位置限制；不同必要技能請分組。確認施放不等於保證回到 HP 門檻或解除所有異常，請指定合適的技能。"]];
-    [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下回合從下一條開始，未就緒者可略過。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件決定何時嘗試技能；技能後會重新讀盤，路徑仍須符合所有目標與傷害限制。已支援的效果可以留在盤面。"]];
+    [self.rows addArrangedSubview:[self label:@"同一輪替組每個轉珠回合只放一個技能；原生確認啟動後，下一回合繼續輪替，未就緒者可略過。保留施放間隔的组會先檢查下一位置的各條規則，吸收救援也推進輪替。組的優先度由最上方成員決定。\n\n保留樓層會限制同位置的所有規則，避免其他規則提前用掉技能。停用規則不保留技能。\n\n本場一次與當回合施放紀錄在停止後仍保留；未能確認啟動的一次性技能也不自動重試。離開本場或完整重啟遊戲後不保留紀錄。\n\n盤面妨礙條件決定何時嘗試技能；技能後會重新讀盤，路徑仍須符合所有目標與傷害限制。已支援的效果可以留在盤面。"]];
     [self.rows addArrangedSubview:[self label:@"同一條規則的條件全部都要符合（AND）。要在「暫時覺醒無效或光不可消」時放同一隻，建立兩條相同位置、獨立施放的規則：一條只設暫時覺醒無效，另一條只設光不可消。任一符合即可嘗試，同位置每回合最多施放一次。\n\n不可消選擇多種珠色時，任一所選珠色不可消便符合；全部不選表示任意珠色。其他條件仍須同時符合。"]];
 }
 - (void)add {
@@ -244,7 +249,7 @@
 }
 - (void)save {
     [self.view endEditing:YES];
-    if (!PHOrbSkillRulesValid(self.draft)) { self.notice.text = @"請檢查角色、群組與條件：間隔 1–999、樓層 0–999、缺珠 1–43、HP 百分比 0–100；保留樓層不能晚於指定樓層。"; return; }
+    if (!PHOrbSkillRulesValid(self.draft)) { self.notice.text = @"請檢查角色、群組與條件：間隔 1–999、先轉回合 0–999、樓層 0–999、缺珠 1–43、HP 百分比 0–100；保留樓層不能晚於指定樓層。"; return; }
     NSMutableArray *rules = [NSMutableArray array]; for (NSDictionary *rule in self.draft) [rules addObject:rule.copy];
     NSString *error = self.saveRules([rules copy]);
     if (error.length) { self.notice.text = error; return; }

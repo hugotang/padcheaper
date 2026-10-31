@@ -2,6 +2,7 @@
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbSkillWindow.h"
 #include "PHOrbSolver.h"
 #include <algorithm>
 #include <cmath>
@@ -11,22 +12,91 @@
 
 namespace {
 constexpr double StepSeconds = 0.065, PreviewLifetime = 45, ExecutionLimit = 4, TimeMargin = 0.40;
+constexpr double ArmDelay = 0.35;
 constexpr double AutomationSettle = 0.20, SkillTimeout = 30, TurnTimeout = 90;
+constexpr double SkillWindowTimeout = 3;
 bool ResolvingOrbs(uint32_t phase) { return phase >= 3 && phase <= 6; }
+bool AcceptedSkillTiming(NSArray *rules) {
+    for (NSDictionary *rule in rules) if ([rule[@"enabled"] boolValue] && [rule[@"intervalMode"] isEqual:@"accepted"]) return true;
+    return false;
+}
+NSDictionary *SkillTimingProfile(NSDictionary *profile) {
+    if (!profile.count) return @{};
+    return @{@"id":profile[@"id"], @"team":profile[@"team"], @"dungeon":profile[@"dungeon"], @"floor":profile[@"floor"],
+        @"formation":profile[@"formation"] ?: @{}, @"opening":profile[@"opening"] ?: @[]};
+}
+bool PersistentSkillWindow(const PHOrbAutomationState &state) {
+    return (state.windowBlocksKnown && (state.windowBlocks & PHOrbSkillWindowPersistent)) ||
+        (state.playerEffects & PHOrbPlayerSkillSeal);
+}
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
     return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSamePlanBoard(&a.board, &b.board);
 }
 double TimeAvailable(const PHOrbSnapshot &state) {
-    return state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
+    const double move = state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
         double(state.remainingFrames) / state.fps : 0;
+    if (PHBattleIsSinglePlayer(state.identity.entryMode, state.identity.multiplayer)) return move;
+    return PHOrbMultiplayerWindow(&state) ? std::min(move, state.multiplayer.remainingSeconds) : 0;
 }
 double StepDuration(const PHOrbSnapshot &state) {
     return state.fps >= 15 && state.fps <= 120 ? std::ceil(StepSeconds * state.fps) / state.fps : StepSeconds;
 }
-bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route) {
+bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route, double delay = 0) {
     if (route.count < 2) return false;
     const double required = (route.count - 1) * StepDuration(state) + TimeMargin;
-    return required <= std::min(TimeAvailable(state), ExecutionLimit);
+    if (required > std::min(TimeAvailable(state), ExecutionLimit)) return false;
+    return PHBattleIsSinglePlayer(state.identity.entryMode, state.identity.multiplayer) ||
+        required + delay <= state.multiplayer.remainingSeconds;
+}
+NSString *MultiplayerModeName(PHOrbMultiplayerKind kind) {
+    switch (kind) {
+        case PHOrbMultiplayerNone: return @"單人";
+        case PHOrbMultiplayerThree: return @"3 人協力";
+        case PHOrbMultiplayerFour: return @"4 人對戰";
+        case PHOrbMultiplayerEight: return @"8 人對戰";
+        case PHOrbMultiplayerUnsupported: return @"未支援的多人模式";
+    }
+    return @"未知模式";
+}
+NSString *MultiplayerWaitMessage(const PHOrbSnapshot &state) {
+    // Presentation only. PHOrbCanPreview and the final canOnce gate remain
+    // authoritative; no message can grant input permission.
+    const auto &m = state.multiplayer;
+    if (!m.known || !m.teamCount || m.localSeat >= m.teamCount || m.viewTeam >= m.teamCount)
+        return @"本機席位或回合資料尚未確認";
+    if (m.kind == PHOrbMultiplayerThree && m.turnSerial % m.teamCount != m.localSeat)
+        return @"等待自己的回合，再按轉一次";
+    if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家，請返回自己的盤面";
+    if (m.localStatus != 3 || m.syncState || !(m.networkFlags & 1u) || (m.networkFlags & ~0x21u) ||
+        (m.connectionState != 2 && m.connectionState != 3 && m.connectionState != 6 && m.connectionState != 7))
+        return @"等待多人同步或連線恢復";
+    if (m.kind != PHOrbMultiplayerThree && m.finished) return @"對戰已結束，等待結算";
+    if (m.kind != PHOrbMultiplayerThree && m.countdownReady != 1) return @"等待對戰開始倒數完成";
+    if (m.resolvePending || state.phase != 2) return @"等待本盤結算或下一盤";
+    if (!m.clockKnown || !std::isfinite(m.remainingSeconds) || m.remainingSeconds > 86400)
+        return @"多人操作時間尚未確認";
+    if (m.remainingSeconds <= 0) return @"多人操作時間已結束";
+    if ((m.kind == PHOrbMultiplayerThree && (m.clockFlags & 2u) && !state.dragged) ||
+        (m.kind != PHOrbMultiplayerThree && (m.clockFlags & 0x36u) != 4u))
+        return @"多人計時暫停或已結束";
+    if (state.boardTransition || !state.settled) return @"等待盤面穩定，再按轉一次";
+    if (state.dragged || !PHInputIsQuiet(&state.input)) return @"請先放開手指，再按轉一次";
+    if (!PHOrbCanPreview(&state)) return @"盤面尚未通過校驗，暫不能轉一次";
+    if (TimeAvailable(state) <= ArmDelay + TimeMargin + StepDuration(state))
+        return @"剩餘時間不足，暫不能轉一次";
+    return @"目前不可轉一次，請稍後重試";
+}
+NSDictionary *MultiplayerTrace(const PHOrbSnapshot &state) {
+    const auto &m = state.multiplayer;
+    return @{@"mode":MultiplayerModeName(m.kind), @"kind":@(m.kind),
+        @"entryMode":@(state.identity.entryMode), @"selector":@(state.identity.multiplayer),
+        @"known":@(m.known), @"disabled":@(state.multiplayerDisabled), @"window":@(PHOrbMultiplayerWindow(&state)),
+        @"turnSerial":@(m.turnSerial), @"teamCount":@(m.teamCount), @"localSeat":@(m.localSeat), @"viewTeam":@(m.viewTeam),
+        @"localStatus":@(m.localStatus), @"networkFlags":@(m.networkFlags), @"syncState":@(m.syncState),
+        @"connectionState":@(m.connectionState), @"countdownReady":@(m.countdownReady),
+        @"finished":@(m.finished), @"resolvePending":@(m.resolvePending), @"clockFlags":@(m.clockFlags),
+        @"clockKnown":@(m.clockKnown), @"clockStart":@(m.clockStart),
+        @"remainingSeconds":@(std::isfinite(m.remainingSeconds) ? m.remainingSeconds : 0)};
 }
 PHOrbSolveOptions OptionsForQuality(NSString *quality) {
     return PHOrbOptionsForQuality([quality isEqual:@"fast"] ? PHOrbSearchQuality::Fast :
@@ -123,10 +193,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"cachedSkillStages":@[@(member.cachedSkillStage[0]), @(member.cachedSkillStage[1])],
         @"skillLevels":@[@(member.skillLevel[0]), @(member.skillLevel[1])],
         @"memberSkillUses":@[@(member.skillUses[0]), @(member.skillUses[1])],
-        @"assistCatalogID":@(member.assistCatalogID), @"orbCounts":orbCounts,
+        @"assistCatalogID":@(member.assistCatalogID), @"assistState":@(member.assistState), @"orbCounts":orbCounts,
         @"boardWidth":@(state.board.width), @"boardHeight":@(state.board.height),
         @"spinnerMask":@(state.board.spinnerMask), @"observedPhase":@(state.phase),
-        @"observedWave":@(state.wave), @"observedSkillUses":@(state.automation.skillUses), @"nativeAttempt":@(attempted)};
+        @"observedWave":@(state.wave), @"observedSkillUses":@(state.automation.skillUses), @"nativeAttempt":@(attempted),
+        @"skillWindow":@(state.automation.window), @"skillBusy":@(state.automation.busy),
+        @"skillWindowBlocks":@(state.automation.windowBlocks), @"skillWindowBlocksKnown":@(state.automation.windowBlocksKnown),
+        @"skillWindowReason":PHOrbSkillWindowDescription(&state.automation)};
 }
 }
 
@@ -135,10 +208,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     dispatch_queue_t _worker;
     std::shared_ptr<std::atomic_bool> _cancel;
     PHBattleFrame _frame;
-    PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState;
+    PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState, _traceOrigin;
     PHOrbRoute _route;
     NSString *_phase, *_message, *_quality, *_goalMode;
-    bool _thornComboPriority, _allowPoisonWithHeartFour;
+    bool _thornComboPriority, _allowPoisonWithHeartFour, _diagonal;
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules, *_decisionRules;
     NSMutableArray *_automationLog;
@@ -152,7 +225,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSMutableArray<NSDictionary *> *_openingLog;
     NSUInteger _openingStep;
     uint8_t _temporaryMask;
-    bool _openingInFlight, _openingAcknowledged, _openingStarted;
+    bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending;
     PHOrbSnapshot _openingBefore;
     NSDictionary *_searchTrace;
     NSDictionary *_lastReadIssue;
@@ -164,17 +237,20 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSUInteger _target;
     uintptr_t _ownedOrb;
     double _now, _lastRead, _requestedAt, _stableAt, _previewAt, _startedAt, _stepAt, _sentAt, _frameAt, _executionElapsed;
+    double _skillWindowWaitAt;
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
     bool _inputFault, _awaitingStart, _startSent, _monitoring, _oneShot, _oneShotBound;
-    PHBattleIdentity _oneShotIdentity;
-    uint32_t _oneShotWave;
+    PHOrbSnapshot _oneShotOrigin;
     PHOrbSnapshot _autoOrigin, _skillBefore;
     NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn, _recoveryTurn;
+    NSUInteger _observedTurn, _decisionObservedTurn;
+    NSUInteger _ruleLastUseTurns[PHOrbMaxSkillRules], _groupLastUseTurns[PHOrbMaxSkillGroups];
+    NSDictionary *_historyTimingProfile;
     uint16_t _usedRules, _unavailableRules, _confirmedRules;
     uint8_t _usedSlots, _usedGroups, _confirmedGroups, _groupNext[PHOrbMaxSkillGroups];
     NSMutableSet<NSDictionary *> *_onceRules;
     PHBattleIdentity _historyIdentity;
-    bool _historyBound, _historyResolve;
+    bool _historyBound, _historyResolve, _historyPuzzleStarted;
     double _autoPhaseAt, _autoStartAt;
     bool _automatic, _autoBound, _sawResolve, _skillAcknowledged, _watchPlayerState;
 }
@@ -182,7 +258,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if ((self = [super init])) {
         _engine = engine;
         _worker = dispatch_queue_create("jp.padcheaper.orbs.solver", DISPATCH_QUEUE_SERIAL);
-        _phase = @"idle"; _message = @"單人操作階段，可預覽路徑或開始連續轉珠";
+        _phase = @"idle"; _message = @"自己的操作階段可轉一次；連續轉珠與技能規則限單人";
         _quality = @"balanced"; _goalMode = @"combo"; _manualGoals = @[]; _goalPlan = @{};
         _skillRules = @[]; _automationLog = [NSMutableArray array]; _onceRules = [NSMutableSet set];
         _recovery = PHOrbDefaultRecovery();
@@ -232,10 +308,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"turn":@(_automatic ? _autoTurn : 0), @"wave":@(_preview.wave),
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"status":@"drag-accepted", @"goals":PHOrbGoalsJSON(&_solveOptions.goals),
+        @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
+        @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
+        @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview-execute",
+        @"multiplayer":MultiplayerTrace(_preview),
         @"startBoard":BoardTrace(_preview.board), @"path":RouteCells(_route),
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
+            @"diagonal":@(_route.diagonal),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
             @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
             @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
@@ -248,7 +329,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!quality) return NO;
     return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
         @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority),
-        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour)}];
+        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour), @"diagonal":@(_diagonal)}];
 }
 - (BOOL)configureSettings:(NSDictionary *)settings {
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
@@ -256,7 +337,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if ([_quality isEqual:canonical[@"quality"]] && [_goalMode isEqual:canonical[@"mode"]] &&
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
         [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue] &&
-        _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue]) return YES;
+        _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue] &&
+        _diagonal == [canonical[@"diagonal"] boolValue]) return YES;
     [self cancelWorker];
     [self loadSettings:canonical];
     _readQueued = _hasStable = false;
@@ -271,6 +353,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _solveOptions.thornComboPriority = _thornComboPriority;
     _allowPoisonWithHeartFour = [settings[@"allowPoisonWithHeartFour"] boolValue];
     _solveOptions.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
+    _diagonal = [settings[@"diagonal"] boolValue];
+    _solveOptions.diagonal = _diagonal;
     _skillRules = settings[@"rules"];
     _recovery = settings[@"recovery"];
     // Keep the last run's decisions with their captured rules. Idle runtime
@@ -303,12 +387,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (void)queueStop:(NSString *)reason {
     const bool wasAutomatic = _automatic;
+    const bool pendingStart = [self executing] && _awaitingStart && _startSent;
     const bool skillRunning = [_phase isEqual:@"skillWaiting"] || _openingInFlight;
     const bool cancelledIntent = _automatic || _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] ||
         ([_phase isEqual:@"releasing"] && _releaseComplete);
     [self cancelWorker];
+    [_engine armMultiplayerOnce:NO];
     _automatic = _oneShot = _oneShotBound = false;
+    _skillWindowWaitAt = 0;
     _readQueued = false; _hasStable = false;
     _message = reason ?: @"已停止";
     if (skillRunning) _message = [_message stringByAppendingString:@"；已啟動的技能由遊戲完成"];
@@ -320,38 +407,67 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     }
     if (wasAutomatic) [self logAutomation:[NSString stringWithFormat:@"連續模式停止：%@", _message]];
     _releaseComplete = false;
-    if (_ownedOrb || _staged) _phase = @"releasing";
+    if (_ownedOrb || _staged || pendingStart) _phase = @"releasing";
     else { _phase = @"stopped"; _recordingExecution = false; }
     if (cancelledIntent) ++_cancelled;
 }
 - (void)queueRead {
     if (_automatic || _oneShot || [self executing] || _inputFault || _openingInFlight) return;
     [self cancelWorker];
+    [_engine armMultiplayerOnce:NO];
     _monitoring = _readQueued = true; _hasStable = false; _requestedAt = _now;
     [self clearRoute]; _goalPlan = @{}; _phase = @"reading"; _message = @"等待盤面穩定…";
 }
 - (void)queueOnce {
     if (_automatic || _oneShot || [self executing] || _inputFault || _openingInFlight || !_frame.ready || !_frame.enabled) return;
-    [self queueRead];
-    _oneShot = true; _oneShotBound = false;
-    if (_hasLive && _live.valid && _live.present) {
-        _oneShotIdentity = _live.identity; _oneShotWave = _live.wave; _oneShotBound = true;
+    _monitoring = true;
+    // Bind at the tap, using a fresh read even when the UI status is old.
+    // An ineligible multiplayer tap must never wait for another player's turn.
+    PHOrbSnapshot current{}; NSString *reason = nil;
+    const BOOL read = [_engine read:&current frame:_frame reason:&reason];
+    _hasLive = read; _live = current;
+    if (!read || !current.valid || !current.present || current.multiplayerDisabled) {
+        [self queueStop:reason ?: @"目前盤面無法確認，未排入轉一次"]; return;
     }
-    _message = @"轉一次：等待盤面穩定，求路成功後執行";
+    const bool multiplayer = !PHBattleIsSinglePlayer(current.identity.entryMode, current.identity.multiplayer);
+    if (multiplayer && !PHOrbCanPreview(&current)) {
+        [self queueStop:reason ?: @"尚未輪到自己或盤面未穩定；請在自己的操作窗口再按轉一次"]; return;
+    }
+    if (multiplayer && TimeAvailable(current) <= ArmDelay + TimeMargin + StepDuration(current)) {
+        [self queueStop:@"多人剩餘時間不足，未排入轉一次"]; return;
+    }
+    if (multiplayer && [_goalMode isEqual:@"leaders"]) {
+        [self queueStop:@"多人隊長條件尚未驗證；請選 Combo 或指定形狀，再按轉一次。"]; return;
+    }
+    [self queueRead];
+    _oneShot = _oneShotBound = true; _oneShotOrigin = current;
+    [_engine armMultiplayerOnce:multiplayer];
+    _message = multiplayer ? [NSString stringWithFormat:@"%@：只執行本機這一盤，求路完成後轉一次", MultiplayerModeName(current.multiplayer.kind)] :
+        @"轉一次：等待盤面穩定，求路成功後執行";
 }
 - (void)queueAutomatic {
     if (_automatic || _oneShot || [self executing] || _inputFault || !_frame.ready || !_frame.enabled) return;
+    _monitoring = true;
+    PHOrbSnapshot current{}; NSString *reason = nil;
+    const BOOL read = [_engine read:&current frame:_frame reason:&reason];
+    _hasLive = read; _live = current;
+    [_engine armMultiplayerOnce:NO];
+    if (current.multiplayer.kind != PHOrbMultiplayerNone || current.multiplayerDisabled || (current.present &&
+        !PHBattleIsSinglePlayer(current.identity.entryMode, current.identity.multiplayer))) {
+        [self queueStop:@"多人只支援轉一次；連續轉珠、開場與技能規則限單人"]; return;
+    }
     [self cancelWorker];
     _automatic = _monitoring = true; _autoBound = _sawResolve = _hasStable = _readQueued = false;
     _autoTurn = 1; _autoMoves = _autoSkills = 0; _unavailableRules = 0;
     _autoStartAt = _autoPhaseAt = _now; _autoOrigin = {}; [self clearRoute]; _goalPlan = @{};
+    _skillWindowWaitAt = 0;
     _boardTransitionFrames = 0; _lastReadIssue = @{};
     _activeProfile = @{};
     [_automationLog removeAllObjects];
     [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects];
     [_skillAttemptContexts removeAllObjects];
     [_decisionContexts removeAllObjects];
-    _decisionRules = @[]; _decisionState = {}; _decisionTurn = _recoveryTurn = 0;
+    _decisionRules = @[]; _decisionState = {}; _decisionTurn = _decisionObservedTurn = _recoveryTurn = 0;
     _phase = @"autoWaiting"; _message = @"連續模式準備中；點浮動「停止」可隨時中斷";
 }
 - (void)logAutomation:(NSString *)message {
@@ -362,37 +478,120 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _phase = @"autoWaiting"; _autoPhaseAt = _now; _hasStable = false;
     _message = [NSString stringWithFormat:@"連續第 %lu 回合 · 等待盤面穩定", (unsigned long)_autoTurn];
 }
+- (void)resetRuleTiming {
+    _observedTurn = 0;
+    _historyPuzzleStarted = false;
+    std::fill(std::begin(_ruleLastUseTurns), std::end(_ruleLastUseTurns), 0);
+    std::fill(std::begin(_groupLastUseTurns), std::end(_groupLastUseTurns), 0);
+}
+- (PHOrbRuleMatch)triggerRule:(NSUInteger)index state:(const PHOrbSnapshot *)state reason:(NSString **)reason {
+    NSDictionary *rule = _skillRules[index];
+    const NSUInteger group = [rule[@"group"] unsignedIntegerValue];
+    NSUInteger last = group ? _groupLastUseTurns[group - 1] : _ruleLastUseTurns[index];
+    // A same-turn attempt without a completion receipt must still expose a
+    // required rescue. Per-turn availability stops it; the new interval must
+    // not hide it merely because its uncertain start reserved the clock.
+    const bool attempted = (_usedRules & (1u << index)) || (group && (_usedGroups & (1u << (group - 1))));
+    if (attempted && last == _observedTurn && [rule[@"required"] boolValue]) last = 0;
+    return PHOrbTriggerSkillRuleWithTiming(rule, state, _autoTurn, _observedTurn, last, reason);
+}
+- (BOOL)hasPendingSkillWindow:(const PHOrbSnapshot *)state {
+    if (_openingInFlight || [_activeProfile[@"opening"] count] > _openingStep) return YES;
+    if (_openingPuzzlePending && _activeProfile[@"formation"]) return NO;
+    for (NSUInteger i = 0; i < _skillRules.count; ++i) {
+        NSDictionary *rule = _skillRules[i];
+        NSUInteger slot = [rule[@"slot"] unsignedIntegerValue] - 1, group = [rule[@"group"] unsignedIntegerValue];
+        if (![rule[@"enabled"] boolValue] || ((_usedRules | _confirmedRules | _unavailableRules) & (1u << i)) ||
+            (_usedSlots & (1u << slot)) || (group && ((_usedGroups | _confirmedGroups) & (1u << (group - 1)))) ||
+            ([rule[@"once"] boolValue] && [_onceRules containsObject:rule])) continue;
+        if ([rule[@"monster"] unsignedIntValue] && [rule[@"monster"] unsignedIntValue] != state->automation.members[slot].number &&
+            !state->automation.members[slot].temporaryTurns) continue;
+        return YES;
+    }
+    return NO;
+}
+- (void)deferSkillWindow:(NSString *)reason {
+    [self waitForAutomationBoard];
+    if (!_skillWindowWaitAt) _skillWindowWaitAt = _now;
+    if (_now - _skillWindowWaitAt >= SkillWindowTimeout) {
+        [self queueStop:[NSString stringWithFormat:@"%@；等待 3 秒後仍未就緒，已停止，未施放或轉珠", reason]];
+    } else {
+        _message = [NSString stringWithFormat:@"%@；此次未施放，等待重查", reason];
+    }
+}
+- (BOOL)waitForSkillWindow {
+    if (![self hasPendingSkillWindow:&_live]) { _skillWindowWaitAt = 0; return NO; }
+    const auto &state = _live.automation;
+    // Known lasting restrictions retain optional-rule behavior. A temporary
+    // closed window is neither a native refusal nor permission to start a drag.
+    const bool persistent = PersistentSkillWindow(state);
+    if (!state.window && persistent && [_activeProfile[@"opening"] count] > _openingStep) {
+        [self queueStop:[NSString stringWithFormat:@"開場第 %lu 步未就緒：%@；未施放或跳到下一步",
+            (unsigned long)_openingStep + 1, PHOrbSkillWindowDescription(&state)]];
+        return YES;
+    }
+    if (persistent) { _skillWindowWaitAt = 0; return NO; }
+    if (state.window) return NO; // Require a stable decision/cast before clearing the deferral timer.
+    if (!_skillWindowWaitAt) _skillWindowWaitAt = _now;
+    if (_now - _skillWindowWaitAt >= SkillWindowTimeout) {
+        [self queueStop:[NSString stringWithFormat:@"%@；等待 3 秒後仍未就緒，已停止，未施放或轉珠",
+            PHOrbSkillWindowDescription(&state)]];
+    } else {
+        _hasStable = false;
+        _message = [NSString stringWithFormat:@"%@；等待重新確認，未施放或轉珠", PHOrbSkillWindowDescription(&state)];
+    }
+    return YES;
+}
 // Keep once-per-battle and per-orb-turn history across a manual stop/start.
 // Transient read failures, phase 22 and skill-cleared floors do not reset it.
 - (void)observeRuleHistory:(const PHOrbSnapshot *)state read:(BOOL)read {
-    if (!read) return;
+    if (!read) { _historyPuzzleStarted = false; return; }
     if (!state->present) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0;
+        _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyBound = _historyResolve = false; [_onceRules removeAllObjects];
-        _historyRules = nil;
+        _historyRules = nil; _historyTimingProfile = nil;
+        [self resetRuleTiming];
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
         [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
         return;
     }
     if (!state->valid || state->multiplayerDisabled ||
-        !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) return;
+        !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) {
+        _historyPuzzleStarted = false; return;
+    }
     if (!_historyBound || !PHBattleSameIdentity(&_historyIdentity, &state->identity)) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0;
+        _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyIdentity = state->identity; _historyBound = true; _historyResolve = false;
-        _historyRules = nil;
+        _historyRules = nil; _historyTimingProfile = nil;
+        [self resetRuleTiming]; _observedTurn = 1;
         [_onceRules removeAllObjects];
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
         [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
     }
-    if (ResolvingOrbs(state->phase) && state->moves > 0) _historyResolve = true;
-    if (_historyResolve && state->phase == 2 && state->moves == 0 && state->settled && !state->dragged) {
+    const bool timed = AcceptedSkillTiming(_historyRules);
+    if (state->phase == 22 && !_historyResolve) _historyPuzzleStarted = false;
+    if (timed && state->phase == 2 && state->dragged) _historyPuzzleStarted = true;
+    // A zero-swap turn needs an observed drag or an explicitly pending opening
+    // puzzle. A phase/floor transition alone must not advance skill intervals.
+    if (ResolvingOrbs(state->phase) && (state->moves > 0 || _openingPuzzlePending || (timed && _historyPuzzleStarted)))
+        _historyResolve = true;
+    if (_historyResolve && state->phase == 2 && state->moves == 0 && state->settled && !state->dragged &&
+        !state->boardTransition && (!(timed || _openingPuzzlePending) || (state->automation.valid && !state->automation.busy))) {
+        // Count this observed resolve/idle pair once. Phase 22, a floor clear,
+        // elapsed time or a stop/start never advances the timing clock.
+        if (_observedTurn && _observedTurn < NSUIntegerMax) ++_observedTurn;
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        _openingPuzzlePending = false;
         [_unavailableReasons removeAllObjects]; _historyResolve = false;
     }
+    if (!_historyResolve && state->phase == 2 && !state->moves && state->settled && !state->dragged && !state->boardTransition)
+        _historyPuzzleStarted = false;
 }
 // Called on every observed native frame while armed, even during animation.
 // A skill's phase 22 is never evidence that an orb turn has completed.
@@ -407,7 +606,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             @"valid":@(state->valid), @"automationValid":@(state->automation.valid),
             @"width":@(state->board.width), @"height":@(state->board.height),
             @"resizeProgress":@(state->resizeProgress), @"resizeTarget":@(state->resizeTarget),
-            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0))};
+            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0)),
+            @"duringAutomatic":@(_automatic), @"sessionPhase":_phase,
+            @"capturedSearchGeneration":_searchTrace[@"generation"] ?: @0};
         [self queueStop:reason ?: @"關卡已結束或戰鬥資料無法確認，已停止連續模式"]; return NO;
     }
     if (!_autoBound) {
@@ -431,7 +632,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 if ([_activeProfile[@"opening"] count] && (state->wave || state->moves || state->phase != 2 || state->automation.skillUses)) {
                     [self queueStop:@"開場只可在首層、尚未轉珠及施放技能時開始；中途加入請使用不含開場的策略"]; return NO;
                 }
-                _openingProfile = _activeProfile; _openingStep = 0; _openingInFlight = _openingAcknowledged = _openingStarted = false;
+                _openingProfile = _activeProfile; _openingStep = 0;
+                _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
                 [_openingLog removeAllObjects];
             }
             const bool openingDone = resume && _openingStep == [_openingProfile[@"opening"] count];
@@ -450,11 +652,17 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         // Idle config reloads can restore different common settings after an
         // automatically selected profile stops. Only rules chosen for a new
         // run may reset its cursor; reloading the UI must not restart a cycle.
-        if (![_historyRules isEqual:_skillRules]) {
+        NSDictionary *timingProfile = SkillTimingProfile(_activeProfile);
+        const bool rulesChanged = ![_historyRules isEqual:_skillRules];
+        const bool timingChanged = rulesChanged || ![_historyTimingProfile isEqual:timingProfile];
+        if (rulesChanged || (timingChanged && AcceptedSkillTiming(_skillRules))) {
             _usedRules = _unavailableRules = _confirmedRules = _confirmedGroups = 0;
             [_unavailableReasons removeAllObjects];
             std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
-            _historyRules = _skillRules;
+        }
+        if (timingChanged) {
+            [self resetRuleTiming]; _observedTurn = 1; _historyResolve = false;
+            _historyRules = _skillRules; _historyTimingProfile = timingProfile;
         }
         [self logAutomation:[NSString stringWithFormat:@"本次策略：%@", resolved[@"message"]]];
         _autoOrigin = *state; _autoBound = true;
@@ -483,9 +691,20 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _lastReadIssue = @{@"reason":@"等待原生改盤動畫完成", @"phase":@(state->phase),
             @"valid":@YES, @"automationValid":@YES, @"width":@(state->board.width), @"height":@(state->board.height),
             @"resizeProgress":@(state->resizeProgress), @"resizeTarget":@(state->resizeTarget),
-            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0))};
+            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0)),
+            @"duringAutomatic":@(_automatic), @"sessionPhase":_phase,
+            @"capturedSearchGeneration":_searchTrace[@"generation"] ?: @0};
         _message = _openingInFlight ? [NSString stringWithFormat:@"開場第 %lu 步：等待原生改盤動畫完成…", (unsigned long)_openingStep + 1] :
             @"等待原生改盤動畫完成…";
+    }
+    const bool beforeTouch = [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
+        ([_phase isEqual:@"arming"] && !_startSent && !state->dragged);
+    if (!state->boardTransition && state->phase == 2 &&
+        !state->automation.window && beforeTouch && [self hasPendingSkillWindow:state] &&
+        !PersistentSkillWindow(state->automation)) {
+        [self cancelWorker]; [self clearRoute];
+        [self waitForAutomationBoard];
+        _message = @"轉珠前技能窗口已關閉，重新確認後再判斷技能";
     }
     return YES;
 }
@@ -499,6 +718,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     record[@"usesAfter"] = @(state->automation.skillUses);
     _openingLog[_openingLog.count - 1] = [record copy];
     ++_openingStep; _openingInFlight = false;
+    if (_openingStep == [_openingProfile[@"opening"] count] &&
+        [_openingProfile[@"opening"][_openingStep - 1][@"puzzleAfter"] boolValue]) {
+        _openingPuzzlePending = true;
+        [self logAutomation:@"開場完成：先轉此盤，確認下一回合後才接技能循環"];
+    }
     [self logAutomation:[NSString stringWithFormat:@"開場 %lu／%lu 已確認完成", (unsigned long)_openingStep,
         (unsigned long)[_openingProfile[@"opening"] count]]];
     return YES;
@@ -506,6 +730,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 - (void)advanceAutomation {
     if (!_automatic || [self executing] || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         [_phase isEqual:@"skillArming"] || [_phase isEqual:@"openingArming"] || _now - _autoStartAt < 0.35) return;
+    if ([_phase isEqual:@"autoWaiting"] && _live.phase == 2 && !_live.boardTransition &&
+        _live.settled && [self waitForSkillWindow]) return;
     if ([_phase isEqual:@"turnWaiting"]) {
         _sawResolve |= ResolvingOrbs(_live.phase);
         if (_now - _autoPhaseAt > TurnTimeout) { [self queueStop:@"等候下一回合逾時，請檢查遊戲畫面"]; return; }
@@ -573,6 +799,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             return;
         }
     }
+    if (_openingPuzzlePending && _activeProfile[@"formation"]) {
+        // The last opening skill may leave a CD1 supplier uncharged. Keep
+        // this choice across stop/start; only a confirmed orb turn clears it.
+        if (!PHOrbCanPreview(&_live)) {
+            [self queueStop:@"開場完成後盤面或操作條件尚未確認，未轉珠或接續技能循環"]; return;
+        }
+        [self beginSolve]; return;
+    }
     uint8_t temporaryMask = 0;
     for (unsigned slot = 0; slot < 6; ++slot) {
         const auto &member = _live.automation.members[slot];
@@ -585,7 +819,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     }
     _temporaryMask = temporaryMask;
     if (_decisionTurn != _autoTurn) [_skillAttemptContexts removeAllObjects];
-    [_ruleDecisions removeAllObjects]; _decisionTurn = _autoTurn;
+    [_ruleDecisions removeAllObjects]; _decisionTurn = _autoTurn; _decisionObservedTurn = _observedTurn;
     _decisionRules = _skillRules; _decisionState = _live;
     [_decisionContexts removeAllObjects];
     for (NSUInteger i = 0; i < _skillRules.count; ++i) {
@@ -620,13 +854,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             unavailable = [NSString stringWithFormat:@"暫時變身為 #%u，原形態技能暫停", member->number];
         else if (member->bound) unavailable = @"施放者被綁定";
         else if (member->state) unavailable = @"施放者尚未回到待命狀態";
+        else if (!_live.automation.window) unavailable = PHOrbSkillWindowDescription(&_live.automation);
         // Optional rules retain the previous short circuit: unavailable
         // actors do not make unrelated, unknown condition data mandatory.
         if (unavailable && ![rule[@"required"] boolValue]) {
             _ruleDecisions[i] = [NSString stringWithFormat:@"略過 · %@", unavailable]; continue;
         }
         NSString *trigger = nil;
-        PHOrbRuleMatch match = PHOrbTriggerSkillRule(rule, &_live, _autoTurn, &trigger);
+        PHOrbRuleMatch match = [self triggerRule:i state:&_live reason:&trigger];
         _ruleDecisions[i] = trigger ?: @"條件無法確認";
         if (match == PHOrbRuleUnknown) {
             [self queueStop:[NSString stringWithFormat:@"規則 %lu：%@，已停止", (unsigned long)i + 1, _ruleDecisions[i]]]; return;
@@ -664,12 +899,17 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (void)queueExecute:(NSUInteger)generation {
     if (![_phase isEqual:@"preview"] || generation != _generation || !_frame.enabled || _inputFault || !_route.goalsMet || !_route.hazardsSafe) return;
+    if (!PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
+        (!_oneShot || !_oneShotBound || !PHOrbSameTurn(&_oneShotOrigin, &_preview))) {
+        [self queueStop:@"多人預覽不能直接執行；請在自己的操作窗口按轉一次重新讀盤"]; return;
+    }
     if (_now - _previewAt > PreviewLifetime || !_hasLive || !PHOrbCanPreview(&_live) || !SamePosition(_live, _preview)) {
         [self queueStop:@"盤面或回合已改變，請重新讀盤"];
         return;
     }
-    if (!HasRouteTime(_live, _route)) {
+    if (!HasRouteTime(_live, _route, ArmDelay)) {
         _message = @"操作時間不足，請重新讀盤取得較短路徑";
+        if (_oneShot) [self queueStop:_message];
         return;
     }
     if (![self hasThornBudget:&_live]) {
@@ -698,6 +938,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
     options.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
+    options.diagonal = _diagonal;
+    _skillWindowWaitAt = 0;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
@@ -716,19 +958,36 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         return;
     }
     const double available = TimeAvailable(_live);
+    const bool multiplayer = !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer);
+    double remaining = available;
+    if (multiplayer) {
+        const double searchRoom = _live.multiplayer.remainingSeconds - ArmDelay - TimeMargin - StepDuration(_live);
+        if (!PHOrbCanPreview(&_live) || searchRoom < 0.05 || available <= TimeMargin + StepDuration(_live)) {
+            [self queueStop:@"多人本機操作窗口已關閉或時間不足，未開始求路"]; return;
+        }
+        options.milliseconds = std::min(options.milliseconds, unsigned(std::min(1.0, searchRoom) * 1000));
+        remaining = std::min(available, _live.multiplayer.remainingSeconds - ArmDelay - double(options.milliseconds) / 1000);
+        // Until multiplayer HP derivation is validated, no damaging thorn contact.
+        options.thorns = {};
+    }
     // Quantize to native frames as well as the hard execution deadline. A
     // longer thorough route must remain feasible even at a lower frame rate.
-    const double budget = std::min(available > 0 ? available : ExecutionLimit, ExecutionLimit);
+    const double budget = std::min(remaining > 0 ? remaining : multiplayer ? 0 : ExecutionLimit, ExecutionLimit);
     options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
     _solveOptions = options;
+    _traceOrigin = _preview;
     _searchTrace = @{@"schema":@1, @"generation":@(_generation), @"status":@"searching",
+        @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
+        @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
+        @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview",
+        @"multiplayer":MultiplayerTrace(_preview),
         @"turn":@(_automatic ? _autoTurn : 0), @"wave":@(_preview.wave),
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"board":BoardTrace(_preview.board), @"goals":PHOrbGoalsJSON(&options.goals),
         @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds),
         @"thornComboPriority":@(options.thornComboPriority),
-        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour)};
+        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
@@ -821,16 +1080,27 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (_automatic && ![self executing]) {
         PHOrbSnapshot current{}; NSString *reason = nil;
         BOOL read = [_engine readAutomation:&current frame:frame reason:&reason];
+        _hasLive = read; _live = current;
         if (![self observeAutomation:&current read:read reason:reason]) return;
         if ([_phase isEqual:@"openingArming"]) {
             NSDictionary *step = _activeProfile[@"opening"][_openingStep];
             const NSUInteger slot = [step[@"slot"] unsignedIntegerValue] - 1;
+            if (current.phase == 2 && !current.automation.window &&
+                PHOrbSameAutomationExceptWindow(&_openingBefore, &current) && !current.dragged && PHInputIsQuiet(&current.input)) {
+                [self deferSkillWindow:PHOrbSkillWindowDescription(&current.automation)];
+                return;
+            }
             if (!PHOrbSameAutomation(&_openingBefore, &current) ||
                 !PHOrbProfileMatchesOpeningTeam(_activeProfile, &current, _openingStep)) {
                 [self queueStop:@"開場施放前盤面、隊員或武裝已改變，未施放"]; return;
             }
             PHOrbSkillResult result = [_engine useSkill:slot request:PHOrbRequestForRule(step)
                 expected:&_openingBefore frame:frame reason:&reason];
+            if (result == PHOrbSkillWindowClosed) {
+                [self deferSkillWindow:reason ?: @"技能窗口尚未開放；開場此步未施放"];
+                return;
+            }
+            _skillWindowWaitAt = 0;
             if (result == PHOrbSkillUnavailable) {
                 [self queueStop:[NSString stringWithFormat:@"開場第 %lu 步未就緒：%@；未跳到下一步",
                     (unsigned long)_openingStep + 1, reason ?: @"遊戲判定技能不可用"]]; return;
@@ -838,6 +1108,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             _openingInFlight = true; _openingAcknowledged = false; _openingStarted = result == PHOrbSkillStarted;
             [_openingLog addObject:@{@"step":@(_openingStep + 1), @"slot":step[@"slot"], @"source":step[@"source"],
                 @"skill":step[@"skill"], @"usesBefore":@(_openingBefore.automation.skillUses),
+                @"consumeAssist":@([step[@"consumeAssist"] boolValue]), @"puzzleAfter":@([step[@"puzzleAfter"] boolValue]),
                 @"status":result == PHOrbSkillStarted ? @"started" : @"uncertain"}];
             if (result != PHOrbSkillStarted) {
                 [self queueStop:reason ?: @"開場啟動未確認；保留此步，不會重複施放"]; return;
@@ -848,13 +1119,21 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         }
         if ([_phase isEqual:@"skillArming"]) {
             NSUInteger slot = [_skillRules[_skillRule][@"slot"] unsignedIntegerValue] - 1;
+            if (current.phase == 2 && !current.automation.window &&
+                PHOrbSameAutomationExceptWindow(&_skillBefore, &current) && !current.dragged && PHInputIsQuiet(&current.input)) {
+                _decisionState = current;
+                _decisionContexts[_skillRule] = SkillDecisionContext(current, slot);
+                _ruleDecisions[_skillRule] = @"技能窗口尚未開放，此次未施放，等待重查";
+                [self deferSkillWindow:PHOrbSkillWindowDescription(&current.automation)];
+                return;
+            }
             // Recheck color-count conditions on the frame that starts a skill.
             // Spinner-dependent thresholds are unknown, never guessed from a
             // previously sampled color. The native engine rechecks state again.
             if (!PHOrbSameAutomation(&_skillBefore, &current)) {
                 [self queueStop:@"技能施放前盤面、隊員或戰鬥狀態已改變，已停止"]; return;
             }
-            PHOrbRuleMatch trigger = PHOrbTriggerSkillRule(_skillRules[_skillRule], &current, _autoTurn, &reason);
+            PHOrbRuleMatch trigger = [self triggerRule:_skillRule state:&current reason:&reason];
             if (trigger != PHOrbRuleYes) {
                 if (trigger == PHOrbRuleUnknown) [self queueStop:reason ?: @"技能觸發條件無法確認"];
                 else [self waitForAutomationBoard];
@@ -866,12 +1145,28 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             PHOrbSkillResult result = [_engine useSkill:slot request:PHOrbRequestForRule(_skillRules[_skillRule])
                 expected:&_skillBefore frame:frame reason:&reason];
             NSDictionary *rule = _skillRules[_skillRule];
+            if (result == PHOrbSkillWindowClosed) {
+                NSMutableDictionary *attempt = [_skillAttemptContexts[@(_skillRule)] mutableCopy];
+                attempt[@"nativeAttempt"] = @NO;
+                attempt[@"skillWindow"] = @NO;
+                attempt[@"skillWindowBlocksKnown"] = @NO;
+                attempt[@"skillWindowBlocks"] = @0;
+                attempt[@"skillWindowReason"] = reason ?: @"技能窗口尚未開放";
+                _skillAttemptContexts[@(_skillRule)] = [attempt copy];
+                _decisionContexts[_skillRule] = [attempt copy];
+                _ruleDecisions[_skillRule] = @"技能窗口尚未開放，此次未呼叫原生施放，等待重查";
+                [self deferSkillWindow:reason ?: @"技能窗口尚未開放"];
+                return;
+            }
+            _skillWindowWaitAt = 0;
             // Rejection can include an uncertain native start. A once rule
             // must not be retried by stopping and immediately starting again.
             if (result != PHOrbSkillUnavailable && [rule[@"once"] boolValue]) [_onceRules addObject:rule];
             NSUInteger group = [rule[@"group"] unsignedIntegerValue];
             if (result != PHOrbSkillUnavailable) {
                 _usedRules |= 1u << _skillRule; _usedSlots |= 1u << slot;
+                _ruleLastUseTurns[_skillRule] = _observedTurn;
+                if (group) _groupLastUseTurns[group - 1] = _observedTurn;
                 if (group) _usedGroups |= 1u << (group - 1);
             }
             if (result == PHOrbSkillRejected) {
@@ -888,7 +1183,18 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             } else {
                 _ruleDecisions[_skillRule] = @"技能已啟動，等待遊戲完成";
                 if (group) {
-                    _groupNext[group - 1] = (uint8_t)((_skillRule + 1) % _skillRules.count);
+                    NSUInteger next = (_skillRule + 1) % _skillRules.count;
+                    BOOL timed = NO;
+                    for (NSDictionary *candidate in _skillRules) if ([candidate[@"enabled"] boolValue] &&
+                        [candidate[@"group"] unsignedIntegerValue] == group &&
+                        [candidate[@"intervalMode"] isEqual:@"accepted"]) timed = YES;
+                    if (timed) for (NSUInteger step = 1; step < _skillRules.count; ++step) {
+                        const NSUInteger index = (_skillRule + step) % _skillRules.count;
+                        NSDictionary *candidate = _skillRules[index];
+                        if ([candidate[@"group"] unsignedIntegerValue] == group &&
+                            [candidate[@"slot"] unsignedIntegerValue] != slot + 1) { next = index; break; }
+                    }
+                    _groupNext[group - 1] = (uint8_t)next;
                 }
                 _skillAcknowledged = false;
                 _phase = @"skillWaiting"; _autoPhaseAt = time; _hasStable = false;
@@ -900,7 +1206,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (_inputFault || ![self executing]) return;
     NSString *reason = nil;
     PHOrbSnapshot current{};
-    BOOL read = (_automatic || _openingInFlight) ? [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
+    BOOL read = (_automatic || _openingInFlight || _openingPuzzlePending ||
+        (_historyBound && AcceptedSkillTiming(_historyRules))) ?
+        [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
     if (!read || !current.valid || current.multiplayerDisabled ||
         !PHOrbSameTurn(&_expected, &current) || current.phase != 2) {
         // The private manager has already been removed. Never inject stale
@@ -910,9 +1218,19 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _ownedOrb = 0; _phase = @"stopped"; _recordingExecution = false;
         return;
     }
+    const bool multiplayer = !PHBattleIsSinglePlayer(current.identity.entryMode, current.identity.multiplayer);
+    if (multiplayer && !PHOrbMultiplayerWindow(&current)) {
+        [self queueStop:reason ?: @"多人已交接、同步、結算或計時結束，已停止輸入"];
+        _ownedOrb = 0; _phase = @"stopped"; _recordingExecution = false;
+        return;
+    }
     _live = current; _hasLive = true;
-    if (_automatic && (![self observeAutomation:&current read:read reason:reason] || current.automation.busy)) {
-        if (_automatic) [self queueStop:@"轉珠前技能或動畫狀態已改變，已停止"];
+    if (_automatic) {
+        const BOOL observed = [self observeAutomation:&current read:read reason:reason];
+        // A pre-touch closure can return to rule waiting without starting a
+        // gesture. A busy window must not turn that deferral into a stop.
+        if (observed && ![self executing]) return;
+        if (observed && current.automation.busy) [self queueStop:@"轉珠前技能或動畫狀態已改變，已停止"];
         // Fall through to the existing owned-orb release path when needed.
     }
     if ([_phase isEqual:@"arming"]) {
@@ -922,7 +1240,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         if (![self hasThornBudget:&current]) {
             [self queueStop:@"執行前荊棘傷害預算已不符合，已停止"]; return;
         }
-        if (time - _requestedAt < 0.35) return;
+        if (time - _requestedAt < ArmDelay) return;
         if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
             [self queueStop:@"開始逾時或操作時間不足"]; return;
         }
@@ -934,6 +1252,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         NSString *stopReason = !frame.enabled ? @"總開關或前景狀態已改變，已停止" :
             !PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" :
             !current.ordinary ? @"盤面操作限制已改變，已停止" :
+            multiplayer && TimeAvailable(current) <= TimeMargin ? @"多人剩餘時間不足，已停止並放開" :
             time < _startedAt ? @"執行時鐘異常，已停止" :
             time - _startedAt > ExecutionLimit ? [NSString stringWithFormat:@"轉珠執行超過 %.1f 秒上限（已確認 %lu／%u 步），已停止",
                 ExecutionLimit, (unsigned long)_confirmed, _route.count ? _route.count - 1 : 0] :
@@ -963,6 +1282,12 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         }
     }
     if ([_phase isEqual:@"releasing"]) {
+        // Stop can arrive after began but before the native acknowledgement.
+        // Only the captured starting token with unchanged board/turn is ours.
+        if (!_ownedOrb && _awaitingStart && _startSent && _route.count &&
+            current.dragged == _preview.board.tokens[_route.cells[0]] &&
+            PHInputIsQuiet(&current.input) && SamePosition(current, _preview))
+            _ownedOrb = current.dragged;
         if (!current.dragged || !_ownedOrb || current.dragged != _ownedOrb) {
             if (_releaseComplete) [self queueStop:@"遊戲已接管放開，已停止"];
             _ownedOrb = 0; _phase = @"stopped"; _recordingExecution = false;
@@ -995,18 +1320,36 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     // multiplayer latch could survive into the next solo battle forever.
     // Monitoring starts only after the user first asks to read a board.
     if (!active && !_monitoring) return;
-    if (!active && !_automatic && time - _lastRead < 0.10) return;
+    if (!active && !_automatic && !_oneShot && time - _lastRead < 0.10) return;
     _lastRead = time;
     PHOrbSnapshot current{}; NSString *reason = nil;
-    BOOL read = (_automatic || _openingInFlight) ? [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
+    BOOL read = (_automatic || _openingInFlight || _openingPuzzlePending ||
+        (_historyBound && AcceptedSkillTiming(_historyRules))) ?
+        [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
     _hasLive = read; _live = current;
-    if (_oneShot && read) {
-        if (!current.present || current.multiplayerDisabled ||
-            (_oneShotBound && (!PHBattleSameIdentity(&_oneShotIdentity, &current.identity) || current.wave != _oneShotWave))) {
-            [self queueStop:@"場景或關卡已改變，已取消轉一次"]; return;
-        }
-        if (!_oneShotBound && current.valid) {
-            _oneShotIdentity = current.identity; _oneShotWave = current.wave; _oneShotBound = true;
+    if (!read) {
+        _lastReadIssue = @{@"reason":reason ?: @"戰鬥資料未通過讀取校驗", @"phase":@(current.phase),
+            @"valid":@(current.valid), @"automationValid":@(current.automation.valid),
+            @"width":@(current.board.width), @"height":@(current.board.height),
+            @"resizeProgress":@(current.resizeProgress), @"resizeTarget":@(current.resizeTarget),
+            @"openingStep":@(_openingStep + (_openingInFlight ? 1 : 0)),
+            @"duringAutomatic":@(_automatic), @"sessionPhase":_phase,
+            @"multiplayer":MultiplayerTrace(current),
+            @"capturedSearchGeneration":_searchTrace[@"generation"] ?: @0};
+    }
+    if (_oneShot) {
+        const bool multiplayer = _oneShotOrigin.multiplayer.kind != PHOrbMultiplayerNone;
+        if (!read || !current.valid || !current.present || current.multiplayerDisabled || !_oneShotBound ||
+            !PHBattleSameIdentity(&_oneShotOrigin.identity, &current.identity) || current.wave != _oneShotOrigin.wave ||
+            !PHOrbSameMultiplayerTurn(&_oneShotOrigin.multiplayer, &current.multiplayer)) {
+            [self queueStop:!read ? (reason ?: @"讀盤失敗，已取消轉一次") :
+                @"場景、本機席位或回合已改變，已取消轉一次"];
+        } else if (multiplayer && !active &&
+            (!PHOrbCanPreview(&current) || !SamePosition(current, _oneShotOrigin) || TimeAvailable(current) <= TimeMargin)) {
+            [self queueStop:!PHOrbCanPreview(&current) ? (reason ?: @"多人操作窗口已關閉") :
+                @"求路前後盤面或剩餘時間已改變，請重新按轉一次"];
+        } else if (multiplayer && active && !_releaseStaged && !PHOrbMultiplayerWindow(&current)) {
+            [self queueStop:reason ?: @"多人操作窗口已關閉，已停止本次輸入"];
         }
     }
     if (!_automatic) [self observeRuleHistory:&current read:read];
@@ -1035,9 +1378,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                     _executionHistory[_executionHistory.count - 1] = [record copy]; _recordingExecution = false;
                 }
                 _ownedOrb = 0;
+                [_engine armMultiplayerOnce:NO];
                 _phase = _releaseComplete ? @"complete" : @"stopped";
                 if (_releaseComplete) {
-                    _oneShot = false;
+                    _oneShot = _oneShotBound = false;
                     ++_completed; _message = @"本次路徑已執行並放開；下一回合請重新讀盤";
                     if (_automatic) {
                         ++_autoMoves; _sawResolve = ResolvingOrbs(current.phase); _hasStable = false;
@@ -1050,6 +1394,16 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             }
             return;
         }
+        if ([_phase isEqual:@"releasing"]) {
+            // Cancellation during native began may still produce an owned
+            // token. Capture it for release without replacing the stop reason.
+            if (!_ownedOrb && _awaitingStart && _startSent && _route.count &&
+                current.dragged == _preview.board.tokens[_route.cells[0]] &&
+                PHInputIsQuiet(&current.input) && SamePosition(current, _preview))
+                _ownedOrb = current.dragged;
+            _expected = current;
+            return;
+        }
         // The game may replace a leader inside the original native frame.
         // Check the captured plan before an accepted swap updates _expected.
         if (!PHOrbSameLeaders(&_preview, &current)) {
@@ -1059,19 +1413,22 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             return;
         }
         if (_awaitingStart) {
-            if (current.dragged == _preview.board.tokens[_route.cells[0]] && SamePosition(current, _preview)) {
+            const bool multiplayer = current.multiplayer.kind != PHOrbMultiplayerNone;
+            if (current.dragged == _preview.board.tokens[_route.cells[0]] && SamePosition(current, _preview) &&
+                (!multiplayer || PHInputIsQuiet(&current.input))) {
                 _ownedOrb = current.dragged; _awaitingStart = false; _expected = current; _stepAt = _frameAt;
                 [self beginExecutionRecord:&current];
                 _message = @"正在執行；點浮動「停止」即可中斷";
             } else if (current.dragged || time - _startedAt > 0.20) {
-                _ownedOrb = current.dragged == _preview.board.tokens[_route.cells[0]] ? current.dragged : 0;
+                _ownedOrb = current.dragged == _preview.board.tokens[_route.cells[0]] &&
+                    (!multiplayer || PHInputIsQuiet(&current.input)) ? current.dragged : 0;
                 [self queueStop:@"遊戲未接受起點，已停止"];
             }
             return;
         }
         PHOrbBoard expectedBoard{};
-        PHOrbReplay(&_preview.board, &_route, unsigned(_target), &expectedBoard);
-        if (current.dragged == _ownedOrb && current.phase == 2 && PHOrbSamePlanBoard(&current.board, &expectedBoard) &&
+        const bool replayed = PHOrbReplay(&_preview.board, &_route, unsigned(_target), &expectedBoard);
+        if (replayed && current.dragged == _ownedOrb && current.phase == 2 && PHOrbSamePlanBoard(&current.board, &expectedBoard) &&
             current.moves == _preview.moves + _target) {
             // Pace from the frame that submitted this target. Restarting at
             // its afterFrame acknowledgement adds native render/read time to
@@ -1107,13 +1464,16 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         } else if (time - _stableAt >= 0.15) [self beginSolve];
     }
     if ((_automatic || _oneShot) && [_phase isEqual:@"preview"]) {
-        if (!HasRouteTime(_live, _route)) [self queueStop:@"自動路徑超出操作時間，已停止"];
+        if (!HasRouteTime(_live, _route, ArmDelay)) [self queueStop:@"自動路徑超出操作時間，已停止"];
         else [self queueExecute:_generation];
     }
     [self advanceAutomation];
 }
 - (NSDictionary *)snapshot {
     NSMutableArray *path = [NSMutableArray array], *goalHits = [NSMutableArray array];
+    NSMutableArray *ruleUses = [NSMutableArray array], *groupUses = [NSMutableArray array];
+    for (NSUInteger turn : _ruleLastUseTurns) [ruleUses addObject:@(turn)];
+    for (NSUInteger turn : _groupLastUseTurns) [groupUses addObject:@(turn)];
     NSMutableArray *decisionDetails = [NSMutableArray array];
     // A retained native refusal must keep its own observation, even when a
     // later scan sees another spinner phase or charge. Unattempted decisions
@@ -1130,26 +1490,69 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     for (unsigned i = 0; i < _route.count; ++i) [path addObject:@(_route.cells[i])];
     for (unsigned i = 0; i < _route.goalCount && i < PHOrbMaxGoals; ++i) [goalHits addObject:@(_route.goalHits[i])];
     BOOL preview = [_phase isEqual:@"preview"];
-    BOOL canExecute = preview && _route.goalsMet && _route.hazardsSafe && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
+    const bool liveReadable = _hasLive && _live.valid && _live.present && !_live.multiplayerDisabled;
+    const bool multiplayer = _live.multiplayer.kind != PHOrbMultiplayerNone || _live.multiplayerDisabled || (_live.present &&
+        !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer));
+    const bool multiplayerOnceReady = liveReadable && PHOrbCanPreview(&_live) &&
+        ![_goalMode isEqual:@"leaders"] && TimeAvailable(_live) > ArmDelay + TimeMargin + StepDuration(_live);
+    const bool busy = _automatic || _oneShot || [self executing];
+    const bool canOnce = _frame.ready && _frame.enabled && (!multiplayer || multiplayerOnceReady) &&
+        !busy && !_inputFault && !_openingInFlight;
+    const auto &multi = _live.multiplayer;
+    NSString *multiplayerMessage = @"";
+    if (multiplayer) {
+        if (_inputFault) multiplayerMessage = @"輸入狀態異常，請檢查診斷";
+        else if (busy) multiplayerMessage = [_phase isEqual:@"releasing"] ?
+            @"正在放開珠子，等待遊戲確認" : @"本次轉珠執行中，可按停止";
+        else if (!_frame.ready) multiplayerMessage = @"遊戲校驗或前景尚未就緒";
+        else if (!_frame.enabled) multiplayerMessage = @"轉珠功能未啟用，請檢查設定";
+        else if (!liveReadable || !multi.known) multiplayerMessage = @"多人資料未確認，暫不能轉一次";
+        else if (_openingInFlight) multiplayerMessage = @"等待已啟動的技能結束";
+        else if ([_goalMode isEqual:@"leaders"]) multiplayerMessage = @"多人請選 Combo 或指定形狀";
+        else multiplayerMessage = canOnce ? @"可轉一次；完成後停止" : MultiplayerWaitMessage(_live);
+        if (liveReadable && multi.known && multi.teamCount >= 2 && multi.teamCount <= 8 && multi.localSeat < multi.teamCount) {
+            NSString *clock = multi.clockKnown && std::isfinite(multi.remainingSeconds) &&
+                multi.remainingSeconds >= 0 && multi.remainingSeconds <= 86400 ?
+                [NSString stringWithFormat:@"%.1f 秒", multi.remainingSeconds] : @"時間未確認";
+            multiplayerMessage = [multiplayerMessage stringByAppendingFormat:@"\n%@ · 本機 %u／%u · 回合 %u · 剩餘 %@",
+                MultiplayerModeName(multi.kind), multi.localSeat + 1, multi.teamCount, multi.turnSerial, clock];
+        }
+    }
+    NSString *traceRelation = !_searchTrace.count ? @"none" : !liveReadable ? @"current-unreadable" :
+        PHBattleSameIdentity(&_traceOrigin.identity, &_live.identity) ? @"captured-in-same-battle" : @"captured-in-earlier-battle";
+    const bool decisionCurrent = liveReadable && _decisionTurn &&
+        PHBattleSameIdentity(&_decisionState.identity, &_live.identity) && PHOrbSameLeaders(&_decisionState, &_live);
+    BOOL canExecute = !multiplayer && preview && _route.goalsMet && _route.hazardsSafe && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
         SamePosition(_live, _preview) && HasRouteTime(_live, _route) && [self hasThornBudget:&_live];
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && !_automatic && !_oneShot && ![self executing] && !_inputFault && !_openingInFlight), @"canExecute":@(canExecute && !_automatic && !_oneShot),
-        @"canStart":@(_frame.ready && _frame.enabled && !_automatic && !_oneShot && ![self executing] && !_inputFault),
-        @"canOnce":@(_frame.ready && _frame.enabled && !_automatic && !_oneShot && ![self executing] && !_inputFault && !_openingInFlight),
+        @"canStart":@(_frame.ready && _frame.enabled && !multiplayer && !_automatic && !_oneShot && ![self executing] && !_inputFault),
+        @"canOnce":@(canOnce),
+        @"multiplayer":MultiplayerTrace(_live), @"multiplayerActive":@(multiplayer), @"multiplayerMessage":multiplayerMessage,
         @"once":@(_oneShot),
-        @"busy":@(_automatic || _oneShot || [self executing]), @"canStop":@(_automatic || _oneShot || [self executing] || _readQueued || preview || [_phase isEqual:@"solving"]),
+        @"busy":@(busy), @"canStop":@(busy || _readQueued || preview || [_phase isEqual:@"solving"]),
         @"automatic":@(_automatic), @"autoTurn":@(_autoTurn), @"autoMoves":@(_autoMoves), @"autoSkills":@(_autoSkills),
         @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),
         @"ruleDecisions":[_ruleDecisions copy], @"decisionTurn":@(_decisionTurn),
+        @"decisionObservedTurn":@(_decisionObservedTurn),
+        @"ruleTiming":@{@"observedTurn":@(_observedTurn), @"profileID":_historyTimingProfile[@"id"] ?: @"",
+            @"ruleLastUseTurns":ruleUses, @"groupLastUseTurns":groupUses},
         @"ruleDecisionDetails":decisionDetails, @"decisionPhase":@(_decisionState.phase),
         @"executionElapsedMS":@(unsigned(_executionElapsed * 1000)), @"executionLimitMS":@(unsigned(ExecutionLimit * 1000)),
         @"decisionSkillWindow":@(_decisionState.automation.window), @"decisionSkillBusy":@(_decisionState.automation.busy),
+        @"decisionSkillWindowReason":PHOrbSkillWindowDescription(&_decisionState.automation),
+        @"decisionContextCurrent":@(decisionCurrent),
+        @"decisionLeaderNumbers":@[@(_decisionState.leaderNumbers[0]), @(_decisionState.leaderNumbers[1])],
+        @"decisionDungeon":@(_decisionState.identity.dungeon), @"decisionFloor":@(_decisionState.identity.floor),
+        @"decisionWave":@(_decisionState.wave),
         @"playerStatus":PHOrbSurvivalDescription(&_live), @"confirmedSkillRules":@(_confirmedRules),
         @"obstacles":PHOrbObstacleDescription(&_live), @"usedSkillGroups":@(_usedGroups),
         @"activeProfile":_activeProfile,
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),
-            @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight), @"steps":[_openingLog copy]},
+            @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight),
+            @"puzzlePending":@(_openingPuzzlePending), @"steps":[_openingLog copy]},
         @"searchTrace":_searchTrace, @"executionHistory":[_executionHistory copy],
+        @"liveReadValid":@(liveReadable), @"searchTraceRelation":traceRelation,
         @"boardTransition":@(_live.boardTransition), @"boardTransitionFrames":@(_boardTransitionFrames),
         @"resizeProgress":@(_live.resizeProgress), @"resizeTarget":@(_live.resizeTarget), @"lastReadIssue":_lastReadIssue,
         @"profileContext":@{@"known":@(_hasLive && _live.valid && _live.present && !_live.multiplayerDisabled),
@@ -1159,6 +1562,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
         @"thornComboPriority":@(_thornComboPriority),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
+        @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,

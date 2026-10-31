@@ -49,6 +49,7 @@ int main(void) {
             "new and legacy configurations default to lower thorn damage");
         Check([PHConfigurationOrbSettings(defaults)[@"allowPoisonWithHeartFour"] isEqual:@NO],
             "new and legacy configurations keep normal poison consumption opt-in");
+        Check([PHConfigurationOrbSettings(defaults)[@"diagonal"] isEqual:@NO], "diagonal movement defaults off in new and legacy settings");
         for (id value in @[@YES, @NO, @1, @"true", NSNull.null]) {
             NSMutableDictionary *thornConfig = [defaults mutableCopy]; thornConfig[@"orbs"] = @{@"thornComboPriority":value};
             NSData *json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
@@ -59,6 +60,10 @@ int main(void) {
             json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
             readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
             Check(PHConfigurationIsValid(readback) == valid, "saved poison policy accepts only true JSON booleans");
+            thornConfig[@"orbs"] = @{@"diagonal":value};
+            json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
+            readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+            Check(PHConfigurationIsValid(readback) == valid, "saved diagonal movement requires a true JSON Boolean");
         }
         Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
             [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");
@@ -123,6 +128,7 @@ int main(void) {
         NSMutableDictionary *rescueRule = [PHOrbDefaultSkillRule() mutableCopy];
         rescueRule[@"hpAtMost"] = @40; rescueRule[@"status"] = @"awoken_bind"; rescueRule[@"required"] = @YES;
         rescueRule[@"obstacle"] = @"unmatchable"; rescueRule[@"unmatchableColors"] = @40;
+        rescueRule[@"intervalMode"] = @"accepted"; rescueRule[@"startAfter"] = @2;
         NSMutableDictionary *rescueSettings = [PHConfigurationOrbSettings(config) mutableCopy]; rescueSettings[@"rules"] = @[rescueRule];
         config[@"orbs"] = rescueSettings;
         Check(!PHConfigurationIsValid(config), "a partial rescue-setting update cannot leave the selected profile stale");
@@ -130,7 +136,7 @@ int main(void) {
         serialized = [NSJSONSerialization dataWithJSONObject:config options:0 error:NULL];
         NSDictionary *rescueConfig = [NSJSONSerialization JSONObjectWithData:serialized options:0 error:NULL];
         Check(PHConfigurationIsValid(rescueConfig) && [PHConfigurationOrbSettings(rescueConfig)[@"rules"] isEqual:@[rescueRule]],
-            "HP, status, required flag and light/heart unmatchable colors round-trip with their selected strategy");
+            "rescue conditions and retained timing/warmup round-trip with their selected strategy");
         Check([PHConfigurationOrbSettings(rescueConfig)[@"recovery"] isEqual:PHOrbDefaultRecovery()],
             "older configuration and profile settings gain a disabled conditional heart policy");
         NSDictionary *heartPolicy = @{@"hpAtMost":@40, @"groups":@2, @"shape":@"four"};

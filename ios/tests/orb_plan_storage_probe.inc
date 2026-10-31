@@ -104,6 +104,32 @@ static void PHProbePlanStorage(UIWindow *overlay) {
         PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowPoisonWithHeartFour"] isEqual:@YES],
             @"Changing quality or thorn preference preserves the selected team's poison policy");
     } else if (poisonMoved) [files moveItemAtPath:poisonBackup toPath:path error:NULL];
+    NSDictionary *beforeDiagonal = PHProbeJSON(@"config.json");
+    NSString *diagonalBackup = [path stringByAppendingFormat:@".diagonal-probe-%@",NSUUID.UUID.UUIDString];
+    BOOL diagonalMoved = [files moveItemAtPath:path toPath:diagonalBackup error:NULL];
+    BOOL diagonalBlocked = diagonalMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(diagonalBlocked,@"Diagonal save test blocks the canonical file of a selected plan");
+    if (diagonalBlocked) {
+        action(@"orbsDiagonal",@YES);
+        NSDictionary *failedDiagonal = snapshot();
+        PHProbeCheck([failedDiagonal[@"config"] isEqual:beforeDiagonal] &&
+            [failedDiagonal[@"orbState"][@"diagonal"] isEqual:@NO] &&
+            [failedDiagonal[@"orbState"][@"diagonalMessage"] length] > 0,
+            @"A failed diagonal save publishes neither the new working policy nor the selected profile");
+        BOOL diagonalRepaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:diagonalBackup toPath:path error:NULL];
+        PHProbeCheck(diagonalRepaired,@"Diagonal fixture restores the canonical file after failed save");
+        if (!diagonalRepaired) return;
+        action(@"retry",nil); action(@"orbsDiagonal",@YES);
+        NSDictionary *diagonalCommitted = snapshot(), *diagonalDisk = PHProbeJSON(@"config.json");
+        NSDictionary *diagonalProfile = profileNamed(configProfiles(diagonalDisk),library[@"selected"]);
+        PHProbeCheck([diagonalDisk[@"orbs"][@"diagonal"] isEqual:@YES] &&
+            [diagonalProfile[@"settings"][@"diagonal"] isEqual:@YES] &&
+            [diagonalCommitted[@"orbState"][@"diagonal"] isEqual:@YES] && ![diagonalCommitted[@"orbState"][@"diagonalMessage"] length],
+            @"A successful diagonal save atomically updates the working settings and selected team plan");
+        action(@"orbsQuality",@"balanced"); action(@"orbsPoisonWithHeartFour",@NO);
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"diagonal"] isEqual:@YES],
+            @"Changing quality or poison policy preserves diagonal permission in the selected plan");
+    } else if (diagonalMoved) [files moveItemAtPath:diagonalBackup toPath:path error:NULL];
     BOOL restored = [original writeToFile:path options:NSDataWritingAtomic error:NULL];
     NSDictionary *reloaded = snapshot();
     PHProbeCheck(restored && [reloaded[@"config"] isEqual:baseline] &&

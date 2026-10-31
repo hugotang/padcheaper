@@ -9,7 +9,13 @@ import re
 def generate(manifest):
     if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.0-106878':
         raise ValueError('Unsupported orb target')
-    if manifest['scope'] != {'multiplayer': False, 'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': [3, 7],
+    if manifest['scope'] != {'multiplayer': {
+                                 'input': 'explicit-local-once', 'modes': [7, 11, 10], 'selector': 1,
+                                 'goal_modes': ['combo', 'manual'], 'continuous': False, 'skills': False,
+                                 'team_mutation': False, 'timer_mutation': False, 'packet_mutation': False,
+                                 'thorn_contact': False, 'device_verified': False,
+                                 'ownership': 'native-local-seat-turn-view-clock', 'preview_execute': False},
+                             'dimensions': [[6, 5], [7, 6], [5, 4]], 'min_erase': [3, 7],
                              'connected_match': True,
                              'continuous': True, 'input': 'scoped-private-manager',
                              'goal_modes': ['combo', 'manual', 'leaders'], 'max_goals': 6,
@@ -54,9 +60,23 @@ def generate(manifest):
                 'PHOrbAwakeningCheckRVA', 'PHOrbSpinnerUpdateRVA', 'PHOrbBombResolveRVA', 'PHOrbTapeProjectRVA',
                 'PHOrbBlindSetRVA', 'PHOrbSuperBlindSetRVA', 'PHOrbBlindTurnRVA', 'PHOrbFixedStartClearRVA',
                 'PHOrbShapeMatchRVA', 'PHOrbLineMatchRVA', 'PHOrbCloudRVA',
-                'PHOrbThornDamageGuardRVA', 'PHOrbPendingDamageGuardRVA', 'PHOrbOrbDamageResolveGuardRVA'}
+                'PHOrbThornDamageGuardRVA', 'PHOrbPendingDamageGuardRVA', 'PHOrbOrbDamageResolveGuardRVA',
+                'PHOrbMultiModeRVA', 'PHOrbMultiFourModeRVA', 'PHOrbMultiInitRVA', 'PHOrbMultiInputGateRVA',
+                'PHOrbMultiDispatchRVA', 'PHOrbMultiSendRVA', 'PHOrbMultiEndRVA', 'PHOrbMultiCountdownRVA',
+                'PHOrbMultiElapsedRVA', 'PHOrbMultiClockRVA', 'PHOrbMultiDeadlineRVA', 'PHOrbMultiTurnElapsedRVA',
+                'PHOrbMultiMatchLimitRVA', 'PHOrbMultiSyncRVA', 'PHOrbMultiTurnInitRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
+    multiplayer_fields = {
+        'PHOrbMultiClockNumeratorRVA': 0x2c6f634, 'PHOrbMultiClockDenominatorRVA': 0x2c6f638,
+        'PHOrbMultiConnectionRVA': 0x1b37258, 'PHOrbMultiNetworkFlagsOffset': 0xafe70,
+        'PHOrbMultiSyncStateOffset': 0xa6398, 'PHOrbMultiResolveOffset': 0x9299a,
+        'PHOrbMultiTurnClockOffset': 0xa6368, 'PHOrbMultiMatchClockOffset': 0xafed8,
+        'PHOrbMultiCountdownOffset': 0xafc81, 'PHOrbMultiFinishedOffset': 0xb7e08,
+    }
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbMulti')} != multiplayer_fields:
+        raise ValueError('Unreviewed multiplayer layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():

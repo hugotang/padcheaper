@@ -1,11 +1,17 @@
 #import <Foundation/Foundation.h>
 #include "PHOrbModel.h"
 
-typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUnavailable, PHOrbSkillStarted };
+typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
+    PHOrbSkillRejected, PHOrbSkillUnavailable, PHOrbSkillStarted,
+    PHOrbSkillWindowClosed // No native call or selection/charge write has occurred.
+};
 
 @protocol PHOrbEngine <NSObject>
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
+// An explicit one-shot UI intent, never a saved setting or automatic mode.
+// Revoking it stops holds; only the same owned gesture may still be released.
+- (void)armMultiplayerOnce:(BOOL)armed;
 // Runs on the native frame thread, with a fresh single-player/board/context
 // check. Unavailable means the game refused this skill, so another rule may run.
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
@@ -29,6 +35,7 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) { PHOrbSkillRejected, PHOrbSkillUna
 - (BOOL)configureProfiles:(NSDictionary *)library;
 - (void)queueRead;
 // Explicit one-click read/solve/execute, without continuous skill rules.
+// Multiplayer binds immediately to the current eligible local operation window.
 - (void)queueOnce;
 - (void)queueAutomatic;
 - (void)queueExecute:(NSUInteger)generation;

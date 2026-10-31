@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <numeric>
 #include <random>
@@ -169,8 +170,12 @@ static void ShapeTests() {
 #include "orb_search_recovery_tests.inc"
 #include "orb_recorded_thorn_solver_tests.inc"
 #include "orb_poison_solver_tests.inc"
+#include "orb_diagonal_solver_tests.inc"
+#include "orb_multiplayer_model_tests.inc"
 
 int main() {
+    MultiplayerModelTests();
+    DiagonalSolverTests();
     ShapeTests();
     TBoundarySolverTests();
     OrbEffectSolverTests();

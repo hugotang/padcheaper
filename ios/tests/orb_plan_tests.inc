@@ -2,7 +2,151 @@ static NSMutableDictionary *ReadPlanFixture(void) {
     NSData *data = [NSData dataWithContentsOfFile:@"ios/templates/ishida-uryu-gamewith-574233/team-plan.json"];
     return data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
 }
+static NSMutableDictionary *ReadCielPlanFixture(NSString *name) {
+    NSString *path = [@"ios/templates/halloween-ciel-gamewith-579537/" stringByAppendingString:name];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
+}
+static void UryuFirstPuzzlePlanTests(void) {
+    for (NSString *name in @[@"team-plan.json",@"team-plan-heart-l.json"]) {
+        NSData *data = [NSData dataWithContentsOfFile:[@"ios/templates/ishida-uryu-gamewith-574233/" stringByAppendingString:name]];
+        NSDictionary *plan = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+        NSDictionary *profile = PHOrbProfileFromPlan(plan,NULL);
+        Check(profile && [PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile),NULL) isEqual:profile],
+            "both Uryu goal variants round-trip with delayed normal Byakuya rules and immediate supply alternatives");
+        if (!profile) continue;
+        const unsigned hearts = [name isEqual:@"team-plan.json"] ? 4 : 5;
+        NSArray *rules = profile[@"settings"][@"rules"];
+        Check(rules.count == 11 && [profile[@"opening"] count] == 6 && ![[profile[@"opening"] lastObject][@"puzzleAfter"] boolValue],
+            "Uryu retains all six opening steps and still evaluates skills/rescues on the first puzzle");
+        if (rules.count != 11) continue;
+        Check([rules[0][@"slot"] isEqual:@2] && [rules[7][@"slot"] isEqual:@4] &&
+            [rules[8][@"required"] boolValue] && [rules[9][@"required"] boolValue] && [rules[10][@"atLeast"] isEqual:@9],
+            "Yoruichi remains before Uryu and both required Unohana rescues remain independent");
+        for (NSUInteger i = 1; i <= 6; ++i) Check([rules[i][@"group"] isEqual:@1] &&
+            [rules[i][@"intervalMode"] isEqual:@"accepted"] && [rules[i][@"every"] isEqual:@1] &&
+            [rules[i][@"startAfter"] isEqual:(i <= 2 ? @1 : @0)] &&
+            [rules[i][@"slot"] unsignedIntValue] == (i % 2 ? 5 : 6),
+            "normal and shortage alternatives share one Byakuya group without delaying first-puzzle rescue");
+        PHOrbSnapshot state = {0}; state.valid = state.settled = state.automation.valid = state.automation.boardKnown = true;
+        state.board.width = 6; state.board.height = 5;
+        for (unsigned slot = 0; slot < 6; ++slot) {
+            state.automation.members[slot].active = true;
+            state.automation.members[slot].number = slot >= 4 ? 14065 : 100 + slot;
+        }
+        for (unsigned i = 0; i < 30; ++i) state.board.types[i] = i < 9 ? 3 : i < 9 + hearts ? 5 : 0;
+        for (NSUInteger i = 1; i <= 6; ++i)
+            Check(PHOrbTriggerSkillRuleWithTiming(rules[i],&state,1,1,0,NULL) == PHOrbRuleNo,
+                "sufficient first-puzzle light and goal-specific hearts preserve both Byakuya skills");
+        state.board.types[8] = 0;
+        Check(PHOrbTriggerSkillRuleWithTiming(rules[3],&state,1,1,0,NULL) == PHOrbRuleYes &&
+            PHOrbTriggerSkillRuleWithTiming(rules[4],&state,1,1,0,NULL) == PHOrbRuleYes,
+            "first-puzzle light shortage may request either ready group member");
+        state.board.types[8] = 3; state.board.types[9 + hearts - 1] = 0;
+        Check(PHOrbTriggerSkillRuleWithTiming(rules[5],&state,1,1,0,NULL) == PHOrbRuleYes &&
+            PHOrbTriggerSkillRuleWithTiming(rules[6],&state,1,1,0,NULL) == PHOrbRuleYes,
+            "heart shortage is an independent OR alternative rather than requiring light shortage too");
+        state.board.types[9 + hearts - 1] = 5;
+        Check(PHOrbTriggerSkillRuleWithTiming(rules[1],&state,1,2,0,NULL) == PHOrbRuleYes &&
+            PHOrbTriggerSkillRuleWithTiming(rules[2],&state,1,3,2,NULL) == PHOrbRuleYes,
+            "normal supply starts on observed turn two and continues despite displayed-run restarts");
+        state.board.spinnerMask = UINT64_C(1) << 8; state.board.spinnerColors = 63;
+        Check(PHOrbTriggerSkillRuleWithTiming(rules[3],&state,1,1,0,NULL) == PHOrbRuleUnknown,
+            "a spinner-dependent ninth light is not treated as guaranteed first-puzzle supply");
+    }
+}
+static void ConsumingAssistPlanTests(void) {
+    for (NSString *name in @[@"recommended.team-plan.json", @"kenpachi-2.team-plan.json"]) {
+        NSMutableDictionary *plan = ReadCielPlanFixture(name);
+        NSDictionary *profile = PHOrbProfileFromPlan(plan, NULL);
+        Check(profile && [PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile), NULL) isEqual:profile],
+            "both CIEL article plans retain their consumed assists and first-puzzle policy on roundtrip");
+        if (!profile) continue;
+        if ([name isEqual:@"kenpachi-2.team-plan.json"]) {
+            NSArray *rules = profile[@"settings"][@"rules"];
+            for (NSUInteger i = 4; i < rules.count; ++i) Check(
+                [rules[i][@"intervalMode"] isEqual:@"accepted"] &&
+                [rules[i][@"startAfter"] isEqual:(i < 6 ? @2 : @0)] &&
+                [rules[i][@"every"] isEqual:(i < 6 ? @2 : @1)],
+                "full Kenpachi plan preserves two warmup turns while leaving same-group rescue active immediately");
+        }
+        PHOrbSnapshot state = {0}; state.valid = state.automation.valid = true;
+        for (unsigned i = 0; i < 6; ++i) {
+            PHOrbSkillMember *m = &state.automation.members[i]; m->active = true; m->assistState = 172;
+            m->number = [plan[@"formation"][@"slots"][i][@"body"][@"id"] unsignedIntValue];
+            PHBattleCatalogIDForNumber([plan[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue], &m->assistCatalogID);
+            m->sourceCatalogIDs[1] = m->assistCatalogID;
+        }
+        Check(PHOrbProfileMatchesOpeningTeam(profile, &state, 0), "CIEL opening matches the initial equipped team");
+        for (NSUInteger i = 0; i < [plan[@"opening"] count]; ++i) {
+            NSDictionary *step = plan[@"opening"][i];
+            PHOrbSkillMember *m = &state.automation.members[[step[@"slot"] unsignedIntegerValue] - 1];
+            if ([step[@"afterMonster"] unsignedIntValue]) m->number = [step[@"afterMonster"] unsignedIntValue];
+            if ([step[@"consumeAssist"] boolValue]) {
+                uint16_t assist = m->assistCatalogID;
+                m->assistCatalogID = 0;
+                Check(!PHOrbProfileMatchesOpeningTeam(profile, &state, i + 1), "a merely missing active assist is not a consumption receipt");
+                m->assistState = 0;
+                Check(!PHOrbProfileMatchesOpeningTeam(profile, &state, i), "consumption cannot match an earlier unconfirmed step");
+                ++m->sourceCatalogIDs[1];
+                Check(!PHOrbProfileMatchesOpeningTeam(profile, &state, i + 1), "consumption still binds the exact source weapon");
+                m->sourceCatalogIDs[1] = assist;
+            }
+            Check(PHOrbProfileMatchesOpeningTeam(profile, &state, i + 1), "each CIEL opening transition matches only its confirmed progress");
+        }
+        Check(PHOrbProfileMatchesRunningTeam(profile, &state), "consumed article assists remain absent during the loop");
+        for (unsigned slot = 0; slot < 6; ++slot) {
+            PHOrbSkillMember *m = &state.automation.members[slot];
+            if (m->assistCatalogID) continue;
+            m->identityNumber = m->number; m->identityAssist = m->sourceCatalogIDs[1];
+            m->number = 4264; m->temporaryKnown = true; m->temporaryTurns = 2;
+            PHBattleCatalogIDForNumber(4264, &m->temporaryID);
+            Check(PHOrbProfileMatchesRunningTeam(profile, &state), "native temporary replacement preserves the consumed source identity");
+            ++m->identityAssist;
+            Check(!PHOrbProfileMatchesRunningTeam(profile, &state), "temporary replacement cannot hide a changed consumed source");
+            --m->identityAssist; m->number = m->identityNumber; m->temporaryTurns = 0;
+        }
+    }
+    NSMutableDictionary *plan = ReadCielPlanFixture(@"recommended.team-plan.json");
+    for (id invalid in @[@1, @"true", NSNull.null]) {
+        NSMutableDictionary *bad = ReadCielPlanFixture(@"recommended.team-plan.json");
+        bad[@"opening"][8][@"consumeAssist"] = invalid;
+        Check(!PHOrbProfileFromPlan(bad, NULL), "consumption flags require JSON Boolean values");
+        bad = ReadCielPlanFixture(@"recommended.team-plan.json"); bad[@"opening"][9][@"puzzleAfter"] = invalid;
+        Check(!PHOrbProfileFromPlan(bad, NULL), "first-puzzle flags require JSON Boolean values");
+    }
+    NSMutableDictionary *bad = ReadCielPlanFixture(@"recommended.team-plan.json"); bad[@"opening"][0][@"puzzleAfter"] = @YES;
+    Check(!PHOrbProfileFromPlan(bad, NULL), "first puzzle may follow only the final opening step");
+    bad = ReadCielPlanFixture(@"recommended.team-plan.json"); bad[@"opening"][9][@"consumeAssist"] = @YES;
+    Check(!PHOrbProfileFromPlan(bad, NULL), "body skills cannot declare assist consumption");
+    bad = ReadCielPlanFixture(@"recommended.team-plan.json"); bad[@"opening"][8][@"afterMonster"] = @14189;
+    Check(!PHOrbProfileFromPlan(bad, NULL), "assist consumption cannot declare a simultaneous body transformation");
+    Check([PHOrbPlanDescription(plan) containsString:@"確認武裝消耗"] && [PHOrbPlanDescription(plan) containsString:@"先轉此盤"],
+        "import preview exposes both the consumed weapon and first-puzzle policy");
+    // A later body use on the consumed slot requires assist zero; retaining
+    // the old ID would wrongly imply the original weapon is still active.
+    NSMutableDictionary *last = [[plan[@"opening"] lastObject] mutableCopy]; [last removeObjectForKey:@"puzzleAfter"];
+    NSMutableArray *steps = [plan[@"opening"] mutableCopy]; steps[steps.count - 1] = last;
+    [steps addObject:@{@"slot":@4,@"source":@"body",@"monster":@14190,@"assist":@0,@"skill":@65757,@"afterMonster":@0}];
+    plan[@"opening"] = steps;
+    Check(PHOrbProfileFromPlan(plan, NULL) != nil, "later opening body steps may name the now-consumed assist as zero");
+    steps[steps.count - 1] = @{@"slot":@4,@"source":@"assist",@"monster":@14190,@"assist":@14191,@"skill":@65884,@"afterMonster":@0};
+    plan[@"opening"] = steps;
+    Check(!PHOrbProfileFromPlan(plan, NULL), "an opening cannot reuse a consumed assist");
+    for (NSString *name in @[@"recommended.post-opening.json", @"kenpachi-2.post-opening.json"]) {
+        NSString *path = [@"ios/templates/halloween-ciel-gamewith-579537/" stringByAppendingString:name];
+        NSData *data = [NSData dataWithContentsOfFile:path];
+        NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(), data, NULL);
+        Check(library && !library[@"profiles"][0][@"formation"] && !library[@"profiles"][0][@"opening"],
+            "manual-opening compatibility files import as ordinary profiles without replaying weapons");
+        NSDictionary *portable = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+        for (NSDictionary *rule in portable[@"profile"][@"settings"][@"rules"])
+            Check(!rule[@"intervalMode"] && !rule[@"startAfter"], "0.5.11 compatibility files retain their supported rule keys");
+    }
+}
 static void PlanTests(void) {
+    UryuFirstPuzzlePlanTests();
+    ConsumingAssistPlanTests();
     NSMutableDictionary *plan = ReadPlanFixture(); NSString *reason = nil;
     NSDictionary *profile = PHOrbProfileFromPlan(plan, &reason);
     Check(profile && !reason && [profile[@"opening"] count] == 6, "complete Uryu template validates all six opening steps");
@@ -25,6 +169,14 @@ static void PlanTests(void) {
         "full team plans retain the optional normal-poison-with-hearts policy on roundtrip");
     poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @1;
     Check(!PHOrbProfileFromPlan(poisonPlan, NULL), "plan import rejects numeric poison permission");
+    NSMutableDictionary *diagonalPlan = ReadPlanFixture(); diagonalPlan[@"board"][@"diagonal"] = @YES;
+    NSDictionary *diagonalProfile = PHOrbProfileFromPlan(diagonalPlan, &reason);
+    Check(diagonalProfile && [PHOrbPlanFromProfile(diagonalProfile)[@"board"][@"diagonal"] isEqual:@YES] &&
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(diagonalProfile), NULL) isEqual:diagonalProfile] &&
+        [PHOrbPlanDescription(diagonalPlan) containsString:@"斜向轉珠：開啟"],
+        "complete team-plan import/export and review summary retain the optional diagonal gesture policy");
+    diagonalPlan[@"board"][@"diagonal"] = @1;
+    Check(!PHOrbProfileFromPlan(diagonalPlan, NULL), "team plans reject numeric diagonal permission");
     NSDictionary *library = PHOrbProfilesImportingPlan(PHOrbDefaultProfiles(),plan,&reason);
     Check(PHOrbProfilesValid(library) && [library[@"selected"] isEqual:plan[@"id"]] && ![library[@"autoSelect"] boolValue],
         "import selects an explicitly reviewed plan without automatic start");

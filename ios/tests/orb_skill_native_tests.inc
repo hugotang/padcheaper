@@ -110,7 +110,7 @@ static void SkillFixture() {
     for (unsigned i = 0; i < 6; ++i) {
         SetLeader(i, uint16_t(100 + i));
         const uintptr_t member = Impl + PHBattleMemberOffset + i * PHBattleMemberStride;
-        for (uintptr_t offset : {uintptr_t(72), uintptr_t(344), uintptr_t(360), uintptr_t(488), uintptr_t(504)})
+        for (uintptr_t offset : {uintptr_t(72), uintptr_t(344), uintptr_t(360), uintptr_t(472), uintptr_t(488), uintptr_t(504)})
             Protected(member + offset, 0, 0x6a875a8b);
         for (uintptr_t offset : {PHBattleTempIDOffset, PHBattleTempTurnsOffset, PHBattleFormOffset})
             Protected(member + offset, 0, 0x6a875a8b);
@@ -124,6 +124,29 @@ static void SkillFixture() {
     Put<uint8_t>(enemy + 23, 255);
     for (uintptr_t offset : {uintptr_t(2400), uintptr_t(2192), uintptr_t(2256), uintptr_t(2224), uintptr_t(2176), uintptr_t(2240)})
         Protected(enemy + offset, 0, 0x6a875a8b);
+}
+static void ConsumedAssistReadTests() {
+    SkillFixture();
+    const uintptr_t address = Impl + PHBattleMemberOffset;
+    uint16_t assist = 0; PHBattleCatalogIDForNumber(14191, &assist);
+    Put<uint16_t>(address + PHBattleAssistIDOffset, assist);
+    Put<uint16_t>(address + 1438, assist); Protected(address + 472, 172, 0x6a875a8b);
+    FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot before{}, after{};
+    Check([engine readAutomation:&before frame:Frame() reason:nil] && before.automation.members[0].assistState == 172,
+        "native automation reads the protected active assist state without calling getters");
+    Protected(address + 472, 0x100u | 172u, 0x6a875a8b);
+    Check([engine readAutomation:&after frame:Frame() reason:nil] && after.automation.members[0].assistState == (0x100u | 172u) &&
+        !PHOrbSameAutomation(&before, &after), "assist state preserves native word flags instead of narrowing to a byte");
+    Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBody,CurrentFixtureSkill} expected:&before frame:Frame() reason:nil] == PHOrbSkillRejected &&
+        !canUseCalls && !readinessCalls && !skillStartCalls && !writes,
+        "changing only the protected assist state invalidates a pending skill before native calls");
+    Put<uint16_t>(address + 1438, 0); Protected(address + 472, 0, 0x6a875a8b);
+    Check([engine readAutomation:&after frame:Frame() reason:nil] && !after.automation.members[0].assistCatalogID &&
+        !after.automation.members[0].assistState && after.automation.members[0].sourceCatalogIDs[1] == assist &&
+        !PHOrbSameAutomation(&before, &after) && !readinessCalls && !canUseCalls && !writes,
+        "type-250 consumption reads as absent active assist with retained source and changes the attempt context");
+    Put<uint32_t>(address + 472, 0);
+    Check(![engine readAutomation:&after frame:Frame() reason:nil], "corrupt protected consumption state fails the automation read");
 }
 
 static void SetSkillRecord(uint32_t id, uint16_t type, std::initializer_list<int32_t> params) {
@@ -380,6 +403,7 @@ static void TemporarySkillNativeTests() {
 #include "orb_skill_choice_tests.inc"
 
 static void SkillNativeTests() {
+    ConsumedAssistReadTests();
     for (unsigned scenario = 0; scenario < 8; ++scenario) {
         SkillFixture(); FixtureSkillEngine *resizeEngine = [FixtureSkillEngine new];
         PHOrbSnapshot stable{}, transition{}; NSString *resizeReason = nil;

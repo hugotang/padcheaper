@@ -161,6 +161,11 @@ int main(void) { @autoreleasepool {
     Put<uint32_t>(Header+PHBattleMultiplayerRVA,0); [music onFrame:frame time:2]; Check(!sets&&!writes,"multiplayer is latched despite a later selector transition");
     Put<uint16_t>(Header+PHSaveRVA,0); [music onFrame:frame time:3]; Put<uint16_t>(Header+PHSaveRVA,0x0101); [music onFrame:frame time:4];
     Check(sets==1,"observed battle exit permits a later single-player track selection");
+    for (uint16_t mode : {uint16_t(7), uint16_t(10), uint16_t(11)}) {
+        Seed(); music=[PHMusic new]; frame=Frame(); Put<uint16_t>(Header+PHBattleModeRVA,mode);
+        [music onFrame:frame time:1];
+        Check(!sets&&!writes,"co-op and competitive categories cannot set music even with a zero selector");
+    }
     Seed(); music=[PHMusic new]; frame=Frame();
     Put<uint16_t>(Header+PHSaveRVA+PHMusicClearBucketsOffset+28,0);
     const auto clearRecord=Header+PHSaveRVA+PHMusicClearRecordsOffset;

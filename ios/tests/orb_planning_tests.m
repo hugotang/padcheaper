@@ -38,6 +38,12 @@ int main(void) {
               "recorded leader pair yields wood column plus heart cross plus attacking-color four-match");
         Check([plan[@"warning"] containsString:@"有效覺醒"] && [plan[@"warning"] containsString:@"追加 Combo"],
               "board plan never claims to have verified awakening activation or leader-added combos");
+        PHOrbSnapshot douma = state; douma.leaderNumbers[0] = douma.leaderNumbers[1] = 12832;
+        NSDictionary *doumaPlan = PHOrbPlanForLeaders(&douma);
+        NSSet *doumaGoals = [NSSet setWithArray:doumaPlan[@"goals"]];
+        Check([doumaPlan[@"available"] boolValue] && doumaGoals.count == 2 &&
+            [doumaGoals containsObject:Goal(@"match",2,1,5)] && [doumaGoals containsObject:Goal(@"cross",31,1,0)],
+            "recorded unchanged Douma leaders yield one water five-match and one attacking-color cross without duplicating both leaders");
         state.leaderNumbers[0] = 13834;
         plan = PHOrbPlanForLeaders(&state);
         Check([plan[@"available"] boolValue] && [plan[@"goals"] count] == 2, "identical leader clauses share the same matches");

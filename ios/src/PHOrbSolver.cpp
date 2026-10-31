@@ -27,6 +27,7 @@ struct Context {
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
+    bool diagonal = false;
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
@@ -56,6 +57,15 @@ Bits Neighbours(Bits cells, const Context &context) {
         ((cells & ~context.rightEdge) << 1) | ((cells & ~context.leftEdge) >> 1)) & context.boardMask;
 }
 
+Bits MoveNeighbours(Bits cells, const Context &context) {
+    Bits result = Neighbours(cells, context);
+    if (context.diagonal) {
+        Bits horizontal = ((cells & ~context.rightEdge) << 1) | ((cells & ~context.leftEdge) >> 1);
+        result |= ((horizontal << context.width) | (horizontal >> context.width)) & context.boardMask;
+    }
+    return result;
+}
+
 Bits MarkedRuns(Bits color, const Context &context) {
     Bits marked = 0;
     for (unsigned axis = 0; axis < 2; ++axis) {
@@ -77,10 +87,11 @@ void AddPattern(std::vector<Pattern> &patterns, Bits cells, unsigned w, unsigned
 }
 
 Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true,
-                    bool allowPoisonWithHeartFour = false) {
+                    bool allowPoisonWithHeartFour = false, bool diagonal = false) {
     const unsigned w = board.width, h = board.height;
     Context context{w, h, goals, {}};
     context.allowPoisonWithHeartFour = allowPoisonWithHeartFour;
+    context.diagonal = diagonal;
     context.minErase = board.minErase ? board.minErase : 3;
     context.minMatch = board.minMatch;
     context.unmatchable = board.unmatchableColors;
@@ -161,7 +172,7 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
         Bits frontier = Bits(1) << i, seen = frontier;
         if (frontier & context.blocked) continue;
         for (unsigned distance = 1; distance < w * h; ++distance) {
-            frontier = Neighbours(frontier, context) & ~seen & ~context.blocked;
+            frontier = MoveNeighbours(frontier, context) & ~seen & ~context.blocked;
             if (!frontier) break;
             context.distanceMasks[i][distance] = frontier;
             context.distanceDepth[i] = distance;
@@ -682,7 +693,7 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept {
     result = {}; thornDamage = 0; thornContacts = 0;
     PHOrbBoard replay{};
-    if (!route.count || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
+    if (!route.count || route.diagonal != options.diagonal || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
         !PHOrbEvaluate(replay, options.goals, result, options.allowPoisonWithHeartFour)) return false;
     Cells thorns{};
     for (unsigned i = 0; i < board.width * board.height; ++i)
@@ -721,14 +732,14 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
         std::array<uint32_t, 128> damageTable{};
         for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
-        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour);
+        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
         // evaluation. Check the clock between each such candidate.
         const unsigned deadlineMask = context.variants > 1 || context.shapeGoals ? 0u : options.goals.count ? 7u : 31u;
         if (!EnoughOrbs(initial, context)) return PHOrbSolveStatus::InsufficientOrbs;
         std::vector<Node> starts, beam, next;
-        starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * 4);
+        starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * (options.diagonal ? 8 : 4));
         for (unsigned i = 0; i < size; ++i) {
             if (!PHOrbCanStartAt(&board, i)) continue;
             Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); starts.push_back(node);
@@ -739,7 +750,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
         std::unordered_set<uint64_t> visited;
-        visited.reserve(options.beam * 4);
+        visited.reserve(options.beam * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
         const bool recover = context.shapeGoals && options.recoveryPasses;
         const bool retain = context.shapeGoals && options.backtrackLimit && options.steps >= 12;
@@ -752,7 +763,11 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 next.clear(); visited.clear();
                 for (const Node &parent : beam) {
                     unsigned current = parent.path[parent.length - 1];
-                    for (int cell : {int(current) - int(board.width), int(current) + int(board.width), int(current) - 1, int(current) + 1}) {
+                    const int width = int(board.width);
+                    const int neighbors[] = {int(current) - width, int(current) + width, int(current) - 1, int(current) + 1,
+                        int(current) - width - 1, int(current) - width + 1, int(current) + width - 1, int(current) + width + 1};
+                    for (unsigned direction = 0; direction < (options.diagonal ? 8u : 4u); ++direction) {
+                        const int cell = neighbors[direction];
                         if (cancel.load(std::memory_order_relaxed)) return;
                         if ((evaluated & deadlineMask) == 0) {
                             const auto now = Clock::now();
@@ -762,7 +777,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             // for a different score or a discarded frontier.
                             if (now >= passDeadline && !met()) { passEnded = true; break; }
                         }
-                        if (cell < 0 || !PHOrbAdjacent(current, unsigned(cell), board.width, board.height) ||
+                        if (cell < 0 || !PHOrbMoveAdjacent(current, unsigned(cell), board.width, board.height, options.diagonal) ||
                             (blocked & (Bits(1) << cell)) ||
                             (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
                         Node child = parent;
@@ -856,6 +871,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         if (!found) return PHOrbSolveStatus::NoRoute;
         route.count = best.length;
+        route.diagonal = options.diagonal;
         std::copy(best.path.begin(), best.path.begin() + best.length, route.cells);
         route.combos = best.score.result.combos; route.erased = best.score.result.erased;
         route.goalCount = options.goals.count; route.matchedGoals = best.score.result.matchedGoals;

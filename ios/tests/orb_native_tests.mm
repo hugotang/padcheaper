@@ -10,6 +10,9 @@ static unsigned failures, writes, failWrite, guardChecks;
 static bool codeValid = true;
 static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSelectionWrite;
 static bool replaceHashDuringResizeRead;
+static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
+static bool changeTurnDuringCoordinateRead;
+static bool rejectBattleProtection;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -24,6 +27,7 @@ static bool Range(uintptr_t address, size_t length) {
     return false;
 }
 BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required, vm_prot_t forbidden) {
+    if (rejectBattleProtection && address == Impl + 0x92000 && length == 0x2e000) return NO;
     return Range(address, length);
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
@@ -32,6 +36,18 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (replaceHashDuringResizeRead && address == Impl + PHOrbResizeProgressOffset) {
         replaceHashDuringResizeRead = false;
         reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
+    }
+    if (changeTurnDuringMultiRead && address == Impl + PHOrbMultiResolveOffset) {
+        changeTurnDuringMultiRead = false;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
+    }
+    if (changeHashDuringBoardRead && address == Impl + PHOrbTableOffset) {
+        changeHashDuringBoardRead = false;
+        reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
+    }
+    if (changeTurnDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changeTurnDuringCoordinateRead = false;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
     }
     return YES;
 }
@@ -64,6 +80,9 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     writes = failWrite = guardChecks = 0; codeValid = true;
     ignoreSelectionWrite = switchMultiInSelectionWrite = changeSourceInSelectionWrite = false;
     replaceHashDuringResizeRead = false;
+    changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
+    changeTurnDuringCoordinateRead = false;
+    rejectBattleProtection = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);
@@ -108,13 +127,34 @@ static void NativeInputFrame() {
     std::memcpy(p + 1320, p, 264); p[1320 + 219] = p[214]; p[2641] = p[2640];
     std::memcpy(p + 1320 + 12, p + 4, 8); p[213] = 0;
 }
+static void ReadIssueNativeTests() {
+    NSArray<NSString *> *messages = @[@"場景表的戰鬥物件未通過讀取校驗", @"戰鬥實作指標未通過讀取校驗",
+        @"目前戰鬥實作與場景物件不一致", @"戰鬥記憶體範圍未通過讀寫保護校驗"];
+    for (unsigned guard = 0; guard < 4; ++guard) {
+        Reset(); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot captured{}, failed{}; NSString *reason = nil;
+        Check([engine read:&captured frame:Frame() reason:&reason], "read-issue fixture captures a valid board before each failure");
+        if (guard == 0) Put<uintptr_t>(Header + PHSceneTableRVA + 24, 0);
+        if (guard == 1) Put<uintptr_t>(Header + PHGameMainRVA + 0x70, Impl + 1);
+        if (guard == 2) Put<uintptr_t>(Header + PHBattleImplRVA, 0);
+        if (guard == 3) rejectBattleProtection = true;
+        Check(![engine read:&failed frame:Frame() reason:&reason] && !failed.valid && [reason isEqual:messages[guard]],
+            "each original battle-read guard names its specific failed check");
+        Check(![engine stageCell:0 down:YES beginning:YES expected:&captured frame:Frame() reason:&reason] && !writes,
+            "a read-guard failure cannot stage input from a previously captured board");
+    }
+    Reset();
+}
 
 #include "orb_skill_native_tests.inc"
 #include "orb_effect_native_tests.inc"
 #include "orb_thorn_native_tests.inc"
+#include "orb_diagonal_native_tests.inc"
+#include "orb_skill_window_native_tests.inc"
+#include "orb_multiplayer_native_tests.inc"
 
 int main() {
     @autoreleasepool {
+        MultiplayerNativeTests();
         Reset(); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
         BOOL initialRead = [engine read:&state frame:Frame() reason:&reason];
         Check(initialRead && PHOrbCanPreview(&state), "validated ordinary board readable");
@@ -234,7 +274,7 @@ int main() {
 
         Reset(); engine = PHCreateOrbEngine(); Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
         [engine read:&state frame:Frame() reason:&reason];
-        Check(state.multiplayerDisabled && guardChecks == 0 && writes == 0, "multiplayer is metadata only with no native calls or input writes");
+        Check(state.multiplayerDisabled && guardChecks == 0 && writes == 0, "unsupported multiplayer selectors remain metadata only without native calls or writes");
         Put<uint32_t>(Header + PHBattleMultiplayerRVA, 0); [engine read:&state frame:Frame() reason:&reason];
         Check(state.multiplayerDisabled, "multiplayer latch cannot be bypassed by selector transitions");
         Put<uint16_t>(Header + PHSaveRVA, 0); [engine read:&state frame:Frame() reason:&reason];
@@ -260,6 +300,9 @@ int main() {
         SurvivalNativeTests();
         OrbEffectNativeTests();
         ThornNativeTests();
+        ReadIssueNativeTests();
+        DiagonalNativeTests();
+        SkillWindowNativeTests();
         std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

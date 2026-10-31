@@ -14,6 +14,8 @@ static PHOrbSession *PlanSession(FakeOrbEngine *engine, NSDictionary *profile) {
         engine->live.automation.members[i].number = [profile[@"team"][i] unsignedIntValue];
         PHBattleCatalogIDForNumber([profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue],
             &engine->live.automation.members[i].assistCatalogID);
+        engine->live.automation.members[i].sourceCatalogIDs[1] = engine->live.automation.members[i].assistCatalogID;
+        engine->live.automation.members[i].assistState = 172;
     }
     for (NSDictionary *step in profile[@"opening"]) {
         unsigned slot = [step[@"slot"] unsignedIntValue] - 1;
@@ -127,8 +129,134 @@ static void TemporaryPlanSessionTests() {
         }
     }
 }
+static void ConsumingAssistPlanSessionTests() {
+    // Isolate sequencing from the article's haste/board effects. The actual
+    // article JSON is separately checked by the profile import fixtures.
+    for (unsigned scenario = 0; scenario < 8; ++scenario) {
+        NSMutableDictionary *profile = [PlanSessionProfile() mutableCopy];
+        profile[@"opening"] = @[@{@"slot":@5,@"source":@"assist",@"monster":@14065,
+            @"assist":@13105,@"skill":@58344,@"afterMonster":@0,@"consumeAssist":@YES,@"puzzleAfter":@YES}];
+        NSMutableDictionary *settings = [profile[@"settings"] mutableCopy];
+        NSMutableDictionary *loop = [settings[@"rules"][0] mutableCopy];
+        loop[@"required"] = @YES; settings[@"rules"] = @[loop]; profile[@"settings"] = settings;
+        FakeOrbEngine *engine = [FakeOrbEngine new];
+        engine->consumeAssistAfterSkill[4] = scenario != 2;
+        if (scenario == 6) engine->failSkillAck = YES;
+        PHOrbSession *session = PlanSession(engine, profile);
+        Check(UntilPhase(session, engine, @"openingWaiting") && engine->skillOrder.size() == 1,
+            "consuming first-puzzle opening starts exactly one native skill");
+        if (scenario == 1) [session queueStop:@"stop while consuming opening assist"];
+        if (scenario == 3) ++engine->live.automation.members[4].sourceCatalogIDs[1];
+        if (scenario == 2 || scenario == 3 || scenario == 6) {
+            for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
+        } else {
+            for (unsigned i = 0; i < 30 && [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] < 1; ++i)
+                Tick(session, engine, Frame());
+        }
+        if (scenario == 2 || scenario == 3 || scenario == 6) {
+            Check([[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 0 &&
+                ![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.size() == 1,
+                "retained weapon, changed source or missing skill receipt cannot advance the consumed opening");
+            [session queueAutomatic];
+            for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
+            Check(engine->skillOrder.size() == 1 && !engine->stages,
+                "invalid consumption does not replay or skip the started opening on resume");
+            continue;
+        }
+        Check([[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 1 &&
+            [[session snapshot][@"opening"][@"puzzlePending"] boolValue] && !engine->live.automation.members[4].assistCatalogID,
+            "confirmed consumption preserves the pending first puzzle");
+        engine->chosenSkill[4] = 64914; engine->unavailableSkills[4] = YES;
+        [session queueStop:@"stop after opening before the first puzzle"];
+        if (scenario == 4 || scenario == 7) {
+            // User completes this puzzle manually while stopped.
+            engine->live.phase = 3; engine->live.moves = scenario == 7 ? 0 : 1;
+            Tick(session, engine, Frame(), 0.12);
+            engine->live.phase = 2; engine->live.moves = 0; engine->live.automation.skillUses = 0;
+            Tick(session, engine, Frame(), 0.12); engine->unavailableSkills[4] = NO;
+            Check(![[session snapshot][@"opening"][@"puzzlePending"] boolValue],
+                "a confirmed manual orb turn clears the deferred first puzzle");
+        }
+        [session queueAutomatic];
+        if (scenario == 4 || scenario == 7) {
+            Check(UntilPhase(session, engine, @"skillWaiting") && engine->skillOrder.size() == 2,
+                "resuming after a manually completed first puzzle starts the loop without replaying the assist");
+            [session queueStop:@"end manual first puzzle fixture"]; continue;
+        }
+        Check(UntilPhase(session, engine, @"arming") && engine->skillOrder.size() == 1,
+            "the first opening board is planned before the uncharged required CD1 supplier");
+        if (scenario == 5) {
+            [session queueStop:@"stop with pending first puzzle"];
+            ++engine->live.automation.members[4].sourceCatalogIDs[1]; [session queueAutomatic];
+            for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
+            Check(![[session snapshot][@"automatic"] boolValue] && engine->skillOrder.size() == 1 && !engine->stages,
+                "pending first puzzle still checks the exact consumed source on resume");
+            continue;
+        }
+        Check(UntilPhase(session, engine, @"turnWaiting") && engine->skillOrder.size() == 1,
+            "first-puzzle policy sends an orb route without retrying its uncharged supplier");
+        engine->unavailableSkills[4] = NO;
+        engine->live.phase = 3; engine->live.moves = 1;
+        Tick(session, engine, Frame());
+        engine->live.phase = 2; engine->live.moves = 0; engine->live.automation.skillUses = 0;
+        Check(UntilPhase(session, engine, @"skillWaiting") && engine->skillOrder.size() == 2 && engine->skillOrder.back() == 4 &&
+            ![[session snapshot][@"opening"][@"puzzlePending"] boolValue],
+            "only the next confirmed orb turn clears the pending puzzle and resumes the supplier loop");
+        [session queueStop:@"end consumed opening fixture"];
+    }
+}
+static void KenpachiPlanTimingSessionTests() {
+    NSData *data = [NSData dataWithContentsOfFile:@"ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.team-plan.json"];
+    NSDictionary *plan = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSMutableDictionary *profile = [PHOrbProfileFromPlan(plan,NULL) mutableCopy];
+    Check(profile != nil, "Kenpachi full plan is available to the session fixture");
+    if (!profile) return;
+    // Exercise the actual article ordering, sources and timing. Isolate the
+    // session from shape search and native skill effects/cooldown simulation.
+    NSMutableDictionary *settings = [profile[@"settings"] mutableCopy];
+    settings[@"quality"] = @"fast"; settings[@"mode"] = @"combo"; settings[@"goals"] = @[];
+    profile[@"settings"] = settings;
+    FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = PlanSession(engine,profile);
+    NSArray *steps = profile[@"opening"];
+    for (unsigned i = 0; i < 600 && [session.snapshot[@"automatic"] boolValue]; ++i) {
+        const NSUInteger index = [session.snapshot[@"opening"][@"completed"] unsignedIntegerValue];
+        if (index == steps.count) break;
+        NSDictionary *step = steps[index]; const unsigned slot = [step[@"slot"] unsignedIntValue] - 1;
+        engine->chosenSource[slot] = [step[@"source"] isEqual:@"body"] ? PHOrbSkillBody : PHOrbSkillAssist;
+        engine->chosenSkill[slot] = [step[@"skill"] unsignedIntValue];
+        engine->transformAfterSkill[slot] = [step[@"afterMonster"] unsignedIntValue];
+        engine->consumeAssistAfterSkill[slot] = [step[@"consumeAssist"] boolValue];
+        Tick(session,engine,Frame());
+    }
+    const std::vector<NSUInteger> opening{1,3,4,5,0,2,5,4};
+    Check(engine->skillOrder == opening && [session.snapshot[@"opening"][@"completed"] unsignedIntegerValue] == 8 &&
+        ObservedSkillTurn(session) == 1 && !engine->stages &&
+        !engine->live.automation.members[4].assistCatalogID && !engine->live.automation.members[5].assistCatalogID,
+        "eight real opening rows consume both weapons without advancing the orb-turn clock");
+    for (NSDictionary *rule in settings[@"rules"]) {
+        const unsigned slot = [rule[@"slot"] unsignedIntValue] - 1;
+        engine->chosenSource[slot] = PHOrbSkillBody; engine->chosenSkill[slot] = [rule[@"skill"] unsignedIntValue];
+        engine->transformAfterSkill[slot] = 0; engine->consumeAssistAfterSkill[slot] = NO;
+    }
+    // Keep the optional evolved shield unavailable; all three required
+    // suppliers are independently native-ready in this sequencing fixture.
+    engine->unavailableSkills[2] = YES; engine->unavailableSkills[4] = YES;
+    std::vector<NSUInteger> expected = opening;
+    for (unsigned turn = 1; turn <= 5; ++turn) {
+        if (turn == 5) engine->unavailableSkills[4] = NO;
+        const bool finished = turn == 1 ? UntilPhase(session,engine,@"turnWaiting") : NextOrbTurn(session,engine);
+        expected.insert(expected.end(), {5,0,1});
+        if (turn == 3) expected.push_back(3);
+        if (turn == 5) expected.push_back(4);
+        Check(finished && engine->skillOrder == expected && ObservedSkillTurn(session) == turn,
+            "full Kenpachi plan supplies three skills on every warmup/rotation turn and alternates at turns three and five");
+    }
+    [session queueStop:@"end full Kenpachi sequencing fixture"];
+}
 static void PlanSessionTests() {
+    KenpachiPlanTimingSessionTests();
     TemporaryPlanSessionTests();
+    ConsumingAssistPlanSessionTests();
     NSDictionary *profile = PlanSessionProfile();
     // The fifth real opening skill resizes the board without necessarily
     // changing phase away from two. Acknowledge it, then await full geometry.

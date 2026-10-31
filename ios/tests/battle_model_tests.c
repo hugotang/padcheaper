@@ -94,8 +94,8 @@ int main(void) {
     Check(PHBattleStateGate(&state) == PHBattleGateReady, "reported category 1 solo entry is eligible");
     for (uint32_t mode = 0; mode <= UINT16_MAX; ++mode) {
         state.mode = (int16_t)mode;
-        Check(PHBattleStateGate(&state) == (mode == 7 ? PHBattleGateMultiplayer : PHBattleGateReady),
-            "default entry filters never authorize the known three-player category, even with multi zero");
+        Check(PHBattleStateGate(&state) == ((mode == 7 || mode == 10 || mode == 11) ? PHBattleGateMultiplayer : PHBattleGateReady),
+            "co-op and competitive categories never authorize battle writes even with a zero selector");
     }
     state.mode = 3;
     state.policy = (PHBattlePolicy){.configured = true, .modes = {.count = 3, .values = {0,1,12}},
@@ -154,6 +154,13 @@ int main(void) {
         state.protectedValuesValid = false; state.teamBanksValid = false;
         Check(PHBattleStateGate(&state) == PHBattleGateMultiplayer,
             "multiplayer disablement is reported before temporary protected-value or layout errors");
+    }
+    for (int16_t mode = 10; mode <= 11; ++mode) {
+        state = solo; state.mode = mode; state.multiplayer = 0;
+        state.policy = (PHBattlePolicy){.configured = true, .modes = {.allowAll = true},
+            .sources = {.allowAll = true}, .multiplayer = {.allowAll = true}};
+        Check(PHBattleStateGate(&state) == PHBattleGateMultiplayer && PHBattleEntryGate(&state) == PHBattleGateMultiplayer,
+            "competitive selector reset rejects battle mutations under all legacy filters");
     }
     state = solo; state.multiplayerDisabled = true;
     Check(PHBattleEntryGate(&state) == PHBattleGateMultiplayer, "a detected multiplayer battle remains disabled after selector reset");

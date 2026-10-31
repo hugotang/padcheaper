@@ -1,11 +1,32 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.11-orbs",
+  "prototype_version": "0.5.12-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
-    "multiplayer": false,
+    "multiplayer": {
+      "input": "explicit-local-once",
+      "modes": [
+        7,
+        11,
+        10
+      ],
+      "selector": 1,
+      "goal_modes": [
+        "combo",
+        "manual"
+      ],
+      "continuous": false,
+      "skills": false,
+      "team_mutation": false,
+      "timer_mutation": false,
+      "packet_mutation": false,
+      "thorn_contact": false,
+      "device_verified": false,
+      "ownership": "native-local-seat-turn-view-clock",
+      "preview_execute": false
+    },
     "dimensions": [
       [
         6,
@@ -198,7 +219,17 @@
     "PHOrbPendingDamageOffset": "0xb7e68",
     "PHOrbPendingThornDamageOffset": "0xb7e6c",
     "PHOrbSkillSelectedSourceOffset": "0x92e1c",
-    "PHOrbSkillFamilyOffset": "0x300"
+    "PHOrbSkillFamilyOffset": "0x300",
+    "PHOrbMultiClockNumeratorRVA": "0x2c6f634",
+    "PHOrbMultiClockDenominatorRVA": "0x2c6f638",
+    "PHOrbMultiConnectionRVA": "0x1b37258",
+    "PHOrbMultiNetworkFlagsOffset": "0xafe70",
+    "PHOrbMultiSyncStateOffset": "0xa6398",
+    "PHOrbMultiResolveOffset": "0x9299a",
+    "PHOrbMultiTurnClockOffset": "0xa6368",
+    "PHOrbMultiMatchClockOffset": "0xafed8",
+    "PHOrbMultiCountdownOffset": "0xafc81",
+    "PHOrbMultiFinishedOffset": "0xb7e08"
   },
   "guards": [
     {
@@ -696,6 +727,126 @@
       "length": 64,
       "bytes": "df060071e0000054d601003560821391ebfafa97f50300aa08008052050000146082139130fbfa97f50300aa28008052893a40f98ac385522a01a07228692a38",
       "sha256": "713e473c71d9dd02fa43e68c21e1f3d89f6c2cd18711ed9f4ee50ae2c8db89c1"
+    },
+    {
+      "name": "PHOrbMultiModeRVA",
+      "va": "0x100542b74",
+      "rva": "0x542b74",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b000f008c11e910821579100a11991fc26fc971f2c007168020052e813881a1f28007100159f1afd7b41a9f44fc2a8",
+      "sha256": "3006db4ee203904004a250dc97b414f06e73efc2615b0643aa65e563a8655c23"
+    },
+    {
+      "name": "PHOrbMultiFourModeRVA",
+      "va": "0x100542bb8",
+      "rva": "0x542bb8",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009168b000f008c11e910821579100a11991ed26fc971f2c0071e0179f1afd7bc1a8c0035fd6e923bd6df44f01a9fd7b02a9fd830091f30300aa",
+      "sha256": "8ba16ce010df8cea68dae832abf24977379778679efe5253fd00fb8f6dd087a5"
+    },
+    {
+      "name": "PHOrbMultiInitRVA",
+      "va": "0x10000be9c",
+      "rva": "0xbe9c",
+      "length": 64,
+      "bytes": "ff0301d1f65701a9f44f02a9fd7b03a9fdc30091f30300aa083840f9c9940090284900f988db14940001003768d9009008210991081140b908090051a9008012",
+      "sha256": "b7713138d0119b3b73d7e26331da87c15a51797de3b5e94b8a85d38f358c1472"
+    },
+    {
+      "name": "PHOrbMultiInputGateRVA",
+      "va": "0x1000164f4",
+      "rva": "0x164f4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd83009114d900d094c2009188438a522800a072886a68b81f1100710419417a21100054f30300aa083840f9098d429129213991",
+      "sha256": "d24d33407992f13fc7af6a43ab6fc19bfd9e23743b39b063924a9099162ac404"
+    },
+    {
+      "name": "PHOrbMultiDispatchRVA",
+      "va": "0x1005b4edc",
+      "rva": "0x5b4edc",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f30300aa5cd3ea97f40300aa2e37fe97e0000034683a40f949dc8f526901a0720a6969784a791512",
+      "sha256": "2618617c05fddd3590d09d05e08ada2838f11d39c8dc95aca9562ba10dd3b9a9"
+    },
+    {
+      "name": "PHOrbMultiSendRVA",
+      "va": "0x1000135a0",
+      "rva": "0x135a0",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091ff4324d1143840f908ce9f524801a072886a68b8a8161037f30300aa899a42912b450d91898e429122013a9169014039",
+      "sha256": "5f91e0209125b04af0058955eab9a5e7e338cb9bb262d77f881449a96bad2d6e"
+    },
+    {
+      "name": "PHOrbMultiEndRVA",
+      "va": "0x100542c88",
+      "rva": "0x542c88",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b000f008c11e910821579100a11991b726fc9708781f121f290071c1000054683a40f909c18f526901a07208696938",
+      "sha256": "04552ccbfd3982f5724805c4455e029cc24e9d9fc1c006df9d362599d520a48c"
+    },
+    {
+      "name": "PHOrbMultiCountdownRVA",
+      "va": "0x10060f25c",
+      "rva": "0x60f25c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091083840f929909f524901a0721469693894010037f30300aa0849429100e12591c10880523286fd97683a40f908dd429100b11b91",
+      "sha256": "4a8aae893894ea6cc442bc4fa568a6c55c1bde5aa7985a70b1b472900bc313ef"
+    },
+    {
+      "name": "PHOrbMultiElapsedRVA",
+      "va": "0x1005a76d4",
+      "rva": "0x5a76d4",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009109e481526901a07208bc429108c13b910a0140392a0108370a012837e003271e2a0110364a01203708bc429100613b91fd7bc1a80f460214",
+      "sha256": "7dd5fa0708b3d49be5c7f379a741194f54618c51bbb72fda53e0c7ccdf13ccac"
+    },
+    {
+      "name": "PHOrbMultiClockRVA",
+      "va": "0x100638f4c",
+      "rva": "0x638f4c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091130040f971a72094080013cb0001239ea83101f008d118910109402d21d8217e0008211e41d8217e0018211e0800399e0001239e",
+      "sha256": "787838100d223f49955d2c0f14d1a7d7f75889493046a89713f1d2360c309e40"
+    },
+    {
+      "name": "PHOrbMultiDeadlineRVA",
+      "va": "0x1005a70c8",
+      "rva": "0x5a70c8",
+      "length": 64,
+      "bytes": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa193840f928df429118f11c9128cf4291154d1691a83385522801a072",
+      "sha256": "2e7b0887eb0a3795bdeb17e4bf9d0ce7379173f62d9f79c4d21dabddd93e07cb"
+    },
+    {
+      "name": "PHOrbMultiTurnElapsedRVA",
+      "va": "0x10001ecb8",
+      "rva": "0x1ecb8",
+      "length": 64,
+      "bytes": "08204039e003271e28030036f44fbea9fd7b01a9fd430091f30300aac8000837e00313aa9c681894610e40bd0028211e09000014681240b929749e524978a672",
+      "sha256": "7b21949aa90a1d6c9fe628e4ba8a0e7b798efb37582c322a2f5d43bd18be95fa"
+    },
+    {
+      "name": "PHOrbMultiMatchLimitRVA",
+      "va": "0x10023cc24",
+      "rva": "0x23cc24",
+      "length": 64,
+      "bytes": "0018c079c0035fd6f44fbea9fd7b01a9fd430091f30300aa000c40f9600000b4213cf797e795309400038052f1953094f40300aa686500f0001947fd000000fd",
+      "sha256": "535395aba9856d1e92cf5a02ba98a26933cc21e3dbeaaf4d891ae6e6411c59bb"
+    },
+    {
+      "name": "PHOrbMultiSyncRVA",
+      "va": "0x100012dbc",
+      "rva": "0x12dbc",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa282000511f0d003168010054683a40f908994291099943b9a900003509a943b93f01146b400000541fa103b9",
+      "sha256": "e124019af651ba61fa92a60383d04bd8ef26ae97c4b3fdf2b11e9b52ed86b15b"
+    },
+    {
+      "name": "PHOrbMultiTurnInitRVA",
+      "va": "0x10001b2bc",
+      "rva": "0x1b2bc",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091083840f9899586522901a072096969383f05007100020054491d0035f30300aa09ce9f524901a072146969b8",
+      "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208"
     }
   ],
   "thorn_budget": {

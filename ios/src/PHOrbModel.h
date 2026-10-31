@@ -84,11 +84,26 @@ typedef struct {
     // loadout for plan continuity only; never use them to activate a skill.
     uint16_t identityNumber, identityAssist, temporaryID, temporaryTurns;
     uint8_t state, skillStage[2], cachedSkillStage[2];
+    uint16_t assistState; // Native protected +472: low byte 172 retains the assist, type 250 clears it to zero.
     bool active, bound, temporaryKnown;
 } PHOrbSkillMember;
 
 typedef enum { PHOrbSkillAutomatic, PHOrbSkillBody, PHOrbSkillAssist } PHOrbSkillSource;
 typedef struct { PHOrbSkillSource source; uint32_t skill; } PHOrbSkillRequest;
+
+enum {
+    PHOrbSkillWindowScene = 1u << 0, PHOrbSkillWindowHP = 1u << 1,
+    PHOrbSkillWindowMemberAnimation = 1u << 2, PHOrbSkillWindowSeal = 1u << 3,
+    PHOrbSkillWindowSpecial = 1u << 4, PHOrbSkillWindowMovement = 1u << 5,
+    PHOrbSkillWindowEnemyTurn = 1u << 6, PHOrbSkillWindowInput = 1u << 7,
+    PHOrbSkillWindowSpecialMode = 1u << 8, PHOrbSkillWindowLimit = 1u << 9,
+    PHOrbSkillWindowTimedAnimation = 1u << 10, PHOrbSkillWindowTutorial = 1u << 11,
+    PHOrbSkillWindowDungeon = 1u << 12, PHOrbSkillWindowEnemyParts = 1u << 13,
+    PHOrbSkillWindowEnemyAction = 1u << 14, PHOrbSkillWindowNoEnemy = 1u << 15,
+    PHOrbSkillWindowResize = 1u << 16,
+    PHOrbSkillWindowPersistent = PHOrbSkillWindowSeal | PHOrbSkillWindowLimit |
+        PHOrbSkillWindowTutorial | PHOrbSkillWindowDungeon | PHOrbSkillWindowEnemyParts
+};
 
 // Populated only by the explicit automation reader. Ordinary previews do not
 // call skill getters (some native getters lazily mutate cooldown caches).
@@ -98,6 +113,8 @@ typedef struct {
     uint16_t skillUses;
     uint8_t enemyEffects, playerBypass, activeEnemies, playerEffects;
     bool valid, window, busy, enemiesKnown, boardKnown, hpKnown, statusKnown, awakeningRestricted;
+    uint32_t windowBlocks; // Read-only reasons for the existing native window gates.
+    bool windowBlocksKnown;
 } PHOrbAutomationState;
 
 typedef enum {
@@ -105,6 +122,23 @@ typedef enum {
     PHOrbSpinnerBadPeriod, PHOrbSpinnerBadColors, PHOrbSpinnerBadRows,
     PHOrbSpinnerCountMismatch, PHOrbSpinnerBadPhase
 } PHOrbSpinnerReadStatus;
+
+typedef enum {
+    PHOrbMultiplayerNone, PHOrbMultiplayerThree, PHOrbMultiplayerFour,
+    PHOrbMultiplayerEight, PHOrbMultiplayerUnsupported
+} PHOrbMultiplayerKind;
+
+// Read-only native operation context. Multiplayer mode values are selectors,
+// not player counts. No skill/team automation may use this input exception.
+typedef struct {
+    PHOrbMultiplayerKind kind;
+    uint32_t turnSerial, teamCount, localSeat, viewTeam, localStatus;
+    uint32_t networkFlags, syncState, connectionState;
+    uint8_t countdownReady, finished, resolvePending, clockFlags;
+    bool known, clockKnown;
+    uint64_t clockStart;
+    double remainingSeconds;
+} PHOrbMultiplayerState;
 
 typedef struct {
     PHBattleIdentity identity;
@@ -127,6 +161,7 @@ typedef struct {
     bool present, valid, settled, ordinary, multiplayerDisabled, leadersValid, unmatchableKnown;
     PHOrbAutomationState automation;
     PHOrbThornState thorns;
+    PHOrbMultiplayerState multiplayer;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -140,6 +175,7 @@ typedef struct {
     uint8_t searchPasses, backtracks, exploredDepth;
     bool deadlineReached, goalsMet, hazardsSafe;
     uint8_t mortalPoisonErased;
+    bool diagonal; // Captured gesture policy; match connectivity remains four-way.
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);
@@ -158,12 +194,18 @@ bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 // dimming is visual and is cleared by native start acceptance.
 bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer);
+bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
+bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
+bool PHOrbInputContextReady(const PHOrbSnapshot *state);
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
+bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+bool PHOrbSameAutomationExceptWindow(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSamePlayerState(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 uint32_t PHOrbBoardObstacles(const PHOrbSnapshot *state);
 

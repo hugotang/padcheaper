@@ -49,12 +49,22 @@ int main(void) {
             "legacy profile settings keep damage-first thorn ranking");
         Check([PHOrbCanonicalSettings(Settings())[@"allowPoisonWithHeartFour"] isEqual:@NO],
             "legacy profiles retain the strict poison policy");
+        Check([PHOrbCanonicalSettings(Settings())[@"diagonal"] isEqual:@NO], "legacy profiles retain orthogonal-only movement");
         for (id invalid in @[@1, @0, @"true", NSNull.null]) {
             NSMutableDictionary *settings = [Settings() mutableCopy]; settings[@"thornComboPriority"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "thorn priority requires a real JSON Boolean");
             [settings removeObjectForKey:@"thornComboPriority"]; settings[@"allowPoisonWithHeartFour"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "poison permission requires a real JSON Boolean");
+            [settings removeObjectForKey:@"allowPoisonWithHeartFour"]; settings[@"diagonal"] = invalid;
+            Check(!PHOrbCanonicalSettings(settings), "diagonal permission requires a real JSON Boolean");
         }
+        NSMutableDictionary *diagonalProfile = Profile(@"diagonal");
+        NSMutableDictionary *diagonalSettings = [Settings() mutableCopy]; diagonalSettings[@"diagonal"] = @YES;
+        diagonalProfile[@"settings"] = diagonalSettings;
+        NSData *diagonalData = PHOrbExportProfileData(diagonalProfile, NULL);
+        NSDictionary *diagonalLibrary = PHOrbProfilesImportingData(PHOrbDefaultProfiles(), diagonalData, NULL);
+        Check([PHOrbProfileNamed(diagonalLibrary,@"diagonal")[@"settings"][@"diagonal"] isEqual:@YES],
+            "an exported profile retains diagonal permission on import");
         NSMutableDictionary *generic = Profile(@"generic"), *team = Profile(@"team"), *stage = Profile(@"stage");
         team[@"team"] = @[@100,@101,@102,@103,@104,@0];
         stage[@"dungeon"] = @7; stage[@"floor"] = @2;
@@ -116,13 +126,14 @@ int main(void) {
             "profiles, bindings, thorn priority, poison policy and Boolean rules survive JSON persistence");
         NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy];
         rescue[@"hpAtMost"] = @40; rescue[@"status"] = @"awoken_bind"; rescue[@"required"] = @YES;
+        rescue[@"intervalMode"] = @"accepted"; rescue[@"startAfter"] = @2;
         settings[@"rules"] = @[rescue];
         updated = PHOrbProfilesUpdatingSettings(original,settings);
         json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
         restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
         Check(PHOrbProfilesValid(restored) && [PHOrbProfileNamed(restored,@"team")[@"settings"][@"rules"] isEqual:@[rescue]] &&
             [PHOrbProfileNamed(original,@"team")[@"settings"][@"rules"] isEqual:Settings()[@"rules"]],
-            "rescue thresholds, conjunctive status and required preference persist together without mutating the original profile");
+            "rescue conditions, accepted timing and warmup persist together without mutating the original profile");
         Check([PHOrbCanonicalSettings(Settings())[@"recovery"] isEqual:PHOrbDefaultRecovery()] && PHOrbProfilesValid(original),
             "legacy four-key profile settings remain loadable and normalize to disabled hearts");
         NSDictionary *heartPolicy = @{@"hpAtMost":@35,@"groups":@2,@"shape":@"four"}; settings[@"recovery"] = heartPolicy;

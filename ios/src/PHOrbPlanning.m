@@ -78,6 +78,9 @@ NSString *PHOrbGoalsDescription(NSArray *goals) {
 NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary *catalog) {
     NSMutableArray *goals = [NSMutableArray array], *leaders = [NSMutableArray array];
     NSMutableOrderedSet *warnings = [NSMutableOrderedSet orderedSet], *unsupported = [NSMutableOrderedSet orderedSet];
+    if (state && !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer))
+        return @{@"available":@NO, @"goals":@[], @"leaders":@[], @"warning":@"",
+            @"message":@"多人隊長條件尚未驗證；請選 Combo 或指定形狀，再按轉一次。"};
     if (!state || !state->present || !state->valid || !state->leadersValid || state->multiplayerDisabled ||
         !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) {
         return @{@"available":@NO, @"goals":@[], @"leaders":@[], @"warning":@"",

@@ -1,7 +1,9 @@
 #import "PHOrbSession.h"
+#import "PHOrbSkillWindow.h"
 #import "PHInput.h"
 #import "PHTarget.h"
 #import <CoreFoundation/CoreFoundation.h>
+#include <mach/mach_time.h>
 #include "PHTargetGenerated.h"
 #include "PHOrbGenerated.h"
 #include <algorithm>
@@ -142,7 +144,10 @@ bool ReadBoardEffects(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint3
     return !state.spinnerTurns || ReadSpinner(state, impl, key1, key2);
 }
 
-bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
+#include "PHOrbMultiplayer.inc"
+
+bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
+    PHOrbMultiplayerKind observedKind, bool multiplayerDisabled) {
     state = {};
     if (!NSThread.isMainThread || !frame.ready || !frame.header || !frame.player || frame.header > UINTPTR_MAX - 0x3000000u) {
         if (reason) *reason = @"等待已校驗的遊戲與登入";
@@ -152,26 +157,37 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     uint8_t scene[2]; uint32_t player = 0;
     if (reason) *reason = @"登入或場景資料未通過讀取校驗";
     if (!PHReadMemory(save, scene, sizeof(scene)) || !PHReadU32(save + PHPlayerIDOffset, &player) || player != frame.player) return false;
-    if (scene[0] != 1) { if (reason) *reason = @"進入單人關卡後，輪到操作時讀盤"; return true; }
+    if (scene[0] != 1) { if (reason) *reason = @"進入關卡後，在自己的操作窗口讀盤"; return true; }
     if (scene[1] != 1) { if (reason) *reason = @"場景切換中"; return false; }
     uint16_t mode = 0, source = 0, ids[2]{};
     uint32_t multi = 0;
-    if (reason) *reason = @"單人模式資料未通過讀取校驗";
+    if (reason) *reason = @"遊戲模式資料未通過讀取校驗";
     if (!PHReadU16(header + PHBattleModeRVA, &mode) || !PHReadU32(header + PHBattleMultiplayerRVA, &multi) ||
         !PHReadU16(save + PHBattleSourceModeOffset, &source)) return false;
     state.present = true;
     state.identity = {header, game, 0, frame.player, frame.epoch, 0, 0, {}, int16_t(mode), source, multi};
-    if (!PHBattleIsSinglePlayer(int16_t(mode), multi)) {
+    state.multiplayer.kind = PHOrbMultiplayerMode(int16_t(mode), multi);
+    if (multiplayerDisabled || state.multiplayer.kind == PHOrbMultiplayerUnsupported ||
+        (observedKind != PHOrbMultiplayerNone && state.multiplayer.kind != observedKind)) {
+        // Apply the scene latch before any board/leader read. A mid-battle
+        // selector reset must not temporarily enter the single-player reader.
         state.multiplayerDisabled = true;
-        if (reason) *reason = @"多人模式不支援自動轉珠";
+        if (reason) *reason = @"此多人模式或連線過渡狀態尚不支援轉一次";
         return true;
     }
     uintptr_t object = 0, impl = 0, active = 0;
-    if (reason) *reason = @"戰鬥物件或記憶體範圍未通過讀取校驗";
-    if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game ||
-        !PHReadPointer(game + 0x70, &impl) || !impl || (impl & 7u) || impl > UINTPTR_MAX - 0xc4000 ||
-        !PHReadPointer(header + PHBattleImplRVA, &active) || active != impl ||
-        !PHMemoryHasProtection(impl + 0x92000, 0x2e000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return false;
+    if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game) {
+        if (reason) *reason = @"場景表的戰鬥物件未通過讀取校驗"; return false;
+    }
+    if (!PHReadPointer(game + 0x70, &impl) || !impl || (impl & 7u) || impl > UINTPTR_MAX - 0xc4000) {
+        if (reason) *reason = @"戰鬥實作指標未通過讀取校驗"; return false;
+    }
+    if (!PHReadPointer(header + PHBattleImplRVA, &active) || active != impl) {
+        if (reason) *reason = @"目前戰鬥實作與場景物件不一致"; return false;
+    }
+    if (!PHMemoryHasProtection(impl + 0x92000, 0x2e000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) {
+        if (reason) *reason = @"戰鬥記憶體範圍未通過讀寫保護校驗"; return false;
+    }
     state.identity.impl = impl;
     uint32_t key1 = 0, key2 = 0, fixedX = 0, audit = 0;
     uint8_t shape[8]{};
@@ -207,13 +223,21 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
     state.boardTransition = resize[0] != resize[1] || resize[0] >= 1;
     state.minErase = shape[4]; state.freeMovement = shape[5];
     state.board.width = shape[0]; state.board.height = shape[1];
+    if (!ReadMultiplayerFields(state)) {
+        if (reason) *reason = @"多人本機席位、回合或連線資料未通過讀取校驗";
+        return false;
+    }
+    PHOrbSnapshot window = state; window.valid = true;
+    const bool multiplayerMetadataOnly = state.multiplayer.kind != PHOrbMultiplayerNone && !PHOrbMultiplayerWindow(&window);
     // Skills may remove unmatchable/locked/special orbs. Their window is
     // separate from ordinary drag eligibility, never a relaxation of it.
-    state.automation.window = source == 0 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
+    state.automation.window = state.multiplayer.kind == PHOrbMultiplayerNone &&
+        source == 0 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
+    if (!state.automation.window) state.automation.windowBlocks |= PHOrbSkillWindowScene;
     // Release may enter the resolve phase and start removing orb objects in
     // this same native frame. Identity + drag metadata is sufficient to
     // acknowledge release; a resolving board must never be used for a route.
-    if (state.phase != 2 || state.boardTransition) {
+    if (state.phase != 2 || state.boardTransition || multiplayerMetadataOnly) {
         uint32_t lastKey1 = 0, lastKey2 = 0, lastPhase = 0, lastWave = 0;
         uintptr_t lastImpl = 0, lastActive = 0, lastInput = 0;
         uint8_t lastScene[2]{}, lastHash[32]{}; uint16_t lastMode = 0, lastSource = 0, lastIDs[2]{};
@@ -235,8 +259,12 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
             !Decode(impl + PHBattlePhaseOffset,key1,key2,0x766cfc6du,lastPhase) || lastPhase != state.phase ||
             !Decode(impl + PHBattleWaveOffset,key1,key2,0x766cfc6du,lastWave) || lastWave != state.wave) return false;
         state.valid = true;
-        if (state.boardTransition) { state.automation.window = false; state.automation.busy = true; }
-        if (reason) *reason = state.boardTransition ? @"等待原生改盤動畫完成；尚未讀取珠子與座標" : @"等待自己的操作階段";
+        if (state.boardTransition) {
+            state.automation.window = false; state.automation.busy = true;
+            state.automation.windowBlocks |= PHOrbSkillWindowResize;
+        }
+        if (reason) *reason = multiplayerMetadataOnly ? MultiplayerReason(state) : state.boardTransition ?
+            @"等待原生改盤動畫完成；尚未讀取珠子與座標" : @"等待自己的操作階段";
         return true;
     }
     state.ordinary = source == 0 && state.minErase >= 3 && state.minErase <= 7 && state.freeMovement == 1 &&
@@ -289,8 +317,13 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason) {
         !PHReadPointer(game + 0x70, &lastImpl) || lastImpl != impl ||
         !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2) return false;
-    state.leadersValid = ReadLeaders(state, save, impl);
+    state.leadersValid = state.multiplayer.kind == PHOrbMultiplayerNone && ReadLeaders(state, save, impl);
     state.valid = true;
+    if (state.multiplayer.kind != PHOrbMultiplayerNone && !PHOrbMultiplayerWindow(&state)) {
+        state.ordinary = false;
+        if (reason) *reason = MultiplayerReason(state);
+        return true;
+    }
     if (!state.ordinary) { if (reason) *reason = @"盤面效果未通過校驗、特殊操作規則、彈窗或入場動畫尚未結束"; }
     else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型、旗標或轉轉模式"; }
     else if (!state.settled && !state.dragged) { if (reason) *reason = @"等待盤面動畫停止"; }
@@ -351,25 +384,118 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 @implementation PHNativeOrbEngine {
     Manager _manager;
     uintptr_t _header, _realManager, _verifiedHeader;
-    bool _staged, _multiplayerDisabled;
+    bool _staged, _multiplayerDisabled, _sawMultiplayer, _multiplayerOnce;
+    bool _multiplayerBegan, _multiplayerReleaseSent;
+    PHOrbMultiplayerKind _multiplayerKind;
+    uintptr_t _multiplayerOwnedOrb, _multiplayerStartOrb;
+    NSUInteger _multiplayerStartCell;
+    PHOrbSnapshot _multiplayerGesture, _multiplayerArmCandidate;
+}
+- (void)forgetMultiplayerGesture {
+    _multiplayerOnce = _multiplayerBegan = _multiplayerReleaseSent = false;
+    _multiplayerOwnedOrb = _multiplayerStartOrb = 0;
+    _multiplayerStartCell = 0; _multiplayerGesture = {};
+}
+- (void)armMultiplayerOnce:(BOOL)armed {
+    if (!armed) { _multiplayerOnce = false; return; }
+    // Repeated taps cannot reset an outstanding began/hold/release lease.
+    // Revocation preserves only its possible acknowledgement and release.
+    if (!_staged && !_multiplayerDisabled && !_multiplayerBegan && !_multiplayerOnce &&
+        _multiplayerArmCandidate.multiplayer.kind != PHOrbMultiplayerNone && PHOrbCanPreview(&_multiplayerArmCandidate)) {
+        _multiplayerGesture = _multiplayerArmCandidate;
+        _multiplayerOnce = true;
+    }
 }
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state || _staged) return NO;
-    if (!Read(*state, frame, reason)) return NO;
-    if (!state->present) _multiplayerDisabled = false;
+    _multiplayerArmCandidate = {};
+    const BOOL read = Read(*state, frame, reason,
+        _sawMultiplayer ? _multiplayerKind : PHOrbMultiplayerNone, _multiplayerDisabled);
+    if (read && !state->present) {
+        _multiplayerDisabled = _sawMultiplayer = false;
+        _multiplayerKind = PHOrbMultiplayerNone;
+        [self forgetMultiplayerGesture];
+    }
     if (state->multiplayerDisabled) _multiplayerDisabled = true;
+    if (state->present) {
+        const auto kind = state->multiplayer.kind;
+        if (kind != PHOrbMultiplayerNone) {
+            if (_sawMultiplayer && kind != _multiplayerKind) _multiplayerDisabled = true;
+            if (!_sawMultiplayer) { _sawMultiplayer = true; _multiplayerKind = kind; }
+        } else if (_sawMultiplayer) _multiplayerDisabled = true;
+    }
     state->multiplayerDisabled |= _multiplayerDisabled;
+    if (!read) {
+        // Preserve only the observed mode for unavailable-state UI. A read
+        // failure before mode capture must not make a known multiplayer game
+        // appear eligible for continuous input. This is never a valid board.
+        if (_sawMultiplayer && state->multiplayer.kind == PHOrbMultiplayerNone)
+            state->multiplayer.kind = _multiplayerKind;
+        [self forgetMultiplayerGesture]; return NO;
+    }
     if (state->valid && !state->multiplayerDisabled && _verifiedHeader != frame.header) {
-        if (!CheckCode(frame.header, reason)) { state->valid = false; return NO; }
+        if (!CheckCode(frame.header, reason)) {
+            state->valid = false; [self forgetMultiplayerGesture]; return NO;
+        }
         _verifiedHeader = frame.header;
     }
-    if (state->valid && !state->multiplayerDisabled) ReadThornBudget(*state);
-    if (_multiplayerDisabled && reason) *reason = @"本場曾進入多人；離開關卡後才可讀盤";
+    if (state->valid && !state->multiplayerDisabled && state->multiplayer.kind != PHOrbMultiplayerNone) {
+        PHOrbSnapshot confirmed{}; confirmed.identity = state->identity; confirmed.multiplayer.kind = state->multiplayer.kind;
+        uint16_t mode = 0; uint32_t multi = 0;
+        if (!PHReadU16(frame.header + PHBattleModeRVA, &mode) || int16_t(mode) != state->identity.entryMode ||
+            !PHReadU32(frame.header + PHBattleMultiplayerRVA, &multi) || multi != state->identity.multiplayer ||
+            !ConfirmMultiplayerIdentity(*state) ||
+            !ReadMultiplayerFields(confirmed) || !SameMultiplayerRead(state->multiplayer, confirmed.multiplayer)) {
+            state->valid = false;
+            [self forgetMultiplayerGesture];
+            if (reason) *reason = @"讀盤期間多人席位、回合或連線狀態已改變";
+            return NO;
+        }
+        state->multiplayer = confirmed.multiplayer;
+        const bool window = PHOrbMultiplayerWindow(state);
+        state->ordinary &= window;
+        if (!window && reason) *reason = MultiplayerReason(*state);
+    }
+    if (_multiplayerBegan) {
+        if (!state->valid || state->multiplayerDisabled || !PHOrbSameTurn(&_multiplayerGesture, state) ||
+            !PHOrbMultiplayerWindow(state)) {
+            // A different turn, disconnect or native resolve owns its own
+            // cleanup. Never carry an old private gesture into that context.
+            [self forgetMultiplayerGesture];
+        } else if (_multiplayerOwnedOrb) {
+            if (state->dragged != _multiplayerOwnedOrb) [self forgetMultiplayerGesture];
+        } else if (state->dragged) {
+            if (state->dragged == _multiplayerStartOrb && PHInputIsQuiet(&state->input) &&
+                state->moves == _multiplayerGesture.moves &&
+                PHOrbSamePlanBoard(&state->board, &_multiplayerGesture.board))
+                _multiplayerOwnedOrb = state->dragged;
+            else [self forgetMultiplayerGesture];
+        } else if (!_multiplayerOnce || !PHInputIsQuiet(&state->input) ||
+            state->moves != _multiplayerGesture.moves ||
+            !PHOrbSamePlanBoard(&state->board, &_multiplayerGesture.board)) {
+            [self forgetMultiplayerGesture];
+        }
+    }
+    else if (_multiplayerOnce && (!PHOrbCanPreview(state) || !PHOrbSameTurn(&_multiplayerGesture, state) ||
+        state->moves != _multiplayerGesture.moves || !PHOrbSamePlanBoard(&_multiplayerGesture.board, &state->board))) {
+        [self forgetMultiplayerGesture];
+    }
+    if (_multiplayerDisabled) [self forgetMultiplayerGesture];
+    if (PHOrbCanPreview(state)) _multiplayerArmCandidate = *state;
+    // HP derivation for multiplayer thorn damage needs its own validation.
+    // Unknown thorn budgets make the solver avoid contacts in this first batch.
+    if (state->valid && !state->multiplayerDisabled && state->multiplayer.kind == PHOrbMultiplayerNone)
+        ReadThornBudget(*state);
+    if (_multiplayerDisabled && reason) *reason = @"本場多人模式或連線狀態已改變；離開關卡後才可重新操作";
     return YES;
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (![self read:state frame:frame reason:reason]) return NO;
     if (!state->present || !state->valid || state->multiplayerDisabled) return YES;
+    if (!PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) {
+        if (reason) *reason = @"多人僅支援轉一次；連續轉珠、開場及技能規則仍限單人";
+        return YES;
+    }
     if (!ReadAutomationFields(*state)) {
         if (reason) *reason = @"技能／敵人資料未通過讀取校驗，已停止";
         return NO;
@@ -411,6 +537,12 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return PHOrbSkillRejected;
     PHOrbSnapshot live{};
     if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
+    if (!live.automation.window && live.phase == 2 && live.settled && !live.dragged && PHInputIsQuiet(&live.input) &&
+        PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) &&
+        PHOrbSameAutomationExceptWindow(expected, &live)) {
+        if (reason) *reason = PHOrbSkillWindowDescription(&live.automation);
+        return PHOrbSkillWindowClosed;
+    }
     if (!PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
         !PHOrbSameAutomation(expected, &live) || live.phase != 2 || !live.settled || live.dragged ||
         !PHInputIsQuiet(&live.input)) {
@@ -419,7 +551,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     if (!CheckCode(frame.header, reason)) return PHOrbSkillRejected;
     const auto &member = live.automation.members[slot];
-    if (!live.automation.window || live.automation.busy || !member.active || member.bound || member.state ||
+    if (!live.automation.window) {
+        if (reason) *reason = PHOrbSkillWindowDescription(&live.automation);
+        return PHOrbSkillWindowClosed;
+    }
+    if (live.automation.busy || !member.active || member.bound || member.state ||
         live.automation.skillUses >= 255) {
         if (reason) *reason = @"技能目前不可使用";
         return PHOrbSkillUnavailable;
@@ -562,12 +698,31 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 }
 - (BOOL)stageCell:(NSUInteger)cell down:(BOOL)down beginning:(BOOL)beginning
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
-    if (_staged || _multiplayerDisabled || !expected || !frame.ready || (down && !frame.enabled) ||
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !expected || (beginning && !down) ||
+        cell >= PHOrbMaxCells || !frame.ready || (down && !frame.enabled) ||
         (beginning && !CheckCode(frame.header, reason))) return NO;
     PHOrbSnapshot live{}; NSString *readReason = nil;
     if (![self read:&live frame:frame reason:&readReason] || !live.valid || live.multiplayerDisabled) {
         if (reason) *reason = readReason ?: @"輸入前狀態無法確認";
         return NO;
+    }
+    const bool multiplayer = live.multiplayer.kind != PHOrbMultiplayerNone;
+    if (multiplayer) {
+        const bool sameGesture = _multiplayerOwnedOrb && live.dragged == _multiplayerOwnedOrb &&
+            PHOrbSameTurn(&_multiplayerGesture, &live);
+        const bool deferredStart = _multiplayerBegan && !_multiplayerOwnedOrb && !live.dragged &&
+            cell == _multiplayerStartCell && PHOrbSameTurn(&_multiplayerGesture, &live) &&
+            live.moves == _multiplayerGesture.moves && PHOrbSamePlanBoard(&_multiplayerGesture.board, &live.board);
+        if (!PHOrbMultiplayerWindow(&live) ||
+            (down && (!_multiplayerOnce || _multiplayerReleaseSent)) ||
+            (!down && (!sameGesture || live.board.tokens[cell] != _multiplayerOwnedOrb)) ||
+            (down && beginning && (_multiplayerBegan || live.dragged ||
+                !PHOrbSameTurn(&_multiplayerGesture, &live) || live.moves != _multiplayerGesture.moves ||
+                !PHOrbSamePlanBoard(&_multiplayerGesture.board, &live.board))) ||
+            (down && !beginning && !sameGesture && !deferredStart)) {
+            if (reason) *reason = @"多人輸入僅限本次轉一次及同一個本機操作窗口";
+            return NO;
+        }
     }
     if (!PHOrbSameTurn(expected, &live) || live.boardTransition || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
@@ -583,12 +738,32 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (reason) *reason = @"目前 HP 或荊棘傷害無法確認，或這一步會超過可承受傷害";
         return NO;
     }
+    if (down && live.dragged) {
+        unsigned from = 0, size = live.board.width * live.board.height;
+        for (; from < size; ++from) if (live.board.tokens[from] == live.dragged) break;
+        if (from == size || (from != cell && !PHOrbMoveAdjacent(from, unsigned(cell),
+            live.board.width, live.board.height, live.freeMovement == 1))) {
+            if (reason) *reason = @"輸入目標不是持珠的相鄰格，未交換"; return NO;
+        }
+    }
     uintptr_t real = 0;
     if (!PHReadPointer(frame.header + PHBattleInputRVA, &real) || real != live.inputManager || (real & 7u) ||
         !PHMemoryHasProtection(real, PHOrbInputBytes, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) return NO;
     float raw[2];
     if (!RawPoint(frame.header, live.board.x[cell], live.board.y[cell], raw)) {
         if (reason) *reason = @"觸控座標轉換未通過校驗"; return NO;
+    }
+    // Coordinate conversion is a native call. Recheck multiplayer ownership
+    // after it and immediately before leasing the global input pointer.
+    if (multiplayer) {
+        PHOrbSnapshot final{};
+        if (![self read:&final frame:frame reason:reason] || !final.valid || final.multiplayerDisabled ||
+            !PHOrbSameTurn(&live, &final) || final.phase != 2 || final.dragged != live.dragged ||
+            final.moves != live.moves || !PHOrbSamePlanBoard(&live.board, &final.board) ||
+            !PHOrbMultiplayerWindow(&final) ||
+            (down && (!_multiplayerOnce || !final.ordinary || !PHInputIsQuiet(&final.input))) ||
+            (!down && (!_multiplayerOwnedOrb || final.dragged != _multiplayerOwnedOrb))) return NO;
+        live = final;
     }
     if (beginning) {
         _manager.fill(0);
@@ -611,6 +786,15 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     uintptr_t privateManager = reinterpret_cast<uintptr_t>(_manager.data());
     if (!PHWriteData(frame.header + PHBattleInputRVA, &privateManager, sizeof(privateManager))) return NO;
     _staged = true;
+    if (multiplayer && beginning) {
+        _multiplayerGesture = live; _multiplayerStartCell = cell;
+        _multiplayerStartOrb = live.board.tokens[cell]; _multiplayerBegan = true;
+    }
+    if (multiplayer && !down) {
+        _multiplayerOnce = false; _multiplayerReleaseSent = true;
+        // Retain ownership until read observes release or a context change,
+        // so a refused release can be retried without permitting another hold.
+    }
     return YES;
 }
 - (BOOL)finishInput:(NSString **)reason {

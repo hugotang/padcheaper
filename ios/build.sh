@@ -72,6 +72,8 @@ cp ios/docs/release-0.5.8.md "$build_dir/release-0.5.8.md"
 cp ios/docs/release-0.5.9.md "$build_dir/release-0.5.9.md"
 cp ios/docs/release-0.5.10.md "$build_dir/release-0.5.10.md"
 cp ios/docs/release-0.5.11.md "$build_dir/release-0.5.11.md"
+cp ios/docs/release-0.5.12.md "$build_dir/release-0.5.12.md"
+cp ios/docs/orb-multiplayer-once.md ios/docs/orb-0511-log-analysis.md "$build_dir/"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
 cp ios/docs/persistence-music-sharing.md "$build_dir/persistence-music-sharing.md"
@@ -84,6 +86,7 @@ cp ios/docs/release-0.5.6.md "$build_dir/release-0.5.6.md"
 cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
 mkdir -p "$build_dir/templates"
 cp -R ios/templates/ishida-uryu-gamewith-574233 "$build_dir/templates/"
+cp -R ios/templates/halloween-ciel-gamewith-579537 "$build_dir/templates/"
 cp ios/docs/release-0.5.5.md "$build_dir/release-0.5.5.md"
 cp ios/docs/release-0.5.4.md "$build_dir/release-0.5.4.md"
 cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
@@ -101,6 +104,8 @@ cp ios/research/orb_thorn_probe.cpp ios/research/orb_thorn_benchmark.py ios/rese
 cp ios/research/orb-shape-thorn-20261030.json ios/research/orb-shape-thorn-feasibility-0510.json ios/research/orb-shape-thorn-results-0510.json ios/research/orb-shape-results-0510.json "$build_dir/research/"
 cp ios/research/orb_recorded_shape_probe.cpp ios/research/orb_recorded_shape_benchmark.py ios/research/orb_lowhp_reachability_probe.cpp ios/research/orb_dense_heart_probe.cpp "$build_dir/research/"
 cp ios/research/orb-poison-20261030.json ios/research/orb-poison-results-0511.json ios/research/orb_poison_probe.cpp ios/research/orb_poison_benchmark.py "$build_dir/research/"
+cp ios/research/orb-multiplayer-20261031.json ios/research/halloween-ciel-579537-native.json "$build_dir/research/"
+cp ios/research/orb-0511-log-analysis-20261030.json ios/research/orb-0511-logs-20261030.json ios/research/orb_0511_log_analysis.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
@@ -115,28 +120,19 @@ import subprocess
 import sys
 
 directory = Path(sys.argv[1])
-readme = directory / "README.md"
-readme.write_text(readme.read_text(encoding="utf-8").replace(
-    "](docs/", "](").replace(
-    "](../.github/workflows/ios-dylib.yml)",
-    "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)"), encoding="utf-8")
 binary = directory / "PADCheaper.dylib"
-research_notes = directory / "auto-orb-feasibility.md"
-research_notes.write_text(research_notes.read_text(encoding="utf-8").replace(
-    "](../research/", "](research/"), encoding="utf-8")
-orb_notes = directory / "auto-orbs.md"
-orb_notes.write_text(orb_notes.read_text(encoding="utf-8").replace(
-    "](../third_party/", "](third_party/"), encoding="utf-8")
-for name in ("orb-shape-search.md", "development.md", "solver-research-2026-10-30.md", "release-0.5.7.md", "release-0.5.8.md", "release-0.5.9.md", "release-0.5.10.md", "release-0.5.11.md", "orb-spinner-thorn-search.md", "opening-resize-music.md"):
-    notes = directory / name
-    notes.write_text(notes.read_text(encoding="utf-8").replace(
-        "](../research/", "](research/"), encoding="utf-8")
-plan_notes = directory / "team-plan-config.md"
-plan_notes.write_text(plan_notes.read_text(encoding="utf-8").replace(
-    "](../templates/", "](templates/"), encoding="utf-8")
-template_notes = directory / "templates/ishida-uryu-gamewith-574233/README.md"
-template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(
-    "](../../docs/", "](../../"), encoding="utf-8")
+for notes in directory.glob("*.md"):
+    content = notes.read_text(encoding="utf-8")
+    for old, new in (("](docs/", "]("), ("](../research/", "](research/"),
+                     ("](../templates/", "](templates/"), ("](../third_party/", "](third_party/"),
+                     ("](../README.md", "](README.md"),
+                     ("](../.github/workflows/ios-dylib.yml)",
+                      "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
+        content = content.replace(old, new)
+    notes.write_text(content, encoding="utf-8")
+for template_notes in (directory / "templates").glob("*/README.md"):
+    template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(
+        "](../../docs/", "](../../"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
 version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
                     Path("ios/src/PHOverlay.h").read_text()).group(1)
@@ -147,8 +143,11 @@ metadata = {
     "dylib_version": version,
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
-    "automatic_orbs": "single-player 6x5/7x6/5x4; explicit continuous start for the current battle or execute-once; saved search quality and up to six conjunctive goals; every route requires goals, native timing and swap/release acknowledgement; new features remain pending device verification",
-    "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; atomic single-file config commit; source/skill constraints never force a native choice; explicit start; in-process opening progress",
+    "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual goals only; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
+    "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; confirmed consumeAssist and final puzzleAfter; accepted-use group intervals and startAfter persist within the same battle/strategy across stop/restart; atomic single-file config commit; source/skill constraints never force a native choice",
+    "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended and double Kenpachi include confirmed openings, supply order and delayed rotation; no universal seamless-skill or healing guarantee",
+    "diagonal_orbs": "optional default-off adjacent eight-direction search, replay and native acknowledgement; matching stays horizontal/vertical; atomically saved with selected profile/team plan; device verification pending",
+    "skill_window_recheck": "transient native closure waits up to three seconds and rechecks before activation and first touch; no once/group/opening receipt consumed while waiting; persistent restrictions and identity/input changes still stop",
     "profile_file_sharing": "selected ordinary profile or complete team plan as bounded JSON file; native share sheet and document picker; preview before atomic save; duplicate IDs refused; no account/API/master switches",
     "deck_persistence": "save_decks ID 58 native commit; exact queued raw record correlation recovers serializer-defaulted badges and respects confirmed explicit zero; account-bound per-field deferred restore with readback and cancellation",
     "unlock_restoration": "disabled cosmetic ownership and descriptor restoration retains failed work until readback; changed table, ID or native descriptor value revokes old lease",
@@ -164,7 +163,7 @@ metadata = {
     "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
     "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
     "skill_selection_reset": "only an idle member passing native readiness may reset a retained selection to the native default sentinel; exact ID and fresh snapshot checked, no charge writes",
-    "floating_orb_shortcuts": "read/solve/execute once using saved goals and quality, or explicit continuous start using existing skill rules; stop available throughout; no duplicate starts, no writes on failed goals",
+    "floating_orb_shortcuts": "default collapsed 56px PC bubble; idle tap expands once/auto/collapse, second PC opens settings; busy PC immediately stops even folded; refresh/panel close retain folding; draggable shortcuts wrap with 44px minimum targets; current multiplayer readiness shares the button gate and retained stop cause stays in diagnostics/accessibility",
     "scripted_team_provider": "inspect native bounded bytecode from initial and all event roots; share empty records only when no party opcode exists; preserve native script and events; refuse malformed/unknown/running contexts",
     "team_restore_continuity": "ignore only native assist padding and unused skill bytes without an assist; retain per-slot restore failure reasons and retry unfinished leases; successful restores permit another team; uncertain writes block their original battle until an observed exit or validated different battle",
     "orb_frame_pacing": "65 ms target submission spacing includes native render time; every swap must still be acknowledged; unchanged four-second execution deadline and native time budget, with specific stop cause and elapsed time",
@@ -183,7 +182,7 @@ metadata = {
     "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",
     "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",
     "entry_board_limit": "board dimensions and generated opening board remain from the native constructor; ordinary team refresh does not regenerate them",
-    "multiplayer_write_policy": "Nonzero multi or mode 7 cannot be enabled by filters; detected multiplayer remains blocked until battle exit; metadata-only probes make no native calls",
+    "multiplayer_write_policy": "Nonzero multi or modes 7/10/11 block team, skill, continuous, timer and BGM mutations regardless of filters; battle policy remains latched until exit. The sole exception is explicit local once for mode 7/11/10 selector 1: fresh ownership/view/clock guards, arm, one began and token-bound release; no packet edits or network pump/bank getters; multiplayer device synchronization unverified",
     "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "All mode categories except multiplayer; source/multi zero defaults; editable mode/source GUI filters; legacy multi settings load but cannot override single-player restriction",
     "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",

@@ -1,0 +1,514 @@
+{
+  "format": "padcheaper-team-plan",
+  "schema": 1,
+  "target": "jp.gungho.pad-ios-23.6.0-106878",
+  "id": "halloween-ciel-gw579537-kenpachi-2",
+  "name": "GameWith 更木劍八 2 體：CIEL × 尤皮莉絲",
+  "formation": {
+    "schema": 1,
+    "title": "GameWith 579537 更木劍八 2 體：CIEL × 尤皮莉絲",
+    "slots": [
+      {
+        "body": {
+          "id": 14184,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 8,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 127,
+          "latents": []
+        },
+        "assist": {
+          "id": 13711,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14200,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 9,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 127,
+          "latents": [
+            48
+          ]
+        },
+        "assist": {
+          "id": 14132,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14175,
+          "level": 120,
+          "skill": 5,
+          "awakenings": 8,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            47
+          ]
+        },
+        "assist": {
+          "id": 13053,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14042,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 5,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            28,
+            28,
+            28
+          ]
+        },
+        "assist": {
+          "id": 7983,
+          "level": 1,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14042,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 5,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            28,
+            28,
+            28
+          ]
+        },
+        "assist": {
+          "id": 14191,
+          "level": 1,
+          "skill": 1,
+          "awakenings": 5,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14189,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 5,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 127,
+          "latents": [
+            28,
+            28
+          ]
+        },
+        "assist": {
+          "id": 13960,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 5,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      }
+    ]
+  },
+  "opening": [
+    {
+      "slot": 2,
+      "source": "assist",
+      "monster": 14200,
+      "assist": 14132,
+      "skill": 65428,
+      "afterMonster": 0
+    },
+    {
+      "slot": 4,
+      "source": "body",
+      "monster": 14042,
+      "assist": 7983,
+      "skill": 64643,
+      "afterMonster": 14043
+    },
+    {
+      "slot": 5,
+      "source": "body",
+      "monster": 14042,
+      "assist": 14191,
+      "skill": 64643,
+      "afterMonster": 14043
+    },
+    {
+      "slot": 6,
+      "source": "body",
+      "monster": 14189,
+      "assist": 13960,
+      "skill": 65749,
+      "afterMonster": 14190
+    },
+    {
+      "slot": 1,
+      "source": "assist",
+      "monster": 14184,
+      "assist": 13711,
+      "skill": 62381,
+      "afterMonster": 0
+    },
+    {
+      "slot": 3,
+      "source": "body",
+      "monster": 14175,
+      "assist": 13053,
+      "skill": 65775,
+      "afterMonster": 0
+    },
+    {
+      "slot": 6,
+      "source": "assist",
+      "monster": 14190,
+      "assist": 13960,
+      "skill": 63913,
+      "afterMonster": 0,
+      "consumeAssist": true
+    },
+    {
+      "slot": 5,
+      "source": "assist",
+      "monster": 14043,
+      "assist": 14191,
+      "skill": 65884,
+      "afterMonster": 0,
+      "consumeAssist": true
+    }
+  ],
+  "rotation": [
+    {
+      "enabled": true,
+      "slot": 3,
+      "monster": 14175,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 65778,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 6,
+      "monster": 14190,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 65757,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 1,
+      "monster": 14184,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 65740,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 2,
+      "monster": 14200,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 0,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 65765,
+      "atLeast": 0
+    },
+    {
+      "enabled": true,
+      "slot": 4,
+      "monster": 14043,
+      "every": 2,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 2
+    },
+    {
+      "enabled": true,
+      "slot": 5,
+      "monster": 14043,
+      "every": 2,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "none",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": false,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 2
+    },
+    {
+      "enabled": true,
+      "slot": 4,
+      "monster": 14043,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "damage_absorb",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 0
+    },
+    {
+      "enabled": true,
+      "slot": 5,
+      "monster": 14043,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "damage_absorb",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 0
+    },
+    {
+      "enabled": true,
+      "slot": 4,
+      "monster": 14043,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "attribute_absorb",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 0
+    },
+    {
+      "enabled": true,
+      "slot": 5,
+      "monster": 14043,
+      "every": 1,
+      "floor": 0,
+      "color": -1,
+      "below": 0,
+      "enemy": "attribute_absorb",
+      "group": 1,
+      "once": false,
+      "reserveUntil": 0,
+      "obstacle": "none",
+      "unmatchableColors": 0,
+      "hpAtMost": 0,
+      "status": "none",
+      "required": true,
+      "source": "body",
+      "skill": 64650,
+      "atLeast": 0,
+      "intervalMode": "accepted",
+      "startAfter": 0
+    }
+  ],
+  "board": {
+    "quality": "thorough",
+    "mode": "manual",
+    "goals": [
+      {
+        "kind": "match",
+        "colors": 16,
+        "count": 2,
+        "length": 3
+      },
+      {
+        "kind": "four",
+        "colors": 32,
+        "count": 1,
+        "length": 0
+      }
+    ],
+    "recovery": {
+      "hpAtMost": 0,
+      "groups": 1,
+      "shape": "match"
+    }
+  },
+  "dungeon": 0,
+  "floor": 0,
+  "source": "https://xn--0ck4aw2h.gamewith.jp/article/show/579537#basic3；2026-10-30。完整自動開場需本批 consumeAssist／intervalMode／startAfter 支援。八步後前兩盤自動供珠轉珠，第三盤才啟用劍八固定輪替；吸收救援從第一盤檢查。間隔從同組上次啟動計算，同場同策略停止重開保留。0.5.11 仍用手動八步後供珠轉兩盤，再啟動 post-opening 策略；詳見 README。"
+}

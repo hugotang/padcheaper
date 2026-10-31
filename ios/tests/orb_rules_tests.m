@@ -5,9 +5,11 @@ static unsigned failures;
 static void Check(BOOL ok, const char *message) { if (!ok) { fprintf(stderr, "FAIL: %s\n", message); ++failures; } }
 
 #include "orb_effect_rules_tests.inc"
+#include "orb_timing_rules_tests.inc"
 
 int main(void) {
     @autoreleasepool {
+        SkillTimingRuleTests();
         Check(PHOrbSkillRulesValid(@[]), "empty rules enable continuous orbs without skills");
         NSMutableDictionary *rule = [PHOrbDefaultSkillRule() mutableCopy];
         for (NSDictionary *change in @[@{@"slot":@0}, @{@"slot":@7}, @{@"slot":@YES}, @{@"every":@0},

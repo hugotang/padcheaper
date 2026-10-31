@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "checkedOn": "2026-10-31",
+  "method": "Independent JSON/schema, unchanged-opening comparison, pinned skill data and declarative charge arithmetic; no native program or test suite executed. C-family checks cover delimiter/include integrity only.",
+  "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7",
+  "nativeChargeResetEvidence": "../../research/halloween-ciel-579537-native.json",
+  "afterOpeningByakuyaCharge": [
+    10,
+    0
+  ],
+  "oldEagerSecondPuzzleCharge": [
+    1,
+    1
+  ],
+  "bodyCooldown": 2,
+  "results": [
+    {
+      "file": "team-plan.json",
+      "bytes": 10905,
+      "sha256": "b17e92f854cec119db9a53f3855db55940219a8666af9a2e45040d93a4886c7b",
+      "rules": 11,
+      "heartThreshold": 4,
+      "openingPreserved": true,
+      "boardGoalsPreserved": true,
+      "expectedSchedule": [
+        {
+          "turn": 1,
+          "casterSlot": null
+        },
+        {
+          "turn": 2,
+          "casterSlot": 5
+        },
+        {
+          "turn": 3,
+          "casterSlot": 6
+        },
+        {
+          "turn": 4,
+          "casterSlot": 5
+        },
+        {
+          "turn": 5,
+          "casterSlot": 6
+        }
+      ],
+      "staticChecksPassed": true
+    },
+    {
+      "file": "team-plan-heart-l.json",
+      "bytes": 10895,
+      "sha256": "f1ce5f304da8df66f0be84106e1c45d6824a6cdf37c3007f257b13533fe8051c",
+      "rules": 11,
+      "heartThreshold": 5,
+      "openingPreserved": true,
+      "boardGoalsPreserved": true,
+      "expectedSchedule": [
+        {
+          "turn": 1,
+          "casterSlot": null
+        },
+        {
+          "turn": 2,
+          "casterSlot": 5
+        },
+        {
+          "turn": 3,
+          "casterSlot": 6
+        },
+        {
+          "turn": 4,
+          "casterSlot": 5
+        },
+        {
+          "turn": 5,
+          "casterSlot": 6
+        }
+      ],
+      "staticChecksPassed": true
+    }
+  ],
+  "legacyPostOpeningLibraryUnchanged": true,
+  "compiled": false,
+  "runtimeSuitesRun": false,
+  "deviceVerified": false
+}

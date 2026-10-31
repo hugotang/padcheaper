@@ -25,10 +25,11 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         catalog > UINTPTR_MAX - catalogCount * PHBattleCatalogStride) return false;
     out.skillUses = uint16_t(skillUses);
     out.window &= hp > 0;
+    if (!hp) out.windowBlocks |= PHOrbSkillWindowHP;
     for (unsigned i = 0; i < 6; ++i) {
         const uintptr_t member = impl + PHBattleMemberOffset + i * PHBattleMemberStride;
         auto &m = out.members[i];
-        uint8_t flags = 0; uint32_t nativeState = 0, id = 0, record = 0, bind = 0, charge = 0, shadow = 0, overrideID = 0;
+        uint8_t flags = 0; uint32_t nativeState = 0, id = 0, record = 0, bind = 0, charge = 0, shadow = 0, overrideID = 0, assistState = 0;
         uintptr_t parameter = 0;
         if (!PHReadU8(member, &flags) || !PHReadU32(member + PHOrbSkillMemberStateOffset, &nativeState) || nativeState > 7) return false;
         m.state = uint8_t(nativeState); out.busy |= nativeState != 0;
@@ -40,8 +41,10 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
             !SmallProtected(member + PHOrbSkillBindOffset, key1, key2, UINT8_MAX, bind) ||
             !SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
             !PHReadU32(member + PHBattleChargeShadowOffset, &shadow) || (shadow ^ charge) != 0x68fb65ceu ||
-            !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID)) return false;
+            !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID) ||
+            !SmallProtected(member + 472, key1, key2, UINT16_MAX, assistState)) return false;
         m.bound = int8_t(uint8_t(bind)) > 0; m.charge = uint16_t(charge);
+        m.assistState = uint16_t(assistState);
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
         // Keep authoritative stages/use counts and the derived stage cache
         // separately: can-use refreshes the cache only after basic readiness.
@@ -86,6 +89,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         // tells us whether a selection dialog or skill is still in progress.
         m.selection = overrideID;
         out.window &= motion == target;
+        if (motion != target) out.windowBlocks |= PHOrbSkillWindowMemberAnimation;
         out.busy |= motion != target;
     }
     uint16_t bindTurns = 0, sealTurns = 0, special = 0, timed = 0;
@@ -106,6 +110,14 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
     out.window &= !PositiveDuration(bindTurns) && !PositiveDuration(sealTurns) && int16_t(special) < 0 &&
         !(movement & 1u) && !enemyTurn && !inputMode && specialMode != 0x12345678 &&
         (int32_t(skillLimit) < 0 || int16_t(limitRemaining) > 0) && (int16_t(timed) < 1 || animation == animationTarget);
+    if (PositiveDuration(bindTurns) || PositiveDuration(sealTurns)) out.windowBlocks |= PHOrbSkillWindowSeal;
+    if (int16_t(special) >= 0) out.windowBlocks |= PHOrbSkillWindowSpecial;
+    if (movement & 1u) out.windowBlocks |= PHOrbSkillWindowMovement;
+    if (enemyTurn) out.windowBlocks |= PHOrbSkillWindowEnemyTurn;
+    if (inputMode) out.windowBlocks |= PHOrbSkillWindowInput;
+    if (specialMode == 0x12345678) out.windowBlocks |= PHOrbSkillWindowSpecialMode;
+    if (int32_t(skillLimit) >= 0 && int16_t(limitRemaining) <= 0) out.windowBlocks |= PHOrbSkillWindowLimit;
+    if (int16_t(timed) >= 1 && animation != animationTarget) out.windowBlocks |= PHOrbSkillWindowTimedAnimation;
     out.busy |= int16_t(special) >= 0 || (movement & 1u) || enemyTurn || inputMode || specialMode == 0x12345678 ||
         (int16_t(timed) >= 1 && animation != animationTarget);
     uint8_t tutorial = 0, tutorialStep = 0;
@@ -113,11 +125,13 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
     if (int8_t(tutorial) >= 0) {
         if (!PHReadU8(header + PHOrbTutorialTableRVA + 8u * tutorial + 2, &tutorialStep)) return false;
         out.window &= tutorialStep != 75; // Native tap handler restricts this tutorial step to its leader.
+        if (tutorialStep == 75) out.windowBlocks |= PHOrbSkillWindowTutorial;
     }
     if (dungeonRules) {
         uint8_t rules = 0;
         if (dungeonRules > UINTPTR_MAX - 33 || !PHReadU8(dungeonRules + 32, &rules)) return false;
         out.window &= !(rules & 0x40u);
+        if (rules & 0x40u) out.windowBlocks |= PHOrbSkillWindowDungeon;
     }
     if (PositiveDuration(bindTurns) || PositiveDuration(sealTurns)) out.playerEffects |= PHOrbPlayerSkillSeal;
     ReadSurvival(state, dungeonRules, key1, key2, hp);
@@ -130,13 +144,18 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         uintptr_t enemy = impl + PHOrbEnemyOffset + i * PHOrbEnemyStride;
         uint16_t flags = 0; uint32_t low = 0, high = 0; uint8_t action = 0;
         if (!PHReadU16(enemy + 532, &flags)) return false;
-        if (flags & 0x100u) { out.enemiesKnown = false; out.window = false; continue; } // Enemy parts not yet modeled.
+        if (flags & 0x100u) {
+            out.enemiesKnown = false; out.window = false;
+            out.windowBlocks |= PHOrbSkillWindowEnemyParts;
+            continue;
+        } // Enemy parts not yet modeled.
         if (!Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
             !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
         if (int64_t((uint64_t(high) << 32) | low) <= 0) continue;
         ++out.activeEnemies;
         if (!PHReadU8(enemy + 23, &action)) return false;
         out.window &= int8_t(action) < 0;
+        if (int8_t(action) >= 0) out.windowBlocks |= PHOrbSkillWindowEnemyAction;
         out.busy |= int8_t(action) >= 0;
         for (unsigned effect = 0; effect < 4; ++effect) {
             uint32_t duration = 0, mask = 0;
@@ -150,6 +169,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         }
     }
     out.window &= out.activeEnemies > 0;
+    if (!out.activeEnemies) out.windowBlocks |= PHOrbSkillWindowNoEnemy;
     out.busy |= !out.activeEnemies || !hp;
     for (unsigned effect = 0; effect < 4; ++effect) {
         uint16_t turns = 0, delay = 0;
@@ -164,5 +184,6 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2 ||
         !PHReadPointer(state.identity.game + 0x70, &lastImpl) || lastImpl != impl) return false;
     out.valid = true;
+    out.windowBlocksKnown = true;
     return true;
 }

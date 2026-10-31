@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "checkedOn": "2026-10-31",
+  "method": "Independent Python source/configuration checks against the pinned catalog and saved article tables; JSON and Python syntax only. No native code, test suites or compiler executed.",
+  "checks": [
+    "article six body/assist IDs, levels, supers and latents",
+    "card level and skill limits, assist eligibility, awakening count, latent cost",
+    "exact article opening order, native evolving stage ID, transformation and consumed-assist transitions",
+    "required supply rule order and double-Kenpachi interval/group",
+    "portable 0.5.11 post-opening format and final bodies",
+    "UTF-8 JSON, identifier/name bounds and import byte limit",
+    "accepted-use timing and two warmup turns in the full Kenpachi plan; required rescue starts immediately",
+    "0.5.11 portable rules retain legacy keys and equal the full rotation after omitting new timing fields",
+    "changed JSON parses and Python sources pass AST syntax parsing; native/GUI/session cases remain unexecuted"
+  ],
+  "results": [
+    {
+      "config": "recommended.team-plan.json",
+      "bytes": 9397,
+      "sha256": "c8572e8d1e602ad681e413306c8763b4f0d49b3f9cc4cde6f41e05327e7c81ba",
+      "openingSteps": 10,
+      "rotationRules": 7,
+      "consumedAssistSlots": [
+        4
+      ],
+      "finalBodies": [
+        14035,
+        14043,
+        14175,
+        14190,
+        14200,
+        14184
+      ],
+      "finalAssists": [
+        12569,
+        7403,
+        11598,
+        0,
+        14132,
+        13711
+      ],
+      "passed": true
+    },
+    {
+      "config": "kenpachi-2.team-plan.json",
+      "bytes": 11122,
+      "sha256": "2a4160c2fb8d5168fd5210713d625b485656678703f8642e43bcd6c3258a8741",
+      "openingSteps": 8,
+      "rotationRules": 10,
+      "consumedAssistSlots": [
+        6,
+        5
+      ],
+      "finalBodies": [
+        14184,
+        14200,
+        14175,
+        14043,
+        14043,
+        14190
+      ],
+      "finalAssists": [
+        13711,
+        14132,
+        13053,
+        7983,
+        0,
+        0
+      ],
+      "passed": true
+    }
+  ],
+  "compiled": false,
+  "runtimeSuitesRun": false,
+  "deviceVerified": false,
+  "kenpachiStartup": {
+    "casterChargeAfterCookieUse": 0,
+    "automaticWarmupPuzzles": 2,
+    "normalAttemptTurns": [
+      3,
+      5,
+      7,
+      9
+    ],
+    "expectedSlots": [
+      4,
+      5,
+      4,
+      5
+    ],
+    "uncoveredTurnsWithoutRescue": [
+      1,
+      2
+    ],
+    "legacyDirectStartupGapTurns": [
+      3,
+      4
+    ],
+    "manualWarmupPuzzlesBeforeStarting0511": 2,
+    "intervalMode": "accepted",
+    "startAfter": 2,
+    "rescueStartAfter": 0,
+    "basis": "Read-only native charge evidence plus declarative config checks. The schedule assumes no rescue, delay, extra haste or manual use, and native readiness. Session behavior remains unexecuted."
+  },
+  "sourceSyntaxCounts": {
+    "json": 12,
+    "python": 1
+  }
+}

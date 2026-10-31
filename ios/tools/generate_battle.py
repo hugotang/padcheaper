@@ -10,7 +10,7 @@ def generate(manifest):
     if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.0-106878":
         raise ValueError("Unsupported battle target")
     if manifest["gate"] != {"entry_categories": "all-except-multiplayer", "source_modes_default": [0], "multiplayer_modes_default": [0],
-                            "write_scope": "single-player-only", "excluded_entry_modes": [7], "multiplayer_override": False,
+                            "write_scope": "single-player-only", "excluded_entry_modes": [7, 10, 11], "multiplayer_override": False,
                             "multiplayer_latch": "until-battle-exit", "unsupported_banked_multiplayer": [1, 4], "supported_banked_multiplayer": [],
                             "runtime_configuration": "battle", "player_input_phase": 2,
                             "automatic_entry_phase": 0, "automatic_entry_window": "fresh-wave-zero-intro"}:

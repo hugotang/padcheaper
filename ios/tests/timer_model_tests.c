@@ -65,7 +65,14 @@ int main(void) {
         state.phase = 2; state.flags = 0x22;
         Check(PHTimerAutomaticFlags(&state) == 0x22, "multiplayer and mode-7 transition states preserve timer flags");
     }
-    state.mode = 12; state.multiplayer = 0; state.multiplayerDisabled = true;
+    state.multiplayer = 0;
+    for (int16_t mode = 10; mode <= 11; ++mode) {
+        state.mode = mode; state.multiplayerDisabled = false; state.phase = 58;
+        Check(!PHTimerCanDismiss(&state), "competitive selector zero cannot enable timer popup writes");
+        state.phase = 2;
+        Check(PHTimerAutomaticFlags(&state) == 0x22, "competitive selector zero preserves native clock flags");
+    }
+    state.mode = 12; state.multiplayerDisabled = true;
     Check(PHTimerAutomaticFlags(&state) == 0x22, "a detected multiplayer timer remains disabled after selector reset");
     printf("Timer policy tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;

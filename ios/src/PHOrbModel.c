@@ -68,6 +68,7 @@ bool PHOrbCanEnterThorn(const PHOrbSnapshot *state, unsigned cell) {
     if (!state || cell >= state->board.width * state->board.height || cell >= PHOrbMaxCells) return false;
     if (!(state->board.flags[cell] & PHOrbFlagThorn) || !state->board.thornDamage[cell] ||
         !state->dragged || state->dragged == state->board.tokens[cell]) return true;
+    if (!PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) return false;
     const PHOrbThornState *t = &state->thorns;
     return t->known && t->hp > 0 && t->hp <= t->maximumHP && t->maximumHP <= INT32_MAX &&
         (uint64_t)t->pendingDamage + PHOrbThornDamage(state->board.thornDamage[cell], t->maximumHP) < t->hp;
@@ -143,8 +144,57 @@ bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b) {
 
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     return a && b && PHBattleSameIdentity(&a->identity, &b->identity) && a->wave == b->wave &&
+        PHOrbSameMultiplayerTurn(&a->multiplayer, &b->multiplayer) &&
         a->inputManager == b->inputManager && a->minErase == b->minErase && a->freeMovement == b->freeMovement &&
         a->board.width == b->board.width && a->board.height == b->board.height;
+}
+
+PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer) {
+    if (PHBattleIsSinglePlayer(mode, multiplayer)) return PHOrbMultiplayerNone;
+    if (multiplayer == 1) {
+        if (mode == 7) return PHOrbMultiplayerThree;
+        if (mode == 11) return PHOrbMultiplayerFour;
+        if (mode == 10) return PHOrbMultiplayerEight;
+    }
+    return PHOrbMultiplayerUnsupported;
+}
+
+bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b) {
+    if (!a || !b || a->kind != b->kind) return false;
+    if (a->kind == PHOrbMultiplayerNone) return true;
+    return a->known && b->known && a->kind != PHOrbMultiplayerUnsupported &&
+        a->turnSerial == b->turnSerial && a->teamCount == b->teamCount &&
+        a->localSeat == b->localSeat && a->viewTeam == b->viewTeam &&
+        (a->kind == PHOrbMultiplayerThree || a->clockStart == b->clockStart);
+}
+
+bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
+    if (!state || !state->present || !state->valid || state->multiplayerDisabled || state->phase != 2 ||
+        state->identity.sourceMode != 0 || state->boardTransition) return false;
+    const PHOrbMultiplayerState *m = &state->multiplayer;
+    if (!m->known || m->kind != PHOrbMultiplayerMode(state->identity.entryMode, state->identity.multiplayer) ||
+        m->kind == PHOrbMultiplayerNone || m->kind == PHOrbMultiplayerUnsupported ||
+        !m->teamCount || m->localSeat >= m->teamCount || m->viewTeam != m->localSeat || m->localStatus != 3 ||
+        m->turnSerial > INT32_MAX || m->syncState != 0 ||
+        (m->connectionState != 2 && m->connectionState != 3 && m->connectionState != 6 && m->connectionState != 7) ||
+        !(m->networkFlags & 1u) || (m->networkFlags & ~0x21u) || m->resolvePending ||
+        !m->clockKnown || !isfinite(m->remainingSeconds) || m->remainingSeconds <= 0 || m->remainingSeconds > 86400)
+        return false;
+    if (m->kind == PHOrbMultiplayerThree)
+        // Native first swap pauses the co-op decision clock; the ordinary
+        // move timer then bounds this already-selected gesture.
+        return !(m->clockFlags & ~3u) && (!(m->clockFlags & 2u) || state->dragged) &&
+            m->teamCount >= 2 && m->teamCount <= 3 &&
+            m->turnSerial % m->teamCount == m->localSeat;
+    return m->teamCount == (m->kind == PHOrbMultiplayerFour ? 4u : 8u) &&
+        m->countdownReady == 1 && m->finished == 0 && m->clockStart != 0 && (m->clockFlags & 0x36u) == 4u;
+}
+
+bool PHOrbInputContextReady(const PHOrbSnapshot *state) {
+    if (!state || state->multiplayerDisabled) return false;
+    if (PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer))
+        return state->multiplayer.kind == PHOrbMultiplayerNone;
+    return PHOrbMultiplayerWindow(state);
 }
 
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
@@ -158,6 +208,7 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         !PHOrbSamePlanBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
+        x->windowBlocksKnown != y->windowBlocksKnown || x->windowBlocks != y->windowBlocks ||
         x->skillUses != y->skillUses || x->enemiesKnown != y->enemiesKnown || x->boardKnown != y->boardKnown ||
         x->enemyEffects != y->enemyEffects || x->playerBypass != y->playerBypass ||
         x->activeEnemies != y->activeEnemies) return false;
@@ -165,7 +216,7 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         const PHOrbSkillMember *m = &x->members[i], *n = &y->members[i];
         if (m->active != n->active || m->number != n->number || m->charge != n->charge ||
             m->state != n->state || m->bound != n->bound || m->selection != n->selection ||
-            m->assistCatalogID != n->assistCatalogID ||
+            m->assistCatalogID != n->assistCatalogID || m->assistState != n->assistState ||
             memcmp(m->sourceCatalogIDs, n->sourceCatalogIDs, sizeof(m->sourceCatalogIDs)) ||
             m->identityNumber != n->identityNumber || m->identityAssist != n->identityAssist ||
             m->temporaryID != n->temporaryID || m->temporaryTurns != n->temporaryTurns ||
@@ -185,6 +236,16 @@ bool PHOrbSamePlayerState(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     return x->hpKnown == y->hpKnown && x->hp == y->hp && x->maximumHP == y->maximumHP &&
         x->statusKnown == y->statusKnown && x->playerEffects == y->playerEffects &&
         x->awakeningRestricted == y->awakeningRestricted;
+}
+
+bool PHOrbSameAutomationExceptWindow(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
+    if (!a || !b) return false;
+    PHOrbSnapshot comparison = *b;
+    comparison.automation.window = a->automation.window;
+    comparison.automation.busy = a->automation.busy;
+    comparison.automation.windowBlocks = a->automation.windowBlocks;
+    comparison.automation.windowBlocksKnown = a->automation.windowBlocksKnown;
+    return PHOrbSameAutomation(a, &comparison);
 }
 
 uint32_t PHOrbBoardObstacles(const PHOrbSnapshot *state) {
@@ -249,6 +310,15 @@ bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height) {
         (a % width == b % width && (a + width == b || b + width == a));
 }
 
+bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal) {
+    if (!diagonal) return PHOrbAdjacent(a, b, width, height);
+    if (!width || !height || width > PHOrbMaxCells || height > PHOrbMaxCells ||
+        width * height > PHOrbMaxCells || a >= width * height || b >= width * height || a == b) return false;
+    unsigned dx = a % width > b % width ? a % width - b % width : b % width - a % width;
+    unsigned dy = a / width > b / width ? a / width - b / width : b / width - a / width;
+    return dx <= 1 && dy <= 1;
+}
+
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result) {
     if (!PHOrbBoardValid(board) || !route || !result || route->count < 1 ||
         route->count > PHOrbMaxSteps + 1 || through >= route->count || route->cells[0] >= board->width * board->height) return false;
@@ -257,7 +327,7 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
     *result = *board;
     for (unsigned i = 1; i <= through; ++i) {
         unsigned a = route->cells[i - 1], b = route->cells[i];
-        if (!PHOrbAdjacent(a, b, board->width, board->height)) return false;
+        if (!PHOrbMoveAdjacent(a, b, board->width, board->height, route->diagonal)) return false;
         if (blocked & (UINT64_C(1) << b)) return false;
 #define PH_ORB_SWAP(field, type) do { type temp = result->field[a]; result->field[a] = result->field[b]; result->field[b] = temp; } while (0)
         PH_ORB_SWAP(types, uint8_t);
@@ -276,7 +346,7 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
 bool PHOrbCanPreview(const PHOrbSnapshot *state) {
     return state && state->present && state->valid && state->settled && state->ordinary &&
         !state->boardTransition &&
-        !state->multiplayerDisabled && PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) &&
+        PHOrbInputContextReady(state) &&
         state->identity.sourceMode == 0 && state->phase == 2 && !state->dragged && PHInputIsQuiet(&state->input) &&
         (!(state->obstacles & PHOrbObstacleSpinner) || state->board.spinnerMask || state->spinnerReadStatus == PHOrbSpinnerReady) &&
         PHOrbBoardValid(&state->board);

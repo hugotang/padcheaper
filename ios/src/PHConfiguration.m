@@ -17,7 +17,7 @@ NSDictionary *PHDefaultConfiguration(void) {
              @"features": @{@"skin": @NO, @"bgm": @NO, @"bgmUncleared": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
              @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[],
-                 @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO},
+                 @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO, @"diagonal":@NO},
              @"orbProfiles":PHOrbDefaultProfiles()};
 }
 
@@ -48,7 +48,7 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
     NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[],
-        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO} mutableCopy];
+        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO, @"diagonal":@NO} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
     return settings;
@@ -108,7 +108,8 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
     if (![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
         !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"]) ||
-        !PHIsBoolean(orbs[@"thornComboPriority"]) || !PHIsBoolean(orbs[@"allowPoisonWithHeartFour"])) return NO;
+        !PHIsBoolean(orbs[@"thornComboPriority"]) || !PHIsBoolean(orbs[@"allowPoisonWithHeartFour"]) ||
+        !PHIsBoolean(orbs[@"diagonal"])) return NO;
     NSDictionary *profiles = PHConfigurationOrbProfiles(configuration);
     NSDictionary *selectedProfile = PHOrbProfileNamed(profiles, profiles[@"selected"]);
     if (selectedProfile && ![PHOrbCanonicalSettings(orbs) isEqual:PHOrbCanonicalSettings(selectedProfile[@"settings"])]) return NO;

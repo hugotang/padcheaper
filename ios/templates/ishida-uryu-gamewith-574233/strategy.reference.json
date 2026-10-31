@@ -410,5 +410,74 @@
     "applyBattleAutomatically": false,
     "forbidUnsupportedExecutionFields": true,
     "mode": "single-player-only"
+  },
+  "startupRevision": {
+    "date": "2026-10-31",
+    "status": "source-only-unbuilt",
+    "appliesTo": [
+      "team-plan.json",
+      "team-plan-heart-l.json"
+    ],
+    "requiredSourceFeatures": [
+      "intervalMode",
+      "startAfter"
+    ],
+    "chargeEvidence": {
+      "nativeFinalizerReference": "../../research/halloween-ciel-579537-native.json",
+      "chargeResetRoutine": "0x1005C4DE0",
+      "openingOtherMemberHasteByStep": [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    "byakuyaMinimumCooldown": 2,
+    "afterSixStepOpening": {
+      "slot5Charge": 10,
+      "slot6Charge": 0
+    },
+    "oldEagerOpening": {
+      "firstPuzzleCasterSlot": 5,
+      "secondPuzzleCharges": [
+        1,
+        1
+      ],
+      "secondPuzzleByakuyaReady": [
+        false,
+        false
+      ]
+    },
+    "preservedOpening": {
+      "firstPuzzleCasterSlot": null,
+      "secondPuzzleCasterSlot": 5,
+      "thirdPuzzleCasterSlot": 6,
+      "fourthPuzzleCasterSlot": 5
+    },
+    "firstPuzzleSupply": {
+      "minimumGuaranteedLight": 9,
+      "minimumGuaranteedHearts": {
+        "four": 4,
+        "l": 5
+      },
+      "policy": "normal pair delayed one observed puzzle; light-shortage OR heart-shortage alternatives remain eligible; each group casts at most once"
+    },
+    "ruleOrder": "Yoruichi, Byakuya group (normal rows plus two color alternatives per position), Haschwalth, two independent Unohana rescues, Uryu",
+    "facts": {
+      "uryuTransformationProducesLight": false,
+      "yoruichiBodyGeneratesLight": 6,
+      "byakuyaBodyGeneratesLightAndHeartEach": 5,
+      "byakuyaBodyHPAndMoveTimeMultiplier": 1.5,
+      "byakuyaBodyBuffTurns": 1
+    },
+    "limitations": [
+      "Assumes the listed six-step opening, max-skilled bodies and no extra haste, skill delay, manual cast or turn between opening steps.",
+      "First-puzzle shortage rescue may consume slot5 and recreate the second-puzzle gap; there is no universal continuous-supply guarantee.",
+      "Preserving Byakuya also forgoes its one-turn HP, move-time and personal damage-cap buff.",
+      "Orb counts do not prove a solvable T/heart layout; the solver still validates all goals and hazards.",
+      "Run and device behavior have not been compiled or tested. Existing deployed configs require reimporting the new template into a supporting dylib."
+    ]
   }
 }

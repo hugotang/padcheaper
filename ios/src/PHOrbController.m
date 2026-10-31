@@ -305,6 +305,8 @@
 @property(nonatomic, strong) UILabel *thornDescription;
 @property(nonatomic, strong) UISwitch *poisonWithHeartFour;
 @property(nonatomic, strong) UILabel *poisonDescription;
+@property(nonatomic, strong) UISwitch *diagonal;
+@property(nonatomic, strong) UILabel *diagonalDescription;
 @property(nonatomic, strong) UISegmentedControl *goalMode;
 @property(nonatomic, strong) UIButton *editGoals;
 @property(nonatomic, strong) UILabel *goalDescription;
@@ -357,7 +359,7 @@
     [self.view addSubview:scroll];
     UILabel *title = [self label:26 weight:UIFontWeightBold]; title.text = @"自動轉珠";
     UILabel *subtitle = [self label:14 weight:UIFontWeightRegular];
-    subtitle.text = @"單人 · 6×5／7×6／5×4 · 連續轉珠與技能規則";
+    subtitle.text = @"6×5／7×6／5×4 · 單人連續／多人轉一次";
     self.status = [self label:17 weight:UIFontWeightSemibold]; self.status.accessibilityIdentifier = @"padcheaper.orbsStatus";
     self.boardView = [PHOrbBoardView new];
     self.boardView.layer.cornerRadius = 12; self.boardView.clipsToBounds = YES;
@@ -400,6 +402,16 @@
     [self.qualityControl addTarget:self action:@selector(changeQuality) forControlEvents:UIControlEventValueChanged];
     self.qualityDescription = [self label:13 weight:UIFontWeightRegular];
     self.qualityDescription.accessibilityIdentifier = @"padcheaper.orbsQualityDescription";
+    UILabel *diagonalTitle = [self label:15 weight:UIFontWeightMedium]; diagonalTitle.text = @"允許斜向轉珠（Diagonal）";
+    self.diagonal = [UISwitch new];
+    self.diagonal.accessibilityIdentifier = @"padcheaper.orbsDiagonal";
+    self.diagonal.accessibilityLabel = diagonalTitle.text;
+    [self.diagonal addTarget:self action:@selector(changeDiagonal) forControlEvents:UIControlEventValueChanged];
+    UIStackView *diagonalRow = [[UIStackView alloc] initWithArrangedSubviews:@[diagonalTitle, self.diagonal]];
+    diagonalRow.axis = UILayoutConstraintAxisHorizontal; diagonalRow.alignment = UIStackViewAlignmentCenter; diagonalRow.spacing = 12;
+    [diagonalRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    self.diagonalDescription = [self label:13 weight:UIFontWeightRegular];
+    self.diagonalDescription.accessibilityIdentifier = @"padcheaper.orbsDiagonalDescription";
     UILabel *thornTitle = [self label:15 weight:UIFontWeightMedium]; thornTitle.text = @"荊棘盤優先 Combo";
     self.thornPriority = [UISwitch new];
     self.thornPriority.accessibilityIdentifier = @"padcheaper.orbsThornPriority";
@@ -430,7 +442,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。一般毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。猛毒仍避開，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。一般毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。猛毒仍避開，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人只支援 Combo／指定形狀的浮動「轉一次」，需在自己的操作窗口按下。完成後停止；同步或換回合會取消。多人避開有傷害的荊棘，不讀取單人 HP 預算；連續轉珠、技能規則與隊長自動目標仍限單人。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -445,7 +457,7 @@
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
-        self.qualityDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
+        self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
         self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
@@ -483,7 +495,8 @@
     NSDictionary *state = self.snapshot()[@"orbState"] ?: @{};
     self.state = state;
     if (!self.isViewLoaded) return;
-    self.status.text = state[@"message"] ?: @"等待初始化";
+    self.status.text = [state[@"multiplayerMessage"] length] ? [NSString stringWithFormat:@"%@\n%@",
+        state[@"message"] ?: @"等待初始化", state[@"multiplayerMessage"]] : state[@"message"] ?: @"等待初始化";
     self.readButton.enabled = [state[@"canRead"] boolValue]; self.executeButton.enabled = [state[@"canExecute"] boolValue];
     self.stopButton.enabled = [state[@"canStop"] boolValue];
     self.startButton.enabled = [state[@"canStart"] boolValue];
@@ -503,6 +516,11 @@
     if (!ruleLines.count) [ruleLines addObject:@"尚無技能規則；開始後只會連續轉珠。"];
     if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
         state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
+    for (NSDictionary *rule in state[@"rules"]) if ([rule[@"enabled"] boolValue] && [rule[@"intervalMode"] isEqual:@"accepted"]) {
+        if ([state[@"automatic"] boolValue] && [state[@"ruleTiming"][@"observedTurn"] unsignedIntegerValue]) [ruleLines addObject:[NSString stringWithFormat:
+            @"同場策略已觀察至第 %@ 回合；施放間隔在停止重開後保留", state[@"ruleTiming"][@"observedTurn"]]];
+        break;
+    }
     if ([state[@"obstacles"] length]) [ruleLines addObject:[NSString stringWithFormat:@"目前盤面：%@", state[@"obstacles"]]];
     NSString *ruleMessage = state[@"ruleMessage"];
     self.ruleDescription.text = ruleMessage.length ? ruleMessage : [ruleLines componentsJoinedByString:@"\n"];
@@ -512,6 +530,8 @@
     NSMutableArray *decisions = [NSMutableArray array];
     NSArray *rows = state[@"ruleDecisions"] ?: @[];
     if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];
+    if (rows.count && state[@"decisionContextCurrent"] && ![state[@"decisionContextCurrent"] boolValue])
+        [decisions addObject:@"以下保留先前技能判斷；目前戰鬥尚未確認或隊長已變更。"];
     NSArray *details = state[@"ruleDecisionDetails"] ?: @[];
     for (NSUInteger i = 0; i < rows.count; ++i) {
         NSUInteger rule = i < details.count ? [details[i][@"rule"] unsignedIntegerValue] : i + 1;
@@ -543,6 +563,13 @@
     self.qualityDescription.text = qualityMessage.length ? qualityMessage :
         @[@"較快取得路徑，適合一般回合。", @"兼顧求路速度與搜尋範圍。", @"搜尋更多候選路徑，需要等候較久；不保證 Combo 一定較高。"][quality];
     self.qualityDescription.textColor = qualityMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.diagonal.on = [state[@"diagonal"] boolValue];
+    self.diagonal.enabled = [state[@"canSetDiagonal"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSString *diagonalMessage = state[@"diagonalMessage"];
+    self.diagonalDescription.text = diagonalMessage.length ? diagonalMessage : self.diagonal.on ?
+        @"求路可使用相鄰斜格，可能縮短路徑或減少荊棘接觸；搜尋方向增加，同樣時間內不保證更快達標。每步確認遊戲實際交換後才繼續。" :
+        @"預設只走上下左右。開啟後可走八方向，消除與形狀仍按橫直規則；設定會與目前策略一同儲存。";
+    self.diagonalDescription.textColor = diagonalMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.thornPriority.on = [state[@"thornComboPriority"] boolValue];
     self.thornPriority.enabled = [state[@"canSetThornPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *thornMessage = state[@"thornPolicyMessage"];
@@ -595,6 +622,7 @@
             @"這條路徑未通過目前消毒、爆彈或荊棘條件，只供預覽；請查看上方原因。" :
         [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
             @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
+        [state[@"multiplayerActive"] boolValue] ? @"3／4／8 人請使用浮動「轉一次」；每次重新讀取本機盤面，完成後停止。多人隊長目標、技能與連續模式尚未開放。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
     self.boardView.board = state[@"board"]; self.boardView.path = state[@"path"];
     NSUInteger width = [state[@"board"][@"width"] unsignedIntegerValue], height = [state[@"board"][@"height"] unsignedIntegerValue];
@@ -633,6 +661,10 @@
 }
 - (void)changeThornPriority {
     if (self.thornPriority.enabled) self.action(@"orbsThornPriority", @(self.thornPriority.on));
+    [self refresh];
+}
+- (void)changeDiagonal {
+    if (self.diagonal.enabled) self.action(@"orbsDiagonal", @(self.diagonal.on));
     [self refresh];
 }
 - (void)changePoisonPolicy {
@@ -715,7 +747,8 @@
     NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
         @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery(),
         @"thornComboPriority":state[@"thornComboPriority"] ?: @NO,
-        @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO};
+        @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO,
+        @"diagonal":state[@"diagonal"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
     PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
@@ -728,7 +761,8 @@
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
                 @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO,
-                @"allowPoisonWithHeartFour":saved[@"allowPoisonWithHeartFour"] ?: @NO});
+                @"allowPoisonWithHeartFour":saved[@"allowPoisonWithHeartFour"] ?: @NO,
+                @"diagonal":saved[@"diagonal"] ?: @NO});
             NSString *message = saved[@"profileMessage"];
             const BOOL formationSaved = !selected[@"formation"] ||
                 [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];

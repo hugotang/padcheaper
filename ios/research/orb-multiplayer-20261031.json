@@ -1,0 +1,799 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "server_acceptance_verified": false,
+  "network_sync_verified": false,
+  "authorization": "Explicit 3/4/8-player local one-shot input; user chose to accumulate source and defer compilation/tests.",
+  "binary": {
+    "path": "E:\\ipa\\analysis\\pad_23.6.0\\pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "immutable": true,
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "workspace_copy_equal": true
+  },
+  "method": "IDA 9.4 Hex-Rays analysis on a workspace database copy; original/current IDA guard bytes and original Mach-O bytes compared. No game, native fixture, test suite, build or CI execution.",
+  "scope": {
+    "input": "explicit-local-once",
+    "modes": [
+      7,
+      11,
+      10
+    ],
+    "selector": 1,
+    "goal_modes": [
+      "combo",
+      "manual"
+    ],
+    "continuous": false,
+    "skills": false,
+    "team_mutation": false,
+    "timer_mutation": false,
+    "packet_mutation": false,
+    "thorn_contact": false,
+    "device_verified": false,
+    "ownership": "native-local-seat-turn-view-clock",
+    "preview_execute": false
+  },
+  "modes": [
+    {
+      "players": 3,
+      "entry_mode": 7,
+      "selector": 1,
+      "local_window": "turnSerial % teamCount == localSeat && viewTeam == localSeat",
+      "native_team_count": [
+        2,
+        3
+      ],
+      "note": "Reduced mode-7 count of 2 retains co-op ownership semantics; this does not add separate two-player co-op mode support."
+    },
+    {
+      "players": 4,
+      "entry_mode": 11,
+      "selector": 1,
+      "local_window": "viewTeam == localSeat; native active match clock and completed countdown",
+      "native_team_count": [
+        4
+      ],
+      "co_op_modulo_required": false
+    },
+    {
+      "players": 8,
+      "entry_mode": 10,
+      "selector": 1,
+      "local_window": "viewTeam == localSeat; native active match clock and completed countdown",
+      "native_team_count": [
+        8
+      ],
+      "co_op_modulo_required": false
+    }
+  ],
+  "layout": {
+    "new_read_only_fields": {
+      "PHOrbMultiClockNumeratorRVA": "0x2c6f634",
+      "PHOrbMultiClockDenominatorRVA": "0x2c6f638",
+      "PHOrbMultiConnectionRVA": "0x1b37258",
+      "PHOrbMultiNetworkFlagsOffset": "0xafe70",
+      "PHOrbMultiSyncStateOffset": "0xa6398",
+      "PHOrbMultiResolveOffset": "0x9299a",
+      "PHOrbMultiTurnClockOffset": "0xa6368",
+      "PHOrbMultiMatchClockOffset": "0xafed8",
+      "PHOrbMultiCountdownOffset": "0xafc81",
+      "PHOrbMultiFinishedOffset": "0xb7e08"
+    },
+    "shared_read_only_fields": {
+      "PHBattleTurnSerialOffset": "0xa3e48",
+      "PHBattlePlayerTeamOffset": "0xa3e4c",
+      "PHBattleTeamCountOffset": "0xa3e54",
+      "PHBattleCurrentTeamOffset": "0xa3e58",
+      "PHBattleTeamDescriptorOffset": "0xad270",
+      "PHBattleTeamDescriptorStride": "0x70",
+      "PHBattleDungeonPointerOffset": "0xb0f20",
+      "PHBattleInputRVA": "0x2ac6fd8",
+      "PHBattleDragPointerOffset": "0x988b8"
+    },
+    "not_local_seat": "impl+0xa3e5c (shared leader/helper selector)",
+    "descriptor_status": {
+      "offset": 28,
+      "required": 3
+    },
+    "co_op_clock": {
+      "base": "impl+0xa6368",
+      "start": {
+        "offset": 0,
+        "type": "uint64"
+      },
+      "flags": {
+        "offset": 8,
+        "type": "uint8"
+      },
+      "accumulated": {
+        "offset": 12,
+        "type": "float32"
+      },
+      "paused_hundredths": {
+        "offset": 16,
+        "type": "uint32 xor 0x33c2f3a1"
+      },
+      "limit": {
+        "offset": 20,
+        "type": "float32"
+      }
+    },
+    "competitive_clock": {
+      "base": "impl+0xafed8",
+      "start": {
+        "offset": 0,
+        "type": "uint64"
+      },
+      "flags": {
+        "offset": 24,
+        "type": "uint8"
+      },
+      "paused_hundredths": {
+        "offset": 32,
+        "type": "uint32 xor 0x33c2f3a1"
+      },
+      "limit": "positive int16 at dungeon+12, dungeon pointer impl+0xb0f20"
+    }
+  },
+  "gates": {
+    "phase": 2,
+    "source": 0,
+    "descriptor_status": 3,
+    "network_flags_required": "0x1",
+    "network_flags_allowed": "0x21",
+    "sync_state": 0,
+    "connection_states": [
+      2,
+      3,
+      6,
+      7
+    ],
+    "resolve_pending": 0,
+    "countdown_ready_for_competitive": 1,
+    "finished_for_competitive": 0,
+    "co_op_clock": "flags limited to 0x3; pause bit allowed only while selected; ordinary remaining move frames still bound the gesture",
+    "competitive_clock": "nonzero start epoch and (flags & 0x36) == 4",
+    "remaining_seconds": "known finite 0 < remaining <= 86400",
+    "ineligible_windows": "metadata only, no board object pool/table read",
+    "selector_reset": "categories 7/10/11 remain multiplayer even at selector zero; classification changes latch until observed scene exit"
+  },
+  "input_contract": {
+    "trigger": "explicit current-window one-shot tap only",
+    "goals": [
+      "combo",
+      "manual"
+    ],
+    "leader_planning": false,
+    "identity": [
+      "battle identity",
+      "wave",
+      "turn serial",
+      "team count",
+      "local seat",
+      "displayed team",
+      "input manager",
+      "board shape",
+      "competitive clock start epoch"
+    ],
+    "begin": "one began; deferred held start stays on original cell until its captured token is acknowledged",
+    "stop": "revoke holds; only the owned token in the same eligible context may receive a release",
+    "release": "retry while context remains valid until native acknowledgement; never send stale cleanup across a turn/scene/disconnect",
+    "manual_input": "cancel and preserve the real input manager bytes",
+    "time": "search budget <= 1000 ms; reserve 0.35 s arming, frame-quantized moves and 0.40 s margin; execution <= 4 s; never modify native clocks",
+    "thorn_policy": "no damaging multiplayer thorn contact; no single-player HP derivation",
+    "native_calls": "existing coordinate transform and original frame only; no network pump/sender/bank getter or skill entry invocation",
+    "private_input": "global input pointer scoped to original frame and restored; no board/token writes",
+    "unavailable_read": "Retain the observed multiplayer kind for UI only. A failed read cannot authorize input or continuous mode; a selector/mode latch is applied before any board/leader read."
+  },
+  "evidence": [
+    {
+      "va": "0x100542b74",
+      "purpose": "Competitive mode classifier",
+      "observation": "sub_100542B74(0) accepts categories 10 and 11; sub_100542B74(1) accepts category 10 only.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100542bb8",
+      "purpose": "Four-player classifier",
+      "observation": "Entry category 11 is four-player versus. Category 10 is eight-player versus.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10000be9c",
+      "purpose": "Multiplayer setup and local seat",
+      "observation": "Initializes local seat at impl+0xa3e4c from native record+60; team count is 8 for category 10 and 4 for category 11, otherwise the native count. Competitive display team at impl+0xa3e58 is initialized from the local seat. Accepted native connection states satisfy ((state-2)&~5)==0: 2,3,6,7.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1000164f4",
+      "purpose": "Local input versus remote co-op replay",
+      "observation": "Native ownership gate accepts a competitive classification or turnSerial % teamCount == localSeat. Remote co-op takes the replay branch. The dylib additionally requires the displayed team to equal its local seat.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10001afb8",
+      "purpose": "Local participant descriptor",
+      "observation": "Native local-participant checks use descriptor status 3 at impl+0xad270+seat*0x70+28. The shared leader/helper selector at impl+0xa3e5c is not the local seat.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10001b2bc",
+      "purpose": "Turn initialization flags",
+      "observation": "Native turn setup clears impl+0xafe70 and sets bit 0. PASS, synchronization and terminal/result flags are separate. Source input accepts only bit 0 with optional bit 5 (mask 0x21), sync state zero and no resolve pending.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005b4edc",
+      "purpose": "Original phase-2 dispatcher",
+      "observation": "Calls the original orb handler 0x10060d1f0 in the phase-2 branch, then 0x1000135a0 only for selector 1, the local modulo co-op turn and a noncompetitive classification. The dylib stages input around the existing original frame; it never calls the sender itself.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1000135a0",
+      "purpose": "Co-op sender evidence",
+      "observation": "Consumes native move-record flags and owned board data. Final-send flag bit 1 leads to native packet submission and sets bit 2. This routine mutates state and must not be invoked by the dylib.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10060d1f0",
+      "purpose": "Original orb input and ordinary first-swap clock pause",
+      "observation": "On a successful own co-op swap, records the native path and calls 0x10001ec44 for impl+0xa6368 when not competitive or special drag. Callsite 0x10060e8dc is the ordinary pause path. Therefore a selected 3P gesture must tolerate clock bit 1 (pause); a fresh unselected gesture must reject it.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10001ec44",
+      "purpose": "Co-op clock pause (evidence only)",
+      "observation": "Accumulates elapsed time, stores encoded hundredths using XOR 0x33c2f3a1 and sets flags bit 1. It is called naturally by the original native handler; no direct call or clock write is added.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10001ecb8",
+      "purpose": "Co-op elapsed-time semantics",
+      "observation": "Returns zero if clock bit 0 is clear; when running and bit 1 is set returns encoded hundredths, otherwise mach elapsed plus accumulated float. Native caps elapsed to the per-turn limit. The source reader clamps remaining seconds to zero at or past that limit.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100638f4c",
+      "purpose": "Monotonic native elapsed conversion",
+      "observation": "Uses mach_absolute_time and native timebase numerator/denominator with float32 multiply/divide, converts to uint64 then float32 seconds. Source reproduces this conversion with validity/range checks and performs no clock mutation.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005a76d4",
+      "purpose": "Competitive elapsed-time semantics",
+      "observation": "Match clock flags at impl+0xafed8+24: bit 2 running, bit 4 paused, bits 1/5 terminal. Paused encoded hundredths at +32 use XOR 0x33c2f3a1. Source requires active, nonpaused, nonterminal state and a nonzero start epoch.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10023cc24",
+      "purpose": "Match limit",
+      "observation": "Returns signed 16-bit dungeon field at +12; source reads the positive value directly through impl+0xb0f20 and never calls the getter.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005a70c8",
+      "purpose": "Competitive deadline enforcement",
+      "observation": "Compares elapsed from 0x1005a76d4 against the dungeon limit from 0x10023cc24 and the local descriptor status, with native phase/result transitions. Source reserves search, arming, frame-quantized steps and release time and stops on expiry.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x10060f25c",
+      "purpose": "Competitive countdown gate",
+      "observation": "Checks impl+0xafc81; when countdown is not ready the original code enters phase 70. Source conservatively requires the byte to equal 1.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100542c88",
+      "purpose": "Competitive finished gate",
+      "observation": "For categories 10/11 reads bit 0 at impl+0xb7e08. Source conservatively requires the finished byte to be zero.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005a7e3c",
+      "purpose": "Native match-clock start",
+      "observation": "Sets a mach start epoch and active bit 2. Reached from the original input handler when appropriate; not called by the dylib.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005a81ec",
+      "purpose": "Native versus match-clock start",
+      "observation": "Initializes two native clocks and active bit 2 from the original input path. Source waits for the clock to be established naturally.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100012dbc",
+      "purpose": "Multiplayer synchronization dispatcher",
+      "observation": "Reads sync state at impl+0xa6398 and calls mutating network/state routines. Source reads the field only and requires zero; this is not a read-only polling API.",
+      "runtime_call": false
+    }
+  ],
+  "guards": [
+    {
+      "name": "PHOrbMultiModeRVA",
+      "va": "0x100542b74",
+      "rva": "0x542b74",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b000f008c11e910821579100a11991fc26fc971f2c007168020052e813881a1f28007100159f1afd7b41a9f44fc2a8",
+      "sha256": "3006db4ee203904004a250dc97b414f06e73efc2615b0643aa65e563a8655c23"
+    },
+    {
+      "name": "PHOrbMultiFourModeRVA",
+      "va": "0x100542bb8",
+      "rva": "0x542bb8",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009168b000f008c11e910821579100a11991ed26fc971f2c0071e0179f1afd7bc1a8c0035fd6e923bd6df44f01a9fd7b02a9fd830091f30300aa",
+      "sha256": "8ba16ce010df8cea68dae832abf24977379778679efe5253fd00fb8f6dd087a5"
+    },
+    {
+      "name": "PHOrbMultiInitRVA",
+      "va": "0x10000be9c",
+      "rva": "0xbe9c",
+      "length": 64,
+      "bytes": "ff0301d1f65701a9f44f02a9fd7b03a9fdc30091f30300aa083840f9c9940090284900f988db14940001003768d9009008210991081140b908090051a9008012",
+      "sha256": "b7713138d0119b3b73d7e26331da87c15a51797de3b5e94b8a85d38f358c1472"
+    },
+    {
+      "name": "PHOrbMultiInputGateRVA",
+      "va": "0x1000164f4",
+      "rva": "0x164f4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd83009114d900d094c2009188438a522800a072886a68b81f1100710419417a21100054f30300aa083840f9098d429129213991",
+      "sha256": "d24d33407992f13fc7af6a43ab6fc19bfd9e23743b39b063924a9099162ac404"
+    },
+    {
+      "name": "PHOrbMultiDispatchRVA",
+      "va": "0x1005b4edc",
+      "rva": "0x5b4edc",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f30300aa5cd3ea97f40300aa2e37fe97e0000034683a40f949dc8f526901a0720a6969784a791512",
+      "sha256": "2618617c05fddd3590d09d05e08ada2838f11d39c8dc95aca9562ba10dd3b9a9"
+    },
+    {
+      "name": "PHOrbMultiSendRVA",
+      "va": "0x1000135a0",
+      "rva": "0x135a0",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091ff4324d1143840f908ce9f524801a072886a68b8a8161037f30300aa899a42912b450d91898e429122013a9169014039",
+      "sha256": "5f91e0209125b04af0058955eab9a5e7e338cb9bb262d77f881449a96bad2d6e"
+    },
+    {
+      "name": "PHOrbMultiEndRVA",
+      "va": "0x100542c88",
+      "rva": "0x542c88",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b000f008c11e910821579100a11991b726fc9708781f121f290071c1000054683a40f909c18f526901a07208696938",
+      "sha256": "04552ccbfd3982f5724805c4455e029cc24e9d9fc1c006df9d362599d520a48c"
+    },
+    {
+      "name": "PHOrbMultiCountdownRVA",
+      "va": "0x10060f25c",
+      "rva": "0x60f25c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091083840f929909f524901a0721469693894010037f30300aa0849429100e12591c10880523286fd97683a40f908dd429100b11b91",
+      "sha256": "4a8aae893894ea6cc442bc4fa568a6c55c1bde5aa7985a70b1b472900bc313ef"
+    },
+    {
+      "name": "PHOrbMultiElapsedRVA",
+      "va": "0x1005a76d4",
+      "rva": "0x5a76d4",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009109e481526901a07208bc429108c13b910a0140392a0108370a012837e003271e2a0110364a01203708bc429100613b91fd7bc1a80f460214",
+      "sha256": "7dd5fa0708b3d49be5c7f379a741194f54618c51bbb72fda53e0c7ccdf13ccac"
+    },
+    {
+      "name": "PHOrbMultiClockRVA",
+      "va": "0x100638f4c",
+      "rva": "0x638f4c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091130040f971a72094080013cb0001239ea83101f008d118910109402d21d8217e0008211e41d8217e0018211e0800399e0001239e",
+      "sha256": "787838100d223f49955d2c0f14d1a7d7f75889493046a89713f1d2360c309e40"
+    },
+    {
+      "name": "PHOrbMultiDeadlineRVA",
+      "va": "0x1005a70c8",
+      "rva": "0x5a70c8",
+      "length": 64,
+      "bytes": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa193840f928df429118f11c9128cf4291154d1691a83385522801a072",
+      "sha256": "2e7b0887eb0a3795bdeb17e4bf9d0ce7379173f62d9f79c4d21dabddd93e07cb"
+    },
+    {
+      "name": "PHOrbMultiTurnElapsedRVA",
+      "va": "0x10001ecb8",
+      "rva": "0x1ecb8",
+      "length": 64,
+      "bytes": "08204039e003271e28030036f44fbea9fd7b01a9fd430091f30300aac8000837e00313aa9c681894610e40bd0028211e09000014681240b929749e524978a672",
+      "sha256": "7b21949aa90a1d6c9fe628e4ba8a0e7b798efb37582c322a2f5d43bd18be95fa"
+    },
+    {
+      "name": "PHOrbMultiMatchLimitRVA",
+      "va": "0x10023cc24",
+      "rva": "0x23cc24",
+      "length": 64,
+      "bytes": "0018c079c0035fd6f44fbea9fd7b01a9fd430091f30300aa000c40f9600000b4213cf797e795309400038052f1953094f40300aa686500f0001947fd000000fd",
+      "sha256": "535395aba9856d1e92cf5a02ba98a26933cc21e3dbeaaf4d891ae6e6411c59bb"
+    },
+    {
+      "name": "PHOrbMultiSyncRVA",
+      "va": "0x100012dbc",
+      "rva": "0x12dbc",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa282000511f0d003168010054683a40f908994291099943b9a900003509a943b93f01146b400000541fa103b9",
+      "sha256": "e124019af651ba61fa92a60383d04bd8ef26ae97c4b3fdf2b11e9b52ed86b15b"
+    },
+    {
+      "name": "PHOrbMultiTurnInitRVA",
+      "va": "0x10001b2bc",
+      "rva": "0x1b2bc",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091083840f9899586522901a072096969383f05007100020054491d0035f30300aa09ce9f524901a072146969b8",
+      "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208"
+    }
+  ],
+  "written_regressions": {
+    "executed": false,
+    "files": [
+      "ios/tests/orb_multiplayer_model_tests.inc",
+      "ios/tests/orb_multiplayer_session_tests.inc",
+      "ios/tests/orb_multiplayer_native_tests.inc",
+      "ios/tests/battle_model_tests.c",
+      "ios/tests/timer_model_tests.c",
+      "ios/tests/music_tests.mm",
+      "ios/tests/overlay_probe.m"
+    ],
+    "coverage": [
+      "all 15 local seats",
+      "co-op modulo ownership versus independent competitive boards",
+      "wrong-window tap rejected without future queued intent",
+      "preview/continuous/skill refusal",
+      "one began and deferred start cell binding",
+      "stop during native began before acknowledgement",
+      "release retry with revoked holds",
+      "co-op first-swap clock pause",
+      "competitive countdown/clock epoch/deadline",
+      "read/coordinate races and late solver cancellation",
+      "hand input, pass, sync, disconnect, background, resize",
+      "selector/mode reset latch and scene exit",
+      "specific board reason preserved and unavailable mode UI",
+      "no multiplayer HP/leader/skill getter or input write during read",
+      "selector/mode latch blocks solo board reads before pool/table access"
+    ]
+  },
+  "static_checks": {
+    "ida_original_guards": {
+      "count": 15,
+      "passed": true,
+      "guards": [
+        {
+          "name": "PHOrbMultiModeRVA",
+          "va": "0x100542b74",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "3006db4ee203904004a250dc97b414f06e73efc2615b0643aa65e563a8655c23"
+        },
+        {
+          "name": "PHOrbMultiFourModeRVA",
+          "va": "0x100542bb8",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "8ba16ce010df8cea68dae832abf24977379778679efe5253fd00fb8f6dd087a5"
+        },
+        {
+          "name": "PHOrbMultiInitRVA",
+          "va": "0x10000be9c",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "b7713138d0119b3b73d7e26331da87c15a51797de3b5e94b8a85d38f358c1472"
+        },
+        {
+          "name": "PHOrbMultiInputGateRVA",
+          "va": "0x1000164f4",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "d24d33407992f13fc7af6a43ab6fc19bfd9e23743b39b063924a9099162ac404"
+        },
+        {
+          "name": "PHOrbMultiDispatchRVA",
+          "va": "0x1005b4edc",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "2618617c05fddd3590d09d05e08ada2838f11d39c8dc95aca9562ba10dd3b9a9"
+        },
+        {
+          "name": "PHOrbMultiSendRVA",
+          "va": "0x1000135a0",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "5f91e0209125b04af0058955eab9a5e7e338cb9bb262d77f881449a96bad2d6e"
+        },
+        {
+          "name": "PHOrbMultiEndRVA",
+          "va": "0x100542c88",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "04552ccbfd3982f5724805c4455e029cc24e9d9fc1c006df9d362599d520a48c"
+        },
+        {
+          "name": "PHOrbMultiCountdownRVA",
+          "va": "0x10060f25c",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "4a8aae893894ea6cc442bc4fa568a6c55c1bde5aa7985a70b1b472900bc313ef"
+        },
+        {
+          "name": "PHOrbMultiElapsedRVA",
+          "va": "0x1005a76d4",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "7dd5fa0708b3d49be5c7f379a741194f54618c51bbb72fda53e0c7ccdf13ccac"
+        },
+        {
+          "name": "PHOrbMultiClockRVA",
+          "va": "0x100638f4c",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "787838100d223f49955d2c0f14d1a7d7f75889493046a89713f1d2360c309e40"
+        },
+        {
+          "name": "PHOrbMultiDeadlineRVA",
+          "va": "0x1005a70c8",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "2e7b0887eb0a3795bdeb17e4bf9d0ce7379173f62d9f79c4d21dabddd93e07cb"
+        },
+        {
+          "name": "PHOrbMultiTurnElapsedRVA",
+          "va": "0x10001ecb8",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "7b21949aa90a1d6c9fe628e4ba8a0e7b798efb37582c322a2f5d43bd18be95fa"
+        },
+        {
+          "name": "PHOrbMultiMatchLimitRVA",
+          "va": "0x10023cc24",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "535395aba9856d1e92cf5a02ba98a26933cc21e3dbeaaf4d891ae6e6411c59bb"
+        },
+        {
+          "name": "PHOrbMultiSyncRVA",
+          "va": "0x100012dbc",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "e124019af651ba61fa92a60383d04bd8ef26ae97c4b3fdf2b11e9b52ed86b15b"
+        },
+        {
+          "name": "PHOrbMultiTurnInitRVA",
+          "va": "0x10001b2bc",
+          "original_equal": true,
+          "current_equal_original": true,
+          "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208"
+        }
+      ]
+    },
+    "original_macho_guards": {
+      "executable": "E:\\ipa\\analysis\\pad_23.6.0\\pad",
+      "size": 21573888,
+      "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "workspace_copy_equal": true,
+      "guard_count": 15,
+      "guards": [
+        {
+          "name": "PHOrbMultiModeRVA",
+          "file_offset": "0x542b74",
+          "segment": "__TEXT",
+          "sha256": "3006db4ee203904004a250dc97b414f06e73efc2615b0643aa65e563a8655c23",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiFourModeRVA",
+          "file_offset": "0x542bb8",
+          "segment": "__TEXT",
+          "sha256": "8ba16ce010df8cea68dae832abf24977379778679efe5253fd00fb8f6dd087a5",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiInitRVA",
+          "file_offset": "0xbe9c",
+          "segment": "__TEXT",
+          "sha256": "b7713138d0119b3b73d7e26331da87c15a51797de3b5e94b8a85d38f358c1472",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiInputGateRVA",
+          "file_offset": "0x164f4",
+          "segment": "__TEXT",
+          "sha256": "d24d33407992f13fc7af6a43ab6fc19bfd9e23743b39b063924a9099162ac404",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiDispatchRVA",
+          "file_offset": "0x5b4edc",
+          "segment": "__TEXT",
+          "sha256": "2618617c05fddd3590d09d05e08ada2838f11d39c8dc95aca9562ba10dd3b9a9",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiSendRVA",
+          "file_offset": "0x135a0",
+          "segment": "__TEXT",
+          "sha256": "5f91e0209125b04af0058955eab9a5e7e338cb9bb262d77f881449a96bad2d6e",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiEndRVA",
+          "file_offset": "0x542c88",
+          "segment": "__TEXT",
+          "sha256": "04552ccbfd3982f5724805c4455e029cc24e9d9fc1c006df9d362599d520a48c",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiCountdownRVA",
+          "file_offset": "0x60f25c",
+          "segment": "__TEXT",
+          "sha256": "4a8aae893894ea6cc442bc4fa568a6c55c1bde5aa7985a70b1b472900bc313ef",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiElapsedRVA",
+          "file_offset": "0x5a76d4",
+          "segment": "__TEXT",
+          "sha256": "7dd5fa0708b3d49be5c7f379a741194f54618c51bbb72fda53e0c7ccdf13ccac",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiClockRVA",
+          "file_offset": "0x638f4c",
+          "segment": "__TEXT",
+          "sha256": "787838100d223f49955d2c0f14d1a7d7f75889493046a89713f1d2360c309e40",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiDeadlineRVA",
+          "file_offset": "0x5a70c8",
+          "segment": "__TEXT",
+          "sha256": "2e7b0887eb0a3795bdeb17e4bf9d0ce7379173f62d9f79c4d21dabddd93e07cb",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiTurnElapsedRVA",
+          "file_offset": "0x1ecb8",
+          "segment": "__TEXT",
+          "sha256": "7b21949aa90a1d6c9fe628e4ba8a0e7b798efb37582c322a2f5d43bd18be95fa",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiMatchLimitRVA",
+          "file_offset": "0x23cc24",
+          "segment": "__TEXT",
+          "sha256": "535395aba9856d1e92cf5a02ba98a26933cc21e3dbeaaf4d891ae6e6411c59bb",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiSyncRVA",
+          "file_offset": "0x12dbc",
+          "segment": "__TEXT",
+          "sha256": "e124019af651ba61fa92a60383d04bd8ef26ae97c4b3fdf2b11e9b52ed86b15b",
+          "matched": true
+        },
+        {
+          "name": "PHOrbMultiTurnInitRVA",
+          "file_offset": "0x1b2bc",
+          "segment": "__TEXT",
+          "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208",
+          "matched": true
+        }
+      ]
+    },
+    "json_python_contracts": {
+      "status": "passed-static-only",
+      "json_files": [
+        "ios/targets/pad-23.6.0.json",
+        "ios/targets/battle-23.6.0.json",
+        "ios/targets/orbs-23.6.0.json",
+        "ios/research/orb-multiplayer-20261031.json"
+      ],
+      "python_ast_files": [
+        "ios/tools/generate_orbs.py",
+        "ios/tools/generate_battle.py"
+      ],
+      "contracts": [
+        "orb scope matches generator literal",
+        "battle gate matches generator literal",
+        "exact required guard names and uniqueness",
+        "fingerprint lengths, bytes/hashes and VA/RVA",
+        "10 multiplayer constants match generator and research",
+        "15 multiplayer guards match research",
+        "manual-dispatch workflow",
+        "all new test includes and entry calls wired",
+        "native/fake engine arm method present",
+        "multiplayer constant references resolve in manifest"
+      ],
+      "guard_counts": {
+        "orb": 77,
+        "battle": 34,
+        "new_multiplayer": 15
+      },
+      "lexical_delimiter_files": [
+        "ios/src/PHBattlePolicy.h",
+        "ios/src/PHOrbModel.h",
+        "ios/src/PHOrbModel.c",
+        "ios/src/PHOrbMultiplayer.inc",
+        "ios/src/PHOrbNative.mm",
+        "ios/src/PHOrbSession.h",
+        "ios/src/PHOrbSession.mm",
+        "ios/src/PHOrbPlanning.m",
+        "ios/src/PHOrbController.m",
+        "ios/src/PHOverlay.m",
+        "ios/src/PHRuntime.m",
+        "ios/tests/orb_multiplayer_model_tests.inc",
+        "ios/tests/orb_multiplayer_session_tests.inc",
+        "ios/tests/orb_multiplayer_native_tests.inc",
+        "ios/tests/orb_solver_tests.cpp",
+        "ios/tests/orb_session_tests.mm",
+        "ios/tests/orb_native_tests.mm",
+        "ios/tests/battle_model_tests.c",
+        "ios/tests/timer_model_tests.c",
+        "ios/tests/music_tests.mm",
+        "ios/tests/overlay_probe.m"
+      ],
+      "new_file_whitespace": {
+        "status": "passed",
+        "files": [
+          "ios/src/PHOrbMultiplayer.inc",
+          "ios/tests/orb_multiplayer_model_tests.inc",
+          "ios/tests/orb_multiplayer_session_tests.inc",
+          "ios/tests/orb_multiplayer_native_tests.inc",
+          "ios/docs/orb-multiplayer-once.md",
+          "ios/research/orb-multiplayer-20261031.json"
+        ]
+      },
+      "source_sha256_normalized_utf8_lf": {
+        "ios/src/PHBattlePolicy.h": "c6b5f731fdcdb7d89f55231c79c31c94b7806db860cc385b8fefeca9c883733b",
+        "ios/src/PHOrbModel.h": "370377d4529c6c349f06591704d568a477dc6736809c38bde815a30ffa6ce4ea",
+        "ios/src/PHOrbModel.c": "84dbee72b0db8226cd6d453e70caf9cffac0e459df82082dce90812e660cb21d",
+        "ios/src/PHOrbMultiplayer.inc": "917d97aa1d4d0f8a4b3c7d747e41780c79bf570510a6de09ab535cbe2aa01900",
+        "ios/src/PHOrbNative.mm": "f3d84f2f9cf6893af9e4ca6ccb95fbef209bfdef8200f17fc07a608246258b86",
+        "ios/src/PHOrbSession.h": "ebcdfd53a207e474a82ad301a48f6caff03b2b256afb154f19a37aacadef9228",
+        "ios/src/PHOrbSession.mm": "dfaaaf82e492124b87954aebfa63324a660b80c3775193379710cfe36e59e3ec",
+        "ios/src/PHOrbPlanning.m": "6b163cc97f2e3508aaed181d57f12ab8d6cef4179ee9756a9b4839b1a5c434fc",
+        "ios/src/PHOrbController.m": "0e5b9ec4debede2b26ae7c324ca00fbd19f1b10fbb7f2b130759c521f882f75f",
+        "ios/src/PHOverlay.m": "ceb53422f99e1954173d93a63c987543efaf25930028f4c4ce6903cecbba6515",
+        "ios/src/PHRuntime.m": "8814ce52baae8577dcd6a5068712cdc1e3ec8082084c833ca907788582ceb49f",
+        "ios/tests/orb_multiplayer_model_tests.inc": "c6249e3dbd1ca6e0a20af332d08e4fe99c367f52c012ddf3ad1df116b09453a8",
+        "ios/tests/orb_multiplayer_session_tests.inc": "0fe27030600c50bff15a7ba1941048d8c3b922ca03bafde3cd983c60e39e9a8a",
+        "ios/tests/orb_multiplayer_native_tests.inc": "ee1e36d5e4845cb493a9caae5f8e1f7036401543fbd3bd54ed9db99c51c753af",
+        "ios/tests/orb_solver_tests.cpp": "214c94bdc8dce325f6354e3921cd86a80b8c41875ad83e0ffd7812787c647f31",
+        "ios/tests/orb_session_tests.mm": "3208250d702e6ff50ce2517a7bda7f77e12fcec551412032f2a6e4477e38179f",
+        "ios/tests/orb_native_tests.mm": "d3d80b77a4d58a0fbd197b1c61d2cbbfee33e2741a03d8ccf5781ebaee8d9bae",
+        "ios/tests/battle_model_tests.c": "5a69ce063dd6ab9675d02ed996a1ce93265789b8fbcdf692d58b47f9a00d0554",
+        "ios/tests/timer_model_tests.c": "63d92d33ed0b543e91727915f90fd0ce297e9485ede28eab30477de1c6f6426e",
+        "ios/tests/music_tests.mm": "1ce0dec6e22077cc5f1743c93167a0376c50675fd230c7c13bf5ee3734edb2e9",
+        "ios/tests/overlay_probe.m": "b2fa1aa36d8b287537ef5a489aa09655cdc6b075799b35a1b86777e4165c0645"
+      },
+      "limitations": "No project module/generator imported or executed; no C/Objective-C compiler, test suite, runtime/native fixture, CI, packaging or device execution."
+    },
+    "diff_whitespace": {
+      "status": "passed",
+      "command": "git -c core.safecrlf=false diff --check",
+      "scope": "tracked workspace differences; new multiplayer files checked separately for trailing whitespace"
+    }
+  },
+  "pending": [
+    "Authorized full offline/macOS model/solver/session/native/config/UI regression run",
+    "Authorized iPhoneOS arm64 build/signature/package from the same reviewed source",
+    "LiveContainer and Dopamine execution of all modes including 3P peer view of each seat/PASS and 4/8P first/subsequent boards",
+    "Device clock ending during solve/arm/gesture; native deferred start/release acknowledgement; hand interruption and background/foreground",
+    "Actual multiplayer peer synchronization and server acceptance"
+  ],
+  "prior_failure_context": {
+    "document": "ios/docs/three-player-entry.md",
+    "finding": "Earlier disconnect involved team replacement; it does not establish success or failure of a scoped native one-shot gesture."
+  }
+}

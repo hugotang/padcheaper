@@ -4,6 +4,7 @@
 #import "PHOrbPlanning.h"
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <utility>
 #include <vector>
@@ -17,6 +18,9 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     NSUInteger stages, releases, cell, reads, beginFrames;
     BOOL down, beginning, staged, ignoreStart, requireHoldForStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
+    BOOL wrongDiagonalTarget, closeWindowInUse;
+    BOOL multiplayerArmed, ignoreRelease;
+    NSUInteger multiplayerArms;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
@@ -25,6 +29,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     PHOrbSkillSource chosenSource[6];
     uint32_t chosenSkill[6];
     uint16_t transformAfterSkill[6];
+    BOOL consumeAssistAfterSkill[6];
     unsigned lightAfterByakuya;
     NSUInteger skillFrames, resizeFrames, activeSkill, skillAttempts;
     std::vector<NSUInteger> skillOrder;
@@ -41,6 +46,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.phase = 2; live.input.valid = true; live.minErase = 3; live.freeMovement = 1;
         live.remainingFrames = 300; live.fps = 60; live.board.width = uint8_t(width); live.board.height = uint8_t(height);
         live.automation.valid = live.automation.window = live.automation.enemiesKnown = live.automation.boardKnown = true;
+        live.automation.windowBlocksKnown = true;
         live.automation.hpKnown = live.automation.statusKnown = true;
         live.automation.hp = live.automation.maximumHP = 1000;
         live.thorns = {1000,1000,0,true}; live.unmatchableKnown = true;
@@ -61,7 +67,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 }
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     ++reads;
-    if (!frame.ready || staged || failRead) return NO;
+    if (!frame.ready || staged || failRead) {
+        *state = {};
+        state->multiplayer.kind = live.multiplayer.kind;
+        state->multiplayerDisabled = live.multiplayerDisabled || multiplayerLatched;
+        return NO;
+    }
     if (!live.present) multiplayerLatched = NO;
     if (live.multiplayerDisabled) multiplayerLatched = YES;
     *state = live; state->multiplayerDisabled |= multiplayerLatched;
@@ -79,13 +90,26 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     return [self read:state frame:frame reason:reason];
 }
+- (void)armMultiplayerOnce:(BOOL)armed {
+    if (armed && !multiplayerArmed) ++multiplayerArms;
+    multiplayerArmed = armed;
+}
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (closeWindowInUse) {
+        closeWindowInUse = NO; live.automation.window = false;
+        live.automation.windowBlocks = PHOrbSkillWindowInput;
+    }
     if (!frame.ready || !frame.enabled || slot >= 6 || staged || multiplayerLatched || live.multiplayerDisabled ||
         !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
-        !PHOrbSameAutomation(&live, expected) || live.phase != 2 || !PHInputIsQuiet(&live.input)) return PHOrbSkillRejected;
+        live.phase != 2 || !live.settled || live.dragged || !PHInputIsQuiet(&live.input)) return PHOrbSkillRejected;
+    if (!live.automation.window && PHOrbSameAutomationExceptWindow(expected, &live)) {
+        if (reason) *reason = @"技能窗口關閉：原生操作尚未結束";
+        return PHOrbSkillWindowClosed;
+    }
+    if (!PHOrbSameAutomation(&live, expected)) return PHOrbSkillRejected;
     ++skillAttempts;
     const PHOrbSkillMember &member = live.automation.members[slot];
-    if (unavailableSkills[slot] || !live.automation.window || live.automation.busy || !member.active ||
+    if (unavailableSkills[slot] || live.automation.busy || !member.active ||
         member.bound || member.state) return PHOrbSkillUnavailable;
     if (requireNineLight && slot == 0) {
         unsigned light = 0;
@@ -114,6 +138,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (staged || !frame.ready || (hold && !frame.enabled) || live.multiplayerDisabled || multiplayerLatched ||
+        (!PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) &&
+            (!PHOrbMultiplayerWindow(&live) || (hold && !multiplayerArmed))) ||
         !PHOrbSameTurn(&live, expected) || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
@@ -151,6 +177,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         if (transformAfterSkill[activeSkill]) {
             live.automation.members[activeSkill].number = transformAfterSkill[activeSkill];
             transformAfterSkill[activeSkill] = 0;
+        }
+        if (consumeAssistAfterSkill[activeSkill] && chosenSource[activeSkill] == PHOrbSkillAssist) {
+            live.automation.members[activeSkill].assistCatalogID = 0;
+            live.automation.members[activeSkill].assistState = 0;
+            consumeAssistAfterSkill[activeSkill] = NO;
         }
         chosenSource[activeSkill] = PHOrbSkillBody;
         if (!failSkillAck) ++live.automation.skillUses;
@@ -190,7 +221,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
                 }
     }
     if (!staged) return;
-    if (!down) { live.dragged = 0; live.settled = true; live.phase = 3; return; }
+    if (!down) {
+        if (ignoreRelease) return;
+        live.dragged = 0; live.settled = true; live.phase = 3; return;
+    }
     if (beginning) {
         ++beginFrames;
         if (requireHoldForStart) return; // Native tall-layout began gate.
@@ -209,7 +243,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     unsigned from = 0;
     while (from < cells && live.board.tokens[from] != live.dragged) ++from;
     if (from == cell || from == cells) return;
-    Check(PHOrbAdjacent(from, unsigned(cell), live.board.width, live.board.height), "executor never skips to a nonadjacent cell");
+    const int dx = int(from % live.board.width) - int(cell % live.board.width);
+    const int dy = int(from / live.board.width) - int(cell / live.board.width);
+    Check(std::abs(dx) <= 1 && std::abs(dy) <= 1 && (dx || dy), "executor only sends a neighboring cell center");
+    if (wrongDiagonalTarget && dx && dy) {
+        cell = from / live.board.width * live.board.width + cell % live.board.width;
+    }
     if ((live.board.flags[cell] & PHOrbFlagThorn) && live.board.thornDamage[cell])
         live.thorns.pendingDamage += PHOrbThornDamage(live.board.thornDamage[cell],live.thorns.maximumHP);
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
@@ -262,6 +301,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 
 #include "orb_automation_session_tests.inc"
 #include "orb_strategy_session_tests.inc"
+#include "orb_timing_session_tests.inc"
 #include "orb_survival_session_tests.inc"
 #include "orb_recovery_session_tests.inc"
 #include "orb_effect_session_tests.inc"
@@ -272,10 +312,17 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_lifecycle_session_tests.inc"
 #include "orb_color_condition_session_tests.inc"
 #include "orb_plan_session_tests.inc"
+#include "orb_uryu_startup_session_tests.inc"
+#include "orb_skill_window_session_tests.inc"
+#include "orb_diagonal_session_tests.inc"
+#include "orb_multiplayer_session_tests.inc"
 
 int main() {
     @autoreleasepool {
+        SkillWindowSessionTests();
+        DiagonalSessionTests();
         ShortcutSessionTests();
+        MultiplayerSessionTests();
         FramePacingSessionTests();
         FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
         for (unsigned i = 0; i < 20; ++i) Tick(session, engine, Frame());
@@ -541,6 +588,7 @@ int main() {
         Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->stages == 0, "late solver completion cannot revive canceled intent");
         AutomationSessionTests();
         StrategySessionTests();
+        SkillTimingSessionTests();
         SurvivalSessionTests();
         RecoverySessionTests();
         OrbEffectSessionTests();
@@ -549,6 +597,7 @@ int main() {
         LifecycleSessionTests();
         ColorConditionSessionTests();
         PlanSessionTests();
+        UryuStartupSessionTests();
         ExecutionTraceSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
