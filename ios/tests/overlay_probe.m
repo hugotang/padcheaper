@@ -16,6 +16,7 @@ static UIWindow *PHProbeLegacyOverlay;
 static NSHashTable<UIWindow *> *PHProbeLegacyWindows;
 static NSDictionary *PHProbeRestartLibrary;
 static NSMutableArray<NSDictionary *> *PHProbeGeometry;
+static NSMutableArray<NSDictionary *> *PHProbeFloatingHits;
 static void *PHProbeDylib;
 
 @interface UIViewController (PHProbeOverlayState)
@@ -39,7 +40,7 @@ static void PHProbeCheck(BOOL condition, NSString *message) {
 
 static void PHProbeReport(NSString *phase) {
     NSDictionary *report = @{@"phase": phase, @"success": @(PHProbeFailures.count == 0), @"failures": PHProbeFailures,
-        @"geometry":PHProbeGeometry ?: @[]};
+        @"geometry":PHProbeGeometry ?: @[], @"floatingHitTests":PHProbeFloatingHits ?: @[]};
     NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:NULL];
     [data writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Documents/overlay-probe.json"] atomically:YES];
 }
@@ -74,8 +75,19 @@ static void PHProbeFloatingTargets(UIWindow *overlay) {
             [NSString stringWithFormat:@"Floating control %@ must be a visible on-screen 44-point target", identifier]);
         if (!control) continue;
         CGPoint center = [control convertPoint:CGPointMake(CGRectGetMidX(control.bounds), CGRectGetMidY(control.bounds)) toView:overlay];
-        PHProbeCheck([overlay hitTest:center withEvent:nil] == control,
-            [NSString stringWithFormat:@"Floating control %@ must receive its own touch", identifier]);
+        UIView *hit = [overlay hitTest:center withEvent:nil];
+        BOOL enabled = ![control isKindOfClass:UIControl.class] || [(UIControl *)control isEnabled];
+        BOOL ownsHit = hit == control || [hit isDescendantOfView:control];
+        // UIKit may omit a disabled button from hit testing. It must never
+        // redirect that tap to a different control; enabled actions and Stop
+        // must always retain their own on-screen target.
+        PHProbeCheck(enabled ? ownsHit : (!hit || ownsHit),
+            [NSString stringWithFormat:@"Floating control %@ hit mismatch: enabled=%d frame=%@ hit=%@",
+                identifier, enabled, NSStringFromCGRect(control.frame), hit.accessibilityIdentifier ?: NSStringFromClass(hit.class)]);
+        if (!PHProbeFloatingHits) PHProbeFloatingHits = [NSMutableArray array];
+        [PHProbeFloatingHits addObject:@{@"control":identifier, @"enabled":@(enabled),
+            @"frame":NSStringFromCGRect(control.frame), @"hit":hit.accessibilityIdentifier ?: NSStringFromClass(hit.class) ?: @"nil",
+            @"ownsHit":@(ownsHit)}];
         for (UIView *previous in controls)
             PHProbeCheck(!CGRectIntersectsRect(previous.frame, control.frame), @"Floating controls must never overlap each other");
         [controls addObject:control];
@@ -367,6 +379,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
     PHProbeCheck(panel.hidden && !onceShortcut.hidden && !autoShortcut.hidden && !collapseShortcut.hidden,
         @"First PC tap expands shortcuts without opening settings");
+    PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled,
+        @"An unvalidated guest keeps both input shortcuts disabled after unfolding");
     PHProbeFloatingTargets(overlay);
     CGPoint oldShortcutCenter = [onceShortcut convertPoint:CGPointMake(CGRectGetMidX(onceShortcut.bounds), CGRectGetMidY(onceShortcut.bounds)) toView:overlay];
     [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
