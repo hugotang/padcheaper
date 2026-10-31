@@ -3,6 +3,7 @@
 #import "PHOverlay.h"
 #import "PHOrbController.h"
 #import "PHOrbModel.h"
+#import "PHOrbPlanning.h"
 #import "PHOrbProfiles.h"
 #import "PHConfiguration.h"
 #import "PHFormationModel.h"
@@ -37,6 +38,7 @@ static void PHProbeCheck(BOOL condition, NSString *message) {
 }
 
 #include "orb_plan_storage_probe.inc"
+#include "orb_fixed_leader_probe.inc"
 
 static void PHProbeReport(NSString *phase) {
     NSDictionary *report = @{@"phase": phase, @"success": @(PHProbeFailures.count == 0), @"failures": PHProbeFailures,
@@ -552,7 +554,10 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     PHProbeCheck(goalMode.enabled && goalMode.numberOfSegments == 3, @"Native goal modes are available without enabling game input");
     goalMode.selectedSegmentIndex = 2; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
     PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"mode"] isEqual:@"leaders"], @"Leader board mode is saved explicitly");
-    __block NSArray *savedGoals = nil, *rescuePayload = nil;
+    PHOverlaySnapshot goalStorageSnapshot = [orbController valueForKey:@"snapshot"];
+    PHOverlayAction goalStorageAction = [orbController valueForKey:@"action"];
+    __block NSArray *savedGoals = nil, *rescuePayload = nil, *fixedSavedGoals = nil;
+    __block NSDictionary *fixedLeaderPlan = nil, *beforeFixedGoals = nil;
     __block NSDictionary *orbFixture = nil, *baseOrbFixture = nil, *wantedHearts = nil, *profilePayload = nil;
     __block NSMutableDictionary *goalFailure = nil, *ruleFailure = nil, *recoveryFailure = nil, *profileFailure = nil;
     __block NSString *orbAction = nil;
@@ -1209,6 +1214,33 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
                 @"Only a second explicit shortcut tap submits the next-board action");
+            NSDictionary *readFailure = PHProbeFourLeaderPlan(7625,36024,NO);
+            nextBoardStatus[@"canOnce"] = @NO;
+            nextBoardStatus[@"liveLeaderPlan"] = readFailure;
+            nextBoardStatus[@"multiplayerMessage"] = readFailure[@"message"] ?: @"";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            shortcutAction = nil; shortcutActionCount = 0;
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled && !shortcutActionCount &&
+                [shortcutStatus.text hasPrefix:@"本機隊長資料讀取未通過校驗"] &&
+                [onceShortcut.accessibilityHint containsString:@"可複製診斷"],
+                @"A fixed-leader read failure explains the disabled shortcut even after a previous completed route");
+            [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            NSDictionary *fixedReady = PHProbeFourLeaderPlan(7625,36024,YES);
+            nextBoardStatus[@"liveLeaderPlan"] = fixedReady;
+            nextBoardStatus[@"canOnce"] = fixedReady[@"available"] ?: @NO;
+            nextBoardStatus[@"multiplayerMessage"] = @"可轉一次；完成後停止\n4 人對戰 · 本機 4／4";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck([fixedReady[@"goals"] isEqual:PHProbeFixedFaganGoals()] && onceShortcut.enabled &&
+                onceShortcut.hidden && shortcutStatus.hidden && !shortcutActionCount,
+                @"A recognized fixed Fagan restores readiness while preserving the collapsed preference and no input intent");
+            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!onceShortcut.hidden && onceShortcut.enabled && !autoShortcut.enabled &&
+                [shortcutStatus.text isEqual:@"可轉一次；完成後停止"] && !shortcutActionCount,
+                @"Unfolding after fixed-leader recovery only reveals the available one-shot action");
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
+                @"Fixed-leader recovery still requires one explicit tap to dispatch one action");
             shortcutState[@"orbState"] = @{@"phase":@"stopped",@"message":@"目標未達成，未開始轉珠",@"canOnce":@NO,@"canStart":@NO,@"busy":@NO};
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled &&
@@ -1334,30 +1366,138 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             multiLeader[@"liveLeaderPlan"] = @{@"available":@YES,@"goals":savedGoals,
                 @"leaders":@[@"隊長 #14242",@"助人 · 4 人額外技能（不提供助人隊長技）"],
                 @"message":@"目前本機盤面條件",@"warning":@"多人只規劃最低盤面條件"};
-            orbFixture = @{@"orbState":multiLeader}; orbAction = nil; [orbController refresh];
+            orbFixture = @{@"orbState":[multiLeader copy]}; orbAction = nil; [orbController refresh];
             NSString *multiText = ((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription")).text;
             PHProbeCheck([multiText containsString:@"#14242"] && [multiText containsString:@"額外技能"] &&
                 [multiText containsString:@"目前本機"] && ![multiText containsString:@"舊"] && ![multiText containsString:@"✓"] &&
                 !PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit").hidden && !orbAction,
                 @"Idle multiplayer displays the live local leaders without attaching old route hits or submitting input");
-            multiLeader[@"liveLeaderPlan"] = @{@"available":@NO,@"goals":@[],@"leaders":@[],
-                @"message":@"未能確認本機回合的隊長／助人"};
-            orbFixture = @{@"orbState":multiLeader}; [orbController refresh];
-            PHProbeCheck(PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit").hidden &&
-                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription")).text containsString:@"未能確認"],
-                @"Missing current multiplayer pair hides stale customization and explains unavailable conditions");
-            multiLeader[@"liveLeaderPlan"] = @{@"available":@YES,@"goals":savedGoals,
-                @"leaders":@[@"隊長 #14242"],@"message":@"目前本機盤面條件"};
-            orbFixture = @{@"orbState":multiLeader}; [orbController refresh];
+            multiLeader[@"liveLeaderPlan"] = PHProbeFourLeaderPlan(7625,36024,NO);
+            // Replace the immutable snapshot without a UI refresh to model
+            // a native-read failure between the timer and the actual tap.
+            orbFixture = @{@"orbState":[multiLeader copy]};
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!orbController.presentedViewController && !orbAction &&
+                PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit").hidden &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription")).text containsString:@"讀取未通過校驗"],
+                @"A stale customization tap rechecks the failed leader read instead of copying an earlier pair");
+            multiLeader[@"goals"] = @[];
+            orbFixture = @{@"orbState":[multiLeader copy]};
+            beforeFixedGoals = PHProbeJSON(@"config.json");
+            goalMode.selectedSegmentIndex = 1;
+            [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
+        }),
+        PHProbeStep(@"multiplayer-manual-fallback-visible", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{
+            UIViewController *editor = orbController.presentedViewController; [editor loadViewIfNeeded];
+            NSArray *defaultDraft = @[@{@"kind":@"l",@"colors":@63,@"count":@1,@"length":@0}];
+            PHProbeCheck([[editor valueForKey:@"draft"] isEqual:defaultDraft] && !orbAction &&
+                [PHProbeJSON(@"config.json") isEqual:beforeFixedGoals],
+                @"First manual selection opens an independent draft when leaders are unavailable, without copying stale goals or saving");
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsGoalCancel") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"multiplayer-manual-fallback-cancelled", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            PHProbeCheck(!orbAction && goalMode.selectedSegmentIndex == 2 &&
+                [PHProbeJSON(@"config.json") isEqual:beforeFixedGoals],
+                @"Cancelling a new manual draft preserves the selected mode and stored goals");
+            NSMutableDictionary *multiLeader = [baseOrbFixture[@"orbState"] mutableCopy];
+            multiLeader[@"phase"] = @"idle"; multiLeader[@"multiplayerActive"] = @YES;
+            multiLeader[@"goalMode"] = @"leaders"; multiLeader[@"canExecute"] = multiLeader[@"canStart"] = @NO;
+            multiLeader[@"goalPlan"] = @{@"available":@YES,@"goals":savedGoals,@"message":@"舊條件"};
+            multiLeader[@"liveLeaderPlan"] = PHProbeFourLeaderPlan(7170,36017,YES);
+            multiLeader[@"path"] = @[@0,@1]; multiLeader[@"goalHits"] = @[@9];
+            for (NSString *gate in @[@"busy",@"inputFault",@"canSetGoals"]) {
+                multiLeader[@"busy"] = multiLeader[@"inputFault"] = @NO; multiLeader[@"canSetGoals"] = @YES;
+                orbFixture = @{@"orbState":[multiLeader copy]}; [orbController refresh];
+                multiLeader[gate] = @(![gate isEqual:@"canSetGoals"]);
+                orbFixture = @{@"orbState":[multiLeader copy]};
+                [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+                PHProbeCheck(!orbController.presentedViewController && !orbAction && !goalMode.enabled,
+                    @"Customization rechecks busy, input fault and settings permission before opening a stale sheet");
+                multiLeader[gate] = @([gate isEqual:@"canSetGoals"]);
+                orbFixture = @{@"orbState":[multiLeader copy]}; [orbController refresh];
+                multiLeader[gate] = @(![gate isEqual:@"canSetGoals"]);
+                orbFixture = @{@"orbState":[multiLeader copy]};
+                goalMode.selectedSegmentIndex = 0; [goalMode sendActionsForControlEvents:UIControlEventValueChanged];
+                PHProbeCheck(!orbAction && !goalMode.enabled && goalMode.selectedSegmentIndex == 2,
+                    @"A stale mode selection rechecks the same gates and restores the saved segment without dispatch");
+            }
+            multiLeader[@"busy"] = multiLeader[@"inputFault"] = @NO; multiLeader[@"canSetGoals"] = @YES;
+            orbFixture = @{@"orbState":[multiLeader copy]}; [orbController refresh];
+            fixedLeaderPlan = PHProbeFourLeaderPlan(7625,36024,YES);
+            multiLeader[@"liveLeaderPlan"] = fixedLeaderPlan;
+            orbFixture = @{@"orbState":[multiLeader copy]};
             [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
-        PHProbeStep(@"multiplayer-leader-goal-editor-visible", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{
+        PHProbeStep(@"fixed-leader-exact-editor-visible", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{
             UIViewController *editor = orbController.presentedViewController; [editor loadViewIfNeeded];
-            PHProbeCheck([[editor valueForKey:@"draft"] isEqual:savedGoals],
-                @"Multiplayer customization copies the currently displayed local leader conditions");
-            [editor dismissViewControllerAnimated:NO completion:nil];
+            NSArray *draft = [editor valueForKey:@"draft"];
+            UILabel *description = (UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription");
+            PHProbeCheck([fixedLeaderPlan[@"goals"] isEqual:PHProbeFixedFaganGoals()] &&
+                [draft isEqual:PHProbeFixedFaganGoals()] && [description.text containsString:@"#7625"] &&
+                [description.text containsString:@"固定隊伍版本"] && [description.text containsString:@"不提供助人隊長技"] &&
+                [description.text containsString:@"首批剛好 5 顆"] && [description.text containsString:@"任意珠種條件只以"] &&
+                ![description.text containsString:@"舊"] && ![description.text containsString:@"✓"] && !orbAction,
+                @"Clicking after the leader changes copies the real embedded Fagan plan with exact-five and helper scope, without old route hits");
+            UIStepper *length = (UIStepper *)PHProbeFind(editor.view,@"padcheaper.orbsGoallength1");
+            UIButton *kind = (UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsGoalkind1");
+            BOOL selectedExact = NO;
+            for (UIMenuElement *element in kind.menu.children) if ([element isKindOfClass:UIAction.class]) {
+                UIAction *choice = (UIAction *)element;
+                selectedExact |= [choice.title isEqual:@"精確顆數"] && choice.state == UIMenuElementStateOn;
+            }
+            PHProbeCheck(length && length.value == 5 && length.minimumValue == 3 && length.maximumValue == 42 &&
+                [length.accessibilityLabel isEqual:@"每組剛好珠數"] && selectedExact,
+                @"Copied exact goals select the exact-kind menu and expose the bounded exact-length control");
+            length.value = 6; [length sendActionsForControlEvents:UIControlEventValueChanged];
+            UIStepper *count = (UIStepper *)PHProbeFind(editor.view,@"padcheaper.orbsGoalcount1");
+            count.value = 2; [count sendActionsForControlEvents:UIControlEventValueChanged];
+            draft = [editor valueForKey:@"draft"];
+            PHProbeCheck(draft.count == 2 && [draft[1][@"length"] isEqual:@6] && [draft[1][@"count"] isEqual:@2] &&
+                [fixedLeaderPlan[@"goals"] isEqual:PHProbeFixedFaganGoals()],
+                @"Editing exact length and group count changes only the manual draft, leaving the source leader plan immutable");
+            orbAction = nil; orbValue = nil;
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsGoalSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(orbController.presentedViewController == editor && [orbAction isEqual:@"orbsGoals"] &&
+                [orbValue[@"mode"] isEqual:@"manual"] && [orbValue[@"goals"] isEqual:draft] &&
+                [((UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsGoalNotice")).text containsString:@"尚未確認儲存"] &&
+                [PHProbeJSON(@"config.json") isEqual:beforeFixedGoals],
+                @"An unacknowledged exact-goal save retains the draft and sheet without changing the real config file");
+            length = (UIStepper *)PHProbeFind(editor.view,@"padcheaper.orbsGoallength1");
+            UIScrollView *scroll = PHProbeScrollParent(length);
+            [editor.view layoutIfNeeded];
+            if (scroll) [scroll scrollRectToVisible:[length convertRect:length.bounds toView:scroll] animated:NO];
+            PHProbeRender(self.window,orbWindow,@"orbs-fixed-exact-draft");
+            fixedSavedGoals = [orbValue[@"goals"] copy];
+            [orbController setValue:goalStorageSnapshot forKey:@"snapshot"];
+            [orbController setValue:goalStorageAction forKey:@"action"];
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsGoalSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"fixed-leader-exact-save-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            NSDictionary *disk = PHProbeJSON(@"config.json"), *live = goalStorageSnapshot()[@"orbState"];
+            PHProbeCheck([disk[@"orbs"][@"mode"] isEqual:@"manual"] && [disk[@"orbs"][@"goals"] isEqual:fixedSavedGoals] &&
+                [live[@"goalMode"] isEqual:@"manual"] && [live[@"goals"] isEqual:fixedSavedGoals] &&
+                [disk[@"orbs"][@"recovery"] isEqual:beforeFixedGoals[@"orbs"][@"recovery"]],
+                @"Exact length and group count reach the actual config file before the editor closes, preserving the recovery policy");
+            [orbController refresh];
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"fixed-leader-exact-reopened", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{
+            UIViewController *editor = orbController.presentedViewController; [editor loadViewIfNeeded];
+            PHProbeCheck([[editor valueForKey:@"draft"] isEqual:fixedSavedGoals],
+                @"Reopening the stored manual profile preserves exact semantics and the edited group count");
+            UIStepper *length = (UIStepper *)PHProbeFind(editor.view,@"padcheaper.orbsGoallength1");
+            length.value = 5; [length sendActionsForControlEvents:UIControlEventValueChanged];
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsGoalCancel") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
         PHProbeStep(@"multiplayer-leader-goal-editor-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:fixedSavedGoals],
+                @"Cancelling an exact-length edit leaves the previously committed manual goals intact");
+            goalStorageAction(@"orbsGoals",@{@"mode":beforeFixedGoals[@"orbs"][@"mode"],@"goals":beforeFixedGoals[@"orbs"][@"goals"]});
+            PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"goals"] isEqual:beforeFixedGoals[@"orbs"][@"goals"]] &&
+                [PHProbeJSON(@"config.json")[@"orbs"][@"mode"] isEqual:beforeFixedGoals[@"orbs"][@"mode"]],
+                @"The exact-goal storage probe restores the prior mode and goals before the remaining GUI cases");
+            [orbController setValue:[^{ return orbFixture; } copy] forKey:@"snapshot"];
+            [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
             NSMutableDictionary *temporaryLeader = [baseOrbFixture[@"orbState"] mutableCopy];
             temporaryLeader[@"goalMode"] = @"manual"; temporaryLeader[@"path"] = @[];
             temporaryLeader[@"goalPlan"] = @{@"available":@YES, @"goals":savedGoals,

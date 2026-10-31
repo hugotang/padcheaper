@@ -45,6 +45,7 @@
     self.view.accessibilityIdentifier = @"padcheaper.orbsGoalEditor";
     UILabel *title = [self label:@"指定盤面目標"]; title.font = [UIFont boldSystemFontOfSize:22];
     UIButton *cancel = [self button:@"取消"];
+    cancel.accessibilityIdentifier = @"padcheaper.orbsGoalCancel";
     [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]];
     header.spacing = 12; header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
@@ -329,6 +330,7 @@
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
+- (void)editGoalSettingsForManualSelection:(BOOL)manualSelection;
 - (void)changeGoalMode;
 @end
 
@@ -675,21 +677,28 @@
 }
 - (void)changeGoalMode {
     NSInteger index = self.goalMode.selectedSegmentIndex;
-    if (index < 0 || index > 2 || !self.goalMode.enabled) return;
+    if (index < 0 || index > 2) return;
+    [self refresh];
+    if (!self.goalMode.enabled) return;
     NSString *mode = @[@"combo", @"manual", @"leaders"][(NSUInteger)index];
     NSArray *goals = self.state[@"goals"] ?: @[];
-    if ([mode isEqual:@"manual"] && !goals.count) { [self editGoalSettings]; [self refresh]; return; }
+    if ([mode isEqual:@"manual"] && !goals.count) { [self editGoalSettingsForManualSelection:YES]; return; }
     self.action(@"orbsGoals", @{@"mode":mode, @"goals":goals}); [self refresh];
 }
 - (void)editGoalSettings {
+    [self editGoalSettingsForManualSelection:NO];
+}
+- (void)editGoalSettingsForManualSelection:(BOOL)manualSelection {
+    // A tap can arrive between periodic refreshes. Copy only the current
+    // available leader plan; a new manual draft does not depend on it.
+    [self refresh];
     if (!self.goalMode.enabled || self.presentedViewController) return;
-    BOOL liveLeaders = [self.state[@"goalMode"] isEqual:@"leaders"] && [self.state[@"multiplayerActive"] boolValue] &&
-        ![self.state[@"busy"] boolValue];
+    BOOL copyLeaders = !manualSelection && [self.state[@"goalMode"] isEqual:@"leaders"];
+    BOOL liveLeaders = copyLeaders && [self.state[@"multiplayerActive"] boolValue];
     NSDictionary *plan = liveLeaders ? self.state[@"liveLeaderPlan"] : self.state[@"goalPlan"];
-    if (liveLeaders && ![plan[@"available"] boolValue]) return;
     NSArray *baseGoals = plan[@"baseGoals"] ?: plan[@"goals"];
-    NSArray *goals = [self.state[@"goalMode"] isEqual:@"leaders"] ? baseGoals : self.state[@"goals"];
-    if (!goals.count) goals = baseGoals;
+    if (copyLeaders && (![plan[@"available"] boolValue] || !baseGoals.count)) return;
+    NSArray *goals = copyLeaders ? baseGoals : self.state[@"goals"];
     if (!goals.count) goals = @[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0}];
     __weak PHOrbController *weakSelf = self;
     PHOrbGoalEditor *editor = [[PHOrbGoalEditor alloc] initWithGoals:goals save:^NSString *(NSArray *saved) {
