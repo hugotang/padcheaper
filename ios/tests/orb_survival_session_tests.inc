@@ -144,10 +144,15 @@ static void SurvivalSessionTests() {
         "prior-turn confirmation cannot satisfy a once-only rescue that is needed again on a later turn");
 
     engine = [FakeOrbEngine new]; session = AutomaticSession(engine,@[rescue]);
-    Check(UntilPhase(session,engine,@"solving"), "HP change fixture reaches the solver without needing rescue");
+    // Hold main-queue completions until the HP change has reached the session.
+    // A fast worker can otherwise leave "solving" during UntilPhase's drain.
+    Check(UntilSolveStarts(session,engine), "HP change fixture reaches the solver without needing rescue");
     engine->live.automation.hp = 100; Tick(session,engine,Frame());
     Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.empty() &&
         [[session snapshot][@"message"] containsString:@"HP"], "a later HP drop cancels a route chosen before rescue became necessary");
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.empty() &&
+        [[session snapshot][@"message"] containsString:@"HP"], "a late solver completion cannot revive the route canceled by an HP change");
     for (unsigned during = 0; during < 2; ++during) {
         engine = [FakeOrbEngine new]; engine->dropHPOnStart = during == 0; engine->dropHPOnMove = during == 1;
         session = AutomaticSession(engine,@[rescue]);
