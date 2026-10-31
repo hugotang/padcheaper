@@ -47,7 +47,9 @@ static void SkillWindowSessionTests() {
         engine->live.automation.windowBlocks = PHOrbSkillWindowInput;
         session = AutomaticSession(engine, @[rule]);
         for (unsigned i = 0; i < 35; ++i) Tick(session, engine, Frame());
-        if (cancellation == 0) engine->live.input.rawCount = 1;
+        // The native count may outlive a released touch. A live hand input
+        // is represented by the decoded active mask, as in production.
+        if (cancellation == 0) engine->live.input.rawActiveMask = 1;
         if (cancellation == 1) engine->live.identity.multiplayer = 1;
         if (cancellation == 2) engine->live.present = false;
         Tick(session, engine, Frame());
