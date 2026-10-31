@@ -118,6 +118,51 @@ typedef struct {
     bool windowBlocksKnown;
 } PHOrbAutomationState;
 
+// Optional, timestamped observations for diagnostics only. Neither these
+// fields nor their absence participate in skill or gesture authorization.
+typedef enum {
+    PHOrbObservationNotRequested, PHOrbObservationReady, PHOrbObservationUnavailable,
+    PHOrbObservationTransition, PHOrbObservationMultiplayer, PHOrbObservationChanged
+} PHOrbObservationStatus;
+typedef enum {
+    PHOrbChargeUnknown, PHOrbChargeNoSkill, PHOrbChargeBelowBody,
+    PHOrbChargeBody, PHOrbChargeAssist
+} PHOrbChargeWindow;
+enum {
+    PHOrbLInactive = 1u << 0, PHOrbLBound = 1u << 1, PHOrbLAwokenBind = 1u << 2,
+    PHOrbLAwakeningsDisabled = 1u << 3, PHOrbLLatentsDisabled = 1u << 4,
+    PHOrbLNoLatent = 1u << 5, PHOrbLNoAwakening = 1u << 6,
+    PHOrbLUnknownLatents = 1u << 7, PHOrbLUnknownAwakenings = 1u << 8,
+    PHOrbLDynamicAwakenings = 1u << 9, PHOrbLUnknownAttributes = 1u << 10,
+    PHOrbLUnknownRules = 1u << 11
+};
+typedef struct {
+    uint32_t skillIDs[2], rootSkillIDs[2];
+    uint16_t number, sourceAssist, activeAssist, charge, catalogCooldown[2];
+    uint16_t bodyCooldown, totalCooldown, chargeToBody, chargeToAssist, lBlockers;
+    uint8_t stage[2], cachedStage[2], lAwakenings, lColors, assistRecoveryLatents;
+    PHOrbChargeWindow chargeWindow;
+    bool active, bound, temporaryForm, assistRetained, assistVariantUnsupported;
+    bool skillKnown[2], cooldownKnown[2], thresholdsKnown, familyKnown, sourceFamilyEqual;
+    bool latentKnown, lAwakeningsKnown, lAttributesKnown, lEligibilityKnown;
+} PHOrbMemberObservation;
+typedef struct {
+    uint64_t hp;
+    uint16_t effectTurns[4], effectMasks[4];
+    uint8_t effects;
+    bool present, parts, hpKnown, actionBusy, effectsKnown;
+} PHOrbEnemyObservation;
+typedef struct {
+    PHOrbMemberObservation members[6];
+    PHOrbEnemyObservation enemies[8];
+    PHOrbObservationStatus status;
+    uint32_t hp, maximumHP;
+    int32_t dungeonCooldownAdjustment;
+    int16_t assistVoidTurns;
+    uint8_t enemyCount, activeEnemies, dungeonFlags;
+    bool hpKnown, enemiesKnown, rulesKnown, cooldownAdjustmentKnown, assistVoidKnown, assistVoidFresh;
+} PHOrbBattleObservation;
+
 typedef enum {
     PHOrbSpinnerInactive, PHOrbSpinnerReady, PHOrbSpinnerBadCount,
     PHOrbSpinnerBadPeriod, PHOrbSpinnerBadColors, PHOrbSpinnerBadRows,
@@ -205,6 +250,7 @@ typedef struct {
     PHOrbAutomationState automation;
     PHOrbThornState thorns;
     PHOrbMultiplayerState multiplayer;
+    PHOrbBattleObservation observation;
 } PHOrbSnapshot;
 
 typedef struct {

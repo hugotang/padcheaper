@@ -95,6 +95,7 @@ cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
 cp ios/docs/uryu-byakuya-0.5.2.md "$build_dir/uryu-byakuya-0.5.2.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/docs/enemy-aware-automation.md "$build_dir/enemy-aware-automation.md"
+cp ios/docs/battle-observation.md "$build_dir/battle-observation.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
 cp ios/third_party/pazusoba/LICENSE ios/third_party/pazusoba/NOTICE.md "$build_dir/third_party/pazusoba/"
@@ -114,6 +115,7 @@ cp ios/research/orb-multiplayer-peer-exit-20261031.json "$build_dir/research/"
 cp ios/research/orb-multiplayer-entry-20261031.json "$build_dir/research/"
 cp ios/research/orb-multiplayer-solo-20261031.json ios/research/orb-spinner-search-20261031.json ios/research/orb_spinner_search_benchmark.py "$build_dir/research/"
 cp ios/research/orb-dense-spinner-20261031.json "$build_dir/research/"
+cp ios/research/orb-opening-read-20261101.json ios/research/orb-battle-observation-20261101.json "$build_dir/research/"
 cp ios/data/fixed-leader-skills.json "$build_dir/research/"
 cp ios/research/orb-0511-log-analysis-20261030.json ios/research/orb-0511-logs-20261030.json ios/research/orb_0511_log_analysis.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
@@ -154,6 +156,7 @@ metadata = {
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual/current native leader goals; local turn/view/source and current parameter checks, explicit 4P extra-skill helper handling; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
+    "battle_observation": "optional read-only stable single-player current enemy HP/effects, assist-void/L-provider eligibility and table-based skill charge thresholds; separate optional fingerprints; no native getter calls, enemy action forecast, shield/healing calculation or survival-based automation; pending device verification",
     "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
     "multiplayer_peer_exit": "4P accepts initialized peer recovery sync 5/step 2 and a validated remote-seat departure at sync 15 or retained flag 0x10000; local status/connection/clock/board checks still required; recovery entry cancels old input; 3P/8P unchanged; device verification pending",
     "multiplayer_entry": "orb mode latch is scoped to a confirmed account/image and entry hash; a new match retires old mode and gesture intent even when the menu was not observed; only the reviewed mode 7 selector 1 to 2 continuation may change ownership within an entry; reverse/unknown transitions and racing reads remain blocked; device verification pending",

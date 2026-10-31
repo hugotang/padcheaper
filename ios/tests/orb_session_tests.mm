@@ -17,6 +17,9 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     PHOrbSnapshot live;
     NSUInteger stages, releases, cell, reads, beginFrames;
     BOOL down, beginning, staged, ignoreStart, requireHoldForStart, ignoreMove, failRestore, corruptSwap, failRead, multiplayerLatched;
+    NSString *readFailureReason;
+    NSUInteger observationReads;
+    BOOL failObservation;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
@@ -69,6 +72,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     ++reads;
     if (!frame.ready || staged || failRead) {
         *state = {};
+        if (reason && failRead) *reason = readFailureReason;
         state->multiplayer.kind = live.multiplayer.kind;
         state->multiplayerDisabled = live.multiplayerDisabled || multiplayerLatched;
         return NO;
@@ -91,6 +95,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     return [self read:state frame:frame reason:reason];
+}
+- (void)observeBattle:(PHOrbSnapshot *)state {
+    ++observationReads;
+    state->observation = live.observation;
+    if (failObservation) { state->observation = {}; state->observation.status = PHOrbObservationUnavailable; }
 }
 - (void)armMultiplayerOnce:(BOOL)armed {
     if (armed && !multiplayerArmed) ++multiplayerArms;
@@ -324,9 +333,11 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_skill_window_session_tests.inc"
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
+#include "orb_observation_session_tests.inc"
 
 int main() {
     @autoreleasepool {
+        ObservationSessionTests();
         SkillWindowSessionTests();
         DiagonalSessionTests();
         ShortcutSessionTests();

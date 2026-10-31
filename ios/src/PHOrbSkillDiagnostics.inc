@@ -1,10 +1,10 @@
-// Included in PHOrbNative's private namespace. Read live skill records only
-// after a refused, guarded native attempt. These descriptions never authorize
-// activation or replace the game's can-use result.
+// Shared native record layout. Refusal descriptions below run only after a
+// guarded attempt; optional observations read the table without calling any
+// native getter. Neither can authorize activation or replace native can-use.
 struct SkillDiagnosticRecord {
     uint32_t strings[3];
     uint16_t type, maxLevel, cooldown;
-    int16_t cachedCooldown;
+    int16_t levelCooldownDelta; // Signed per-level adjustment, not a mutable cache.
     int32_t params[8];
 };
 static_assert(sizeof(SkillDiagnosticRecord) == 52, "native skill record layout");

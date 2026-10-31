@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "report": {
+    "version": "0.5.14-orbs",
+    "mode": 1,
+    "source": 0,
+    "selector": 0,
+    "stopped_reason": "戰鬥記憶體範圍未通過讀寫保護校驗；已啟動的技能由遊戲完成",
+    "retained_failure": {
+      "openingStep": 3,
+      "phase": 0,
+      "width": 0,
+      "height": 0,
+      "valid": false,
+      "automationValid": false,
+      "sessionPhase": "stopped",
+      "duringAutomatic": false
+    },
+    "opening_at_copy": {
+      "completed": 3,
+      "count": 6,
+      "inFlight": false,
+      "profile": "uryu-gw574233-full-four",
+      "puzzlePending": false,
+      "steps": [
+        {
+          "consumeAssist": false,
+          "puzzleAfter": false,
+          "skill": 58344,
+          "slot": 5,
+          "source": "assist",
+          "status": "confirmed",
+          "step": 1,
+          "usesAfter": 1,
+          "usesBefore": 0
+        },
+        {
+          "consumeAssist": false,
+          "puzzleAfter": false,
+          "skill": 64780,
+          "slot": 1,
+          "source": "body",
+          "status": "confirmed",
+          "step": 2,
+          "usesAfter": 2,
+          "usesBefore": 1
+        },
+        {
+          "consumeAssist": false,
+          "puzzleAfter": false,
+          "skill": 60998,
+          "slot": 4,
+          "source": "assist",
+          "status": "confirmed",
+          "step": 3,
+          "usesAfter": 3,
+          "usesBefore": 2
+        }
+      ]
+    },
+    "readiness_at_copy": {
+      "canOnce": true,
+      "blockers": [],
+      "readSucceeded": true,
+      "readReason": "可以讀盤及求路",
+      "nativePhase": 2,
+      "remainingFrames": 390,
+      "fps": 30
+    },
+    "solver_at_copy": {
+      "elapsedMS": 0,
+      "evaluated": 0,
+      "completed": 0,
+      "inputFrames": 0,
+      "inputFault": false
+    },
+    "ordered_events": [
+      "opening-1-confirmed",
+      "opening-2-confirmed",
+      "automatic-stopped-during-opening-3",
+      "opening-3-confirmed-after-stop"
+    ],
+    "limits": [
+      "Retained zero phase and geometry are unread defaults, not observed empty-board or phase-zero transitions.",
+      "The later ready board and member charges are not stop-time observations.",
+      "No VM-region details were captured; the exact failing page or protection is unknown.",
+      "Recovered board readiness does not authorize an automatic restart."
+    ],
+    "privacy": "Account, container paths, entry hashes, raw pointers and full unrelated diagnostics omitted."
+  },
+  "existing_fix": {
+    "commit": "6913f2d",
+    "core_range_offset": "0x92000",
+    "old_length": "0x2e000",
+    "new_length": "0x2c000",
+    "modal_pointer_checked_separately": true,
+    "new_product_guard_relaxation_in_this_batch": false,
+    "delivered_0_5_14_contains_fix": false
+  },
+  "written_regressions": [
+    "Single-player automation reads phase 2 and 22 with only actual core and modal mapped; no native calls or writes.",
+    "Actual core-protection and modal read-only failures still reject before native calls.",
+    "Third native opening use completes while reader unavailable; no fabricated receipt, no orb input.",
+    "Fresh receipt advances to completed=3 while stopped; explicit resume starts step four only."
+  ],
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_checks": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "json_files": 6,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 16,
+      "local_includes": 87,
+      "local_document_links": 97,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "unchanged_decision_model_and_single_player_policy": true,
+      "workflow_dispatch_only": true,
+      "generated_files_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "source_sha256_lf": {
+        "ios/src/PHOrbController.m": "f2cbcde33c7e5b642b9e0db75b4ceb0ae0ca7d4e12afe434d0ea0f619eff965a",
+        "ios/src/PHOrbModel.h": "dd233f040a430a79dc3cef75bd6e7321776768d796cff7676eeddac38fb84881",
+        "ios/src/PHOrbNative.mm": "9b0fdbb5c4e0a15dbd4f0c81d7d323ded3368d715ca1f49cf74f663914d6960f",
+        "ios/src/PHOrbObservation.inc": "9a3d552171111c7d29dea37003e31b6569da2e2463fa637b122ca33f7015f0b9",
+        "ios/src/PHOrbObservationPresentation.inc": "3a071d36410835fa8eb70bfd61fb581f0047d111bfb8e50d34de5a02e20570a6",
+        "ios/src/PHOrbSession.h": "935be1d172d0f5b20f8a8e8cc214e34b1ecac80ec77ed1ef8450cbee4b3b9c8d",
+        "ios/src/PHOrbSession.mm": "30dc4475b87168f3bd29480768fa9f80738f5fb5005e5678f9f216160d3d40d3",
+        "ios/src/PHOrbSkillDiagnostics.inc": "ebd641fc3dc0dbf8649f4596e7504621c9af177c482872435649e1806f87bb53",
+        "ios/src/PHRuntime.m": "b4d27b4f6da6aac84740ed3123fc1bacfbebba08bcc4ac9271422c17bd3959a7",
+        "ios/tests/orb_native_tests.mm": "f0ced82f6fc887524f1a3f60860b414fa451f7ddce52ae2e75ddd422d6a456ea",
+        "ios/tests/orb_observation_native_tests.inc": "a3fe00ee49d6c207d82275928eab1bcb5f8f12a8ee0c36b3cb18dbe19b7f88e6",
+        "ios/tests/orb_observation_session_tests.inc": "f25952ee8bf7d7918da6ccc7adcdf4d5943bb00cd5ef7d8149d4bf5510fd2870",
+        "ios/tests/orb_plan_session_tests.inc": "f54c31c524f3c1820c7f85098f38e54d40bbbdf07b0281dc30127d1bdd7e2222",
+        "ios/tests/orb_session_tests.mm": "dce2a7343ecfa30411e9ae05ac8536d3b363e8ac04294f33b22ff08d826ffb6e",
+        "ios/tests/orb_skill_native_tests.inc": "aa69289fedd5f52fb14ab08813fbb092dce19aa3cf76cc79034d0fbafce11e51",
+        "ios/tests/overlay_probe.m": "e3bb0399e21043c3e825b2fee38fd27b46ada47a8a702eec7c19e1220fba2e83",
+        "ios/tools/generate_orbs.py": "1daa4c22620cdf0e1a82bcce1f2dd82cd91fea145b038800d05e7f3ed5f762ec",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b"
+      },
+      "limits": "Does not establish Objective-C/C++ compilation, test execution, native timing, device L recovery, survival or performance."
+    }
+  },
+  "pending": [
+    "Explicit compile/test request before running new or existing test suites.",
+    "Device verification of six-step Uryu opening and resume without duplicate skills."
+  ]
+}

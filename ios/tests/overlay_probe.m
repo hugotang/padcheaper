@@ -777,6 +777,18 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsDecisions")).text containsString:@"規則 6（位置 2）"],
                 @"Captured decisions identify the real position independently of rule order");
             PHProbeRender(self.window, orbWindow, @"orbs-skill-position-decisions");
+            ruleFailure[@"battleObservationDescription"] = @"戰況診斷：下一擊／減傷／回血尚未解析。\n暫時武裝無效：3 回合\n解武裝資格：位置 3：光 L（有效 L 2 個）\n位置 3：充能 20／本體 5／武裝合計 21\n尚未啟用自動 L＋心四連耐久。";
+            [orbController refresh];
+            UILabel *observationLabel = (UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsBattleObservation");
+            PHProbeCheck(!observationLabel.hidden && [observationLabel.text containsString:@"位置 3：光 L"] &&
+                [observationLabel.text containsString:@"尚未解析"] && [observationLabel.text containsString:@"尚未啟用"],
+                @"Read-only battle details show L/charge facts with unresolved survival and automation limitations");
+            [orbController.view layoutIfNeeded];
+            [orbScroll scrollRectToVisible:[observationLabel convertRect:observationLabel.bounds toView:orbScroll] animated:NO];
+            PHProbeRender(self.window, orbWindow, @"orbs-battle-observation");
+            ruleFailure[@"battleObservationDescription"] = @""; [orbController refresh];
+            PHProbeCheck(observationLabel.hidden && !observationLabel.text.length,
+                @"Absent or multiplayer diagnostics remove prior L/charge text");
             [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
         PHProbeStep(@"rule-editor-keyboard-ready", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsRuleEditor", YES); }, ^{

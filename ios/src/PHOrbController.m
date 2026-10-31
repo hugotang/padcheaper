@@ -323,6 +323,7 @@
 @property(nonatomic, strong) UILabel *ruleDescription;
 @property(nonatomic, strong) UILabel *playerDescription;
 @property(nonatomic, strong) UILabel *decisionDescription;
+@property(nonatomic, strong) UILabel *battleObservationDescription;
 @property(nonatomic, strong) UIButton *editRecovery;
 @property(nonatomic, strong) UILabel *recoveryDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
@@ -391,6 +392,8 @@
     self.playerDescription.accessibilityIdentifier = @"padcheaper.orbsPlayerStatus";
     self.decisionDescription = [self label:13 weight:UIFontWeightRegular];
     self.decisionDescription.accessibilityIdentifier = @"padcheaper.orbsDecisions";
+    self.battleObservationDescription = [self label:13 weight:UIFontWeightRegular];
+    self.battleObservationDescription.accessibilityIdentifier = @"padcheaper.orbsBattleObservation";
     self.editRecovery = [self button:@"低血時的心珠目標" selector:@selector(editRecoverySettings) identifier:@"padcheaper.orbsRecoveryEdit"];
     self.recoveryDescription = [self label:13 weight:UIFontWeightRegular];
     self.recoveryDescription.accessibilityIdentifier = @"padcheaper.orbsRecoveryDescription";
@@ -462,7 +465,8 @@
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
         self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
         self.goalMode, self.editGoals, self.goalDescription,
-        self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription, self.decisionDescription,
+        self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription,
+        self.battleObservationDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
@@ -530,6 +534,8 @@
     self.ruleDescription.textColor = ruleMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.playerDescription.text = state[@"playerStatus"] ?: @"";
     self.playerDescription.hidden = !self.playerDescription.text.length;
+    self.battleObservationDescription.text = state[@"battleObservationDescription"] ?: @"";
+    self.battleObservationDescription.hidden = !self.battleObservationDescription.text.length;
     NSMutableArray *decisions = [NSMutableArray array];
     NSArray *rows = state[@"ruleDecisions"] ?: @[];
     if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];

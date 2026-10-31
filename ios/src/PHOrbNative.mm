@@ -334,6 +334,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbSkills.inc"
 #include "PHOrbSkillChoice.inc"
 #include "PHOrbSkillDiagnostics.inc"
+#include "PHOrbObservation.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
     if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
@@ -513,6 +514,22 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return NO;
     }
     return YES;
+}
+- (void)observeBattle:(PHOrbSnapshot *)state {
+    if (!state) return;
+    state->observation = {};
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !state->identity.header ||
+        _verifiedHeader != state->identity.header) {
+        state->observation.status = PHOrbObservationUnavailable;
+        return;
+    }
+    // Optional fingerprints do not participate in the existing input/skill
+    // gate. An unrecognized diagnostic layout only removes its observation.
+    if (state->multiplayer.kind == PHOrbMultiplayerNone && !CheckObservationCode(state->identity.header)) {
+        state->observation.status = PHOrbObservationUnavailable;
+        return;
+    }
+    ReadBattleObservation(*state);
 }
 - (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header {
     return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, selector) & 1) != 0;

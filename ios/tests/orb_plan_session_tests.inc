@@ -318,6 +318,44 @@ static void PlanSessionTests() {
     TemporaryPlanSessionTests();
     ConsumingAssistPlanSessionTests();
     NSDictionary *profile = PlanSessionProfile();
+    {
+        // 0.5.14 device report: native third opening skill finished after the
+        // reader rejected its memory mapping. Recovery must not restart auto.
+        FakeOrbEngine *failedEngine = [FakeOrbEngine new];
+        PHOrbSession *failedSession = PlanSession(failedEngine, profile);
+        for (unsigned i = 0; i < 3000 && failedEngine->skillOrder.size() < 3 &&
+            [[failedSession snapshot][@"automatic"] boolValue]; ++i) Tick(failedSession, failedEngine, Frame());
+        Check(failedEngine->skillOrder == std::vector<NSUInteger>({4,0,3}) &&
+            [[failedSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 2 &&
+            [[failedSession snapshot][@"opening"][@"inFlight"] boolValue],
+            "read-failure fixture has two confirmed opening steps and the third native use in flight");
+        failedEngine->hangSkill = YES; failedEngine->failRead = YES;
+        failedEngine->readFailureReason = @"戰鬥記憶體範圍未通過讀寫保護校驗";
+        Tick(failedSession, failedEngine, Frame());
+        NSDictionary *failure = [failedSession snapshot];
+        Check(![failure[@"automatic"] boolValue] && [failure[@"message"] containsString:failedEngine->readFailureReason] &&
+            [failure[@"lastReadIssue"][@"openingStep"] unsignedIntegerValue] == 3 &&
+            ![failure[@"lastReadIssue"][@"valid"] boolValue] && !failedEngine->stages,
+            "third-step unreadable mapping stops auto without interpreting zero phase/geometry as a real board");
+        failedEngine->hangSkill = NO;
+        for (unsigned i = 0; i < 10; ++i) Tick(failedSession, failedEngine, Frame());
+        Check(failedEngine->live.automation.skillUses == 3 &&
+            [[failedSession snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 2,
+            "native completion while unreadable is not acknowledged from fabricated state");
+        failedEngine->failRead = NO;
+        for (unsigned i = 0; i < 40; ++i) Tick(failedSession, failedEngine, Frame());
+        NSDictionary *recovered = [failedSession snapshot];
+        Check(![recovered[@"automatic"] boolValue] && [recovered[@"canStart"] boolValue] &&
+            [recovered[@"opening"][@"completed"] unsignedIntegerValue] == 3 &&
+            ![recovered[@"opening"][@"inFlight"] boolValue] && failedEngine->skillOrder.size() == 3 &&
+            [recovered[@"message"] isEqual:failure[@"message"]] && !failedEngine->stages,
+            "fresh receipt confirms the third skill after recovery while preserving stop cause and requiring explicit resume");
+        [failedSession queueAutomatic];
+        for (unsigned i = 0; i < 300 && failedEngine->skillOrder.size() < 4; ++i) Tick(failedSession, failedEngine, Frame());
+        Check(failedEngine->skillOrder == std::vector<NSUInteger>({4,0,3,1}) && !failedEngine->stages,
+            "explicit resume runs only opening step four and never replays the completed third skill");
+        [failedSession queueStop:@"end third-opening read-failure fixture"];
+    }
     // The fifth real opening skill resizes the board without necessarily
     // changing phase away from two. Acknowledge it, then await full geometry.
     for (unsigned scenario = 0; scenario < 9; ++scenario) {

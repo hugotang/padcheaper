@@ -11,6 +11,7 @@
 #include <memory>
 
 namespace {
+#include "PHOrbObservationPresentation.inc"
 constexpr double StepSeconds = 0.065, PreviewLifetime = 45, ExecutionLimit = 4, TimeMargin = 0.40;
 constexpr double ArmDelay = 0.35;
 constexpr double AutomationSettle = 0.20, SkillTimeout = 30, TurnTimeout = 90;
@@ -286,6 +287,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSDictionary *_lastReadIssue;
     NSString *_liveReadReason;
     double _lastReadUptime;
+    PHOrbSnapshot _observationState;
+    double _observationAt, _observationUptime, _observationDurationMS;
     NSMutableArray<NSDictionary *> *_onceReadinessHistory;
     NSDictionary *_onceReadinessKey;
     NSUInteger _boardTransitionFrames;
@@ -331,6 +334,31 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
     }
     return self;
+}
+- (void)refreshBattleObservation:(BOOL)read active:(BOOL)active time:(NSTimeInterval)time {
+    if (!read || !_frame.ready || !_frame.enabled || !ObservationWindow(_live) || active || _oneShot ||
+        (_live.automation.valid && _live.automation.busy)) {
+        _observationState = {};
+        _observationState.observation.status = _live.multiplayer.kind != PHOrbMultiplayerNone ? PHOrbObservationMultiplayer :
+            read ? PHOrbObservationTransition : PHOrbObservationUnavailable;
+        _observationUptime = _observationDurationMS = 0;
+        return;
+    }
+    if (![_engine respondsToSelector:@selector(observeBattle:)]) return;
+    if (_observationState.observation.status == PHOrbObservationReady && !ObservationContextMatches(_observationState, _live)) {
+        _observationState = {};
+        _observationState.observation.status = PHOrbObservationChanged;
+        _observationUptime = _observationDurationMS = 0;
+    }
+    // Invalidating evidence must not reset the attempt clock. Rapid board,
+    // skill or read-window changes cannot turn diagnostics into frame polling.
+    if (_observationAt > 0 && time >= _observationAt && time - _observationAt < 0.75) return;
+    const double started = NSProcessInfo.processInfo.systemUptime;
+    PHOrbSnapshot captured = _live;
+    [_engine observeBattle:&captured];
+    _observationDurationMS = std::max(0.0, NSProcessInfo.processInfo.systemUptime - started) * 1000;
+    _observationState = captured;
+    _observationAt = time; _observationUptime = NSProcessInfo.processInfo.systemUptime;
 }
 - (BOOL)executing {
     return [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] || [_phase isEqual:@"releasing"];
@@ -1410,6 +1438,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
     _hasLive = read; _live = current;
     _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
+    [self refreshBattleObservation:read active:active time:time];
     if (!read) {
         _lastReadIssue = @{@"reason":reason ?: @"戰鬥資料未通過讀取校驗", @"phase":@(current.phase),
             @"valid":@(current.valid), @"automationValid":@(current.automation.valid),
@@ -1601,6 +1630,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         if (!timeReady) [onceBlockers addObject:@"time-unavailable"];
     }
     const double uptime = NSProcessInfo.processInfo.systemUptime;
+    const double observationAge = _observationUptime > 0 ? std::max(0.0, uptime - _observationUptime) * 1000 : -1;
+    const bool observationCurrent = liveReadable && _frame.ready && _frame.enabled && !_inputFault && ![self executing] &&
+        !_oneShot && observationAge >= 0 && observationAge <= 1500 &&
+        _observationState.observation.status == PHOrbObservationReady && ObservationContextMatches(_observationState, _live);
+    NSDictionary *observation = BattleObservationTrace(_observationState, observationCurrent, observationAge, _observationDurationMS);
     NSDictionary *onceReadiness = @{@"canOnce":@(canOnce), @"blockers":onceBlockers,
         @"frameReady":@(_frame.ready), @"frameEnabled":@(_frame.enabled), @"monitoring":@(_monitoring),
         @"readSucceeded":@(_hasLive), @"liveReadable":@(liveReadable), @"present":@(_live.present),
@@ -1692,6 +1726,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"decisionDungeon":@(_decisionState.identity.dungeon), @"decisionFloor":@(_decisionState.identity.floor),
         @"decisionWave":@(_decisionState.wave),
         @"playerStatus":PHOrbSurvivalDescription(&_live), @"confirmedSkillRules":@(_confirmedRules),
+        @"battleObservation":observation,
+        @"battleObservationDescription":multiplayer ? @"" : BattleObservationDescription(_observationState.observation, observationCurrent),
         @"obstacles":PHOrbObstacleDescription(&_live), @"usedSkillGroups":@(_usedGroups),
         @"activeProfile":_activeProfile,
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),

@@ -24,6 +24,10 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 - (BOOL)stageCell:(NSUInteger)cell down:(BOOL)down beginning:(BOOL)beginning
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
+@optional
+// Enrich a stable snapshot with read-only diagnostics. Failure is optional
+// data unavailability, never a new automation or gesture blocker.
+- (void)observeBattle:(PHOrbSnapshot *)state;
 @end
 
 @interface PHOrbSession : NSObject

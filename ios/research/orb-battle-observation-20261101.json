@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Read-only IDA pseudocode/disassembly, ordinary source review and static JSON/AST/lexical/byte comparison only. No project code, generator, compiler, test suite, benchmark or CI execution.",
+  "native_evidence": [
+    {
+      "va": "0x10059fae4",
+      "finding": "Protected dungeon CD modifier at impl+735728 uses salt 0x766cfc6d; a negative cache value calls dungeon option 74 and writes. Diagnostic must never invoke this getter.",
+      "guard": "PHOrbObservationCooldownCacheRVA"
+    },
+    {
+      "va": "0x10059fb34",
+      "finding": "Nonzero base CD receives dungeon adjustment once."
+    },
+    {
+      "va": "0x10059f95c",
+      "finding": "Nonzero total CD receives dungeon adjustment twice with active assist, once without."
+    },
+    {
+      "va": "0x100482a00",
+      "finding": "Body root ID parameter+84; level-based signed delta from record+18; authoritative-stage diagnostics are explicitly distinct from native cached stage.",
+      "guard": "PHOrbObservationBodyCooldownRVA"
+    },
+    {
+      "va": "0x100482830",
+      "finding": "Body skill level u16 member+1298; assist skill level u8 member+1442 and variant byte member+1444. Nonzero variants require separate catalog lookup, initially unsupported.",
+      "guard": "PHOrbObservationTotalCooldownRVA"
+    },
+    {
+      "va": "0x1004828fc",
+      "finding": "Types 232/233 use root CD at stage zero; later children use base CD; type 233 at/after child count resets to root CD.",
+      "guard": "PHOrbObservationEvolvedCooldownRVA"
+    },
+    {
+      "va": "0x100482d60",
+      "finding": "Direct eight-ID stage list, first zero terminates; type 232 clamps last and type 233 wraps to first. Invalid lists are unknown, no recursion.",
+      "guard": "PHOrbObservationEvolvedSkillRVA"
+    },
+    {
+      "va": "0x1005a0690",
+      "finding": "Member latent gating checks bind, awoken-bind, dungeon flags+33 bits4/0x20, and latent 48 requires effective awakening 60 via table 0x100f1548c.",
+      "guard": "PHOrbObservationLatentRVA"
+    },
+    {
+      "va": "0x1000455d8",
+      "finding": "Packed latent count low nibble, or high nibble if15, max8; each seven-bit ID skips by native slot cost; repeated occupied bits must not multiply latent count.",
+      "guard": "PHOrbObservationLatentDecodeRVA"
+    },
+    {
+      "va": "0x10059fefc",
+      "finding": "Effective awakenings require active==1; bind/status/dungeon restrictions; added protected entries; dynamic grants; base+assist+super count; L+108 contributes2 to L60.",
+      "guard": "PHOrbObservationLAwakeningRVA"
+    },
+    {
+      "va": "0x10001cce0",
+      "finding": "Nine protected signed-short awakening entries at member+520+i*16.",
+      "guard": "PHOrbObservationAddedAwakeningRVA"
+    },
+    {
+      "va": "0x100481aa8",
+      "finding": "Current parameter awakenings and unlocked count, level-gated super or matching sync, active assist only when its equip marker is within unlocked awakening prefix.",
+      "guard": "PHOrbObservationBaseAwakeningRVA"
+    },
+    {
+      "va": "0x10000a018",
+      "finding": "Up to10 base awakening records; L+108 counts as two L60.",
+      "guard": "PHOrbObservationAwakeningCountRVA"
+    },
+    {
+      "va": "0x10000a250",
+      "finding": "Equip49 presence is bounded by available count and first nonpositive record; call at0x100481c38 passes member+1440&0x7f.",
+      "guard": "PHOrbObservationEquipRVA"
+    },
+    {
+      "va": "0x10060f594",
+      "finding": "Live main/sub overrides and current parameter primary/secondary/tertiary attributes. Main override propagates to existing fallback sub/third.",
+      "guard": "PHOrbObservationAttributeRVA"
+    },
+    {
+      "va": "0x1005a01c8",
+      "finding": "Two dynamic awakening grant rows at impl+744732, stride12, six awakening IDs at row+4. L/ L+ rows are unknown until predicates are implemented.",
+      "guard": "PHOrbObservationGrantsRVA"
+    },
+    {
+      "va": "0x1005f6d88",
+      "finding": "Assist invalidation at impl+739980 signed ten-bit remaining turns; zero restores native assists/derived state. Diagnostic never invokes restoration.",
+      "guard": "PHOrbObservationAssistVoidRVA"
+    },
+    {
+      "va": "0x1005ac4c8",
+      "finding": "Recovery accumulator adds effective L count for latent48 providers during generated L-attack entries; equal secondary/tertiary colors skip duplicate credit. Native remaining duration is reduced after queue pass. Current diagnostic deliberately does not claim final per-board recovery amount or ordering."
+    },
+    {
+      "va": "0x100566a0c",
+      "finding": "Enemy action case0x8D sets temporary assist invalidation; no enemy selector/RNG/action function is called by diagnostics."
+    },
+    {
+      "va": "0x1005a12f0",
+      "finding": "Active assist may disappear for temporary form, dungeon prohibition, temporary invalidation except awakening148, consumed assist state, or badges. Source assist remains separately observable."
+    }
+  ],
+  "guard_capture": ".build/ida-multiplayer/observation-guards.json",
+  "optional_guard_names": [
+    "PHOrbObservationCooldownCacheRVA",
+    "PHOrbObservationBodyCooldownRVA",
+    "PHOrbObservationTotalCooldownRVA",
+    "PHOrbObservationEvolvedCooldownRVA",
+    "PHOrbObservationEvolvedSkillRVA",
+    "PHOrbObservationLatentRVA",
+    "PHOrbObservationLatentDecodeRVA",
+    "PHOrbObservationLAwakeningRVA",
+    "PHOrbObservationAddedAwakeningRVA",
+    "PHOrbObservationBaseAwakeningRVA",
+    "PHOrbObservationAwakeningCountRVA",
+    "PHOrbObservationAttributeRVA",
+    "PHOrbObservationAssistVoidRVA",
+    "PHOrbObservationEquipRVA",
+    "PHOrbObservationGrantsRVA"
+  ],
+  "input_skill_guard_count": 114,
+  "optional_guard_count": 15,
+  "total_manifest_guard_count": 129,
+  "scope": {
+    "current_enemy_hp_effects": true,
+    "current_assist_void": true,
+    "current_l_provider_eligibility": true,
+    "current_skill_charge_thresholds": true,
+    "enemy_action_graph": false,
+    "next_hit_forecast": false,
+    "shield_model": false,
+    "healing_model": false,
+    "l_recovery_amount_timing": false,
+    "survival_authorization": false,
+    "precast_or_defer_skills": false,
+    "multiplayer": false,
+    "native_getter_calls": false,
+    "guest_writes": false
+  },
+  "freshness": {
+    "stable_poll_seconds": 0.75,
+    "invalidation_resets_poll_interval": false,
+    "max_public_age_seconds": 1.5,
+    "collection_passes": 2,
+    "data_invalidated_on": [
+      "unreadable",
+      "entry-change",
+      "wave-change",
+      "plan-board-change",
+      "skill-change",
+      "held-orb",
+      "animation",
+      "resize",
+      "multiplayer",
+      "background"
+    ],
+    "limits": "Bounded observed snapshot, not an atomic native transaction. Entry/form/stage changes observed between polls invalidate publication; no observations authorize actions."
+  },
+  "unknowns": [
+    "dynamic L-grant predicates",
+    "assist skill variants",
+    "uninitialized or corrupt dungeon CD cache",
+    "invalid skill/latent/attribute data",
+    "enemy action branches and RNG",
+    "actual L recovery amount/timing",
+    "survival and future skill deadlines"
+  ],
+  "tests_written": [
+    "native B-1/B/T-1/T and signed level delta",
+    "type232/233 stages and cached-stage mismatch",
+    "assist skill level is u8",
+    "unknown cache/variant/index arithmetic",
+    "latent48 six-slot encoding and L+ double count",
+    "normal/super/equip-unlock L contributions",
+    "bind/awoken-bind/dungeon restrictions",
+    "attribute overrides",
+    "duration/entry/key/held-orb read races",
+    "optional guard isolation from input/skill validation",
+    "session no-getter observations, current/stale/transition/multiplayer clearing, bounded interval despite changing boards/charges or intermittent read failures",
+    "ordinary board reads invalidate optional observations without requiring automation validity; reverting a board cannot revive discarded evidence",
+    "unknown L eligibility and assist freshness are JSON null rather than confirmed false",
+    "GUI fact/unknown text and removal",
+    "optional read failure does not disable ordinary auto"
+  ],
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_checks": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "json_files": 6,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 16,
+      "local_includes": 87,
+      "local_document_links": 97,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "unchanged_decision_model_and_single_player_policy": true,
+      "workflow_dispatch_only": true,
+      "generated_files_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "source_sha256_lf": {
+        "ios/src/PHOrbController.m": "f2cbcde33c7e5b642b9e0db75b4ceb0ae0ca7d4e12afe434d0ea0f619eff965a",
+        "ios/src/PHOrbModel.h": "dd233f040a430a79dc3cef75bd6e7321776768d796cff7676eeddac38fb84881",
+        "ios/src/PHOrbNative.mm": "9b0fdbb5c4e0a15dbd4f0c81d7d323ded3368d715ca1f49cf74f663914d6960f",
+        "ios/src/PHOrbObservation.inc": "9a3d552171111c7d29dea37003e31b6569da2e2463fa637b122ca33f7015f0b9",
+        "ios/src/PHOrbObservationPresentation.inc": "3a071d36410835fa8eb70bfd61fb581f0047d111bfb8e50d34de5a02e20570a6",
+        "ios/src/PHOrbSession.h": "935be1d172d0f5b20f8a8e8cc214e34b1ecac80ec77ed1ef8450cbee4b3b9c8d",
+        "ios/src/PHOrbSession.mm": "30dc4475b87168f3bd29480768fa9f80738f5fb5005e5678f9f216160d3d40d3",
+        "ios/src/PHOrbSkillDiagnostics.inc": "ebd641fc3dc0dbf8649f4596e7504621c9af177c482872435649e1806f87bb53",
+        "ios/src/PHRuntime.m": "b4d27b4f6da6aac84740ed3123fc1bacfbebba08bcc4ac9271422c17bd3959a7",
+        "ios/tests/orb_native_tests.mm": "f0ced82f6fc887524f1a3f60860b414fa451f7ddce52ae2e75ddd422d6a456ea",
+        "ios/tests/orb_observation_native_tests.inc": "a3fe00ee49d6c207d82275928eab1bcb5f8f12a8ee0c36b3cb18dbe19b7f88e6",
+        "ios/tests/orb_observation_session_tests.inc": "f25952ee8bf7d7918da6ccc7adcdf4d5943bb00cd5ef7d8149d4bf5510fd2870",
+        "ios/tests/orb_plan_session_tests.inc": "f54c31c524f3c1820c7f85098f38e54d40bbbdf07b0281dc30127d1bdd7e2222",
+        "ios/tests/orb_session_tests.mm": "dce2a7343ecfa30411e9ae05ac8536d3b363e8ac04294f33b22ff08d826ffb6e",
+        "ios/tests/orb_skill_native_tests.inc": "aa69289fedd5f52fb14ab08813fbb092dce19aa3cf76cc79034d0fbafce11e51",
+        "ios/tests/overlay_probe.m": "e3bb0399e21043c3e825b2fee38fd27b46ada47a8a702eec7c19e1220fba2e83",
+        "ios/tools/generate_orbs.py": "1daa4c22620cdf0e1a82bcce1f2dd82cd91fea145b038800d05e7f3ed5f762ec",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b"
+      },
+      "limits": "Does not establish Objective-C/C++ compilation, test execution, native timing, device L recovery, survival or performance."
+    }
+  },
+  "pending": [
+    "Compile and execute the newly written suites only on explicit build/test instruction.",
+    "Device compare Unohana slot3 body/assist charge and effective L before/after assist invalidation.",
+    "Measure actual diagnostic read cost on iPhone; no performance claim yet.",
+    "Verify L attack-entry generation, deduplication, recovery amount and ordering before adding an automatic L goal.",
+    "Implement enemy branches, shields and healing before enabling defensive defer behavior."
+  ]
+}

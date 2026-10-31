@@ -401,9 +401,33 @@ static void TemporarySkillNativeTests() {
         "expired native temporary duration resumes current body and assist even with retained temporary ID");
 }
 #include "orb_skill_choice_tests.inc"
+#include "orb_observation_native_tests.inc"
 
 static void SkillNativeTests() {
+    ObservationNativeTests();
     ConsumedAssistReadTests();
+    for (unsigned phase : {2u, 22u}) {
+        SkillFixture(); FixtureSkillEngine *openingEngine = [FixtureSkillEngine new];
+        implMappedBytes = PHOrbDialogOffset + sizeof(uintptr_t);
+        Protected(Impl + PHBattlePhaseOffset, phase, 0x766cfc6d);
+        Put<uint32_t>(Impl + PHBattleMemberOffset + 3 * PHBattleMemberStride + PHOrbSkillMemberStateOffset, phase == 22 ? 2 : 0);
+        Protected(Impl + PHOrbSkillUsesOffset, 3, 0x6a875a8b);
+        PHOrbSnapshot opening{}; NSString *openingReason = nil;
+        const auto originalGuest = guest, originalImpl = implBytes;
+        Check([openingEngine readAutomation:&opening frame:Frame() reason:&openingReason] &&
+            opening.valid && opening.automation.valid && opening.automation.skillUses == 3 && opening.phase == phase &&
+            opening.automation.busy == (phase == 22) && !writes && !canUseCalls && !readinessCalls && !skillStartCalls &&
+            guest == originalGuest && implBytes == originalImpl,
+            "solo opening and native skill animation do not require unused allocation-tail pages");
+        rejectBattleProtection = true;
+        Check(![openingEngine readAutomation:&opening frame:Frame() reason:&openingReason] && !opening.valid &&
+            [openingReason containsString:@"戰鬥記憶體範圍"] && !canUseCalls && !skillStartCalls && !writes,
+            "a real core-protection failure still rejects an opening read before any skill call");
+        rejectBattleProtection = false; dialogProtection = VM_PROT_READ;
+        Check(![openingEngine readAutomation:&opening frame:Frame() reason:&openingReason] && !opening.valid &&
+            [openingReason containsString:@"彈窗記憶體"] && !canUseCalls && !skillStartCalls && !writes,
+            "the separately checked live modal must remain writable during single-player opening");
+    }
     for (unsigned scenario = 0; scenario < 8; ++scenario) {
         SkillFixture(); FixtureSkillEngine *resizeEngine = [FixtureSkillEngine new];
         PHOrbSnapshot stable{}, transition{}; NSString *resizeReason = nil;

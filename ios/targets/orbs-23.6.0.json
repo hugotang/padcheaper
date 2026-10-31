@@ -164,7 +164,17 @@
       "combine": "post-skill-conjunction"
     },
     "unmatchable_color_condition": "any-selected-basic-color",
-    "skill_source_choice": "native-same-family-body"
+    "skill_source_choice": "native-same-family-body",
+    "battle_observation": {
+      "mode": "optional-read-only-single-player",
+      "cooldown": "table-and-initialized-cache-authoritative-stage",
+      "assist_recovery": "current-eligibility-only",
+      "enemies": "current-hp-effects",
+      "native_getters": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "optional_guards": true
+    }
   },
   "user_report": {
     "date": "2026-10-28",
@@ -252,7 +262,12 @@
     "PHOrbMultiDisconnectSeatOffset": "0xad6ec",
     "PHOrbMultiRecoverySourceOffset": "0xafe78",
     "PHOrbMultiRecoveryFlagsOffset": "0xafe74",
-    "PHOrbMultiDialogOffset": "0xbe9d0"
+    "PHOrbMultiDialogOffset": "0xbe9d0",
+    "PHOrbObservationCooldownOffset": "0xb39f0",
+    "PHOrbObservationAssistVoidOffset": "0xb4a8c",
+    "PHOrbObservationAddedAwakeningsOffset": "0x208",
+    "PHOrbObservationProfileOffset": "0x4e8",
+    "PHOrbObservationAwakeningGrantsOffset": "0xb5d1c"
   },
   "guards": [
     {
@@ -1166,6 +1181,126 @@
       "length": 64,
       "bytes": "085c97521700088b08f29452898592521600098bff4a05b9090c40b92a7600f02b7600f03f0500716b0800542c0d00118c757e922d0500d14199c03d629dc03d",
       "sha256": "e575ea9bf8c9ef29211b798b17513612561cb4896e7273c733964d2a48f35f10"
+    },
+    {
+      "name": "PHOrbObservationCooldownCacheRVA",
+      "va": "0x10059fae4",
+      "rva": "0x59fae4",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa143e87527401a0720000148bfd43ff970001f83608e481526801a072606a68f82d7bf297e10300aa6002148b0d44ff97",
+      "sha256": "06783f75e3467c2d74d0d546e4f5a5b0ecc83b0d8a629815ed82ec0d62ae2473"
+    },
+    {
+      "name": "PHOrbObservationBodyCooldownRVA",
+      "va": "0x100482a00",
+      "rva": "0x482a00",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091080040f9085580b969b600f029c11e918a368c52ea18a0722a696ab81f010a6b62020054f40301aaf30300aa0a388c52",
+      "sha256": "4d8c408d07aecf5c036b4df4fcf08921e54432fc4c968fe6f97d47914a305d6f"
+    },
+    {
+      "name": "PHOrbObservationTotalCooldownRVA",
+      "va": "0x100482830",
+      "rva": "0x482830",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa080040f976b600f0d6c21e9109388c52e918a072c96a69f8085580b98a06805200252a9b887ec179",
+      "sha256": "1eb22195a1e6133a91b9542f76b9b1dd1d546cd23caf75f60c12bb57033e4739"
+    },
+    {
+      "name": "PHOrbObservationEvolvedCooldownRVA",
+      "va": "0x1004828fc",
+      "rva": "0x4828fc",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f40302aaf50301aaf30300aa30d4029460050036681a40791fa50371c1010054e00313aa2ad40294a0010034681640b9",
+      "sha256": "e9b8a1f08a774dec1d3c08e622ee5c4ad3368705027f410cc894045e93053182"
+    },
+    {
+      "name": "PHOrbObservationEvolvedSkillRVA",
+      "va": "0x100482d60",
+      "rva": "0x482d60",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf50300aa68b600f008c11e9109388c52e918a072166969f8880680521458289be00314aa10d30294a0030034",
+      "sha256": "e8a4c2c7a1474e4ebad1da0e683bb6cb2790052c55794d37cbe9b0b7838cac7f"
+    },
+    {
+      "name": "PHOrbObservationLatentRVA",
+      "va": "0x1005a0690",
+      "rva": "0x5a0690",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091810600b4f40300aa083840f909e481526901a072096969f829854039a905103789cb88526901a0720869697808651a53",
+      "sha256": "6d010a9b45aadc5e8a36311fca1dd85bff8e7431fa81649b12dc44550518e5ea"
+    },
+    {
+      "name": "PHOrbObservationLatentDecodeRVA",
+      "va": "0x1000455d8",
+      "rva": "0x455d8",
+      "length": 64,
+      "bytes": "090040b92a0d0012291d04535f3d00712a018a1a5f210071090180524931891a8a040034e80300aa00008052080140f908fd48d3ea008052cb0180522c008052",
+      "sha256": "2ecbb84df64e70e06fbff442bf54e9db20715a673b6389ca8e913eb65501c04b"
+    },
+    {
+      "name": "PHOrbObservationLAwakeningRVA",
+      "va": "0x10059fefc",
+      "rva": "0x59fefc",
+      "length": 64,
+      "bytes": "280040391f05007101050054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30302aaf40301aaf50300aa20200191a943ff971f040071",
+      "sha256": "f4333afdd5bc3d69a547f0ed3834d0f4bb4bf2863d9d80397bff28235b363e3c"
+    },
+    {
+      "name": "PHOrbObservationAddedAwakeningRVA",
+      "va": "0x10001cce0",
+      "rva": "0x1cce0",
+      "length": 64,
+      "bytes": "3f200071a8000054286c1c530800088b000107917750151400008052c0035fd6f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa15008052e00314aa",
+      "sha256": "55d634e0d25a5ad2f810797def0133aac7b69baf320f776d96832a892296aa22"
+    },
+    {
+      "name": "PHOrbObservationBaseAwakeningRVA",
+      "va": "0x100481aa8",
+      "rva": "0x481aa8",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f40301aaf50300aa000040f9a19ac039e20314aa5121ee97f30300aab60640f9960900b4b70240f9",
+      "sha256": "a81f4acc28d5b78d360a835844126e70c1b05767582599f6eaa00bb2481cf461"
+    },
+    {
+      "name": "PHOrbObservationAwakeningCountRVA",
+      "va": "0x10000a018",
+      "rva": "0xa018",
+      "length": 64,
+      "bytes": "3f2800714801805229b0881a0b0080122c0080525fec0071cc0100544d380051bf95007168060054480080520a0c80524e7600b0ce2105918f000010d0696d38",
+      "sha256": "212fd26565905a860042bf349040cf82c52a71d825bc5c7bccd5254691c929c2"
+    },
+    {
+      "name": "PHOrbObservationAttributeRVA",
+      "va": "0x10060f594",
+      "rva": "0x60f594",
+      "length": 64,
+      "bytes": "081cd439e90308aa6800f836097042f9293140392924c91a290200370920d439c900f836097042f92a31c339ca00f8371f01007149b1881a2924c91a09010037",
+      "sha256": "77ac629ce66ca2d01ce8c4135af62b13656758d4a7861f6c9be01cede5046a2c"
+    },
+    {
+      "name": "PHOrbObservationAssistVoidRVA",
+      "va": "0x1005f6d88",
+      "rva": "0x5f6d88",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191083840f9895189526901a072086969781f25007200010054fd7b45a9f44f44a9f65743a9",
+      "sha256": "889116fcc229a4c1e8e000f572fcfc6adc0cbbec82b23bcb0922ed059c2b9d5c"
+    },
+    {
+      "name": "PHOrbObservationEquipRVA",
+      "va": "0x10000a250",
+      "rva": "0xa250",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aac101f836010080d268b20b910979e1782ad101512b7901515f1500716931891a293d00133f0500718b00005421040091",
+      "sha256": "9adf07fd6095a83b9096919cda0fee33c3eb7f42607b43d5f8c993a67371ffc3"
+    },
+    {
+      "name": "PHOrbObservationGrantsRVA",
+      "va": "0x1005a01c8",
+      "rva": "0x5a01c8",
+      "length": 64,
+      "bytes": "c9d6429136713491290080529a018052fb0309aa15591a9be00315aae10314aa4bcbfb97a0010034080080d2a91200912a6968381f0700716b0000541f030a6b",
+      "sha256": "2424236ca74b28424d873b2fe207d788fa2357cc29025f870a1da0e65d5a11e8"
     }
   ],
   "thorn_budget": {

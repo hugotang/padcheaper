@@ -46,6 +46,11 @@ def generate(manifest):
                              'survival_conditions': ['hp_at_most', 'awoken_bind', 'member_bind', 'skill_seal'],
                              'required_skills': 'confirmed-rule-or-group-before-route',
                              'hp_read': 'read-only-effective-cap', 'decision_reasons': True,
+                             'battle_observation': {'mode': 'optional-read-only-single-player',
+                                 'cooldown': 'table-and-initialized-cache-authoritative-stage',
+                                 'assist_recovery': 'current-eligibility-only', 'enemies': 'current-hp-effects',
+                                 'native_getters': False, 'enemy_forecast': False, 'survival_authorization': False,
+                                 'optional_guards': True},
                              'recovery_goal': {'mode': 'continuous-only', 'hp_percent': [1, 100], 'groups': [1, 3],
                                                'shapes': ['match', 'four'], 'combine': 'post-skill-conjunction'}}:
         raise ValueError('Unreviewed orb scope')
@@ -83,6 +88,13 @@ def generate(manifest):
                 'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
                 'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA', 'PHOrbLeaderCatalogAllocateRVA',
                 'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA'}
+    observation_guards = {'PHOrbObservationCooldownCacheRVA', 'PHOrbObservationBodyCooldownRVA',
+        'PHOrbObservationTotalCooldownRVA', 'PHOrbObservationEvolvedCooldownRVA', 'PHOrbObservationEvolvedSkillRVA',
+        'PHOrbObservationLatentRVA', 'PHOrbObservationLatentDecodeRVA', 'PHOrbObservationLAwakeningRVA',
+        'PHOrbObservationAddedAwakeningRVA', 'PHOrbObservationBaseAwakeningRVA',
+        'PHOrbObservationAwakeningCountRVA', 'PHOrbObservationAttributeRVA',
+        'PHOrbObservationAssistVoidRVA', 'PHOrbObservationEquipRVA', 'PHOrbObservationGrantsRVA'}
+    required |= observation_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -108,6 +120,14 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbLeader')} != leader_fields:
         raise ValueError('Unreviewed multiplayer leader layout')
+    observation_fields = {
+        'PHOrbObservationCooldownOffset': 0xb39f0, 'PHOrbObservationAssistVoidOffset': 0xb4a8c,
+        'PHOrbObservationAddedAwakeningsOffset': 520, 'PHOrbObservationProfileOffset': 1256,
+        'PHOrbObservationAwakeningGrantsOffset': 744732,
+    }
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbObservation')} != observation_fields:
+        raise ValueError('Unreviewed optional observation layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():
@@ -124,8 +144,15 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
+        if guard['name'] in observation_guards:
+            continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbObservationTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in observation_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbObservationTextGuardCount = sizeof(PHOrbObservationTextGuards) / sizeof(PHOrbObservationTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 
