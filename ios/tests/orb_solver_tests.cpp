@@ -172,6 +172,7 @@ static void ShapeTests() {
 #include "orb_recorded_thorn_solver_tests.inc"
 #include "orb_recorded_spinner_solver_tests.inc"
 #include "orb_shape_space_tests.inc"
+#include "orb_assist_solver_tests.inc"
 #include "orb_poison_solver_tests.inc"
 #include "orb_diagonal_solver_tests.inc"
 #include "orb_multiplayer_model_tests.inc"
@@ -190,6 +191,7 @@ int main() {
     RecordedThornSolverTests();
     RecordedSpinnerSolverTests();
     ShapeSpaceTests();
+    AssistSolverTests();
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {
         PHOrbSnapshot snapshot{}; snapshot.board = Board(dimensions.first, dimensions.second, 7);

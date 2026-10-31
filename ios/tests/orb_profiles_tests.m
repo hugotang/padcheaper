@@ -40,9 +40,11 @@ static void SharingTests(void) {
     NSMutableDictionary *badProfile=[profile mutableCopy]; badProfile[@"account"]=@42;
     Check(!PHOrbExportProfileData(badProfile,NULL),"export cannot include account or private config fields");
 }
+#include "orb_assist_profiles_tests.inc"
 int main(void) {
     @autoreleasepool {
         PlanTests();
+        AssistProfileTests();
         SharingTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
         Check([PHOrbCanonicalSettings(Settings())[@"thornComboPriority"] isEqual:@NO],
@@ -50,6 +52,7 @@ int main(void) {
         Check([PHOrbCanonicalSettings(Settings())[@"allowPoisonWithHeartFour"] isEqual:@NO],
             "legacy profiles retain the strict poison policy");
         Check([PHOrbCanonicalSettings(Settings())[@"diagonal"] isEqual:@NO], "legacy profiles retain orthogonal-only movement");
+        Check([PHOrbCanonicalSettings(Settings())[@"assistRecoveryL"] isEqual:@NO], "legacy profiles default to no conditional L recovery");
         for (id invalid in @[@1, @0, @"true", NSNull.null]) {
             NSMutableDictionary *settings = [Settings() mutableCopy]; settings[@"thornComboPriority"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "thorn priority requires a real JSON Boolean");
@@ -57,6 +60,8 @@ int main(void) {
             Check(!PHOrbCanonicalSettings(settings), "poison permission requires a real JSON Boolean");
             [settings removeObjectForKey:@"allowPoisonWithHeartFour"]; settings[@"diagonal"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "diagonal permission requires a real JSON Boolean");
+            [settings removeObjectForKey:@"diagonal"]; settings[@"assistRecoveryL"] = invalid;
+            Check(!PHOrbCanonicalSettings(settings), "assist recovery requires a real JSON Boolean");
         }
         NSMutableDictionary *diagonalProfile = Profile(@"diagonal");
         NSMutableDictionary *diagonalSettings = [Settings() mutableCopy]; diagonalSettings[@"diagonal"] = @YES;

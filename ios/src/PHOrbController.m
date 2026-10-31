@@ -309,6 +309,8 @@
 @property(nonatomic, strong) UILabel *poisonDescription;
 @property(nonatomic, strong) UISwitch *diagonal;
 @property(nonatomic, strong) UILabel *diagonalDescription;
+@property(nonatomic, strong) UISwitch *assistRecoveryL;
+@property(nonatomic, strong) UILabel *assistRecoveryDescription;
 @property(nonatomic, strong) UISegmentedControl *goalMode;
 @property(nonatomic, strong) UIButton *editGoals;
 @property(nonatomic, strong) UILabel *goalDescription;
@@ -438,6 +440,16 @@
     [poisonRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     self.poisonDescription = [self label:13 weight:UIFontWeightRegular];
     self.poisonDescription.accessibilityIdentifier = @"padcheaper.orbsPoisonDescription";
+    UILabel *assistTitle = [self label:15 weight:UIFontWeightMedium]; assistTitle.text = @"武裝無效時補 L";
+    self.assistRecoveryL = [UISwitch new];
+    self.assistRecoveryL.accessibilityIdentifier = @"padcheaper.orbsAssistRecoveryL";
+    self.assistRecoveryL.accessibilityLabel = assistTitle.text;
+    [self.assistRecoveryL addTarget:self action:@selector(changeAssistRecovery) forControlEvents:UIControlEventValueChanged];
+    UIStackView *assistRow = [[UIStackView alloc] initWithArrangedSubviews:@[assistTitle, self.assistRecoveryL]];
+    assistRow.axis = UILayoutConstraintAxisHorizontal; assistRow.alignment = UIStackViewAlignmentCenter; assistRow.spacing = 12;
+    [assistRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    self.assistRecoveryDescription = [self label:13 weight:UIFontWeightRegular];
+    self.assistRecoveryDescription.accessibilityIdentifier = @"padcheaper.orbsAssistRecoveryDescription";
     self.goalMode = [[UISegmentedControl alloc] initWithItems:@[@"高 Combo", @"指定形狀", @"隊長盤面"]];
     self.goalMode.accessibilityIdentifier = @"padcheaper.orbsGoalMode"; self.goalMode.accessibilityLabel = @"求路目標";
     [self.goalMode.heightAnchor constraintGreaterThanOrEqualToConstant:36].active = YES;
@@ -466,6 +478,7 @@
         self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
         self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription,
+        assistRow, self.assistRecoveryDescription,
         self.battleObservationDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -593,6 +606,13 @@
         @"全部轉轉相位都有首消心四連時允許消毒／猛毒，優先目標及較高 Combo。採用你確認的隊伍回復能力；邪魔可消，爆彈須首消全消。" :
         @"目前避免一般毒及猛毒消除。確認這隊首消心四連可充分回血後開啟；設定會與目前策略一同儲存。";
     self.poisonDescription.textColor = poisonMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.assistRecoveryL.on = [state[@"assistRecoveryL"] boolValue];
+    self.assistRecoveryL.enabled = [state[@"canSetAssistRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    NSString *assistMessage = state[@"assistRecoveryMessage"];
+    NSString *assistStatus = state[@"assistRecoveryStatus"];
+    self.assistRecoveryDescription.text = assistMessage.length ? assistMessage : assistStatus.length ? assistStatus :
+        @"僅限單人連續模式：按目前有效潛覺及 L 覺醒補足解除組數，保留原有形狀與心珠要求。資料或珠數不足時停止；尚不支援省略輸出形狀的耐久回合。";
+    self.assistRecoveryDescription.textColor = assistMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSString *mode = state[@"goalMode"] ?: @"combo";
     NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
     self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
@@ -675,6 +695,10 @@
 }
 - (void)changeDiagonal {
     if (self.diagonal.enabled) self.action(@"orbsDiagonal", @(self.diagonal.on));
+    [self refresh];
+}
+- (void)changeAssistRecovery {
+    if (self.assistRecoveryL.enabled) self.action(@"orbsAssistRecoveryL", @(self.assistRecoveryL.on));
     [self refresh];
 }
 - (void)changePoisonPolicy {
@@ -769,7 +793,7 @@
         @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery(),
         @"thornComboPriority":state[@"thornComboPriority"] ?: @NO,
         @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO,
-        @"diagonal":state[@"diagonal"] ?: @NO};
+        @"diagonal":state[@"diagonal"] ?: @NO, @"assistRecoveryL":state[@"assistRecoveryL"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
     PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
@@ -783,7 +807,7 @@
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
                 @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO,
                 @"allowPoisonWithHeartFour":saved[@"allowPoisonWithHeartFour"] ?: @NO,
-                @"diagonal":saved[@"diagonal"] ?: @NO});
+                @"diagonal":saved[@"diagonal"] ?: @NO, @"assistRecoveryL":saved[@"assistRecoveryL"] ?: @NO});
             NSString *message = saved[@"profileMessage"];
             const BOOL formationSaved = !selected[@"formation"] ||
                 [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];

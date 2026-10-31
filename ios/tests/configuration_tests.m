@@ -50,6 +50,7 @@ int main(void) {
         Check([PHConfigurationOrbSettings(defaults)[@"allowPoisonWithHeartFour"] isEqual:@NO],
             "new and legacy configurations keep normal poison consumption opt-in");
         Check([PHConfigurationOrbSettings(defaults)[@"diagonal"] isEqual:@NO], "diagonal movement defaults off in new and legacy settings");
+        Check([PHConfigurationOrbSettings(defaults)[@"assistRecoveryL"] isEqual:@NO], "assist recovery defaults off in new and legacy settings");
         for (id value in @[@YES, @NO, @1, @"true", NSNull.null]) {
             NSMutableDictionary *thornConfig = [defaults mutableCopy]; thornConfig[@"orbs"] = @{@"thornComboPriority":value};
             NSData *json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
@@ -64,6 +65,10 @@ int main(void) {
             json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
             readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
             Check(PHConfigurationIsValid(readback) == valid, "saved diagonal movement requires a true JSON Boolean");
+            thornConfig[@"orbs"] = @{@"assistRecoveryL":value};
+            json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
+            readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+            Check(PHConfigurationIsValid(readback) == valid, "saved assist recovery requires a true JSON Boolean");
         }
         Check([PHConfigurationOrbSettings(defaults)[@"mode"] isEqual:@"combo"] &&
             [PHConfigurationOrbSettings(defaults)[@"goals"] count] == 0, "existing behavior remains the default without leader inference");

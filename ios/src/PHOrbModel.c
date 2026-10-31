@@ -411,6 +411,47 @@ bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {
     return true;
 }
 
+unsigned PHOrbRequiredShapeOrbs(const PHOrbGoalSet *goals, unsigned color) {
+    if (!PHOrbGoalsValid(goals) || color >= PHOrbBasicTypes) return 0;
+    unsigned result = 0;
+    for (unsigned i = 0; i < goals->count; ++i) {
+        const PHOrbGoal *g = &goals->items[i];
+        if (g->colors != (1u << color)) continue;
+        if (g->kind == PHOrbGoalL || g->kind == PHOrbGoalT || g->kind == PHOrbGoalCross) result += 5u * g->count;
+        else if (g->kind == PHOrbGoalSquare) result += 9u * g->count;
+        else if (g->kind == PHOrbGoalFour) result += 4u * g->count;
+    }
+    return result;
+}
+
+bool PHOrbShapeInventoryAvailable(const PHOrbBoard *board, const PHOrbGoalSet *goals) {
+    if (!PHOrbBoardValid(board) || !PHOrbGoalsValid(goals)) return false;
+    for (unsigned color = 0; color < PHOrbBasicTypes; ++color) {
+        unsigned minimum = 0, maximum = 0;
+        PHOrbColorCountRange(board, color, &minimum, &maximum);
+        if (PHOrbRequiredShapeOrbs(goals, color) > minimum) return false;
+    }
+    return true;
+}
+
+bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssistRecoveryState *b) {
+    if (!a || !b || !a->valid || !b->valid || a->turns != b->turns || a->fresh != b->fresh ||
+        a->dungeonFlags != b->dungeonFlags || a->retainedAssists != b->retainedAssists ||
+        a->unknownMembers != b->unknownMembers) return false;
+    return !memcmp(a->perColor, b->perColor, sizeof(a->perColor)) &&
+        !memcmp(a->providers, b->providers, sizeof(a->providers)) &&
+        !memcmp(a->blockers, b->blockers, sizeof(a->blockers)) &&
+        !memcmp(a->numbers, b->numbers, sizeof(a->numbers)) &&
+        !memcmp(a->sourceAssists, b->sourceAssists, sizeof(a->sourceAssists)) &&
+        !memcmp(a->activeAssists, b->activeAssists, sizeof(a->activeAssists)) &&
+        !memcmp(a->assistStates, b->assistStates, sizeof(a->assistStates)) &&
+        !memcmp(a->temporaryIDs, b->temporaryIDs, sizeof(a->temporaryIDs)) &&
+        !memcmp(a->temporaryTurns, b->temporaryTurns, sizeof(a->temporaryTurns)) &&
+        !memcmp(a->colors, b->colors, sizeof(a->colors)) &&
+        !memcmp(a->awakenings, b->awakenings, sizeof(a->awakenings)) &&
+        !memcmp(a->latents, b->latents, sizeof(a->latents));
+}
+
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height) {
     if (!width || !height || width * height > PHOrbMaxCells || a >= width * height || b >= width * height) return false;
     return (a / width == b / width && (a + 1 == b || b + 1 == a)) ||

@@ -42,16 +42,18 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     NSNumber *thornComboPriority = settings[@"thornComboPriority"] ?: @NO;
     NSNumber *allowPoisonWithHeartFour = settings[@"allowPoisonWithHeartFour"] ?: @NO;
     NSNumber *diagonal = settings[@"diagonal"] ?: @NO;
+    NSNumber *assistRecoveryL = settings[@"assistRecoveryL"] ?: @NO;
     if (![quality isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:quality] ||
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
         !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority) ||
-        !PHOrbProfileIsBoolean(allowPoisonWithHeartFour) || !PHOrbProfileIsBoolean(diagonal)) return nil;
+        !PHOrbProfileIsBoolean(allowPoisonWithHeartFour) || !PHOrbProfileIsBoolean(diagonal) ||
+        !PHOrbProfileIsBoolean(assistRecoveryL)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
     return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy],
         @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority,
-        @"allowPoisonWithHeartFour":allowPoisonWithHeartFour, @"diagonal":diagonal};
+        @"allowPoisonWithHeartFour":allowPoisonWithHeartFour, @"diagonal":diagonal, @"assistRecoveryL":assistRecoveryL};
 }
 
 NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
@@ -77,7 +79,7 @@ BOOL PHOrbProfilesValid(id library) {
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
             !KeysWithOptional(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"],
-                @[@"recovery", @"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal"])) return NO;
+                @[@"recovery", @"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
@@ -188,7 +190,17 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
             // assist, retaining its source ID. Missing equipment alone is
             // insufficient evidence that this exact weapon was consumed.
             if (member->assistCatalogID || member->assistState || member->sourceCatalogIDs[1] != assist) return NO;
-        } else if (member->assistCatalogID != assist) return NO;
+        } else if (member->assistCatalogID != assist) {
+            const PHOrbAssistRecoveryState *evidence = &state->assistRecovery;
+            // Only fresh policy evidence distinguishes retained, temporarily
+            // voided equipment from consumption or a changed source weapon.
+            if (![profile[@"settings"][@"assistRecoveryL"] boolValue] || !evidence->valid || !evidence->turns ||
+                (evidence->dungeonFlags & 8u) || !(evidence->retainedAssists & (1u << i)) ||
+                member->assistCatalogID || member->sourceCatalogIDs[1] != assist || (member->assistState & 255u) != 172 ||
+                evidence->sourceAssists[i] != assist || evidence->activeAssists[i] ||
+                evidence->assistStates[i] != member->assistState || evidence->numbers[i] != member->number ||
+                evidence->temporaryIDs[i] != member->temporaryID || evidence->temporaryTurns[i]) return NO;
+        }
     }
     return YES;
 }
@@ -221,7 +233,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
         ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
         !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
-            @[@"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal"])) return nil;
+            @[@"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return nil;
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;

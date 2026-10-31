@@ -20,6 +20,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     NSString *readFailureReason;
     NSUInteger observationReads;
     BOOL failObservation;
+    NSUInteger assistReads;
+    BOOL failAssist, changeAssistOnStart, changeAssistOnMove;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
@@ -52,6 +54,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.automation.windowBlocksKnown = true;
         live.automation.hpKnown = live.automation.statusKnown = true;
         live.automation.hp = live.automation.maximumHP = 1000;
+        live.assistRecovery.valid = true; // Explicit synthetic no-void state, not diagnostic cache data.
         live.thorns = {1000,1000,0,true}; live.unmatchableKnown = true;
         live.automation.activeEnemies = 1;
         for (unsigned i = 0; i < 6; ++i) {
@@ -100,6 +103,26 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     ++observationReads;
     state->observation = live.observation;
     if (failObservation) { state->observation = {}; state->observation.status = PHOrbObservationUnavailable; }
+}
+- (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    ++assistReads;
+    state->assistRecovery = {};
+    if (failAssist || staged || !frame.ready || !frame.enabled || live.phase != 2 ||
+        (!live.settled && !live.dragged) || live.automation.busy || live.boardTransition ||
+        live.multiplayer.kind != PHOrbMultiplayerNone || !PHInputIsQuiet(&live.input)) {
+        if (reason) *reason = @"fixture assist evidence unavailable";
+        return NO;
+    }
+    state->assistRecovery = live.assistRecovery;
+    for (unsigned slot = 0; slot < 6; ++slot) {
+        const auto &member = live.automation.members[slot]; auto &evidence = state->assistRecovery;
+        evidence.numbers[slot] = member.number; evidence.sourceAssists[slot] = member.sourceCatalogIDs[1];
+        evidence.activeAssists[slot] = member.assistCatalogID; evidence.assistStates[slot] = member.assistState;
+        evidence.temporaryIDs[slot] = member.temporaryID; evidence.temporaryTurns[slot] = member.temporaryTurns;
+        if (member.active && !member.temporaryTurns && member.sourceCatalogIDs[1] && (member.assistState & 255u) == 172)
+            evidence.retainedAssists |= 1u << slot;
+    }
+    return state->assistRecovery.valid;
 }
 - (void)armMultiplayerOnce:(BOOL)armed {
     if (armed && !multiplayerArmed) ++multiplayerArms;
@@ -252,6 +275,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         }
         if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
         if (dropHPOnStart) { live.automation.hp = 100; dropHPOnStart = NO; }
+        if (changeAssistOnStart) { ++live.assistRecovery.turns; changeAssistOnStart = NO; }
         return;
     }
     if (ignoreMove) return;
@@ -273,6 +297,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     live.board.flags[from] &= ~PHOrbFlagBlindTouch; live.board.flags[cell] &= ~PHOrbFlagBlindTouch;
     ++live.moves;
     if (dropHPOnMove) { live.automation.hp = 100; dropHPOnMove = NO; }
+    if (changeAssistOnMove) { ++live.assistRecovery.turns; changeAssistOnMove = NO; }
     if (replaceLeaderOnMove) { live.leaderNumbers[0] = 14242; replaceLeaderOnMove = NO; }
     if (corruptSwap) live.board.types[cells - 1] = uint8_t((live.board.types[cells - 1] + 1) % 6);
 }
@@ -334,9 +359,11 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
 #include "orb_observation_session_tests.inc"
+#include "orb_assist_session_tests.inc"
 
 int main() {
     @autoreleasepool {
+        AssistSessionTests();
         ObservationSessionTests();
         SkillWindowSessionTests();
         DiagonalSessionTests();

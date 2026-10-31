@@ -24,6 +24,7 @@ static vm_prot_t dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
 static unsigned changeContinuationDuringRead;
 static bool changeContinuationDuringCoordinateRead;
 static unsigned observationMutation;
+static bool changeAssistDuringCoordinateRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -47,12 +48,21 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
-    if (observationMutation && address == Impl + PHOrbObservationAssistVoidOffset) {
+    if (observationMutation && observationMutation != 6 && address == Impl + PHOrbObservationAssistVoidOffset) {
         const unsigned mutation = observationMutation; observationMutation = 0;
         if (mutation == 1) Store<uint16_t>(reinterpret_cast<uint8_t *>(address), 7);
         if (mutation == 2) reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
         if (mutation == 3) Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHBattleKey1RVA), 99);
         if (mutation == 4) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleDragPointerOffset), Impl + PHOrbPoolOffset);
+        if (mutation == 5) Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHSaveRVA + PHBattleCatalogCountOffset), 14599);
+        if (mutation == 7) Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbAssistRecoveryQueueCountOffset), 1);
+    }
+    if (observationMutation == 6 && address == Impl + PHBattleMemberOffset + PHOrbObservationProfileOffset) {
+        observationMutation = 0; Store<uintptr_t>(reinterpret_cast<uint8_t *>(address), 0);
+    }
+    if (changeAssistDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changeAssistDuringCoordinateRead = false;
+        Store<uint16_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbObservationAssistVoidOffset), 7);
     }
     if (changeHashDuringEntryRead && address == Header + PHBattleEntryHashRVA) {
         changeHashDuringEntryRead = false;
@@ -163,6 +173,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
     observationMutation = 0;
+    changeAssistDuringCoordinateRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);
@@ -179,6 +190,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     Put<float>(Input + 2664, 0.5); Put<float>(Input + 2668, 0.1);
     for (const auto &guard : PHOrbTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbObservationTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
+    for (const auto &guard : PHOrbAssistRecoveryTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     const unsigned spacing = width == 7 ? 90 : width == 5 ? 126 : 105;
     for (unsigned row = 0; row < height; ++row) for (unsigned column = 0; column < width; ++column) {
         unsigned nativeIndex = (height - 1 - row) * 16 + column;
@@ -234,6 +246,7 @@ static void ReadIssueNativeTests() {
 }
 
 #include "orb_skill_native_tests.inc"
+#include "orb_assist_native_tests.inc"
 #include "orb_effect_native_tests.inc"
 #include "orb_thorn_native_tests.inc"
 #include "orb_diagonal_native_tests.inc"
@@ -385,6 +398,7 @@ int main() {
         Reset(); codeValid = false; engine = PHCreateOrbEngine();
         Check(![engine read:&state frame:Frame() reason:&reason] && writes == 0, "wrong target rejects native access");
         SkillNativeTests();
+        AssistNativeTests();
         SurvivalNativeTests();
         OrbEffectNativeTests();
         ThornNativeTests();

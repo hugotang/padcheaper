@@ -545,6 +545,14 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             ![(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsExecute") isEnabled],
             @"Diagonal switch follows the acknowledged file save while unvalidated game input remains disabled");
     }
+    UISwitch *assistRecovery = (UISwitch *)PHProbeFind(orbWindow,@"padcheaper.orbsAssistRecoveryL");
+    PHProbeCheck(assistRecovery.enabled && !assistRecovery.on,@"Assist recovery defaults off without enabling input");
+    for (NSNumber *enabled in @[@YES,@NO]) {
+        assistRecovery.on = enabled.boolValue; [assistRecovery sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"assistRecoveryL"] isEqual:enabled] &&
+            assistRecovery.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsExecute") isEnabled],
+            @"Assist policy switch follows the actual saved setting without starting gameplay");
+    }
     NSArray *qualityIDs = @[@"fast", @"balanced", @"thorough"];
     for (NSUInteger index = 0; index < qualityIDs.count; ++index) {
         qualityControl.selectedSegmentIndex = (NSInteger)index;
@@ -628,6 +636,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"thornComboPriority":@NO, @"canSetThornPolicy":@YES,
                 @"allowPoisonWithHeartFour":@NO, @"canSetPoisonPolicy":@YES,
                 @"diagonal":@NO, @"canSetDiagonal":@YES,
+                @"assistRecoveryL":@NO, @"canSetAssistRecovery":@YES,
                 @"rules":@[], @"canSetRules":@YES, @"canStart":@YES, @"automatic":@NO,
                 @"recovery":savedHeartPolicy ?: @{}, @"canSetRecovery":@YES,
                 @"profiles":@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[]}, @"canSetProfiles":@YES,
@@ -721,6 +730,11 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck([orbAction isEqual:@"orbsDiagonal"] && [orbValue isEqual:@YES] && !diagonal.on &&
                 [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsDiagonalDescription")).text containsString:@"未能儲存"],
                 @"Unacknowledged diagonal save restores the previous switch and displays the error");
+            qualityFailure[@"assistRecoveryMessage"] = @"武裝回復 L 未能儲存，仍保留原設定"; [orbController refresh];
+            assistRecovery.on = YES; [assistRecovery sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck([orbAction isEqual:@"orbsAssistRecoveryL"] && [orbValue isEqual:@YES] && !assistRecovery.on &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsAssistRecoveryDescription")).text containsString:@"未能儲存"],
+                @"Unacknowledged assist policy save restores the switch and displays its own error");
             qualityFailure[@"busy"] = @YES; orbAction = nil; [orbController refresh];
             qualityControl.selectedSegmentIndex = 0; [qualityControl sendActionsForControlEvents:UIControlEventValueChanged];
             PHProbeCheck(!qualityControl.enabled && orbAction == nil, @"Busy session cannot change quality through the control");
@@ -728,6 +742,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck(!thornPriority.enabled && orbAction == nil, @"Busy session cannot change thorn ranking for a running route");
             diagonal.on = YES; [diagonal sendActionsForControlEvents:UIControlEventValueChanged];
             PHProbeCheck(!diagonal.enabled && orbAction == nil, @"Busy session cannot change the captured movement policy");
+            assistRecovery.on = YES; [assistRecovery sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck(!assistRecovery.enabled && orbAction == nil,@"Busy session cannot change its captured assist policy");
             qualityFailure[@"busy"] = @NO; qualityFailure[@"inputFault"] = @YES; qualityFailure[@"canRead"] = @NO;
             [orbController refresh];
             PHProbeCheck([((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAvailability")).text containsString:@"重啟"],

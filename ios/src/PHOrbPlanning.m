@@ -2,6 +2,7 @@
 #import <CoreFoundation/CoreFoundation.h>
 #include "PHOrbLeaderGenerated.h"
 #include <math.h>
+#include "PHOrbAssistPlanning.inc"
 
 NSArray<NSString *> *PHOrbGoalKinds(void) {
     return @[@"combo", @"colors", @"match", @"l", @"cross", @"t", @"square", @"row", @"column", @"four", @"exact"];

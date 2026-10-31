@@ -25,6 +25,9 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
 @optional
+// Fresh action-specific capture, including during the same owned drag.
+// An enabled policy requires this method; the optional observation is not used.
+- (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Enrich a stable snapshot with read-only diagnostics. Failure is optional
 // data unavailability, never a new automation or gesture blocker.
 - (void)observeBattle:(PHOrbSnapshot *)state;

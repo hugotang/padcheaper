@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <chrono>
 
 namespace {
 #include "PHOrbObservationPresentation.inc"
@@ -267,7 +268,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState, _traceOrigin;
     PHOrbRoute _route;
     NSString *_phase, *_message, *_quality, *_goalMode;
-    bool _thornComboPriority, _allowPoisonWithHeartFour, _diagonal;
+    bool _thornComboPriority, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
+    bool _assistAwaitingResult;
+    double _assistCheckedAt;
+    PHOrbSnapshot _assistReleased;
+    NSDictionary *_assistTrace;
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules, *_decisionRules;
     NSMutableArray *_automationLog;
@@ -330,6 +335,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
         _openingLog = [NSMutableArray array];
         _searchTrace = @{}; _executionHistory = [NSMutableArray array];
+        _assistTrace = @{};
         _lastReadIssue = @{};
         _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
     }
@@ -374,6 +380,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _executionElapsed = 0;
     _recordingExecution = false;
 }
+#include "PHOrbAssistSession.inc"
 - (void)recordExecution:(NSString *)status state:(const PHOrbSnapshot *)state evaluation:(NSDictionary *)evaluation {
     if (!_recordingExecution || !_executionHistory.count) return;
     NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
@@ -420,6 +427,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"observedRead":@"board", @"observedBoardPreserved":@NO, @"observedBoardMoves":@(state->moves),
         @"observedPhase":@(state->phase), @"observedMultiplayer":MultiplayerTrace(*state),
         @"confirmedSteps":@0, @"releaseEvaluation":@{}, @"releaseConfirmed":@NO};
+    NSMutableDictionary *withMechanic = [record mutableCopy];
+    withMechanic[@"assistRecovery"] = _assistTrace; record = [withMechanic copy];
     if (_executionHistory.count >= 3) [_executionHistory removeObjectAtIndex:0];
     [_executionHistory addObject:record]; _recordingExecution = true;
 }
@@ -427,7 +436,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!quality) return NO;
     return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
         @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority),
-        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour), @"diagonal":@(_diagonal)}];
+        @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour), @"diagonal":@(_diagonal),
+        @"assistRecoveryL":@(_assistRecoveryL)}];
 }
 - (BOOL)configureSettings:(NSDictionary *)settings {
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
@@ -436,7 +446,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
         [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue] &&
         _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue] &&
-        _diagonal == [canonical[@"diagonal"] boolValue]) return YES;
+        _diagonal == [canonical[@"diagonal"] boolValue] && _assistRecoveryL == [canonical[@"assistRecoveryL"] boolValue]) return YES;
     [self cancelWorker];
     [self loadSettings:canonical];
     _readQueued = _hasStable = false;
@@ -453,6 +463,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _solveOptions.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     _diagonal = [settings[@"diagonal"] boolValue];
     _solveOptions.diagonal = _diagonal;
+    _assistRecoveryL = [settings[@"assistRecoveryL"] boolValue];
     _skillRules = settings[@"rules"];
     _recovery = settings[@"recovery"];
     // Keep the last run's decisions with their captured rules. Idle runtime
@@ -501,10 +512,21 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [self recordExecution:@"cancelled" state:_hasLive ? &_live : nullptr evaluation:nil];
         NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
         if (!record[@"reason"]) record[@"reason"] = _message;
+        record[@"assistRecovery"] = _assistTrace;
         _executionHistory[_executionHistory.count - 1] = [record copy];
     }
     if (wasAutomatic) [self logAutomation:[NSString stringWithFormat:@"連續模式停止：%@", _message]];
     _releaseComplete = false;
+    if (_assistAwaitingResult) {
+        NSMutableDictionary *trace = [_assistTrace mutableCopy];
+        if ([trace[@"status"] isEqual:@"awaiting-next-turn"]) trace[@"status"] = @"interrupted";
+        trace[@"actualConfirmed"] = @NO; trace[@"reason"] = _message;
+        _assistTrace = [trace copy]; _assistAwaitingResult = false;
+        if (_executionHistory.count) {
+            NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
+            record[@"assistRecovery"] = _assistTrace; _executionHistory[_executionHistory.count - 1] = [record copy];
+        }
+    }
     if (_ownedOrb || _staged || pendingStart) _phase = @"releasing";
     else { _phase = @"stopped"; _recordingExecution = false; }
     if (cancelledIntent) ++_cancelled;
@@ -561,6 +583,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _automatic = _monitoring = true; _autoBound = _sawResolve = _hasStable = _readQueued = false;
     _autoTurn = 1; _autoMoves = _autoSkills = 0; _unavailableRules = 0;
     _autoStartAt = _autoPhaseAt = _now; _autoOrigin = {}; [self clearRoute]; _goalPlan = @{};
+    _assistTrace = @{}; _assistAwaitingResult = false; _assistCheckedAt = 0;
     _skillWindowWaitAt = 0;
     _boardTransitionFrames = 0; _lastReadIssue = @{};
     _activeProfile = @{};
@@ -696,7 +719,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 // Called on every observed native frame while armed, even during animation.
 // A skill's phase 22 is never evidence that an orb turn has completed.
-- (BOOL)observeAutomation:(const PHOrbSnapshot *)state read:(BOOL)read reason:(NSString *)reason {
+- (BOOL)observeAutomation:(PHOrbSnapshot *)state read:(BOOL)read reason:(NSString *)reason {
     [self observeRuleHistory:state read:read];
     if (!_frame.ready || !_frame.enabled || _now < _autoPhaseAt) {
         [self queueStop:@"總開關、前景或登入狀態已改變，已停止連續模式"]; return NO;
@@ -720,6 +743,24 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             ([_profileLibrary[@"autoSelect"] boolValue] || [_profileLibrary[@"selected"] isEqual:retained[@"id"]]);
         NSDictionary *resolved = resume ? @{@"ok":@YES, @"profile":retained, @"message":retained[@"name"]} :
             PHOrbResolveProfile(_profileLibrary, state);
+        const bool recoverBinding = resume ? [retained[@"settings"][@"assistRecoveryL"] boolValue] :
+            [resolved[@"ok"] boolValue] ? ([resolved[@"profile"] count] ?
+                [resolved[@"profile"][@"settings"][@"assistRecoveryL"] boolValue] : _assistRecoveryL) : [self bindingNeedsAssistRecovery];
+        const bool assistWindow = state->phase == 2 && state->settled && !state->boardTransition &&
+            !state->automation.busy && !state->dragged;
+        if (recoverBinding && !assistWindow && !(resume && _openingInFlight)) {
+            if (!PHInputIsQuiet(&state->input) || state->dragged) {
+                [self queueStop:@"偵測到手動操作，已停止連續模式"]; return NO;
+            }
+            if (_now - _autoPhaseAt > 12) {
+                [self queueStop:@"尚未取得穩定的單人隊伍及武裝狀態，已停止"]; return NO;
+            }
+            _message = @"等待盤面穩定後核對隊伍及武裝狀態…"; return YES;
+        }
+        if (recoverBinding && assistWindow) {
+            if (![self captureAssistRecovery:state]) return NO;
+            if (!resume) resolved = PHOrbResolveProfile(_profileLibrary, state);
+        }
         if (![resolved[@"ok"] boolValue]) { [self queueStop:resolved[@"message"]]; return NO; }
         _activeProfile = resolved[@"profile"];
         if (_activeProfile[@"formation"]) {
@@ -800,6 +841,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     }
     const bool beforeTouch = [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         ([_phase isEqual:@"arming"] && !_startSent && !state->dragged);
+    // Only an outstanding preview is polled, at a bounded rate. Actual input
+    // still gets an unthrottled read after native coordinate conversion.
+    if (_preview.assistRecovery.valid && ([_phase isEqual:@"solving"] || [_phase isEqual:@"preview"]) &&
+        (_now < _assistCheckedAt || _now - _assistCheckedAt >= 0.25) && ![self validateAssistRecovery:state]) return NO;
     if (!state->boardTransition && state->phase == 2 &&
         !state->automation.window && beforeTouch && [self hasPendingSkillWindow:state] &&
         !PersistentSkillWindow(state->automation)) {
@@ -829,7 +874,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     return YES;
 }
 - (void)advanceAutomation {
-    if (!_automatic || [self executing] || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
+    if (!_automatic || !_autoBound || [self executing] || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         [_phase isEqual:@"skillArming"] || [_phase isEqual:@"openingArming"] || _now - _autoStartAt < 0.35) return;
     if ([_phase isEqual:@"autoWaiting"] && _live.phase == 2 && !_live.boardTransition &&
         _live.settled && [self waitForSkillWindow]) return;
@@ -865,6 +910,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _stable = _live; _stableAt = _now; _hasStable = true; return;
     }
     if (_now - _stableAt < AutomationSettle) return;
+    // Only stable, active decisions request mechanism evidence. Skills run
+    // first; the final goal capture below always reads again after them.
+    if (_assistRecoveryL && ![self captureAssistRecovery:&_live]) return;
     if ([_phase isEqual:@"openingWaiting"]) {
         if (![self finishOpeningIfConfirmed:&_live]) {
             [self queueStop:@"開場技能完成後的次數、角色或武裝不符合預期；保留進度，未執行下一步"]; return;
@@ -872,6 +920,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         ++_autoSkills; [self waitForAutomationBoard]; return;
     }
     if ([_phase isEqual:@"turnWaiting"]) {
+        if (![self confirmAssistRecoveryResult:&_live]) return;
         ++_autoTurn;
         [self waitForAutomationBoard]; return;
     }
@@ -1035,6 +1084,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     // route. Clear it even when planning or the new search fails.
     [self clearRoute];
     _readQueued = false; _preview = _live;
+    _preview.assistRecovery = {};
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
@@ -1045,6 +1095,17 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
     _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
+    if (_automatic && _assistRecoveryL) {
+        if (![self captureAssistRecovery:&_preview]) return;
+        _goalPlan = PHOrbPlanWithAssistRecovery(_goalPlan, YES, &_preview, YES);
+        NSDictionary *previous = [_assistTrace[@"status"] isEqual:@"observed-clear"] ?
+            [_assistTrace dictionaryWithValuesForKeys:@[@"status", @"beforeTurns", @"observedTurns", @"turn",
+                @"actualConfirmed", @"lOnlyAmountConfirmed"]] : nil;
+        NSMutableDictionary *trace = [[self assistRecoveryTrace:&_preview.assistRecovery status:
+            [_goalPlan[@"available"] boolValue] ? @"planned" : @"blocked"] mutableCopy];
+        if (previous) trace[@"previousOutcome"] = previous;
+        _assistTrace = [trace copy];
+    } else _assistTrace = @{};
     if ([_goalMode isEqual:@"manual"] && _preview.automation.valid &&
         (_preview.automation.members[0].temporaryTurns || _preview.automation.members[5].temporaryTurns)) {
         NSMutableDictionary *plan = [_goalPlan mutableCopy];
@@ -1092,21 +1153,59 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"board":BoardTrace(_preview.board), @"goals":PHOrbGoalsJSON(&options.goals),
         @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds),
         @"thornComboPriority":@(options.thornComboPriority),
-        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
+        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal),
+        @"assistRecovery":_assistTrace, @"assistRecoveryL":_goalPlan[@"assistRecoveryActive"] ?: @NO};
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
+    NSArray<NSDictionary *> *const assistCandidates = _goalPlan[@"assistRecoveryCandidates"] ?: @[];
     const NSUInteger generation = _generation;
     __weak PHOrbSession *weakSelf = self;
     _phase = @"solving"; _message = @"正在求路…";
     dispatch_async(_worker, ^{
+      @autoreleasepool {
         PHOrbRoute route{};
-        const auto result = PHOrbSolve(board, options, *cancel, route);
+        PHOrbSolveOptions selectedOptions = options;
+        PHOrbSolveStatus result = PHOrbSolveStatus::NoRoute;
+        NSDictionary *selectedAssist = @{};
+        NSMutableArray *attempts = [NSMutableArray array];
+        const auto start = std::chrono::steady_clock::now();
+        const NSUInteger choices = std::max(NSUInteger(1), assistCandidates.count);
+        for (NSUInteger choice = 0; choice < choices; ++choice) {
+            const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            if (cancel->load(std::memory_order_relaxed) || (assistCandidates.count && spent >= options.milliseconds)) break;
+            PHOrbSolveOptions trial = options;
+            if (assistCandidates.count && !PHOrbReadGoals(assistCandidates[choice][@"goals"], &trial.goals)) continue;
+            if (assistCandidates.count) trial.milliseconds = unsigned(options.milliseconds - spent) / unsigned(choices - choice);
+            if (!trial.milliseconds) break;
+            PHOrbRoute candidate{};
+            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
+            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
+                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS)}];
+            route = candidate; result = status; selectedOptions = trial;
+            if (assistCandidates.count) selectedAssist = assistCandidates[choice];
+            if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) break;
+        }
+        selectedOptions.milliseconds = options.milliseconds; // Public budget is the shared job, not its last slice.
+        const PHOrbSolveOptions checkedOptions = selectedOptions;
+        const auto searchElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
         dispatch_async(dispatch_get_main_queue(), ^{
             PHOrbSession *session = weakSelf;
             if (!session || generation != session->_generation || ![session->_phase isEqual:@"solving"] ||
                 cancel->load(std::memory_order_relaxed)) return;
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
+            trace[@"candidateAttempts"] = [attempts copy];
+            trace[@"goals"] = PHOrbGoalsJSON(&checkedOptions.goals);
+            trace[@"totalElapsedMS"] = @(searchElapsed);
+            session->_solveOptions = checkedOptions;
+            if (selectedAssist.count) {
+                NSMutableDictionary *plan = [session->_goalPlan mutableCopy];
+                plan[@"goals"] = selectedAssist[@"goals"]; plan[@"assistRecoveryChoice"] = selectedAssist;
+                plan[@"message"] = PHOrbGoalsDescription(plan[@"goals"]); session->_goalPlan = [plan copy];
+                NSMutableDictionary *decision = [session->_assistTrace mutableCopy];
+                decision[@"choice"] = selectedAssist; decision[@"actualConfirmed"] = @NO;
+                session->_assistTrace = [decision copy]; trace[@"assistRecovery"] = session->_assistTrace;
+            }
             trace[@"path"] = RouteCells(route); trace[@"elapsedMS"] = @(route.elapsedMS);
             trace[@"evaluated"] = @(route.evaluated); trace[@"deadline"] = @(route.deadlineReached);
             trace[@"evaluationCalls"] = @(route.evaluationCalls); trace[@"evaluationCacheHits"] = @(route.evaluationCacheHits);
@@ -1115,10 +1214,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";
-                session->_message = result == PHOrbSolveStatus::InsufficientOrbs ?
+                session->_message = assistCandidates.count ? @"本次限時搜尋未找到兼顧原目標及武裝回復 L 的路徑；未證明盤面無解，已停止。" :
+                    result == PHOrbSolveStatus::InsufficientOrbs ?
                     @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" :
                     result == PHOrbSolveStatus::IncompatibleGoals ?
-                    @"目前珠色比例無法同時排出符合規則的 T 形及四連；可改盤或調整目標。" :
+                    @"目前珠數或空間無法同時排出所需的獨立形狀；可改盤或調整目標。" :
                     @"本次未取得有效路徑，請重新讀盤";
                 if (session->_automatic || session->_oneShot) [session queueStop:session->_message];
                 return;
@@ -1127,19 +1227,19 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             PHOrbEvaluation evaluation{};
             uint32_t thornDamage = 0; uint8_t thornContacts = 0;
             if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
-                !PHOrbEvaluateRoute(board, route, options, evaluation, thornDamage, thornContacts) ||
+                !PHOrbEvaluateRoute(board, route, checkedOptions, evaluation, thornDamage, thornContacts) ||
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
                 evaluation.mortalPoisonErased != route.mortalPoisonErased ||
                 evaluation.unmatchedBombs != route.unmatchedBombs ||
-                evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != options.goals.count ||
+                evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != checkedOptions.goals.count ||
                 !std::equal(std::begin(evaluation.goalHits), std::end(evaluation.goalHits), route.goalHits)) {
                 [session queueStop:@"路徑重播校驗失敗，已停止"]; session->_phase = @"fault";
                 return;
             }
             trace[@"predictedBoard"] = BoardTrace(replay);
-            trace[@"evaluation"] = EvaluationTrace(evaluation, options.goals); session->_searchTrace = [trace copy];
+            trace[@"evaluation"] = EvaluationTrace(evaluation, checkedOptions.goals); session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = @"preview"; session->_previewAt = session->_now;
             NSString *summary = [NSString stringWithFormat:@"預計 %u Combo（不含天降／加算）· %u 步 · 約 %.1f 秒",
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
@@ -1152,13 +1252,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             if (options.allowPoisonWithHeartFour && route.poisonErased && route.heartFours)
                 summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消毒／猛毒，合計最多 %u 顆。", route.poisonErased];
             summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
-                route.elapsedMS, options.milliseconds, route.deadlineReached ? @"已到時間上限" : @"未到時間上限", options.steps];
+                unsigned(searchElapsed), options.milliseconds, (route.deadlineReached || searchElapsed >= options.milliseconds) ?
+                    @"已到候選或總時間上限" : @"未到時間上限", checkedOptions.steps];
             if (!route.goalsMet) {
-                NSArray<NSDictionary *> *goals = PHOrbGoalsJSON(&options.goals);
+                NSArray<NSDictionary *> *goals = PHOrbGoalsJSON(&checkedOptions.goals);
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];
-                for (unsigned g = 0; g < options.goals.count; ++g) if (route.goalHits[g] < options.goals.items[g].count)
+                for (unsigned g = 0; g < checkedOptions.goals.count; ++g) if (route.goalHits[g] < checkedOptions.goals.items[g].count)
                     [missing addObject:[NSString stringWithFormat:@"未達成：%@（%u／%u）",
-                        PHOrbGoalDescription(goals[g]), route.goalHits[g], options.goals.items[g].count]];
+                        PHOrbGoalDescription(goals[g]), route.goalHits[g], checkedOptions.goals.items[g].count]];
                 summary = [NSString stringWithFormat:@"%@\n%@", [missing componentsJoinedByString:@"\n"], summary];
             }
             session->_message = !route.hazardsSafe ? [NSString stringWithFormat:
@@ -1171,6 +1272,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
             if ((session->_automatic || session->_oneShot) && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
         });
+      }
     });
 }
 - (void)finishNativeFrame {
@@ -1192,7 +1294,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _hasLive = read; _live = current;
         _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
         if (![self observeAutomation:&current read:read reason:reason]) return;
+        _live.assistRecovery = current.assistRecovery;
         if ([_phase isEqual:@"openingArming"]) {
+            if (_assistRecoveryL && ![self captureAssistRecovery:&current]) return;
             NSDictionary *step = _activeProfile[@"opening"][_openingStep];
             const NSUInteger slot = [step[@"slot"] unsignedIntegerValue] - 1;
             if (current.phase == 2 && !current.automation.window &&
@@ -1342,6 +1446,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         if (observed && ![self executing]) return;
         if (observed && current.automation.busy) [self queueStop:@"轉珠前技能或動畫狀態已改變，已停止"];
         // Fall through to the existing owned-orb release path when needed.
+    }
+    if (_automatic && ([_phase isEqual:@"arming"] || [_phase isEqual:@"running"]) &&
+        ![self validateAssistRecovery:&current]) {
+        // A failure revokes holds, while retaining the existing owned release.
+        if (![_phase isEqual:@"releasing"]) return;
     }
     if ([_phase isEqual:@"arming"]) {
         if (!frame.enabled || !PHOrbCanPreview(&current) || !SamePosition(current, _preview)) {
@@ -1498,6 +1607,12 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                         @"本次路徑已執行並放開；下一盤可操作時可再按轉一次" :
                         @"本次路徑已執行並放開；下一回合請重新讀盤";
                     if (_automatic) {
+                        if ([_goalPlan[@"assistRecoveryActive"] boolValue]) {
+                            _assistReleased = _preview; _assistAwaitingResult = true;
+                            NSMutableDictionary *trace = [_assistTrace mutableCopy];
+                            trace[@"status"] = @"awaiting-next-turn"; trace[@"actualConfirmed"] = @NO;
+                            _assistTrace = [trace copy];
+                        }
                         ++_autoMoves; _sawResolve = ResolvingOrbs(current.phase); _hasStable = false;
                         _phase = @"turnWaiting"; _autoPhaseAt = time;
                         _message = @"本回合已放開，等待消除、敵人行動與下一回合…";
@@ -1745,6 +1860,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"thornComboPriority":@(_thornComboPriority),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
         @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
+        @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace,
+        @"assistRecoveryStatus":_goalPlan[@"assistRecoveryMessage"] ?: @"",
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,

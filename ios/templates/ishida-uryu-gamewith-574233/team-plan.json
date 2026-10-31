@@ -496,7 +496,8 @@
       "hpAtMost": 0,
       "groups": 1,
       "shape": "match"
-    }
+    },
+    "assistRecoveryL": true
   },
   "dungeon": 0,
   "floor": 0,

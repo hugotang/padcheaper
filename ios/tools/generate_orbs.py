@@ -51,6 +51,13 @@ def generate(manifest):
                                  'assist_recovery': 'current-eligibility-only', 'enemies': 'current-hp-effects',
                                  'native_getters': False, 'enemy_forecast': False, 'survival_authorization': False,
                                  'optional_guards': True},
+                             'assist_recovery_goals': {'mode': 'opt-in-single-player-continuous',
+                                 'capture': 'fresh-double-read-before-plan-and-input', 'combine': 'retain-base-and-heart-goals',
+                                 'amount': 'current-effective-L-per-distinct-member-color-per-first-wave-group',
+                                 'partial_recovery': False, 'candidate_limit': 12, 'shared_search_deadline': True,
+                                 'native_queue_capacity_confirmed': False,
+                                 'confirmation': 'next-stable-native-duration-zero', 'survival_authorization': False,
+                                 'guards': 'separate-policy-only', 'device_verified': False},
                              'recovery_goal': {'mode': 'continuous-only', 'hp_percent': [1, 100], 'groups': [1, 3],
                                                'shapes': ['match', 'four'], 'combine': 'post-skill-conjunction'}}:
         raise ValueError('Unreviewed orb scope')
@@ -94,7 +101,54 @@ def generate(manifest):
         'PHOrbObservationAddedAwakeningRVA', 'PHOrbObservationBaseAwakeningRVA',
         'PHOrbObservationAwakeningCountRVA', 'PHOrbObservationAttributeRVA',
         'PHOrbObservationAssistVoidRVA', 'PHOrbObservationEquipRVA', 'PHOrbObservationGrantsRVA'}
-    required |= observation_guards
+    assist_recovery_guards = {
+        'PHOrbAssistRecoveryShapeL1RVA',
+        'PHOrbAssistRecoveryShapeL2RVA',
+        'PHOrbAssistRecoveryShapeL3RVA',
+        'PHOrbAssistRecoveryShapeL4RVA',
+        'PHOrbAssistRecoveryShapeL5RVA',
+        'PHOrbAssistRecoveryShapeL6RVA',
+        'PHOrbAssistRecoveryShapeL7RVA',
+        'PHOrbAssistRecoveryShapeDispatchRVA',
+        'PHOrbAssistRecoveryGroupLFlag1RVA',
+        'PHOrbAssistRecoveryGroupLFlag2RVA',
+        'PHOrbAssistRecoveryGroupLFlag3RVA',
+        'PHOrbAssistRecoveryGroupLFlag4RVA',
+        'PHOrbAssistRecoveryGroupLFlag5RVA',
+        'PHOrbAssistRecoveryGroupLFlag6RVA',
+        'PHOrbAssistRecoveryEntryMember1RVA',
+        'PHOrbAssistRecoveryEntryMember2RVA',
+        'PHOrbAssistRecoveryEntryMember3RVA',
+        'PHOrbAssistRecoveryEntryMember4RVA',
+        'PHOrbAssistRecoveryEntryMember5RVA',
+        'PHOrbAssistRecoveryEntryMember6RVA',
+        'PHOrbAssistRecoveryEntryMember7RVA',
+        'PHOrbAssistRecoveryEntryAllocate1RVA',
+        'PHOrbAssistRecoveryEntryAllocate2RVA',
+        'PHOrbAssistRecoveryEntryL1RVA',
+        'PHOrbAssistRecoveryEntryL2RVA',
+        'PHOrbAssistRecoveryProviders1RVA',
+        'PHOrbAssistRecoveryProviders2RVA',
+        'PHOrbAssistRecoveryProviders3RVA',
+        'PHOrbAssistRecoveryProviders4RVA',
+        'PHOrbAssistRecoveryQueueWalk1RVA',
+        'PHOrbAssistRecoveryQueueWalk2RVA',
+        'PHOrbAssistRecoveryQueueWalk3RVA',
+        'PHOrbAssistRecoveryApplyL1RVA',
+        'PHOrbAssistRecoveryApplyL2RVA',
+        'PHOrbAssistRecoveryApplyL3RVA',
+        'PHOrbAssistRecoveryApplyL4RVA',
+        'PHOrbAssistRecoveryApplyL5RVA',
+        'PHOrbAssistRecoveryThirdDuplicateRVA',
+        'PHOrbAssistRecoveryDurationApply1RVA',
+        'PHOrbAssistRecoveryDurationApply2RVA',
+        'PHOrbAssistRecoveryShapeAnchorRVA',
+        'PHOrbAssistRecoveryAssistRetained1RVA',
+        'PHOrbAssistRecoveryAssistRetained2RVA',
+        'PHOrbAssistRecoveryOrdinaryDispatch1RVA',
+        'PHOrbAssistRecoveryOrdinaryDispatch2RVA',
+    }
+    required |= observation_guards | assist_recovery_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -128,6 +182,11 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbObservation')} != observation_fields:
         raise ValueError('Unreviewed optional observation layout')
+    assist_recovery_fields = {'PHOrbAssistRecoveryQueueOffset': 47056,
+        'PHOrbAssistRecoveryQueueCountOffset': 47080, 'PHOrbAssistRecoveryDispatchOffset': 600632}
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbAssistRecovery')} != assist_recovery_fields:
+        raise ValueError('Unreviewed assist recovery layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():
@@ -144,7 +203,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -153,6 +212,11 @@ def generate(manifest):
         if guard['name'] in observation_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbObservationTextGuardCount = sizeof(PHOrbObservationTextGuards) / sizeof(PHOrbObservationTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbAssistRecoveryTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in assist_recovery_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbAssistRecoveryTextGuardCount = sizeof(PHOrbAssistRecoveryTextGuards) / sizeof(PHOrbAssistRecoveryTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 

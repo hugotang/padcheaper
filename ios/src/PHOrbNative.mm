@@ -335,6 +335,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbSkillChoice.inc"
 #include "PHOrbSkillDiagnostics.inc"
 #include "PHOrbObservation.inc"
+#include "PHOrbAssistRecovery.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
     if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
@@ -530,6 +531,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return;
     }
     ReadBattleObservation(*state);
+}
+- (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!state) return NO;
+    state->assistRecovery = {};
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !frame.ready || !frame.enabled ||
+        !state->identity.header || frame.header != state->identity.header || _verifiedHeader != state->identity.header ||
+        !CheckAssistRecoveryCode(state->identity.header) || !ReadAssistRecoveryFields(*state)) {
+        if (reason) *reason = @"武裝回復 L：原生資料或前後一致性未確認，已停止";
+        return NO;
+    }
+    return YES;
 }
 - (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header {
     return (reinterpret_cast<int (*)(uintptr_t, uintptr_t, int)>(header + PHOrbCanUseSkillRVA)(game, member, selector) & 1) != 0;
@@ -794,6 +806,31 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             (down && !PHOrbSameLeaders(&live, &final)) ||
             (down && (!_multiplayerOnce || !final.ordinary || !PHInputIsQuiet(&final.input))) ||
             (!down && (!_multiplayerOwnedOrb || final.dragged != _multiplayerOwnedOrb))) return NO;
+        live = final;
+    }
+    // Revalidate the policy evidence after coordinate conversion, at the
+    // last boundary before input. Cleanup releases remain possible on failure.
+    if (down && expected->assistRecovery.valid) {
+        PHOrbSnapshot final{};
+        NSString *finalReason = nil;
+        const BOOL readFinal = !multiplayer && [self readAutomation:&final frame:frame reason:&finalReason];
+        if (!readFinal || !PHOrbSameTurn(&live, &final) || final.phase != 2 || final.dragged != live.dragged ||
+            final.moves != live.moves || !PHOrbSamePlanBoard(&live.board, &final.board) ||
+            !final.ordinary || final.boardTransition || !PHOrbSameLeaders(&live, &final) ||
+            !PHOrbSameAutomationExceptWindow(expected, &final) || !PHInputIsQuiet(&final.input) ||
+            !PHOrbCanEnterThorn(&final, unsigned(cell))) {
+            if (reason) *reason = !readFinal && finalReason.length ? finalReason :
+                @"武裝回復 L：輸入前盤面、隊員或操作條件已改變，未繼續輸入";
+            return NO;
+        }
+        if (![self readAssistRecovery:&final frame:frame reason:&finalReason]) {
+            if (reason) *reason = finalReason ?: @"武裝回復 L：輸入前資料無法確認，未繼續輸入";
+            return NO;
+        }
+        if (!PHOrbSameAssistRecovery(&expected->assistRecovery, &final.assistRecovery)) {
+            if (reason) *reason = @"武裝無效、有效 L 或提供隊員已改變，未繼續輸入";
+            return NO;
+        }
         live = final;
     }
     if (beginning) {

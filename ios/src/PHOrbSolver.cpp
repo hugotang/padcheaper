@@ -204,6 +204,8 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
         unsigned inventory[PHOrbTypes]{};
         for (unsigned i = 0; i < context.width * context.height; ++i)
             ++inventory[context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i]];
+        for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
+            if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color]) return false;
         for (unsigned g = 0; g < context.goals.count; ++g) {
             const auto &goal = context.goals.items[g];
             if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch)) return false;
@@ -218,6 +220,28 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
 }
 
 bool ShapeSpaceAvailable(const Cells &cells, const Context &context) {
+    // Same-color exact shapes need disjoint cells and disjoint-color borders.
+    // Enumerating a pair is a necessary placement bound, not a route proof.
+    for (unsigned g = 0; g < context.goals.count; ++g) {
+        const auto &a = context.goals.items[g];
+        if (a.kind != PHOrbGoalL || !a.colors || (a.colors & (a.colors - 1))) continue;
+        for (unsigned h = 0; h < context.goals.count; ++h) {
+            const auto &b = context.goals.items[h];
+            if (b.kind != PHOrbGoalT || b.colors != a.colors) continue;
+            unsigned separators = context.width * context.height + 1;
+            for (const auto &x : context.patterns[g]) for (const auto &y : context.patterns[h])
+                if (!(x.cells & y.cells) && !(x.border & y.cells) && !(y.border & x.cells))
+                    separators = std::min(separators, Count(x.border | y.border));
+            for (unsigned phase = 0; phase < context.variants; ++phase) {
+                unsigned available = 0;
+                for (unsigned i = 0; i < context.width * context.height; ++i) {
+                    unsigned color = context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i];
+                    available += !(a.colors & (1u << color));
+                }
+                if (available < separators) return false;
+            }
+        }
+    }
     // An exact T needs a different color along its entire conservative
     // border. A distinct-color four also consumes non-T cells. Enumerate
     // their possible placements without path, thorn or fixed-cell limits:

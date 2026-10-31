@@ -165,7 +165,8 @@
           "hpAtMost": 0,
           "groups": 1,
           "shape": "match"
-        }
+        },
+        "assistRecoveryL": true
       }
     },
     {
@@ -330,7 +331,8 @@
           "hpAtMost": 0,
           "groups": 1,
           "shape": "match"
-        }
+        },
+        "assistRecoveryL": true
       }
     }
   ]

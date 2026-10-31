@@ -479,5 +479,22 @@
       "Orb counts do not prove a solvable T/heart layout; the solver still validates all goals and hazards.",
       "Run and device behavior have not been compiled or tested. Existing deployed configs require reimporting the new template into a supporting dylib."
     ]
+  },
+  "assistRecoveryPolicy": {
+    "updated": "2026-11-01",
+    "status": "source-only-unbuilt",
+    "setting": "assistRecoveryL",
+    "templateEnabled": true,
+    "oldSavedProfilesChanged": false,
+    "policy": "Retain all output and heart goals; add enough effective attack-color L groups to predict full recovery; fresh action reads and next stable zero confirmation required.",
+    "sourceNotes": "../../docs/assist-recovery.md",
+    "sameColorTAndLMinimumOrbs": 10,
+    "keepsRequiredRescues": true,
+    "removesT": false,
+    "survivalForecast": false,
+    "nativeQueueCapacityConfirmed": false,
+    "compiled": false,
+    "testsExecuted": false,
+    "deviceVerified": false
   }
 }

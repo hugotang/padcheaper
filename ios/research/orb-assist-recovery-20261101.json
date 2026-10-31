@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "base_commit": "a85d40e",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Static IDA pseudocode/disassembly and original-byte comparison; source review, JSON/AST/lexical checks only. Never run game functions, the generator, compiler, tests, benchmarks, GUI or CI in this source-only batch.",
+  "native_evidence": [
+    {
+      "va": "0x1005f7954",
+      "finding": "Exact five-cell group with horizontal run-three anchor and vertical endpoint distance two gives L. Native rows run bottom-up; both inequalities accept every fitting placement of all four existing L masks. Solver same-color border exclusion remains conservative.",
+      "guard_prefixes": ["PHOrbAssistRecoveryShapeAnchor", "PHOrbAssistRecoveryShapeL"]
+    },
+    {
+      "va": "0x1005fc5cc",
+      "finding": "Group metadata is reset for each removed group; impl+601622 maps L to group flag 0x40. Current attack color dispatches once per group. Native dispatch 525190 takes a separate path and is excluded by the new capture.",
+      "guard_prefixes": ["PHOrbAssistRecoveryShapeDispatch", "PHOrbAssistRecoveryGroupLFlag", "PHOrbAssistRecoveryOrdinaryDispatch"]
+    },
+    {
+      "va": "0x100601ed0",
+      "finding": "For each attack-color group, iterate six active==1 unbound members and create an entry for each matching current main/sub/third attribute. Heart and auxiliary effects also allocate queue entries; no universal total capacity bound is claimed.",
+      "guard_prefixes": ["PHOrbAssistRecoveryEntryMember"]
+    },
+    {
+      "va": "0x10060594c",
+      "finding": "Native pool capacity 256; allocates while count<=255. Entry flags at +44 encode sub as 2, third as 0x10000. Incoming group0x40 and effective awakening60>=1 set entry0x40, independent of positive damage. Slot at entry+52.",
+      "guard_prefixes": ["PHOrbAssistRecoveryEntryAllocate", "PHOrbAssistRecoveryEntryL"]
+    },
+    {
+      "va": "0x1005ac4c8",
+      "finding": "At each consumer frame cache current effective L count for active==1 members with latent48. Completed L entries add the provider count, deduplicating same-color main/sub/third within that group; separate L groups accumulate. v231 is animation membership, not a suppression of subsequent L groups.",
+      "guard_prefixes": ["PHOrbAssistRecoveryProviders", "PHOrbAssistRecoveryQueueWalk", "PHOrbAssistRecoveryApplyL", "PHOrbAssistRecoveryThirdDuplicate"]
+    },
+    {
+      "va": "0x1005adf64",
+      "finding": "Subtract accumulated credit from signed10 duration impl+739980; clamp to zero, preserve high0xF800, clear fresh0x400, and call 1005f6d88(game,1) on clear. Do not pre-credit restored assist awakenings or infer relative healing/damage ordering.",
+      "guard_prefixes": ["PHOrbAssistRecoveryDurationApply"]
+    },
+    {
+      "va": "0x1005a1cf0",
+      "finding": "Positive assist void suppresses active assist unless effective awakening148 protects it. Source assist +1458 remains; protected member+472 low byte172 indicates retained equipment. Clearing active +1438 alone never proves consumption. Real restore can change derived HP/skill values.",
+      "guard_prefixes": ["PHOrbAssistRecoveryAssistRetained"]
+    },
+    {
+      "va": "0x1005f58e4",
+      "finding": "Ordinary duration ticks can also restore equipment at zero. A next-stable sample cannot attribute a duration delta to L alone. No action permission relies on calling or predicting this routine."
+    }
+  ],
+  "guards": {
+    "manifest": "ios/targets/orbs-23.6.0.json",
+    "operation_unchanged": 114,
+    "optional_diagnostic_unchanged": 15,
+    "policy_only_added": 45,
+    "total": 174,
+    "bytes_each": 64,
+    "capture_requires_optional_and_policy_guards": true,
+    "generator_executed": false
+  },
+  "source_behavior": {
+    "setting": "assistRecoveryL",
+    "default": false,
+    "uryu_templates": true,
+    "ciel_templates_changed": false,
+    "mode": "ordinary-solo-continuous-only",
+    "read_path": "fresh-action-specific-double-collection-not-diagnostic-cache",
+    "capture_members": "current-active-card, source/active-assist, protected-assist-state, temporary-form, effective-L, latent48, distinct-colors",
+    "rules": "active==1; bound/awoken-bind/awakening-disabled/latent-disabled/no-latent/no-L cannot contribute; unsupported grants and variants stay unknown",
+    "capture_consistency": "catalog pointer/count, entry identity, protected keys, interpreted automation/evidence, phase/wave/moves/drag",
+    "atomic_snapshot": false,
+    "all_ABA_races_excluded": false,
+    "preview_poll_seconds": 0.25,
+    "native_getters_called": false,
+    "guest_writes_during_capture": false,
+    "goals": "retain every existing goal and heart rule; add minimal per-color L allocations predicted to cover the full current duration",
+    "candidate_limit": 12,
+    "shared_search_deadline": true,
+    "preflight": "distinct same-color exact-shape inventory and necessary T/L separators in every shared spinner phase",
+    "replay": "selected candidate goals, independent final replay and release evaluation",
+    "execution": "fresh pre-input evidence plus final native recheck after coordinate conversion; cleanup release remains available",
+    "outcome": "require observed next stable duration zero; residual/reapply/unavailable stops without retry",
+    "duration_delta_L_only": false,
+    "partial_recovery": false,
+    "remove_output_T": false,
+    "required_rescue_bypass": false,
+    "enemy_forecast": false,
+    "shield_or_healing_forecast": false,
+    "survival_authorization": false,
+    "multiplayer_automation": false,
+    "native_queue_capacity_confirmed": false
+  },
+  "written_regressions": [
+    "Native effective L+, distinct attributes/overrides, multiple providers, disabled/unknown sources, retained equipment, guard isolation, read-only capture, consistency races and post-coordinate input boundary.",
+    "Planner sufficient/residual/multi-color/multi-group allocations, existing L reuse, six-goal limit, base/heart retention, spinner inventory and twelve-candidate bound.",
+    "Solver nine versus ten orbs for same-color T/L, independent coordinate witnesses, all four L orientations at board corners, multi-L first-wave counts, insufficient separators and shared spinner phases.",
+    "Session fresh versus diagnostic evidence, second candidate replay, shared deadline bookkeeping, cancellation before and during owned input, stable-zero outcome versus residual/reapply/unavailable, required skills, delayed and retained profile binding, lifecycle and multiplayer isolation.",
+    "Profile/config strict Boolean defaults, Uryu opt-in, exact source/retained/consumed separation, export/import, GUI acknowledgement and actual disk-save rollback/selected-plan coherence."
+  ],
+  "pending": [
+    "Compile, execute all written and existing regressions, GUI, generated-header consistency and package only on a new explicit build/test request.",
+    "Establish a complete native queue capacity/support bound across cascades and auxiliary effects before treating predicted L credit as guaranteed.",
+    "Verify device post-void source identity, provider counts, multiple L/color recovery and actual status removal or enemy reapply.",
+    "Measure iPhone action-capture/guard cost and long-route frame pacing; no new performance result yet.",
+    "Implement enemy action branches, effective shields, healing bounds and restore ordering before L+heart-four defensive stall or delaying required rescue."
+  ],
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "benchmarks_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_review": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "json_files": 10,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 29,
+      "local_includes": 136,
+      "local_document_links": 119,
+      "test_entry_points_written": 5,
+      "unique_gui_steps": 27,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "orb_policy": 45,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "original_129_orb_guards_unchanged": true,
+      "existing_automation_equality_unchanged": true,
+      "workflow_dispatch_only": true,
+      "generated_files_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "source_sha256_lf": {
+        "ios/src/PHConfiguration.m": "0dfdd10eaad1dd1878bbee0a36846377bdbbbc3c73e929206b7ab8716d886baf",
+        "ios/src/PHOrbAssistPlanning.inc": "f912b37d866aab4392023e4e97a32b4d5a16ed368337eacf1903e5034fdeb1e1",
+        "ios/src/PHOrbAssistRecovery.inc": "e3a7107b8ec63964e29cd1625475708055be15d8ab653521573565b5999c984a",
+        "ios/src/PHOrbAssistSession.inc": "7f3d9ffb06570a3e4ab76cd712ab2c91898a2a2640f3458211124481545278eb",
+        "ios/src/PHOrbController.m": "0ab8c4cec04957cb0494ad19937af78aad7003ad4f247682359f33bf7d25506c",
+        "ios/src/PHOrbModel.c": "426d5ab01091ffbb966433dfcf138d1ca97980c481b7bbb46c195bc31edf04c9",
+        "ios/src/PHOrbModel.h": "882458124030cfc5ffe5b9877fad39d933853f90e2e06206fbb95bdc1faf9543",
+        "ios/src/PHOrbNative.mm": "132d54c4c7e8cdfed6286be06323ac5858e278765907e82ad96ce6495b5a67cd",
+        "ios/src/PHOrbPlanning.h": "c35ed9a2fda6f95d0b8b0dd8c31be3879d179f2d9a0e76bd3ac33bc8f129bb7a",
+        "ios/src/PHOrbPlanning.m": "942e069a0fed35aca5ecd97957a4880f114171ae2453513073c35a2864b73f1f",
+        "ios/src/PHOrbProfiles.m": "5b686592d4d369d3f86ce26394eafe9cfbeb05e23f954a02f36fea4c7c7cbb70",
+        "ios/src/PHOrbSession.h": "93c0823992c85de78fe775b949f58d9a734cfc4ed583ca57f61b9bbeae7501fd",
+        "ios/src/PHOrbSession.mm": "359d19692dd7f4d484cd182663d85244a61ef173939d5c8b4eec5a83fbc834da",
+        "ios/src/PHOrbSolver.cpp": "87d2a136b8e2367945653b754bfed9a5bed465f0a976c9a6867f55e594574d82",
+        "ios/src/PHOrbSolver.h": "74164aed3a3d3c844510824c8fc9381ddaa74d8052e64dc6b061152de13f6e77",
+        "ios/src/PHRuntime.m": "808d9c88230a4828f33e87dfb4e0d4704166cfb439acf637699baa5578494665",
+        "ios/tests/configuration_tests.m": "94f8a7a5a4909f85726954ac60af0f2eea1dfb7ee2ba904e9026146ca9a057be",
+        "ios/tests/orb_assist_native_tests.inc": "1d44854dff326ee49091cc0ff782a0647423a4f4a403b12240876bcd7d11c98c",
+        "ios/tests/orb_assist_planning_tests.inc": "9a7795dfba34f8a0d9b3cfee3ce16f9c00e2511646fbab38bf815db7199a6e08",
+        "ios/tests/orb_assist_profiles_tests.inc": "33e80c50ba53f7abe59b1433f19ed03835a2a37bc6be82aa63701e4bfd4d2b18",
+        "ios/tests/orb_assist_session_tests.inc": "beac0d38980eb3fdd660fa964099e47970686c0c9b3e33ab28f8d41756da7cc3",
+        "ios/tests/orb_assist_solver_tests.inc": "168a9640746d470965aecebb34c1797eaddf7f16b3849ab110635f006814ffc2",
+        "ios/tests/orb_native_tests.mm": "6bd4dba6bcef0013a650af04721c270d1bbb9db5293e45c8f256bb7b638d42da",
+        "ios/tests/orb_plan_storage_probe.inc": "681ee71d59b35d988b2f43d5812cd62031664dae55adaadf0dd6bfa8f621df9d",
+        "ios/tests/orb_planning_tests.m": "52c6fc51cd1701556dcfa4f9426a5d54a0640257696c58e08270956e0b44ee32",
+        "ios/tests/orb_profiles_tests.m": "9b6146053d3e6b593d0ccb78c344a5e2eab92ecfd0de8dcf711116a2e584a851",
+        "ios/tests/orb_session_tests.mm": "dd11f9d45433238e06f095f0b95b1146236356a205f829bd12697927968b0b12",
+        "ios/tests/orb_solver_tests.cpp": "231e7e9e12cdda587571c99a86b02cd5d9ff9a8d2cac09e001d0bded013b08a3",
+        "ios/tests/overlay_probe.m": "a69a300fb1f28f3788651d94eeda18abb038e9fd14ba8b9dc2231dd5c96cba7b",
+        "ios/tools/generate_orbs.py": "0b171db714d01311c477874c5612cc48f0e49cd9168659bf7eb6b28fb88be4d6",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b",
+        "ios/build.sh": "79037969860fe92abf54891a0a36cc4e98486c65eb392f2ecd19e1c052a2292e"
+      },
+      "limits": "No compilation, case execution, solver run, native timing, device recovery, queue-capacity, survival or performance result."
+    }
+  }
+}

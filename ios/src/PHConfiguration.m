@@ -48,7 +48,8 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
     NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[],
-        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO, @"diagonal":@NO} mutableCopy];
+        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO,
+        @"diagonal":@NO, @"assistRecoveryL":@NO} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
     return settings;
@@ -109,7 +110,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
         !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
         !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"]) ||
         !PHIsBoolean(orbs[@"thornComboPriority"]) || !PHIsBoolean(orbs[@"allowPoisonWithHeartFour"]) ||
-        !PHIsBoolean(orbs[@"diagonal"])) return NO;
+        !PHIsBoolean(orbs[@"diagonal"]) || !PHIsBoolean(orbs[@"assistRecoveryL"])) return NO;
     NSDictionary *profiles = PHConfigurationOrbProfiles(configuration);
     NSDictionary *selectedProfile = PHOrbProfileNamed(profiles, profiles[@"selected"]);
     if (selectedProfile && ![PHOrbCanonicalSettings(orbs) isEqual:PHOrbCanonicalSettings(selectedProfile[@"settings"])]) return NO;

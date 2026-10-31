@@ -163,6 +163,18 @@ typedef struct {
     bool hpKnown, enemiesKnown, rulesKnown, cooldownAdjustmentKnown, assistVoidKnown, assistVoidFresh;
 } PHOrbBattleObservation;
 
+// Fresh action-specific evidence, separate from the optional diagnostic cache.
+// Per-color amounts count each eligible member once, regardless of duplicate
+// attributes. They predict L recovery, never healing or survival.
+typedef struct {
+    uint16_t turns, perColor[5], blockers[6];
+    uint16_t numbers[6], sourceAssists[6], activeAssists[6], assistStates[6];
+    uint16_t temporaryIDs[6], temporaryTurns[6];
+    uint8_t colors[6], awakenings[6], latents[6], providers[5];
+    uint8_t unknownMembers, retainedAssists, dungeonFlags;
+    bool valid, fresh;
+} PHOrbAssistRecoveryState;
+
 typedef enum {
     PHOrbSpinnerInactive, PHOrbSpinnerReady, PHOrbSpinnerBadCount,
     PHOrbSpinnerBadPeriod, PHOrbSpinnerBadColors, PHOrbSpinnerBadRows,
@@ -251,6 +263,7 @@ typedef struct {
     PHOrbThornState thorns;
     PHOrbMultiplayerState multiplayer;
     PHOrbBattleObservation observation;
+    PHOrbAssistRecoveryState assistRecovery;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -295,6 +308,11 @@ const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status);
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state);
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
+// Independent exact L/T/cross/square/four groups of one color cannot share
+// cells. Other goals may overlap these groups and are not added to this bound.
+unsigned PHOrbRequiredShapeOrbs(const PHOrbGoalSet *goals, unsigned color);
+bool PHOrbShapeInventoryAvailable(const PHOrbBoard *board, const PHOrbGoalSet *goals);
+bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssistRecoveryState *b);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);

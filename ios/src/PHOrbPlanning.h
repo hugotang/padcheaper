@@ -15,6 +15,10 @@ FOUNDATION_EXPORT NSString *PHOrbRecoveryDescription(NSDictionary *settings);
 // mode. Base goals are retained for later editing; no healing is simulated.
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanWithRecovery(NSDictionary *plan, NSDictionary *settings,
                                                       const PHOrbSnapshot *state, BOOL automatic);
+// Preserve all base/heart goals. Return a bounded list of color/group choices
+// whose predicted first-wave L amount covers the current assist-void duration.
+FOUNDATION_EXPORT NSDictionary *PHOrbPlanWithAssistRecovery(NSDictionary *plan, BOOL enabled,
+    const PHOrbSnapshot *state, BOOL automatic);
 // Board objectives only, never a claim that the complete leader skill fired.
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanForLeaders(const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary *catalog);
