@@ -191,8 +191,19 @@ static void MultiplayerNextBoardSessionTests() {
             "metadata-only multiplayer release preserves the actual last board instead of thirty fire placeholders");
         const NSUInteger afterFirstStages = engine->stages;
         [session queueOnce];
-        Check(!engine->multiplayerArmed && ![session.snapshot[@"busy"] boolValue],
-            "a tap during resolution cannot reserve a second gesture for later");
+        Check(!engine->multiplayerArmed && ![session.snapshot[@"once"] boolValue] &&
+            ![session.snapshot[@"automatic"] boolValue] && ![session.snapshot[@"canOnce"] boolValue] &&
+            engine->stages == afterFirstStages && engine->multiplayerArms == 1,
+            "a tap during resolution immediately revokes intent without arming or submitting another gesture");
+        // afterFrame retains the last staged-frame marker until beforeFrame.
+        // Cancelling here may enter releasing for one cleanup frame, even
+        // though native release was already acknowledged. Keep the window
+        // closed while checking cleanup, before introducing the next board.
+        Tick(session, engine, Frame(), 0.12);
+        Check(!engine->multiplayerArmed && ![session.snapshot[@"busy"] boolValue] &&
+            ![session.snapshot[@"once"] boolValue] && engine->stages == afterFirstStages &&
+            engine->beginFrames == 1 && engine->releases == 1,
+            "rejected resolution tap finishes cleanup without reserving future input or repeating release");
         engine->live.multiplayer.resolvePending = 0; engine->live.phase = 2;
         engine->live.moves = 0; engine->live.settled = engine->live.ordinary = true;
         engine->live.remainingFrames = 300;
