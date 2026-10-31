@@ -91,13 +91,19 @@ bool SameMultiplayerRead(const PHOrbMultiplayerState &a, const PHOrbMultiplayerS
         a.clockKnown == b.clockKnown && a.clockFlags == b.clockFlags && a.clockStart == b.clockStart;
 }
 
-bool ConfirmMultiplayerIdentity(const PHOrbSnapshot &state) {
-    const auto &id = state.identity;
+bool SameOrbBattleEntry(const PHBattleIdentity &a, const PHBattleIdentity &b) {
+    // Modes, selectors, floors, teams and allocation addresses may change
+    // within a battle. Only the account/image or entry nonce retires a latch.
+    return a.header == b.header && a.player == b.player && a.epoch == b.epoch &&
+        !std::memcmp(a.entryHash, b.entryHash, sizeof(a.entryHash));
+}
+
+bool ConfirmOrbEntryIdentity(const PHBattleIdentity &id) {
     const uintptr_t h = id.header, save = h + PHSaveRVA;
-    uint8_t scene[2]{}, hash[32]{}, shape[8]{};
+    uint8_t scene[2]{}, hash[32]{};
     uint16_t mode = 0, source = 0, ids[2]{};
-    uint32_t player = 0, multi = 0, key1 = 0, key2 = 0, phase = 0, wave = 0, moves = 0;
-    uintptr_t object = 0, impl = 0, active = 0, manager = 0, dragged = 0;
+    uint32_t player = 0, multi = 0;
+    uintptr_t object = 0, impl = 0, active = 0;
     return PHReadMemory(save, scene, sizeof(scene)) && scene[0] == 1 && scene[1] == 1 &&
         PHReadU32(save + PHPlayerIDOffset, &player) && player == id.player &&
         PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) && ids[0] == id.dungeon && ids[1] == id.floor &&
@@ -107,7 +113,16 @@ bool ConfirmMultiplayerIdentity(const PHOrbSnapshot &state) {
         PHReadU32(h + PHBattleMultiplayerRVA, &multi) && multi == id.multiplayer &&
         PHReadPointer(h + PHSceneTableRVA + 24, &object) && object == id.game &&
         PHReadPointer(id.game + 0x70, &impl) && impl == id.impl &&
-        PHReadPointer(h + PHBattleImplRVA, &active) && active == id.impl &&
+        PHReadPointer(h + PHBattleImplRVA, &active) && active == id.impl;
+}
+
+bool ConfirmMultiplayerIdentity(const PHOrbSnapshot &state) {
+    const auto &id = state.identity;
+    const uintptr_t h = id.header;
+    uint8_t shape[8]{};
+    uint32_t key1 = 0, key2 = 0, phase = 0, wave = 0, moves = 0;
+    uintptr_t manager = 0, dragged = 0;
+    return ConfirmOrbEntryIdentity(id) &&
         PHReadPointer(h + PHBattleInputRVA, &manager) && manager == state.inputManager &&
         PHReadPointer(id.impl + PHBattleDragPointerOffset, &dragged) && dragged == state.dragged &&
         PHReadU32(id.impl + PHOrbMoveSerialOffset, &moves) && moves == state.moves &&

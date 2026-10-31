@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-ready-for-authorized-build",
+  "device_verified": false,
+  "report": {
+    "symptom": "4P completion followed by 3P in the same app session leaves the shortcut reporting multiplayer data unconfirmed. Restarting the app restores 3P input.",
+    "device_snapshot_provided": false,
+    "limits": "The source contains a concrete stale-latch path consistent with the report; this does not establish which intermediate reads occurred on the device."
+  },
+  "source_evidence": {
+    "baseline_commit": "2e06095db55b09386bc85bc02775ab0c76ebb98b",
+    "reader": "PHNativeOrbEngine read retained _sawMultiplayer, _multiplayerKind and _multiplayerDisabled until Read returned success with present=false.",
+    "early_gate": "Read compared the new mode with the old observed mode before reading dungeon entry identity, so a skipped menu followed by mode 11 to mode 7 latched the new match permanently.",
+    "sampling": "PHOrbSession afterFrame throttles idle reads and can receive unavailable foreground/account/scene reads; absence of a successful menu sample is not proof that the match is unchanged.",
+    "ui": "PHOrbSession snapshot reports multiplayer data unconfirmed when liveReadable is false, including a retained multiplayerDisabled latch."
+  },
+  "change": {
+    "entry_key": ["header", "player", "account epoch", "32-byte nonzero entry hash"],
+    "excluded_as_reset_proof": ["mode", "multiplayer selector", "dungeon/floor", "game allocation", "team or local seat", "turn or board"],
+    "read_policy": "Read and confirm scene, account, entry hash, dungeon/floor, modes and matching active game implementation before selecting a mode gate. Confirm again after the complete read; publish latch changes only on success. Existing multiplayer double-read checks remain required.",
+    "new_entry": "Retire the previous mode latch and all captured multiplayer gesture state; read the current mode under its ordinary checks. Readiness does not create input intent.",
+    "same_entry": "Retain unsupported/changed-mode latch before board or leader reads. Selector reset cannot masquerade as a new single-player battle.",
+    "failed_entry": "An empty hash, loading scene, read error or identity race cannot retire or rebind the previous latch.",
+    "scope": "Orb local one-shot reader only. No changes to team, skill, BGM, timer or network mutation policies.",
+    "new_native_offsets": 0,
+    "new_native_calls": 0,
+    "new_game_memory_writes": 0
+  },
+  "regressions": {
+    "status": "pending-authorized-run",
+    "files": [
+      "ios/tests/orb_multiplayer_entry_native_tests.inc",
+      "ios/tests/orb_multiplayer_entry_session_tests.inc",
+      "ios/tests/orb_native_tests.mm",
+      "ios/tests/overlay_probe.m"
+    ],
+    "cases": [
+      "One production engine across every 3/4/8P pair, including identical game allocation and no observed menu.",
+      "Established same-entry latch recovers on a verified new hash; mode/dungeon change alone remains blocked before board reads.",
+      "Empty nonce, loading scene and early/late identity races preserve the previous latch, then a complete new-entry read recovers.",
+      "Unsupported new match remains blocked; following supported match can recover independently.",
+      "Old arm and held token never carry into the new match, including reused token addresses; new explicit gesture completes and restores the input manager.",
+      "Session cancels old worker/gesture, handles an unavailable intermediate read, and restores shortcut readiness without automatic input.",
+      "The same overlay changes from unavailable after 4P to eligible 3P and dispatches only on a new explicit tap."
+    ]
+  },
+  "pending": ["Authorized local and macOS/arm64/GUI build tests", "4P to 3P device verification without restarting the app", "Existing fixed-leader and peer-exit device checks"]
+}

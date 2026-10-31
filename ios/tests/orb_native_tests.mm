@@ -11,6 +11,7 @@ static bool codeValid = true;
 static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSelectionWrite;
 static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
+static bool changeHashDuringEntryRead;
 static bool changeTurnDuringCoordinateRead;
 static unsigned changePeerDuringMultiRead;
 static bool changePeerDuringCoordinateRead;
@@ -38,6 +39,10 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (!Range(address, length)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (changeHashDuringEntryRead && address == Header + PHBattleEntryHashRVA) {
+        changeHashDuringEntryRead = false;
+        reinterpret_cast<uint8_t *>(address)[0] = 3;
+    }
     if (clearImplAfterSceneRead && address == Header + PHBattleImplRVA) {
         clearImplAfterSceneRead = false;
         Store<uintptr_t>(reinterpret_cast<uint8_t *>(address), 0);
@@ -120,6 +125,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     ignoreSelectionWrite = switchMultiInSelectionWrite = changeSourceInSelectionWrite = false;
     replaceHashDuringResizeRead = false;
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
+    changeHashDuringEntryRead = false;
     changeTurnDuringCoordinateRead = false;
     changePeerDuringMultiRead = 0; changePeerDuringCoordinateRead = false;
     changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;

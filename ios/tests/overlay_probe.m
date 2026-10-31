@@ -1270,6 +1270,21 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
                 @"Fixed-leader recovery still requires one explicit tap to dispatch one action");
+            shortcutAction = nil; shortcutActionCount = 0;
+            nextBoardStatus[@"canOnce"] = @NO;
+            nextBoardStatus[@"multiplayerMessage"] = @"多人資料未確認，暫不能轉一次";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled,
+                @"An unavailable read between competitive and co-op matches disables stale shortcuts");
+            nextBoardStatus[@"canOnce"] = @YES;
+            nextBoardStatus[@"multiplayerMessage"] = @"可轉一次；完成後停止\n3 人協力 · 本機 2／3";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(onceShortcut.enabled && !autoShortcut.enabled && !shortcutActionCount &&
+                [shortcutStatus.text isEqual:@"可轉一次；完成後停止"],
+                @"The same overlay recovers a new 3P entry after 4P without reloading or auto-dispatch");
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
+                @"A recovered 3P entry still requires an explicit tap");
             shortcutState[@"orbState"] = @{@"phase":@"stopped",@"message":@"目標未達成，未開始轉珠",@"canOnce":@NO,@"canStart":@NO,@"busy":@NO};
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled &&

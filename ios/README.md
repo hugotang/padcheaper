@@ -1,10 +1,10 @@
 # 編譯及載入 PADCheaper
 
-2026-10-31 後續源碼新增 [CIEL × 尤皮莉絲單劍八獨立配置](templates/halloween-ciel-gamewith-579537/kenpachi-1.md)、[多人本機隊長／助人盤面解析及 4 人下一盤按鈕修正](docs/orb-multiplayer-once.md)。**0.5.13 已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI；真機仍待驗收。** 詳見 [更新說明](docs/release-0.5.13.md) 及開發紀錄。 單劍八配置限單人技能循環；多人解析只提供明確點擊「轉一次」的最低盤面條件。待驗證狀態見 [開發紀錄](docs/development.md)。
+2026-10-31 本次 `0.5.14-orbs` 合併 4→3 跨場次恢復、固定隊長解析、手動目標入口及 4 人其他玩家退出修正，正按使用者指示編譯測試。實際建置與交付結果見 [開發紀錄](docs/development.md)、[更新說明](docs/release-0.5.14.md)。既有 [CIEL × 尤皮莉絲單劍八配置](templates/halloween-ciel-gamewith-579537/kenpachi-1.md) 與多人明確點擊「轉一次」保留；真機同步仍待驗收。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
-`0.5.13-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
+`0.5.14-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
 0.5.12 收齊技能窗口重查、可選斜向轉珠、雨龍首盤保留白哉、CIEL／雙劍八起步時序、明確點擊的 3／4／8 人「轉一次」及預設收合的 PC 浮動入口。完整 [更新說明](docs/release-0.5.12.md)、[多人操作](docs/orb-multiplayer-once.md) 與 [實機測試要點](docs/device-testing.md) 列出行為；[CI 84](https://github.com/hugotang/padcheaper/actions/runs/41171594592) 已通過完整回歸、arm64 編譯、簽章、瀏覽器與四份 GUI，結果見 [開發紀錄](docs/development.md)，多人同步仍待真機驗證。新時序需重新匯入對應模板，替換 dylib 不會改寫已存策略。
 
@@ -74,7 +74,7 @@ bash ios/build.sh
 
 ## Dopamine rootless 安裝
 
-完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.13 的重測順序見 [更新說明](docs/release-0.5.13.md)。
+完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.14 的重測順序見 [更新說明](docs/release-0.5.14.md)。
 
 ## LiveContainer 安裝
 
@@ -82,7 +82,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，閒置點一下展開快捷列，再點 PC 開設定，按 × 關閉面板。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示 `0.5.13-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示 `0.5.14-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
@@ -128,6 +128,6 @@ PC 面板的「單人入口設定」可修改 mode／source 的全部允許開�
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.13-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.14-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

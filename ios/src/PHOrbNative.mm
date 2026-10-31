@@ -127,8 +127,10 @@ bool ReadBoardEffects(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint3
 #include "PHOrbMultiplayer.inc"
 
 bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
-    PHOrbMultiplayerKind observedKind, bool multiplayerDisabled) {
+    PHOrbMultiplayerKind observedKind, bool multiplayerDisabled,
+    const PHBattleIdentity *observedEntry, bool &entryConfirmed) {
     state = {};
+    entryConfirmed = false;
     if (!NSThread.isMainThread || !frame.ready || !frame.header || !frame.player || frame.header > UINTPTR_MAX - 0x3000000u) {
         if (reason) *reason = @"等待已校驗的遊戲與登入";
         return false;
@@ -147,14 +149,6 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     state.present = true;
     state.identity = {header, game, 0, frame.player, frame.epoch, 0, 0, {}, int16_t(mode), source, multi};
     state.multiplayer.kind = PHOrbMultiplayerMode(int16_t(mode), multi);
-    if (multiplayerDisabled || state.multiplayer.kind == PHOrbMultiplayerUnsupported ||
-        (observedKind != PHOrbMultiplayerNone && state.multiplayer.kind != observedKind)) {
-        // Apply the scene latch before any board/leader read. A mid-battle
-        // selector reset must not temporarily enter the single-player reader.
-        state.multiplayerDisabled = true;
-        if (reason) *reason = @"此多人模式或連線過渡狀態尚不支援轉一次";
-        return true;
-    }
     uintptr_t object = 0, impl = 0, active = 0;
     if (!PHReadPointer(header + PHSceneTableRVA + 24, &object) || object != game) {
         if (reason) *reason = @"場景表的戰鬥物件未通過讀取校驗"; return false;
@@ -169,15 +163,33 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
         if (reason) *reason = @"戰鬥記憶體範圍未通過讀寫保護校驗"; return false;
     }
     state.identity.impl = impl;
+    if (reason) *reason = @"關卡入場識別未通過讀取校驗";
+    if (!PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) || !ids[0] || !ids[1] ||
+        !PHReadMemory(header + PHBattleEntryHashRVA, state.identity.entryHash, sizeof(state.identity.entryHash))) return false;
+    state.identity.dungeon = ids[0]; state.identity.floor = ids[1];
+    bool hashPresent = false;
+    for (uint8_t byte : state.identity.entryHash) hashPresent |= byte != 0;
+    if (!hashPresent) return false;
+    if (reason) *reason = @"讀取期間關卡入場識別或場景已改變";
+    if (!ConfirmOrbEntryIdentity(state.identity)) return false;
+    entryConfirmed = true;
+    const bool newEntry = observedEntry && !SameOrbBattleEntry(*observedEntry, state.identity);
+    if ((!newEntry && multiplayerDisabled) || state.multiplayer.kind == PHOrbMultiplayerUnsupported ||
+        (!newEntry && observedKind != PHOrbMultiplayerNone && state.multiplayer.kind != observedKind)) {
+        // A missed menu frame must not carry the previous match's latch into
+        // a verified new entry. Keep same-entry selector changes closed before
+        // any board/leader access, including a temporary return to solo mode.
+        state.multiplayerDisabled = true;
+        if (reason) *reason = @"此多人模式或連線過渡狀態尚不支援轉一次";
+        return true;
+    }
     uint32_t key1 = 0, key2 = 0, fixedX = 0, audit = 0;
     uint8_t shape[8]{};
     uintptr_t dialog = 0;
     uint16_t specialDrag = 0;
     uint8_t moveBlocked = 0, intro = 0;
     if (reason) *reason = @"戰鬥身分、受保護階段或輸入資料未通過讀取校驗";
-    if (!PHReadMemory(save + PHBattleDungeonOffset, ids, sizeof(ids)) || !ids[0] || !ids[1] ||
-        !PHReadMemory(header + PHBattleEntryHashRVA, state.identity.entryHash, sizeof(state.identity.entryHash)) ||
-        !PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
+    if (!PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
         !Decode(impl + PHBattlePhaseOffset, key1, key2, 0x766cfc6du, state.phase) ||
         !Decode(impl + PHBattleWaveOffset, key1, key2, 0x766cfc6du, state.wave) ||
         !Decode(impl + PHOrbFixedStartOffset, key1, key2, 0x6a875a8bu, fixedX) ||
@@ -188,10 +200,6 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
         !PHReadU32(save + PHBattleAuditOffset, &audit) || !PHReadPointer(impl + PHOrbDialogOffset, &dialog) ||
         !PHReadU16(impl + PHOrbSpecialDragOffset, &specialDrag) || !PHReadU8(impl + PHOrbMoveBlockedOffset, &moveBlocked) ||
         !PHReadU8(impl + PHBattleIntroOffset, &intro) || !PHReadGameInput(header, &state.input)) return false;
-    state.identity.dungeon = ids[0]; state.identity.floor = ids[1];
-    bool hashPresent = false;
-    for (uint8_t byte : state.identity.entryHash) hashPresent |= byte != 0;
-    if (!hashPresent) return false;
     if (reason) *reason = @"改盤動畫資料未通過讀取校驗";
     float resize[2]{};
     if (!PHReadMemory(impl + PHOrbResizeProgressOffset, resize, sizeof(resize)) ||
@@ -366,6 +374,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     uintptr_t _header, _realManager, _verifiedHeader;
     bool _staged, _multiplayerDisabled, _sawMultiplayer, _multiplayerOnce;
     bool _multiplayerBegan, _multiplayerReleaseSent;
+    bool _multiplayerEntryKnown;
+    PHBattleIdentity _multiplayerEntry;
     PHOrbMultiplayerKind _multiplayerKind;
     uintptr_t _multiplayerOwnedOrb, _multiplayerStartOrb;
     NSUInteger _multiplayerStartCell;
@@ -389,15 +399,45 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state || _staged) return NO;
     _multiplayerArmCandidate = {};
-    const BOOL read = Read(*state, frame, reason,
-        _sawMultiplayer ? _multiplayerKind : PHOrbMultiplayerNone, _multiplayerDisabled);
-    if (read && !state->present) {
+    bool entryConfirmed = false;
+    BOOL read = Read(*state, frame, reason,
+        _sawMultiplayer ? _multiplayerKind : PHOrbMultiplayerNone, _multiplayerDisabled,
+        _multiplayerEntryKnown ? &_multiplayerEntry : nullptr, entryConfirmed);
+    if (read && state->valid && !state->multiplayerDisabled && _verifiedHeader != frame.header) {
+        if (!CheckCode(frame.header, reason)) { state->valid = false; read = NO; }
+        else _verifiedHeader = frame.header;
+    }
+    if (read && state->valid && !state->multiplayerDisabled && state->multiplayer.kind != PHOrbMultiplayerNone) {
+        PHOrbSnapshot confirmed{}; confirmed.identity = state->identity; confirmed.multiplayer.kind = state->multiplayer.kind;
+        if (!ConfirmMultiplayerIdentity(*state) ||
+            !ReadMultiplayerFields(confirmed) || !SameMultiplayerRead(state->multiplayer, confirmed.multiplayer)) {
+            state->valid = false; read = NO;
+            if (reason) *reason = @"讀盤期間多人席位、回合或連線狀態已改變";
+        } else {
+            state->multiplayer = confirmed.multiplayer;
+            const bool window = PHOrbMultiplayerWindow(state);
+            state->ordinary &= window;
+            if (!window && reason) *reason = MultiplayerReason(*state);
+        }
+    }
+    // Publish the new entry only after the entire read agrees. An interrupted
+    // read must not retire an old latch or grant a new gesture candidate.
+    if (read && entryConfirmed && !ConfirmOrbEntryIdentity(state->identity)) {
+        state->valid = false; read = NO;
+        if (reason) *reason = @"讀取期間關卡入場識別或場景已改變";
+    }
+    const bool exited = read && !state->present;
+    const bool newEntry = read && entryConfirmed && _multiplayerEntryKnown &&
+        !SameOrbBattleEntry(_multiplayerEntry, state->identity);
+    if (exited || newEntry) {
         _multiplayerDisabled = _sawMultiplayer = false;
         _multiplayerKind = PHOrbMultiplayerNone;
         [self forgetMultiplayerGesture];
     }
-    if (state->multiplayerDisabled) _multiplayerDisabled = true;
-    if (state->present) {
+    if (exited) { _multiplayerEntryKnown = false; _multiplayerEntry = {}; }
+    else if (read && entryConfirmed) { _multiplayerEntryKnown = true; _multiplayerEntry = state->identity; }
+    if (read && entryConfirmed && state->multiplayerDisabled) _multiplayerDisabled = true;
+    if (read && entryConfirmed && state->present) {
         const auto kind = state->multiplayer.kind;
         if (kind != PHOrbMultiplayerNone) {
             if (_sawMultiplayer && kind != _multiplayerKind) _multiplayerDisabled = true;
@@ -412,29 +452,6 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (_sawMultiplayer && state->multiplayer.kind == PHOrbMultiplayerNone)
             state->multiplayer.kind = _multiplayerKind;
         [self forgetMultiplayerGesture]; return NO;
-    }
-    if (state->valid && !state->multiplayerDisabled && _verifiedHeader != frame.header) {
-        if (!CheckCode(frame.header, reason)) {
-            state->valid = false; [self forgetMultiplayerGesture]; return NO;
-        }
-        _verifiedHeader = frame.header;
-    }
-    if (state->valid && !state->multiplayerDisabled && state->multiplayer.kind != PHOrbMultiplayerNone) {
-        PHOrbSnapshot confirmed{}; confirmed.identity = state->identity; confirmed.multiplayer.kind = state->multiplayer.kind;
-        uint16_t mode = 0; uint32_t multi = 0;
-        if (!PHReadU16(frame.header + PHBattleModeRVA, &mode) || int16_t(mode) != state->identity.entryMode ||
-            !PHReadU32(frame.header + PHBattleMultiplayerRVA, &multi) || multi != state->identity.multiplayer ||
-            !ConfirmMultiplayerIdentity(*state) ||
-            !ReadMultiplayerFields(confirmed) || !SameMultiplayerRead(state->multiplayer, confirmed.multiplayer)) {
-            state->valid = false;
-            [self forgetMultiplayerGesture];
-            if (reason) *reason = @"讀盤期間多人席位、回合或連線狀態已改變";
-            return NO;
-        }
-        state->multiplayer = confirmed.multiplayer;
-        const bool window = PHOrbMultiplayerWindow(state);
-        state->ordinary &= window;
-        if (!window && reason) *reason = MultiplayerReason(*state);
     }
     if (_multiplayerBegan) {
         if (!state->valid || state->multiplayerDisabled || !PHOrbSameTurn(&_multiplayerGesture, state) ||
