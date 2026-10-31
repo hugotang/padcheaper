@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-2026-10-31 本次 `0.5.14-orbs` 合併 4→3 跨場次恢復、固定隊長解析、手動目標入口及 4 人其他玩家退出修正，正按使用者指示編譯測試。實際建置與交付結果見 [開發紀錄](docs/development.md)、[更新說明](docs/release-0.5.14.md)。既有 [CIEL × 尤皮莉絲單劍八配置](templates/halloween-ciel-gamewith-579537/kenpachi-1.md) 與多人明確點擊「轉一次」保留；真機同步仍待驗收。
+2026-10-31，`0.5.14-orbs` 已在 [CI 87](https://github.com/hugotang/padcheaper/actions/runs/41202426621) 通過原生／session／model／solver、iPhoneOS arm64 編譯及嚴格簽章、瀏覽器與四份 GUI。修正 4→3 跨場次恢復、固定隊長解析、手動目標入口及 4 人其他玩家退出判定。結果見 [開發紀錄](docs/development.md)、[更新說明](docs/release-0.5.14.md)；真機同步仍待驗收。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 

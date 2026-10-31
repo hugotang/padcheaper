@@ -4,17 +4,21 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-10-31：0.5.14，跨多人場次切換修正與本次建置
+## 2026-10-31：0.5.14-orbs 編譯與自動測試完成
 
-使用者回報同一 app 打完 4 人再進 3 人，浮動列顯示「多人資料未確認，暫不能轉一次」，重開 app 才恢復，並明確要求調查後編譯測試。本批建置獲授權，合併前面固定隊長、手動目標入口及其他玩家退出的源碼。
+使用者要求調查 4 人完成後進 3 人一直停用、重開 app 才恢復的問題，再編譯測試。[CI 87](https://github.com/hugotang/padcheaper/actions/runs/41202426621) 已通過本批完整 macOS 原生／session／model／solver／規則／config／策略測試、iPhoneOS arm64 編譯與嚴格簽章、瀏覽器及 Scene／舊式視窗的首次與重啟共四份 GUI。下方先前源碼段落與研究 JSON 保留建置前歷史，本節及交付 `verification.json` 才是此次自動驗證結果。
 
-找到源碼的具體缺陷：orb engine 只在成功讀到非關卡場景時清除多人模式記錄；下一次讀取先用舊模式攔截，尚未取得新入場識別。因此漏讀大廳時，4→3 會被當成同場異常而持續停用。本次沒有裝置中間紀錄，這是能解釋症狀的源碼路徑，不能當作真機已重現。
+源碼缺陷是 orb engine 只在成功讀到非關卡場景時清除多人模式記錄；下一次讀取先以舊模式攔截，尚未取得新入場識別。漏讀大廳時，4→3 會被當成同場異常而持續停用。已改用完整覆核的遊戲影像／帳號 epoch／非零入場 hash 限定場次，讀取成功後才發布新模式；同場 mode／selector／樓層／記憶體位址改變不解鎖。新場次撤銷舊求路、點擊及持珠權限；按鈕恢復不自行轉珠。本次沒有裝置中間紀錄，不能以 fixture 通過宣稱真機症狀已消失。
 
-改用已確認的遊戲影像／帳號 epoch／非零入場 hash 限定 latch 的場次。進入模式判定前與完整讀取後都覆核場景、帳號、hash、關卡、mode／selector 及 active impl；只有完整成功讀取才發布新場次。同場 mode／selector／樓層／記憶體位址改變不能自行解鎖。新場次清除舊模式與持珠權限，session 既有身分比較取消舊求路／輸入；新按鈕可用不自行開轉。
+同一 production engine 的 3／4／8 人各組切換、重用記憶體／token、漏讀大廳、既有 latch、空 hash、載入中、早晚識別競態及新手勢案例均已執行通過；session 在新場取消舊 worker／持珠，同一浮動介面恢復後仍需明確點擊。先前固定隊長總筆數／專用技能、手動入口與複製時重讀、其他玩家退出／重連初始化案例一併通過。詳見 [跨場次研究](../research/orb-multiplayer-entry-20261031.json)、[更新說明](release-0.5.14.md)。
 
-補入同一 production engine 的 3／4／8 人各組切換、重用記憶體／token、既有 latch、空 hash、載入中、雙讀競態及明確新手勢案例；另加 session 取消舊工作、重新點擊與同一浮動介面恢復案例。詳見 [跨場次研究](../research/orb-multiplayer-entry-20261031.json)。目前正在進行 `0.5.14-orbs` 本機測試與後續完整 macOS／arm64／GUI 建置，尚未交付；[更新說明](release-0.5.14.md) 記錄此批內容。
+Windows GCC 的 input／battle／preset／badge／timer 與 orb model／solver、五個 generator、leader catalog 及 formation 測試通過。43 份 JSON、Python／建置摘要 AST 與 diff 檢查通過；原始 IPA 的 158 組指紋（orb 107／battle 34／runtime 17）、UUID 及 SHA-256 全部吻合。本機測試依賴與最終 CI 源碼一致，macOS 原生與 UIKit 測試另由本次 CI 完成。
 
-Windows GCC 的 input／battle／preset／badge／timer 與 orb model／solver、五個 generator、leader catalog 及 formation 測試已通過。43 份 JSON、Python／建置摘要 AST 與 diff 檢查通過；原始 IPA 的 158 組指紋（orb 107／battle 34／runtime 17）、UUID 及 SHA-256 全部吻合。原生 ObjC／session 與 GUI 案例仍須本次 macOS CI 執行，不能以本機測試代替。
+四份 GUI 均為 `phase=done`、`success=1`、零 failures；已檢視本次產出的收合／展開、橫向、精確珠數手動編輯、設定與瀏覽器截圖。它們是 fixture 視窗，未執行 PAD 真機多人同步。
+
+二進位來源 `b298cce8ec56319cb562a14d9b3e9a92dfd4cd4b`，大小 5,039,600 bytes，SHA-256 `dffdb4c49f895787eacb8301b85ff1d28ba9572265575d80f864879f0c93adb4`；iPhoneOS arm64、最低 iOS 15.0。交付目標為 `E:/ipa/PADCheaper-0.5.14-orbs` 及同名 ZIP，所有舊版不覆寫。二進位、manifest、配置及研究 JSON 保持 CI 原件，只補齊文件結果、驗證證據與套件連結。
+
+真機優先驗收不重開 app 的 4→3、他人回合停用、再次輪到自己需再點一次；接著測 3→4／重複 4 人、固定隊長與額外助人、其他玩家退出後可用、本機失連／結算／持珠重置仍停止。多人同步與真機輸入尚未驗證，`device_verified=false`；詳見 [測試要點](device-testing.md)。
 
 ## 2026-10-31：4 人其他玩家退出後誤等同步，源碼待建置
 
