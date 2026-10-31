@@ -14,7 +14,68 @@ static PHOrbSnapshot MultiplayerModelState(unsigned players, unsigned seat) {
     m.remainingSeconds = 60;
     return s;
 }
+static void MultiplayerPeerExitModelTests() {
+    for (unsigned seat = 0; seat < 4; ++seat) {
+        const auto baseline = MultiplayerModelState(4, seat);
+        auto recovery = baseline; recovery.multiplayer.syncState = 5;
+        for (uint32_t step : {0u, 1u, 2u, 3u, 4u, UINT32_MAX}) {
+            recovery.multiplayer.syncStep = step;
+            Check(PHOrbCanPreview(&recovery) == (step == 2),
+                "4P peer recovery opens only after native entry has cleared selection and completed initialization");
+        }
+        for (unsigned peer = 0; peer < 4; ++peer) for (uint32_t status : {3u, 5u, 6u, 7u}) {
+            auto s = baseline;
+            auto &m = s.multiplayer;
+            m.disconnectKnown = true; m.disconnectSeat = peer; m.disconnectStatus = status;
+            m.networkFlags = 0x10003;
+            const bool remoteExit = peer != seat && (status == 5 || status == 6);
+            Check(PHOrbCanPreview(&s) == remoteExit,
+                "retained exit bit requires a validated other seat with native disconnected or retired status");
+            m.syncState = 15;
+            Check(PHOrbCanPreview(&s) == remoteExit,
+                "4P departure completion applies to the captured remote seat, not every local board");
+            if (!remoteExit) continue;
+            Check(PHOrbSameTurn(&baseline, &s), "a peer departure does not replace local board ownership");
+            m.syncState = 0;
+            for (unsigned failure = 0; failure < 14; ++failure) {
+                auto blocked = s;
+                if (failure == 0) blocked.multiplayer.disconnectKnown = false;
+                if (failure == 1) blocked.multiplayer.disconnectSeat = 4;
+                if (failure == 2) blocked.multiplayer.disconnectSeat = UINT32_MAX;
+                if (failure == 3) blocked.multiplayer.localStatus = 5;
+                if (failure == 4) blocked.multiplayer.connectionState = 0;
+                if (failure == 5) blocked.multiplayer.connectionState = 5;
+                if (failure == 6) blocked.multiplayer.networkFlags |= 0x10;
+                if (failure == 7) blocked.multiplayer.networkFlags &= ~1u;
+                if (failure == 8) blocked.multiplayer.resolvePending = 1;
+                if (failure == 9) blocked.multiplayer.countdownReady = 0;
+                if (failure == 10) blocked.multiplayer.finished = 1;
+                if (failure == 11) blocked.multiplayer.clockFlags = 0x14;
+                if (failure == 12) blocked.multiplayer.remainingSeconds = 0;
+                if (failure == 13) blocked.multiplayer.viewTeam = peer;
+                Check(!PHOrbCanPreview(&blocked),
+                    "remote exit support retains local connection, ownership, clock, resolution and terminal gates");
+            }
+        }
+    }
+    for (unsigned players : {3u, 4u, 8u}) for (uint32_t sync : {1u, 2u, 3u, 4u, 5u, 6u, 14u, 15u, 16u, 17u, 20u, 21u, 22u, UINT32_MAX}) {
+        auto s = MultiplayerModelState(players, 1);
+        auto &m = s.multiplayer;
+        m.syncState = sync; m.syncStep = 2;
+        m.disconnectKnown = true; m.disconnectSeat = 0; m.disconnectStatus = 5;
+        Check(PHOrbCanPreview(&s) == (players == 4 && (sync == 5 || sync == 15)),
+            "only reviewed 4P peer states are added; co-op, 8P, unknown and terminal states remain blocked");
+        m.networkFlags = 0x10001; m.syncState = 0;
+        Check(PHOrbCanPreview(&s) == (players == 4),
+            "3P and 8P retain their previous exit-bit policy even with a supplied peer descriptor");
+    }
+    auto modal = MultiplayerModelState(4, 1);
+    modal.multiplayer.syncState = 15; modal.multiplayer.syncStep = 1;
+    modal.multiplayer.disconnectKnown = true; modal.multiplayer.disconnectSeat = 0; modal.multiplayer.disconnectStatus = 5;
+    Check(!PHOrbCanPreview(&modal), "unreviewed departure modal substeps stay closed in 4P");
+}
 static void MultiplayerModelTests() {
+    MultiplayerPeerExitModelTests();
     for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
         auto s = MultiplayerModelState(players, seat);
         Check(PHOrbMultiplayerWindow(&s) && PHOrbCanPreview(&s), "all local seats have a recognized multiplayer input window");
@@ -121,7 +182,7 @@ static void MultiplayerModelTests() {
         for (uint32_t flags : {2u, 7u, 0xbu, 0x13u, 0x83u, 0x203u, 0x10003u}) {
             next = MultiplayerModelState(players, players - 1);
             next.multiplayer.networkFlags = flags;
-            Check(!PHOrbCanPreview(&next), "missing active flag and send/pass/sync/terminal bits still block all modes");
+            Check(!PHOrbCanPreview(&next), "missing active, send/pass/terminal bits and unconfirmed exit markers block all modes");
         }
     }
     auto thorn = MultiplayerModelState(3,0);

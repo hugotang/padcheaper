@@ -240,7 +240,9 @@
     "PHOrbLeaderExtraRegistryRVA": "0x27c8b80",
     "PHOrbLeaderExtraSelectionOffset": "0x5cc1f8",
     "PHOrbLeaderExtraStride": "0x350",
-    "PHOrbLeaderExtraSkillOffset": "0x54"
+    "PHOrbLeaderExtraSkillOffset": "0x54",
+    "PHOrbMultiSyncStepOffset": "0xa639c",
+    "PHOrbMultiDisconnectSeatOffset": "0xad6ec"
   },
   "guards": [
     {
@@ -1010,6 +1012,94 @@
       "length": 64,
       "bytes": "00008052e9fe0f360abe1494a009003488ed9052880ba072f5d900d0b5c21e91a16ae87814f09152a002148b149e0894e10300aac8ed9052880ba072a26ae878",
       "sha256": "ecd414fb992bb4d057bbc5ec0e0088b3ba2841a3a09e06868d1de2967a3690a9"
+    },
+    {
+      "name": "PHOrbMultiPeerDetectRVA",
+      "va": "0x10000dfc8",
+      "rva": "0xdfc8",
+      "length": 64,
+      "bytes": "880640b9ff0208eb40030054a81e40b908791e121f150071c0020054a11a40b900a33491b12c1494600000b4196040b90200001419008012e10315aa9a430094",
+      "sha256": "8d0ecc47edabf1f12be5dd4fdcb09abdd383056e6a4456c53e07118a68b0fc96"
+    },
+    {
+      "name": "PHOrbMultiRecoveryEntryRVA",
+      "va": "0x10000fe44",
+      "rva": "0xfe44",
+      "length": 64,
+      "bytes": "153840f988738c524801a072a86a68b81f0500710d0100541f090071602200541f0d0071000100541f110071e0210054c2020014280500341f050071a01c0054",
+      "sha256": "8cf1c320447b25d5d780a1eb794d6ec6e4cbb5e18b8df2e6d46363d052cbe1ac"
+    },
+    {
+      "name": "PHOrbMultiRecoveryResetRVA",
+      "va": "0x1000101e8",
+      "rva": "0x101e8",
+      "length": 64,
+      "bytes": "683a40f9091791522901a0721f6929f8493385522901a07208696938290080522101280ae00313aa82ca17940000805257ca1494e0030037603a40f9cd020094",
+      "sha256": "7195cd6bfdbef92f6582574deea31bfa2896b92b2a7a1916f344a5c8ef4e6748"
+    },
+    {
+      "name": "PHOrbMultiRecoveryReadyRVA",
+      "va": "0x100010298",
+      "rva": "0x10298",
+      "length": 64,
+      "bytes": "753a40f988738c524801a07249008052a96a28b8a89a429109214e3989010036089543bda89a429100010e9122a3189400b8a15e00d8215e0039201e0800381e",
+      "sha256": "c35b57b7ce244e4baf39a422f1da270a0befc3348173ee0135f2700db884aa23"
+    },
+    {
+      "name": "PHOrbMultiPeerDispatchRVA",
+      "va": "0x100012eb4",
+      "rva": "0x12eb4",
+      "length": 64,
+      "bytes": "1f390071000400541f3d007161080054e00313aa49fbff97d5ffff171f0d0071200300541f110071600300541f15007141070054e00313aae10314aacaf3ff97",
+      "sha256": "649a0ec0a48276cfa43d5a01161d442636db2996991a0ce6e21adf8616e58813"
+    },
+    {
+      "name": "PHOrbMultiPeerStatusRVA",
+      "va": "0x10000dd6c",
+      "rva": "0xdd6c",
+      "length": 64,
+      "bytes": "b6000036c800805209000014180080d2b6ff073708534039080b088b090d40b929011e32090d00b9a8008052081f00b90000805275d31494a000003497000034",
+      "sha256": "f330b06536f0b9c26c3e87af758040ebbd88597db9e9ebbfa714c03a11cb7e9b"
+    },
+    {
+      "name": "PHOrbMultiPeerSeatRVA",
+      "va": "0x10000de98",
+      "rva": "0xde98",
+      "length": 64,
+      "bytes": "89dd9a524901a072156929b814010036fd7b45a9f44f44a9f65743a9f85f42a9fa6741a9e923c66cc0035fd609738c524901a0722a7600d040bdc03d0069a93c",
+      "sha256": "42a8d7122ed7cc5adcb87ffffe2e92fc1ce718ad8891ee9a50e6cd8523deb6b2"
+    },
+    {
+      "name": "PHOrbMultiPeerFinishRVA",
+      "va": "0x100011d80",
+      "rva": "0x11d80",
+      "length": 64,
+      "bytes": "080080520200001468008052899a429129610e91287d0029080080123f21012908ce9f524801a072896a68b829011032896a28b820008052fd7b42a9f44f41a9",
+      "sha256": "af817884540ab027e8643f2ce21663f26b207e308db8967d502f42ef2b434605"
+    },
+    {
+      "name": "PHOrbMultiPeerViewRVA",
+      "va": "0x100013c70",
+      "rva": "0x13c70",
+      "length": 64,
+      "bytes": "09ce9f524901a0720a6969b84a01203709cb87524901a0722a0180368add9a524a01a0720a696ab80b6969b85f010b6b61000054090080520b000014096969b8",
+      "sha256": "5da8767487d87ab7b49e1cb92f55e2b3a7dd207ea6a4c3b81c1a021680705908"
+    },
+    {
+      "name": "PHOrbMultiInputPrecheckRVA",
+      "va": "0x100016678",
+      "rva": "0x16678",
+      "length": 64,
+      "bytes": "e00313aa57f2ff976007003788438a522800a0728b6a68b87f110071800400540000805236b1149440010037683a40f9098d42912a494eb92b554eb94c0dcb1a",
+      "sha256": "8a532b615701c7d2048f15334b18f899aa5de4f73f17619795bba676363aae5b"
+    },
+    {
+      "name": "PHOrbMultiPrecheckResultRVA",
+      "va": "0x10060e24c",
+      "rva": "0x60e24c",
+      "length": 64,
+      "bytes": "e00313aaa920e89780a3073788189452880ba0720aaa00f04ac11e91496968b829050011496928b8080340f9c9d48f526901a0721669e978df0600718b010054",
+      "sha256": "b9359c3c2ab13678bd69c4a55182bdb3e5273d04469a7a95550070f4819a8c04"
     }
   ],
   "thorn_budget": {

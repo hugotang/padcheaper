@@ -25,8 +25,19 @@ bool ReadMultiplayerFields(PHOrbSnapshot &state) {
         !PHReadU32(p + PHBattleTeamDescriptorOffset + m.localSeat * PHBattleTeamDescriptorStride + 28, &m.localStatus) ||
         !PHReadU32(p + PHOrbMultiNetworkFlagsOffset, &m.networkFlags) ||
         !PHReadU32(p + PHOrbMultiSyncStateOffset, &m.syncState) ||
+        !PHReadU32(p + PHOrbMultiSyncStepOffset, &m.syncStep) ||
         !PHReadU32(h + PHOrbMultiConnectionRVA, &m.connectionState) ||
         !PHReadU8(p + PHOrbMultiResolveOffset, &m.resolvePending)) return false;
+    m.disconnectKnown = false; m.disconnectSeat = m.disconnectStatus = 0;
+    if (m.kind == PHOrbMultiplayerFour && ((m.networkFlags & 0x10000u) || m.syncState == 15)) {
+        // The recorded seat is an index, not the co-op turn or helper selector.
+        // Never dereference an unbounded descriptor or infer a remote exit
+        // solely from a nonzero sync state / retained flag.
+        if (!PHReadU32(p + PHOrbMultiDisconnectSeatOffset, &m.disconnectSeat) || m.disconnectSeat >= m.teamCount ||
+            !PHReadU32(p + PHBattleTeamDescriptorOffset + m.disconnectSeat * PHBattleTeamDescriptorStride + 28,
+                &m.disconnectStatus)) return false;
+        m.disconnectKnown = true;
+    }
     m.known = true;
     if (m.kind == PHOrbMultiplayerThree) {
         // 0x10001ECB8: per-turn native clock, including paused accumulated time.
@@ -73,7 +84,9 @@ bool ReadMultiplayerFields(PHOrbSnapshot &state) {
 
 bool SameMultiplayerRead(const PHOrbMultiplayerState &a, const PHOrbMultiplayerState &b) {
     return PHOrbSameMultiplayerTurn(&a, &b) && a.localStatus == b.localStatus &&
-        a.networkFlags == b.networkFlags && a.syncState == b.syncState && a.connectionState == b.connectionState &&
+        a.networkFlags == b.networkFlags && a.syncState == b.syncState && a.syncStep == b.syncStep &&
+        a.connectionState == b.connectionState && a.disconnectKnown == b.disconnectKnown &&
+        a.disconnectSeat == b.disconnectSeat && a.disconnectStatus == b.disconnectStatus &&
         a.countdownReady == b.countdownReady && a.finished == b.finished && a.resolvePending == b.resolvePending &&
         a.clockKnown == b.clockKnown && a.clockFlags == b.clockFlags && a.clockStart == b.clockStart;
 }
@@ -111,9 +124,7 @@ NSString *MultiplayerReason(const PHOrbSnapshot &state) {
     if (m.kind == PHOrbMultiplayerThree && m.teamCount && m.turnSerial % m.teamCount != m.localSeat)
         return @"3 人協力：尚未輪到自己，請在自己的回合再按轉一次";
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家的隊伍；請返回自己的盤面";
-    if (m.localStatus != 3 ||
-        (m.connectionState != 2 && m.connectionState != 3 && m.connectionState != 6 && m.connectionState != 7) ||
-        m.syncState || !PHOrbMultiplayerNetworkReady(&m))
+    if (!PHOrbMultiplayerLocalReady(&m))
         return @"多人同步、交接或連線狀態尚未就緒";
     if (m.kind != PHOrbMultiplayerThree && (m.countdownReady != 1 || m.finished))
         return @"對戰尚未開始、已結束或正在結算";

@@ -108,6 +108,7 @@ cp ios/research/orb-poison-20261030.json ios/research/orb-poison-results-0511.js
 cp ios/research/orb-multiplayer-20261031.json ios/research/halloween-ciel-579537-native.json "$build_dir/research/"
 cp ios/research/orb-multiplayer-leaders-20261031.json ios/research/orb-multiplayer-next-board-20261031.json "$build_dir/research/"
 cp ios/research/orb-multiplayer-leader-capacity-20261031.json "$build_dir/research/"
+cp ios/research/orb-multiplayer-peer-exit-20261031.json "$build_dir/research/"
 cp ios/data/fixed-leader-skills.json "$build_dir/research/"
 cp ios/research/orb-0511-log-analysis-20261030.json ios/research/orb-0511-logs-20261030.json ios/research/orb_0511_log_analysis.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
@@ -149,6 +150,7 @@ metadata = {
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual/current native leader goals; local turn/view/source and current parameter checks, explicit 4P extra-skill helper handling; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
     "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
+    "multiplayer_peer_exit": "4P accepts initialized peer recovery sync 5/step 2 and a validated remote-seat departure at sync 15 or retained flag 0x10000; local status/connection/clock/board checks still required; recovery entry cancels old input; 3P/8P unchanged; source pending build and device verification",
     "orb_readiness_diagnostics": "current session and runtime button gates plus up to 16 distinct multiplayer states observed by UI snapshots, retained after exit; metadata-only release keeps the last complete observed board",
     "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; confirmed consumeAssist and final puzzleAfter; accepted-use group intervals and startAfter persist within the same battle/strategy across stop/restart; atomic single-file config commit; source/skill constraints never force a native choice",
     "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended plus independent single/double Kenpachi plans; single Kenpachi uses Unohana #14061 after a seven-step opening with mandatory three-skill supply and absorption rescue only; no universal seamless-skill or healing guarantee",

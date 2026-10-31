@@ -1214,6 +1214,35 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
                 @"Only a second explicit shortcut tap submits the next-board action");
+            nextBoardStatus[@"canOnce"] = @NO;
+            nextBoardStatus[@"multiplayerMessage"] = @"等待多人同步或連線恢復\n4 人對戰 · 本機 3／4";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            shortcutAction = nil; shortcutActionCount = 0;
+            // The session tests provide these gates; this fixture checks only
+            // that a peer-exit readiness refresh cannot bypass collapse/taps.
+            nextBoardStatus[@"canOnce"] = @YES;
+            nextBoardStatus[@"multiplayerMessage"] = @"可轉一次；完成後停止\n4 人對戰 · 本機 3／4";
+            nextBoardStatus[@"onceReadiness"] = @{@"multiplayer":@{@"syncState":@0, @"networkFlags":@65539,
+                @"disconnectKnown":@YES, @"disconnectSeat":@0, @"disconnectStatus":@5, @"localReady":@YES}};
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(onceShortcut.hidden && shortcutStatus.hidden && shortcutActionCount == 0,
+                @"Peer departure readiness leaves collapsed controls hidden and sends no game action");
+            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(onceShortcut.enabled && !autoShortcut.enabled && shortcutActionCount == 0 &&
+                [shortcutStatus.text isEqual:@"可轉一次；完成後停止"],
+                @"Unfolding after a peer exits shows the current local readiness without auto-start");
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
+                @"Peer departure still requires one explicit shortcut tap per local gesture");
+            nextBoardStatus[@"canOnce"] = @NO;
+            nextBoardStatus[@"multiplayerMessage"] = @"等待多人同步或連線恢復\n4 人對戰 · 本機 3／4";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            shortcutAction = nil; shortcutActionCount = 0;
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!onceShortcut.enabled && !shortcutActionCount &&
+                [shortcutStatus.text hasPrefix:@"等待多人同步"],
+                @"A later local connection loss disables the shortcut despite an older peer-exit trace");
             NSDictionary *readFailure = PHProbeFourLeaderPlan(7625,36024,NO);
             nextBoardStatus[@"canOnce"] = @NO;
             nextBoardStatus[@"liveLeaderPlan"] = readFailure;

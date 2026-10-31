@@ -168,6 +168,16 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
         (a->kind == PHOrbMultiplayerThree || a->clockStart == b->clockStart);
 }
 
+static bool PHOrbMultiplayerRemoteExit(const PHOrbMultiplayerState *state) {
+    // 0x10000DD10 records the affected seat and its disconnected/retired
+    // status. A local departure or an unconfirmed seat is not a peer event.
+    return state->kind == PHOrbMultiplayerFour && state->teamCount == 4 &&
+        state->localSeat < state->teamCount && state->viewTeam == state->localSeat &&
+        state->disconnectKnown && state->disconnectSeat < state->teamCount &&
+        state->disconnectSeat != state->localSeat &&
+        (state->disconnectStatus == 5 || state->disconnectStatus == 6);
+}
+
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state) {
     if (!state || (state->kind != PHOrbMultiplayerThree && state->kind != PHOrbMultiplayerFour &&
         state->kind != PHOrbMultiplayerEight)) return false;
@@ -175,8 +185,27 @@ bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state) {
     // 0x10001343c branch returns without clearing it, and later local boards
     // remain playable. 3P must finish its send/handoff; 8P clears the flags
     // and initializes the next board. Keep those modes' existing mask.
-    const uint32_t allowed = state->kind == PHOrbMultiplayerFour ? 0x23u : 0x21u;
+    uint32_t allowed = state->kind == PHOrbMultiplayerFour ? 0x23u : 0x21u;
+    // 0x100011BEC returns competitive sync to 0 and leaves bit 16 set.
+    // 0x100013C70 applies it to the recorded seat, not every local board.
+    if (PHOrbMultiplayerRemoteExit(state)) allowed |= 0x10000u;
     return (state->networkFlags & 1u) && !(state->networkFlags & ~allowed);
+}
+
+bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state) {
+    if (!state || !state->known || state->localStatus != 3 ||
+        (state->connectionState != 2 && state->connectionState != 3 &&
+         state->connectionState != 6 && state->connectionState != 7) ||
+        !PHOrbMultiplayerNetworkReady(state)) return false;
+    if (state->syncState == 0) return true;
+    if (state->kind != PHOrbMultiplayerFour) return false;
+    // Competitive dispatch returns nonblocking for peer recovery (5) and
+    // departure completion (15). Recovery entry clears the selected orb;
+    // accept only its initialized step 2, which skips the co-op modal.
+    // Keep unknown, local reconnect and terminal states closed.
+    if (state->syncState == 5) return state->syncStep == 2;
+    return state->syncState == 15 && (state->syncStep == 0 || state->syncStep == 2) &&
+        PHOrbMultiplayerRemoteExit(state);
 }
 
 bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
@@ -185,10 +214,8 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
     const PHOrbMultiplayerState *m = &state->multiplayer;
     if (!m->known || m->kind != PHOrbMultiplayerMode(state->identity.entryMode, state->identity.multiplayer) ||
         m->kind == PHOrbMultiplayerNone || m->kind == PHOrbMultiplayerUnsupported ||
-        !m->teamCount || m->localSeat >= m->teamCount || m->viewTeam != m->localSeat || m->localStatus != 3 ||
-        m->turnSerial > INT32_MAX || m->syncState != 0 ||
-        (m->connectionState != 2 && m->connectionState != 3 && m->connectionState != 6 && m->connectionState != 7) ||
-        !PHOrbMultiplayerNetworkReady(m) || m->resolvePending ||
+        !m->teamCount || m->localSeat >= m->teamCount || m->viewTeam != m->localSeat ||
+        m->turnSerial > INT32_MAX || !PHOrbMultiplayerLocalReady(m) || m->resolvePending ||
         !m->clockKnown || !isfinite(m->remainingSeconds) || m->remainingSeconds <= 0 || m->remainingSeconds > 86400)
         return false;
     if (m->kind == PHOrbMultiplayerThree)

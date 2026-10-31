@@ -12,6 +12,8 @@ static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSel
 static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
 static bool changeTurnDuringCoordinateRead;
+static unsigned changePeerDuringMultiRead;
+static bool changePeerDuringCoordinateRead;
 static bool changeLeaderDuringPairRead, changeLeaderDuringCoordinateRead;
 static bool changeLeaderCatalogDuringPairRead;
 static bool clearImplAfterSceneRead;
@@ -55,6 +57,24 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (changeTurnDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
         changeTurnDuringCoordinateRead = false;
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
+    }
+    if (changePeerDuringMultiRead == 1 && address == Impl + PHOrbMultiDisconnectSeatOffset) {
+        changePeerDuringMultiRead = 0;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiDisconnectSeatOffset), 1);
+    }
+    if (changePeerDuringMultiRead == 2 && address == Impl + PHBattleTeamDescriptorOffset + 28) {
+        changePeerDuringMultiRead = 0;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(address), 6);
+    }
+    if (changePeerDuringMultiRead == 3 && address == Impl + PHOrbMultiSyncStepOffset) {
+        changePeerDuringMultiRead = 0;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(address), 0);
+    }
+    if (changePeerDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changePeerDuringCoordinateRead = false;
+        const uint32_t seat = Load<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattlePlayerTeamOffset));
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiDisconnectSeatOffset), seat);
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTeamDescriptorOffset + seat * PHBattleTeamDescriptorStride + 28), 5);
     }
     const uintptr_t helper = Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride;
     if (changeLeaderCatalogDuringPairRead && address == helper + PHBattleCardParamOffset) {
@@ -101,6 +121,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     replaceHashDuringResizeRead = false;
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
     changeTurnDuringCoordinateRead = false;
+    changePeerDuringMultiRead = 0; changePeerDuringCoordinateRead = false;
     changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
     changeLeaderCatalogDuringPairRead = false;
     clearImplAfterSceneRead = false;

@@ -33,8 +33,10 @@ static void StartNativeMultiplayer(id<PHOrbEngine> engine, PHOrbSnapshot &state)
         "multiplayer token is acknowledged after original manager restoration");
 }
 #include "orb_multiplayer_leader_native_tests.inc"
+#include "orb_multiplayer_peer_native_tests.inc"
 
 static void MultiplayerNativeTests() {
+    MultiplayerPeerNativeTests();
     MultiplayerLeaderNativeTests();
     for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
         Reset(); SetNativeMultiplayer(players, seat);

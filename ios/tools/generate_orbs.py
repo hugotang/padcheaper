@@ -68,6 +68,10 @@ def generate(manifest):
                 'PHOrbMultiElapsedRVA', 'PHOrbMultiClockRVA', 'PHOrbMultiDeadlineRVA', 'PHOrbMultiTurnElapsedRVA',
                 'PHOrbMultiMatchLimitRVA', 'PHOrbMultiSyncRVA', 'PHOrbMultiTurnInitRVA',
                 'PHOrbMultiNextBoardRVA', 'PHOrbMultiSubmittedGateRVA',
+                'PHOrbMultiPeerDetectRVA', 'PHOrbMultiRecoveryEntryRVA', 'PHOrbMultiRecoveryResetRVA',
+                'PHOrbMultiRecoveryReadyRVA', 'PHOrbMultiPeerDispatchRVA', 'PHOrbMultiPeerStatusRVA',
+                'PHOrbMultiPeerSeatRVA', 'PHOrbMultiPeerFinishRVA', 'PHOrbMultiPeerViewRVA',
+                'PHOrbMultiInputPrecheckRVA', 'PHOrbMultiPrecheckResultRVA',
                 'PHOrbLeaderTeamSizeRVA', 'PHOrbLeaderLoadRVA', 'PHOrbLeaderStoreRVA', 'PHOrbLeaderReloadRVA',
                 'PHOrbLeaderInitializeRVA', 'PHOrbLeaderSwapRVA', 'PHOrbLeaderCatalogRVA', 'PHOrbLeaderExtraLookupRVA',
                 'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
@@ -78,7 +82,8 @@ def generate(manifest):
     multiplayer_fields = {
         'PHOrbMultiClockNumeratorRVA': 0x2c6f634, 'PHOrbMultiClockDenominatorRVA': 0x2c6f638,
         'PHOrbMultiConnectionRVA': 0x1b37258, 'PHOrbMultiNetworkFlagsOffset': 0xafe70,
-        'PHOrbMultiSyncStateOffset': 0xa6398, 'PHOrbMultiResolveOffset': 0x9299a,
+        'PHOrbMultiSyncStateOffset': 0xa6398, 'PHOrbMultiSyncStepOffset': 0xa639c,
+        'PHOrbMultiDisconnectSeatOffset': 0xad6ec, 'PHOrbMultiResolveOffset': 0x9299a,
         'PHOrbMultiTurnClockOffset': 0xa6368, 'PHOrbMultiMatchClockOffset': 0xafed8,
         'PHOrbMultiCountdownOffset': 0xafc81, 'PHOrbMultiFinishedOffset': 0xb7e08,
     }

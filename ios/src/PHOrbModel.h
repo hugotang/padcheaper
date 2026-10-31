@@ -134,9 +134,10 @@ typedef enum {
 typedef struct {
     PHOrbMultiplayerKind kind;
     uint32_t turnSerial, teamCount, localSeat, viewTeam, localStatus;
-    uint32_t networkFlags, syncState, connectionState;
+    uint32_t networkFlags, syncState, syncStep, connectionState;
+    uint32_t disconnectSeat, disconnectStatus;
     uint8_t countdownReady, finished, resolvePending, clockFlags;
-    bool known, clockKnown;
+    bool known, clockKnown, disconnectKnown;
     uint64_t clockStart;
     double remainingSeconds;
 } PHOrbMultiplayerState;
@@ -237,6 +238,7 @@ bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer);
 bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
+bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state);
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
 bool PHOrbInputContextReady(const PHOrbSnapshot *state);
 const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status);

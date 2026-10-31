@@ -1,0 +1,382 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "network_sync_verified": false,
+  "server_acceptance_verified": false,
+  "report": {
+    "symptom": "4P floating one-shot waits for multiplayer synchronization or connection recovery when another player disconnects or quits, although the local board remains manually playable.",
+    "user_confirmation": "4-player versus; another player disconnects/exits; local manual orb movement still works.",
+    "disabled_time_values_provided": false,
+    "limits": [
+      "No diagnostic snapshot was provided for this departure incident; the actual sync state, flags and connection values are unknown.",
+      "Static native branches identify concrete over-restrictions capable of causing the symptom. They do not prove which branch occurred on this device.",
+      "The shared competitive dispatch also covers 8P, but this change is deliberately limited to the confirmed 4P use case.",
+      "Unreviewed reconnect, terminal, unknown and modal states are still blocked; no blanket allowance for local disconnection."
+    ]
+  },
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Read-only IDA decompilation and disassembly on the existing workspace database; original/current bytes compared. Source and data inspection only; no game, fixture, generator, compiler, test suite or CI execution.",
+  "native_evidence": [
+    {
+      "va": "0x100542b74",
+      "finding": "Argument 0 recognizes competitive native categories 10 and 11; argument 1 recognizes only category 10. The patch applies the added states only to category 11 / selector 1 (4P)."
+    },
+    {
+      "va": "0x10000dfc8",
+      "guard": "PHOrbMultiPeerDetectRVA",
+      "finding": "sub_10000DF84 compares the loop seat with context+4 (the local seat) and skips self; it checks other nonretired descriptors against the peer liveness record and builds a peer mask."
+    },
+    {
+      "va": "0x10000d184",
+      "finding": "The sync dispatcher enters state 5 through the peer liveness path. Constant xmmword_100ED32E0 decodes to [5,0,0,UINT32_MAX]."
+    },
+    {
+      "va": "0x100012eb4",
+      "guard": "PHOrbMultiPeerDispatchRVA",
+      "finding": "Competitive sync 15 calls sub_100011BEC then returns 0; sync 5 calls sub_10000FE18 then returns 0. Noncompetitive cases return 1 after those calls. This alone is not used to permit all nonzero states."
+    },
+    {
+      "va": "0x10000fe44",
+      "guard": "PHOrbMultiRecoveryEntryRVA",
+      "finding": "Sync 5 reads its substep at impl+0xA639C. Step 0 initializes recovery, step 1 creates/skips its modal, step 2 enters the active recovery loop. Steps 3/4 take a modal path and are not allowed by this patch."
+    },
+    {
+      "va": "0x1000101e8",
+      "guard": "PHOrbMultiRecoveryResetRVA",
+      "finding": "Recovery initialization clears impl+0x988B8 (selected orb) and invokes the native board release/reset routine. Competitive mode then skips the co-op dialog branch. An old held token must not survive this reset."
+    },
+    {
+      "va": "0x100010298",
+      "guard": "PHOrbMultiRecoveryReadyRVA",
+      "finding": "The nonmodal competitive path stores 2 at impl+0xA639C before entering the ongoing recovery loop. New 4P eligibility requires this exact initialized substep."
+    },
+    {
+      "va": "0x10000fc50",
+      "finding": "Missing/disconnected peer cleanup explicitly skips the local seat and calls sub_10000DD10 for a remote descriptor; peer detection/cleanup are inspected only, never called by the dylib."
+    },
+    {
+      "va": "0x10000dd6c",
+      "guard": "PHOrbMultiPeerStatusRVA",
+      "finding": "sub_10000DD10 stores status 5 (removed/retired branch) or 6 (disconnected branch) at descriptor+28. These are the only peer descriptor statuses accepted for the new retained exit-marker allowance."
+    },
+    {
+      "va": "0x10000de98",
+      "guard": "PHOrbMultiPeerSeatRVA",
+      "finding": "The departure routine stores the affected seat at impl+0xAD6EC, then selects sync 15 for its completion path. Constant xmmword_100ED32F0 is [15,0,0,UINT32_MAX]."
+    },
+    {
+      "va": "0x100011d80",
+      "guard": "PHOrbMultiPeerFinishRVA",
+      "finding": "In competitive mode departure completion returns sync to 0, clears step/counters, and ORs 0x10000 into impl+0xAFE70. The marker can remain on an otherwise playable local board."
+    },
+    {
+      "va": "0x100013c70",
+      "guard": "PHOrbMultiPeerViewRVA",
+      "finding": "The remote-input path treats retained bit 16 as affecting the recorded departure seat only when impl+0xAD6EC equals impl+0xA3E58 (displayed team). The marker is not a global local-input prohibition."
+    },
+    {
+      "va": "0x100016678",
+      "guard": "PHOrbMultiInputPrecheckRVA",
+      "finding": "sub_1000164F4 calls sub_100012FD8 before input and exits with a blocking result if it returns 1. On the competitive local path the function returns 0 and does not invoke the remote-seat input handler. Hex-Rays inferred a void signature here; original instructions and the caller establish the boolean result."
+    },
+    {
+      "va": "0x100012fd8",
+      "finding": "Precheck calls sub_100012DBC(a1,2). A true result blocks. Competitive 4P permits the native retained submitted bit on subsequent eligible boards; existing next-board guards continue to protect that behavior."
+    },
+    {
+      "va": "0x10060e24c",
+      "guard": "PHOrbMultiPrecheckResultRVA",
+      "finding": "The actual phase-2 orb handler calls sub_1000164F4 and tests bit 0 of W0 before continuing. This connects the nonblocking competitive dispatch to the native local orb input path."
+    },
+    {
+      "va": "0x10001ad1c",
+      "finding": "Peer departure may move the shared leader/host selector at context+20; it does not shrink context+12 (team count) or replace the local seat. The 4P teamCount==4 requirement is retained."
+    }
+  ],
+  "change": {
+    "shared_predicate": "PHOrbMultiplayerLocalReady",
+    "callers": [
+      "PHOrbMultiplayerWindow",
+      "MultiplayerReason",
+      "MultiplayerWaitMessage",
+      "MultiplayerTrace"
+    ],
+    "four_player_sync": [
+      {
+        "sync": 0,
+        "note": "Existing synchronized state, with reviewed local connection and flags."
+      },
+      {
+        "sync": 5,
+        "step": [
+          2
+        ],
+        "note": "Only after peer recovery initialization; step 0/1/3/4 and unknown steps remain blocked."
+      },
+      {
+        "sync": 15,
+        "step": [
+          0,
+          2
+        ],
+        "requires": "Validated remote departure seat and descriptor status."
+      }
+    ],
+    "network_required_bits": "0x1",
+    "network_allowed_bits_4p_default": "0x23",
+    "network_optional_peer_exit_bit": "0x10000",
+    "peer_exit_requirements": [
+      "4P",
+      "teamCount == 4",
+      "localSeat in range",
+      "viewTeam == localSeat",
+      "disconnectKnown",
+      "disconnectSeat in range and not localSeat",
+      "disconnectStatus in [5,6]"
+    ],
+    "network_allowed_bits_3p_8p": "0x21",
+    "local_connection_states_unchanged": [
+      2,
+      3,
+      6,
+      7
+    ],
+    "local_status_unchanged": 3,
+    "read_only_fields": {
+      "PHOrbMultiSyncStepOffset": "0xa639c",
+      "PHOrbMultiDisconnectSeatOffset": "0xad6ec"
+    },
+    "descriptor_status_offset": 28,
+    "read_policy": "Only read an affected descriptor in 4P while sync 15 or bit 16 is active. Bounds check the recorded index before dereference. Both reads must agree on sync step, affected seat/status and all existing fields.",
+    "unchanged_gates": [
+      "phase 2",
+      "source 0",
+      "known mode/seat/view",
+      "native match clock and countdown",
+      "no pending resolution",
+      "time budget",
+      "quiet input",
+      "stable supported board",
+      "valid current leader data when selected",
+      "explicit one-shot arm and token ownership"
+    ],
+    "input_policy": "An unaffected local gesture survives remote-only departure metadata if its board/token remain valid. Recovery entry or local loss cancels. Only a new explicit tap can start again after cancellation/completion.",
+    "native_state_writes_added": 0,
+    "native_network_calls_added": 0,
+    "continuous_or_skill_input_added": false
+  },
+  "diagnostics": {
+    "new_fields": [
+      "syncStep",
+      "disconnectKnown",
+      "disconnectSeat",
+      "disconnectStatus",
+      "localReady"
+    ],
+    "seat_numbering": "zero-based; unknown departure seat is presented as -1",
+    "retention": "Add sync step and exit identity to the existing bounded 16-entry UI-observed readiness key. Time ticks still do not create entries; raw frames are not recorded.",
+    "privacy": "No account identifiers, process pointers, peer identifiers, packet contents or raw device logs stored."
+  },
+  "new_guard_count": 11,
+  "total_orb_guard_count": 107,
+  "guard_capture": ".build/ida-multiplayer/peer-exit-guards.json",
+  "guards": [
+    {
+      "name": "PHOrbMultiPeerDetectRVA",
+      "va": "0x10000dfc8",
+      "rva": "0xdfc8",
+      "length": 64,
+      "bytes": "880640b9ff0208eb40030054a81e40b908791e121f150071c0020054a11a40b900a33491b12c1494600000b4196040b90200001419008012e10315aa9a430094",
+      "sha256": "8d0ecc47edabf1f12be5dd4fdcb09abdd383056e6a4456c53e07118a68b0fc96"
+    },
+    {
+      "name": "PHOrbMultiRecoveryEntryRVA",
+      "va": "0x10000fe44",
+      "rva": "0xfe44",
+      "length": 64,
+      "bytes": "153840f988738c524801a072a86a68b81f0500710d0100541f090071602200541f0d0071000100541f110071e0210054c2020014280500341f050071a01c0054",
+      "sha256": "8cf1c320447b25d5d780a1eb794d6ec6e4cbb5e18b8df2e6d46363d052cbe1ac"
+    },
+    {
+      "name": "PHOrbMultiRecoveryResetRVA",
+      "va": "0x1000101e8",
+      "rva": "0x101e8",
+      "length": 64,
+      "bytes": "683a40f9091791522901a0721f6929f8493385522901a07208696938290080522101280ae00313aa82ca17940000805257ca1494e0030037603a40f9cd020094",
+      "sha256": "7195cd6bfdbef92f6582574deea31bfa2896b92b2a7a1916f344a5c8ef4e6748"
+    },
+    {
+      "name": "PHOrbMultiRecoveryReadyRVA",
+      "va": "0x100010298",
+      "rva": "0x10298",
+      "length": 64,
+      "bytes": "753a40f988738c524801a07249008052a96a28b8a89a429109214e3989010036089543bda89a429100010e9122a3189400b8a15e00d8215e0039201e0800381e",
+      "sha256": "c35b57b7ce244e4baf39a422f1da270a0befc3348173ee0135f2700db884aa23"
+    },
+    {
+      "name": "PHOrbMultiPeerDispatchRVA",
+      "va": "0x100012eb4",
+      "rva": "0x12eb4",
+      "length": 64,
+      "bytes": "1f390071000400541f3d007161080054e00313aa49fbff97d5ffff171f0d0071200300541f110071600300541f15007141070054e00313aae10314aacaf3ff97",
+      "sha256": "649a0ec0a48276cfa43d5a01161d442636db2996991a0ce6e21adf8616e58813"
+    },
+    {
+      "name": "PHOrbMultiPeerStatusRVA",
+      "va": "0x10000dd6c",
+      "rva": "0xdd6c",
+      "length": 64,
+      "bytes": "b6000036c800805209000014180080d2b6ff073708534039080b088b090d40b929011e32090d00b9a8008052081f00b90000805275d31494a000003497000034",
+      "sha256": "f330b06536f0b9c26c3e87af758040ebbd88597db9e9ebbfa714c03a11cb7e9b"
+    },
+    {
+      "name": "PHOrbMultiPeerSeatRVA",
+      "va": "0x10000de98",
+      "rva": "0xde98",
+      "length": 64,
+      "bytes": "89dd9a524901a072156929b814010036fd7b45a9f44f44a9f65743a9f85f42a9fa6741a9e923c66cc0035fd609738c524901a0722a7600d040bdc03d0069a93c",
+      "sha256": "42a8d7122ed7cc5adcb87ffffe2e92fc1ce718ad8891ee9a50e6cd8523deb6b2"
+    },
+    {
+      "name": "PHOrbMultiPeerFinishRVA",
+      "va": "0x100011d80",
+      "rva": "0x11d80",
+      "length": 64,
+      "bytes": "080080520200001468008052899a429129610e91287d0029080080123f21012908ce9f524801a072896a68b829011032896a28b820008052fd7b42a9f44f41a9",
+      "sha256": "af817884540ab027e8643f2ce21663f26b207e308db8967d502f42ef2b434605"
+    },
+    {
+      "name": "PHOrbMultiPeerViewRVA",
+      "va": "0x100013c70",
+      "rva": "0x13c70",
+      "length": 64,
+      "bytes": "09ce9f524901a0720a6969b84a01203709cb87524901a0722a0180368add9a524a01a0720a696ab80b6969b85f010b6b61000054090080520b000014096969b8",
+      "sha256": "5da8767487d87ab7b49e1cb92f55e2b3a7dd207ea6a4c3b81c1a021680705908"
+    },
+    {
+      "name": "PHOrbMultiInputPrecheckRVA",
+      "va": "0x100016678",
+      "rva": "0x16678",
+      "length": 64,
+      "bytes": "e00313aa57f2ff976007003788438a522800a0728b6a68b87f110071800400540000805236b1149440010037683a40f9098d42912a494eb92b554eb94c0dcb1a",
+      "sha256": "8a532b615701c7d2048f15334b18f899aa5de4f73f17619795bba676363aae5b"
+    },
+    {
+      "name": "PHOrbMultiPrecheckResultRVA",
+      "va": "0x10060e24c",
+      "rva": "0x60e24c",
+      "length": 64,
+      "bytes": "e00313aaa920e89780a3073788189452880ba0720aaa00f04ac11e91496968b829050011496928b8080340f9c9d48f526901a0721669e978df0600718b010054",
+      "sha256": "b9359c3c2ab13678bd69c4a55182bdb3e5273d04469a7a95550070f4819a8c04"
+    }
+  ],
+  "written_regressions": {
+    "executed": false,
+    "files": [
+      "ios/tests/orb_multiplayer_model_tests.inc",
+      "ios/tests/orb_multiplayer_peer_native_tests.inc",
+      "ios/tests/orb_multiplayer_peer_session_tests.inc",
+      "ios/tests/orb_native_tests.mm",
+      "ios/tests/overlay_probe.m"
+    ],
+    "coverage": [
+      "All distinct 4P local/peer seat pairs, descriptor statuses 5/6, retained flag and sync 15.",
+      "Initialized sync 5 step 2 only; entry/modal/unknown substeps remain blocked; 3P/8P policies unchanged.",
+      "Invalid/unknown/local affected seats, local status/connection loss, clock/countdown/resolve and unsupported flags.",
+      "Two native reads agree on affected seat, descriptor status and sync substep; local departure during coordinate conversion rejects began before input-pointer lease.",
+      "4P peer exit preserves current leader source and inactive extra helper semantics; missing leader data still blocks leader planning.",
+      "Peer leaves before solve, during solve or during held gesture; current explicit shot may complete, subsequent board requires a second explicit tap.",
+      "Native selection reset, local departure/disconnection and match end cancel without stale hold or release; explicit stop can release only a still-owned local token.",
+      "Collapsed shortcut stays collapsed; status recovery never starts input; later local loss disables the button despite stale diagnostic values.",
+      "Recovery step, additional peer departure and local loss appear in bounded readiness history; copying after scene exit retains observations."
+    ]
+  },
+  "static_checks": {
+    "checked_on": "2026-10-31",
+    "method": "JSON and Python AST parsing, lexical C/Objective-C/C++ inspection, source wiring and original Mach-O byte comparisons; no generator, compiler, test suite or GUI execution.",
+    "status": "passed-static-only",
+    "json_files": [
+      "ios/research/orb-multiplayer-peer-exit-20261031.json",
+      "ios/targets/orbs-23.6.0.json",
+      "ios/targets/battle-23.6.0.json",
+      "ios/targets/pad-23.6.0.json",
+      ".build/ida-multiplayer/peer-exit-guards.json"
+    ],
+    "python_ast_files": [
+      "ios/tools/generate_orbs.py",
+      "ios/tools/generate_battle.py"
+    ],
+    "embedded_python_blocks": 6,
+    "source_files": [
+      "ios/src/PHOrbModel.h",
+      "ios/src/PHOrbModel.c",
+      "ios/src/PHOrbMultiplayer.inc",
+      "ios/src/PHOrbSession.mm",
+      "ios/src/PHOrbNative.mm",
+      "ios/src/PHOrbLeaders.inc",
+      "ios/tests/orb_multiplayer_model_tests.inc",
+      "ios/tests/orb_multiplayer_native_tests.inc",
+      "ios/tests/orb_multiplayer_session_tests.inc",
+      "ios/tests/orb_multiplayer_peer_native_tests.inc",
+      "ios/tests/orb_multiplayer_peer_session_tests.inc",
+      "ios/tests/orb_native_tests.mm",
+      "ios/tests/orb_session_tests.mm",
+      "ios/tests/orb_solver_tests.cpp",
+      "ios/tests/overlay_probe.m",
+      "ios/tests/orb_fixed_leader_probe.inc"
+    ],
+    "source_sha256_utf8_lf": {
+      "ios/src/PHOrbModel.h": "d6050573666ec504f55e094352e04e408e81133381e5b1aa288d05bf557d4ed5",
+      "ios/src/PHOrbModel.c": "33a45cc9e27a446b19e96567f229c148bdbdbe263c7df19ac8b30ae36502764c",
+      "ios/src/PHOrbMultiplayer.inc": "6b6ebb9f675fcf0bc60349ff908b8b98f68d74fb0b556c2bf784bead2acb8feb",
+      "ios/src/PHOrbSession.mm": "e3229a6b8c47c840cec77ebe6a54dfdc67715f8cee09747dfeccdb7ee4f5fbe0",
+      "ios/src/PHOrbNative.mm": "a2156fd654ac572e55946402064f4242ee108079766aece7975acdddb2db0497",
+      "ios/src/PHOrbLeaders.inc": "ec6e2cff2840e56de71f28c34330cd7e52bc0266482a288d40e18e8dccfadd4f",
+      "ios/tests/orb_multiplayer_model_tests.inc": "e23c72d97cd619e8124af60e1e2e5abf0d16de5626f5ba6d5710259ba04fb064",
+      "ios/tests/orb_multiplayer_native_tests.inc": "760d62a329f0732266d10a2959f3f93f33aba1cb083a5bf808da00e2927dee38",
+      "ios/tests/orb_multiplayer_session_tests.inc": "61a41bde4ab92cb445616b275f6a6cf4deb47a51280e63e3b32a812a06be6fb1",
+      "ios/tests/orb_multiplayer_peer_native_tests.inc": "29c58156e8b46eadc6c0a382cbf824bba06bbb5aad579abddbfdacc3d1d006d9",
+      "ios/tests/orb_multiplayer_peer_session_tests.inc": "89e57cf2fd31aa8af4d623a142530a071e5626d3390744b56a0fb9f4fd645ac3",
+      "ios/tests/orb_native_tests.mm": "8bb917645709ac63067e908a4215ac4fc14ee73cf05f780193e32ecd98395281",
+      "ios/tests/orb_session_tests.mm": "9d722b465b5b3d08a6b1a60d53416a94a865822bb3fe919b1bbc91564599b370",
+      "ios/tests/orb_solver_tests.cpp": "bb59a65f0926a79e82e8342fd96fd016e6b7177aeccc9207b7fedfbab521dce0",
+      "ios/tests/overlay_probe.m": "6b4f4c28d61560aa591a458190756aa1e22aeb7d577475600ac4c72dd519aaba",
+      "ios/tests/orb_fixed_leader_probe.inc": "b36df1abc5e6f1a750b70cd17c1878770018d3312c2f13749558431ed14770b7"
+    },
+    "local_includes": 71,
+    "guard_counts": {
+      "orb": 107,
+      "battle": 34,
+      "new_peer_exit": 11
+    },
+    "all_orb_battle_guards_match_workspace_macho": true,
+    "workspace_binary_identity_matches": true,
+    "shared_predicate_and_double_read_wiring": true,
+    "diagnostic_fields": 28,
+    "unique_gui_steps": 27,
+    "diff_check": "passed",
+    "workflow": "workflow_dispatch-only",
+    "generated_headers_unchanged": true,
+    "generator_executed": false,
+    "compiled": false,
+    "test_suites_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "delivered_files_modified": false
+  },
+  "pending": [
+    "User-authorized build/test, including the earlier unbuilt fixed-leader and manual-editor changes.",
+    "4P device: capture disabled-time fields, confirm peer-only exit readiness, complete explicit shots before/after exit and next board, no automatic third shot.",
+    "Device verify recovery-entry token reset, local disconnection/termination, countdown end, background and manual interruption.",
+    "3P handoff and 8P next-board regression; peer/server synchronization remains unverified."
+  ]
+}

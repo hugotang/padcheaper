@@ -67,8 +67,7 @@ NSString *MultiplayerWaitMessage(const PHOrbSnapshot &state) {
     if (m.kind == PHOrbMultiplayerThree && m.turnSerial % m.teamCount != m.localSeat)
         return @"等待自己的回合，再按轉一次";
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家，請返回自己的盤面";
-    if (m.localStatus != 3 || m.syncState || !PHOrbMultiplayerNetworkReady(&m) ||
-        (m.connectionState != 2 && m.connectionState != 3 && m.connectionState != 6 && m.connectionState != 7))
+    if (!PHOrbMultiplayerLocalReady(&m))
         return @"等待多人同步或連線恢復";
     if (m.kind != PHOrbMultiplayerThree && m.finished) return @"對戰已結束，等待結算";
     if (m.kind != PHOrbMultiplayerThree && m.countdownReady != 1) return @"等待對戰開始倒數完成";
@@ -93,6 +92,9 @@ NSDictionary *MultiplayerTrace(const PHOrbSnapshot &state) {
         @"known":@(m.known), @"disabled":@(state.multiplayerDisabled), @"window":@(PHOrbMultiplayerWindow(&state)),
         @"turnSerial":@(m.turnSerial), @"teamCount":@(m.teamCount), @"localSeat":@(m.localSeat), @"viewTeam":@(m.viewTeam),
         @"localStatus":@(m.localStatus), @"networkFlags":@(m.networkFlags), @"syncState":@(m.syncState),
+        @"syncStep":@(m.syncStep), @"localReady":@(PHOrbMultiplayerLocalReady(&m)),
+        @"disconnectKnown":@(m.disconnectKnown), @"disconnectSeat":@(m.disconnectKnown ? int(m.disconnectSeat) : -1),
+        @"disconnectStatus":@(m.disconnectStatus),
         @"networkReady":@(PHOrbMultiplayerNetworkReady(&m)),
         @"connectionState":@(m.connectionState), @"countdownReady":@(m.countdownReady),
         @"finished":@(m.finished), @"resolvePending":@(m.resolvePending), @"clockFlags":@(m.clockFlags),
@@ -1605,6 +1607,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"leaderReadStatus":@(PHOrbLeaderReadStatusName(_live.leaderRead.status)),
         @"leaderReadPass":@(_live.leaderRead.pass), @"leaderReadSlot":@(_live.leaderRead.visibleSlot),
         @"networkFlags":@(multi.networkFlags), @"syncState":@(multi.syncState),
+        @"syncStep":@(multi.syncStep), @"disconnectKnown":@(multi.disconnectKnown),
+        @"disconnectSeat":@(multi.disconnectSeat), @"disconnectStatus":@(multi.disconnectStatus),
         @"connectionState":@(multi.connectionState), @"localStatus":@(multi.localStatus),
         @"countdownReady":@(multi.countdownReady), @"finished":@(multi.finished),
         @"resolvePending":@(multi.resolvePending)};
