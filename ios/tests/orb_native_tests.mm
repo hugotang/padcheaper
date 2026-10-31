@@ -12,6 +12,7 @@ static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSel
 static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
 static bool changeTurnDuringCoordinateRead;
+static bool clearImplAfterSceneRead;
 static bool rejectBattleProtection;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
@@ -33,6 +34,10 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (!Range(address, length)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (clearImplAfterSceneRead && address == Header + PHBattleImplRVA) {
+        clearImplAfterSceneRead = false;
+        Store<uintptr_t>(reinterpret_cast<uint8_t *>(address), 0);
+    }
     if (replaceHashDuringResizeRead && address == Impl + PHOrbResizeProgressOffset) {
         replaceHashDuringResizeRead = false;
         reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
@@ -82,6 +87,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     replaceHashDuringResizeRead = false;
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
     changeTurnDuringCoordinateRead = false;
+    clearImplAfterSceneRead = false;
     rejectBattleProtection = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
@@ -135,9 +141,15 @@ static void ReadIssueNativeTests() {
         Check([engine read:&captured frame:Frame() reason:&reason], "read-issue fixture captures a valid board before each failure");
         if (guard == 0) Put<uintptr_t>(Header + PHSceneTableRVA + 24, 0);
         if (guard == 1) Put<uintptr_t>(Header + PHGameMainRVA + 0x70, Impl + 1);
-        if (guard == 2) Put<uintptr_t>(Header + PHBattleImplRVA, 0);
+        // GameMain + 0x70 aliases PHBattleImplRVA in this target. Invalidate
+        // after its first read to reach the second, consistency-check read.
+        if (guard == 2) clearImplAfterSceneRead = true;
         if (guard == 3) rejectBattleProtection = true;
-        Check(![engine read:&failed frame:Frame() reason:&reason] && !failed.valid && [reason isEqual:messages[guard]],
+        const BOOL read = [engine read:&failed frame:Frame() reason:&reason];
+        if (read || failed.valid || ![reason isEqual:messages[guard]])
+            std::fprintf(stderr, "Read guard %u: read=%d valid=%d reason=%s\n", guard, int(read),
+                int(failed.valid), reason.UTF8String ?: "nil");
+        Check(!read && !failed.valid && [reason isEqual:messages[guard]],
             "each original battle-read guard names its specific failed check");
         Check(![engine stageCell:0 down:YES beginning:YES expected:&captured frame:Frame() reason:&reason] && !writes,
             "a read-guard failure cannot stage input from a previously captured board");
