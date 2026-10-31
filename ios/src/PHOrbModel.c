@@ -208,6 +208,18 @@ bool PHOrbInputContextReady(const PHOrbSnapshot *state) {
     return PHOrbMultiplayerWindow(state);
 }
 
+const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status) {
+    static const char *const names[] = {
+        "not-attempted", "ready", "input-context", "catalog-header", "catalog-capacity", "local-owner",
+        "skill-table", "protected-keys", "member-header", "protected-source", "source-card", "permanent-form",
+        "temporary-form", "temporary-turns", "extra-helper-state", "extra-registry", "extra-selection",
+        "extra-row", "extra-active-skill", "member-state", "transform-mismatch", "parameter-chain",
+        "leader-skill", "duplicate-source", "pair-changed", "catalog-changed", "owner-changed",
+        "skill-table-changed", "protected-keys-changed"
+    };
+    return (unsigned)status < sizeof(names) / sizeof(names[0]) ? names[status] : "unknown";
+}
+
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state) {
     if (!state || !state->present || !state->valid || state->multiplayerDisabled || !state->leadersValid ||
         !state->leaderNumbers[0] || !PHOrbInputContextReady(state)) return false;
@@ -330,7 +342,7 @@ bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {
     if (!goals || goals->count > PHOrbMaxGoals) return false;
     for (unsigned i = 0; i < goals->count; ++i) {
         const PHOrbGoal *g = &goals->items[i];
-        if (g->kind > PHOrbGoalFour || !g->count || g->count > PHOrbMaxCells / 3) return false;
+        if (g->kind > PHOrbGoalExact || !g->count || g->count > PHOrbMaxCells / 3) return false;
         if (g->kind == PHOrbGoalCombo) {
             if (g->colors || g->length) return false;
         } else {
@@ -340,7 +352,7 @@ bool PHOrbGoalsValid(const PHOrbGoalSet *goals) {
                 for (unsigned bit = 0; bit < 6; ++bit) colors += (g->colors >> bit) & 1u;
                 if (g->count > colors) return false;
             }
-            if (g->kind == PHOrbGoalMatch) {
+            if (g->kind == PHOrbGoalMatch || g->kind == PHOrbGoalExact) {
                 if (g->length < 3 || g->length > PHOrbMaxCells) return false;
             } else if (g->length) return false;
         }

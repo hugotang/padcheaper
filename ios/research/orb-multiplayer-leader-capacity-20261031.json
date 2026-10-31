@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "server_acceptance_verified": false,
+  "network_sync_verified": false,
+  "source_base_commit": "1d33b42e7dfd45d39282b9a52e21c1609ac12078",
+  "request": "Investigate 0.5.13 four-player automatic leader detection failure. User clarified that four-player helpers supply only an active skill and the mode uses a fixed draft team; GameWith was requested as a reference. Continue accumulating source.",
+  "method": "Read-only IDA analysis and public pinned card/skill facts. Source edits and written regression cases. Only data, Python AST, source lexical/wiring and Mach-O fingerprint checks are permitted before the next authorized build; no project generator, test suite, compiler, CI or package run.",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "reported_log": {
+    "version": "0.5.13-orbs",
+    "sha256": "7ecb64f6da4fd686f1f2d1f33e02b9ab8fffad30e19f0e0a8a713a04a208ba26",
+    "original_log_in_repository": false,
+    "entry_mode": 11,
+    "selector": 1,
+    "local_seat": 3,
+    "view_team": 3,
+    "team_count": 4,
+    "phase": 2,
+    "board_read": true,
+    "preview_ready": true,
+    "input_quiet": true,
+    "countdown_ready": 1,
+    "finished": 0,
+    "resolve_pending": 0,
+    "network_flags": 1,
+    "connection_state": 6,
+    "sync_state": 0,
+    "remaining_seconds": 183.728,
+    "blockers": ["leaders-unavailable"],
+    "leaders_valid": false,
+    "leader_numbers": [0, 0],
+    "conclusion": "Local operation and board checks passed; the optional native leader read failed before offline profile lookup. The old log has no failed stage or partial IDs, so it cannot identify the exact failing check or prove the new code fixes this device."
+  },
+  "gamewith": {
+    "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/407676",
+    "retrieved_on": "2026-10-31",
+    "text_cache": ".build/ida-multiplayer/gamewith-407676.txt",
+    "text_sha256": "c057bc0d9f8891bcc16d6862448acf9c2360f1c262796caff5bd3ca5be0ac9bc",
+    "findings": [
+      "The selected dungeon fixes the leader, time limit and matching bonuses.",
+      "The player chooses four subs from five randomly offered candidates.",
+      "Avatar skills are separate active skills; article season labels are not evidence of the current event roster."
+    ],
+    "no_helper_leader_basis": "User clarification plus native active=1 leader application gates at 0x10006FB04 and 0x10007156C; the article alone is not cited as proof of the inactive-helper implementation."
+  },
+  "native_evidence": [
+    {
+      "va": "0x10052f39c",
+      "guard": "PHOrbLeaderCatalogAllocateRVA",
+      "finding": "Allocator stores total record count at table+12 (save+0x5ef15c) and allocates 840 bytes per record; table+24 stores the pointer."
+    },
+    {
+      "va": "0x10068dd10",
+      "guard": "PHOrbLeaderCatalogDownloadRVA",
+      "finding": "Download parser computes ordinary max+1 and additional rows with ID>99999, allocates their sum, restores ordinary count at save+0x5ef158, and appends variants beginning at the ordinary bound. Guard at 0x10068de28 confirms allocation arguments and count reset in assembly. Raw card positions 0/1/25/26 correspond to ID/name/active/leader; leader is stored at parameter+92."
+    },
+    {
+      "va": "0x10052f558",
+      "guard": "PHOrbLeaderCatalogLinksRVA",
+      "finding": "Linker iterates [ordinaryCount,totalRecords), linking record+828 from the ordinary ID remainder. Guard at 0x10052f618 includes both bounds."
+    },
+    {
+      "va": "0x10052fc4c",
+      "finding": "Variant lookup follows record+828 until the full ID matches. 0.5.13 incorrectly bounded every link by ordinaryCount. A valid appended fixed record can therefore never pass its parameter check."
+    },
+    {
+      "va": "0x1005a12f0",
+      "finding": "Fixed variants preserve the million prefix through permanent forms. Four-player extra helper 10000000 is source slot 5, active=0, extra bit 2, base ID truncated to uint16 and selected private-row parameter. Protected source/form/temporary salts and team-bank address checks were rechecked against native code."
+    },
+    {
+      "va": "0x10006b0bc",
+      "finding": "Case 0xEB stores type235 color mask, minimum length and exact length separately at impl+744756+(leader side*352)+240/+242/+243. Cases 0xC1/0xDC preserve orb masks for L effects."
+    },
+    {
+      "va": "0x1005fc5cc",
+      "finding": "For type235 matching, the native uses the allowed color and either nonzero minimum with removedCount>=minimum or nonzero exact with removedCount==exact. The source planner only enables one nonzero length branch and conservatively requires exact groups in the first removal wave; it does not claim full native activation or repeated scaling."
+    }
+  ],
+  "layout_change": {"PHOrbLeaderCatalogRecordsOffset": "0x5ef15c"},
+  "guard_source": "../targets/orbs-23.6.0.json",
+  "guard_capture": ".build/ida-multiplayer/leader-capacity-guards.json",
+  "new_guard_count": 3,
+  "total_orb_guard_count": 96,
+  "read_changes": [
+    "Require totalRecords>=ordinaryCount, totalRecords<=0x20000, non-overflowing pointer arithmetic and a readable non-executable allocation span. Bound traversal by totalRecords with a 128-link limit; require exact full ID and parameter pointer.",
+    "Read the whole local leader pair twice, compare validated identity, and recheck total records alongside catalog pointer/count, owner, native skill count and protected keys before publishing. Single-player retains its ordinary-card path.",
+    "A verified inactive four-player extra helper validates its active skill but does not read or require its unused leader-skill field. Publish helper leader skill 0 and the explicit no-helper-leader label. Unknown ordinary helper failures are still unavailable.",
+    "Capture failed-read status/pass/slot, catalog counts, observed IDs, source/forms and extra-row facts separately from the trusted pair. Never publish partial or stale leader identities. No guest pointer, decoding key or account data in the new diagnostic.",
+    "Retain changes of failed stage/pass/slot in the existing 16-entry readiness history. Current open-window read failures explain the failed validation instead of asking the user to wait for their turn."
+  ],
+  "offline_index": {
+    "source": "https://github.com/Mapaler/PADDashFormation",
+    "revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+    "raw_card_url": "https://raw.githubusercontent.com/Mapaler/PADDashFormation/b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f/monsters-info/official-API/ja-card.json",
+    "raw_card_sha256": "cadd53b19f4d03ea219de1c1002e6c5a5d1bb26cb41a86d934a142e65f435f82",
+    "card_sha256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
+    "skill_sha256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7",
+    "parser_reference_url": "https://github.com/Mapaler/PADDashFormation/blob/b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f/script-skill-parser.js",
+    "parser_reference_sha256": "c922adfdb9909a9999c5946bbfb94568ef5d570e75123e27c15011d32b953c4e",
+    "raw_rows": 27028,
+    "ordinary_native_upper_bound": 14358,
+    "native_allocation_records": 27128,
+    "recognized_million_prefix_rows": 1455,
+    "ordinary_card_references_crosschecked": 14229,
+    "ordinary_skill_field_mismatches": 0,
+    "ordinary_profiles": 7724,
+    "new_source_facts": "../data/fixed-leader-skills.json",
+    "missing_profile_card_references": 117,
+    "missing_root_skills": 113,
+    "dependency_skill_records": 325,
+    "prefix9_card_references": 54,
+    "prefix9_scope": "54 dedicated variants are represented in the pinned raw data. This is a source inventory, not a claim that every row is in the current 4P event or that device behavior is verified.",
+    "format": "Only raw card native ID/name/leader references and necessary skill ID/type/params; no ckey, runtime account state, executable upstream code or precomputed generated profiles.",
+    "build_merge": "generate_leaders.py validates matching revision/source/region/skill hash, unique IDs, complete bounded noncyclic dependencies and no ordinary-profile replacement, then parses and embeds the supplemental profiles. update_leader_catalog.py gains reproducible fixed-fact extraction from ja-card.json. Neither tool has been executed for this batch.",
+    "mask_policy": "Only supplemental fixed match/L clauses with the exact known ten-orb mask 1023 use the explicitly warned sufficient six-color subset 63. Other unknown/poison-only masks and attack-color masks are never silently truncated.",
+    "exact_policy": "Supplemental type235 with only the exact field set uses first-wave exact removed-group length; exact4 keeps the existing four goal. Both fields set remain unsupported. The new manual exact goal round-trips without becoming a minimum.",
+    "examples": [
+      {"catalog_id": 9008388, "name": "超ボルケーノドラゴン", "skill": 35997, "intended_board_clauses": "6 Combo", "ordinary_skill": 27504},
+      {"catalog_id": 9007170, "name": "剛剣の蒼戦帝・ロイヤルオーク", "skill": 36017, "intended_board_clauses": "six-color L and 6 Combo"},
+      {"catalog_id": 9007625, "name": "氷極の黄龍帝・ファガン -RAI-", "skill": 36024, "intended_board_clauses": "3 attacking colors and one exact first-wave five"}
+    ],
+    "avatar_active_skill_example": 36861,
+    "generated_output_produced": false
+  },
+  "written_regressions": {
+    "status": "written-not-run",
+    "native": "Real fixed Volcano Dragon at appended index14600 plus active-skill-only helper; total bounds, capacity race, exact pointer, multiple links/cycles, zero leader skill and unused extra-helper leader field; existing all-seat and source-race cases retained.",
+    "diagnostics": "All original native failures now assert stages. Failed observations cannot authorize planning, failure stage changes are retained, identical observations do not flood history, recovery does not auto-start and leaving preserves history.",
+    "catalog": "Pinned facts and profiles preserve ordinary results; real fixed Volcano/Royal Oak/Fagan examples and prefix9 inventory; complete dependency/provenance/duplicate/cycle checks; only exact1023 masks narrowed with warnings; unknown masks and ambiguous lengths blocked.",
+    "solver": "Exact5 straight/L/cross/T, unmarked neighbor, under/oversize/merged groups, repeated groups, later gravity rejection, shared spinner phases, unmatchable/native minima/hazards, one legal swap plus replay on 6x5/7x6/5x4, invalid goal bounds.",
+    "planning_session_profiles": "Actual fixed skill rather than base card; inactive avatar skipped; exact descriptions and JSON/profile round-trip; idle fixed Fagan plan becomes available without starting input."
+  },
+  "static_checks": {
+    "status": "passed-static-only",
+    "checked_on": "2026-10-31",
+    "workspace_script": ".build/ida-multiplayer/leader-capacity-static.py",
+    "workspace_report": ".build/ida-multiplayer/leader-capacity-static.json",
+    "json_unique_key_files": 10,
+    "python_ast_files": 5,
+    "embedded_build_python_blocks": 1,
+    "source_lexical_files": 19,
+    "source_check_limit": "Literal/comment/delimiter and include/entry checks, not a C/Objective-C/C++ compiler or executed fixture.",
+    "ordinary_card_references_crosschecked": 14229,
+    "fixed_card_references": 117,
+    "fixed_root_skills": 113,
+    "fixed_dependency_records": 325,
+    "fixed_max_reference_depth": 2,
+    "fixed_facts_sha256_utf8_lf": "d6a2ea48e693c33ba9aefd30104dd0dd13bac7a3762600173b8bbb1f8bec5a86",
+    "pinned_data_hashes_match": true,
+    "guard_counts": {"orb": 96, "battle": 34, "new_capacity": 3},
+    "new_guards_match_workspace_macho": true,
+    "workspace_binary_identity_matches": true,
+    "diagnostic_statuses": 29,
+    "diagnostic_trace_fields": 25,
+    "diff_check": "passed",
+    "workflow": "workflow_dispatch-only",
+    "generated_headers_still_previous_source": true,
+    "generator_executed": false,
+    "compiled": false,
+    "test_suites_executed": false,
+    "ci_dispatched": false,
+    "delivered_files_modified": false
+  },
+  "limitations": [
+    "The old log does not reveal its failed native check; static defects are confirmed, but this user's corrected 4P leader detection still requires a new authorized build and device log.",
+    "Source facts do not imply all fixed/event skills are supported. Unknown types, unavailable data and unmodeled alternatives continue to block automatic leader planning; no base-card or Combo fallback.",
+    "Only minimum board clauses are planned. HP, skill-use count, composition, attack participation/binds, effective awakenings, full activation, damage, scores, added combos and skyfall are outside the planner.",
+    "Multiplayer remains explicit local one-shot only; no continuous input, skill use, team changes, timer/BGM/network mutation or native bank/network getter invocation.",
+    "New exact-length goal changes source validation/evaluation/UI only until the next build. Its fixtures, catalog merger and device behavior have not run. Delivered 0.5.13 and earlier CI86 do not validate this batch."
+  ],
+  "pending": [
+    "Explicitly authorized generators, full model/solver/native/planning/session/profile regression, iPhoneOS compilation and GUI checks on the same final source.",
+    "New-version 4P fixed leader detection and private avatar active skill; actual card/skill IDs, exact/any-orb conditions, current event coverage and inactive helper label.",
+    "Manual copied exact-goal edits and persistence; 3/8P plus single-player regression; failure/recovery/history, local gesture release and multiplayer synchronization."
+  ]
+}

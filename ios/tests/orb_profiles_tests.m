@@ -143,6 +143,14 @@ int main(void) {
         Check(PHOrbProfilesValid(restored) && [PHOrbProfileNamed(restored,@"team")[@"settings"][@"recovery"] isEqual:heartPolicy] &&
             !PHOrbProfileNamed(original,@"team")[@"settings"][@"recovery"],
             "heart threshold, shape and independent groups are saved with the chosen strategy without mutating legacy profiles");
+        settings[@"mode"] = @"manual";
+        settings[@"goals"] = @[@{@"kind":@"exact",@"colors":@63,@"count":@1,@"length":@5}];
+        updated = PHOrbProfilesUpdatingSettings(original,settings);
+        json = [NSJSONSerialization dataWithJSONObject:updated options:0 error:NULL];
+        restored = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+        Check(PHOrbProfilesValid(restored) &&
+            [PHOrbProfileNamed(restored,@"team")[@"settings"][@"goals"] isEqual:settings[@"goals"]],
+            "copied exact-length leader goal survives a saved manual profile without becoming a minimum");
         settings[@"recovery"] = @{};
         Check(!PHOrbCanonicalSettings(settings) && !PHOrbProfilesUpdatingSettings(original,settings),
             "malformed conditional hearts cannot be dropped while saving other strategy fields");

@@ -165,6 +165,7 @@ static void ShapeTests() {
 
 #include "orb_effect_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
+#include "orb_exact_solver_tests.inc"
 #include "orb_thorn_solver_tests.inc"
 #include "orb_t_boundary_solver_tests.inc"
 #include "orb_search_recovery_tests.inc"
@@ -182,6 +183,7 @@ int main() {
     PoisonHeartFourSolverTests();
     ThornSolverTests();
     OrbShapeSolverTests();
+    ExactLengthSolverTests();
     SearchRecoveryTests();
     RecordedThornSolverTests();
     std::atomic_bool cancel{false}; PHOrbRoute route{};

@@ -4,13 +4,13 @@
 #include <math.h>
 
 NSArray<NSString *> *PHOrbGoalKinds(void) {
-    return @[@"combo", @"colors", @"match", @"l", @"cross", @"t", @"square", @"row", @"column", @"four"];
+    return @[@"combo", @"colors", @"match", @"l", @"cross", @"t", @"square", @"row", @"column", @"four", @"exact"];
 }
 
 NSString *PHOrbGoalTitle(NSString *kind) {
     NSUInteger index = [PHOrbGoalKinds() indexOfObject:kind ?: @""];
     return index == NSNotFound ? @"未知條件" : @[@"Combo", @"多色消除", @"連消", @"L 字", @"十字", @"T 字",
-        @"3×3 正方形", @"整橫排", @"整直行", @"四連"][(NSUInteger)index];
+        @"3×3 正方形", @"整橫排", @"整直行", @"四連", @"精確顆數"][(NSUInteger)index];
 }
 
 NSString *PHOrbColorTitle(NSUInteger mask) {
@@ -63,6 +63,7 @@ NSString *PHOrbGoalDescription(NSDictionary *goal) {
     if ([kind isEqual:@"combo"]) return [NSString stringWithFormat:@"至少 %lu Combo", (unsigned long)count];
     if ([kind isEqual:@"colors"]) return [NSString stringWithFormat:@"%@中消除 %lu 種顏色", color, (unsigned long)count];
     NSString *shape = [kind isEqual:@"match"] ? [NSString stringWithFormat:@"至少 %@ 顆連消", goal[@"length"]] : PHOrbGoalTitle(kind);
+    if ([kind isEqual:@"exact"]) shape = [NSString stringWithFormat:@"首批剛好 %@ 顆連消", goal[@"length"]];
     return [NSString stringWithFormat:@"%@ %@ × %lu 組", color, shape, (unsigned long)count];
 }
 
@@ -80,9 +81,13 @@ NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary
     NSMutableOrderedSet *warnings = [NSMutableOrderedSet orderedSet], *unsupported = [NSMutableOrderedSet orderedSet];
     const BOOL multiplayer = state && !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer);
     if (!PHOrbLeaderContextReady(state)) {
+        NSString *message = multiplayer ? @"未能確認本機回合的隊長／助人；請在自己的操作窗口重新讀盤，或改用指定形狀。" :
+            @"未能確認目前隊長與助人；請重新讀盤，或改用指定形狀。";
+        if (multiplayer && PHOrbInputContextReady(state) && state->leaderRead.status != PHOrbLeaderReadNotAttempted &&
+            state->leaderRead.status != PHOrbLeaderReadReady)
+            message = @"本機隊長資料讀取未通過校驗；可複製診斷查看原因，或改用指定形狀。";
         return @{@"available":@NO, @"goals":@[], @"leaders":@[], @"warning":@"",
-            @"message":multiplayer ? @"未能確認本機回合的隊長／助人；請在自己的操作窗口重新讀盤，或改用指定形狀。" :
-                @"未能確認目前隊長與助人；請重新讀盤，或改用指定形狀。"};
+            @"message":message};
     }
     NSDictionary *cards = [catalog[@"cards"] isKindOfClass:NSDictionary.class] ? catalog[@"cards"] : @{};
     NSDictionary *skills = [catalog[@"skills"] isKindOfClass:NSDictionary.class] ? catalog[@"skills"] : @{};

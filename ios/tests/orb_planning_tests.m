@@ -47,6 +47,40 @@ static void MultiplayerLeaderPlanningTests(void) {
             Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"column",4,1,0)]] &&
                 [plan[@"leaders"][1] containsString:@"不提供助人隊長技"],
                 "4P extra helper is disclosed and never treated as a missing normal card");
+            changed.leaderContext.catalogIDs[0] += 1000000;
+            changed.leaderContext.skillIDs[0] = 54198;
+            changed.leaderContext.skillIDs[1] = 6196;
+            plan = PHOrbPlanForLeaders(&changed);
+            Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"colors",31,4,0)]] &&
+                [plan[@"leaders"][0] containsString:@"固定隊伍"] &&
+                [plan[@"leaders"][1] containsString:@"不提供助人隊長技"],
+                "fixed 4P leader contributes its own skill while extra helper never requires a leader profile");
+            changed.leaderContext.skillIDs[0] = 120000;
+            Check(![PHOrbPlanForLeaders(&changed)[@"available"] boolValue],
+                "unindexed fixed leader still blocks instead of borrowing the ordinary card skill");
+            changed = s; changed.leadersValid = false; memset(&changed.leaderContext,0,sizeof(changed.leaderContext));
+            changed.leaderRead.status = PHOrbLeaderReadParameter; changed.leaderRead.catalogID = 1014342;
+            plan = PHOrbPlanForLeaders(&changed);
+            Check(![plan[@"available"] boolValue] && [plan[@"leaders"] count] == 0 &&
+                [plan[@"message"] hasPrefix:@"本機隊長資料讀取未通過校驗"],
+                "failed parameter observations are diagnostic only and explain a currently open local window");
+            SetLeaderContextFixture(&changed,8388,35997,13834,63039); SetExtraLeaderFixture(&changed);
+            changed.leaderContext.catalogIDs[0] = changed.leaderContext.parameterIDs[0] = 9008388;
+            plan = PHOrbPlanForLeaders(&changed);
+            Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"combo",0,6,0)]],
+                "real fixed Volcano Dragon profile is present without a base-card or helper requirement");
+            SetLeaderContextFixture(&changed,7170,36017,13834,63039); SetExtraLeaderFixture(&changed);
+            changed.leaderContext.catalogIDs[0] = changed.leaderContext.parameterIDs[0] = 9007170;
+            plan = PHOrbPlanForLeaders(&changed);
+            Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"l",63,1,0),Goal(@"combo",0,6,0)]] &&
+                [plan[@"warning"] containsString:@"任意珠種條件只以"],
+                "fixed Royal Oak uses an explicit safe six-color L rather than the normal water profile");
+            SetLeaderContextFixture(&changed,7625,36024,13834,63039); SetExtraLeaderFixture(&changed);
+            changed.leaderContext.catalogIDs[0] = changed.leaderContext.parameterIDs[0] = 9007625;
+            plan = PHOrbPlanForLeaders(&changed);
+            Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"colors",31,3,0),Goal(@"exact",63,1,5)]] &&
+                [plan[@"message"] containsString:@"首批剛好 5 顆"],
+                "fixed Fagan retains its exact five instead of silently widening to at least five");
         }
         SetLeaderContextFixture(&s,14184,65745,14190,65762); plan = PHOrbPlanForLeaders(&s);
         Check([plan[@"available"] boolValue] && [plan[@"goals"] count] == 1 &&
@@ -61,9 +95,14 @@ int main(void) {
         NSArray *manual = @[Goal(@"l", 4, 1, 0), Goal(@"cross", 32, 1, 0), Goal(@"combo", 0, 7, 0)];
         Check(PHOrbReadGoals(manual, &goals) && goals.count == 3 && [PHOrbGoalsJSON(&goals) isEqual:manual],
               "manual multi-goal plan round-trips without changing meaning");
+        NSArray *exact = @[Goal(@"exact",63,1,5),Goal(@"match",63,1,5)];
+        Check(PHOrbReadGoals(exact,&goals) && [PHOrbGoalsJSON(&goals) isEqual:exact] &&
+            [PHOrbGoalDescription(exact[0]) containsString:@"首批剛好 5 顆"],
+            "copied fixed-team goals preserve exact semantics in manual JSON and descriptions");
         for (id invalid in @[@YES, @"l", NSNull.null, @[@1], @[@{@"kind":@"unknown"}],
             @[Goal(@"l", 64, 1, 0)], @[Goal(@"combo", 1, 7, 0)], @[Goal(@"colors", 3, 3, 0)],
-            @[Goal(@"match", 1, 1, 2)], @[Goal(@"l", 1, 1, 3)], @[Goal(@"combo", 0, 15, 0)],
+            @[Goal(@"match", 1, 1, 2)], @[Goal(@"exact",1,1,0)], @[Goal(@"exact",1,1,43)],
+            @[Goal(@"l", 1, 1, 3)], @[Goal(@"combo", 0, 15, 0)],
             @[Goal(@"l", 1, 1, 0), Goal(@"l", 1, 2, 0)]]) {
             Check(!PHOrbReadGoals(invalid, &goals) && goals.count == 0, "malformed, duplicate, or out-of-range goals are rejected atomically");
         }

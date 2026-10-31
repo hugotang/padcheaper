@@ -20,6 +20,15 @@ static void MultiplayerModelTests() {
         Check(PHOrbMultiplayerWindow(&s) && PHOrbCanPreview(&s), "all local seats have a recognized multiplayer input window");
         SetLeaderContextFixture(&s,14242,66063,13834,63039);
         Check(PHOrbLeaderContextReady(&s), "leader context follows every validated local seat");
+        auto diagnosticOnly = s;
+        diagnosticOnly.leaderRead.status = PHOrbLeaderReadParameter;
+        diagnosticOnly.leaderRead.catalogID = 1000001;
+        Check(PHOrbSameLeaders(&s,&diagnosticOnly),
+            "failed-check observations never participate in trusted leader identity");
+        diagnosticOnly.leadersValid = false; diagnosticOnly.leaderContext = {};
+        diagnosticOnly.leaderRead.status = PHOrbLeaderReadReady;
+        Check(!PHOrbLeaderContextReady(&diagnosticOnly),
+            "a diagnostic ready label cannot authorize an absent validated leader context");
         for (unsigned field = 0; field < 10; ++field) {
             auto changed = s;
             if (field == 0) changed.leaderContext.sourceSlots[0] = 2;

@@ -99,6 +99,21 @@ NSDictionary *MultiplayerTrace(const PHOrbSnapshot &state) {
         @"clockKnown":@(m.clockKnown), @"clockStart":@(m.clockStart),
         @"remainingSeconds":@(std::isfinite(m.remainingSeconds) ? m.remainingSeconds : 0)};
 }
+NSDictionary *LeaderReadTrace(const PHOrbSnapshot &state) {
+    const auto &d = state.leaderRead;
+    // These are failed-check observations, never a partially trusted pair.
+    return @{@"status":@(PHOrbLeaderReadStatusName(d.status)), @"pass":@(d.pass),
+        @"visibleSlot":@(d.pass == 1 || d.pass == 2 ? int(d.visibleSlot) : -1),
+        @"catalogCount":@(d.catalogCount), @"catalogRecords":@(d.catalogRecords), @"skillCount":@(d.skillCount),
+        @"catalogIndex":@(d.catalogIndex), @"catalogID":@(d.catalogID), @"parameterID":@(d.parameterID),
+        @"skillID":@(d.skillID), @"sourceSlot":@(d.sourceSlot), @"sourceCatalogID":@(d.sourceCatalogID),
+        @"formID":@(d.formID), @"temporaryID":@(d.temporaryID), @"temporaryTurns":@(d.temporaryTurns),
+        @"activeFlags":@(d.activeFlags), @"extraFlags":@(d.extraFlags),
+        @"extraCount":@(d.extraCount), @"extraSelection":@(d.extraSelection),
+        @"extraRecord":@(d.extraRecord), @"extraSkill":@(d.extraSkill),
+        @"ownerFlags":@(d.ownerFlags), @"ownerBusy":@(d.ownerBusy),
+        @"ownerBankMatches":@(d.ownerBankMatches), @"parameterMatches":@(d.parameterMatches)};
+}
 NSDictionary *LeaderTrace(const PHOrbSnapshot &state) {
     const auto &c = state.leaderContext;
     // Deliberately omit process pointers. Sources use zero-based native slots.
@@ -113,7 +128,7 @@ NSDictionary *LeaderTrace(const PHOrbSnapshot &state) {
         @"activeFlags":@[@(c.activeFlags[0]), @(c.activeFlags[1])],
         @"extraFlags":@[@(c.extraFlags[0]), @(c.extraFlags[1])],
         @"extraHelper":@(c.extraHelper), @"extraSelection":@(c.extraSelection), @"extraRecord":@(c.extraRecord),
-        @"extraSkill":@(c.extraSkill)};
+        @"extraSkill":@(c.extraSkill), @"read":LeaderReadTrace(state)};
 }
 PHOrbSolveOptions OptionsForQuality(NSString *quality) {
     return PHOrbOptionsForQuality([quality isEqual:@"fast"] ? PHOrbSearchQuality::Fast :
@@ -1573,6 +1588,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"dragActive":@(_live.dragged != 0), @"inputQuiet":@(PHInputIsQuiet(&_live.input)),
         @"remainingFrames":@(_live.remainingFrames), @"fps":@(_live.fps),
         @"leaderReady":@(!multiplayer || leaderReady), @"timeReady":@(timeReady),
+        @"leaderRead":LeaderReadTrace(_live),
         @"busy":@(busy), @"inputFault":@(_inputFault), @"openingInFlight":@(_openingInFlight),
         @"sessionPhase":_phase, @"nativePhase":@(_live.phase), @"generation":@(_generation),
         @"completed":@(_completed), @"readReason":_liveReadReason,
@@ -1586,6 +1602,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"turn":@(multi.turnSerial), @"seat":@(multi.localSeat), @"view":@(multi.viewTeam),
         @"dungeon":@(_live.identity.dungeon), @"floor":@(_live.identity.floor), @"wave":@(_live.wave),
         @"readReason":_liveReadReason, @"clockFlags":@(multi.clockFlags),
+        @"leaderReadStatus":@(PHOrbLeaderReadStatusName(_live.leaderRead.status)),
+        @"leaderReadPass":@(_live.leaderRead.pass), @"leaderReadSlot":@(_live.leaderRead.visibleSlot),
         @"networkFlags":@(multi.networkFlags), @"syncState":@(multi.syncState),
         @"connectionState":@(multi.connectionState), @"localStatus":@(multi.localStatus),
         @"countdownReady":@(multi.countdownReady), @"finished":@(multi.finished),

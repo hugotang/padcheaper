@@ -71,7 +71,8 @@ def generate(manifest):
                 'PHOrbLeaderTeamSizeRVA', 'PHOrbLeaderLoadRVA', 'PHOrbLeaderStoreRVA', 'PHOrbLeaderReloadRVA',
                 'PHOrbLeaderInitializeRVA', 'PHOrbLeaderSwapRVA', 'PHOrbLeaderCatalogRVA', 'PHOrbLeaderExtraLookupRVA',
                 'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
-                'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA'}
+                'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA', 'PHOrbLeaderCatalogAllocateRVA',
+                'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -86,6 +87,7 @@ def generate(manifest):
         raise ValueError('Unreviewed multiplayer layout')
     leader_fields = {
         'PHOrbLeaderSkillOffset': 0x5c, 'PHOrbLeaderCatalogNextOffset': 0x33c,
+        'PHOrbLeaderCatalogRecordsOffset': 0x5ef15c,
         'PHOrbLeaderExtraFlagOffset': 0x44, 'PHOrbLeaderExtraRegistryRVA': 0x27c8b80,
         'PHOrbLeaderExtraSelectionOffset': 0x5cc1f8, 'PHOrbLeaderExtraStride': 0x350,
         'PHOrbLeaderExtraSkillOffset': 0x54,

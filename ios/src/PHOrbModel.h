@@ -18,12 +18,13 @@ enum { PHOrbBasicTypes = 6, PHOrbJammer = 6, PHOrbPoison = 7, PHOrbMortalPoison 
 typedef enum {
     PHOrbGoalCombo, PHOrbGoalColors, PHOrbGoalMatch, PHOrbGoalL,
     PHOrbGoalCross, PHOrbGoalT, PHOrbGoalSquare, PHOrbGoalRow,
-    PHOrbGoalColumn, PHOrbGoalFour
+    PHOrbGoalColumn, PHOrbGoalFour, PHOrbGoalExact
 } PHOrbGoalKind;
 
 // Each goal is a conjunction. Colors is a six-bit fire/water/wood/light/dark/
 // heart mask. Count means combos, distinct colors, or separate matching groups.
-// Length is used only by Match (at least this many orbs in one group).
+// Length is used by Match (at least this many orbs) and Exact (exactly this
+// many actually removed orbs in a first-wave group, without a shape constraint).
 typedef struct { uint8_t kind, colors, count, length; } PHOrbGoal;
 typedef struct { uint8_t count; PHOrbGoal items[PHOrbMaxGoals]; } PHOrbGoalSet;
 
@@ -152,6 +153,31 @@ typedef struct {
     bool known, extraHelper; // Four-player extra skill has no helper leader skill.
 } PHOrbLeaderContext;
 
+typedef enum {
+    PHOrbLeaderReadNotAttempted, PHOrbLeaderReadReady, PHOrbLeaderReadInputContext,
+    PHOrbLeaderReadCatalog, PHOrbLeaderReadCatalogCapacity, PHOrbLeaderReadOwner,
+    PHOrbLeaderReadSkillTable, PHOrbLeaderReadKeys, PHOrbLeaderReadMember,
+    PHOrbLeaderReadSource, PHOrbLeaderReadBase, PHOrbLeaderReadForm,
+    PHOrbLeaderReadTemporary, PHOrbLeaderReadTemporaryTurns, PHOrbLeaderReadExtraHelper,
+    PHOrbLeaderReadExtraRegistry, PHOrbLeaderReadExtraSelection, PHOrbLeaderReadExtraRow,
+    PHOrbLeaderReadExtraSkill, PHOrbLeaderReadMemberState, PHOrbLeaderReadTransform,
+    PHOrbLeaderReadParameter, PHOrbLeaderReadSkill, PHOrbLeaderReadDuplicateSource,
+    PHOrbLeaderReadPairChanged, PHOrbLeaderReadCatalogChanged, PHOrbLeaderReadOwnerChanged,
+    PHOrbLeaderReadSkillTableChanged, PHOrbLeaderReadKeysChanged
+} PHOrbLeaderReadStatus;
+
+// Observations from the last attempted check, including failed optional reads.
+// Never used for planning/identity. No guest pointers, protected keys or account data.
+typedef struct {
+    PHOrbLeaderReadStatus status;
+    uint32_t catalogCount, catalogRecords, skillCount, catalogIndex;
+    uint32_t catalogID, parameterID, skillID, sourceSlot, sourceCatalogID;
+    uint32_t formID, temporaryID, temporaryTurns, extraSelection, extraRecord, extraSkill;
+    uint16_t extraCount;
+    uint8_t pass, visibleSlot, activeFlags, extraFlags, ownerFlags, ownerBusy;
+    bool ownerBankMatches, parameterMatches;
+} PHOrbLeaderReadDiagnostics;
+
 typedef struct {
     PHBattleIdentity identity;
     PHOrbBoard board;
@@ -161,6 +187,7 @@ typedef struct {
     uint16_t remainingFrames;
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
     PHOrbLeaderContext leaderContext;
+    PHOrbLeaderReadDiagnostics leaderRead;
     uint32_t obstacles;
     uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
     uint32_t spinnerRawCount, spinnerRawPeriod, spinnerRawColors;
@@ -212,6 +239,7 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
 bool PHOrbInputContextReady(const PHOrbSnapshot *state);
+const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status);
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state);
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals);

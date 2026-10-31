@@ -235,6 +235,7 @@
     "PHOrbMultiFinishedOffset": "0xb7e08",
     "PHOrbLeaderSkillOffset": "0x5c",
     "PHOrbLeaderCatalogNextOffset": "0x33c",
+    "PHOrbLeaderCatalogRecordsOffset": "0x5ef15c",
     "PHOrbLeaderExtraFlagOffset": "0x44",
     "PHOrbLeaderExtraRegistryRVA": "0x27c8b80",
     "PHOrbLeaderExtraSelectionOffset": "0x5cc1f8",
@@ -242,6 +243,30 @@
     "PHOrbLeaderExtraSkillOffset": "0x54"
   },
   "guards": [
+    {
+      "name": "PHOrbLeaderCatalogAllocateRVA",
+      "va": "0x10052f39c",
+      "rva": "0x52f39c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa000c40f9800000b48100805222048052127d0194740e00b908698052807e081b8100805222048052af7c0194",
+      "sha256": "1cf337e8ab4df6df2d70b3034c8c73de9387f65be1983e8fa92f9b35844c17cc"
+    },
+    {
+      "name": "PHOrbLeaderCatalogLinksRVA",
+      "va": "0x10052f618",
+      "rva": "0x52f618",
+      "length": 64,
+      "bytes": "6c0a80b99f010b6b0a0300546d0e40f90e6980520f6983d2ef88b5f2aff8d4f210d490523000a072917d0e9bb16971b8207ecf9b00c4b09b1110805201340e9b",
+      "sha256": "cfecc8647369f9ee05fcb833776264ef357f534eb2889ee5843f420d66f85966"
+    },
+    {
+      "name": "PHOrbLeaderCatalogDownloadRVA",
+      "va": "0x10068de28",
+      "rva": "0x68de28",
+      "length": 64,
+      "bytes": "9a0600114103150b142b9e52d40ba072c16a34b8c002088b5785fa97882c9e52c80ba072e90f40b9c96a28b8da6a34b8082d9e52c80ba072c06a68f8882b9e52",
+      "sha256": "eebf2967ba846c7ce9deee04c1536ecd13b3bdaf966677230b5428289a19e208"
+    },
     {
       "name": "PHOrbResizeRVA",
       "va": "0x10055b6b4",

@@ -4,6 +4,8 @@
 
 2026-10-31 新源碼加入 3／4／8 人本機隊長／助人解析，**0.5.13 已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過編譯及自動回歸，結果見開發紀錄；0.5.12 不含此擴充**。多人操作仍限明確點擊「轉一次」；原生來源、4 人額外技能助人及固定隊伍版本的處理見 [多人隊長盤面](orb-multiplayer-once.md)。
 
+0.5.13 的 4 人回報後，本批源碼再修正固定版本資料上界、補充 113 個專用隊長技的原始參數，並新增精確顆數目標。**尚未編譯或執行新案例，既有 0.5.13 不含這批修正。** 來源與待驗證見 [開發紀錄](development.md)。
+
 0.5.3 的 [效果適配](orb-effects.md) 納入集中驗證，最新結果見開發紀錄：最少直線及相連消除門檻、不可消色都參與目標判斷；轉轉每個共用相位都必須達標，顯示最低達成數。邪魔等特殊珠只計基本 Combo，不供應六色目標；毒／猛毒及首批未消爆彈另有禁止執行條件。
 
 0.5.3 的 [四連與複合形狀搜尋修正](orb-shape-search.md) 已通過桌面求解器回歸：四連改按實際消除群組，允許未消同色鄰珠；加入補珠／拆組／布局評估與候選分流。下表為目前原始碼語意，已交付 0.5.2 仍額外禁止四連旁的未消同色珠。
@@ -29,6 +31,7 @@
 | 四連 | 首批消除的獨立直線 4 顆；2×2 與五連不符合 |
 | 整橫排／整直行 | 同一首批消除群組包含實際盤寬的一整行／盤高的一整列 |
 | 連消 | 同一群組至少指定珠數，可包含盤內連鎖 |
+| 精確顆數 `exact`（待建置） | 首批實際消除的一組恰好 N 顆，不限形狀；超過 N 顆或後續連鎖不計 |
 | 多色 | 指定珠色集合中，實際被消除的不同顏色數，可包含盤內連鎖 |
 | 最低 Combo | 本次消除及盤內連鎖的 Combo 合計 |
 
@@ -63,6 +66,8 @@
 離線索引 `ios/data/leader-orbs.json` 由 public `mon_ja.json`／`skill_ja.json` 的角色與技能參數產生，包含 14,229 筆角色、7,724 筆隊長技索引；這些筆數不代表全部隊長技均受支援。來源是 [PADDashFormation](https://github.com/Mapaler/PADDashFormation)，revision `b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f`。參數語意參考同 revision 的 [script-skill-parser.js](https://github.com/Mapaler/PADDashFormation/blob/b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f/script-skill-parser.js)。索引與編隊 catalog 使用相同 card／skill SHA-256；不執行上游腳本，也不按技能敘述文字猜測條件。
 
 `update_leader_catalog.py` 只讀取下載的 JSON 並產生源碼資料。`generate_leaders.py` 在獲准建置時將索引內嵌進 dylib，手機不需要 Python 或網路查詢。執行期首次使用隊長盤面才解析索引。
+
+本批另保存 `ios/data/fixed-leader-skills.json`：同 revision 原始 `monsters-info/official-API/ja-card.json` 的 117 筆固定角色引用及 325 筆技能參數，對應普通索引遺漏的 113 個隊長技能。名稱／ID 不替代實機身分校驗；合併只按實際技能 ID 查詢，不能覆蓋普通 profile。授權 generator 執行時驗證來源及完整依賴，再解析補入。固定專用 type 235 可產生精確長度，type 119 等連消及 193／220／221 的任意珠種 `1023` 採明示的六色子集，不使用毒／爆彈滿足條件；其他未知遮罩不會截斷後放行。未建模類型繼續停用。
 
 原生快照讀取已核對的 visible member 位置 1／6，使用目前 `catalogID`、有效旗標及 catalog parameter pointer／record ID 比對，再轉成圖鑑號碼。單人保留既有索引方式。讀不到完整雙隊長時不沿用舊 ID；高 Combo／手動形狀仍可在普通盤面使用。保存的隊伍草稿不作為隊長來源。
 

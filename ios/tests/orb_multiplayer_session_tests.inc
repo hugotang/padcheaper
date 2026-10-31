@@ -13,7 +13,7 @@ static void SetMultiplayer(FakeOrbEngine *engine, unsigned players, unsigned sea
     m.localStatus = 3; m.networkFlags = 1; m.connectionState = 2;
     m.countdownReady = 1; m.clockFlags = players == 3 ? 0 : 4;
     m.clockStart = players == 3 ? 0 : 12345; m.remainingSeconds = 60;
-    s.automation = {}; s.thorns = {}; s.leadersValid = false; s.leaderContext = {};
+    s.automation = {}; s.thorns = {}; s.leadersValid = false; s.leaderContext = {}; s.leaderRead = {};
 }
 static void StartMultiplayerOnce(PHOrbSession *session, FakeOrbEngine *engine) {
     Tick(session, engine, Frame());
@@ -170,6 +170,64 @@ static void MultiplayerLeaderSessionTests() {
     SetLeaderContextFixture(&engine->live,14242,66063,13834,63039); Tick(session,engine,Frame(),0.12);
     Check([session.snapshot[@"canOnce"] boolValue] && [session.snapshot[@"liveLeaderPlan"][@"goals"] count] == 3 && !engine->stages,
         "a refreshed supported pair restores availability without automatically starting");
+    engine = [FakeOrbEngine new]; SetMultiplayer(engine,4,3);
+    SetLeaderContextFixture(&engine->live,7625,36024,1,51); SetExtraLeaderFixture(&engine->live);
+    engine->live.leaderContext.catalogIDs[0] = engine->live.leaderContext.parameterIDs[0] = 9007625;
+    session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    [session configureSettings:settings]; [session queueRead]; [session queueStop:@"fixed leader observation"];
+    Tick(session,engine,Frame(),0.12);
+    NSDictionary *fixedPlan = session.snapshot[@"liveLeaderPlan"];
+    Check([session.snapshot[@"canOnce"] boolValue] && [fixedPlan[@"available"] boolValue] &&
+        [fixedPlan[@"goals"] containsObject:@{@"kind":@"exact",@"colors":@63,@"count":@1,@"length":@5}] &&
+        [fixedPlan[@"message"] containsString:@"首批剛好 5 顆"] && !engine->stages && !engine->skillAttempts,
+        "idle 4P fixed-skill index restores availability with an exact-five clause and no automatic gesture");
+}
+static void MultiplayerLeaderReadDiagnosticsTests() {
+    FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine,4,3);
+    engine->live.leaderNumbers[0] = engine->live.leaderNumbers[1] = 0;
+    auto &d = engine->live.leaderRead;
+    d.status = PHOrbLeaderReadParameter; d.pass = 1; d.visibleSlot = 0;
+    d.catalogCount = 14600; d.catalogRecords = 14601; d.catalogIndex = 14600;
+    d.catalogID = 1014342; d.parameterID = 2014342;
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Tick(session,engine,Frame());
+    [session configureSettings:@{@"quality":@"fast",@"mode":@"leaders",@"goals":@[],@"rules":@[]}];
+    [session queueRead]; [session queueStop:@"leader diagnostic observation"];
+    Tick(session,engine,Frame(),0.12);
+    NSDictionary *status = session.snapshot, *read = status[@"leaderContext"][@"read"];
+    Check(![status[@"canOnce"] boolValue] && ![status[@"leaderContext"][@"known"] boolValue] &&
+        [status[@"leaderNumbers"] isEqual:@[@0,@0]] &&
+        [read[@"status"] isEqual:@"parameter-chain"] && [read[@"catalogIndex"] isEqual:@14600] &&
+        [status[@"onceReadiness"][@"leaderRead"] isEqual:read] &&
+        [status[@"multiplayerMessage"] hasPrefix:@"本機隊長資料讀取未通過校驗"],
+        "leader read failure is explained without publishing diagnostic IDs as a valid pair");
+    NSSet *allowed = [NSSet setWithArray:@[@"status",@"pass",@"visibleSlot",@"catalogCount",@"catalogRecords",
+        @"skillCount",@"catalogIndex",@"catalogID",@"parameterID",@"skillID",@"sourceSlot",@"sourceCatalogID",
+        @"formID",@"temporaryID",@"temporaryTurns",@"activeFlags",@"extraFlags",@"extraCount",@"extraSelection",
+        @"extraRecord",@"extraSkill",@"ownerFlags",@"ownerBusy",@"ownerBankMatches",@"parameterMatches"]];
+    Check([[NSSet setWithArray:read.allKeys] isEqual:allowed],
+        "leader diagnostics contain only bounded status and card fields, without guest pointers or protected keys");
+    NSUInteger historyCount = [status[@"onceReadinessHistory"] count];
+    d.status = PHOrbLeaderReadExtraRow; d.visibleSlot = 5; d.catalogID = 10000000;
+    Tick(session,engine,Frame(),0.12); status = session.snapshot;
+    NSDictionary *lastRead = [status[@"onceReadinessHistory"] lastObject][@"leaderRead"];
+    Check([status[@"onceReadinessHistory"] count] == historyCount + 1 &&
+        [lastRead[@"visibleSlot"] isEqual:@5] && [lastRead[@"status"] isEqual:@"extra-row"],
+        "a different leader check is retained even when the outer blocker is still leaders-unavailable");
+    historyCount = [status[@"onceReadinessHistory"] count];
+    Tick(session,engine,Frame(),0.12);
+    Check([session.snapshot[@"onceReadinessHistory"] count] == historyCount,
+        "an unchanged failed leader check does not flood retained readiness history");
+    SetLeaderContextFixture(&engine->live,1,51,1,51); SetExtraLeaderFixture(&engine->live);
+    d.status = PHOrbLeaderReadReady; d.pass = 3; d.visibleSlot = UINT8_MAX;
+    Tick(session,engine,Frame(),0.12); status = session.snapshot;
+    Check([status[@"canOnce"] boolValue] && [status[@"liveLeaderPlan"][@"available"] boolValue] &&
+        !engine->stages && !engine->skillAttempts && !engine->multiplayerArmed,
+        "recovering valid 4P leader metadata restores the button without creating an input intent");
+    NSArray *history = status[@"onceReadinessHistory"];
+    engine->live = {}; Tick(session,engine,Frame(),0.12);
+    Check([session.snapshot[@"onceReadinessHistory"] isEqual:history],
+        "leaving the match preserves failed-read stages for a later copied diagnostic");
 }
 static void MultiplayerNextBoardSessionTests() {
     for (unsigned players : {3u, 4u, 8u}) {
@@ -255,6 +313,7 @@ static void MultiplayerNextBoardSessionTests() {
         "retained multiplayer readiness changes are bounded and never create input intent");
 }
 static void MultiplayerSessionTests() {
+    MultiplayerLeaderReadDiagnosticsTests();
     MultiplayerNextBoardSessionTests();
     MultiplayerLeaderSessionTests();
     MultiplayerStatusTests();

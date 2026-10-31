@@ -13,10 +13,11 @@ static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
 static bool changeTurnDuringCoordinateRead;
 static bool changeLeaderDuringPairRead, changeLeaderDuringCoordinateRead;
+static bool changeLeaderCatalogDuringPairRead;
 static bool clearImplAfterSceneRead;
 static bool rejectBattleProtection;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
-static std::vector<uint8_t> catalogBytes(14600 * PHBattleCatalogStride);
+static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
 static const uintptr_t Impl = reinterpret_cast<uintptr_t>(implBytes.data());
 static const uintptr_t Input = reinterpret_cast<uintptr_t>(realInput.data());
@@ -56,6 +57,11 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
     }
     const uintptr_t helper = Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride;
+    if (changeLeaderCatalogDuringPairRead && address == helper + PHBattleCardParamOffset) {
+        changeLeaderCatalogDuringPairRead = false;
+        const uintptr_t records = Header + PHSaveRVA + PHOrbLeaderCatalogRecordsOffset;
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(records), Load<uint32_t>(reinterpret_cast<uint8_t *>(records)) + 1);
+    }
     if ((changeLeaderDuringPairRead && address == helper + PHBattleCardParamOffset) ||
         (changeLeaderDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA)) {
         changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
@@ -96,6 +102,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
     changeTurnDuringCoordinateRead = false;
     changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
+    changeLeaderCatalogDuringPairRead = false;
     clearImplAfterSceneRead = false;
     rejectBattleProtection = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
@@ -130,6 +137,7 @@ static void SetLeader(unsigned slot, uint16_t number) {
     if (!PHBattleCatalogIDForNumber(number, &id) || id >= 14600) { Check(false, "leader fixture number"); return; }
     uintptr_t catalog = reinterpret_cast<uintptr_t>(catalogBytes.data());
     Put<uint32_t>(Header + PHSaveRVA + PHBattleCatalogCountOffset, 14600);
+    Put<uint32_t>(Header + PHSaveRVA + PHOrbLeaderCatalogRecordsOffset, 14600);
     Put<uintptr_t>(Header + PHSaveRVA + PHBattleCatalogPointerOffset, catalog);
     Put<uint32_t>(catalog + id * PHBattleCatalogStride, id);
     uintptr_t member = Impl + PHBattleMemberOffset + slot * PHBattleMemberStride;

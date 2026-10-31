@@ -16,6 +16,7 @@ using Bits = uint64_t;
 using Clock = std::chrono::steady_clock;
 constexpr uint8_t Empty = 255;
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
+bool ShapeGoal(unsigned kind) { return kind >= PHOrbGoalL && kind <= PHOrbGoalFour; }
 struct Pattern { Bits cells, border; uint16_t stableColors = 63; };
 struct Context {
     unsigned width, height;
@@ -114,8 +115,8 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     for (unsigned g = 0; g < goals.count; ++g) {
         auto &out = context.patterns[g];
         const auto kind = goals.items[g].kind;
-        if (kind == PHOrbGoalCombo || kind == PHOrbGoalMatch) continue;
-        context.shapeGoals += kind >= PHOrbGoalL;
+        if (kind == PHOrbGoalCombo || kind == PHOrbGoalMatch || kind == PHOrbGoalExact) continue;
+        context.shapeGoals += ShapeGoal(kind);
         if (kind == PHOrbGoalColors || kind == PHOrbGoalFour || kind == PHOrbGoalRow || kind == PHOrbGoalColumn) {
             for (unsigned axis = 0; axis < 2; ++axis) {
                 if ((kind == PHOrbGoalRow && axis) || (kind == PHOrbGoalColumn && !axis)) continue;
@@ -147,7 +148,7 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     // Its validity is invariant across candidates and spinner phases.
     for (unsigned g = 0; g < goals.count; ++g) {
         const auto kind = goals.items[g].kind;
-        if (kind < PHOrbGoalL || kind == PHOrbGoalRow || kind == PHOrbGoalColumn) continue;
+        if (!ShapeGoal(kind) || kind == PHOrbGoalRow || kind == PHOrbGoalColumn) continue;
         auto &patterns = context.patterns[g];
         patterns.erase(std::remove_if(patterns.begin(), patterns.end(), [&](const Pattern &pattern) {
             return Count(pattern.cells) < context.minMatch || MarkedRuns(pattern.cells, context) != pattern.cells;
@@ -160,7 +161,7 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     // excludes the target color cannot spoil an exact shape's border.
     if (context.variants > 1) for (unsigned g = 0; g < goals.count; ++g) {
         const auto kind = goals.items[g].kind;
-        if (kind < PHOrbGoalL) continue;
+        if (!ShapeGoal(kind)) continue;
         for (auto &pattern : context.patterns[g]) {
             if (pattern.cells & context.dynamicSpinners) pattern.stableColors = 0;
             else if (kind != PHOrbGoalFour && kind != PHOrbGoalRow && kind != PHOrbGoalColumn &&
@@ -189,7 +190,7 @@ unsigned Needed(const PHOrbGoal &goal, unsigned w, unsigned h) {
         case PHOrbGoalRow: return w;
         case PHOrbGoalColumn: return h;
         case PHOrbGoalFour: return 4;
-        case PHOrbGoalMatch: return goal.length;
+        case PHOrbGoalMatch: case PHOrbGoalExact: return goal.length;
         default: return 3;
     }
 }
@@ -201,6 +202,7 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
             ++inventory[context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i]];
         for (unsigned g = 0; g < context.goals.count; ++g) {
             const auto &goal = context.goals.items[g];
+            if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch)) return false;
             unsigned possible = 0, needed = std::max({Needed(goal, context.width, context.height), context.minErase, context.minMatch});
             for (unsigned c = 0; c < PHOrbTypes; ++c)
                 if (!(context.unmatchable & (1u << c)) && (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
@@ -436,7 +438,8 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                 const auto &goal = context.goals.items[g];
                 if (!(goal.colors & (1u << color))) continue;
                 bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
-                    !wave && goal.kind >= PHOrbGoalL && ShapeMatches(group, colors[color], goal, context.patterns[g]);
+                    goal.kind == PHOrbGoalExact ? !wave && count == goal.length :
+                    !wave && ShapeGoal(goal.kind) && ShapeMatches(group, colors[color], goal, context.patterns[g]);
                 if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
         }
@@ -462,7 +465,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
         // Public replay validation needs actual hits only. Avoid template
         // repair/distance work on the session's main-thread verification.
         if (!context.guidance) continue;
-        if (goal.kind >= PHOrbGoalL) {
+        if (ShapeGoal(goal.kind)) {
             hints[g] = FindShapeHints(colors, used[g], result.goalHits[g], g, context);
             if (hints[g].count) score.layouts[g] = hints[g].items[0].tag;
         }
@@ -475,9 +478,9 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                 partial[c] = NearColor(colors[c], context.patterns[g]);
             std::sort(partial.begin(), partial.end(), std::greater<unsigned>());
             for (unsigned i = 0; i < unsigned(goal.count - result.goalHits[g]); ++i) near += partial[i];
-        } else if (goal.kind >= PHOrbGoalL) {
+        } else if (ShapeGoal(goal.kind)) {
             near = ShapeNear(hints[g], unsigned(goal.count - result.goalHits[g]));
-        } else if (goal.kind == PHOrbGoalMatch) {
+        } else if (goal.kind == PHOrbGoalMatch || goal.kind == PHOrbGoalExact) {
             // Largest connected area is only a heuristic; the actual result
             // above still requires marked triples and the requested length.
             Bits seen = 0;
@@ -494,7 +497,9 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                         seen |= Bits(1) << next; queue[tail++] = unsigned(next);
                     }
                 }
-                near = std::max(near, 3072 * std::min(tail, unsigned(goal.length)) / goal.length);
+                const unsigned filled = std::min(tail, unsigned(goal.length));
+                const unsigned excess = goal.kind == PHOrbGoalExact && tail > goal.length ? tail - goal.length : 0;
+                near = std::max(near, 3072 * filled / (goal.length + excess));
             }
         }
         score.goalProgress[g] = (result.goalHits[g] * 4096 + near) / goal.count;
@@ -830,7 +835,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             std::any_of(initialThorns.begin(), initialThorns.end(), [](uint8_t value) { return value != 0; })) {
             for (unsigned g = 0; g < options.goals.count; ++g) {
                 const auto &goal = options.goals.items[g];
-                if (goal.kind < PHOrbGoalL || goal.kind == PHOrbGoalFour ||
+                if (!ShapeGoal(goal.kind) || goal.kind == PHOrbGoalFour ||
                     goal.kind == PHOrbGoalRow || goal.kind == PHOrbGoalColumn) continue;
                 const unsigned needed = Needed(goal, board.width, board.height) * goal.count;
                 if (needed > largestShape) { largestShape = needed; primaryFocus = g; }

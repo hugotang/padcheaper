@@ -22,5 +22,5 @@ static void SetExtraLeaderFixture(PHOrbSnapshot *s) {
     c->activeFlags[1] = 0; c->extraFlags[1] = 2; c->extraHelper = true;
     c->extraRows = 12000; c->extraCount = 1; c->extraSelection = c->extraRecord = 73;
     c->parameterIDs[1] = 10000000; c->parameters[1] = c->extraRows + 8;
-    c->skillIDs[1] = 0; c->extraSkill = 51;
+    c->skillIDs[1] = 0; c->extraSkill = 36861;
 }

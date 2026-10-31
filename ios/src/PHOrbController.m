@@ -86,7 +86,7 @@
     if ([field isEqual:@"kind"]) {
         goal[@"count"] = @1;
         goal[@"colors"] = [value isEqual:@"combo"] ? @0 : [goal[@"colors"] unsignedIntegerValue] ? goal[@"colors"] : @63;
-        goal[@"length"] = [value isEqual:@"match"] ? @6 : @0;
+        goal[@"length"] = [value isEqual:@"match"] ? @6 : [value isEqual:@"exact"] ? @5 : @0;
     }
     if ([goal[@"kind"] isEqual:@"colors"]) {
         NSUInteger colors = 0;
@@ -139,7 +139,7 @@
         }] forControlEvents:UIControlEventTouchUpInside];
         UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:[NSString stringWithFormat:@"條件 %lu", (unsigned long)i + 1]], remove]];
         heading.spacing = 12; [card addArrangedSubview:heading];
-        NSArray *kinds = @[@"l", @"cross", @"t", @"square", @"row", @"column", @"four", @"match", @"combo", @"colors"];
+        NSArray *kinds = @[@"l", @"cross", @"t", @"square", @"row", @"column", @"four", @"match", @"exact", @"combo", @"colors"];
         NSMutableArray *titles = [NSMutableArray array]; for (NSString *value in kinds) [titles addObject:PHOrbGoalTitle(value)];
         [card addArrangedSubview:[self menu:i field:@"kind" values:kinds titles:titles]];
         if (![kind isEqual:@"combo"]) {
@@ -147,19 +147,20 @@
             NSMutableArray *colorTitles = [NSMutableArray array]; for (NSNumber *mask in masks) [colorTitles addObject:PHOrbColorTitle(mask.unsignedIntegerValue)];
             [card addArrangedSubview:[self menu:i field:@"colors" values:masks titles:colorTitles]];
         }
-        NSUInteger maximum = [kind isEqual:@"combo"] || [kind isEqual:@"match"] ? 14 : 3;
+        NSUInteger maximum = [kind isEqual:@"combo"] || [kind isEqual:@"match"] || [kind isEqual:@"exact"] ? 14 : 3;
         if ([kind isEqual:@"colors"]) {
             maximum = 0; for (NSUInteger bit = 0; bit < 6; ++bit) maximum += ([goal[@"colors"] unsignedIntegerValue] >> bit) & 1u;
         }
         [card addArrangedSubview:[self stepper:i field:@"count" title:[kind isEqual:@"combo"] ? @"最低 Combo" :
             [kind isEqual:@"colors"] ? @"顏色數" : @"獨立消除組數" minimum:1 maximum:MAX(maximum, [goal[@"count"] unsignedIntegerValue])]];
         if ([kind isEqual:@"match"]) [card addArrangedSubview:[self stepper:i field:@"length" title:@"每組最少珠數" minimum:3 maximum:PHOrbMaxCells]];
+        if ([kind isEqual:@"exact"]) [card addArrangedSubview:[self stepper:i field:@"length" title:@"每組剛好珠數" minimum:3 maximum:PHOrbMaxCells]];
         [self.rows addArrangedSubview:card];
     }
     UIButton *add = [self button:@"＋ 新增條件"]; add.enabled = self.draft.count < PHOrbMaxGoals;
     add.accessibilityIdentifier = @"padcheaper.orbsGoalAdd";
     [add addTarget:self action:@selector(add) forControlEvents:UIControlEventTouchUpInside]; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"所有條件需同時達成。相同條件請增加組數，最多 6 項。\n\nL／十字／T 須獨立 5 顆，3×3 須獨立 9 顆，周邊不連同色珠。四連須實際消除的一組直線 4 顆；未消同色鄰珠可保留，合併成五顆以上不符合。形狀以首批消除為準。橫排與直行依實際盤面寬高判定。多組目標需分成不同 Combo。\n\nCombo、多色與連消可包含盤內連鎖，不含天降或隊長加算。"]];
+    [self.rows addArrangedSubview:[self label:@"所有條件需同時達成。相同條件請增加組數，最多 6 項。\n\nL／十字／T 須獨立 5 顆，3×3 須獨立 9 顆，周邊不連同色珠。四連須實際消除的一組直線 4 顆；未消同色鄰珠可保留，合併成五顆以上不符合。精確顆數須實際消除一組剛好指定數量的珠子，不限形狀。形狀與精確顆數以首批消除為準。橫排與直行依實際盤面寬高判定。多組目標需分成不同 Combo。\n\nCombo、多色與最少連消可包含盤內連鎖，不含天降或隊長加算。"]];
 }
 - (void)add {
     if (self.draft.count >= PHOrbMaxGoals) return;

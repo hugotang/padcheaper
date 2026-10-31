@@ -107,6 +107,8 @@ cp ios/research/orb_recorded_shape_probe.cpp ios/research/orb_recorded_shape_ben
 cp ios/research/orb-poison-20261030.json ios/research/orb-poison-results-0511.json ios/research/orb_poison_probe.cpp ios/research/orb_poison_benchmark.py "$build_dir/research/"
 cp ios/research/orb-multiplayer-20261031.json ios/research/halloween-ciel-579537-native.json "$build_dir/research/"
 cp ios/research/orb-multiplayer-leaders-20261031.json ios/research/orb-multiplayer-next-board-20261031.json "$build_dir/research/"
+cp ios/research/orb-multiplayer-leader-capacity-20261031.json "$build_dir/research/"
+cp ios/data/fixed-leader-skills.json "$build_dir/research/"
 cp ios/research/orb-0511-log-analysis-20261030.json ios/research/orb-0511-logs-20261030.json ios/research/orb_0511_log_analysis.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
