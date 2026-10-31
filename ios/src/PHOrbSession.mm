@@ -36,6 +36,8 @@ double TimeAvailable(const PHOrbSnapshot &state) {
     const double move = state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
         double(state.remainingFrames) / state.fps : 0;
     if (PHBattleIsSinglePlayer(state.identity.entryMode, state.identity.multiplayer)) return move;
+    if (state.multiplayer.kind == PHOrbMultiplayerThreeSolo)
+        return PHOrbMultiplayerWindow(&state) ? move : 0;
     return PHOrbMultiplayerWindow(&state) ? std::min(move, state.multiplayer.remainingSeconds) : 0;
 }
 double StepDuration(const PHOrbSnapshot &state) {
@@ -46,12 +48,14 @@ bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route, double de
     const double required = (route.count - 1) * StepDuration(state) + TimeMargin;
     if (required > std::min(TimeAvailable(state), ExecutionLimit)) return false;
     return PHBattleIsSinglePlayer(state.identity.entryMode, state.identity.multiplayer) ||
+        state.multiplayer.kind == PHOrbMultiplayerThreeSolo ||
         required + delay <= state.multiplayer.remainingSeconds;
 }
 NSString *MultiplayerModeName(PHOrbMultiplayerKind kind) {
     switch (kind) {
         case PHOrbMultiplayerNone: return @"單人";
         case PHOrbMultiplayerThree: return @"3 人協力";
+        case PHOrbMultiplayerThreeSolo: return @"3 人協力・單人續玩";
         case PHOrbMultiplayerFour: return @"4 人對戰";
         case PHOrbMultiplayerEight: return @"8 人對戰";
         case PHOrbMultiplayerUnsupported: return @"未支援的多人模式";
@@ -62,21 +66,24 @@ NSString *MultiplayerWaitMessage(const PHOrbSnapshot &state) {
     // Presentation only. PHOrbCanPreview and the final canOnce gate remain
     // authoritative; no message can grant input permission.
     const auto &m = state.multiplayer;
+    const bool continuation = m.kind == PHOrbMultiplayerThreeSolo;
     if (!m.known || !m.teamCount || m.localSeat >= m.teamCount || m.viewTeam >= m.teamCount)
         return @"本機席位或回合資料尚未確認";
     if (m.kind == PHOrbMultiplayerThree && m.turnSerial % m.teamCount != m.localSeat)
         return @"等待自己的回合，再按轉一次";
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家，請返回自己的盤面";
     if (!PHOrbMultiplayerLocalReady(&m))
-        return @"等待多人同步或連線恢復";
-    if (m.kind != PHOrbMultiplayerThree && m.finished) return @"對戰已結束，等待結算";
-    if (m.kind != PHOrbMultiplayerThree && m.countdownReady != 1) return @"等待對戰開始倒數完成";
+        return continuation ? @"等待原生單人續玩切換完成" : @"等待多人同步或連線恢復";
+    if (!continuation && m.kind != PHOrbMultiplayerThree && m.finished) return @"對戰已結束，等待結算";
+    if (!continuation && m.kind != PHOrbMultiplayerThree && m.countdownReady != 1) return @"等待對戰開始倒數完成";
     if (m.resolvePending || state.phase != 2) return @"等待本盤結算或下一盤";
-    if (!m.clockKnown || !std::isfinite(m.remainingSeconds) || m.remainingSeconds > 86400)
+    if (continuation && (state.fps < 15 || state.fps > 120 || !state.remainingFrames || state.remainingFrames > 30000))
+        return @"單人續玩的轉珠時間尚未確認或已結束";
+    if (!continuation && (!m.clockKnown || !std::isfinite(m.remainingSeconds) || m.remainingSeconds > 86400))
         return @"多人操作時間尚未確認";
-    if (m.remainingSeconds <= 0) return @"多人操作時間已結束";
+    if (!continuation && m.remainingSeconds <= 0) return @"多人操作時間已結束";
     if ((m.kind == PHOrbMultiplayerThree && (m.clockFlags & 2u) && !state.dragged) ||
-        (m.kind != PHOrbMultiplayerThree && (m.clockFlags & 0x36u) != 4u))
+        (!continuation && m.kind != PHOrbMultiplayerThree && (m.clockFlags & 0x36u) != 4u))
         return @"多人計時暫停或已結束";
     if (state.boardTransition || !state.settled) return @"等待盤面穩定，再按轉一次";
     if (state.dragged || !PHInputIsQuiet(&state.input)) return @"請先放開手指，再按轉一次";
@@ -95,7 +102,12 @@ NSDictionary *MultiplayerTrace(const PHOrbSnapshot &state) {
         @"syncStep":@(m.syncStep), @"localReady":@(PHOrbMultiplayerLocalReady(&m)),
         @"disconnectKnown":@(m.disconnectKnown), @"disconnectSeat":@(m.disconnectKnown ? int(m.disconnectSeat) : -1),
         @"disconnectStatus":@(m.disconnectStatus),
+        @"continuation":@(m.kind == PHOrbMultiplayerThreeSolo), @"continuationOwnerKnown":@(m.continuationOwnerKnown),
+        @"continuationOwnerFlags":@(m.continuationOwnerFlags),
+        @"continuationDialog":@(m.continuationDialog), @"recoverySource":@(m.recoverySource), @"recoveryFlags":@(m.recoveryFlags),
+        @"timeSource":m.kind == PHOrbMultiplayerThreeSolo ? @"move-timer" : m.kind == PHOrbMultiplayerNone ? @"none" : @"multiplayer-clock",
         @"networkReady":@(PHOrbMultiplayerNetworkReady(&m)),
+        @"networkRequired":@(m.kind != PHOrbMultiplayerNone && m.kind != PHOrbMultiplayerThreeSolo),
         @"connectionState":@(m.connectionState), @"countdownReady":@(m.countdownReady),
         @"finished":@(m.finished), @"resolvePending":@(m.resolvePending), @"clockFlags":@(m.clockFlags),
         @"clockKnown":@(m.clockKnown), @"clockStart":@(m.clockStart),
@@ -204,6 +216,7 @@ NSString *SolveStatusName(PHOrbSolveStatus status) {
         case PHOrbSolveStatus::GoalsUnmet: return @"goals-unmet";
         case PHOrbSolveStatus::Unsafe: return @"unsafe";
         case PHOrbSolveStatus::InsufficientOrbs: return @"insufficient-orbs";
+        case PHOrbSolveStatus::IncompatibleGoals: return @"incompatible-goals";
         case PHOrbSolveStatus::NoRoute: return @"no-route";
         case PHOrbSolveStatus::Cancelled: return @"cancelled";
         case PHOrbSolveStatus::Invalid: return @"invalid";
@@ -212,12 +225,10 @@ NSString *SolveStatusName(PHOrbSolveStatus status) {
     return @"unknown";
 }
 NSString *PoisonFailureContext(const PHOrbEvaluation &evaluation, const PHOrbSolveOptions &options) {
-    if (evaluation.mortalPoisonErased) return [NSString stringWithFormat:
-        @"候選路徑會消除猛毒 %u 顆；猛毒消除仍未開放。\n", evaluation.mortalPoisonErased];
     if (!evaluation.poisonErased) return @"";
     if (!options.allowPoisonWithHeartFour) return [NSString stringWithFormat:
-        @"候選路徑會消除毒 %u 顆；目前策略設定為避毒。\n", evaluation.poisonErased];
-    return !evaluation.heartFours ? @"候選路徑會消一般毒，但未在全部轉轉相位達成首消心四連；未開放執行。\n" : @"";
+        @"候選路徑會消除毒／猛毒共 %u 顆；目前策略設定為避毒。\n", evaluation.poisonErased];
+    return !evaluation.heartFours ? @"候選路徑會消毒／猛毒，但未在全部轉轉相位達成首消心四連；未開放執行。\n" : @"";
 }
 NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, bool attempted = false) {
     const auto &member = state.automation.members[slot];
@@ -374,6 +385,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
             @"diagonal":@(_route.diagonal),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
+            @"evaluationCalls":@(_route.evaluationCalls), @"evaluationCacheHits":@(_route.evaluationCacheHits),
             @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
             @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
         @"predictedBoard":BoardTrace(predicted), @"observedBoard":BoardTrace(state->board),
@@ -1022,12 +1034,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const bool multiplayer = !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer);
     double remaining = available;
     if (multiplayer) {
-        const double searchRoom = _live.multiplayer.remainingSeconds - ArmDelay - TimeMargin - StepDuration(_live);
-        if (!PHOrbCanPreview(&_live) || searchRoom < 0.05 || available <= TimeMargin + StepDuration(_live)) {
+        if (!PHOrbCanPreview(&_live) || available <= TimeMargin + StepDuration(_live)) {
             [self queueStop:@"多人本機操作窗口已關閉或時間不足，未開始求路"]; return;
         }
-        options.milliseconds = std::min(options.milliseconds, unsigned(std::min(1.0, searchRoom) * 1000));
-        remaining = std::min(available, _live.multiplayer.remainingSeconds - ArmDelay - double(options.milliseconds) / 1000);
+        if (_live.multiplayer.kind != PHOrbMultiplayerThreeSolo) {
+            const double searchRoom = _live.multiplayer.remainingSeconds - ArmDelay - TimeMargin - StepDuration(_live);
+            if (searchRoom < 0.05) { [self queueStop:@"多人本機操作時間不足，未開始求路"]; return; }
+            options.milliseconds = std::min(options.milliseconds, unsigned(std::min(1.0, searchRoom) * 1000));
+            remaining = std::min(available, _live.multiplayer.remainingSeconds - ArmDelay - double(options.milliseconds) / 1000);
+        }
         // Until multiplayer HP derivation is validated, no damaging thorn contact.
         options.thorns = {};
     }
@@ -1066,13 +1081,17 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
             trace[@"path"] = RouteCells(route); trace[@"elapsedMS"] = @(route.elapsedMS);
             trace[@"evaluated"] = @(route.evaluated); trace[@"deadline"] = @(route.deadlineReached);
+            trace[@"evaluationCalls"] = @(route.evaluationCalls); trace[@"evaluationCacheHits"] = @(route.evaluationCacheHits);
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";
                 session->_message = result == PHOrbSolveStatus::InsufficientOrbs ?
-                    @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" : @"本次未取得有效路徑，請重新讀盤";
+                    @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" :
+                    result == PHOrbSolveStatus::IncompatibleGoals ?
+                    @"目前珠色比例無法同時排出符合規則的 T 形及四連；可改盤或調整目標。" :
+                    @"本次未取得有效路徑，請重新讀盤";
                 if (session->_automatic || session->_oneShot) [session queueStop:session->_message];
                 return;
             }
@@ -1102,8 +1121,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             if (route.thornContacts) summary = [summary stringByAppendingFormat:
                 @"\n荊棘碰觸 %u 次 · 傷害上限 %u · 首批心四連 %u 組；未把回血與抗性計入可承受傷害。",
                 route.thornContacts, route.thornDamage, route.heartFours];
-            if (options.allowPoisonWithHeartFour && route.poisonErased && !route.mortalPoisonErased && route.heartFours)
-                summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消一般毒，最多 %u 顆。", route.poisonErased];
+            if (options.allowPoisonWithHeartFour && route.poisonErased && route.heartFours)
+                summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消毒／猛毒，合計最多 %u 顆。", route.poisonErased];
             summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
                 route.elapsedMS, options.milliseconds, route.deadlineReached ? @"已到時間上限" : @"未到時間上限", options.steps];
             if (!route.goalsMet) {
@@ -1608,6 +1627,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"leaderReadPass":@(_live.leaderRead.pass), @"leaderReadSlot":@(_live.leaderRead.visibleSlot),
         @"networkFlags":@(multi.networkFlags), @"syncState":@(multi.syncState),
         @"syncStep":@(multi.syncStep), @"disconnectKnown":@(multi.disconnectKnown),
+        @"continuationOwnerKnown":@(multi.continuationOwnerKnown), @"continuationDialog":@(multi.continuationDialog),
+        @"continuationOwnerFlags":@(multi.continuationOwnerFlags),
+        @"recoverySource":@(multi.recoverySource), @"recoveryFlags":@(multi.recoveryFlags),
         @"disconnectSeat":@(multi.disconnectSeat), @"disconnectStatus":@(multi.disconnectStatus),
         @"connectionState":@(multi.connectionState), @"localStatus":@(multi.localStatus),
         @"countdownReady":@(multi.countdownReady), @"finished":@(multi.finished),
@@ -1633,7 +1655,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             NSString *clock = multi.clockKnown && std::isfinite(multi.remainingSeconds) &&
                 multi.remainingSeconds >= 0 && multi.remainingSeconds <= 86400 ?
                 [NSString stringWithFormat:@"%.1f 秒", multi.remainingSeconds] : @"時間未確認";
-            multiplayerMessage = [multiplayerMessage stringByAppendingFormat:@"\n%@ · 本機 %u／%u · 回合 %u · 剩餘 %@",
+            if (multi.kind == PHOrbMultiplayerThreeSolo)
+                multiplayerMessage = [multiplayerMessage stringByAppendingFormat:@"\n%@ · 本機 %u／%u · 轉珠 %.1f 秒",
+                    MultiplayerModeName(multi.kind), multi.localSeat + 1, multi.teamCount, TimeAvailable(_live)];
+            else multiplayerMessage = [multiplayerMessage stringByAppendingFormat:@"\n%@ · 本機 %u／%u · 回合 %u · 剩餘 %@",
                 MultiplayerModeName(multi.kind), multi.localSeat + 1, multi.teamCount, multi.turnSerial, clock];
         }
     }
@@ -1712,6 +1737,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"searchBudgetMS":@(_solveOptions.milliseconds),
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),
+        @"evaluationCalls":@(_route.evaluationCalls), @"evaluationCacheHits":@(_route.evaluationCacheHits),
         @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
         @"completed":@(_completed), @"cancelled":@(_cancelled), @"inputFrames":@(_sentFrames), @"inputFault":@(_inputFault),
         @"startSent":@(_startSent), @"startAccepted":@(_startSent && !_awaitingStart),

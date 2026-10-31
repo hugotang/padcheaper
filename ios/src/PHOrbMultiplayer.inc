@@ -39,6 +39,20 @@ bool ReadMultiplayerFields(PHOrbSnapshot &state) {
         m.disconnectKnown = true;
     }
     m.known = true;
+    if (m.kind == PHOrbMultiplayerThreeSolo) {
+        // 0x10060D4C4 still gates selector 2 on the selected recovery byte.
+        // Confirm native local-bank ownership even for Combo/manual goals.
+        // Stale peer statuses and clocks are not a source of input authority.
+        uintptr_t dialog = 0, bank = 0; uint8_t flags = 0;
+        PHOrbLeaderReadDiagnostics owner{};
+        if (!PHReadU8(p + PHOrbMultiRecoverySourceOffset, &m.recoverySource) || m.recoverySource > 1 ||
+            !PHReadU8(p + PHOrbMultiRecoveryFlagsOffset + (m.recoverySource ? 6 : 0), &m.recoveryFlags) ||
+            !PHReadPointer(p + PHOrbMultiDialogOffset, &dialog)) return false;
+        m.continuationDialog = dialog != 0;
+        m.continuationOwnerKnown = ReadLeaderOwner(state, bank, flags, owner);
+        m.continuationOwnerFlags = flags;
+        return true;
+    }
     if (m.kind == PHOrbMultiplayerThree) {
         // 0x10001ECB8: per-turn native clock, including paused accumulated time.
         auto &flags = m.clockFlags; uint32_t paused = 0;
@@ -87,6 +101,9 @@ bool SameMultiplayerRead(const PHOrbMultiplayerState &a, const PHOrbMultiplayerS
         a.networkFlags == b.networkFlags && a.syncState == b.syncState && a.syncStep == b.syncStep &&
         a.connectionState == b.connectionState && a.disconnectKnown == b.disconnectKnown &&
         a.disconnectSeat == b.disconnectSeat && a.disconnectStatus == b.disconnectStatus &&
+        a.recoverySource == b.recoverySource && a.recoveryFlags == b.recoveryFlags &&
+        a.continuationOwnerFlags == b.continuationOwnerFlags &&
+        a.continuationOwnerKnown == b.continuationOwnerKnown && a.continuationDialog == b.continuationDialog &&
         a.countdownReady == b.countdownReady && a.finished == b.finished && a.resolvePending == b.resolvePending &&
         a.clockKnown == b.clockKnown && a.clockFlags == b.clockFlags && a.clockStart == b.clockStart;
 }
@@ -136,6 +153,14 @@ bool ConfirmMultiplayerIdentity(const PHOrbSnapshot &state) {
 NSString *MultiplayerReason(const PHOrbSnapshot &state) {
     const auto &m = state.multiplayer;
     if (!m.known) return @"多人模式的本機席位或回合資料尚未確認";
+    if (m.kind == PHOrbMultiplayerThreeSolo) {
+        if (m.viewTeam != m.localSeat) return @"單人續玩尚未返回本機盤面";
+        if (!PHOrbMultiplayerLocalReady(&m)) return @"等待原生單人續玩切換完成";
+        if (m.resolvePending) return @"本盤已放開，等待遊戲結算";
+        if (state.fps < 15 || state.fps > 120 || !state.remainingFrames || state.remainingFrames > 30000)
+            return @"單人續玩的轉珠時間尚未確認或已結束";
+        return @"3 人協力已轉為單人續玩；可重新按轉一次";
+    }
     if (m.kind == PHOrbMultiplayerThree && m.teamCount && m.turnSerial % m.teamCount != m.localSeat)
         return @"3 人協力：尚未輪到自己，請在自己的回合再按轉一次";
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家的隊伍；請返回自己的盤面";

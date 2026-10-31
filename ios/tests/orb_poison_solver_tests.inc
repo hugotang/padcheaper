@@ -33,8 +33,20 @@ static void PoisonHeartFourSolverTests() {
     board = ShapeBoard(6, 5, {});
     for (unsigned i : {24u, 25u, 26u, 27u}) board.types[i] = 5;
     board.types[0] = board.types[1] = board.types[2] = PHOrbMortalPoison;
-    Check(PHOrbEvaluate(board, {}, evaluation, true) && !evaluation.hazardsSafe && evaluation.mortalPoisonErased == 3,
-        "the normal poison option does not enable mortal poison even with hearts");
+    Check(PHOrbEvaluate(board, {}, evaluation, true) && evaluation.hazardsSafe && evaluation.mortalPoisonErased == 3 &&
+        PHOrbEvaluate(board, {}, evaluation) && !evaluation.hazardsSafe,
+        "mortal poison uses the same opt-in heart-four gate as normal poison and stays forbidden by default");
+    auto allHazards = board;
+    allHazards.types[6] = allHazards.types[7] = allHazards.types[8] = PHOrbPoison;
+    allHazards.types[12] = allHazards.types[13] = allHazards.types[14] = PHOrbJammer;
+    allHazards.types[18] = allHazards.types[19] = allHazards.types[20] = PHOrbBomb;
+    Check(PHOrbEvaluate(allHazards, {}, evaluation, true) && evaluation.hazardsSafe &&
+        evaluation.poisonErased == 6 && evaluation.mortalPoisonErased == 3 && !evaluation.unmatchedBombs &&
+        evaluation.combos == EffectOracle(allHazards).combos && FourOracle(allHazards,5) == 1,
+        "one first-wave heart four permits normal poison, mortal poison, jammer and a complete bomb clear together");
+    allHazards.types[26] = 1;
+    Check(PHOrbEvaluate(allHazards, {}, evaluation, true) && !evaluation.hazardsSafe && !evaluation.heartFours,
+        "losing the heart four still rejects a mixed poison/mortal release");
     board.types[0] = board.types[1] = board.types[2] = PHOrbPoison;
     board.types[28] = 5;
     Check(FourOracle(board, 5) == 0 && PHOrbEvaluate(board, {}, evaluation, true) && !evaluation.hazardsSafe,
@@ -53,6 +65,9 @@ static void PoisonHeartFourSolverTests() {
     for (unsigned i : {0u, 1u, 2u, 3u}) cascadingPoison.types[i] = 5;
     Check(PHOrbEvaluate(cascadingPoison, {}, evaluation, true) && evaluation.hazardsSafe && evaluation.poisonErased == 3,
         "deterministic cascade poison is accepted only behind the same first-wave heart gate");
+    cascadingPoison.types[24] = cascadingPoison.types[25] = cascadingPoison.types[20] = PHOrbMortalPoison;
+    Check(PHOrbEvaluate(cascadingPoison, {}, evaluation, true) && evaluation.hazardsSafe && evaluation.mortalPoisonErased == 3,
+        "deterministic cascade mortal poison shares the first-wave heart policy");
     cascadingPoison.types[24] = cascadingPoison.types[25] = cascadingPoison.types[20] = PHOrbBomb;
     Check(PHOrbEvaluate(cascadingPoison, {}, evaluation, true) && !evaluation.hazardsSafe && evaluation.unmatchedBombs == 3,
         "hearts and poison permission never postpone bomb removal to a later cascade");
@@ -91,6 +106,11 @@ static void PoisonHeartFourSolverTests() {
     Check(PHOrbEvaluate(correlated, {}, evaluation, true) && evaluation.poisonErased == 3 &&
         !evaluation.heartFours && !evaluation.hazardsSafe,
         "poison plus hearts in one phase does not waive the heart requirement in poison-free phases");
+    correlated.types[0] = correlated.types[1] = correlated.types[2] = correlated.types[28] = PHOrbMortalPoison;
+    correlated.spinnerColors = (1u << 5) | (1u << PHOrbMortalPoison);
+    Check(PHOrbEvaluate(correlated, {}, evaluation, true) && evaluation.mortalPoisonErased == 3 &&
+        !evaluation.heartFours && !evaluation.hazardsSafe,
+        "mortal-poison-free phases must also retain the heart four when another phase removes mortal poison");
     board.spinnerMask = 0; board.spinnerColors = 0;
     board.types[0] = board.types[1] = 1;
     Check(PHOrbEvaluate(board, {}, evaluation) && evaluation.hazardsSafe && !evaluation.poisonErased,
@@ -110,6 +130,16 @@ static void PoisonHeartFourSolverTests() {
         PHOrbReplay(&choice, &accepting, 1, &replay) && FourOracle(replay, 5) == 1 &&
         EffectOracle(replay).combos == accepting.combos,
         "accepted normal poison ranks extra Combo ahead of avoiding poison on an exhaustive one-swap choice");
+    choice.types[0] = choice.types[1] = choice.types[3] = PHOrbMortalPoison;
+    options.allowPoisonWithHeartFour = false;
+    Check(PHOrbSolve(choice,options,cancel,strict) == PHOrbSolveStatus::Solved && !strict.mortalPoisonErased,
+        "strict mode still prefers the mortal-poison-free swap");
+    options.allowPoisonWithHeartFour = true;
+    Check(PHOrbSolve(choice,options,cancel,accepting) == PHOrbSolveStatus::Solved && accepting.hazardsSafe &&
+        accepting.mortalPoisonErased == 3 && accepting.combos > strict.combos && accepting.cells[1] == 2 &&
+        PHOrbReplay(&choice,&accepting,1,&replay) && FourOracle(replay,5) == 1 &&
+        EffectOracle(replay).combos == accepting.combos,
+        "accepted mortal poison ranks goal and Combo progress ahead of avoiding the extra match");
 
     // Mixed hazard phases exercise normal/mortal distinction and first-wave
     // heart counts using independent whole-run, union and gravity oracles.
@@ -131,7 +161,7 @@ static void PoisonHeartFourSolverTests() {
         }
         Check(PHOrbEvaluate(mixed, {}, evaluation, true) && evaluation.poisonErased == poison &&
             evaluation.mortalPoisonErased == mortal && evaluation.unmatchedBombs == bombs && evaluation.heartFours == hearts &&
-            evaluation.hazardsSafe == (!mortal && !bombs && (!poison || hearts)),
+            evaluation.hazardsSafe == (!bombs && (!poison || hearts)),
             "mixed hazard phases follow independent first-wave hearts, poison and mortal-poison counts");
     }
 }

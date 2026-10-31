@@ -1,6 +1,16 @@
 # 3／4／8 人「轉一次」與隊長盤面條件
 
-0.5.14 已由 [CI 87](https://github.com/hugotang/padcheaper/actions/runs/41202426621) 完成本機流程與介面自動驗證；下方「新源碼待建置」記錄保留當時狀態，這些修正現已包含於本版，真機仍待驗收。
+0.5.14 已由 [CI 87](https://github.com/hugotang/padcheaper/actions/runs/41202426621) 完成跨場次、4 人退出與固定隊長相關的自動驗證。**下列 3 人單人續玩是之後的新源碼，尚未建置／執行案例，0.5.14 不包含此修正。** 其餘舊源碼小節保留歷史；版本狀態見 [開發紀錄](development.md)。
+
+## 待建置：3 人兩位隊友退出後的單人續玩
+
+原生 3 人協力在只剩本機後可切成 mode 7／selector 2。舊版只識別 selector 1，且讀盤還會在過大的記憶體範圍檢查提早失敗。新源碼分開校驗核心與實際彈窗指標，新增「3 人協力・單人續玩」分類；核對本機 descriptor／隊伍、原生清理完成與彈窗／recovery 狀態後，以原生轉珠時間判定「轉一次」，不再等已停用的線上回合餘數或倒數。
+
+同一場只允許已確認的 selector 1→2，切換會取消舊求路與手勢。盤面恢復只恢復按鈕，每盤仍須再點一次；連續模式、技能、開場、套隊、計時及 BGM 寫入維持單人限制。反向或未知 selector 仍停用，下一場按 0.5.14 的入場識別重新確認。
+
+隊長盤面仍使用本機第 1／6 格的原生來源及技能。高 Combo／手動目標也必須先確認本機隊伍所有權，不能以讀不到隊長當成已取得操作權。診斷增加 `continuationOwnerKnown`、`continuationOwnerFlags`、`continuationDialog`、`recoverySource`／`recoveryFlags`，並明示 `timeSource=move-timer`；沒有改寫原生網路旗標、計時或呼叫同步函式。
+
+原紀錄在席位讀取前失敗，因此 count／status 等條件仍需新版本真機核對。新增案例均已寫未跑；[研究證據](../research/orb-multiplayer-solo-20261031.json) 與 [測試要點](device-testing.md) 列明這些限制。
 
 ## 0.5.14：跨場次重新確認模式
 

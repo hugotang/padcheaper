@@ -19,6 +19,10 @@ static bool changeLeaderDuringPairRead, changeLeaderDuringCoordinateRead;
 static bool changeLeaderCatalogDuringPairRead;
 static bool clearImplAfterSceneRead;
 static bool rejectBattleProtection;
+static size_t implMappedBytes = 0xc4000;
+static vm_prot_t dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
+static unsigned changeContinuationDuringRead;
+static bool changeContinuationDuringCoordinateRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -28,16 +32,19 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 static bool Range(uintptr_t address, size_t length) {
     for (auto *region : {&guest, &implBytes, &realInput, &newInput, &catalogBytes}) {
         auto base = reinterpret_cast<uintptr_t>(region->data());
-        if (address >= base && address - base <= region->size() && length <= region->size() - (address - base)) return true;
+        const size_t size = region == &implBytes ? implMappedBytes : region->size();
+        if (address >= base && address - base <= size && length <= size - (address - base)) return true;
     }
     return false;
 }
 BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required, vm_prot_t forbidden) {
-    if (rejectBattleProtection && address == Impl + 0x92000 && length == 0x2e000) return NO;
+    if (rejectBattleProtection && address == Impl + 0x92000 && length == 0x2c000) return NO;
+    if (address >= Impl + PHOrbDialogOffset && address < Impl + PHOrbMultiDialogOffset + sizeof(uintptr_t) &&
+        ((dialogProtection & required) != required || (dialogProtection & forbidden))) return NO;
     return Range(address, length);
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
-    if (!Range(address, length)) return NO;
+    if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
     if (changeHashDuringEntryRead && address == Header + PHBattleEntryHashRVA) {
         changeHashDuringEntryRead = false;
@@ -80,6 +87,19 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         const uint32_t seat = Load<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattlePlayerTeamOffset));
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiDisconnectSeatOffset), seat);
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTeamDescriptorOffset + seat * PHBattleTeamDescriptorStride + 28), 5);
+    }
+    if (((changeContinuationDuringRead == 1 || changeContinuationDuringRead == 3) && address == Impl + PHOrbMultiRecoveryFlagsOffset) ||
+        (changeContinuationDuringRead == 2 && address == Impl + PHOrbMultiDialogOffset) ||
+        (changeContinuationDuringRead == 4 && address == Impl + PHBattleTeamDescriptorOffset + PHBattleTeamDescriptorStride)) {
+        const unsigned change = changeContinuationDuringRead; changeContinuationDuringRead = 0;
+        if (change == 1) Store<uint8_t>(reinterpret_cast<uint8_t *>(address), 0x40);
+        if (change == 2) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiDialogOffset), Impl + 1);
+        if (change == 3) Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHBattleMultiplayerRVA), 1);
+        if (change == 4) Store<uint8_t>(reinterpret_cast<uint8_t *>(address), 3);
+    }
+    if (changeContinuationDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changeContinuationDuringCoordinateRead = false;
+        Store<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiRecoveryFlagsOffset), 0x40);
     }
     const uintptr_t helper = Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride;
     if (changeLeaderCatalogDuringPairRead && address == helper + PHBattleCardParamOffset) {
@@ -132,6 +152,8 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     changeLeaderCatalogDuringPairRead = false;
     clearImplAfterSceneRead = false;
     rejectBattleProtection = false;
+    implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
+    changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);

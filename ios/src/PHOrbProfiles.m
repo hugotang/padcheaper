@@ -326,8 +326,8 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     [lines addObject:[profile[@"settings"][@"thornComboPriority"] boolValue] ?
         @"荊棘盤優先 Combo：開啟；首消心四連且拖珠傷害低於目前 HP 才可接觸" : @"荊棘盤優先 Combo：關閉；優先較少傷害"];
     [lines addObject:[profile[@"settings"][@"allowPoisonWithHeartFour"] boolValue] ?
-        @"心四連時允許消一般毒：開啟；採用已確認的隊伍回復能力，優先目標與 Combo；猛毒仍避開，爆彈須首消全消" :
-        @"心四連時允許消一般毒：關閉；避免毒／猛毒消除，爆彈須首消全消"];
+        @"心四連時允許消毒／猛毒：開啟；採用已確認的隊伍回復能力，優先目標與 Combo；邪魔可消，爆彈須首消全消" :
+        @"心四連時允許消毒／猛毒：關閉；避免毒／猛毒消除，爆彈須首消全消"];
     [lines addObject:@"\n儲存並選用會同時選取隊伍與策略；入場套隊沿用既有開關。按「開始自動轉」才執行開場及循環。"];
     return [lines componentsJoinedByString:@"\n"];
 }

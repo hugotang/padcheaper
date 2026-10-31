@@ -28,6 +28,7 @@ struct Context {
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
+    std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
     bool diagonal = false;
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     std::array<Bits, 2> runStarts{};
@@ -169,6 +170,9 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
                 pattern.stableColors &= ~board.spinnerColors;
         }
     }
+    for (unsigned g = 0; g < goals.count; ++g)
+        for (const auto &pattern : context.patterns[g])
+            context.hasStableLayouts[g] |= (pattern.stableColors & goals.items[g].colors & ~context.unmatchable) != 0;
     if (context.guidance && context.shapeGoals) for (unsigned i = 0; i < w * h; ++i) {
         Bits frontier = Bits(1) << i, seen = frontier;
         if (frontier & context.blocked) continue;
@@ -211,6 +215,37 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
         }
     }
     return true; // Necessary inventory check, not a proof that a route exists.
+}
+
+bool ShapeSpaceAvailable(const Cells &cells, const Context &context) {
+    // An exact T needs a different color along its entire conservative
+    // border. A distinct-color four also consumes non-T cells. Enumerate
+    // their possible placements without path, thorn or fixed-cell limits:
+    // if even that larger layout space lacks separators, no route can help.
+    // Check every shared phase independently, allowing its T/four to move.
+    const unsigned size = context.width * context.height;
+    for (unsigned g = 0; g < context.goals.count; ++g) {
+        const auto &t = context.goals.items[g];
+        if (t.kind != PHOrbGoalT || !t.colors || (t.colors & (t.colors - 1))) continue;
+        const unsigned color = unsigned(__builtin_ctz(t.colors));
+        for (unsigned h = 0; h < context.goals.count; ++h) {
+            const auto &four = context.goals.items[h];
+            if (four.kind != PHOrbGoalFour || !four.colors || (four.colors & (four.colors - 1)) ||
+                four.colors == t.colors) continue;
+            unsigned minimum = size + 1;
+            for (const auto &a : context.patterns[g]) for (const auto &b : context.patterns[h])
+                if (!(a.cells & b.cells)) minimum = std::min(minimum, Count(a.border | b.cells));
+            for (unsigned phase = 0; phase < context.variants; ++phase) {
+                unsigned separators = 0;
+                for (unsigned i = 0; i < size; ++i) {
+                    const auto type = context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i];
+                    separators += type != color;
+                }
+                if (separators < minimum) return false;
+            }
+        }
+    }
+    return true; // Passing only means this necessary bound did not rule it out.
 }
 
 bool ShapeMatches(Bits group, Bits color, const PHOrbGoal &goal, const std::vector<Pattern> &patterns) {
@@ -271,7 +306,10 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
         const Bits color = colors[c];
         for (unsigned p = 0; p < context.patterns[g].size(); ++p) {
             const auto &pattern = context.patterns[g][p];
-            if (context.stableHints && !(pattern.stableColors & (1u << c))) continue;
+            // Dense spinner masks can remove every stable template of a
+            // goal. In that case retain per-phase hints immediately; a zero
+            // guidance score must not consume the primary pass's budget.
+            if (context.stableHints && context.hasStableLayouts[g] && !(pattern.stableColors & (1u << c))) continue;
             ShapeHint hint{pattern.cells, pattern.border, 4096, uint16_t(1 + p * PHOrbBasicTypes + c), uint8_t(c), exact};
             if (met) {
                 if ((pattern.cells & used & color) == pattern.cells) OfferHint(hints, hint);
@@ -377,7 +415,7 @@ void FinishProgress(Score &score, const Context &context) {
 // random skyfall or leader-added combos. Exact shapes require an entire
 // first-wave group, so a 3x4 blob is never reported as a 3x3 square.
 bool ReleaseHazardsSafe(const PHOrbEvaluation &result, bool allowPoisonWithHeartFour, bool requireHeart = true) {
-    return !result.unmatchedBombs && !result.mortalPoisonErased &&
+    return !result.unmatchedBombs &&
         (!result.poisonErased || (allowPoisonWithHeartFour && (!requireHeart || result.heartFours)));
 }
 
@@ -550,12 +588,34 @@ Score Evaluate(Cells cells, const Context &context) {
     return worst;
 }
 
+// A score depends on the color layout and this pass's immutable context, not
+// the drag endpoint or path. Reuse it across those candidates, but compare
+// every cell so a hash collision can only cost a cache miss. Thorn damage and
+// contact-dependent heart requirements are applied to a copy by the caller.
+class EvaluationCache {
+    struct Entry { Cells cells{}; Score score{}; uint32_t pass = 0; };
+    std::vector<Entry> _entries;
+    uint32_t _pass = 0;
+public:
+    unsigned calls = 0, hits = 0;
+    explicit EvaluationCache(bool enabled) : _entries(enabled ? 4096 : 0) {}
+    void nextPass() { ++_pass; }
+    Score score(const Cells &cells, const Context &context) {
+        if (_entries.empty()) { ++calls; return Evaluate(cells, context); }
+        uint64_t hash = 14695981039346656037ULL;
+        for (unsigned i = 0; i < context.width * context.height; ++i) { hash ^= cells[i]; hash *= 1099511628211ULL; }
+        Entry &entry = _entries[hash & (_entries.size() - 1)];
+        if (entry.pass == _pass && entry.cells == cells) { ++hits; return entry.score; }
+        ++calls;
+        entry.cells = cells; entry.score = Evaluate(cells, context); entry.pass = _pass;
+        return entry.score;
+    }
+};
+
 bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
-    if (allowPoisonWithHeartFour && ar.mortalPoisonErased != br.mortalPoisonErased)
-        return ar.mortalPoisonErased < br.mortalPoisonErased;
     if (!allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
@@ -597,7 +657,6 @@ bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornCom
     if (focus < PHOrbMaxGoals && a.score.result.hazardsSafe == b.score.result.hazardsSafe &&
         !a.score.result.goalsMet && !b.score.result.goalsMet &&
         (allowPoisonWithHeartFour || a.score.result.poisonErased == b.score.result.poisonErased) &&
-        (!allowPoisonWithHeartFour || a.score.result.mortalPoisonErased == b.score.result.mortalPoisonErased) &&
         a.score.result.unmatchedBombs == b.score.result.unmatchedBombs) {
         const unsigned av = a.score.progress + 3 * a.score.goalProgress[focus];
         const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
@@ -743,6 +802,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // evaluation. Check the clock between each such candidate.
         const unsigned deadlineMask = context.variants > 1 || context.shapeGoals ? 0u : options.goals.count ? 7u : 31u;
         if (!EnoughOrbs(initial, context)) return PHOrbSolveStatus::InsufficientOrbs;
+        if (!ShapeSpaceAvailable(initial, context)) return PHOrbSolveStatus::IncompatibleGoals;
         std::vector<Node> starts, beam, next;
         starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * (options.diagonal ? 8 : 4));
         for (unsigned i = 0; i < size; ++i) {
@@ -754,6 +814,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         Node best;
         bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
+        EvaluationCache evaluationCache(context.variants > 1 && context.shapeGoals);
         std::unordered_set<uint64_t> visited;
         visited.reserve(options.beam * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
@@ -763,6 +824,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
                           Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false) {
             ++passes;
+            // Recovery changes stableHints, so it must not inherit the main
+            // pass's heuristic scores. Exact validation is still unchanged.
+            evaluationCache.nextPass();
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
                 next.clear(); visited.clear();
@@ -795,7 +859,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         std::swap(child.cells[current], child.cells[cell]);
                         std::swap(child.thorns[current], child.thorns[cell]);
                         if (!visited.insert(Hash(child, size)).second) continue;
-                        child.score = Evaluate(child.cells, scoring);
+                        child.score = evaluationCache.score(child.cells, scoring);
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
                         // A branch can finish its heart four later. Keep the
@@ -826,13 +890,12 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 } else SelectBeam(next, beam, options.beam, depth, scoring, focus, options.thornComboPriority);
             }
         };
-        // A spinner/thorn board can make an early easy four crowd out the
+        // A spinner board can make an early easy four crowd out the
         // harder exact shape. Start with that shape's progress while keeping
         // every original goal and release gate. Other passes retain the
         // ordinary objective, so the focused score does not authorize a move.
         unsigned primaryFocus = PHOrbMaxGoals, largestShape = 0;
-        if (context.variants > 1 && context.shapeGoals > 1 &&
-            std::any_of(initialThorns.begin(), initialThorns.end(), [](uint8_t value) { return value != 0; })) {
+        if (context.variants > 1 && context.shapeGoals > 1) {
             for (unsigned g = 0; g < options.goals.count; ++g) {
                 const auto &goal = options.goals.items[g];
                 if (!ShapeGoal(goal.kind) || goal.kind == PHOrbGoalFour ||
@@ -889,6 +952,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         std::copy(std::begin(best.score.result.goalHits), std::end(best.score.result.goalHits), route.goalHits);
         const auto finished = Clock::now();
         route.evaluated = evaluated; route.deadlineReached = timedOut || finished >= deadline;
+        route.evaluationCalls = evaluationCache.calls; route.evaluationCacheHits = evaluationCache.hits;
         route.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(finished - start).count());
         route.searchPasses = uint8_t(passes); route.backtracks = uint8_t(backtracks); route.exploredDepth = uint8_t(exploredDepth);
         PHOrbBoard replay{};

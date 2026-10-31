@@ -156,7 +156,14 @@ PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer) {
         if (mode == 11) return PHOrbMultiplayerFour;
         if (mode == 10) return PHOrbMultiplayerEight;
     }
+    if (mode == 7 && multiplayer == 2) return PHOrbMultiplayerThreeSolo;
     return PHOrbMultiplayerUnsupported;
+}
+
+bool PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerKind from, PHOrbMultiplayerKind to) {
+    // Native co-op continuation is one-way within an entry. It is still an
+    // explicit multiplayer one-shot context, never ordinary solo automation.
+    return from == to || (from == PHOrbMultiplayerThree && to == PHOrbMultiplayerThreeSolo);
 }
 
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b) {
@@ -165,7 +172,7 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
     return a->known && b->known && a->kind != PHOrbMultiplayerUnsupported &&
         a->turnSerial == b->turnSerial && a->teamCount == b->teamCount &&
         a->localSeat == b->localSeat && a->viewTeam == b->viewTeam &&
-        (a->kind == PHOrbMultiplayerThree || a->clockStart == b->clockStart);
+        (a->kind == PHOrbMultiplayerThree || a->kind == PHOrbMultiplayerThreeSolo || a->clockStart == b->clockStart);
 }
 
 static bool PHOrbMultiplayerRemoteExit(const PHOrbMultiplayerState *state) {
@@ -179,6 +186,9 @@ static bool PHOrbMultiplayerRemoteExit(const PHOrbMultiplayerState *state) {
 }
 
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state) {
+    // 0x10001C5F8 / 0x10000C5EC clear the active network flags when native
+    // local continuation finishes. Connection state is no longer its clock.
+    if (state && state->kind == PHOrbMultiplayerThreeSolo) return state->networkFlags == 0;
     if (!state || (state->kind != PHOrbMultiplayerThree && state->kind != PHOrbMultiplayerFour &&
         state->kind != PHOrbMultiplayerEight)) return false;
     // Native release sets bit 1 in every multiplayer mode. In 4P the
@@ -193,6 +203,12 @@ bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state) {
 }
 
 bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state) {
+    if (state && state->kind == PHOrbMultiplayerThreeSolo)
+        return state->known && state->localStatus == 3 && state->teamCount >= 2 && state->teamCount <= 3 &&
+            state->localSeat < state->teamCount && state->viewTeam == state->localSeat &&
+            state->continuationOwnerKnown && !state->continuationDialog && state->recoverySource <= 1 &&
+            !(state->recoveryFlags & 0x40u) && !state->syncState && !state->syncStep &&
+            PHOrbMultiplayerNetworkReady(state);
     if (!state || !state->known || state->localStatus != 3 ||
         (state->connectionState != 2 && state->connectionState != 3 &&
          state->connectionState != 6 && state->connectionState != 7) ||
@@ -215,8 +231,13 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
     if (!m->known || m->kind != PHOrbMultiplayerMode(state->identity.entryMode, state->identity.multiplayer) ||
         m->kind == PHOrbMultiplayerNone || m->kind == PHOrbMultiplayerUnsupported ||
         !m->teamCount || m->localSeat >= m->teamCount || m->viewTeam != m->localSeat ||
-        m->turnSerial > INT32_MAX || !PHOrbMultiplayerLocalReady(m) || m->resolvePending ||
-        !m->clockKnown || !isfinite(m->remainingSeconds) || m->remainingSeconds <= 0 || m->remainingSeconds > 86400)
+        m->turnSerial > INT32_MAX || !PHOrbMultiplayerLocalReady(m) || m->resolvePending)
+        return false;
+    // Selector 2 bypasses the native co-op input precheck and decision clock.
+    // The ordinary move timer still bounds every explicitly armed gesture.
+    if (m->kind == PHOrbMultiplayerThreeSolo)
+        return state->fps >= 15 && state->fps <= 120 && state->remainingFrames > 0 && state->remainingFrames <= 30000;
+    if (!m->clockKnown || !isfinite(m->remainingSeconds) || m->remainingSeconds <= 0 || m->remainingSeconds > 86400)
         return false;
     if (m->kind == PHOrbMultiplayerThree)
         // Native first swap pauses the co-op decision clock; the ordinary

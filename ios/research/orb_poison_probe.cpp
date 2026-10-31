@@ -155,7 +155,7 @@ int main() {
                 worst.lightT = std::min(worst.lightT, oracle.lightT); worst.hearts = std::min(worst.hearts, oracle.hearts);
                 worst.poison = std::max(worst.poison, oracle.poison); worst.mortal = std::max(worst.mortal, oracle.mortal); worst.bombs = std::max(worst.bombs, oracle.bombs);
             }
-            safe = !worst.bombs && !worst.mortal && (!worst.poison || (allow && worst.hearts));
+            safe = !worst.bombs && (!worst.poison || (allow && worst.hearts));
             safe &= !contacts || (known && hp && hp <= maximum && maximum <= INT32_MAX && uint64_t(pending) + damage < hp && worst.hearts);
             const bool met = worst.lightT && worst.hearts;
             valid &= route.combos == worst.combos && route.erased == worst.erased && route.heartFours == worst.hearts &&
@@ -164,10 +164,10 @@ int main() {
                 route.poisonErased == worst.poison && route.mortalPoisonErased == worst.mortal && route.unmatchedBombs == worst.bombs &&
                 route.thornContacts == contacts && route.thornDamage == damage &&
                 status == (!safe ? PHOrbSolveStatus::Unsafe : met ? PHOrbSolveStatus::Solved : PHOrbSolveStatus::GoalsUnmet);
-        } else if (!route.count) valid &= status == PHOrbSolveStatus::InsufficientOrbs || status == PHOrbSolveStatus::NoRoute;
+        } else if (!route.count) valid &= status == PHOrbSolveStatus::InsufficientOrbs || status == PHOrbSolveStatus::NoRoute || status == PHOrbSolveStatus::IncompatibleGoals;
         const char *name = status == PHOrbSolveStatus::Solved ? "solved" : status == PHOrbSolveStatus::GoalsUnmet ? "goals_unmet" :
             status == PHOrbSolveStatus::Unsafe ? "unsafe" : status == PHOrbSolveStatus::InsufficientOrbs ? "insufficient" :
-            status == PHOrbSolveStatus::NoRoute ? "no_route" : "unexpected";
+            status == PHOrbSolveStatus::NoRoute ? "no_route" : status == PHOrbSolveStatus::IncompatibleGoals ? "incompatible_goals" : "unexpected";
         std::printf("{\"id\":%u,\"allowPoisonWithHeartFour\":%s,\"status\":\"%s\",\"goals_met\":%s,\"hazards_safe\":%s,"
             "\"goal_hits\":[%u,%u],\"combos\":%u,\"steps\":%u,\"poisonErased\":%u,\"mortalPoisonErased\":%u,\"unmatchedBombs\":%u,"
             "\"thornContacts\":%u,\"thornDamage\":%llu,\"heartFours\":%u,\"elapsedMS\":%u,\"wall_ms\":%.3f,\"evaluated\":%u,"

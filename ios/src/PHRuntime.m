@@ -892,6 +892,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"elapsedMS"], orbs[@"evaluated"], orbs[@"deadline"], orbs[@"searchSteps"], orbs[@"searchBeam"], orbs[@"searchBudgetMS"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb search passes: %@ / backtracks %@ / deepest %@ steps",
         orbs[@"searchPasses"], orbs[@"backtracks"], orbs[@"exploredDepth"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb evaluation: %@ calls / %@ cache hits (candidate scoring only)",
+        orbs[@"evaluationCalls"], orbs[@"evaluationCacheHits"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb multiplayer (read-only): %@\nMultiplayer support: explicit local one-shot only; synchronization not device-verified",
         orbs[@"multiplayer"] ?: @{}];
     for (NSString *key in @[@"onceReadiness", @"runtimeReadiness", @"onceReadinessHistory"]) {
@@ -900,7 +902,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null"];
     }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nThorn Combo priority: %@", orbs[@"thornComboPriority"]];
-    diagnostics = [diagnostics stringByAppendingFormat:@"\nNormal poison with first-wave heart four: %@ (team recovery policy)", orbs[@"allowPoisonWithHeartFour"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nPoison and mortal poison with first-wave heart four: %@ (team recovery policy)", orbs[@"allowPoisonWithHeartFour"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nDiagonal gesture moves: %@ · captured route: %@ (matches remain orthogonal)", orbs[@"diagonal"], orbs[@"routeDiagonal"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb start: sent %@ / accepted %@",
         orbs[@"startSent"], orbs[@"startAccepted"]];

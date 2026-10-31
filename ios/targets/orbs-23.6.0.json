@@ -28,7 +28,14 @@
       "ownership": "native-local-seat-turn-view-clock",
       "preview_execute": false,
       "leader_planning": "read-only-local-current-parameters",
-      "extra_helper": "four-player-native-extra-skill-no-helper-leader"
+      "extra_helper": "four-player-native-extra-skill-no-helper-leader",
+      "continuation": {
+        "mode": 7,
+        "selector": 2,
+        "ownership": "native-local-bank-after-coop-cleanup",
+        "time": "native-move-timer",
+        "input": "explicit-local-once"
+      }
     },
     "dimensions": [
       [
@@ -105,7 +112,7 @@
     "hazards": {
       "jammer": "ordinary-match",
       "poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
-      "mortal_poison": "no-deterministic-match",
+      "mortal_poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
       "bomb": "all-first-wave",
       "thorn": "bounded-contact-with-first-wave-heart-four"
     },
@@ -242,7 +249,10 @@
     "PHOrbLeaderExtraStride": "0x350",
     "PHOrbLeaderExtraSkillOffset": "0x54",
     "PHOrbMultiSyncStepOffset": "0xa639c",
-    "PHOrbMultiDisconnectSeatOffset": "0xad6ec"
+    "PHOrbMultiDisconnectSeatOffset": "0xad6ec",
+    "PHOrbMultiRecoverySourceOffset": "0xafe78",
+    "PHOrbMultiRecoveryFlagsOffset": "0xafe74",
+    "PHOrbMultiDialogOffset": "0xbe9d0"
   },
   "guards": [
     {
@@ -1100,6 +1110,62 @@
       "length": 64,
       "bytes": "e00313aaa920e89780a3073788189452880ba0720aaa00f04ac11e91496968b829050011496928b8080340f9c9d48f526901a0721669e978df0600718b010054",
       "sha256": "b9359c3c2ab13678bd69c4a55182bdb3e5273d04469a7a95550070f4819a8c04"
+    },
+    {
+      "name": "PHOrbMultiSoloViewRVA",
+      "va": "0x10001c87c",
+      "rva": "0x1c87c",
+      "length": 64,
+      "bytes": "e00313aae10314aa0200805296c1ff9788438a522800a07249008052096b28b83f03146b20020054a87500f001cd43bde003271e6010805201008052c00c1694",
+      "sha256": "407910d0fb3e0c7b00d1f72eedf635e12c24b459f224c72896e2dee16f76ae9d"
+    },
+    {
+      "name": "PHOrbMultiSoloFinalizeRVA",
+      "va": "0x10001cbe0",
+      "rva": "0x1cbe0",
+      "length": 64,
+      "bytes": "683a40f9088d429100213991210080527fbeff97683a40f9c9d48f526901a0720869e9781f0500712b020054e00313aa2eb01794683a40f9c9d48f526901a072",
+      "sha256": "9989566a22644568d012db99f318ef6ddfc9bb071146151263464eba20bdcc66"
+    },
+    {
+      "name": "PHOrbMultiSoloResetRVA",
+      "va": "0x10000c8d0",
+      "rva": "0xc8d0",
+      "length": 64,
+      "bytes": "287600f000a1c03d6056893d7f6225b908ad84526802088b29008052eb0308aaea0308aa497d0029ea030baa6b610591290500113f35007161ffff54e003679e",
+      "sha256": "2ad76bb5fe21a01c0c3624d34b4db0a080b51bae21ca6c9a76c63833a3b850e9"
+    },
+    {
+      "name": "PHOrbMultiSoloInputReturnRVA",
+      "va": "0x100016724",
+      "rva": "0x16724",
+      "length": 64,
+      "bytes": "000080521200001408d1429100912091215715941f040071cb000054683a40f9a93385522901a0722a0080520a692938e00313aa98c91794e00313aa89f4ff97",
+      "sha256": "bb355c09aa163cd0d2fc5a811e2d2daa31102e3f62cd48ebcfde258fd5cf7973"
+    },
+    {
+      "name": "PHOrbMultiSoloRecoveryGateRVA",
+      "va": "0x10060d4c4",
+      "rva": "0x60d4c4",
+      "length": 64,
+      "bytes": "080340f909cf9f524901a072096969383f010071890598524a0698524911899a0801098b09c987524901a07208696938680b3037e00313aa3af0ff97200e0037",
+      "sha256": "ddf731a8b2fab69850cde16a157e0d0578de08c98f7e459725b1e0e117e27f4a"
+    },
+    {
+      "name": "PHOrbMultiSoloReleaseRVA",
+      "va": "0x10060e874",
+      "rva": "0x60e874",
+      "length": 64,
+      "bytes": "89438a522900a072496b69b83f110071600100543f050071c171ff54098d4291292139912a0d40b92b2540296c0dca1a8aad0a1b5f01096bc170ff5409ce9f52",
+      "sha256": "d06a46ecb8b69a13e9c6ed1000606cbd8d034c3abefe82945c02b28958dd69d2"
+    },
+    {
+      "name": "PHOrbMultiSoloNetworkResetRVA",
+      "va": "0x10000c610",
+      "rva": "0xc610",
+      "length": 64,
+      "bytes": "085c97521700088b08f29452898592521600098bff4a05b9090c40b92a7600f02b7600f03f0500716b0800542c0d00118c757e922d0500d14199c03d629dc03d",
+      "sha256": "e575ea9bf8c9ef29211b798b17513612561cb4896e7273c733964d2a48f35f10"
     }
   ],
   "thorn_budget": {

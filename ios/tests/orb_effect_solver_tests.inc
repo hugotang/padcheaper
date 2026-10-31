@@ -68,7 +68,7 @@ static void OrbEffectSolverTests() {
         auto board = jammer;
         board.types[24] = board.types[25] = board.types[26] = uint8_t(poison);
         Check(PHOrbEvaluate(board, {}, result) && !result.hazardsSafe && result.poisonErased == 3,
-            "poison and mortal poison matches never authorize a route");
+            "poison and mortal poison matches cannot authorize a route under the default strict policy");
         board.unmatchableColors = uint16_t(1u << poison);
         Check(PHOrbEvaluate(board, {}, result) && result.hazardsSafe && result.poisonErased == 0,
             "an unmatchable poison color stays on the board in every wave");

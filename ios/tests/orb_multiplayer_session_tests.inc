@@ -25,6 +25,7 @@ static void StartMultiplayerOnce(PHOrbSession *session, FakeOrbEngine *engine) {
 }
 #include "orb_multiplayer_peer_session_tests.inc"
 #include "orb_multiplayer_entry_session_tests.inc"
+#include "orb_multiplayer_solo_session_tests.inc"
 static void MultiplayerStatusTests() {
     for (unsigned players : {3u, 4u, 8u}) {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, players, players - 1);
@@ -315,6 +316,7 @@ static void MultiplayerNextBoardSessionTests() {
         "retained multiplayer readiness changes are bounded and never create input intent");
 }
 static void MultiplayerSessionTests() {
+    MultiplayerSoloSessionTests();
     MultiplayerEntrySessionTests();
     MultiplayerPeerSessionTests();
     MultiplayerLeaderReadDiagnosticsTests();

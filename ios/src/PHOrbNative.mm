@@ -159,8 +159,18 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     if (!PHReadPointer(header + PHBattleImplRVA, &active) || active != impl) {
         if (reason) *reason = @"目前戰鬥實作與場景物件不一致"; return false;
     }
-    if (!PHMemoryHasProtection(impl + 0x92000, 0x2e000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) {
+    // Keep the reviewed battle core protected, but do not require unused
+    // allocation tail pages up to +0xC0000. Modal pointers lie outside that
+    // core and receive their own exact-range protection check.
+    if (!PHMemoryHasProtection(impl + 0x92000, 0x2c000, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE)) {
         if (reason) *reason = @"戰鬥記憶體範圍未通過讀寫保護校驗"; return false;
+    }
+    if (!PHMemoryHasProtection(impl + PHOrbDialogOffset, sizeof(uintptr_t),
+        VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE) ||
+        (state.multiplayer.kind == PHOrbMultiplayerThreeSolo &&
+         !PHMemoryHasProtection(impl + PHOrbMultiDialogOffset, sizeof(uintptr_t),
+            VM_PROT_READ | VM_PROT_WRITE, VM_PROT_EXECUTE))) {
+        if (reason) *reason = @"戰鬥彈窗記憶體範圍未通過讀寫保護校驗"; return false;
     }
     state.identity.impl = impl;
     if (reason) *reason = @"關卡入場識別未通過讀取校驗";
@@ -175,10 +185,11 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     entryConfirmed = true;
     const bool newEntry = observedEntry && !SameOrbBattleEntry(*observedEntry, state.identity);
     if ((!newEntry && multiplayerDisabled) || state.multiplayer.kind == PHOrbMultiplayerUnsupported ||
-        (!newEntry && observedKind != PHOrbMultiplayerNone && state.multiplayer.kind != observedKind)) {
+        (!newEntry && observedKind != PHOrbMultiplayerNone &&
+         !PHOrbMultiplayerTransitionAllowed(observedKind, state.multiplayer.kind))) {
         // A missed menu frame must not carry the previous match's latch into
         // a verified new entry. Keep same-entry selector changes closed before
-        // any board/leader access, including a temporary return to solo mode.
+        // any board/leader access, except the reviewed 3P continuation path.
         state.multiplayerDisabled = true;
         if (reason) *reason = @"此多人模式或連線過渡狀態尚不支援轉一次";
         return true;
@@ -440,7 +451,10 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     if (read && entryConfirmed && state->present) {
         const auto kind = state->multiplayer.kind;
         if (kind != PHOrbMultiplayerNone) {
-            if (_sawMultiplayer && kind != _multiplayerKind) _multiplayerDisabled = true;
+            if (_sawMultiplayer && kind != _multiplayerKind) {
+                if (!PHOrbMultiplayerTransitionAllowed(_multiplayerKind, kind)) _multiplayerDisabled = true;
+                else { _multiplayerKind = kind; [self forgetMultiplayerGesture]; }
+            }
             if (!_sawMultiplayer) { _sawMultiplayer = true; _multiplayerKind = kind; }
         } else if (_sawMultiplayer) _multiplayerDisabled = true;
     }

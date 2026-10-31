@@ -1,0 +1,238 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "network_sync_verified": false,
+  "server_acceptance_verified": false,
+  "method": "Read-only IDA decompilation/disassembly and original/current byte comparison; sanitized diagnostic extraction and source review. No generator, compiler, test suite, benchmark, GUI or CI run for these changes.",
+  "report": {
+    "version": "0.5.14-orbs",
+    "symptom": "Both peers in 3P disconnect/turn grey; local native solo continuation remains manually playable but floating one-shot is disabled.",
+    "battle": {
+      "phase": 2,
+      "mode": 7,
+      "source": 0,
+      "selector": 2
+    },
+    "orb": {
+      "readSucceeded": false,
+      "readReason": "戰鬥記憶體範圍未通過讀寫保護校驗",
+      "kind": 4,
+      "known": false,
+      "blockers": [
+        "live-unreadable",
+        "board-not-ready",
+        "time-unavailable"
+      ]
+    },
+    "limits": [
+      "The orb reader failed before reading descriptors, clocks or board data. Zero seat/count/status/flags/timer values are unread defaults, not device observations.",
+      "Battle's narrower impl+0x92000/0x2c000 range succeeds while the orb impl+0x92000/0x2e000 range fails. The log does not identify which exact page/protection caused the broader check to fail.",
+      "Mode 7 selector 2 is a separate concrete classification omission. Adding that mode alone would not fix the earlier memory gate failure.",
+      "The retained count 2..3, local status 3 and completed-cleanup predicates come from native source analysis and synthetic cases; this device log does not confirm them after the failed read."
+    ],
+    "privacy": "Account identifiers, entry hashes, pointers, device/container paths and unrelated configuration are omitted."
+  },
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "native_evidence": [
+    {
+      "va": "0x100011bec",
+      "finding": "Co-op completion counts remaining descriptors excluding statuses 5/6. One remaining participant leads through sync 3 into native local continuation. The dylib does not call the sync dispatcher."
+    },
+    {
+      "va": "0x10001c87c",
+      "guard": "PHOrbMultiSoloViewRVA",
+      "finding": "sub_10001C5F8 copies localSeat via sub_10000CEE0 then writes selector 2 at 0x10001C898. This mode 7 branch restores the native local bank, including its helper, instead of waiting for turnSerial modulo teamCount."
+    },
+    {
+      "va": "0x10001cbe0",
+      "guard": "PHOrbMultiSoloFinalizeRVA",
+      "finding": "Calls sub_10000C5EC(impl+0xA3E48,1). The surrounding routine restores the saved battle phase and clears the team busy bit after native continuation."
+    },
+    {
+      "va": "0x10000c8d0",
+      "guard": "PHOrbMultiSoloResetRVA",
+      "finding": "Reset stores [0,0,0,UINT32_MAX] at context+9552 (impl+0xA6398), clearing sync and step. Argument 1 preserves the initial turn/count/local/view fields and local descriptor identity."
+    },
+    {
+      "va": "0x100016724",
+      "guard": "PHOrbMultiSoloInputReturnRVA",
+      "finding": "Input precheck sub_1000164F4 only uses the online co-op path for selectors 1/4; selector 2 reaches MOV W0,#0, skipping the retired turn-modulo/decision-clock gate."
+    },
+    {
+      "va": "0x10060d4c4",
+      "guard": "PHOrbMultiSoloRecoveryGateRVA",
+      "finding": "The actual native input routine still checks recovery bit 0x40. Source at impl+0xAFE78 selects impl+0xAFE74 or impl+0xAFE7A; the latter byte is six bytes after the former. A blocking bit invokes recovery dispatch and prevents input."
+    },
+    {
+      "va": "0x10060e874",
+      "guard": "PHOrbMultiSoloReleaseRVA",
+      "finding": "Release performs online network/co-op timer work only for selectors 1/4; selector 2 bypasses that branch while retaining the ordinary native board gesture."
+    },
+    {
+      "va": "0x10000c610",
+      "guard": "PHOrbMultiSoloNetworkResetRVA",
+      "finding": "At 0x10000C624, STR WZR,[context+0xBAE0+0x548] clears context+49192 = impl+0xAFE70 network flags. The continuation reader requires completed cleanup rather than ignoring arbitrary flags."
+    },
+    {
+      "va": "0x10000cee0",
+      "finding": "Loads the local six-member source bank and sets viewTeam to localSeat. sub_10001956C/sub_100019BBC retain six-member mode 7 ownership independent of selector, including helper provenance."
+    }
+  ],
+  "change": {
+    "kind": "PHOrbMultiplayerThreeSolo",
+    "kind_value": 5,
+    "preserved_unsupported_value": 4,
+    "entry_transition": "Allow only Three to ThreeSolo within a verified entry; revoke old arm/worker/token. Reverse or unrelated kind changes remain latched until a verified new entry or exit.",
+    "read_only_fields": {
+      "PHOrbMultiRecoverySourceOffset": "0xafe78",
+      "PHOrbMultiRecoveryFlagsOffset": "0xafe74",
+      "PHOrbMultiDialogOffset": "0xbe9d0"
+    },
+    "memory": {
+      "core_start": "0x92000",
+      "old_length": "0x2e000",
+      "new_length": "0x2c000",
+      "core_end_exclusive": "0xbe000",
+      "modal_offsets": [
+        "0xbe9c8",
+        "0xbe9d0"
+      ],
+      "modal_bytes_each": 8,
+      "protection": "Core and each used modal pointer require read+write and forbid execute. Every individual read still uses PHReadMemory protection. All eight enemy structures remain within the core."
+    },
+    "input_gate": [
+      "mode 7, selector 2, source 0, phase 2 and stable supported board",
+      "known count 2..3, in-range localSeat equals viewTeam, localStatus 3",
+      "native local descriptor active flag/bank address/protection confirmed; team busy bit 8 clear",
+      "syncState 0, syncStep 0, networkFlags 0, no continuation modal, selected recovery flag bit 0x40 clear",
+      "ordinary move timer 1..30000 frames at 15..120 fps; no retired online decision clock or connection requirement",
+      "unchanged board, input, geometry, goals, coordinate conversion and final double-read gates"
+    ],
+    "scope": "Explicit local one-shot and read-only goals only. PHBattleIsSinglePlayer is unchanged; continuous input, skills, team/timer/BGM writes and damaging thorn contacts remain unavailable."
+  },
+  "diagnostics": {
+    "new_fields": [
+      "continuation",
+      "continuationOwnerKnown",
+      "continuationOwnerFlags",
+      "continuationDialog",
+      "recoverySource",
+      "recoveryFlags",
+      "timeSource",
+      "networkRequired"
+    ],
+    "timeSource": "move-timer",
+    "ui": "3 人協力・單人續玩",
+    "history": "Existing 16-entry readiness history includes owner/recovery/modal changes; raw pointers are not logged."
+  },
+  "written_regressions": {
+    "executed": false,
+    "model": "All local seats, retained two-seat mode 7 bank, retired clock independence, timer/ownership/phase/recovery gates and one-way kind transition.",
+    "native": "Truncated unused tail succeeds; actual modal truncation/read-only/execute fails; online-to-continuation revokes pending/held input; reverse transition latches; new entry recovers; owner/recovery/modal/selector/coordinate races reject; leader/helper provenance retained; second board needs another tap.",
+    "session": "Explicit once with no network clock, no auto/skills, old worker and held gesture canceled, recovery readiness returns without auto-start.",
+    "overlay": "Collapsed continuation status and disabled/enabled shortcut share the session gate; another explicit tap is required."
+  },
+  "validation": {
+    "static_only": true,
+    "compiled": false,
+    "tests_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "generated_headers_updated": false,
+    "new_dylib": false,
+    "static_report": {
+      "status": "passed-static-only",
+      "source_baseline": "1ce471e6e0b3c1c5d8746d56befc260cb36ad5ba",
+      "python_ast_files": [
+        "ios/tools/generate_orbs.py",
+        "ios/tools/generate_battle.py",
+        "ios/research/orb_spinner_search_benchmark.py"
+      ],
+      "embedded_python_blocks": 6,
+      "source_sha256_utf8_lf": {
+        "ios/research/orb_poison_probe.cpp": "7b5fb72f1a1334a2404f3e5d88e134413a12811d2c47117f9c6f441d5f505c8a",
+        "ios/research/orb_recorded_shape_probe.cpp": "65b4f0bf3f2d6eb704ebbc09ba4e7db4ce08d1808355f6df3bfdce35074e8fb3",
+        "ios/research/orb_shape_probe.cpp": "6a0ace35cd344d894bf6d6044ada67d5c52c8211b49e47a3a772952167ae94fa",
+        "ios/src/PHOrbController.m": "34142972a3de527756dd3345eac08c675097b3b9ba7807f0134e8a9af04ef59f",
+        "ios/src/PHOrbLeaders.inc": "ec6e2cff2840e56de71f28c34330cd7e52bc0266482a288d40e18e8dccfadd4f",
+        "ios/src/PHOrbModel.c": "a48c9b9ba2c4694b73e7da8e6bf9ed9dbd67a152739d85a37dccaec00b9570ed",
+        "ios/src/PHOrbModel.h": "34cb2796725120c524d1ef07d50f227ceadd64694c495506e34f3fcb561ac431",
+        "ios/src/PHOrbMultiplayer.inc": "ca9454f79dbffee6cf81a4c71ab7131f037c02508c974c3d6aa2e317bdb1d5b5",
+        "ios/src/PHOrbNative.mm": "d8e1f641f3821860976d6cb2e851f5c238ab316f7104f2c64cc6fecf81f87c96",
+        "ios/src/PHOrbProfiles.m": "1fe12a6f859794fc3ea65c8c066f5410fc32a086329305432e1819bb94205410",
+        "ios/src/PHOrbSession.mm": "3f0d071275ab152a3be036b80db376c59b5006d024b7f9f55d4e1fcf4879fdba",
+        "ios/src/PHOrbSolver.cpp": "c9b40362efd34b8bd110d72533d13901a24c74e2f68ef3f163da2699a4d7f8e2",
+        "ios/src/PHOrbSolver.h": "855de9b63551d3c0e7657e294d9729ab753f2110ea16ab46d833649dba352019",
+        "ios/src/PHRuntime.m": "00d1e10cd07e870624b3166d2964300713832b7cb7f733df7670f7703aedcb9b",
+        "ios/tests/orb_effect_solver_tests.inc": "e874d819482c7a4018e56052f3511047b64dd55cc6db37edd9a726446f8eb892",
+        "ios/tests/orb_multiplayer_model_tests.inc": "fee109f6527f1ba2aa968ebfadb85929aab5b23f1fcbc881047a03298f3d6d9c",
+        "ios/tests/orb_multiplayer_native_tests.inc": "74be3f0bd31bdffae753281b13ac1606819d0e83583b64bf26def635fd6eef24",
+        "ios/tests/orb_multiplayer_session_tests.inc": "bbe43f4a93f034bd9a7fb2685011f6b9da305d02243440b642fb8d36eb443cf4",
+        "ios/tests/orb_multiplayer_solo_native_tests.inc": "960ba09ed13719ebf3001cd0f196e0c637b105c3f7794f7cff4aa3d4fb00e795",
+        "ios/tests/orb_multiplayer_solo_session_tests.inc": "e4ba14840454b6d897e8a6d4b458710da3be8ce057cea506ad1be78a88addd15",
+        "ios/tests/orb_native_tests.mm": "c744739b35b37106df7fcc00d8c002fbf1bee1833a9bcfbdaa7244474b5bdb33",
+        "ios/tests/orb_plan_tests.inc": "f670a2b374722f9fc674584a75b0e8e61f2cddda1aa0055349f88f5bbccc701c",
+        "ios/tests/orb_poison_session_tests.inc": "a0bb73c4378191aff7e50dd4a0a0f013ec3578f087d4e418eca61c8a2cce20af",
+        "ios/tests/orb_poison_solver_tests.inc": "d6eb610903cf96aae11dbdff93721fb354f3434aaa78edf3598b3db8dbcc50b0",
+        "ios/tests/orb_profiles_tests.m": "782df92458582be230b78ca38762f8147b452f835b788e1f0923e2dfc461aa30",
+        "ios/tests/orb_recorded_spinner_solver_tests.inc": "b095e2a359f5cb68b6671596b0494f8b4d123055cdd6c0cad43f22ccb9f3033e",
+        "ios/tests/orb_session_tests.mm": "123a171d92f00f75b91739320a4e4b2014ed0423dbcf7985914e0859e104e0db",
+        "ios/tests/orb_shape_solver_tests.inc": "2212e498688b2cc6eafe4e0e6f770d981115a711eaf34ea64378e4035ffc3946",
+        "ios/tests/orb_shape_space_session_tests.inc": "4f15eb9f633bc53560929f6e0b61560357e6162ebb8bcb62bf26e576e712e732",
+        "ios/tests/orb_shape_space_tests.inc": "22a38d68385d89f8dddf02e57247f791083cc53ac189185a292852294b57f77e",
+        "ios/tests/orb_solver_tests.cpp": "5528b0b2bc65cf0060ea1491430858997026e0621ea71123fa3496ff27786171",
+        "ios/tests/overlay_probe.m": "f6bb85736d2d917f1c55c61aa1490076341c4ded58a21c499c6992ebfdd7f940",
+        "ios/tools/generate_orbs.py": "6da7c6574d52f075109c15a671325c6847c129eb5610d81b777a26231962523e",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b",
+        "ios/research/orb_spinner_search_benchmark.py": "0d9bb0c484ca0e7a9dcff003b7b7303e14c5b23a971b909f369586c274b41213",
+        "ios/build.sh": "b45a0861e478e6b8a0745755b84504548001e87bb4d317da7289a7d761872172"
+      },
+      "local_includes": 118,
+      "guard_counts": {
+        "orb": 114,
+        "battle": 34,
+        "runtime": 17,
+        "new_continuation": 7
+      },
+      "all_guards_match_workspace_macho": true,
+      "workspace_binary_identity_matches": true,
+      "diagnostic_fields": 36,
+      "unique_gui_steps": 27,
+      "recorded_board_data_equivalence": 6,
+      "source_entry_wiring": true,
+      "geometry_oracle_executed": false,
+      "diff_check": "passed",
+      "workflow": "workflow_dispatch-only",
+      "generated_headers_unchanged": true,
+      "generator_executed": false,
+      "compiled": false,
+      "test_suites_executed": false,
+      "benchmark_executed": false,
+      "gui_executed": false,
+      "ci_dispatched": false,
+      "delivered_files_modified": false,
+      "json_files_checked": 7,
+      "lexical_source_files_checked": 32,
+      "local_report": ".build/ida-multiplayer/continuation-solver-static.json",
+      "limits": "Source lexical/AST/data/byte checks only; not compilation, case execution, shape proof execution, performance measurement or device validation."
+    }
+  },
+  "pending": [
+    "On an explicitly authorized build, regenerate the manifest header, run native/model/session/overlay and existing 3/4/8-player regressions, then package a new version.",
+    "On device, capture status while peers turn grey and again after manual input becomes possible; confirm selector 2, retained descriptor state, modal/recovery completion and restored one-shot.",
+    "Check every local seat, disconnection on another player's turn, next board, transition while solving/holding, background return and a new 3P/4P entry without restarting.",
+    "0.5.14 and CI 87 predate these changes and do not validate this source batch."
+  ],
+  "guard_capture": ".build/ida-multiplayer/solo-continuation-guards.json",
+  "new_guard_count": 7,
+  "total_orb_guard_count": 114
+}

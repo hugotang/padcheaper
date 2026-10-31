@@ -14,12 +14,12 @@ static void PoisonHeartFourSessionTests() {
             Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[],
                 @"allowPoisonWithHeartFour":@(enabled)}] && [session configureQuality:@"fast"],
                 "changing quality preserves the captured poison policy");
-            const bool allowed = enabled && hearts && poison == PHOrbPoison;
+            const bool allowed = enabled && hearts;
             Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] == allowed &&
                 [session.snapshot[@"hazardsSafe"] boolValue] == allowed &&
                 [session.snapshot[@"allowPoisonWithHeartFour"] boolValue] == enabled &&
                 [session.snapshot[@"searchTrace"][@"allowPoisonWithHeartFour"] boolValue] == enabled,
-                "preview eligibility requires both explicit normal poison permission and first-wave hearts");
+                "preview eligibility for either poison requires explicit permission and first-wave hearts");
             Execute(session);
             for (unsigned i = 0; i < 150 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
             if (allowed) {
@@ -28,11 +28,12 @@ static void PoisonHeartFourSessionTests() {
                     [record[@"releaseConfirmed"] boolValue] &&
                     [record[@"search"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
                     [record[@"releaseEvaluation"][@"poisonErased"] isEqual:@3] &&
+                    [record[@"releaseEvaluation"][@"mortalPoisonErased"] unsignedIntValue] == (poison == PHOrbMortalPoison ? 3u : 0u) &&
                     [record[@"releaseEvaluation"][@"heartFours"] isEqual:@1] &&
                     [record[@"releaseEvaluation"][@"hazardsSafe"] boolValue],
-                    "fresh native release validation uses the same accepted normal poison policy as search and replay");
+                    "fresh release validation uses the same poison/mortal policy as search and replay");
             } else Check(!engine->stages && !engine->releases,
-                "missing hearts, strict mode and mortal poison cannot stage input");
+                "missing hearts and strict mode cannot stage input for either poison");
         }
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetPoisonHeartBoard(engine);
     PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];

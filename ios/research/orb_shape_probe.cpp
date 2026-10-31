@@ -15,6 +15,11 @@
 
 struct OracleResult { unsigned combos = 0, erased = 0, lightT = 0, heart = 0; };
 
+template<typename Status> static auto ShapeSpaceRejected(Status value, int) -> decltype((void)Status::IncompatibleGoals, bool()) {
+    return value == Status::IncompatibleGoals;
+}
+template<typename Status> static bool ShapeSpaceRejected(Status, long) { return false; }
+
 static bool IsT(const std::vector<unsigned> &group, const std::vector<int> &cells, unsigned w, unsigned h) {
     if (group.size() != 5) return false;
     unsigned minX = w, minY = h, maxX = 0, maxY = 0;
@@ -120,7 +125,8 @@ int main(int argc, char **argv) {
     const auto status = PHOrbSolve(board, options, cancel, route);
     const double wall = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
     const char *name = status == PHOrbSolveStatus::Solved ? "solved" : status == PHOrbSolveStatus::GoalsUnmet ? "goals_unmet" :
-        status == PHOrbSolveStatus::NoRoute ? "no_route" : status == PHOrbSolveStatus::InsufficientOrbs ? "insufficient" : "unexpected";
+        status == PHOrbSolveStatus::NoRoute ? "no_route" : status == PHOrbSolveStatus::InsufficientOrbs ? "insufficient" :
+        ShapeSpaceRejected(status, 0) ? "incompatible_goals" : "unexpected";
     bool valid = !std::memcmp(&board, &original, sizeof(board));
     const bool hasRoute = status == PHOrbSolveStatus::Solved || status == PHOrbSolveStatus::GoalsUnmet;
     valid &= hasRoute ? route.count >= 2 && route.count <= options.steps + 1 : !route.count && std::strcmp(name, "unexpected");

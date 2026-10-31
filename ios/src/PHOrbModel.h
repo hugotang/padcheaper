@@ -126,7 +126,7 @@ typedef enum {
 
 typedef enum {
     PHOrbMultiplayerNone, PHOrbMultiplayerThree, PHOrbMultiplayerFour,
-    PHOrbMultiplayerEight, PHOrbMultiplayerUnsupported
+    PHOrbMultiplayerEight, PHOrbMultiplayerUnsupported, PHOrbMultiplayerThreeSolo
 } PHOrbMultiplayerKind;
 
 // Read-only native operation context. Multiplayer mode values are selectors,
@@ -138,6 +138,8 @@ typedef struct {
     uint32_t disconnectSeat, disconnectStatus;
     uint8_t countdownReady, finished, resolvePending, clockFlags;
     bool known, clockKnown, disconnectKnown;
+    uint8_t recoverySource, recoveryFlags, continuationOwnerFlags;
+    bool continuationOwnerKnown, continuationDialog;
     uint64_t clockStart;
     double remainingSeconds;
 } PHOrbMultiplayerState;
@@ -217,6 +219,7 @@ typedef struct {
     bool deadlineReached, goalsMet, hazardsSafe;
     uint8_t mortalPoisonErased;
     bool diagonal; // Captured gesture policy; match connectivity remains four-way.
+    uint32_t evaluationCalls, evaluationCacheHits;
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);
@@ -236,6 +239,7 @@ bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer);
+bool PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerKind from, PHOrbMultiplayerKind to);
 bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
 bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state);

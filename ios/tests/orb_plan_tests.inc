@@ -199,8 +199,12 @@ static void PlanTests(void) {
     NSMutableDictionary *poisonPlan = ReadPlanFixture(); poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @YES;
     NSDictionary *poisonProfile = PHOrbProfileFromPlan(poisonPlan, &reason);
     Check(poisonProfile && [PHOrbPlanFromProfile(poisonProfile)[@"board"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&
-        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(poisonProfile), NULL) isEqual:poisonProfile],
-        "full team plans retain the optional normal-poison-with-hearts policy on roundtrip");
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(poisonProfile), NULL) isEqual:poisonProfile] &&
+        [PHOrbPlanDescription(poisonPlan) containsString:@"心四連時允許消毒／猛毒：開啟"],
+        "full team plans retain the poison-with-hearts setting and disclose its mortal-poison scope on roundtrip");
+    poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @NO;
+    Check([PHOrbPlanDescription(poisonPlan) containsString:@"心四連時允許消毒／猛毒：關閉"],
+        "disabled imported plans still describe the strict policy");
     poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @1;
     Check(!PHOrbProfileFromPlan(poisonPlan, NULL), "plan import rejects numeric poison permission");
     NSMutableDictionary *diagonalPlan = ReadPlanFixture(); diagonalPlan[@"board"][@"diagonal"] = @YES;

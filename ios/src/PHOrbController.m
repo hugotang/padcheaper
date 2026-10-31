@@ -425,7 +425,7 @@
     [thornRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     self.thornDescription = [self label:13 weight:UIFontWeightRegular];
     self.thornDescription.accessibilityIdentifier = @"padcheaper.orbsThornDescription";
-    UILabel *poisonTitle = [self label:15 weight:UIFontWeightMedium]; poisonTitle.text = @"心四連時允許消一般毒";
+    UILabel *poisonTitle = [self label:15 weight:UIFontWeightMedium]; poisonTitle.text = @"心四連時允許消毒／猛毒";
     self.poisonWithHeartFour = [UISwitch new];
     self.poisonWithHeartFour.accessibilityIdentifier = @"padcheaper.orbsPoisonWithHeartFour";
     self.poisonWithHeartFour.accessibilityLabel = poisonTitle.text;
@@ -445,7 +445,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。一般毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。猛毒仍避開，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人只支援 Combo／指定形狀的浮動「轉一次」，需在自己的操作窗口按下。完成後停止；同步或換回合會取消。多人避開有傷害的荊棘，不讀取單人 HP 預算；連續轉珠、技能規則與隊長自動目標仍限單人。";
+    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援 Combo／指定形狀／本機隊長盤面的浮動「轉一次」，需在自己的操作窗口按下。完成後停止；操作權切換或未完成同步會取消。多人避開有傷害的荊棘，不讀取單人 HP 預算；連續轉珠及技能規則仍限單人。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -584,7 +584,7 @@
     self.poisonWithHeartFour.enabled = [state[@"canSetPoisonPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *poisonMessage = state[@"poisonPolicyMessage"];
     self.poisonDescription.text = poisonMessage.length ? poisonMessage : self.poisonWithHeartFour.on ?
-        @"全部轉轉相位都有首消心四連時允許消一般毒，優先目標及較高 Combo。採用你確認的隊伍回復能力；猛毒仍避開，爆彈仍須首消全消。" :
+        @"全部轉轉相位都有首消心四連時允許消毒／猛毒，優先目標及較高 Combo。採用你確認的隊伍回復能力；邪魔可消，爆彈須首消全消。" :
         @"目前避免一般毒及猛毒消除。確認這隊首消心四連可充分回血後開啟；設定會與目前策略一同儲存。";
     self.poisonDescription.textColor = poisonMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     NSString *mode = state[@"goalMode"] ?: @"combo";

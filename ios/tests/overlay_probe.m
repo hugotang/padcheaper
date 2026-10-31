@@ -527,12 +527,14 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     }
     PHProbeRender(self.window, orbWindow, @"orbs-thorn-priority");
     UISwitch *poisonWithHeart = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsPoisonWithHeartFour");
-    PHProbeCheck(poisonWithHeart.enabled, @"Normal poison with heart four is configurable without enabling game input");
+    PHProbeCheck(poisonWithHeart.enabled, @"Poison and mortal poison with heart four are configurable without enabling game input");
     for (NSNumber *enabled in @[@YES, @NO]) {
         poisonWithHeart.on = enabled.boolValue; [poisonWithHeart sendActionsForControlEvents:UIControlEventValueChanged];
         PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowPoisonWithHeartFour"] isEqual:enabled] &&
             poisonWithHeart.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
             @"Poison switch follows the acknowledged disk write without bypassing game validation");
+        if (enabled.boolValue) PHProbeCheck([[[orbController valueForKey:@"poisonDescription"] text] containsString:@"允許消毒／猛毒"],
+            @"Enabled poison-policy text explicitly includes mortal poison");
     }
     PHProbeRender(self.window, orbWindow, @"orbs-poison-heart-four");
     UISwitch *diagonal = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsDiagonal");
@@ -1285,6 +1287,23 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
                 @"A recovered 3P entry still requires an explicit tap");
+            nextBoardStatus[@"canOnce"] = @NO;
+            nextBoardStatus[@"multiplayerMessage"] = @"等待原生單人續玩切換完成\n3 人協力・單人續玩";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            shortcutAction = nil; shortcutActionCount = 0;
+            nextBoardStatus[@"canOnce"] = @YES;
+            nextBoardStatus[@"multiplayerMessage"] = @"可轉一次；完成後停止\n3 人協力・單人續玩 · 本機 2／3 · 轉珠 5.0 秒";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(onceShortcut.hidden && !autoShortcut.enabled && !shortcutActionCount,
+                @"Native co-op continuation readiness preserves collapse and never starts continuous input");
+            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(onceShortcut.enabled && !autoShortcut.enabled && !shortcutActionCount &&
+                [shortcutStatus.accessibilityLabel containsString:@"單人續玩"],
+                @"Unfolding continuation exposes a local one-shot with an explicit continuation label");
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
+                @"A new explicit tap is required after both co-op peers have left");
             shortcutState[@"orbState"] = @{@"phase":@"stopped",@"message":@"目標未達成，未開始轉珠",@"canOnce":@NO,@"canStart":@NO,@"busy":@NO};
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled &&

@@ -74,7 +74,54 @@ static void MultiplayerPeerExitModelTests() {
     modal.multiplayer.disconnectKnown = true; modal.multiplayer.disconnectSeat = 0; modal.multiplayer.disconnectStatus = 5;
     Check(!PHOrbCanPreview(&modal), "unreviewed departure modal substeps stay closed in 4P");
 }
+static void MultiplayerSoloModelTests() {
+    for (unsigned seat = 0; seat < 3; ++seat) {
+        const auto online = MultiplayerModelState(3, seat);
+        auto s = online; s.identity.multiplayer = 2;
+        auto &m = s.multiplayer; m.kind = PHOrbMultiplayerThreeSolo;
+        m.networkFlags = m.connectionState = 0; m.continuationOwnerKnown = true;
+        m.clockKnown = false; m.remainingSeconds = 0; m.clockFlags = 3;
+        m.turnSerial = (seat + 1) % 3;
+        Check(PHOrbCanPreview(&s) && !PHOrbSameTurn(&online, &s) &&
+            !PHBattleIsSinglePlayer(s.identity.entryMode, s.identity.multiplayer),
+            "native 3P continuation uses local ownership and move time without granting ordinary solo context");
+        auto retiredClock = s; retiredClock.multiplayer.clockStart = 98765;
+        Check(PHOrbSameTurn(&s, &retiredClock), "retired co-op clock is not continuation turn identity");
+        auto nextTurn = s; ++nextTurn.multiplayer.turnSerial;
+        Check(!PHOrbSameTurn(&s, &nextTurn), "native turn changes still retire a continuation gesture");
+        if (seat < 2) {
+            auto twoSeats = s; twoSeats.multiplayer.teamCount = 2; twoSeats.multiplayer.recoverySource = 1;
+            Check(PHOrbCanPreview(&twoSeats), "mode 7 continuation accepts its retained two-seat local bank");
+        }
+        for (unsigned failure = 0; failure < 14; ++failure) {
+            auto blocked = s;
+            if (failure == 0) blocked.multiplayer.continuationOwnerKnown = false;
+            if (failure == 1) blocked.multiplayer.continuationDialog = true;
+            if (failure == 2) blocked.multiplayer.recoveryFlags = 0x40;
+            if (failure == 3) blocked.multiplayer.syncState = 3;
+            if (failure == 4) blocked.multiplayer.syncStep = 1;
+            if (failure == 5) blocked.multiplayer.localStatus = 6;
+            if (failure == 6) blocked.multiplayer.networkFlags = 1;
+            if (failure == 7) blocked.multiplayer.teamCount = 1;
+            if (failure == 8) blocked.multiplayer.viewTeam = (seat + 1) % 3;
+            if (failure == 9) blocked.multiplayer.recoverySource = 2;
+            if (failure == 10) blocked.remainingFrames = 0;
+            if (failure == 11) blocked.fps = 0;
+            if (failure == 12) blocked.multiplayer.resolvePending = 1;
+            if (failure == 13) blocked.multiplayerDisabled = true;
+            Check(!PHOrbCanPreview(&blocked), "continuation requires completed native cleanup, local ownership and valid move timer");
+        }
+        SetLeaderContextFixture(&s,14242,66063,13834,63039);
+        Check(PHOrbLeaderContextReady(&s), "3P continuation supports both proven local leader skills");
+    }
+    Check(PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerThree, PHOrbMultiplayerThreeSolo) &&
+        !PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerThreeSolo, PHOrbMultiplayerThree) &&
+        !PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerFour, PHOrbMultiplayerThreeSolo) &&
+        !PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerThreeSolo, PHOrbMultiplayerNone),
+        "only reviewed one-way 3P native continuation may change kind within an entry");
+}
 static void MultiplayerModelTests() {
+    MultiplayerSoloModelTests();
     MultiplayerPeerExitModelTests();
     for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
         auto s = MultiplayerModelState(players, seat);
@@ -139,7 +186,7 @@ static void MultiplayerModelTests() {
     Check(PHOrbCanPreview(&reduced), "mode 7 with two remaining seats retains three-player co-op ownership semantics");
     for (unsigned mode : {0u,7u,10u,11u,12u}) for (unsigned selector = 0; selector <= 5; ++selector) {
         const bool solo = selector == 0 && mode != 7 && mode != 10 && mode != 11;
-        const bool recognized = selector == 1 && (mode == 7 || mode == 10 || mode == 11);
+        const bool recognized = (selector == 1 && (mode == 7 || mode == 10 || mode == 11)) || (mode == 7 && selector == 2);
         const auto kind = PHOrbMultiplayerMode(int16_t(mode), selector);
         Check((kind == PHOrbMultiplayerNone) == solo && (kind == PHOrbMultiplayerUnsupported) == (!solo && !recognized),
             "selector values are not player counts and selector resets cannot become single player");
