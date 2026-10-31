@@ -67,7 +67,7 @@ NSString *MultiplayerWaitMessage(const PHOrbSnapshot &state) {
     if (m.kind == PHOrbMultiplayerThree && m.turnSerial % m.teamCount != m.localSeat)
         return @"等待自己的回合，再按轉一次";
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家，請返回自己的盤面";
-    if (m.localStatus != 3 || m.syncState || !(m.networkFlags & 1u) || (m.networkFlags & ~0x21u) ||
+    if (m.localStatus != 3 || m.syncState || !PHOrbMultiplayerNetworkReady(&m) ||
         (m.connectionState != 2 && m.connectionState != 3 && m.connectionState != 6 && m.connectionState != 7))
         return @"等待多人同步或連線恢復";
     if (m.kind != PHOrbMultiplayerThree && m.finished) return @"對戰已結束，等待結算";
@@ -93,10 +93,27 @@ NSDictionary *MultiplayerTrace(const PHOrbSnapshot &state) {
         @"known":@(m.known), @"disabled":@(state.multiplayerDisabled), @"window":@(PHOrbMultiplayerWindow(&state)),
         @"turnSerial":@(m.turnSerial), @"teamCount":@(m.teamCount), @"localSeat":@(m.localSeat), @"viewTeam":@(m.viewTeam),
         @"localStatus":@(m.localStatus), @"networkFlags":@(m.networkFlags), @"syncState":@(m.syncState),
+        @"networkReady":@(PHOrbMultiplayerNetworkReady(&m)),
         @"connectionState":@(m.connectionState), @"countdownReady":@(m.countdownReady),
         @"finished":@(m.finished), @"resolvePending":@(m.resolvePending), @"clockFlags":@(m.clockFlags),
         @"clockKnown":@(m.clockKnown), @"clockStart":@(m.clockStart),
         @"remainingSeconds":@(std::isfinite(m.remainingSeconds) ? m.remainingSeconds : 0)};
+}
+NSDictionary *LeaderTrace(const PHOrbSnapshot &state) {
+    const auto &c = state.leaderContext;
+    // Deliberately omit process pointers. Sources use zero-based native slots.
+    return @{@"known":@(c.known), @"ready":@(PHOrbLeaderContextReady(&state)),
+        @"catalogIDs":@[@(c.catalogIDs[0]), @(c.catalogIDs[1])],
+        @"skillIDs":@[@(c.skillIDs[0]), @(c.skillIDs[1])],
+        @"sourceSlots":@[@(c.sourceSlots[0]), @(c.sourceSlots[1])],
+        @"sourceCatalogIDs":@[@(c.sourceCatalogIDs[0]), @(c.sourceCatalogIDs[1])],
+        @"formIDs":@[@(c.formIDs[0]), @(c.formIDs[1])],
+        @"temporaryIDs":@[@(c.temporaryIDs[0]), @(c.temporaryIDs[1])],
+        @"temporaryTurns":@[@(c.temporaryTurns[0]), @(c.temporaryTurns[1])],
+        @"activeFlags":@[@(c.activeFlags[0]), @(c.activeFlags[1])],
+        @"extraFlags":@[@(c.extraFlags[0]), @(c.extraFlags[1])],
+        @"extraHelper":@(c.extraHelper), @"extraSelection":@(c.extraSelection), @"extraRecord":@(c.extraRecord),
+        @"extraSkill":@(c.extraSkill)};
 }
 PHOrbSolveOptions OptionsForQuality(NSString *quality) {
     return PHOrbOptionsForQuality([quality isEqual:@"fast"] ? PHOrbSearchQuality::Fast :
@@ -140,6 +157,16 @@ NSDictionary *BoardTrace(const PHOrbBoard &board) {
         @"spinnerMask":@(board.spinnerMask), @"spinnerColors":@(board.spinnerColors),
         @"tapeMask":@(board.tapeMask), @"cloudMask":@(board.cloudMask), @"fixedStart":@(board.fixedStart),
         @"unmatchableColors":@(board.unmatchableColors), @"minErase":@(board.minErase ?: 3), @"minMatch":@(board.minMatch)};
+}
+bool HasBoardObservation(const PHOrbSnapshot &state) {
+    if (!state.valid || !state.present || state.phase != 2 || state.boardTransition ||
+        !PHOrbDimensionsSupported(state.board.width, state.board.height)) return false;
+    // Metadata-only reads retain dimensions, including phase-2 multiplayer
+    // release acknowledgements. Only a complete token table proves that the
+    // orb values were actually read; zero values alone are valid fire orbs.
+    for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
+        if (!state.board.tokens[i]) return false;
+    return true;
 }
 NSArray *RouteCells(const PHOrbRoute &route) {
     NSMutableArray *cells = [NSMutableArray array];
@@ -229,6 +256,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _openingBefore;
     NSDictionary *_searchTrace;
     NSDictionary *_lastReadIssue;
+    NSString *_liveReadReason;
+    double _lastReadUptime;
+    NSMutableArray<NSDictionary *> *_onceReadinessHistory;
+    NSDictionary *_onceReadinessKey;
     NSUInteger _boardTransitionFrames;
     NSMutableArray<NSDictionary *> *_executionHistory;
     bool _recordingExecution;
@@ -269,6 +300,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _openingLog = [NSMutableArray array];
         _searchTrace = @{}; _executionHistory = [NSMutableArray array];
         _lastReadIssue = @{};
+        _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
     }
     return self;
 }
@@ -292,10 +324,16 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     record[@"status"] = status; record[@"confirmedSteps"] = @(_confirmed);
     if (state) {
         record[@"observedPhase"] = @(state->phase);
-        // Phase 3+ readers deliberately omit orb objects. Keep the captured
-        // pre-release board rather than replacing it with an empty read.
-        if (state->valid && state->phase == 2 && PHOrbSameTurn(&_preview, state))
+        record[@"observedMultiplayer"] = MultiplayerTrace(*state);
+        const bool sameTurn = PHOrbSameTurn(&_preview, state);
+        const bool boardRead = HasBoardObservation(*state) && sameTurn;
+        record[@"observedRead"] = !state->valid || !state->present ? @"unreadable" :
+            !sameTurn ? @"different-turn" : boardRead ? @"board" : @"metadata-only";
+        record[@"observedBoardPreserved"] = @(!boardRead);
+        if (boardRead) {
             record[@"observedBoard"] = BoardTrace(state->board);
+            record[@"observedBoardMoves"] = @(state->moves);
+        }
     }
     if (evaluation) record[@"releaseEvaluation"] = evaluation;
     record[@"elapsedMS"] = @(unsigned(_executionElapsed * 1000));
@@ -310,6 +348,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"status":@"drag-accepted", @"goals":PHOrbGoalsJSON(&_solveOptions.goals),
         @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
         @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
+        @"leaderContext":LeaderTrace(_preview),
         @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview-execute",
         @"multiplayer":MultiplayerTrace(_preview),
         @"startBoard":BoardTrace(_preview.board), @"path":RouteCells(_route),
@@ -321,6 +360,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
             @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
         @"predictedBoard":BoardTrace(predicted), @"observedBoard":BoardTrace(state->board),
+        @"observedRead":@"board", @"observedBoardPreserved":@NO, @"observedBoardMoves":@(state->moves),
+        @"observedPhase":@(state->phase), @"observedMultiplayer":MultiplayerTrace(*state),
         @"confirmedSteps":@0, @"releaseEvaluation":@{}, @"releaseConfirmed":@NO};
     if (_executionHistory.count >= 3) [_executionHistory removeObjectAtIndex:0];
     [_executionHistory addObject:record]; _recordingExecution = true;
@@ -426,6 +467,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot current{}; NSString *reason = nil;
     const BOOL read = [_engine read:&current frame:_frame reason:&reason];
     _hasLive = read; _live = current;
+    _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     if (!read || !current.valid || !current.present || current.multiplayerDisabled) {
         [self queueStop:reason ?: @"目前盤面無法確認，未排入轉一次"]; return;
     }
@@ -437,7 +479,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [self queueStop:@"多人剩餘時間不足，未排入轉一次"]; return;
     }
     if (multiplayer && [_goalMode isEqual:@"leaders"]) {
-        [self queueStop:@"多人隊長條件尚未驗證；請選 Combo 或指定形狀，再按轉一次。"]; return;
+        NSDictionary *plan = PHOrbPlanForLeaders(&current);
+        if (![plan[@"available"] boolValue]) { [self queueStop:plan[@"message"]]; return; }
     }
     [self queueRead];
     _oneShot = _oneShotBound = true; _oneShotOrigin = current;
@@ -451,6 +494,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot current{}; NSString *reason = nil;
     const BOOL read = [_engine read:&current frame:_frame reason:&reason];
     _hasLive = read; _live = current;
+    _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     [_engine armMultiplayerOnce:NO];
     if (current.multiplayer.kind != PHOrbMultiplayerNone || current.multiplayerDisabled || (current.present &&
         !PHBattleIsSinglePlayer(current.identity.entryMode, current.identity.multiplayer))) {
@@ -980,6 +1024,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _searchTrace = @{@"schema":@1, @"generation":@(_generation), @"status":@"searching",
         @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
         @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
+        @"leaderContext":LeaderTrace(_preview),
         @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview",
         @"multiplayer":MultiplayerTrace(_preview),
         @"turn":@(_automatic ? _autoTurn : 0), @"wave":@(_preview.wave),
@@ -1081,6 +1126,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         PHOrbSnapshot current{}; NSString *reason = nil;
         BOOL read = [_engine readAutomation:&current frame:frame reason:&reason];
         _hasLive = read; _live = current;
+        _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
         if (![self observeAutomation:&current read:read reason:reason]) return;
         if ([_phase isEqual:@"openingArming"]) {
             NSDictionary *step = _activeProfile[@"opening"][_openingStep];
@@ -1327,6 +1373,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         (_historyBound && AcceptedSkillTiming(_historyRules))) ?
         [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
     _hasLive = read; _live = current;
+    _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     if (!read) {
         _lastReadIssue = @{@"reason":reason ?: @"戰鬥資料未通過讀取校驗", @"phase":@(current.phase),
             @"valid":@(current.valid), @"automationValid":@(current.automation.valid),
@@ -1382,7 +1429,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 _phase = _releaseComplete ? @"complete" : @"stopped";
                 if (_releaseComplete) {
                     _oneShot = _oneShotBound = false;
-                    ++_completed; _message = @"本次路徑已執行並放開；下一回合請重新讀盤";
+                    ++_completed; _message = current.multiplayer.kind != PHOrbMultiplayerNone ?
+                        @"本次路徑已執行並放開；下一盤可操作時可再按轉一次" :
+                        @"本次路徑已執行並放開；下一回合請重新讀盤";
                     if (_automatic) {
                         ++_autoMoves; _sawResolve = ResolvingOrbs(current.phase); _hasStable = false;
                         _phase = @"turnWaiting"; _autoPhaseAt = time;
@@ -1493,12 +1542,59 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const bool liveReadable = _hasLive && _live.valid && _live.present && !_live.multiplayerDisabled;
     const bool multiplayer = _live.multiplayer.kind != PHOrbMultiplayerNone || _live.multiplayerDisabled || (_live.present &&
         !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer));
-    const bool multiplayerOnceReady = liveReadable && PHOrbCanPreview(&_live) &&
-        ![_goalMode isEqual:@"leaders"] && TimeAvailable(_live) > ArmDelay + TimeMargin + StepDuration(_live);
+    NSDictionary *liveLeaderPlan = multiplayer && [_goalMode isEqual:@"leaders"] ?
+        PHOrbPlanForLeaders(&_live) : @{};
+    const bool leaderReady = ![_goalMode isEqual:@"leaders"] || [liveLeaderPlan[@"available"] boolValue];
+    const bool previewReady = PHOrbCanPreview(&_live);
+    const bool timeReady = TimeAvailable(_live) > ArmDelay + TimeMargin + StepDuration(_live);
+    const bool multiplayerOnceReady = liveReadable && previewReady && leaderReady && timeReady;
     const bool busy = _automatic || _oneShot || [self executing];
     const bool canOnce = _frame.ready && _frame.enabled && (!multiplayer || multiplayerOnceReady) &&
         !busy && !_inputFault && !_openingInFlight;
     const auto &multi = _live.multiplayer;
+    NSMutableArray *onceBlockers = [NSMutableArray array];
+    if (!_frame.ready) [onceBlockers addObject:@"frame-not-ready"];
+    if (!_frame.enabled) [onceBlockers addObject:@"feature-disabled"];
+    if (busy) [onceBlockers addObject:@"busy"];
+    if (_inputFault) [onceBlockers addObject:@"input-fault"];
+    if (_openingInFlight) [onceBlockers addObject:@"opening-in-flight"];
+    if (multiplayer) {
+        if (!liveReadable) [onceBlockers addObject:@"live-unreadable"];
+        if (!previewReady) [onceBlockers addObject:@"board-not-ready"];
+        if (!leaderReady) [onceBlockers addObject:@"leaders-unavailable"];
+        if (!timeReady) [onceBlockers addObject:@"time-unavailable"];
+    }
+    const double uptime = NSProcessInfo.processInfo.systemUptime;
+    NSDictionary *onceReadiness = @{@"canOnce":@(canOnce), @"blockers":onceBlockers,
+        @"frameReady":@(_frame.ready), @"frameEnabled":@(_frame.enabled), @"monitoring":@(_monitoring),
+        @"readSucceeded":@(_hasLive), @"liveReadable":@(liveReadable), @"present":@(_live.present),
+        @"boardRead":@(HasBoardObservation(_live)), @"previewReady":@(previewReady),
+        @"settled":@(_live.settled), @"ordinary":@(_live.ordinary), @"boardTransition":@(_live.boardTransition),
+        @"dragActive":@(_live.dragged != 0), @"inputQuiet":@(PHInputIsQuiet(&_live.input)),
+        @"remainingFrames":@(_live.remainingFrames), @"fps":@(_live.fps),
+        @"leaderReady":@(!multiplayer || leaderReady), @"timeReady":@(timeReady),
+        @"busy":@(busy), @"inputFault":@(_inputFault), @"openingInFlight":@(_openingInFlight),
+        @"sessionPhase":_phase, @"nativePhase":@(_live.phase), @"generation":@(_generation),
+        @"completed":@(_completed), @"readReason":_liveReadReason,
+        @"uptimeMS":@(uint64_t(uptime * 1000)),
+        @"readAgeMS":@(_lastReadUptime > 0 ? std::max(0.0, uptime - _lastReadUptime) * 1000 : -1),
+        @"multiplayer":MultiplayerTrace(_live)};
+    // Retain changes seen by the overlay even if diagnostics are copied after
+    // leaving the match. Clock ticks and route swaps do not fill the history.
+    NSDictionary *readinessKey = @{@"blockers":onceBlockers, @"sessionPhase":_phase,
+        @"nativePhase":@(_live.phase), @"generation":@(_generation), @"kind":@(multi.kind),
+        @"turn":@(multi.turnSerial), @"seat":@(multi.localSeat), @"view":@(multi.viewTeam),
+        @"dungeon":@(_live.identity.dungeon), @"floor":@(_live.identity.floor), @"wave":@(_live.wave),
+        @"readReason":_liveReadReason, @"clockFlags":@(multi.clockFlags),
+        @"networkFlags":@(multi.networkFlags), @"syncState":@(multi.syncState),
+        @"connectionState":@(multi.connectionState), @"localStatus":@(multi.localStatus),
+        @"countdownReady":@(multi.countdownReady), @"finished":@(multi.finished),
+        @"resolvePending":@(multi.resolvePending)};
+    if (multiplayer && ![_onceReadinessKey isEqual:readinessKey]) {
+        if (_onceReadinessHistory.count >= 16) [_onceReadinessHistory removeObjectAtIndex:0];
+        [_onceReadinessHistory addObject:onceReadiness];
+    }
+    _onceReadinessKey = multiplayer ? readinessKey : nil;
     NSString *multiplayerMessage = @"";
     if (multiplayer) {
         if (_inputFault) multiplayerMessage = @"輸入狀態異常，請檢查診斷";
@@ -1508,7 +1604,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         else if (!_frame.enabled) multiplayerMessage = @"轉珠功能未啟用，請檢查設定";
         else if (!liveReadable || !multi.known) multiplayerMessage = @"多人資料未確認，暫不能轉一次";
         else if (_openingInFlight) multiplayerMessage = @"等待已啟動的技能結束";
-        else if ([_goalMode isEqual:@"leaders"]) multiplayerMessage = @"多人請選 Combo 或指定形狀";
+        else if (!PHOrbCanPreview(&_live)) multiplayerMessage = MultiplayerWaitMessage(_live);
+        else if (!leaderReady) multiplayerMessage = liveLeaderPlan[@"message"] ?: @"本機隊長／助人資料尚未確認";
         else multiplayerMessage = canOnce ? @"可轉一次；完成後停止" : MultiplayerWaitMessage(_live);
         if (liveReadable && multi.known && multi.teamCount >= 2 && multi.teamCount <= 8 && multi.localSeat < multi.teamCount) {
             NSString *clock = multi.clockKnown && std::isfinite(multi.remainingSeconds) &&
@@ -1528,7 +1625,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"canRead":@(_frame.ready && !_automatic && !_oneShot && ![self executing] && !_inputFault && !_openingInFlight), @"canExecute":@(canExecute && !_automatic && !_oneShot),
         @"canStart":@(_frame.ready && _frame.enabled && !multiplayer && !_automatic && !_oneShot && ![self executing] && !_inputFault),
         @"canOnce":@(canOnce),
+        @"onceReadiness":onceReadiness, @"onceReadinessHistory":[_onceReadinessHistory copy],
         @"multiplayer":MultiplayerTrace(_live), @"multiplayerActive":@(multiplayer), @"multiplayerMessage":multiplayerMessage,
+        @"liveLeaderPlan":liveLeaderPlan,
         @"once":@(_oneShot),
         @"busy":@(busy), @"canStop":@(busy || _readQueued || preview || [_phase isEqual:@"solving"]),
         @"automatic":@(_automatic), @"autoTurn":@(_autoTurn), @"autoMoves":@(_autoMoves), @"autoSkills":@(_autoSkills),
@@ -1587,6 +1686,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"minErase":@(_live.minErase), @"minMatch":@(_live.board.minMatch),
         @"goalHits":goalHits,
         @"leadersValid":@(_live.leadersValid), @"leaderNumbers":@[@(_live.leaderNumbers[0]), @(_live.leaderNumbers[1])],
+        @"leaderContext":LeaderTrace(_live),
         @"searchBudgetMS":@(_solveOptions.milliseconds),
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),

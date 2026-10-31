@@ -113,7 +113,7 @@ NSString *MultiplayerReason(const PHOrbSnapshot &state) {
     if (m.viewTeam != m.localSeat) return @"目前顯示其他玩家的隊伍；請返回自己的盤面";
     if (m.localStatus != 3 ||
         (m.connectionState != 2 && m.connectionState != 3 && m.connectionState != 6 && m.connectionState != 7) ||
-        m.syncState || !(m.networkFlags & 1u) || (m.networkFlags & ~0x21u))
+        m.syncState || !PHOrbMultiplayerNetworkReady(&m))
         return @"多人同步、交接或連線狀態尚未就緒";
     if (m.kind != PHOrbMultiplayerThree && (m.countdownReady != 1 || m.finished))
         return @"對戰尚未開始、已結束或正在結算";

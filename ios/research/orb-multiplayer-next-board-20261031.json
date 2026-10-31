@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "network_sync_verified": false,
+  "report": {
+    "version": "0.5.12-orbs",
+    "loader": "LiveContainer",
+    "symptom": "After the first 4P one-shot, the floating one-shot button stays disabled when the local board is manually playable.",
+    "user_clarification": "The affected control is the floating one-shot button. Diagnostics were copied later, not at the disabled playable board.",
+    "captured_gesture": {
+      "mode": 11,
+      "selector": 1,
+      "local_seat_zero_based": 2,
+      "team_count": 4,
+      "confirmed_steps": 36,
+      "total_steps": 36,
+      "began_sent": 1,
+      "began_accepted": 1,
+      "completed": 1,
+      "input_fault": false,
+      "elapsed_ms": 2500,
+      "release_confirmed": true,
+      "goal_mode": "combo",
+      "diagonal": true,
+      "captured_network_flags": 1,
+      "captured_resolve_pending": 0,
+      "captured_clock_flags": 5
+    },
+    "limits": [
+      "The current board was absent at copy time; its zero fields do not describe the playable board when the button was disabled.",
+      "The log proves local swap acknowledgements and release, not peer/server synchronization.",
+      "Disabled-time network flags were not captured. The native branch identifies a concrete source defect capable of causing this symptom; device confirmation of the fix is pending."
+    ]
+  },
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Read-only IDA decompilation and original/current instruction bytes; static source/data review only. No game, fixture, compiler, generator, test suite or CI execution.",
+  "evidence": [
+    {
+      "va": "0x10060ec78",
+      "function": "0x10060d1f0",
+      "finding": "After a moved local gesture releases, native code ORs 2 into impl+0xafe70. The separate resolve byte at impl+0x9299a is set to 1; phase may still be 2.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100013344",
+      "guard": "PHOrbMultiSubmittedGateRVA",
+      "finding": "The native input precheck detects network flag bit 1 and takes a competitive-specific path. A submitted flag is not universally a prohibition on later orb input.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100013440",
+      "guard": "PHOrbMultiNextBoardRVA",
+      "finding": "sub_100542b74(1) selects only 8P. A 4P return of zero branches to the return epilogue without clearing impl+0xafe70. 8P may enter phase 69, clears the flags, and initializes its following board separately.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x100542b74",
+      "finding": "Argument 0 recognizes categories 10 and 11; argument 1 recognizes category 10 only. This distinguishes the 4P early return from the 8P flag reset.",
+      "runtime_call": false
+    },
+    {
+      "va": "0x1005b4edc",
+      "finding": "Native phase-2 initialization clears the resolve byte. The source still requires phase 2, resolvePending=0, local view/seat, valid active clock, connection, settled board and quiet input.",
+      "runtime_call": false
+    }
+  ],
+  "change": {
+    "shared_function": "PHOrbMultiplayerNetworkReady",
+    "required_network_bits": "0x1",
+    "allowed_network_bits_4p": "0x23",
+    "allowed_network_bits_3p_8p": "0x21",
+    "effect": "A fresh eligible 4P board with flags 3 or 0x23 can expose the one-shot button and bind a new explicit gesture. Resolution still disables it. No native flag is cleared or written.",
+    "new_read_only_offsets": 0,
+    "new_code_guards": 2,
+    "scope": "explicit-local-once",
+    "continuous": false,
+    "skills": false,
+    "team_mutation": false,
+    "timer_mutation": false,
+    "packet_mutation": false
+  },
+  "diagnostics": {
+    "metadata_only_release": "A valid phase-2 release can contain only identity/drag metadata. Preserve observedBoard unless every board token was read; zero orb values alone remain valid fire orbs.",
+    "execution_fields": [
+      "observedRead",
+      "observedBoardPreserved",
+      "observedBoardMoves",
+      "observedMultiplayer"
+    ],
+    "current_readiness": "onceReadiness includes frame/feature/busy/opening gates, current read reason and age, board/leader/time eligibility and native multiplayer fields.",
+    "runtime_readiness": "runtimeReadiness includes final canOnce/canExecute/canStart, account/application/storage/config gates and pending team operations.",
+    "retained_readiness": "At most 16 distinct multiplayer readiness observations, captured when the UI/session snapshot is requested and retained after scene exit. This is not a per-frame trace. Clock ticks and route swaps do not independently add entries.",
+    "privacy": "No account IDs, container paths, process pointers or raw device log are added to the repository."
+  },
+  "written_regressions": {
+    "executed": false,
+    "files": [
+      "ios/tests/orb_multiplayer_model_tests.inc",
+      "ios/tests/orb_multiplayer_native_tests.inc",
+      "ios/tests/orb_multiplayer_session_tests.inc",
+      "ios/tests/orb_session_tests.mm",
+      "ios/tests/overlay_probe.m"
+    ],
+    "coverage": [
+      "4P accepts retained bit 1 only with active bit 0; 3P/8P still reject it.",
+      "Resolution, remote view, missing active bit and send/pass/sync/terminal flags remain rejected.",
+      "Successful gesture, phase-2 metadata-only release, fresh local board and a second explicit one-shot in each mode.",
+      "3P waits through other seats; 4P keeps its turn serial and submitted flag; 8P returns through reset flags.",
+      "New-board availability cannot auto-arm or reuse an old gesture; second begin and release are independent.",
+      "Metadata-only release preserves the real last board and records the observed multiplayer flags.",
+      "Readiness history is bounded, ignores unchanged clock ticks and remains available after scene exit.",
+      "Floating control changes from completed/waiting to ready and only another tap invokes the next action."
+    ]
+  },
+  "static_checks": {
+    "status": "passed-static-only",
+    "recorded_date": "2026-10-31",
+    "batch_receipt": "orb-multiplayer-leaders-20261031.json#static_checks",
+    "json_file_count": 16,
+    "source_file_count": 23,
+    "guard_counts": {
+      "orb": 93,
+      "battle": 34,
+      "new_leader": 14,
+      "new_next_board": 2
+    },
+    "new_guards_match_workspace_macho": true,
+    "workspace_binary_identity_matches": true,
+    "source_sha256_utf8_lf": {
+      "ios/src/PHOrbModel.h": "8375051d0e67b2bea35e0f1a9bb3c37747fcc8c9b36bb04b8a9e1572bb9434e4",
+      "ios/src/PHOrbModel.c": "043b99496f5e67da3a8f27d36132a2074aaf5010a2a9a8d3a94b7084892581da",
+      "ios/src/PHOrbMultiplayer.inc": "bc7a40f66eb7881990c8ef7faa5b9e62b4324a362759f7c186fdb6c007cf30d4",
+      "ios/src/PHOrbSession.mm": "10a1b779436439ec0a03ee76e6bddcafaa6483c67fb74d6116434cf432defde8",
+      "ios/src/PHRuntime.m": "0fdd0f70623d1f988aea1097dc806ee85f15e1e007c0205edcc18e0c957e7824",
+      "ios/tests/orb_multiplayer_model_tests.inc": "455a0d0e3d53c42f76f108c056f0f70b2edd41adf6640f949f2d6cbb600fcfba",
+      "ios/tests/orb_multiplayer_native_tests.inc": "f300ca0af0bc8f323a295c05830179f0c39ba3bf9507e7f3b9f2b712499e9b25",
+      "ios/tests/orb_multiplayer_session_tests.inc": "31261557326e1007517e67c213c748b189abcf34d724015817dcee51b2c0bdd7",
+      "ios/tests/orb_session_tests.mm": "9d722b465b5b3d08a6b1a60d53416a94a865822bb3fe919b1bbc91564599b370",
+      "ios/tests/overlay_probe.m": "f8ad0f2d255407337d389173994a8721ac18a75cdca7bf98a0c290994dcd4279"
+    },
+    "generator_executed": false,
+    "compiled": false,
+    "test_suites_executed": false,
+    "ci_dispatched": false,
+    "limitation": "Source/data consistency and lexical checks passed; written regression cases have not run, and the reported device symptom still requires confirmation."
+  },
+  "pending": [
+    "Authorized model/session/native/overlay test run and iPhoneOS build from the same source.",
+    "4P device: first one-shot, next playable board, button recovery, second explicit shot, and third board without automatic input.",
+    "3P local-turn handoff and 8P next-board regression, countdown end, disconnection and manual interruption.",
+    "Check onceReadiness, runtimeReadiness and onceReadinessHistory if the button is still disabled; disabled-time evidence is required to attribute any remaining blocker.",
+    "Peer synchronization and server acceptance remain unverified."
+  ],
+  "guards": [
+    {
+      "name": "PHOrbMultiNextBoardRVA",
+      "va": "0x100013440",
+      "rva": "0x13440",
+      "length": 64,
+      "bytes": "cdbd149400f7ff34683a40f989289f524901a072096969b8c90000340849429100e12591a1088052bb751594683a40f90000805209ce9f524901a0721f6929b8",
+      "sha256": "c0186c7c5d9f3bc73c41034884429578ff24d5b7d58ac7b2386171dea426efe2"
+    },
+    {
+      "name": "PHOrbMultiSubmittedGateRVA",
+      "va": "0x100013344",
+      "rva": "0x13344",
+      "length": 64,
+      "bytes": "00008052e9fe0f360abe1494a009003488ed9052880ba072f5d900d0b5c21e91a16ae87814f09152a002148b149e0894e10300aac8ed9052880ba072a26ae878",
+      "sha256": "ecd414fb992bb4d057bbc5ec0e0088b3ba2841a3a09e06868d1de2967a3690a9"
+    }
+  ]
+}

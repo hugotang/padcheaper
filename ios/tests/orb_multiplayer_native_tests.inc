@@ -32,14 +32,17 @@ static void StartNativeMultiplayer(id<PHOrbEngine> engine, PHOrbSnapshot &state)
     Check([engine finishInput:&reason] && [engine read:&state frame:Frame() reason:&reason],
         "multiplayer token is acknowledged after original manager restoration");
 }
+#include "orb_multiplayer_leader_native_tests.inc"
+
 static void MultiplayerNativeTests() {
+    MultiplayerLeaderNativeTests();
     for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
         Reset(); SetNativeMultiplayer(players, seat);
         id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
         const auto originalImpl = implBytes, originalGuest = guest, originalInput = realInput;
         Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
             !state.automation.valid && !state.automation.window && !state.leadersValid && !state.thorns.known && writes == 0,
-            "recognized multiplayer reads only a validated local board, without solo skill, leader or HP derivation");
+            "multiplayer without optional leader data retains the local board without solo skill or HP derivation");
         Check([engine readAutomation:&state frame:Frame() reason:&reason] && !state.automation.valid &&
             implBytes == originalImpl && guest == originalGuest && realInput == originalInput && writes == 0,
             "readAutomation cannot enter multiplayer skill or bank routines");
@@ -100,6 +103,59 @@ static void MultiplayerNativeTests() {
         Check(![engine stageCell:1 down:YES beginning:NO expected:&state frame:Frame() reason:&reason] &&
             ![engine stageCell:0 down:NO beginning:NO expected:&state frame:Frame() reason:&reason] && writes == before,
             "handoff, selector reset, reconnect, resize or hand takeover forbids both stale hold and stale release");
+    }
+    for (unsigned players : {3u, 4u, 8u}) {
+        Reset(); SetNativeMultiplayer(players, players - 1);
+        id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
+        StartNativeMultiplayer(engine, state);
+        const PHOrbBoard first = state.board;
+        Check([engine stageCell:0 down:NO beginning:NO expected:&state frame:Frame() reason:&reason],
+            "first native gesture can release before the next-board lifecycle");
+        NativeInputFrame(); Check([engine finishInput:&reason], "first release restores the native input manager");
+        Put<uintptr_t>(Impl + PHBattleDragPointerOffset, 0);
+        Put<uint8_t>(Impl + PHOrbMultiResolveOffset, 1);
+        Put<uint32_t>(Impl + PHOrbMultiNetworkFlagsOffset, 3);
+        const auto realAfterRelease = realInput;
+        const unsigned afterRelease = writes;
+        Check([engine read:&state frame:Frame() reason:&reason] && state.valid && state.phase == 2 &&
+            !state.board.tokens[0] && !PHOrbCanPreview(&state) && writes == afterRelease,
+            "phase-2 native resolution acknowledges release through metadata only");
+        [engine armMultiplayerOnce:YES];
+        Check(![engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] &&
+            writes == afterRelease, "a resolving board cannot arm a future gesture");
+        Put<uint8_t>(Impl + PHOrbMultiResolveOffset, 0);
+        Put<uint32_t>(Impl + PHOrbMoveSerialOffset, 0);
+        Put<uint16_t>(Impl + PHOrbRemainingOffset, 300);
+        for (unsigned i = 0; i < first.width * first.height; ++i)
+            Put<uint8_t>(first.tokens[i], uint8_t((first.types[i] + 1) % 6));
+        if (players != 4) Put<uint32_t>(Impl + PHOrbMultiNetworkFlagsOffset, 1);
+        if (players == 3) Put<uint32_t>(Impl + PHBattleTurnSerialOffset, players * 2 - 1);
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
+            state.board.types[0] != first.types[0] && writes == afterRelease,
+            "fresh local board returns after resolution, retaining bit 1 only in 4P");
+        Check(![engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] &&
+            writes == afterRelease, "availability alone cannot reuse the previous native arm");
+        [engine armMultiplayerOnce:YES];
+        Check([engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:&reason],
+            "a second explicit native arm may begin on the newly read board");
+        NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, state.board.tokens[0]);
+        Check([engine finishInput:&reason] && [engine read:&state frame:Frame() reason:&reason],
+            "second native begin is independently acknowledged");
+        [engine armMultiplayerOnce:NO];
+        Check([engine stageCell:0 down:NO beginning:NO expected:&state frame:Frame() reason:&reason],
+            "second gesture retains only its own release after revocation");
+        NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, 0);
+        Check([engine finishInput:&reason] && [engine read:&state frame:Frame() reason:&reason] &&
+            realInput == realAfterRelease && GlobalInput() == Input,
+            "two successive native one-shots leave the real touch manager intact");
+    }
+    for (unsigned players : {3u, 4u, 8u}) {
+        Reset(); SetNativeMultiplayer(players, players - 1);
+        Put<uint32_t>(Impl + PHOrbMultiNetworkFlagsOffset, 3);
+        id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) == (players == 4) &&
+            bool(state.board.tokens[0]) == (players == 4) && !writes,
+            "only 4P reads a full next board with the retained submitted flag; 3P/8P stay metadata only");
     }
     for (unsigned stateChange = 0; stateChange < 8; ++stateChange) {
         Reset(); SetNativeMultiplayer(8,7);

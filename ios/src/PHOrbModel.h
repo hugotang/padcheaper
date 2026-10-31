@@ -140,6 +140,18 @@ typedef struct {
     double remainingSeconds;
 } PHOrbMultiplayerState;
 
+// Current native view, independently checked against the local team descriptor.
+// Multiplayer IDs cannot be supplied by saved teams or a previous turn.
+typedef struct {
+    uintptr_t teamBank, parameters[2], extraRows;
+    uint32_t catalogIDs[2], skillIDs[2], parameterIDs[2];
+    uint32_t extraSelection, extraRecord, extraSkill;
+    uint16_t sourceCatalogIDs[2], formIDs[2], temporaryIDs[2], temporaryTurns[2];
+    uint16_t extraCount;
+    uint8_t sourceSlots[2], activeFlags[2], extraFlags[2];
+    bool known, extraHelper; // Four-player extra skill has no helper leader skill.
+} PHOrbLeaderContext;
+
 typedef struct {
     PHBattleIdentity identity;
     PHOrbBoard board;
@@ -148,6 +160,7 @@ typedef struct {
     uint32_t phase, wave, moves;
     uint16_t remainingFrames;
     uint16_t leaderNumbers[2]; // Current visible leader/helper, encyclopedia IDs.
+    PHOrbLeaderContext leaderContext;
     uint32_t obstacles;
     uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
     uint32_t spinnerRawCount, spinnerRawPeriod, spinnerRawColors;
@@ -196,8 +209,10 @@ bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer);
 bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
+bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
 bool PHOrbInputContextReady(const PHOrbSnapshot *state);
+bool PHOrbLeaderContextReady(const PHOrbSnapshot *state);
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);

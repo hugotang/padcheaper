@@ -24,7 +24,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
-    BOOL requireNineLight, omitResolvingBoard;
+    BOOL requireNineLight, omitResolvingBoard, multiplayerReleaseMetadata;
     BOOL resizeWithSkill, hangResize;
     PHOrbSkillSource chosenSource[6];
     uint32_t chosenSkill[6];
@@ -76,9 +76,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!live.present) multiplayerLatched = NO;
     if (live.multiplayerDisabled) multiplayerLatched = YES;
     *state = live; state->multiplayerDisabled |= multiplayerLatched;
-    if ((omitResolvingBoard && live.phase != 2) || live.boardTransition) {
+    const bool multiplayerMetadata = live.multiplayer.kind != PHOrbMultiplayerNone && !PHOrbMultiplayerWindow(&live);
+    if ((omitResolvingBoard && live.phase != 2) || live.boardTransition || multiplayerMetadata) {
         std::fill(std::begin(state->board.types), std::end(state->board.types), 0);
         std::fill(std::begin(state->board.tokens), std::end(state->board.tokens), 0);
+        if (multiplayerMetadata) state->ordinary = state->settled = false;
         if (live.boardTransition) {
             state->ordinary = state->settled = state->automation.window = state->automation.boardKnown = false;
             state->automation.busy = true;
@@ -223,6 +225,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!staged) return;
     if (!down) {
         if (ignoreRelease) return;
+        if (multiplayerReleaseMetadata && live.multiplayer.kind != PHOrbMultiplayerNone) {
+            live.dragged = 0; live.settled = false; live.phase = 2;
+            live.multiplayer.resolvePending = 1; live.multiplayer.networkFlags |= 2u;
+            return;
+        }
         live.dragged = 0; live.settled = true; live.phase = 3; return;
     }
     if (beginning) {

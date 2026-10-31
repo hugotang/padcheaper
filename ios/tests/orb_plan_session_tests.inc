@@ -253,7 +253,67 @@ static void KenpachiPlanTimingSessionTests() {
     }
     [session queueStop:@"end full Kenpachi sequencing fixture"];
 }
+static void SingleKenpachiPlanSessionTests() {
+    NSData *data = [NSData dataWithContentsOfFile:@"ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.team-plan.json"];
+    NSDictionary *plan = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSMutableDictionary *profile = [PHOrbProfileFromPlan(plan,NULL) mutableCopy];
+    Check(profile != nil, "single Kenpachi plan is available to the sequencing fixture");
+    if (!profile) return;
+    NSMutableDictionary *settings = [profile[@"settings"] mutableCopy];
+    settings[@"quality"] = @"fast"; settings[@"mode"] = @"combo"; settings[@"goals"] = @[];
+    profile[@"settings"] = settings;
+    for (unsigned scenario = 0; scenario < 4; ++scenario) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; PHOrbSession *session = PlanSession(engine,profile);
+        NSArray *steps = profile[@"opening"];
+        for (unsigned i = 0; i < 600 && [session.snapshot[@"automatic"] boolValue]; ++i) {
+            const NSUInteger index = [session.snapshot[@"opening"][@"completed"] unsignedIntegerValue];
+            if (index == steps.count) break;
+            NSDictionary *step = steps[index]; const unsigned slot = [step[@"slot"] unsignedIntValue] - 1;
+            engine->chosenSource[slot] = [step[@"source"] isEqual:@"body"] ? PHOrbSkillBody : PHOrbSkillAssist;
+            engine->chosenSkill[slot] = [step[@"skill"] unsignedIntValue];
+            engine->transformAfterSkill[slot] = [step[@"afterMonster"] unsignedIntValue];
+            engine->consumeAssistAfterSkill[slot] = [step[@"consumeAssist"] boolValue];
+            Tick(session,engine,Frame());
+        }
+        const std::vector<NSUInteger> opening{3,5,2,0,5,1,4};
+        Check(engine->skillOrder == opening && [session.snapshot[@"opening"][@"completed"] unsignedIntegerValue] == 7 &&
+            !engine->live.automation.members[4].assistCatalogID && !engine->live.automation.members[5].assistCatalogID,
+            "single Kenpachi consumes two distinct weapons in the seven-step guide order");
+        for (NSDictionary *rule in settings[@"rules"]) {
+            const unsigned slot = [rule[@"slot"] unsignedIntValue] - 1;
+            engine->chosenSource[slot] = PHOrbSkillBody; engine->chosenSkill[slot] = [rule[@"skill"] unsignedIntValue];
+            engine->transformAfterSkill[slot] = 0; engine->consumeAssistAfterSkill[slot] = NO;
+        }
+        engine->unavailableSkills[2] = YES; engine->unavailableSkills[4] = scenario != 3;
+        // Native readiness is controlled here; this checks scheduler behavior,
+        // not the guide's actual haste or healing effects on a real device.
+        if (scenario == 1) {
+            engine->live.automation.enemyEffects = PHOrbEnemyDamageAbsorb;
+            engine->unavailableSkills[3] = YES;
+        }
+        if (scenario >= 2) engine->live.automation.playerEffects = PHOrbPlayerAwokenBind;
+        if (scenario) {
+            Check(UntilPhase(session,engine,@"stopped") && !engine->stages,
+                "single Kenpachi absorption gap or residual Unohana status cannot proceed to a puzzle");
+            const auto unohanaUses = std::count(engine->skillOrder.begin(),engine->skillOrder.end(),NSUInteger(4));
+            Check(unohanaUses == (scenario == 3 ? 2 : 1),
+                "residual status does not cast Unohana twice or treat the optional loop as a rescue receipt");
+            continue;
+        }
+        std::vector<NSUInteger> expected = opening;
+        for (unsigned turn = 1; turn <= 6; ++turn) {
+            if (turn == 6) engine->unavailableSkills[4] = NO;
+            const bool finished = turn == 1 ? UntilPhase(session,engine,@"turnWaiting") : NextOrbTurn(session,engine);
+            expected.insert(expected.end(), {5,0,1});
+            if (turn == 6) expected.push_back(4);
+            Check(finished && engine->skillOrder == expected,
+                "single Kenpachi requires three suppliers every puzzle, waits for Unohana readiness and preserves Kenpachi");
+        }
+        [session queueStop:@"end single Kenpachi sequencing fixture"];
+    }
+}
 static void PlanSessionTests() {
+    SingleKenpachiPlanSessionTests();
     KenpachiPlanTimingSessionTests();
     TemporaryPlanSessionTests();
     ConsumingAssistPlanSessionTests();

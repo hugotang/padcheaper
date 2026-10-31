@@ -168,6 +168,17 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
         (a->kind == PHOrbMultiplayerThree || a->clockStart == b->clockStart);
 }
 
+bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state) {
+    if (!state || (state->kind != PHOrbMultiplayerThree && state->kind != PHOrbMultiplayerFour &&
+        state->kind != PHOrbMultiplayerEight)) return false;
+    // Native release sets bit 1 in every multiplayer mode. In 4P the
+    // 0x10001343c branch returns without clearing it, and later local boards
+    // remain playable. 3P must finish its send/handoff; 8P clears the flags
+    // and initializes the next board. Keep those modes' existing mask.
+    const uint32_t allowed = state->kind == PHOrbMultiplayerFour ? 0x23u : 0x21u;
+    return (state->networkFlags & 1u) && !(state->networkFlags & ~allowed);
+}
+
 bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
     if (!state || !state->present || !state->valid || state->multiplayerDisabled || state->phase != 2 ||
         state->identity.sourceMode != 0 || state->boardTransition) return false;
@@ -177,7 +188,7 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state) {
         !m->teamCount || m->localSeat >= m->teamCount || m->viewTeam != m->localSeat || m->localStatus != 3 ||
         m->turnSerial > INT32_MAX || m->syncState != 0 ||
         (m->connectionState != 2 && m->connectionState != 3 && m->connectionState != 6 && m->connectionState != 7) ||
-        !(m->networkFlags & 1u) || (m->networkFlags & ~0x21u) || m->resolvePending ||
+        !PHOrbMultiplayerNetworkReady(m) || m->resolvePending ||
         !m->clockKnown || !isfinite(m->remainingSeconds) || m->remainingSeconds <= 0 || m->remainingSeconds > 86400)
         return false;
     if (m->kind == PHOrbMultiplayerThree)
@@ -197,9 +208,45 @@ bool PHOrbInputContextReady(const PHOrbSnapshot *state) {
     return PHOrbMultiplayerWindow(state);
 }
 
+bool PHOrbLeaderContextReady(const PHOrbSnapshot *state) {
+    if (!state || !state->present || !state->valid || state->multiplayerDisabled || !state->leadersValid ||
+        !state->leaderNumbers[0] || !PHOrbInputContextReady(state)) return false;
+    if (state->multiplayer.kind == PHOrbMultiplayerNone) return state->leaderNumbers[1] != 0;
+    const PHOrbLeaderContext *c = &state->leaderContext;
+    if (!c->known || !c->teamBank || !c->parameters[0] || !c->parameters[1] ||
+        !c->catalogIDs[0] || !c->catalogIDs[1] || c->sourceSlots[0] >= 6 || c->sourceSlots[1] >= 6 ||
+        c->sourceSlots[0] == c->sourceSlots[1] || !c->sourceCatalogIDs[0] || !c->sourceCatalogIDs[1] ||
+        c->activeFlags[0] != 1 || (c->extraFlags[0] & 2u)) return false;
+    if (!c->extraHelper) return state->leaderNumbers[1] && c->activeFlags[1] == 1 && !(c->extraFlags[1] & 2u);
+    return state->multiplayer.kind == PHOrbMultiplayerFour && !state->leaderNumbers[1] &&
+        c->catalogIDs[1] == 10000000u && c->sourceSlots[1] == 5 && !c->activeFlags[1] &&
+        (c->extraFlags[1] & 2u) && c->sourceCatalogIDs[1] == (uint16_t)10000000u &&
+        !c->formIDs[1] && !c->temporaryIDs[1] && !c->temporaryTurns[1] &&
+        c->extraRows && c->extraCount && c->extraSkill;
+}
+
 bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
-    return a && b && a->leadersValid == b->leadersValid &&
-        (!a->leadersValid || (a->leaderNumbers[0] == b->leaderNumbers[0] && a->leaderNumbers[1] == b->leaderNumbers[1]));
+    if (!a || !b || a->leadersValid != b->leadersValid) return false;
+    if (!a->leadersValid) return true;
+    if (a->leaderNumbers[0] != b->leaderNumbers[0] || a->leaderNumbers[1] != b->leaderNumbers[1] ||
+        a->multiplayer.kind != b->multiplayer.kind) return false;
+    if (a->multiplayer.kind == PHOrbMultiplayerNone) return true;
+    const PHOrbLeaderContext *x = &a->leaderContext, *y = &b->leaderContext;
+    return PHOrbLeaderContextReady(a) && PHOrbLeaderContextReady(b) &&
+        PHOrbSameMultiplayerTurn(&a->multiplayer, &b->multiplayer) && x->teamBank == y->teamBank &&
+        !memcmp(x->parameters, y->parameters, sizeof(x->parameters)) &&
+        !memcmp(x->catalogIDs, y->catalogIDs, sizeof(x->catalogIDs)) &&
+        !memcmp(x->skillIDs, y->skillIDs, sizeof(x->skillIDs)) &&
+        !memcmp(x->parameterIDs, y->parameterIDs, sizeof(x->parameterIDs)) &&
+        x->extraHelper == y->extraHelper && x->extraRows == y->extraRows && x->extraCount == y->extraCount &&
+        x->extraSelection == y->extraSelection && x->extraRecord == y->extraRecord && x->extraSkill == y->extraSkill &&
+        !memcmp(x->activeFlags, y->activeFlags, sizeof(x->activeFlags)) &&
+        !memcmp(x->extraFlags, y->extraFlags, sizeof(x->extraFlags)) &&
+        !memcmp(x->sourceSlots, y->sourceSlots, sizeof(x->sourceSlots)) &&
+        !memcmp(x->sourceCatalogIDs, y->sourceCatalogIDs, sizeof(x->sourceCatalogIDs)) &&
+        !memcmp(x->formIDs, y->formIDs, sizeof(x->formIDs)) &&
+        !memcmp(x->temporaryIDs, y->temporaryIDs, sizeof(x->temporaryIDs)) &&
+        !memcmp(x->temporaryTurns, y->temporaryTurns, sizeof(x->temporaryTurns));
 }
 
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {

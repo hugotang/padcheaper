@@ -588,15 +588,16 @@
     NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
     self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
     self.goalMode.enabled = [state[@"canSetGoals"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
-    NSDictionary *plan = state[@"goalPlan"] ?: @{};
     BOOL leaderMode = [mode isEqual:@"leaders"];
+    BOOL liveLeaders = leaderMode && [state[@"multiplayerActive"] boolValue] && ![state[@"busy"] boolValue];
+    NSDictionary *plan = (liveLeaders ? state[@"liveLeaderPlan"] : state[@"goalPlan"]) ?: @{};
     NSArray *editableGoals = plan[@"baseGoals"] ?: plan[@"goals"];
     self.editGoals.hidden = ![mode isEqual:@"manual"] && !(leaderMode && [plan[@"available"] boolValue] && editableGoals.count);
     self.editGoals.enabled = self.goalMode.enabled;
     UIButtonConfiguration *editConfig = self.editGoals.configuration;
     editConfig.title = leaderMode ? @"用這些條件自訂" : @"編輯形狀與珠色"; self.editGoals.configuration = editConfig;
     NSArray *activeGoals = plan[@"goals"], *hits = state[@"goalHits"];
-    BOOL hasGoalResults = [state[@"path"] count] && activeGoals.count && hits.count == activeGoals.count;
+    BOOL hasGoalResults = !liveLeaders && [state[@"path"] count] && activeGoals.count && hits.count == activeGoals.count;
     NSMutableArray *goalLines = [NSMutableArray array];
     if (leaderMode) {
         [goalLines addObjectsFromArray:plan[@"leaders"] ?: @[]];
@@ -622,7 +623,7 @@
             @"這條路徑未通過目前消毒、爆彈或荊棘條件，只供預覽；請查看上方原因。" :
         [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
             @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
-        [state[@"multiplayerActive"] boolValue] ? @"3／4／8 人請使用浮動「轉一次」；每次重新讀取本機盤面，完成後停止。多人隊長目標、技能與連續模式尚未開放。" :
+        [state[@"multiplayerActive"] boolValue] ? @"3／4／8 人請使用浮動「轉一次」；每次重新讀取本機盤面及隊長條件，完成後停止。多人技能與連續模式未開放。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
     self.boardView.board = state[@"board"]; self.boardView.path = state[@"path"];
     NSUInteger width = [state[@"board"][@"width"] unsignedIntegerValue], height = [state[@"board"][@"height"] unsignedIntegerValue];
@@ -681,7 +682,11 @@
 }
 - (void)editGoalSettings {
     if (!self.goalMode.enabled || self.presentedViewController) return;
-    NSArray *baseGoals = self.state[@"goalPlan"][@"baseGoals"] ?: self.state[@"goalPlan"][@"goals"];
+    BOOL liveLeaders = [self.state[@"goalMode"] isEqual:@"leaders"] && [self.state[@"multiplayerActive"] boolValue] &&
+        ![self.state[@"busy"] boolValue];
+    NSDictionary *plan = liveLeaders ? self.state[@"liveLeaderPlan"] : self.state[@"goalPlan"];
+    if (liveLeaders && ![plan[@"available"] boolValue]) return;
+    NSArray *baseGoals = plan[@"baseGoals"] ?: plan[@"goals"];
     NSArray *goals = [self.state[@"goalMode"] isEqual:@"leaders"] ? baseGoals : self.state[@"goals"];
     if (!goals.count) goals = baseGoals;
     if (!goals.count) goals = @[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0}];

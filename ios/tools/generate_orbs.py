@@ -11,7 +11,9 @@ def generate(manifest):
         raise ValueError('Unsupported orb target')
     if manifest['scope'] != {'multiplayer': {
                                  'input': 'explicit-local-once', 'modes': [7, 11, 10], 'selector': 1,
-                                 'goal_modes': ['combo', 'manual'], 'continuous': False, 'skills': False,
+                                 'goal_modes': ['combo', 'manual', 'leaders'], 'continuous': False, 'skills': False,
+                                 'leader_planning': 'read-only-local-current-parameters',
+                                 'extra_helper': 'four-player-native-extra-skill-no-helper-leader',
                                  'team_mutation': False, 'timer_mutation': False, 'packet_mutation': False,
                                  'thorn_contact': False, 'device_verified': False,
                                  'ownership': 'native-local-seat-turn-view-clock', 'preview_execute': False},
@@ -64,7 +66,12 @@ def generate(manifest):
                 'PHOrbMultiModeRVA', 'PHOrbMultiFourModeRVA', 'PHOrbMultiInitRVA', 'PHOrbMultiInputGateRVA',
                 'PHOrbMultiDispatchRVA', 'PHOrbMultiSendRVA', 'PHOrbMultiEndRVA', 'PHOrbMultiCountdownRVA',
                 'PHOrbMultiElapsedRVA', 'PHOrbMultiClockRVA', 'PHOrbMultiDeadlineRVA', 'PHOrbMultiTurnElapsedRVA',
-                'PHOrbMultiMatchLimitRVA', 'PHOrbMultiSyncRVA', 'PHOrbMultiTurnInitRVA'}
+                'PHOrbMultiMatchLimitRVA', 'PHOrbMultiSyncRVA', 'PHOrbMultiTurnInitRVA',
+                'PHOrbMultiNextBoardRVA', 'PHOrbMultiSubmittedGateRVA',
+                'PHOrbLeaderTeamSizeRVA', 'PHOrbLeaderLoadRVA', 'PHOrbLeaderStoreRVA', 'PHOrbLeaderReloadRVA',
+                'PHOrbLeaderInitializeRVA', 'PHOrbLeaderSwapRVA', 'PHOrbLeaderCatalogRVA', 'PHOrbLeaderExtraLookupRVA',
+                'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
+                'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA'}
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -77,6 +84,15 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbMulti')} != multiplayer_fields:
         raise ValueError('Unreviewed multiplayer layout')
+    leader_fields = {
+        'PHOrbLeaderSkillOffset': 0x5c, 'PHOrbLeaderCatalogNextOffset': 0x33c,
+        'PHOrbLeaderExtraFlagOffset': 0x44, 'PHOrbLeaderExtraRegistryRVA': 0x27c8b80,
+        'PHOrbLeaderExtraSelectionOffset': 0x5cc1f8, 'PHOrbLeaderExtraStride': 0x350,
+        'PHOrbLeaderExtraSkillOffset': 0x54,
+    }
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbLeader')} != leader_fields:
+        raise ValueError('Unreviewed multiplayer leader layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():

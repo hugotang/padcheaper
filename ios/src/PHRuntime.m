@@ -708,6 +708,18 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         if ([orbs[@"multiplayerActive"] boolValue] && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue])
             orbs[@"multiplayerMessage"] = @"隊伍正在套用或還原，完成後再按轉一次";
     }
+    uint32_t orbCurrentPlayer = 0;
+    const BOOL orbPlayerMatches = PHCurrentPlayer(&orbCurrentPlayer) && orbCurrentPlayer == PHPlayer;
+    orbs[@"runtimeReadiness"] = @{@"canOnce":orbs[@"canOnce"] ?: @NO,
+        @"canExecute":orbs[@"canExecute"] ?: @NO, @"canStart":orbs[@"canStart"] ?: @NO,
+        @"storageReady":@(PHStorageReady), @"configValid":@(PHConfigValid), @"storageFault":@(PHStorageFault),
+        @"experimentalWrites":@([PHConfig[@"experimentalWrites"] isEqual:@YES]),
+        @"validated":@(PHValidated), @"frameInstalled":@(PHFrameInstalled),
+        @"frameMainThread":@(PHFrameMainThread), @"accountReady":@(PHAccountReady),
+        @"frameOffMain":@(atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed)),
+        @"playerMatches":@(orbPlayerMatches), @"frameCount":@(PHFrameCount),
+        @"applicationActive":@(UIApplication.sharedApplication.applicationState == UIApplicationStateActive),
+        @"restorePending":battle[@"restorePending"] ?: @NO, @"pendingMask":battle[@"pendingMask"] ?: @0};
     battle[@"automaticConfigured"] = @([PHConfigurationBattleFilters(PHConfig)[@"autoApplyTeam"] boolValue]);
     battle[@"automaticSwitchesReady"] = @(PHEnabled(@"battleSwap"));
     battle[@"automaticTeamID"] = PHFormationLibrary[@"selected"] ?: @"";
@@ -882,6 +894,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"searchPasses"], orbs[@"backtracks"], orbs[@"exploredDepth"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb multiplayer (read-only): %@\nMultiplayer support: explicit local one-shot only; synchronization not device-verified",
         orbs[@"multiplayer"] ?: @{}];
+    for (NSString *key in @[@"onceReadiness", @"runtimeReadiness", @"onceReadinessHistory"]) {
+        NSData *data = [NSJSONSerialization dataWithJSONObject:orbs[key] ?: @{} options:NSJSONWritingSortedKeys error:NULL];
+        diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb %@: %@", key,
+            data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null"];
+    }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nThorn Combo priority: %@", orbs[@"thornComboPriority"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nNormal poison with first-wave heart four: %@ (team recovery policy)", orbs[@"allowPoisonWithHeartFour"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nDiagonal gesture moves: %@ · captured route: %@ (matches remain orthogonal)", orbs[@"diagonal"], orbs[@"routeDiagonal"]];
@@ -906,6 +923,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb leader context: %@\nOrb live leader plan: %@",
+        orbs[@"leaderContext"], orbs[@"liveLeaderPlan"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb captured search: %@ / current read valid %@; history records are retained after stopping",
         orbs[@"searchTraceRelation"], orbs[@"liveReadValid"]];
     for (NSString *key in @[@"searchTrace", @"executionHistory", @"opening"]) {

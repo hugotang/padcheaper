@@ -56,11 +56,11 @@ static void UryuFirstPuzzlePlanTests(void) {
     }
 }
 static void ConsumingAssistPlanTests(void) {
-    for (NSString *name in @[@"recommended.team-plan.json", @"kenpachi-2.team-plan.json"]) {
+    for (NSString *name in @[@"recommended.team-plan.json", @"kenpachi-1.team-plan.json", @"kenpachi-2.team-plan.json"]) {
         NSMutableDictionary *plan = ReadCielPlanFixture(name);
         NSDictionary *profile = PHOrbProfileFromPlan(plan, NULL);
         Check(profile && [PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile), NULL) isEqual:profile],
-            "both CIEL article plans retain their consumed assists and first-puzzle policy on roundtrip");
+            "CIEL article plans retain their consumed assists and first-puzzle policy on roundtrip");
         if (!profile) continue;
         if ([name isEqual:@"kenpachi-2.team-plan.json"]) {
             NSArray *rules = profile[@"settings"][@"rules"];
@@ -133,7 +133,7 @@ static void ConsumingAssistPlanTests(void) {
     steps[steps.count - 1] = @{@"slot":@4,@"source":@"assist",@"monster":@14190,@"assist":@14191,@"skill":@65884,@"afterMonster":@0};
     plan[@"opening"] = steps;
     Check(!PHOrbProfileFromPlan(plan, NULL), "an opening cannot reuse a consumed assist");
-    for (NSString *name in @[@"recommended.post-opening.json", @"kenpachi-2.post-opening.json"]) {
+    for (NSString *name in @[@"recommended.post-opening.json", @"kenpachi-1.post-opening.json", @"kenpachi-2.post-opening.json"]) {
         NSString *path = [@"ios/templates/halloween-ciel-gamewith-579537/" stringByAppendingString:name];
         NSData *data = [NSData dataWithContentsOfFile:path];
         NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(), data, NULL);
@@ -144,9 +144,43 @@ static void ConsumingAssistPlanTests(void) {
             Check(!rule[@"intervalMode"] && !rule[@"startAfter"], "0.5.11 compatibility files retain their supported rule keys");
     }
 }
+static void SingleKenpachiPlanTests(void) {
+    NSDictionary *plan = ReadCielPlanFixture(@"kenpachi-1.team-plan.json");
+    NSDictionary *profile = PHOrbProfileFromPlan(plan, NULL);
+    Check(profile && [plan[@"id"] isEqual:@"halloween-ciel-gw579537-kenpachi-1"] &&
+        [profile[@"team"] isEqual:@[@14184,@14200,@14175,@14042,@14061,@14189]],
+        "single Kenpachi has a separate strategy identity and the evolved Unohana member");
+    if (!profile) return;
+    NSArray *steps = profile[@"opening"], *rules = profile[@"settings"][@"rules"];
+    Check(steps.count == 7 && rules.count == 9, "single Kenpachi keeps seven opening rows and nine loop/rescue rules");
+    if (steps.count != 7 || rules.count != 9) return;
+    Check([steps[4][@"slot"] isEqual:@6] && [steps[4][@"consumeAssist"] boolValue] &&
+        [steps[6][@"slot"] isEqual:@5] && [steps[6][@"skill"] isEqual:@63375] &&
+        [steps[6][@"consumeAssist"] boolValue] && ![steps[6][@"puzzleAfter"] boolValue],
+        "single Kenpachi consumes Euphyllis then Unohana weapons and enters the required supply loop on the first puzzle");
+    for (NSUInteger i = 1; i <= 3; ++i)
+        Check([rules[i][@"required"] boolValue] && [rules[i][@"color"] isEqual:@-1] &&
+            [rules[i][@"slot"] unsignedIntValue] == (i == 1 ? 6 : i - 1),
+            "all three CIEL suppliers are mandatory even when the transformation already made enough orbs");
+    Check([rules[4][@"slot"] isEqual:@5] && [rules[4][@"skill"] isEqual:@64730] && ![rules[4][@"required"] boolValue] &&
+        [rules[5][@"required"] boolValue] && [rules[5][@"status"] isEqual:@"awoken_bind"] &&
+        [rules[6][@"required"] boolValue] && [rules[6][@"unmatchableColors"] isEqual:@48] &&
+        [rules[4][@"group"] isEqual:@0] && [rules[5][@"group"] isEqual:@0] && [rules[6][@"group"] isEqual:@0],
+        "optional Unohana healing does not confirm away residual awoken-bind or dark/heart-unmatchable rescue");
+    for (NSUInteger i = 7; i < 9; ++i)
+        Check([rules[i][@"slot"] isEqual:@4] && [rules[i][@"monster"] isEqual:@14043] &&
+            [rules[i][@"required"] boolValue] && ![rules[i][@"enemy"] isEqual:@"none"],
+            "the only Kenpachi is reserved for absorption rather than copied into a fixed two-member loop");
+    NSData *postData = [NSData dataWithContentsOfFile:@"ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.post-opening.json"];
+    NSDictionary *post = postData ? [NSJSONSerialization JSONObjectWithData:postData options:0 error:NULL] : nil;
+    Check([post[@"profile"][@"team"] isEqual:@[@14184,@14200,@14175,@14043,@14061,@14190]] &&
+        [post[@"profile"][@"settings"][@"rules"] isEqual:plan[@"rotation"]],
+        "manual-opening single Kenpachi profile binds transformed members and the same supplier/rescue order");
+}
 static void PlanTests(void) {
     UryuFirstPuzzlePlanTests();
     ConsumingAssistPlanTests();
+    SingleKenpachiPlanTests();
     NSMutableDictionary *plan = ReadPlanFixture(); NSString *reason = nil;
     NSDictionary *profile = PHOrbProfileFromPlan(plan, &reason);
     Check(profile && !reason && [profile[@"opening"] count] == 6, "complete Uryu template validates all six opening steps");

@@ -12,6 +12,7 @@ static bool ignoreSelectionWrite, switchMultiInSelectionWrite, changeSourceInSel
 static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
 static bool changeTurnDuringCoordinateRead;
+static bool changeLeaderDuringPairRead, changeLeaderDuringCoordinateRead;
 static bool clearImplAfterSceneRead;
 static bool rejectBattleProtection;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
@@ -54,6 +55,13 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         changeTurnDuringCoordinateRead = false;
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
     }
+    const uintptr_t helper = Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride;
+    if ((changeLeaderDuringPairRead && address == helper + PHBattleCardParamOffset) ||
+        (changeLeaderDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA)) {
+        changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
+        const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleMemberOffset + PHBattleCardParamOffset));
+        Store<uint32_t>(reinterpret_cast<uint8_t *>(parameter + PHOrbLeaderSkillOffset), 51);
+    }
     return YES;
 }
 BOOL PHWriteData(uintptr_t address, const void *input, size_t length) {
@@ -87,6 +95,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     replaceHashDuringResizeRead = false;
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
     changeTurnDuringCoordinateRead = false;
+    changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
     clearImplAfterSceneRead = false;
     rejectBattleProtection = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;

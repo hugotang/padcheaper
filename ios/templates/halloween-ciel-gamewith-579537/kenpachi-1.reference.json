@@ -1,0 +1,1493 @@
+{
+  "format": "padcheaper-template-reference",
+  "schema": 1,
+  "status": "source-only-unbuilt",
+  "createdOn": "2026-10-31",
+  "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/579537#basic3",
+  "guide": {
+    "cache": "build/skill-readiness-investigation/gamewith-579537.html",
+    "sha256": "984bcd27845b4fa994ae2392b5c859ef488a1947ec09014f0d5c34e2b7c4a92d",
+    "note": "Exact cached bytes inspected in this batch. The older strategy.reference.json records another capture hash; its historical receipt is unchanged."
+  },
+  "catalog": {
+    "source": "https://github.com/Mapaler/PADDashFormation",
+    "revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+    "numbering": "encyclopedia",
+    "card_sha256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
+    "skill_sha256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7"
+  },
+  "sourceTeams": [
+    {
+      "config": "kenpachi-1",
+      "tableIndex": 1,
+      "anchor": "basic3",
+      "tab": "更木剣八1体",
+      "rows": {
+        "_badge_c": [
+          {
+            "text": "闇コンボ強化バッジ",
+            "icons": [
+              {
+                "label": "闇コンボ強化のアイコン",
+                "file": "badge89.png"
+              }
+            ]
+          }
+        ],
+        "_asist": [
+          {
+            "text": "ゴウテン",
+            "icons": [
+              {
+                "label": "ゴウテンのアイコン",
+                "file": "10305.png"
+              }
+            ]
+          },
+          {
+            "text": "ヒュギエイア",
+            "icons": [
+              {
+                "label": "ヒュギエイアのアイコン",
+                "file": "13287.png"
+              }
+            ]
+          },
+          {
+            "text": "柳生九兵衛",
+            "icons": [
+              {
+                "label": "柳生九兵衛のアイコン",
+                "file": "13711.png"
+              }
+            ]
+          },
+          {
+            "text": "柳生九兵衛",
+            "icons": [
+              {
+                "label": "柳生九兵衛のアイコン",
+                "file": "13711.png"
+              }
+            ]
+          },
+          {
+            "text": "メイドイルミナ",
+            "icons": [
+              {
+                "label": "メイドイルミナのアイコン",
+                "file": "13853.png"
+              }
+            ]
+          },
+          {
+            "text": "ハロウィンユーピリス",
+            "icons": [
+              {
+                "label": "ハロウィンユーピリスのアイコン",
+                "file": "14191.png"
+              }
+            ]
+          }
+        ],
+        "_Slv": [],
+        "_potential": [
+          {
+            "text": "",
+            "icons": []
+          },
+          {
+            "text": "",
+            "icons": [
+              {
+                "label": "アシスト無効回復",
+                "file": "ssk15x.png"
+              }
+            ]
+          },
+          {
+            "text": "",
+            "icons": [
+              {
+                "label": "HP強化＋＋",
+                "file": "ssk11.png"
+              },
+              {
+                "label": "HP強化＋＋",
+                "file": "ssk11.png"
+              }
+            ]
+          },
+          {
+            "text": "",
+            "icons": [
+              {
+                "label": "HP強化＋",
+                "file": "sk21.png"
+              },
+              {
+                "label": "HP強化＋",
+                "file": "sk21.png"
+              },
+              {
+                "label": "HP強化＋",
+                "file": "sk21.png"
+              }
+            ]
+          },
+          {
+            "text": "",
+            "icons": [
+              {
+                "label": "HP強化＋＋",
+                "file": "ssk11.png"
+              },
+              {
+                "label": "HP強化＋＋",
+                "file": "ssk11.png"
+              },
+              {
+                "label": "HP強化＋＋",
+                "file": "ssk11.png"
+              }
+            ]
+          },
+          {
+            "text": "",
+            "icons": [
+              {
+                "label": "HP強化＋",
+                "file": "sk21.png"
+              },
+              {
+                "label": "HP強化＋",
+                "file": "sk21.png"
+              }
+            ]
+          }
+        ],
+        "_monster": [
+          {
+            "text": "ハロウィンヴァルキリーCIEL",
+            "icons": [
+              {
+                "label": "ハロウィンヴァルキリーCIELのアイコン",
+                "file": "14184.png"
+              }
+            ]
+          },
+          {
+            "text": "ハロウィン赤ずきん",
+            "icons": [
+              {
+                "label": "ハロウィン赤ずきんのアイコン",
+                "file": "14200.png"
+              }
+            ]
+          },
+          {
+            "text": "ユークス&ミヤ",
+            "icons": [
+              {
+                "label": "ユークス&ミヤのアイコン",
+                "file": "14175.png"
+              }
+            ]
+          },
+          {
+            "text": "更木剣八",
+            "icons": [
+              {
+                "label": "更木剣八のアイコン",
+                "file": "14042.png"
+              }
+            ]
+          },
+          {
+            "text": "卯ノ花烈",
+            "icons": [
+              {
+                "label": "卯ノ花烈のアイコン",
+                "file": "14061.png"
+              }
+            ]
+          },
+          {
+            "text": "ハロウィンユーピリス",
+            "icons": [
+              {
+                "label": "ハロウィンユーピリスのアイコン",
+                "file": "14189.png"
+              }
+            ]
+          }
+        ],
+        "_lv": [
+          {
+            "text": "Lv. 120",
+            "icons": [
+              {
+                "label": "全パラメータ強化",
+                "file": "k140.png"
+              }
+            ]
+          },
+          {
+            "text": "Lv. 120",
+            "icons": [
+              {
+                "label": "全パラメータ強化",
+                "file": "k140.png"
+              }
+            ]
+          },
+          {
+            "text": "Lv. 120",
+            "icons": [
+              {
+                "label": "アシスト共鳴",
+                "file": "k146.png"
+              }
+            ]
+          },
+          {
+            "text": "Lv. 99",
+            "icons": [
+              {
+                "label": "アシスト共鳴",
+                "file": "k146.png"
+              }
+            ]
+          },
+          {
+            "text": "Lv. 120",
+            "icons": [
+              {
+                "label": "全パラメータ強化＋",
+                "file": "k155.png"
+              }
+            ]
+          },
+          {
+            "text": "Lv. 99",
+            "icons": [
+              {
+                "label": "全パラメータ強化",
+                "file": "k140.png"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "openingIcons": [
+    14042,
+    14189,
+    14175,
+    10305,
+    14191,
+    13287,
+    13853
+  ],
+  "cardFacts": [
+    {
+      "id": 10305,
+      "name": "冥境の黒熾龍・ゴウテンの櫛",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        49,
+        83,
+        95,
+        56,
+        28,
+        61,
+        46,
+        125
+      ],
+      "superAwakenings": [],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 41675
+    },
+    {
+      "id": 13287,
+      "name": "ヒュギエイアの医療水",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        49,
+        90,
+        56,
+        21,
+        104,
+        69,
+        70,
+        136
+      ],
+      "superAwakenings": [],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 59220
+    },
+    {
+      "id": 13711,
+      "name": "九兵衛の刀",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        49,
+        95,
+        56,
+        107,
+        46,
+        46,
+        53,
+        131
+      ],
+      "superAwakenings": [],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 62381
+    },
+    {
+      "id": 13853,
+      "name": "イルミナのお手製クッキー",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        49,
+        21,
+        21,
+        110
+      ],
+      "superAwakenings": [],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 63375
+    },
+    {
+      "id": 14042,
+      "name": "特記戦力・更木剣八",
+      "maxLevel": 99,
+      "maxSkill": 5,
+      "awakenings": [
+        52,
+        136,
+        96,
+        139,
+        63
+      ],
+      "superAwakenings": [],
+      "sync": 138,
+      "latentSlots": 8,
+      "activeSkill": 64643
+    },
+    {
+      "id": 14043,
+      "name": "卍解・更木剣八",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        52,
+        136,
+        53,
+        125,
+        144,
+        144,
+        96,
+        139,
+        63
+      ],
+      "superAwakenings": [],
+      "sync": 138,
+      "latentSlots": 8,
+      "activeSkill": 64650
+    },
+    {
+      "id": 14061,
+      "name": "卯ノ花八千流",
+      "maxLevel": 120,
+      "maxSkill": 1,
+      "awakenings": [
+        52,
+        56,
+        55,
+        136,
+        144,
+        144,
+        139,
+        63
+      ],
+      "superAwakenings": [
+        56,
+        138,
+        131,
+        142
+      ],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 64730
+    },
+    {
+      "id": 14175,
+      "name": "月夜の悪戯・ユークス＆ミヤ",
+      "maxLevel": 120,
+      "maxSkill": 5,
+      "awakenings": [
+        52,
+        145,
+        28,
+        140,
+        59,
+        125,
+        144,
+        144
+      ],
+      "superAwakenings": [
+        56,
+        138,
+        129,
+        127
+      ],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 65774
+    },
+    {
+      "id": 14184,
+      "name": "仮装祭の死神・ヴァルキリー -CIEL-",
+      "maxLevel": 120,
+      "maxSkill": 5,
+      "awakenings": [
+        52,
+        145,
+        146,
+        55,
+        104,
+        125,
+        144,
+        144
+      ],
+      "superAwakenings": [
+        56,
+        129,
+        131,
+        127
+      ],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 65740
+    },
+    {
+      "id": 14189,
+      "name": "宵闇のカボチャ彫り・ユーピリス",
+      "maxLevel": 99,
+      "maxSkill": 5,
+      "awakenings": [
+        52,
+        28,
+        136,
+        68,
+        139
+      ],
+      "superAwakenings": [],
+      "sync": 127,
+      "latentSlots": 8,
+      "activeSkill": 65749
+    },
+    {
+      "id": 14190,
+      "name": "月夜の訪問者・ユーピリス",
+      "maxLevel": 99,
+      "maxSkill": 1,
+      "awakenings": [
+        52,
+        28,
+        136,
+        68,
+        125,
+        144,
+        144,
+        139
+      ],
+      "superAwakenings": [],
+      "sync": 127,
+      "latentSlots": 8,
+      "activeSkill": 65757
+    },
+    {
+      "id": 14191,
+      "name": "月夜の訪問者・ユーピリスのクッキー缶",
+      "maxLevel": 1,
+      "maxSkill": 1,
+      "awakenings": [
+        49,
+        95,
+        21,
+        21,
+        131
+      ],
+      "superAwakenings": [],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 65884
+    },
+    {
+      "id": 14200,
+      "name": "月夜の元気娘・赤ずきん",
+      "maxLevel": 120,
+      "maxSkill": 5,
+      "awakenings": [
+        52,
+        145,
+        59,
+        104,
+        104,
+        108,
+        108,
+        132,
+        132
+      ],
+      "superAwakenings": [
+        56,
+        132,
+        129,
+        127
+      ],
+      "sync": 0,
+      "latentSlots": 8,
+      "activeSkill": 65765
+    }
+  ],
+  "skillFacts": [
+    {
+      "id": 41675,
+      "name": "幻視の冥脈",
+      "description": "4ターンの間、ダメージ吸収と属性吸収を無効化、\nダメージ無効を貫通。自分以外のスキルが3ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 22,
+      "unk": "",
+      "params": [
+        41676,
+        41677,
+        41678
+      ]
+    },
+    {
+      "id": 41676,
+      "name": "",
+      "description": "",
+      "type": 173,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 41677,
+      "name": "",
+      "description": "",
+      "type": 191,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4
+      ]
+    },
+    {
+      "id": 41678,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": 59220,
+      "name": "ディバインメディケーション",
+      "description": "消せないドロップと覚醒無効を全回復。5ターンの間、\nHPを60％回復。自分以外のスキルが2ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 16,
+      "unk": "",
+      "params": [
+        59221,
+        59222,
+        59223,
+        59224
+      ]
+    },
+    {
+      "id": 59221,
+      "name": "",
+      "description": "",
+      "type": 196,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9999
+      ]
+    },
+    {
+      "id": 59222,
+      "name": "",
+      "description": "",
+      "type": 117,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        0,
+        0,
+        0,
+        9999
+      ]
+    },
+    {
+      "id": 59223,
+      "name": "",
+      "description": "",
+      "type": 179,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        0,
+        60
+      ]
+    },
+    {
+      "id": 59224,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 62381,
+      "name": "遊びはここからだ！",
+      "description": "4ターンの間、ダメージ吸収を無効化、8コンボ加算、\n最大HPが2倍。自分以外のスキルが2ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 16,
+      "unk": "",
+      "params": [
+        62382,
+        62383,
+        62384,
+        62385
+      ]
+    },
+    {
+      "id": 62382,
+      "name": "",
+      "description": "",
+      "type": 173,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 62383,
+      "name": "",
+      "description": "",
+      "type": 160,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        8
+      ]
+    },
+    {
+      "id": 62384,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        200
+      ]
+    },
+    {
+      "id": 62385,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 63375,
+      "name": "グリモワールクッキー",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[アフタヌーンティー][雲耐性][十字消し攻撃+][火ドロップ強化+][光ドロップ強化+][操作時間延長+]を付与。自分以外のスキルが3ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 6,
+      "unk": "",
+      "params": [
+        63376,
+        63377
+      ]
+    },
+    {
+      "id": 63376,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": 63377,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        132,
+        54,
+        110,
+        99,
+        102,
+        53
+      ]
+    },
+    {
+      "id": 64643,
+      "name": "卍解",
+      "description": "99ターンの間、自分の攻撃力が3倍。\n敵の行動を3ターン遅らせる。最終段階に変身。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        64644,
+        64645,
+        64646
+      ]
+    },
+    {
+      "id": 64644,
+      "name": "",
+      "description": "",
+      "type": 230,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        99,
+        1,
+        300
+      ]
+    },
+    {
+      "id": 64645,
+      "name": "",
+      "description": "",
+      "type": 18,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3
+      ]
+    },
+    {
+      "id": 64646,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        14043
+      ]
+    },
+    {
+      "id": 64650,
+      "name": "両断",
+      "description": "2ターンの間、ダメージ吸収と属性吸収を無効化、自分の\nダメージ上限値が700億。1ターンの間、最大HPが3倍。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 4,
+      "unk": "",
+      "params": [
+        64651,
+        64652,
+        64653
+      ]
+    },
+    {
+      "id": 64651,
+      "name": "",
+      "description": "",
+      "type": 173,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 64652,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        700,
+        1
+      ]
+    },
+    {
+      "id": 64653,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        300
+      ]
+    },
+    {
+      "id": 64730,
+      "name": "皆尽",
+      "description": "7ターンの間、自分の攻撃力が2倍、ダメージ上限値が280億、\nHPを40％回復。消せないドロップと覚醒無効を全回復。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        64731,
+        64732,
+        64733,
+        64734,
+        64735
+      ]
+    },
+    {
+      "id": 64731,
+      "name": "",
+      "description": "",
+      "type": 230,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        7,
+        1,
+        200
+      ]
+    },
+    {
+      "id": 64732,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        7,
+        280,
+        1
+      ]
+    },
+    {
+      "id": 64733,
+      "name": "",
+      "description": "",
+      "type": 179,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        7,
+        0,
+        40
+      ]
+    },
+    {
+      "id": 64734,
+      "name": "",
+      "description": "",
+      "type": 196,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9999
+      ]
+    },
+    {
+      "id": 64735,
+      "name": "",
+      "description": "",
+      "type": 117,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        0,
+        0,
+        0,
+        9999
+      ]
+    },
+    {
+      "id": 65740,
+      "name": "ナイトスピリチュアルハント",
+      "description": "[ロック]を解除し、[お邪魔][爆弾]を[闇]に変化。1ターンの間、自分の\nダメージ上限値が380億。消せないドロップを5ターン回復。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        65741,
+        65742,
+        65743,
+        65744
+      ]
+    },
+    {
+      "id": 65741,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 65742,
+      "name": "",
+      "description": "",
+      "type": 154,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        576,
+        16
+      ]
+    },
+    {
+      "id": 65743,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        380,
+        1
+      ]
+    },
+    {
+      "id": 65744,
+      "name": "",
+      "description": "",
+      "type": 196,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5
+      ]
+    },
+    {
+      "id": 65749,
+      "name": "パンプキンヘッド・ジュピトール",
+      "description": "[ロック]を解除し、[木][闇][回復]を10個ずつ生成。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        65750,
+        65751,
+        65752,
+        65753
+      ]
+    },
+    {
+      "id": 65750,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 65751,
+      "name": "",
+      "description": "",
+      "type": 141,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        10,
+        52
+      ]
+    },
+    {
+      "id": 65752,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 65753,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        14190
+      ]
+    },
+    {
+      "id": 65757,
+      "name": "パンプキンサテライトヴィジット",
+      "description": "[ロック]を解除し、[お邪魔][毒][爆弾]を5個ずつ生成。1ターンの間、\nダメージ無効を貫通、自分のダメージ上限値が500億。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 1,
+      "unk": "",
+      "params": [
+        65758,
+        65759,
+        65760,
+        65761
+      ]
+    },
+    {
+      "id": 65758,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 65759,
+      "name": "",
+      "description": "",
+      "type": 141,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        704,
+        704
+      ]
+    },
+    {
+      "id": 65760,
+      "name": "",
+      "description": "",
+      "type": 191,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1
+      ]
+    },
+    {
+      "id": 65761,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        500,
+        1
+      ]
+    },
+    {
+      "id": 65765,
+      "name": "ウルフズトリートマジック",
+      "description": "[ロック]を解除し、[毒][猛毒]を[回復]に変化。\n覚醒無効を5ターン回復。HPを20％回復。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        65766,
+        65767,
+        65768
+      ]
+    },
+    {
+      "id": 65766,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 65767,
+      "name": "",
+      "description": "",
+      "type": 154,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        384,
+        32
+      ]
+    },
+    {
+      "id": 65768,
+      "name": "",
+      "description": "",
+      "type": 117,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        0,
+        0,
+        20,
+        5
+      ]
+    },
+    {
+      "id": 65774,
+      "name": "ハロウィンナイトクロウ",
+      "description": "10ターンの間、両隣が闇属性に変化。\n自分以外のスキルが2ターン溜まる。スキルが進化。",
+      "type": 232,
+      "maxLevel": 5,
+      "initialCooldown": 22,
+      "unk": "",
+      "params": [
+        65775,
+        65778
+      ]
+    },
+    {
+      "id": 65775,
+      "name": "ハロウィンナイトクロウ",
+      "description": "10ターンの間、両隣が闇属性に変化。\n自分以外のスキルが2ターン溜まる。スキルが進化。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 22,
+      "unk": "",
+      "params": [
+        65776,
+        65777
+      ]
+    },
+    {
+      "id": 65776,
+      "name": "",
+      "description": "",
+      "type": 274,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        10,
+        4,
+        48
+      ]
+    },
+    {
+      "id": 65777,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 65778,
+      "name": "月下の化かし舞い",
+      "description": "5ターンの間、自分のダメージ上限値が280億、2コンボ加算、\n受けるダメージを軽減。[ロック]を解除し、盤面を[光][闇][回復]に変化。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        65779,
+        65780,
+        65781,
+        65782,
+        65783
+      ]
+    },
+    {
+      "id": 65779,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        280,
+        1
+      ]
+    },
+    {
+      "id": 65780,
+      "name": "",
+      "description": "",
+      "type": 160,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        2
+      ]
+    },
+    {
+      "id": 65781,
+      "name": "",
+      "description": "",
+      "type": 3,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        35
+      ]
+    },
+    {
+      "id": 65782,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 65783,
+      "name": "",
+      "description": "",
+      "type": 71,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        4,
+        5,
+        -1
+      ]
+    },
+    {
+      "id": 65884,
+      "name": "サテライトパンプキンクッキーズ",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[副属性変更・闇][チームHP強化][チームHP強化][コンボ強化+][部位破壊ボーナス]を付与。自分以外のスキルが1ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 3,
+      "unk": "",
+      "params": [
+        65885,
+        65886
+      ]
+    },
+    {
+      "id": 65885,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": 65886,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        95,
+        46,
+        46,
+        107,
+        131
+      ]
+    }
+  ],
+  "mappings": {
+    "gameWithAwakenings": {
+      "k146.png": 138,
+      "k140.png": 127,
+      "k155.png": 142
+    },
+    "gameWithLatents": {
+      "ssk15x.png": 48,
+      "ssk11.png": 43,
+      "sk21.png": 28
+    }
+  },
+  "assumptions": {
+    "bodyPlusEach": 297,
+    "assistPlusEach": 99,
+    "bodySkill": "maximum",
+    "assistSkill": 1,
+    "assistSkillNote": "The single-Kenpachi table has no SLv row; all six selected assist skills have maxLevel=1 in the pinned catalog.",
+    "assistLevel": "actual-card-maximum",
+    "badge": "select dark-combo badge in game",
+    "dungeon": 0,
+    "floor": 0
+  },
+  "nativeEvidence": "../../research/halloween-ciel-579537-native.json",
+  "timing": {
+    "lastOpeningCasterSlot": 5,
+    "lastOpeningSkill": 63375,
+    "lastOpeningCasterCharge": 0,
+    "lastOpeningOtherHaste": 3,
+    "unohanaBaseCooldown": 5,
+    "medicalWaterHealTurns": 5,
+    "unohanaFirstOrdinaryReadyPuzzle": 6,
+    "unohanaHealTurns": 7,
+    "unohanaHealPercent": 40,
+    "medicalWaterHealPercent": 60,
+    "assumptions": "No haste, delay, manual skills, skill bind, assist overcharge or other interruptions after the seven steps. Every use still requires native readiness; this is arithmetic, not a runtime result."
+  },
+  "rotation": {
+    "supplySlots": [
+      6,
+      1,
+      2
+    ],
+    "supplyRequired": true,
+    "unohanaLoopSlot": 5,
+    "unohanaResidualRescues": [
+      "awoken_bind",
+      "unmatchable dark or heart after suppliers"
+    ],
+    "kenpachiSlot": 4,
+    "kenpachiConditions": [
+      "damage_absorb",
+      "attribute_absorb"
+    ],
+    "kenpachiScheduledRotation": false,
+    "kenpachiCooldown": 4,
+    "kenpachiBypassTurns": 2
+  },
+  "validation": {
+    "jsonAndCatalog": "passed-static-only",
+    "profilesTests": "written-not-run",
+    "sessionTests": "written-not-run",
+    "build": "not-run",
+    "deviceVerified": false,
+    "staticReceipt": "../../research/orb-multiplayer-leaders-20261031.json#static_checks",
+    "checkedFacts": {
+      "cards": 13,
+      "skills": 63,
+      "openingSteps": 7,
+      "rotationRules": 9,
+      "guideAndCatalogHashesMatch": true,
+      "formationAndPostOpeningMatch": true
+    },
+    "generatorExecuted": false,
+    "ciDispatched": false
+  }
+}

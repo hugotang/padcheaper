@@ -1,0 +1,262 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-10-31",
+  "status": "source-only-unbuilt",
+  "device_verified": false,
+  "server_acceptance_verified": false,
+  "network_sync_verified": false,
+  "authorization": "User requested an independent CIEL x Euphyllis single-Kenpachi plan, followed by multiplayer automatic leader/helper board conditions, accumulating source only.",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "prior_identity_evidence": "orb-multiplayer-20261031.json",
+    "delivered_files_modified": false
+  },
+  "method": "Read-only IDA pseudocode and original/current guard bytes from the workspace database. Source review and static JSON, Python AST, include and Mach-O byte checks only; no generator, compiler, test suite, native game or CI execution.",
+  "scope": {
+    "modes": [
+      7,
+      11,
+      10
+    ],
+    "selector": 1,
+    "input": "explicit-local-once",
+    "leader_planning": "read-only-local-current-parameters",
+    "extra_helper": "four-player-native-extra-skill-no-helper-leader",
+    "goal_modes": [
+      "combo",
+      "manual",
+      "leaders"
+    ],
+    "continuous": false,
+    "skills": false,
+    "team_mutation": false,
+    "timer_mutation": false,
+    "packet_mutation": false,
+    "full_leader_activation": false,
+    "saved_formation_as_source": false
+  },
+  "evidence": [
+    {
+      "va": "0x10001956c",
+      "guard": "PHOrbLeaderTeamSizeRVA",
+      "finding": "Modes 7/10/11 use six members from the current local team; the two-player five-plus-partner-leader convention is not used. Mode 7 with two remaining participants still uses this six-member view."
+    },
+    {
+      "va": "0x100019bbc",
+      "guard": "PHOrbLeaderLoadRVA",
+      "finding": "Loads six visible members from descriptor+64, then reloads their parameters. Current view team, descriptor active bit and source slots identify the local member view. The extension reads the descriptor but never invokes this loader or the bank getter."
+    },
+    {
+      "va": "0x10000efec",
+      "guard": "PHOrbLeaderStoreRVA",
+      "finding": "Native stores the current members back through the selected team descriptor; the extension does not call this routine or copy bank contents."
+    },
+    {
+      "va": "0x1005a12f0",
+      "guard": "PHOrbLeaderReloadRVA",
+      "finding": "Protected source slot is member+184, permanent form +280, temporary ID +248 and temporary turns +264. Base ID is stored at +1456. Fixed-team variants preserve their million-based prefix through permanent transformation; an active temporary form overrides the full current ID. When the 4P helper slot is missing and a selected private extra-skill row has an active skill, it creates current ID 10000000, sets member+68 bit 2 and returns false. Base storage truncates 10000000 to uint16 38528."
+    },
+    {
+      "va": "0x1005a1038",
+      "guard": "PHOrbLeaderInitializeRVA",
+      "finding": "Clears each member's active byte, initializes source slots, and sets active=1 only when reload succeeds. The synthetic extra-skill helper therefore remains active=0. Ordinary multiplayer leaders require active exactly 1."
+    },
+    {
+      "va": "0x1005a2ce4",
+      "guard": "PHOrbLeaderSwapRVA",
+      "finding": "Leader swapping changes the visible member and retains its protected source slot. Source changes must invalidate a route even when the displayed card numbers are identical."
+    },
+    {
+      "va": "0x10052fc4c",
+      "guard": "PHOrbLeaderCatalogRVA",
+      "finding": "Ordinary IDs below catalog count use records of 840 bytes. Variant lookup starts at ID % 100000 and follows uint32 record+828 links until the full record ID matches. ID 10000000 instead resolves the selected extra-skill row+8. The extension bounds ordinary/variant indices and link traversal and does not call this native getter."
+    },
+    {
+      "va": "0x1004c7e3c",
+      "guard": "PHOrbLeaderExtraLookupRVA",
+      "finding": "Registry at RVA 0x27c8b80 contains uint16 count at +4 and row pointer at +8. Rows are 848 bytes. Selection comes from save+0x5cc1f8. Key is selection itself when <=10000000, otherwise selection % 10000000; select the first row whose uint32 ID % 10000000 matches. The extension adds count <=4096 and pointer-overflow guards."
+    },
+    {
+      "va": "0x100484958",
+      "guard": "PHOrbLeaderExtraBindRVA",
+      "finding": "Extra-skill parameters bind to the selected private registry record+8. Active skill is parameter+84; the ordinary leader-skill field is parameter+92. Registry identity, selection and active-skill metadata are re-read rather than interpreting an ordinary-card lookup failure as an absent helper."
+    },
+    {
+      "va": "0x10006fb04",
+      "guard": "PHOrbLeaderApplyRVA",
+      "finding": "Before applying helper leader effects, the native helper member's active byte must equal 1. The inactive extra-skill helper contributes no helper leader skill. Other HP, binding, dungeon and activation gates are outside this board-only planner."
+    },
+    {
+      "va": "0x10006f3ac",
+      "guard": "PHOrbLeaderSkillRVA",
+      "finding": "Leader effect dispatch reads uint32 skill ID from the current parameter pointer+92, including composite type 138. The extension indexes known offline board clauses by this actual skill ID in multiplayer, never by the base card's skill."
+    },
+    {
+      "va": "0x10007156c",
+      "guard": "PHOrbLeaderHelperApplyRVA",
+      "finding": "Helper multiplier application also requires active=1 before the helper skill is evaluated, corroborating the inactive 4P extra helper's lack of leader effects."
+    },
+    {
+      "va": "0x100493790",
+      "guard": "PHOrbLeaderDisplayRVA",
+      "finding": "Native helper leader display is suppressed by member+68 bit 2. This is corroborating UI evidence; the inactive native application gates are the basis for omitting helper leader clauses."
+    },
+    {
+      "va": "0x100241a84",
+      "guard": "PHOrbLeaderFixedTeamRVA",
+      "finding": "Fixed-team entries split a current ID into base ID %1000000 and variant ID /1000000. Different variants may display the same encyclopedia number while using different parameter records and leader skills."
+    }
+  ],
+  "new_layout": {
+    "PHOrbLeaderSkillOffset": "0x5c",
+    "PHOrbLeaderCatalogNextOffset": "0x33c",
+    "PHOrbLeaderExtraFlagOffset": "0x44",
+    "PHOrbLeaderExtraRegistryRVA": "0x27c8b80",
+    "PHOrbLeaderExtraSelectionOffset": "0x5cc1f8",
+    "PHOrbLeaderExtraStride": "0x350",
+    "PHOrbLeaderExtraSkillOffset": "0x54"
+  },
+  "guard_source": "../targets/orbs-23.6.0.json",
+  "guard_capture": ".build/ida-multiplayer/leader-guards.json",
+  "new_guard_count": 14,
+  "total_orb_guard_count": 93,
+  "read_contract": [
+    "Reuse the validated local operation window, including mode/selector, seat/view, turn, connection/sync and native clocks.",
+    "Require team busy bit 8 clear, local descriptor active bit 1 and descriptor+64 pointing to the expected fixed storage bank; check the six-member span is readable without reading bank contents.",
+    "Read visible slots 0 and 5. Validate ordinary or linked variant parameter identity and protected source/form/temporary relationships. Native skill ID zero is a verified empty condition; an unknown nonzero skill is unavailable.",
+    "Recognize an extra helper only in 4P at source slot 5 with exact ID 10000000, inactive byte, extra flag, truncated base, no forms and the selected private parameter record with a valid extra active skill.",
+    "Read the entire pair twice and compare all captured leader metadata. Recheck catalog/count, skill count, keys and owner descriptor before publishing either side. Failed optional reads publish no partial or cached pair.",
+    "Recheck the outer multiplayer identity/window. Reject stale solver work, armed intent and each held move after leader changes, including after native coordinate conversion. Same-window release of the owned token is still permitted; no later movement follows.",
+    "Offline unsupported or missing actual skills block the whole leader plan; there is no base-card or Combo fallback. Combo/manual remain available when only the optional leader read fails.",
+    "Idle UI and customization use the current live leader plan. Search and execution retain their captured context, without borrowing old goal hits or process pointers."
+  ],
+  "limitations": [
+    "3-player co-op, 4-player versus and 8-player versus need separate device verification; recognizing mode 7 with two remaining seats is not support for the separate 2-player co-op mode.",
+    "Fixed-team variants are usable only when their actual native skill already exists and is supported in the pinned offline skill index. This source change does not add a dynamic skill-table parser or prove all event teams are covered.",
+    "The planner reads minimum board conditions only. HP, skill-use counts, effective awakenings, bound members, helper availability rules, full activation, damage, random skyfall and scores are not verified.",
+    "Multiplayer skills, continuous automation, formation replacement, timers, BGM writes and packet manipulation remain disabled. Only a fresh explicit local one-shot intent can submit input.",
+    "CI 84 and delivered 0.5.12 validate earlier source only. This new leader parser and the single-Kenpachi template have not been built, run or verified on-device."
+  ],
+  "diagnostics": {
+    "live": [
+      "Orb leader context",
+      "Orb live leader plan"
+    ],
+    "captured": [
+      "Orb searchTrace.leaderContext",
+      "Orb executionHistory[].leaderContext"
+    ],
+    "source_slots": "zero-based",
+    "includes_raw_pointers": false,
+    "extra_helper_label": "助人 · 4 人額外技能（不提供助人隊長技）"
+  },
+  "written_regressions": {
+    "status": "written-not-run",
+    "model": "All local seats, current-context readiness, same-display source changes, 4P extra-helper absence and selection invalidation.",
+    "native": "All local seats and reduced mode-7 participants; 15 unavailable-context cases, source swaps, permanent/temporary forms, linked variants/cycles, 11 extra-helper invalidations, pair-read/begin/coordinate races and owned release after a held leader change.",
+    "planning": "Actual skill over displayed base-card skill, missing/unsupported skills, zero skill, fixed variants, 4P extra-helper disclosure, CIEL unevaluated skill-use warning and all seats.",
+    "session": "One explicit leader-mode gesture in all seats, captured diagnostics, stale worker/begin/hold/swap cancellation, owned release, 4P extra helper and restored availability without automatic start.",
+    "gui": "Idle current plan versus stale route labels/hits, unavailable customization, and copying current goals when the captured old goals differ."
+  },
+  "static_checks": {
+    "recorded_date": "2026-10-31",
+    "status": "passed-static-only",
+    "json_files": [
+      "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.team-plan.json",
+      "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.formation.json",
+      "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.post-opening.json",
+      "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.reference.json",
+      "ios/targets/orbs-23.6.0.json",
+      "ios/targets/battle-23.6.0.json",
+      "ios/targets/pad-23.6.0.json",
+      "ios/research/orb-multiplayer-leaders-20261031.json",
+      "ios/research/halloween-ciel-579537-native.json",
+      "ios/editor/catalog.json",
+      "ios/data/leader-orbs.json",
+      "build/research/skill-readiness/mon_ja.json",
+      "build/research/skill-readiness/skill_ja.json",
+      ".build/ida-multiplayer/leader-guards.json",
+      "ios/research/orb-multiplayer-next-board-20261031.json",
+      ".build/ida-multiplayer/next-board-guards.json"
+    ],
+    "python_ast_files": [
+      "ios/tools/generate_orbs.py",
+      "ios/tools/generate_battle.py"
+    ],
+    "embedded_build_python_blocks": 1,
+    "source_files": [
+      "ios/src/PHOrbLeaders.inc",
+      "ios/src/PHOrbModel.h",
+      "ios/src/PHOrbModel.c",
+      "ios/src/PHOrbNative.mm",
+      "ios/src/PHOrbPlanning.m",
+      "ios/src/PHOrbSession.mm",
+      "ios/src/PHOrbController.m",
+      "ios/src/PHRuntime.m",
+      "ios/src/PHOrbMultiplayer.inc",
+      "ios/src/PHOverlay.m",
+      "ios/tests/orb_leader_fixture.h",
+      "ios/tests/orb_multiplayer_leader_native_tests.inc",
+      "ios/tests/orb_multiplayer_model_tests.inc",
+      "ios/tests/orb_multiplayer_session_tests.inc",
+      "ios/tests/orb_multiplayer_native_tests.inc",
+      "ios/tests/orb_native_tests.mm",
+      "ios/tests/orb_plan_tests.inc",
+      "ios/tests/orb_plan_session_tests.inc",
+      "ios/tests/orb_planning_tests.m",
+      "ios/tests/overlay_probe.m",
+      "ios/tests/orb_session_tests.mm",
+      "ios/tests/orb_solver_tests.cpp",
+      "ios/tests/orb_profiles_tests.m"
+    ],
+    "source_sha256_utf8_lf": {
+      "ios/src/PHOrbLeaders.inc": "f059097238a4785bcb3b392243ea1717e2c733efa07827d1d6bdd68ada0f34af",
+      "ios/src/PHOrbModel.h": "8375051d0e67b2bea35e0f1a9bb3c37747fcc8c9b36bb04b8a9e1572bb9434e4",
+      "ios/src/PHOrbModel.c": "043b99496f5e67da3a8f27d36132a2074aaf5010a2a9a8d3a94b7084892581da",
+      "ios/src/PHOrbNative.mm": "a2156fd654ac572e55946402064f4242ee108079766aece7975acdddb2db0497",
+      "ios/src/PHOrbPlanning.m": "4c917c66b0e40133f04204c3c22c3ef47bcca7e02c8e54b80d18438889a9693f",
+      "ios/src/PHOrbSession.mm": "10a1b779436439ec0a03ee76e6bddcafaa6483c67fb74d6116434cf432defde8",
+      "ios/src/PHOrbController.m": "13e595ac0bc2f79563e600e5c8ca093a12a59847a14afc5d0a6c12b052d0032a",
+      "ios/src/PHRuntime.m": "0fdd0f70623d1f988aea1097dc806ee85f15e1e007c0205edcc18e0c957e7824",
+      "ios/src/PHOrbMultiplayer.inc": "bc7a40f66eb7881990c8ef7faa5b9e62b4324a362759f7c186fdb6c007cf30d4",
+      "ios/src/PHOverlay.m": "e5ca021b3d74beb36a41571358e0003c7b600762002bbc3a04fe24fe2977255b",
+      "ios/tests/orb_leader_fixture.h": "cef9dea4cf92940e197b831ea3921b8e85b419d4f0b089270da7f34ea58476a6",
+      "ios/tests/orb_multiplayer_leader_native_tests.inc": "63f9cd475be703a44970df46d643dbaa5c9dcc081396f59349559ad7201eb024",
+      "ios/tests/orb_multiplayer_model_tests.inc": "455a0d0e3d53c42f76f108c056f0f70b2edd41adf6640f949f2d6cbb600fcfba",
+      "ios/tests/orb_multiplayer_session_tests.inc": "31261557326e1007517e67c213c748b189abcf34d724015817dcee51b2c0bdd7",
+      "ios/tests/orb_multiplayer_native_tests.inc": "f300ca0af0bc8f323a295c05830179f0c39ba3bf9507e7f3b9f2b712499e9b25",
+      "ios/tests/orb_native_tests.mm": "c27c84714a18f0669d534d79302b716d651955252faa8cf0f27088a10ef712d6",
+      "ios/tests/orb_plan_tests.inc": "5f4a6a9eda53620a2d297077aaf410bb6a0229d0496c075eba24e30c0de3f2cf",
+      "ios/tests/orb_plan_session_tests.inc": "cd345f6b124cf4ba7c38a477faafde9a715d5c1e011556016f7c554165e4a068",
+      "ios/tests/orb_planning_tests.m": "402b5a87c508b1a76f9f3639410d9a62fc088cb8fbd6730a6927112bd48d6aa1",
+      "ios/tests/overlay_probe.m": "f8ad0f2d255407337d389173994a8721ac18a75cdca7bf98a0c290994dcd4279",
+      "ios/tests/orb_session_tests.mm": "9d722b465b5b3d08a6b1a60d53416a94a865822bb3fe919b1bbc91564599b370",
+      "ios/tests/orb_solver_tests.cpp": "214c94bdc8dce325f6354e3921cd86a80b8c41875ad83e0ffd7812787c647f31",
+      "ios/tests/orb_profiles_tests.m": "7d0b0e995e28b94ea07a0d8cafbc792b86d53d5f17b52aa188fb95b1aa080386"
+    },
+    "guide_catalog_contract": "matched",
+    "guard_counts": {
+      "orb": 93,
+      "battle": 34,
+      "new_leader": 14,
+      "new_next_board": 2
+    },
+    "new_guards_match_workspace_macho": true,
+    "workspace_binary_identity_matches": true,
+    "generator_executed": false,
+    "compiled": false,
+    "test_suites_executed": false,
+    "ci_dispatched": false,
+    "scope": "Final source batch: single-Kenpachi template, multiplayer leader parsing and 4P next-board readiness. Lexical and data consistency checks only; no C/Objective-C semantic compilation or behavior validation."
+  },
+  "pending": [
+    "Authorized generator/build, model/solver, native, planning/profile/session and overlay suites on the same source revision.",
+    "LiveContainer and Dopamine checks for current leader/helper names and native skill IDs in each multiplayer mode, fixed variants and 4P extra-skill selections.",
+    "Leader swap/transform races, unknown-rule blocking, current-goal customization, local one-shot release, peer-visible synchronization and native settlement."
+  ],
+  "leader_extension_orb_guard_count": 91
+}

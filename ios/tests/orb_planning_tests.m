@@ -9,6 +9,51 @@ static NSDictionary *Goal(NSString *kind, unsigned colors, unsigned count, unsig
 static NSDictionary *Profile(NSArray *goals) { return @{@"goals":goals, @"warnings":@[], @"unsupported":@[]}; }
 
 #include "orb_recovery_planning_tests.inc"
+#include "orb_leader_fixture.h"
+
+static void MultiplayerLeaderPlanningTests(void) {
+    const unsigned modes[] = {7,11,10}, players[] = {3,4,8};
+    for (unsigned mode = 0; mode < 3; ++mode) for (unsigned seat = 0; seat < players[mode]; ++seat) {
+        PHOrbSnapshot s = {0}; s.present = s.valid = true; s.phase = 2;
+        s.identity.entryMode = modes[mode]; s.identity.multiplayer = 1;
+        PHOrbMultiplayerState *m = &s.multiplayer;
+        m->kind = PHOrbMultiplayerMode(s.identity.entryMode,1); m->known = m->clockKnown = true;
+        m->localSeat = m->viewTeam = seat; m->teamCount = players[mode]; m->turnSerial = mode ? 0 : seat;
+        m->localStatus = 3; m->networkFlags = 1; m->connectionState = 2; m->remainingSeconds = 60;
+        m->countdownReady = 1; m->clockStart = mode ? 100 : 0; m->clockFlags = mode ? 4 : 0;
+        SetLeaderContextFixture(&s,14242,66063,13834,63039);
+        NSDictionary *plan = PHOrbPlanForLeaders(&s);
+        Check([plan[@"available"] boolValue] && [plan[@"goals"] count] == 3 &&
+            [plan[@"warning"] containsString:@"本機目前隊長"],
+            "3/4/8-player local pairs merge the actual native skills with explicit scope");
+        PHOrbSnapshot changed = s; changed.multiplayer.viewTeam = (seat + 1) % players[mode];
+        Check(![PHOrbPlanForLeaders(&changed)[@"available"] boolValue], "other-player view cannot borrow local leader conditions");
+        changed = s; changed.leaderContext.skillIDs[0] = 6196;
+        Check(![PHOrbPlanForLeaders(&changed)[@"available"] boolValue], "native unsupported skill blocks even when base-card skill is supported");
+        changed.leaderContext.skillIDs[0] = 120000;
+        Check(![PHOrbPlanForLeaders(&changed)[@"available"] boolValue], "uncatalogued native skill never falls back to base-card or Combo");
+        changed = s; changed.leaderContext.catalogIDs[0] += 1000000;
+        changed.leaderContext.skillIDs[0] = 54198;
+        plan = PHOrbPlanForLeaders(&changed);
+        Check([plan[@"available"] boolValue] && [plan[@"goals"] containsObject:Goal(@"colors",31,4,0)] &&
+            ![plan[@"goals"] containsObject:Goal(@"column",4,1,0)] && [plan[@"leaders"][0] containsString:@"固定隊伍"],
+            "fixed-team variant uses its own skill instead of the displayed base number");
+        changed = s; changed.leaderContext.skillIDs[1] = 0;
+        plan = PHOrbPlanForLeaders(&changed);
+        Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"column",4,1,0)]],
+            "verified zero native helper skill contributes no board requirement");
+        if (players[mode] == 4) {
+            changed = s; SetExtraLeaderFixture(&changed); plan = PHOrbPlanForLeaders(&changed);
+            Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"column",4,1,0)]] &&
+                [plan[@"leaders"][1] containsString:@"不提供助人隊長技"],
+                "4P extra helper is disclosed and never treated as a missing normal card");
+        }
+        SetLeaderContextFixture(&s,14184,65745,14190,65762); plan = PHOrbPlanForLeaders(&s);
+        Check([plan[@"available"] boolValue] && [plan[@"goals"] count] == 1 &&
+            [plan[@"warning"] containsString:@"技能使用條件未評估"],
+            "CIEL board conditions retain the unevaluated skill-use warning in multiplayer");
+    }
+}
 
 int main(void) {
     @autoreleasepool {
@@ -61,7 +106,7 @@ int main(void) {
         state.leadersValid = false;
         Check(![PHOrbPlanForLeaders(&state)[@"available"] boolValue], "read failures cannot reuse earlier leader IDs");
         state.leadersValid = true; state.leaderNumbers[0] = state.leaderNumbers[1] = 1; state.identity.entryMode = 7;
-        Check(![PHOrbPlanForLeaders(&state)[@"available"] boolValue], "leader planning retains multiplayer exclusion");
+        Check(![PHOrbPlanForLeaders(&state)[@"available"] boolValue], "unrecognized multiplayer selector cannot authorize leader planning");
         state.identity.entryMode = 0; state.leaderNumbers[1] = 2;
         NSDictionary *catalog = @{@"cards":@{@"1":@{@"name":@"A", @"skill":@1}, @"2":@{@"name":@"B", @"skill":@2}},
             @"skills":@{@"1":Profile(@[Goal(@"combo", 0, 5, 0)]), @"2":Profile(@[Goal(@"combo", 0, 7, 0)])}};
@@ -69,6 +114,7 @@ int main(void) {
         Check([plan[@"available"] boolValue] && [plan[@"goals"] isEqual:@[Goal(@"combo", 0, 7, 0)]],
               "paired minimum-combo clauses merge to the stronger threshold");
         RecoveryPlanningTests();
+        MultiplayerLeaderPlanningTests();
     }
     printf("Orb planning tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.12-orbs",
+  "prototype_version": "0.5.13-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -15,7 +15,8 @@
       "selector": 1,
       "goal_modes": [
         "combo",
-        "manual"
+        "manual",
+        "leaders"
       ],
       "continuous": false,
       "skills": false,
@@ -25,7 +26,9 @@
       "thorn_contact": false,
       "device_verified": false,
       "ownership": "native-local-seat-turn-view-clock",
-      "preview_execute": false
+      "preview_execute": false,
+      "leader_planning": "read-only-local-current-parameters",
+      "extra_helper": "four-player-native-extra-skill-no-helper-leader"
     },
     "dimensions": [
       [
@@ -229,7 +232,14 @@
     "PHOrbMultiTurnClockOffset": "0xa6368",
     "PHOrbMultiMatchClockOffset": "0xafed8",
     "PHOrbMultiCountdownOffset": "0xafc81",
-    "PHOrbMultiFinishedOffset": "0xb7e08"
+    "PHOrbMultiFinishedOffset": "0xb7e08",
+    "PHOrbLeaderSkillOffset": "0x5c",
+    "PHOrbLeaderCatalogNextOffset": "0x33c",
+    "PHOrbLeaderExtraFlagOffset": "0x44",
+    "PHOrbLeaderExtraRegistryRVA": "0x27c8b80",
+    "PHOrbLeaderExtraSelectionOffset": "0x5cc1f8",
+    "PHOrbLeaderExtraStride": "0x350",
+    "PHOrbLeaderExtraSkillOffset": "0x54"
   },
   "guards": [
     {
@@ -847,6 +857,134 @@
       "length": 64,
       "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091083840f9899586522901a072096969383f05007100020054491d0035f30300aa09ce9f524901a072146969b8",
       "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208"
+    },
+    {
+      "name": "PHOrbLeaderTeamSizeRVA",
+      "va": "0x10001956c",
+      "rva": "0x1956c",
+      "length": 64,
+      "bytes": "fd7bbfa9fd030091000080527fa51494600000378ea5149460000036c000805209000014c8d9009008c11e910821579100a1199179cc10941f1c0071a8008052",
+      "sha256": "fa31ed803c3a7a187dca6025f540bca78d83f6a901102a741b657df97abc92b8"
+    },
+    {
+      "name": "PHOrbLeaderLoadRVA",
+      "va": "0x100019bbc",
+      "rva": "0x19bbc",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa083840f909cb87524901a072166969b8143e82527401a072d5008052",
+      "sha256": "9c520d8d8f10cb1192db08e7cfb4185692d2fd832167dcb779b44299ee6a8cba"
+    },
+    {
+      "name": "PHOrbLeaderStoreRVA",
+      "va": "0x10000efec",
+      "rva": "0xefec",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191083840f9c9ce9f524901a07209696938c91318375bd900b07bc3009189438a52",
+      "sha256": "29a52f59a84c97c1b745ecb3835ab7d1962014e5a76fb2352476e9d24fc13f82"
+    },
+    {
+      "name": "PHOrbLeaderReloadRVA",
+      "va": "0x1005a12f0",
+      "rva": "0x5a12f0",
+      "length": 64,
+      "bytes": "ff0305d1fc6f0ea9fa670fa9f85f10a9f65711a9f44f12a9fd7b13a9fdc30491f50302aaf30301aaf40300aabf0319f80820a052a88318b8bfe318383f140039",
+      "sha256": "72617ce560d71427ec64858d7b2098f5de2ec8b3d26f56933e8c601e77176232"
+    },
+    {
+      "name": "PHOrbLeaderInitializeRVA",
+      "va": "0x1005a1038",
+      "rva": "0x5a1038",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aa140080d2083840f9094f8b526901a0721f6929381a4782527a01a07236008052",
+      "sha256": "9b6f465655428bf2f0125450282478f9abb4bc31427aebfd0be737ff6ffa8fd3"
+    },
+    {
+      "name": "PHOrbLeaderSwapRVA",
+      "va": "0x1005a2ce4",
+      "rva": "0x5a2ce4",
+      "length": 64,
+      "bytes": "fc6fbca9f65701a9f44f02a9fd7b03a9fdc30091ff030dd1f40302aaf50301aaf30300aae003009121200191024c80521b002394a022019181220191024c8052",
+      "sha256": "b4e5f927e3195da798cd9715198972b73ae4f2de79d9951977e0297b25a0d4a4"
+    },
+    {
+      "name": "PHOrbLeaderCatalogRVA",
+      "va": "0x10052fc4c",
+      "rva": "0x52fc4c",
+      "length": 64,
+      "bytes": "ff8300d1fd7b01a9fd4300918107f83708d092520813a0723f00086ba101005408b100d008c11e91093f9852890ba072016969b808dd719100410f916d60fe97",
+      "sha256": "d08d8186d5133aa09fab6b5a6469df70a1ad4e3379105aa032150a1b3c739262"
+    },
+    {
+      "name": "PHOrbLeaderExtraLookupRVA",
+      "va": "0x1004c7e3c",
+      "rva": "0x4c7e3c",
+      "length": 64,
+      "bytes": "684d9952e86bad72287ca89b09fd76d308d092520813a0722985081b3f00086b29c1811a0a084079ea0100b4000440f96b4d9952eb6bad720c0080b98d7d2b9b",
+      "sha256": "e56136d31f648c2922253c9b51e242d0a26deb3a5739183968752434f041c05e"
+    },
+    {
+      "name": "PHOrbLeaderExtraBindRVA",
+      "va": "0x100484958",
+      "rva": "0x484958",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b600b008c11e9109f0915214d092521413a0720001098b01d092520113a072b1ac0294600200f9742e00b9fd7b41a9",
+      "sha256": "90e1a7dd60a3cc0b4265df46056e8f7be9c6e969fb6e4e990ef6d9db0c39798b"
+    },
+    {
+      "name": "PHOrbLeaderApplyRVA",
+      "va": "0x10006fb04",
+      "rva": "0x6fb04",
+      "length": 64,
+      "bytes": "ff8302d1eb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291f90301aaf30300aa1a3840f948d7429115d13f91f2e9ff97",
+      "sha256": "632f5913a904f1a29bb8a0621c00583bb1c2733671d634aed8d939f8cdb6d85b"
+    },
+    {
+      "name": "PHOrbLeaderSkillRVA",
+      "va": "0x10006f3ac",
+      "rva": "0x6f3ac",
+      "length": 64,
+      "bytes": "ff4302d1fc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291088500f008b142f9080140f9e81700f9280040f9165d40b9df0600716b040054",
+      "sha256": "2cfb2ecf6839b04b030830437fe76619d033dd207254747f4d87e4095bfc351b"
+    },
+    {
+      "name": "PHOrbLeaderHelperApplyRVA",
+      "va": "0x10007156c",
+      "rva": "0x7156c",
+      "length": 64,
+      "bytes": "ff4301d1e923016df65702a9f44f03a9fd7b04a9fd030191f30301aaf40300aa083840f909c1429135813c91a90240f9690000b429814039a90538374800621e",
+      "sha256": "189e4e0da70611a712e9d437ce03977cc529d0374b7285aa0a1e511a493e682b"
+    },
+    {
+      "name": "PHOrbLeaderDisplayRVA",
+      "va": "0x100493790",
+      "rva": "0x493790",
+      "length": 64,
+      "bytes": "ff8306d1ef3b106ded33116deb2b126de923136dfc6f14a9fa6715a9f85f16a9f65717a9f44f18a9fd7b19a9fd430691f30300aae86300f008b142f9080140f9",
+      "sha256": "082d1efbecce42eb50ff7a7141be39cf93c08a65a1fc07b5efc32199dab7a116"
+    },
+    {
+      "name": "PHOrbLeaderFixedTeamRVA",
+      "va": "0x100241a84",
+      "rva": "0x241a84",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f40304aaf30303aaf50302aaf60301aaff0f00b9e2330091a10980529bf2ff97e80300aa00008052",
+      "sha256": "eb2226310241b5a6af424f2bd791b2da4abec4808af3284e00a5294571953985"
+    },
+    {
+      "name": "PHOrbMultiNextBoardRVA",
+      "va": "0x100013440",
+      "rva": "0x13440",
+      "length": 64,
+      "bytes": "cdbd149400f7ff34683a40f989289f524901a072096969b8c90000340849429100e12591a1088052bb751594683a40f90000805209ce9f524901a0721f6929b8",
+      "sha256": "c0186c7c5d9f3bc73c41034884429578ff24d5b7d58ac7b2386171dea426efe2"
+    },
+    {
+      "name": "PHOrbMultiSubmittedGateRVA",
+      "va": "0x100013344",
+      "rva": "0x13344",
+      "length": 64,
+      "bytes": "00008052e9fe0f360abe1494a009003488ed9052880ba072f5d900d0b5c21e91a16ae87814f09152a002148b149e0894e10300aac8ed9052880ba072a26ae878",
+      "sha256": "ecd414fb992bb4d057bbc5ec0e0088b3ba2841a3a09e06868d1de2967a3690a9"
     }
   ],
   "thorn_budget": {

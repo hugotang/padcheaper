@@ -1,5 +1,7 @@
 // Session behavior only; these fixtures do not emulate network peers or prove
 // server synchronization. They are source cases pending an authorized test run.
+#include "orb_leader_fixture.h"
+
 static void SetMultiplayer(FakeOrbEngine *engine, unsigned players, unsigned seat = 0) {
     auto &s = engine->live;
     s.identity.entryMode = players == 3 ? 7 : players == 4 ? 11 : 10;
@@ -11,7 +13,7 @@ static void SetMultiplayer(FakeOrbEngine *engine, unsigned players, unsigned sea
     m.localStatus = 3; m.networkFlags = 1; m.connectionState = 2;
     m.countdownReady = 1; m.clockFlags = players == 3 ? 0 : 4;
     m.clockStart = players == 3 ? 0 : 12345; m.remainingSeconds = 60;
-    s.automation = {}; s.thorns = {}; s.leadersValid = false;
+    s.automation = {}; s.thorns = {}; s.leadersValid = false; s.leaderContext = {};
 }
 static void StartMultiplayerOnce(PHOrbSession *session, FakeOrbEngine *engine) {
     Tick(session, engine, Frame());
@@ -80,8 +82,8 @@ static void MultiplayerStatusTests() {
         Check([session configureSettings:@{@"quality":@"fast", @"mode":@"leaders", @"goals":@[], @"rules":@[]}],
             "status fixture can select a leader goal without submitting input");
         Check(![session.snapshot[@"canOnce"] boolValue] &&
-            [session.snapshot[@"multiplayerMessage"] hasPrefix:@"多人請選 Combo 或指定形狀"],
-            "unsupported multiplayer goals explain the disabled one-shot button");
+            [session.snapshot[@"multiplayerMessage"] hasPrefix:@"未能確認本機回合的隊長／助人"],
+            "missing multiplayer leader context explains the disabled one-shot button");
         Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[]}],
             "status fixture restores Combo before an explicit intent");
         [session queueOnce];
@@ -96,7 +98,154 @@ static void MultiplayerStatusTests() {
             "idle readiness recovers after stop without any automatic gesture or skill");
     }
 }
+static void MultiplayerLeaderSessionTests() {
+    NSDictionary *settings = @{@"quality":@"fast", @"mode":@"leaders", @"goals":@[], @"rules":@[]};
+    for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine,players,seat);
+        SetLeaderContextFixture(&engine->live,1,51,1,51);
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Tick(session,engine,Frame()); Check([session configureSettings:settings],"multiplayer leader settings accepted");
+        [session queueRead]; [session queueStop:@"read-only leader monitoring"];
+        Tick(session,engine,Frame(),0.12);
+        Check([session.snapshot[@"canOnce"] boolValue] && [session.snapshot[@"liveLeaderPlan"][@"available"] boolValue],
+            "idle multiplayer leader plan is visible before an explicit one-shot");
+        [session queueOnce];
+        for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+        Check([session.snapshot[@"completed"] isEqual:@1] && engine->beginFrames == 1 && engine->releases == 1 &&
+            !engine->skillAttempts && !engine->multiplayerArmed &&
+            [session.snapshot[@"searchTrace"][@"goalMode"] isEqual:@"leaders"] &&
+            [session.snapshot[@"searchTrace"][@"leaderContext"][@"skillIDs"] isEqual:@[@51,@51]],
+            "all multiplayer seats complete one leader-mode gesture and retain native skill provenance");
+    }
+    for (unsigned change = 0; change < 7; ++change) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine,4,2);
+        SetLeaderContextFixture(&engine->live,1,51,1,51);
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Tick(session,engine,Frame()); [session configureSettings:settings]; [session queueOnce];
+        Check(UntilSolveStarts(session,engine),"multiplayer leader race reaches the captured worker");
+        if (change == 0) engine->live.leaderContext.sourceSlots[0] = 2;
+        if (change == 1) ++engine->live.leaderContext.skillIDs[0];
+        if (change == 2) ++engine->live.leaderContext.formIDs[0];
+        if (change == 3) { engine->live.leaderContext.temporaryIDs[0] = 1; engine->live.leaderContext.temporaryTurns[0] = 2; }
+        if (change == 4) engine->live.leadersValid = false;
+        if (change == 5) ++engine->live.multiplayer.turnSerial;
+        if (change == 6) ++engine->live.leaderContext.parameters[0];
+        for (unsigned i = 0; i < 35; ++i) Tick(session,engine,Frame());
+        Check(!engine->stages && !engine->multiplayerArmed && ![session.snapshot[@"busy"] boolValue],
+            "changed leader source/skill/form or local turn rejects stale work without any touch");
+    }
+    for (unsigned boundary = 0; boundary < 3; ++boundary) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine,3,1);
+        SetLeaderContextFixture(&engine->live,1,51,1,51);
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Tick(session,engine,Frame()); [session configureSettings:settings];
+        if (boundary == 0) engine->replaceLeaderOnStart = YES;
+        [session queueOnce];
+        if (boundary) {
+            for (unsigned i = 0; i < 2000 && !engine->live.dragged && [session.snapshot[@"busy"] boolValue]; ++i)
+                Tick(session,engine,Frame());
+            Check(engine->live.dragged,"multiplayer leader boundary fixture acquires a token");
+            if (boundary == 1) engine->live.leaderContext.sourceSlots[0] = 2;
+            else engine->replaceLeaderOnMove = YES;
+        }
+        for (unsigned i = 0; i < 120 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+        Check(engine->releases == 1 && !engine->live.dragged && !engine->multiplayerArmed &&
+            engine->live.moves == (boundary == 2 ? 1u : 0u) && !engine->skillAttempts,
+            "leader changes on begin/hold/swap permit only the owned release and no later route step");
+    }
+    FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine,4,1);
+    SetLeaderContextFixture(&engine->live,1,51,1,51); SetExtraLeaderFixture(&engine->live);
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Tick(session,engine,Frame()); [session configureSettings:settings]; [session queueOnce];
+    for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"completed"] isEqual:@1] &&
+        [session.snapshot[@"executionHistory"][0][@"leaderContext"][@"extraHelper"] boolValue] && !engine->skillAttempts,
+        "4P extra helper supports one-shot with an explicit no-helper-leader record");
+    engine = [FakeOrbEngine new]; SetMultiplayer(engine,8,5); SetLeaderContextFixture(&engine->live,14242,120000,1,51);
+    session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame()); [session configureSettings:settings];
+    [session queueOnce];
+    Check(!engine->multiplayerArmed && !engine->stages && ![session.snapshot[@"canOnce"] boolValue] &&
+        [session.snapshot[@"liveLeaderPlan"][@"unsupported"] count],
+        "an uncatalogued actual skill cannot queue a multiplayer one-shot or silently use Combo");
+    SetLeaderContextFixture(&engine->live,14242,66063,13834,63039); Tick(session,engine,Frame(),0.12);
+    Check([session.snapshot[@"canOnce"] boolValue] && [session.snapshot[@"liveLeaderPlan"][@"goals"] count] == 3 && !engine->stages,
+        "a refreshed supported pair restores availability without automatically starting");
+}
+static void MultiplayerNextBoardSessionTests() {
+    for (unsigned players : {3u, 4u, 8u}) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, players, players - 1);
+        engine->multiplayerReleaseMetadata = YES;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Tick(session, engine, Frame()); [session configureQuality:@"fast"]; [session queueOnce];
+        for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
+        NSDictionary *status = session.snapshot;
+        Check([status[@"completed"] isEqual:@1] && engine->releases == 1 && !engine->multiplayerArmed &&
+            ![status[@"canOnce"] boolValue] && [status[@"onceReadiness"][@"monitoring"] boolValue],
+            "a successful phase-2 release revokes input while keeping next-board observation active");
+        NSDictionary *record = [status[@"executionHistory"] lastObject];
+        Check([record[@"releaseConfirmed"] boolValue] && [record[@"observedPhase"] isEqual:@2] &&
+            [record[@"observedRead"] isEqual:@"metadata-only"] && [record[@"observedBoardPreserved"] boolValue] &&
+            [record[@"observedBoard"] isEqual:record[@"predictedBoard"]] &&
+            [record[@"observedMultiplayer"][@"networkFlags"] isEqual:@3] &&
+            [record[@"observedMultiplayer"][@"resolvePending"] isEqual:@1],
+            "metadata-only multiplayer release preserves the actual last board instead of thirty fire placeholders");
+        const NSUInteger afterFirstStages = engine->stages;
+        [session queueOnce];
+        Check(!engine->multiplayerArmed && ![session.snapshot[@"busy"] boolValue],
+            "a tap during resolution cannot reserve a second gesture for later");
+        engine->live.multiplayer.resolvePending = 0; engine->live.phase = 2;
+        engine->live.moves = 0; engine->live.settled = engine->live.ordinary = true;
+        engine->live.remainingFrames = 300;
+        if (players == 3) ++engine->live.multiplayer.turnSerial;
+        if (players != 4) engine->live.multiplayer.networkFlags = 1;
+        for (unsigned i = 0; i < engine->live.board.width * engine->live.board.height; ++i)
+            engine->live.board.types[i] = uint8_t((engine->live.board.types[i] + 1) % 6);
+        Tick(session, engine, Frame(), 0.12);
+        if (players == 3) {
+            Check(![session.snapshot[@"canOnce"] boolValue], "next co-op participant does not receive local input");
+            engine->live.multiplayer.turnSerial += players - 1;
+            Tick(session, engine, Frame(), 0.12);
+        }
+        status = session.snapshot;
+        Check([status[@"canOnce"] boolValue] && [status[@"onceReadiness"][@"previewReady"] boolValue] &&
+            [status[@"multiplayerMessage"] hasPrefix:@"可轉一次"] && ![status[@"canStart"] boolValue] &&
+            ![status[@"canExecute"] boolValue] && !engine->multiplayerArmed && engine->stages == afterFirstStages,
+            "the next local board becomes ready without a solver, auto-arm or automatic gesture");
+        const NSUInteger historyCount = [status[@"onceReadinessHistory"] count];
+        Tick(session, engine, Frame(), 0.12);
+        Check([session.snapshot[@"onceReadinessHistory"] count] == historyCount,
+            "idle clock ticks do not flood readiness change history");
+        [session queueOnce];
+        for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
+        status = session.snapshot;
+        Check([status[@"completed"] isEqual:@2] && engine->beginFrames == 2 && engine->releases == 2 &&
+            engine->multiplayerArms == 2 && !engine->multiplayerArmed && !engine->skillAttempts &&
+            [status[@"executionHistory"] count] == 2,
+            "a second explicit tap submits exactly one fresh gesture, including 4P's retained submitted flag");
+        NSArray *history = status[@"onceReadinessHistory"];
+        engine->live = {};
+        Tick(session, engine, Frame(), 0.12);
+        Check([session.snapshot[@"onceReadinessHistory"] isEqual:history] &&
+            ![session.snapshot[@"onceReadiness"][@"present"] boolValue],
+            "copying diagnostics after scene exit retains multiplayer readiness observations with their original context");
+    }
+    FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, 4, 2);
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Tick(session, engine, Frame()); [session queueRead]; [session queueStop:@"history fixture"];
+    for (unsigned change = 0; change < 24; ++change) {
+        engine->live.multiplayer.syncState = change % 2;
+        Tick(session, engine, Frame(), 0.12);
+        NSDictionary *status = session.snapshot;
+        Check([status[@"onceReadiness"][@"canOnce"] isEqual:status[@"canOnce"]] &&
+            ([status[@"onceReadiness"][@"blockers"] count] == 0) == [status[@"canOnce"] boolValue],
+            "current readiness diagnostics agree with the actual session button gate");
+    }
+    Check([session.snapshot[@"onceReadinessHistory"] count] == 16 && !engine->stages && !engine->multiplayerArmed,
+        "retained multiplayer readiness changes are bounded and never create input intent");
+}
 static void MultiplayerSessionTests() {
+    MultiplayerNextBoardSessionTests();
+    MultiplayerLeaderSessionTests();
     MultiplayerStatusTests();
     for (unsigned players : {3u, 4u, 8u}) for (unsigned seat = 0; seat < players; ++seat) {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, players, seat);
@@ -138,7 +287,7 @@ static void MultiplayerSessionTests() {
         [session queueOnce];
         Check(!engine->stages && !engine->multiplayerArmed && ![session.snapshot[@"busy"] boolValue] &&
             [session.snapshot[@"message"] containsString:@"隊長"],
-            "unsupported multiplayer leader goals are reported without silently falling back to Combo");
+            "unconfirmed multiplayer leader sources are reported without silently falling back to Combo");
     }
     for (unsigned seat = 0; seat < 3; ++seat) {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, 3, seat);

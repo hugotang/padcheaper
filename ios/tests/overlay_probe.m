@@ -1190,6 +1190,25 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 PHProbeCheck(!onceShortcut.enabled && [shortcutStatus.text containsString:@"隊伍正在套用或還原"],
                     @"The runtime team-operation gate has a matching disabled-button explanation");
             }
+            NSMutableDictionary *nextBoardStatus = [shortcutState[@"orbState"] mutableCopy];
+            nextBoardStatus[@"phase"] = @"complete"; nextBoardStatus[@"completed"] = @1;
+            nextBoardStatus[@"message"] = @"本次路徑已執行並放開；下一盤可操作時可再按轉一次";
+            nextBoardStatus[@"multiplayerMessage"] = @"等待本盤結算或下一盤\n4 人對戰 · 本機 3／4";
+            nextBoardStatus[@"canOnce"] = @NO;
+            shortcutState[@"orbState"] = nextBoardStatus;
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            shortcutAction = nil; shortcutActionCount = 0;
+            PHProbeCheck(!onceShortcut.enabled && [shortcutStatus.text containsString:@"等待本盤結算"],
+                @"Successful first release still waits for the next playable board");
+            nextBoardStatus[@"canOnce"] = @YES;
+            nextBoardStatus[@"multiplayerMessage"] = @"可轉一次；完成後停止\n4 人對戰 · 本機 3／4";
+            [overlay.rootViewController updateWithSnapshot:shortcutState];
+            PHProbeCheck(onceShortcut.enabled && !autoShortcut.enabled && shortcutActionCount == 0 &&
+                [shortcutStatus.text isEqual:@"可轉一次；完成後停止"],
+                @"A completed session's next-board refresh reenables once without submitting a gesture");
+            [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"],
+                @"Only a second explicit shortcut tap submits the next-board action");
             shortcutState[@"orbState"] = @{@"phase":@"stopped",@"message":@"目標未達成，未開始轉珠",@"canOnce":@NO,@"canStart":@NO,@"busy":@NO};
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled &&
@@ -1305,6 +1324,40 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [baseGoalEditor dismissViewControllerAnimated:NO completion:nil];
         }),
         PHProbeStep(@"leader-goal-editor-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
+            NSMutableDictionary *multiLeader = [baseOrbFixture[@"orbState"] mutableCopy];
+            multiLeader[@"multiplayerActive"] = @YES; multiLeader[@"busy"] = @NO;
+            multiLeader[@"goalMode"] = @"leaders"; multiLeader[@"canExecute"] = @NO;
+            multiLeader[@"goalPlan"] = @{@"available":@YES,
+                @"goals":@[@{@"kind":@"cross",@"colors":@32,@"count":@1,@"length":@0}],
+                @"leaders":@[@"舊隊長"],@"message":@"舊條件"};
+            multiLeader[@"path"] = @[@0,@1]; multiLeader[@"goalHits"] = @[@9];
+            multiLeader[@"liveLeaderPlan"] = @{@"available":@YES,@"goals":savedGoals,
+                @"leaders":@[@"隊長 #14242",@"助人 · 4 人額外技能（不提供助人隊長技）"],
+                @"message":@"目前本機盤面條件",@"warning":@"多人只規劃最低盤面條件"};
+            orbFixture = @{@"orbState":multiLeader}; orbAction = nil; [orbController refresh];
+            NSString *multiText = ((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription")).text;
+            PHProbeCheck([multiText containsString:@"#14242"] && [multiText containsString:@"額外技能"] &&
+                [multiText containsString:@"目前本機"] && ![multiText containsString:@"舊"] && ![multiText containsString:@"✓"] &&
+                !PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit").hidden && !orbAction,
+                @"Idle multiplayer displays the live local leaders without attaching old route hits or submitting input");
+            multiLeader[@"liveLeaderPlan"] = @{@"available":@NO,@"goals":@[],@"leaders":@[],
+                @"message":@"未能確認本機回合的隊長／助人"};
+            orbFixture = @{@"orbState":multiLeader}; [orbController refresh];
+            PHProbeCheck(PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit").hidden &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalDescription")).text containsString:@"未能確認"],
+                @"Missing current multiplayer pair hides stale customization and explains unavailable conditions");
+            multiLeader[@"liveLeaderPlan"] = @{@"available":@YES,@"goals":savedGoals,
+                @"leaders":@[@"隊長 #14242"],@"message":@"目前本機盤面條件"};
+            orbFixture = @{@"orbState":multiLeader}; [orbController refresh];
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"multiplayer-leader-goal-editor-visible", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{
+            UIViewController *editor = orbController.presentedViewController; [editor loadViewIfNeeded];
+            PHProbeCheck([[editor valueForKey:@"draft"] isEqual:savedGoals],
+                @"Multiplayer customization copies the currently displayed local leader conditions");
+            [editor dismissViewControllerAnimated:NO completion:nil];
+        }),
+        PHProbeStep(@"multiplayer-leader-goal-editor-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
             NSMutableDictionary *temporaryLeader = [baseOrbFixture[@"orbState"] mutableCopy];
             temporaryLeader[@"goalMode"] = @"manual"; temporaryLeader[@"path"] = @[];
             temporaryLeader[@"goalPlan"] = @{@"available":@YES, @"goals":savedGoals,

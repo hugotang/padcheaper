@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "title": "GameWith 579537 更木劍八 1 體：CIEL × 尤皮莉絲",
+  "slots": [
+    {
+      "body": {
+        "id": 14184,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 8,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 127,
+        "latents": []
+      },
+      "assist": {
+        "id": 10305,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14200,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 127,
+        "latents": [
+          48
+        ]
+      },
+      "assist": {
+        "id": 13287,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14175,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 8,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": [
+          43,
+          43
+        ]
+      },
+      "assist": {
+        "id": 13711,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14042,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 5,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": [
+          28,
+          28,
+          28
+        ]
+      },
+      "assist": {
+        "id": 13711,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14061,
+        "level": 120,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 142,
+        "latents": [
+          43,
+          43,
+          43
+        ]
+      },
+      "assist": {
+        "id": 13853,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 4,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14189,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 5,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 127,
+        "latents": [
+          28,
+          28
+        ]
+      },
+      "assist": {
+        "id": 14191,
+        "level": 1,
+        "skill": 1,
+        "awakenings": 5,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    }
+  ]
+}

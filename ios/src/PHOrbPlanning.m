@@ -78,27 +78,37 @@ NSString *PHOrbGoalsDescription(NSArray *goals) {
 NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary *catalog) {
     NSMutableArray *goals = [NSMutableArray array], *leaders = [NSMutableArray array];
     NSMutableOrderedSet *warnings = [NSMutableOrderedSet orderedSet], *unsupported = [NSMutableOrderedSet orderedSet];
-    if (state && !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer))
+    const BOOL multiplayer = state && !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer);
+    if (!PHOrbLeaderContextReady(state)) {
         return @{@"available":@NO, @"goals":@[], @"leaders":@[], @"warning":@"",
-            @"message":@"多人隊長條件尚未驗證；請選 Combo 或指定形狀，再按轉一次。"};
-    if (!state || !state->present || !state->valid || !state->leadersValid || state->multiplayerDisabled ||
-        !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) {
-        return @{@"available":@NO, @"goals":@[], @"leaders":@[], @"warning":@"",
-            @"message":@"未能確認目前隊長與助人；請重新讀盤，或改用指定形狀。"};
+            @"message":multiplayer ? @"未能確認本機回合的隊長／助人；請在自己的操作窗口重新讀盤，或改用指定形狀。" :
+                @"未能確認目前隊長與助人；請重新讀盤，或改用指定形狀。"};
     }
     NSDictionary *cards = [catalog[@"cards"] isKindOfClass:NSDictionary.class] ? catalog[@"cards"] : @{};
     NSDictionary *skills = [catalog[@"skills"] isKindOfClass:NSDictionary.class] ? catalog[@"skills"] : @{};
     for (unsigned slot = 0; slot < 2; ++slot) {
+        if (multiplayer && slot == 1 && state->leaderContext.extraHelper) {
+            [leaders addObject:@"助人 · 4 人額外技能（不提供助人隊長技）"];
+            continue;
+        }
         NSString *number = [NSString stringWithFormat:@"%u", state->leaderNumbers[slot]];
         NSDictionary *card = [cards[number] isKindOfClass:NSDictionary.class] ? cards[number] : @{};
-        NSDictionary *profile = skills[[card[@"skill"] description] ?: @""];
+        // Fixed-team variants can share a displayed number while using a
+        // different native leader skill. Never borrow the base card's skill.
+        NSString *skillKey = multiplayer ? [NSString stringWithFormat:@"%u", state->leaderContext.skillIDs[slot]] :
+            [card[@"skill"] description];
+        NSDictionary *profile = skills[skillKey ?: @""];
+        if (multiplayer && !state->leaderContext.skillIDs[slot])
+            profile = @{@"goals":@[], @"warnings":@[], @"unsupported":@[]};
         NSString *title = [NSString stringWithFormat:@"%@ #%@ · %@", slot ? @"助人" : @"隊長", number,
             [card[@"name"] isKindOfClass:NSString.class] ? card[@"name"] : @"未收錄"];
+        if (multiplayer && state->leaderContext.catalogIDs[slot] >= 1000000u)
+            title = [title stringByAppendingString:@"（固定隊伍版本）"];
         [leaders addObject:title];
         PHOrbGoalSet parsed = {0};
         if (![profile isKindOfClass:NSDictionary.class] || !PHOrbReadGoals(profile[@"goals"], &parsed) ||
             ![profile[@"warnings"] isKindOfClass:NSArray.class] || ![profile[@"unsupported"] isKindOfClass:NSArray.class]) {
-            [unsupported addObject:[NSString stringWithFormat:@"#%@ 的隊長技資料未收錄或無效", number]]; continue;
+            [unsupported addObject:[NSString stringWithFormat:@"#%@ 的隊長技 %@ 資料未收錄或無效", number, skillKey ?: @"未知"]]; continue;
         }
         for (id warning in profile[@"warnings"]) {
             if ([warning isKindOfClass:NSString.class]) [warnings addObject:warning];
@@ -121,6 +131,8 @@ NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary
     if (goals.count > PHOrbMaxGoals) [unsupported addObject:@"雙隊長的盤面條件超過 6 項"];
     NSString *warning = [[@[@"只規劃最低盤面門檻；不計傷害、天降、追加 Combo 或重複發動倍率。"]
         arrayByAddingObjectsFromArray:warnings.array] componentsJoinedByString:@"\n"];
+    if (multiplayer) warning = [warning stringByAppendingString:
+        @"\n多人只讀取本機目前隊長／助人的盤面條件；不施放技能，也不驗證當回合技能次數、HP 或完整隊長技發動。"];
     // Keep unknown rules visible and require a deliberate manual profile.
     BOOL available = unsupported.count == 0;
     NSString *message = available ? PHOrbGoalsDescription(goals) : @"這組隊長包含尚未支援或缺少資料的條件，請改用指定形狀。";

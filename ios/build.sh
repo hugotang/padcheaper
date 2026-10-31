@@ -73,6 +73,7 @@ cp ios/docs/release-0.5.9.md "$build_dir/release-0.5.9.md"
 cp ios/docs/release-0.5.10.md "$build_dir/release-0.5.10.md"
 cp ios/docs/release-0.5.11.md "$build_dir/release-0.5.11.md"
 cp ios/docs/release-0.5.12.md "$build_dir/release-0.5.12.md"
+cp ios/docs/release-0.5.13.md "$build_dir/release-0.5.13.md"
 cp ios/docs/orb-multiplayer-once.md ios/docs/orb-0511-log-analysis.md "$build_dir/"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
@@ -105,6 +106,7 @@ cp ios/research/orb-shape-thorn-20261030.json ios/research/orb-shape-thorn-feasi
 cp ios/research/orb_recorded_shape_probe.cpp ios/research/orb_recorded_shape_benchmark.py ios/research/orb_lowhp_reachability_probe.cpp ios/research/orb_dense_heart_probe.cpp "$build_dir/research/"
 cp ios/research/orb-poison-20261030.json ios/research/orb-poison-results-0511.json ios/research/orb_poison_probe.cpp ios/research/orb_poison_benchmark.py "$build_dir/research/"
 cp ios/research/orb-multiplayer-20261031.json ios/research/halloween-ciel-579537-native.json "$build_dir/research/"
+cp ios/research/orb-multiplayer-leaders-20261031.json ios/research/orb-multiplayer-next-board-20261031.json "$build_dir/research/"
 cp ios/research/orb-0511-log-analysis-20261030.json ios/research/orb-0511-logs-20261030.json ios/research/orb_0511_log_analysis.py "$build_dir/research/"
 cp ios/targets/battle-23.6.0.json "$build_dir/battle-target.json"
 cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
@@ -143,9 +145,11 @@ metadata = {
     "dylib_version": version,
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
-    "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual goals only; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
+    "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual/current native leader goals; local turn/view/source and current parameter checks, explicit 4P extra-skill helper handling; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
+    "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
+    "orb_readiness_diagnostics": "current session and runtime button gates plus up to 16 distinct multiplayer states observed by UI snapshots, retained after exit; metadata-only release keeps the last complete observed board",
     "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; confirmed consumeAssist and final puzzleAfter; accepted-use group intervals and startAfter persist within the same battle/strategy across stop/restart; atomic single-file config commit; source/skill constraints never force a native choice",
-    "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended and double Kenpachi include confirmed openings, supply order and delayed rotation; no universal seamless-skill or healing guarantee",
+    "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended plus independent single/double Kenpachi plans; single Kenpachi uses Unohana #14061 after a seven-step opening with mandatory three-skill supply and absorption rescue only; no universal seamless-skill or healing guarantee",
     "diagonal_orbs": "optional default-off adjacent eight-direction search, replay and native acknowledgement; matching stays horizontal/vertical; atomically saved with selected profile/team plan; device verification pending",
     "skill_window_recheck": "transient native closure waits up to three seconds and rechecks before activation and first touch; no once/group/opening receipt consumed while waiting; persistent restrictions and identity/input changes still stop",
     "profile_file_sharing": "selected ordinary profile or complete team plan as bounded JSON file; native share sheet and document picker; preview before atomic save; duplicate IDs refused; no account/API/master switches",

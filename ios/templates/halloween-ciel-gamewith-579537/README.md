@@ -1,19 +1,22 @@
-# 萬聖 CIEL：GameWith 推薦隊與更木劍八 2 體隊
+# 萬聖 CIEL：GameWith 推薦隊與更木劍八 1／2 體隊
 
-來源：[GameWith ハロウィンヴァルキリーCIELのテンプレパーティ](https://xn--0ck4aw2h.gamewith.jp/article/show/579537)，2026-10-30 讀取。推薦隊對應第一組「おすすめテンプレパーティ」；雙劍八對應「ユーピリスと組み合わせたパーティ」中的「更木剣八2体」。兩套均採首消暗兩組＋心四連，推薦隊另要求暗四連以發動一護的雙體攻擊。
+2026-10-31 新增 **[CIEL × 尤皮莉絲單劍八獨立版](kenpachi-1.md)**，第 5 格為卯之花八千流，使用自己的七步開場與回血循環。新模板已授權隨 0.5.13 編譯測試，結果見開發紀錄；下方 0.5.12 的歷史建置結果僅涵蓋原推薦／雙劍八兩套。
+
+來源：[GameWith ハロウィンヴァルキリーCIELのテンプレパーティ](https://xn--0ck4aw2h.gamewith.jp/article/show/579537)。推薦隊對應第一組「おすすめテンプレパーティ」；單／雙劍八分別對應「ユーピリスと組み合わせたパーティ」中的「更木剣八1体／2体」。三套均採暗兩組＋首消心四連，推薦隊另要求暗四連以發動一護的雙體攻擊。原推薦／雙劍八於 2026-10-30 讀取；單劍八於 2026-10-31 核對文章快取，詳細配裝、七步開場及回血交接見 [獨立說明](kenpachi-1.md)。
 
 ## 檔案與版本
 
-| 隊伍 | 完整自動開場設定 | 0.5.11 手動開場後策略 | 編隊檔 |
+| 隊伍 | 完整自動開場設定 | 手動開場後策略 | 編隊檔 |
 |---|---|---|---|
 | 推薦：一護 × 萬聖 CIEL | [recommended.team-plan.json](recommended.team-plan.json) | [recommended.post-opening.json](recommended.post-opening.json) | [recommended.formation.json](recommended.formation.json) |
+| 更木劍八 1 體：CIEL × 尤皮莉絲（新增待測） | [kenpachi-1.team-plan.json](kenpachi-1.team-plan.json) | [kenpachi-1.post-opening.json](kenpachi-1.post-opening.json) | [kenpachi-1.formation.json](kenpachi-1.formation.json) |
 | 更木劍八 2 體：CIEL × 尤皮莉絲 | [kenpachi-2.team-plan.json](kenpachi-2.team-plan.json) | [kenpachi-2.post-opening.json](kenpachi-2.post-opening.json) | [kenpachi-2.formation.json](kenpachi-2.formation.json) |
 
-**完整整包需要本批新增的 `consumeAssist`／`puzzleAfter` 與 `intervalMode`／`startAfter` 支援；由 0.5.12 提供，建置及回歸結果見 [開發紀錄](../../docs/development.md)，真機驗證待回報。已交付 0.5.11 會拒絕這些新開場及計時欄位。** 0.5.12 已通過編譯與自動回歸，可在「自動轉珠 → 隊伍／關卡策略」匯入完整整包、預覽並儲存，再於單人首層尚未施放或轉珠時開始。
+**完整整包使用 0.5.12 的 `consumeAssist` 開場格式；推薦隊另用 `puzzleAfter`，雙劍八另用 `intervalMode`／`startAfter`。已交付 0.5.11 會拒絕這些新欄位。** 原推薦／雙劍八及相應引擎已通過 0.5.12 編譯與自動回歸，結果見 [開發紀錄](../../docs/development.md)，真機驗證待回報。新單劍八整包、編隊及普通策略尚未執行匯入或回歸，不在 CI 84 的驗證範圍內。整包的入口是「自動轉珠 → 隊伍／關卡策略」匯入、預覽並儲存，再於單人首層尚未施放或轉珠時開始。
 
-若仍使用 0.5.11，可先在編隊管理匯入相應 `formation.json`，按下表手動完成所有開場，再匯入相應 `post-opening.json` 至隊伍／關卡策略。**推薦隊先手動轉開場第一盤，到下一回合才開始自動循環；雙劍八建議先手動完成兩回合供珠與轉珠，再開始循環。** 普通策略綁定變身後六格本體，沒有開場執行或武裝核對，須自行確認配裝及兩件消耗武裝的狀態。雙劍八直接開始時的起步空窗見下方說明。
+原推薦／雙劍八的 0.5.11 相容用法：先在編隊管理匯入相應 `formation.json`，按下表手動完成所有開場，再匯入相應 `post-opening.json` 至隊伍／關卡策略。**推薦隊先手動轉開場第一盤，到下一回合才開始自動循環；雙劍八建議先手動完成兩回合供珠與轉珠，再開始循環。** 普通策略綁定變身後六格本體，沒有開場執行或武裝核對，須自行確認配裝及消耗武裝的狀態。雙劍八直接開始時的起步空窗見下方說明；單劍八的手動七步及待測狀態見獨立說明。
 
-兩套都不綁特定地下城／子關卡。未加入 diagonal 欄位，沿用四方向預設；一般毒與猛毒仍禁止消除，爆彈須首消全消。武裝與技能開場依序等待遊戲原生完成，所有自動操作仍只限單人。
+三套都不綁特定地下城／子關卡。未加入 diagonal 欄位，沿用四方向預設；一般毒與猛毒仍禁止消除，爆彈須首消全消。武裝與技能開場依序等待遊戲原生完成，完整策略及自動技能仍只限單人。以下配裝、十步／八步與計時說明專指原推薦／雙劍八。
 
 ## 推薦模板的六格配裝
 
@@ -126,6 +129,6 @@ GameWith 的 `k146.png` 對應專案覺醒 **138（同色武裝強化／武裝�
 
 採單一心四連版本。心 L 是文章的另一選擇，未在這份 JSON 同時強制，以免多占回復珠。武裝無效回復潛覺通常還需要相應 L 消；目前模板不在出現武裝無效時自動切換 L 目標，相關機制須依關卡手動處理。
 
-已完成 JSON／來源及數值靜態核對；原生蓄技歸零、自動兩盤起步及舊版直接起步空窗亦已記錄。新增 native／profile／session 回歸案例納入 0.5.12，結果見開發紀錄。真機仍須核對十步／八步、消耗武裝回報、第一次轉珠、三技能供珠與雙劍八自動起步、吸收救援與停止恢復輪替。現版普通策略可匯入的格式不等於此隊已真機驗證。
+原推薦／雙劍八已完成 JSON／來源及數值靜態核對；原生蓄技歸零、自動兩盤起步及舊版直接起步空窗亦已記錄。這兩套的 native／profile／session 回歸案例納入 0.5.12，結果見開發紀錄。真機仍須核對十步／八步、消耗武裝回報、第一次轉珠、三技能供珠與雙劍八自動起步、吸收救援與停止恢復輪替。新單劍八只有靜態核對及尚未執行的案例，見 [kenpachi-1.reference.json](kenpachi-1.reference.json)。普通策略的格式相容不代表此隊已真機驗證。
 
 來源表格與固定資料版本見 [strategy.reference.json](strategy.reference.json)，靜態結果見 [validation.json](validation.json)；原生技能進化及武裝消耗證據見 [native 研究](../../research/halloween-ciel-579537-native.json)。本批狀態見 [開發記錄](../../docs/development.md)。

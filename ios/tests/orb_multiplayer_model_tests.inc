@@ -1,3 +1,5 @@
+#include "orb_leader_fixture.h"
+
 static PHOrbSnapshot MultiplayerModelState(unsigned players, unsigned seat) {
     PHOrbSnapshot s{};
     s.identity = {1,2,3,42,1,1,2,{1},int16_t(players == 3 ? 7 : players == 4 ? 11 : 10),0,1};
@@ -16,6 +18,31 @@ static void MultiplayerModelTests() {
     for (unsigned players : {3u,4u,8u}) for (unsigned seat = 0; seat < players; ++seat) {
         auto s = MultiplayerModelState(players, seat);
         Check(PHOrbMultiplayerWindow(&s) && PHOrbCanPreview(&s), "all local seats have a recognized multiplayer input window");
+        SetLeaderContextFixture(&s,14242,66063,13834,63039);
+        Check(PHOrbLeaderContextReady(&s), "leader context follows every validated local seat");
+        for (unsigned field = 0; field < 10; ++field) {
+            auto changed = s;
+            if (field == 0) changed.leaderContext.sourceSlots[0] = 2;
+            if (field == 1) ++changed.leaderContext.sourceCatalogIDs[0];
+            if (field == 2) ++changed.leaderContext.skillIDs[1];
+            if (field == 3) ++changed.leaderContext.catalogIDs[1];
+            if (field == 4) ++changed.leaderContext.parameters[0];
+            if (field == 5) ++changed.leaderContext.formIDs[0];
+            if (field == 6) ++changed.leaderContext.temporaryIDs[1];
+            if (field == 7) ++changed.leaderContext.temporaryTurns[1];
+            if (field == 8) changed.leaderContext.known = false;
+            if (field == 9) ++changed.leaderContext.teamBank;
+            Check(!PHOrbSameLeaders(&s,&changed), "same displayed IDs cannot hide a changed multiplayer leader source");
+        }
+        if (players == 4) {
+            auto extra = s; SetExtraLeaderFixture(&extra);
+            Check(PHOrbLeaderContextReady(&extra) && PHOrbSameLeaders(&extra,&extra),
+                "validated inactive 4P extra helper is a known absence of helper leader skill");
+            auto changed = extra; ++changed.leaderContext.extraRecord;
+            Check(!PHOrbSameLeaders(&extra,&changed), "extra-skill selection changes invalidate the pair");
+            changed = extra; changed.leaderContext.extraHelper = false;
+            Check(!PHOrbLeaderContextReady(&changed), "missing helper ID alone never implies an extra helper");
+        }
         auto next = s; next.multiplayer.remainingSeconds -= 0.1;
         Check(PHOrbSameTurn(&s, &next), "decreasing clock time does not change multiplayer operation identity");
         next.multiplayer.turnSerial += players;
@@ -66,6 +93,27 @@ static void MultiplayerModelTests() {
         if (failure == 14) s.identity.sourceMode = 1;
         Check(!PHOrbMultiplayerWindow(&s) && !PHOrbCanPreview(&s),
             "incomplete, remote, resolving or disconnected multiplayer state cannot preview an executable board");
+    }
+    for (unsigned players : {3u, 4u, 8u}) {
+        auto next = MultiplayerModelState(players, players - 1);
+        next.multiplayer.networkFlags = 3;
+        Check(PHOrbCanPreview(&next) == (players == 4),
+            "only 4P may retain the submitted bit on an otherwise eligible next local board");
+        if (players == 4) {
+            next.multiplayer.resolvePending = 1;
+            Check(!PHOrbCanPreview(&next), "4P submitted-bit support never bypasses active resolution");
+            next.multiplayer.resolvePending = 0;
+            next.multiplayer.viewTeam = 0;
+            Check(!PHOrbCanPreview(&next), "4P submitted-bit support never grants another player's board");
+            next.multiplayer.viewTeam = next.multiplayer.localSeat;
+            next.multiplayer.networkFlags = 0x23;
+            Check(PHOrbCanPreview(&next), "the existing optional visual bit may coexist with 4P submission");
+        }
+        for (uint32_t flags : {2u, 7u, 0xbu, 0x13u, 0x83u, 0x203u, 0x10003u}) {
+            next = MultiplayerModelState(players, players - 1);
+            next.multiplayer.networkFlags = flags;
+            Check(!PHOrbCanPreview(&next), "missing active flag and send/pass/sync/terminal bits still block all modes");
+        }
     }
     auto thorn = MultiplayerModelState(3,0);
     thorn.dragged = thorn.board.tokens[0]; thorn.board.flags[1] |= PHOrbFlagThorn; thorn.board.thornDamage[1] = 1;
