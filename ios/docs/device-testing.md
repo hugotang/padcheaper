@@ -4,7 +4,7 @@
 
 ## 0.5.13：單劍八、多人隊長與下一盤修正
 
-[單劍八獨立版](../templates/halloween-ciel-gamewith-579537/kenpachi-1.md) 與 [多人隊長／助人解析](orb-multiplayer-once.md) **已於 2026-10-31 授權編譯測試，正在建置 0.5.13**。下方 0.5.12 的編譯／CI 結果不涵蓋本批。建置結果見 [開發紀錄](development.md)，取得同來源新 dylib 後再進行這一節真機驗收。
+[單劍八獨立版](../templates/halloween-ciel-gamewith-579537/kenpachi-1.md) 與 [多人隊長／助人解析](orb-multiplayer-once.md) **0.5.13 已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過完整自動回歸、iPhoneOS arm64 編譯與簽章、瀏覽器及四份 GUI**，144 組原始 IPA 指紋相符。使用同來源新 dylib 進行下表真機驗收；自動檢查範圍與雜湊見 [開發紀錄](development.md)。
 
 | 範圍 | 待核對行為 |
 |---|---|

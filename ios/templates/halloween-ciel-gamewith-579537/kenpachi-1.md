@@ -1,6 +1,6 @@
 # CIEL × 尤皮莉絲：更木劍八 1 體
 
-這是 [GameWith 579537「更木剣八1体」](https://xn--0ck4aw2h.gamewith.jp/article/show/579537#basic3) 的獨立編成。2026-10-31 新增，**已授權隨 0.5.13 編譯測試，結果見 [開發紀錄](../../docs/development.md)；真機仍待驗收**。與一護 × CIEL 推薦隊及雙劍八隊使用不同策略 ID，可以並存。
+這是 [GameWith 579537「更木剣八1体」](https://xn--0ck4aw2h.gamewith.jp/article/show/579537#basic3) 的獨立編成。2026-10-31 新增，**已隨 0.5.13 在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過匯入、策略與 session 回歸，結果見 [開發紀錄](../../docs/development.md)；真機仍待驗收**。與一護 × CIEL 推薦隊及雙劍八隊使用不同策略 ID，可以並存。
 
 | 檔案 | 用法 |
 |---|---|
@@ -9,7 +9,7 @@
 | [kenpachi-1.post-opening.json](kenpachi-1.post-opening.json) | 手動完成七步後使用的普通策略；不執行開場、不核對武裝消耗 |
 | [kenpachi-1.reference.json](kenpachi-1.reference.json) | 文章表格、圖示、固定卡片／技能資料、充能假設與待驗證狀態 |
 
-完整整包採 0.5.12 已加入的 `consumeAssist` 格式。新模板本身尚未在該二進位上驗證，也未加入已交付的不可覆寫版本。普通策略使用既有格式，不代表已通過匯入／執行測試。
+完整整包採 0.5.12 已加入的 `consumeAssist` 格式；本模板以 0.5.13 通過匯入、開場與循環 fixture，普通策略亦經匯入往返驗證。0.5.12 交付檔保持原樣，沒有回填新模板或宣稱舊二進位已驗證此隊；實際 CD、技能效果與回血仍待真機確認。
 
 ## 六格編成
 

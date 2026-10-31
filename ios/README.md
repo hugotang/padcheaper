@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-2026-10-31 後續源碼新增 [CIEL × 尤皮莉絲單劍八獨立配置](templates/halloween-ciel-gamewith-579537/kenpachi-1.md)、[多人本機隊長／助人盤面解析及 4 人下一盤按鈕修正](docs/orb-multiplayer-once.md)。**0.5.13 已收到編譯測試指示，正在建置；結果見 [更新說明](docs/release-0.5.13.md) 及開發紀錄。下方 0.5.12／CI 84 不涵蓋本批變更。** 單劍八配置限單人技能循環；多人解析只提供明確點擊「轉一次」的最低盤面條件。待驗證狀態見 [開發紀錄](docs/development.md)。
+2026-10-31 後續源碼新增 [CIEL × 尤皮莉絲單劍八獨立配置](templates/halloween-ciel-gamewith-579537/kenpachi-1.md)、[多人本機隊長／助人盤面解析及 4 人下一盤按鈕修正](docs/orb-multiplayer-once.md)。**0.5.13 已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI；真機仍待驗收。** 詳見 [更新說明](docs/release-0.5.13.md) 及開發紀錄。 單劍八配置限單人技能循環；多人解析只提供明確點擊「轉一次」的最低盤面條件。待驗證狀態見 [開發紀錄](docs/development.md)。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 

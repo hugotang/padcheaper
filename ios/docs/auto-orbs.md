@@ -1,6 +1,6 @@
-# iOS 自動轉珠 — 0.5.12
+# iOS 自動轉珠 — 0.5.13
 
-2026-10-31 後續源碼已新增 [CIEL × 尤皮莉絲單劍八獨立版](../templates/halloween-ciel-gamewith-579537/kenpachi-1.md)、[多人本機隊長／助人盤面解析及 4 人下一盤按鈕修正](orb-multiplayer-once.md)。**本批尚未編譯或執行測試，未提供新 dylib；下方 0.5.12 的建置結果不涵蓋這些變更。** 單劍八完整開場／技能循環限單人，多人解析用於明確點擊「轉一次」。
+2026-10-31 後續源碼已新增 [CIEL × 尤皮莉絲單劍八獨立版](../templates/halloween-ciel-gamewith-579537/kenpachi-1.md)、[多人本機隊長／助人盤面解析及 4 人下一盤按鈕修正](orb-multiplayer-once.md)。**0.5.13 的 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI；真機仍待驗收。** 單劍八完整開場／技能循環限單人，多人解析用於明確點擊「轉一次」。
 
 0.5.12 加入浮動快捷列收合：預設只留 PC，點一下展開快捷列，再按 PC 開設定；「收合」隱藏快捷列及狀態文字，執行中仍可直接按單顆「停止」。0.5.11 不含此功能；新版已通過自動測試，詳見 [開發紀錄](development.md)。
 

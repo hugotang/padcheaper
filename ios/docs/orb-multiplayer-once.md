@@ -2,7 +2,7 @@
 
 ## 0.5.13：本機隊長／助人解析及下一盤修正
 
-已加入多人「隊長盤面」的唯讀解析及可用性提示。**2026-10-31 已授權編譯測試，正在建置 0.5.13；真機仍待驗收。已交付的 0.5.12 只支援多人 Combo／指定形狀，CI 84 不涵蓋本次變更。** 本批狀態見 [開發紀錄](development.md)，原生證據見 [隊長解析研究](../research/orb-multiplayer-leaders-20261031.json)。
+已加入多人「隊長盤面」的唯讀解析及可用性提示。**0.5.13 的 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 已通過編譯、自動回歸及四份 GUI；真機仍待驗收。0.5.12 只支援多人 Combo／指定形狀。** 本批狀態見 [開發紀錄](development.md)，原生證據見 [隊長解析研究](../research/orb-multiplayer-leaders-20261031.json)。
 
 在已核對的本機操作窗口，讀取目前顯示隊伍的第 1／6 格，核對本機 descriptor、來源位置、目前型態與原生參數。雙隊長完整重讀兩次後才發布。3 人、4 人、8 人各沿用下方各自的回合與計時規則；mode 7 剩下兩席仍屬該模式，不代表開放另一種 2 人協力。
 
@@ -14,13 +14,13 @@
 
 這是最低盤面條件規劃。HP、技能次數、有效覺醒、完整隊長技發動、傷害及分數仍未驗證；例如 CIEL 的每回合技能使用條件會保留「未評估」提示。固定隊伍的原生技能若未在離線索引中收錄，這一版源碼仍不能自動規劃。多人自動技能、連續模式、開場、套隊與計時寫入維持停用。
 
-已補寫 model／native／planning／session／GUI 案例，尚未執行。下輪真機需逐模式核對隊長與助人顯示、固定版本、4 人額外技能、缺少條件時停用、換隊長後舊路徑失效及一次手勢的雙端同步。診斷新增 `Orb leader context`、`Orb live leader plan`，搜尋與執行歷史保存 `leaderContext` 的來源／技能／型態，來源位置為零起算，沒有程序指標。
+model／native／planning／session／GUI 案例已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過。下輪真機需逐模式核對隊長與助人顯示、固定版本、4 人額外技能、缺少條件時停用、換隊長後舊路徑失效及一次手勢的雙端同步。診斷新增 `Orb leader context`、`Orb live leader plan`，搜尋與執行歷史保存 `leaderContext` 的來源／技能／型態，來源位置為零起算，沒有程序指標。
 
 ## 待建置修正：4 人下一盤按鈕恢復
 
 0.5.12 已收到「第一盤完成，下一盤能手動轉珠但浮動轉一次仍停用」回報。原生 4 人流程可在放手後保留 networkFlags bit 1，舊共通遮罩卻拒絕它。本批只對 4 人增加該允許位元；下一盤仍須 phase 2、resolvePending 0、同一本機席位／視角及正常連線／時限，才重新開放按鈕。每次仍須明確點擊，不自動連續轉珠。3／8 人既有旗標條件維持。詳細分支與證據限制見 [下一盤研究](../research/orb-multiplayer-next-board-20261031.json)。
 
-放手後未讀取珠子的 metadata 不再覆蓋最後真實盤面。診斷新增當前 `onceReadiness`、外層 `runtimeReadiness` 及最多 16 筆 `onceReadinessHistory`，保留 UI 觀察到的可用／停用原因及讀取時間，稍後離場複製也可對照。新增連續兩次手動操作與按鈕恢復案例，**只寫入源碼，尚未執行或真機驗證；0.5.12 交付檔不含修正**。
+放手後未讀取珠子的 metadata 不再覆蓋最後真實盤面。診斷新增當前 `onceReadiness`、外層 `runtimeReadiness` 及最多 16 筆 `onceReadinessHistory`，保留 UI 觀察到的可用／停用原因及讀取時間，稍後離場複製也可對照。新增連續兩次手動操作與按鈕恢復案例，**已在 [CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 通過 model／native／session／GUI 回歸；0.5.12 交付檔不含修正，真機確認仍待回報**。
 
 ## 已交付 0.5.12：Combo／指定形狀與原生手勢
 

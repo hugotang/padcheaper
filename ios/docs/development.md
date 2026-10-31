@@ -4,11 +4,21 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-10-31：0.5.13-orbs 已授權編譯測試
+## 2026-10-31：0.5.13-orbs 編譯與自動測試完成
 
-使用者要求最後審閱後編譯測試。本批版本升為 0.5.13-orbs，包含下方單劍八配置、多人本機隊長／助人解析及 4 人下一盤修正，將執行本機模型／求路、macOS 原生／session／策略、iPhoneOS arm64、簽章、瀏覽器及四份模擬器 GUI 驗證。結果待本輪完成後填入；下方「已寫未跑」是建置前的歷史記錄。交付使用新的版本資料夾，0.5.12 與既有 IPA 不覆寫。
+使用者要求最後審閱後編譯測試；[CI 86](https://github.com/hugotang/padcheaper/actions/runs/41183970392) 已通過本批完整回歸、macOS 原生／session／規則／config／策略、iPhoneOS arm64 編譯、嚴格簽章、瀏覽器及 Scene／舊式視窗初次與重啟共四份 GUI，零 failures。本節為最終驗證結果，下方源碼與研究 JSON 的「已寫未跑」保留開發時的歷史狀態，不能替代這次 CI 記錄。
 
-本機 generator、六項隊長資料測試、Node 編隊、五組 C model 與完整 orb solver／model 通過；新共用 leader fixture 的 `{0}` 在 C++ 嚴格警告下報未完整初始化，已改為全結構清零並重跑求路／模型通過。原始 IPA 的 93 組 orb、34 組 battle、17 組基本指紋共 144 組吻合，22 份 JSON 及 Python／workflow 靜態檢查通過。macOS 與 iPhoneOS／GUI 結果待 CI。
+Windows GCC 15.2 的五組 C model、完整 orb solver／model、Node 編隊及六項 Python 隊長資料測試通過；五個 generator 均成功。原始 JP PAD 23.6.0／106878 IPA 的 93 組 orb、34 組 battle、17 組基本指紋共 144 組全部相符；22 份 JSON 與 Python／打包／手動 workflow 靜態檢查通過。本機結果對應的 production 及本機測試來源與最終 CI 一致；之後只修正 macOS session 案例的清理時序斷言。
+
+本機首次編譯發現共用 leader fixture 的 C 寫法 `{0}` 觸發 C++ 嚴格初始化警告，改為全結構清零後編譯與求路／模型通過。CI 85 的原生與策略匯入通過，session 只有三種模式的「結算時點擊」即時 busy 斷言失敗：afterFrame 保留已提交幀標記，停止後下一幀才清理。案例改為先確認立即撤銷 once／automatic 意圖且沒有新 arm／stage，再於仍在結算的下一幀確認 idle、沒有重送 begin／release，最後才加入下一盤；正式狀態機保持原行為，最終整套已重跑通過。
+
+新案例覆蓋 4 人保留 submitted 位元的下一盤恢復、3／8 人原旗標判定、連續兩次明確點擊及不自動啟動；metadata 放手保留真實盤面、最多 16 筆 UI readiness 狀態與離場保留；各多人席位的當前隊長／助人、固定版本原生技能、4 人額外技能助人、未知資料與來源變更取消；閒置顯示及複製目前條件。單劍八案例覆蓋匯入往返、七步順序、兩件消耗武裝、每盤 6→1→2 三技、卯之花未就緒時等待及第六盤模擬就緒、必要吸收／異常救援失敗停止。冷卻、回血及完整倍率仍須實機核對；fixture 不模擬實際遊戲技能效果。
+
+四份 GUI 均為 `phase=done`、`success=1`、零 failures，並已檢視相同來源的收合／展開、橫向、設定／模板與瀏覽器截圖。Scene 橫向排列及舊式視窗直向流程通過；舊式視窗真機旋轉、實際檔案提供者與 LiveContainer 觸控仍待驗收。
+
+二進位來源 `e45a6f189eb3f49eba0578922b1b9f09ca6656a6`，大小 5,005,792 bytes，SHA-256 `9ed27d36ea9906d3bb840b5e44f73ac6fee481e3ac49a8dddeab7a2406b3457d`；iPhoneOS arm64、最低 iOS 15.0。目標 manifest、所有模板 JSON、config 範例與研究資料保留同來源 CI 原件，文件另行補充結果。交付資料夾 `E:\ipa\PADCheaper-0.5.13-orbs` 及同名 ZIP；舊版不覆寫。完整證據及差異來源見交付 `verification.json`。
+
+真機先驗收 4 人第一盤完成 → 結算停用 → 下一個可操作盤面恢復 → 第二次明確點擊 → 第三盤不自動轉；再測 3 人交棒、8 人換盤、三模式隊長條件與斷線／背景／手指介入。單劍八在單人匯入獨立配置，核對七步開場、三技供珠、第六盤回血交接及救援不可用時停止。多人同步、原生技能效果及裝置互動尚未驗證，`device_verified=false`；詳見 [測試要點](device-testing.md) 與 [更新說明](release-0.5.13.md)。
 
 ## 2026-10-31：4 人下一盤「轉一次」誤停用，源碼待建置
 
