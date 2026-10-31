@@ -9,9 +9,9 @@
 | 推薦：一護 × 萬聖 CIEL | [recommended.team-plan.json](recommended.team-plan.json) | [recommended.post-opening.json](recommended.post-opening.json) | [recommended.formation.json](recommended.formation.json) |
 | 更木劍八 2 體：CIEL × 尤皮莉絲 | [kenpachi-2.team-plan.json](kenpachi-2.team-plan.json) | [kenpachi-2.post-opening.json](kenpachi-2.post-opening.json) | [kenpachi-2.formation.json](kenpachi-2.formation.json) |
 
-**完整整包需要本批新增的 `consumeAssist`／`puzzleAfter` 與 `intervalMode`／`startAfter` 支援；由 0.5.12 提供，建置及回歸結果見 [開發紀錄](../../docs/development.md)，真機驗證待回報。已交付 0.5.11 會拒絕這些新開場及計時欄位。** 新版建置完成後，可在「自動轉珠 → 隊伍／關卡策略」匯入完整整包、預覽並儲存，再於單人首層尚未施放或轉珠時開始。
+**完整整包需要本批新增的 `consumeAssist`／`puzzleAfter` 與 `intervalMode`／`startAfter` 支援；由 0.5.12 提供，建置及回歸結果見 [開發紀錄](../../docs/development.md)，真機驗證待回報。已交付 0.5.11 會拒絕這些新開場及計時欄位。** 0.5.12 已通過編譯與自動回歸，可在「自動轉珠 → 隊伍／關卡策略」匯入完整整包、預覽並儲存，再於單人首層尚未施放或轉珠時開始。
 
-目前 0.5.11 可先在編隊管理匯入相應 `formation.json`，按下表手動完成所有開場，再匯入相應 `post-opening.json` 至隊伍／關卡策略。**推薦隊先手動轉開場第一盤，到下一回合才開始自動循環；雙劍八建議先手動完成兩回合供珠與轉珠，再開始循環。** 普通策略綁定變身後六格本體，沒有開場執行或武裝核對，須自行確認配裝及兩件消耗武裝的狀態。雙劍八直接開始時的起步空窗見下方說明。
+若仍使用 0.5.11，可先在編隊管理匯入相應 `formation.json`，按下表手動完成所有開場，再匯入相應 `post-opening.json` 至隊伍／關卡策略。**推薦隊先手動轉開場第一盤，到下一回合才開始自動循環；雙劍八建議先手動完成兩回合供珠與轉珠，再開始循環。** 普通策略綁定變身後六格本體，沒有開場執行或武裝核對，須自行確認配裝及兩件消耗武裝的狀態。雙劍八直接開始時的起步空窗見下方說明。
 
 兩套都不綁特定地下城／子關卡。未加入 diagonal 欄位，沿用四方向預設；一般毒與猛毒仍禁止消除，爆彈須首消全消。武裝與技能開場依序等待遊戲原生完成，所有自動操作仍只限單人。
 

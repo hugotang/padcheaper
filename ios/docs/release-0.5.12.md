@@ -1,6 +1,6 @@
 # 0.5.12-orbs
 
-本版收齊 0.5.11 之後的技能窗口重查、斜向轉珠、雨龍／CIEL 模板、3／4／8 人「轉一次」、浮動列收合與目前狀態提示。2026-10-31 已收到「編譯測試」指示，開始執行本批驗證；結果以 [開發紀錄](development.md) 及交付 `verification.json` 為準，舊版 CI 不代表本版通過。
+本版收齊 0.5.11 之後的技能窗口重查、斜向轉珠、雨龍／CIEL 模板、3／4／8 人「轉一次」、浮動列收合與目前狀態提示。2026-10-31，[CI 84](https://github.com/hugotang/padcheaper/actions/runs/41171594592) 已通過完整回歸、iPhoneOS arm64 編譯、嚴格簽章、瀏覽器及四份 GUI 報告。來源與完整結果見 [開發紀錄](development.md) 及交付 `verification.json`。
 
 - 浮動入口預設只留 56×56 PC。閒置先點一下展開，再點 PC 開設定；收合隱藏快捷列及狀態。工作中的單顆 PC 可立即停止，刷新、關閉面板及換回合不自行展開或開始。
 - 多人只接受明確點擊的一次本機路徑。3 人核對自己的席位／回合；4／8 人分別核對自己的獨立盤面、開始倒數和整場時間。支援 Combo／手動形狀，錯誤窗口直接取消；同步、PASS、斷線、換回合、背景及放手未確認時不能開始新一次。連續模式、技能、套隊及計時寫入仍限單人，沒有封包編輯。
@@ -11,6 +11,6 @@
 
 新版完整模板位於 [雨龍](../templates/ishida-uryu-gamewith-574233/README.md) 及 [CIEL／雙劍八](../templates/halloween-ciel-gamewith-579537/README.md)。0.5.11 不接受新增開場、計時與 diagonal 欄位；既有交付保持原樣。更換 dylib 不會自動替換已存策略，使用新時序需重新匯入對應模板並預覽確認。
 
-驗證包含離線 model／solver、macOS 原生／session／規則／設定／策略、瀏覽器、Scene／舊式視窗初次及重啟 GUI，以及同來源 iPhoneOS arm64 dylib 的簽章與雜湊。原始 23.6.0／106878 IPA 的 128 組指紋亦須完全相符。模擬資料與 GUI 不代表真機同步、CD、首消、回血或斜格接受已通過，`device_verified=false`。
+驗證包含離線 model／solver、macOS 原生／session／規則／設定／策略、瀏覽器、Scene／舊式視窗初次及重啟 GUI，以及同來源 iPhoneOS arm64 dylib 的簽章與雜湊。原始 23.6.0／106878 IPA 的 128 組指紋完全相符。模擬資料與 GUI 不代表真機同步、CD、首消、回血或斜格接受已通過，`device_verified=false`。
 
 更新先停止工作並完整關閉 PAD，沿用 Dopamine rootless 的注入方式或在 LiveContainer 重新簽署。建議實機順序為浮動入口／單人一次與停止 → 技能及模板起步 → 斜向 → 3 人 → 4 人、8 人各別 → 背景、斷線及模式切換。逐項預期結果見 [真機測試要點](device-testing.md) 與 [多人操作](orb-multiplayer-once.md)。

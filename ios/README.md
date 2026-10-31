@@ -4,7 +4,7 @@
 
 `0.5.12-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
-0.5.12 收齊技能窗口重查、可選斜向轉珠、雨龍首盤保留白哉、CIEL／雙劍八起步時序、明確點擊的 3／4／8 人「轉一次」及預設收合的 PC 浮動入口。完整 [更新說明](docs/release-0.5.12.md)、[多人操作](docs/orb-multiplayer-once.md) 與 [實機測試要點](docs/device-testing.md) 列出行為；本批已授權建置，結果記錄於 [開發紀錄](docs/development.md)，多人同步仍待真機驗證。新時序需重新匯入對應模板，替換 dylib 不會改寫已存策略。
+0.5.12 收齊技能窗口重查、可選斜向轉珠、雨龍首盤保留白哉、CIEL／雙劍八起步時序、明確點擊的 3／4／8 人「轉一次」及預設收合的 PC 浮動入口。完整 [更新說明](docs/release-0.5.12.md)、[多人操作](docs/orb-multiplayer-once.md) 與 [實機測試要點](docs/device-testing.md) 列出行為；[CI 84](https://github.com/hugotang/padcheaper/actions/runs/41171594592) 已通過完整回歸、arm64 編譯、簽章、瀏覽器與四份 GUI，結果見 [開發紀錄](docs/development.md)，多人同步仍待真機驗證。新時序需重新匯入對應模板，替換 dylib 不會改寫已存策略。
 
 0.5.11 增加預設關閉的「心四連時允許消一般毒」，與所選隊伍策略一起保存。全部轉轉相位有首消心四連時可消一般毒，優先目標與 Combo；猛毒仍避開，爆彈須首消全消。三份成功毒盤桌面重複對照均增加 1 Combo；[CI 79](https://github.com/hugotang/padcheaper/actions/runs/41046955701) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI 報告，真機回血與首消仍待驗收。完整 [更新說明](docs/release-0.5.11.md) 列出條件與驗證範圍。
 
@@ -44,7 +44,7 @@ PC 浮動入口預設收合，閒置點一次展開「轉一次／開始自動�
 
 單人套隊、初始 SB、入場目前 HP 初始化與原生隊伍刷新保留。使用者已確認 0.4.1 的單人入場套隊及 SB 成功；新版 HP、實際技能效果及結算仍需真機核對。用法見 [六人編隊](docs/formation.md)，數值及時機邊界見 [入場數值核對](docs/entry-derived-state.md)。
 
-所有非零 multi 及 mode 7 均拒絕戰鬥套用、變身、還原、SB／HP 寫入及計時干預。舊設定中的 `allowAllMulti: true` 也不能解除限制。一旦偵測多人，本場保持停用，直到確認離開戰鬥。多人診斷只讀取記憶體中的基本狀態，不呼叫原生 bank getter 或 digest。更新時完整關閉遊戲，再替換舊 dylib。
+所有非零 multi 及 mode 7／10／11 均拒絕戰鬥套用、變身、還原、SB／HP 寫入及計時干預。舊設定中的 `allowAllMulti: true` 也不能解除限制。一旦偵測多人，本場保持停用，直到確認離開戰鬥。多人診斷只讀取記憶體中的基本狀態，不呼叫原生 bank getter 或 digest。更新時完整關閉遊戲，再替換舊 dylib。
 
 ## GitHub Actions
 
@@ -72,23 +72,23 @@ bash ios/build.sh
 
 ## Dopamine rootless 安裝
 
-完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.11 的重測順序見 [更新說明](docs/release-0.5.11.md)。
+完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.12 的重測順序見 [更新說明](docs/release-0.5.12.md)。
 
 ## LiveContainer 安裝
 
 1. 完整關閉 PAD，移除舊版或重複的 PADCheaper.dylib。保留 guest 容器內原有 config.json、隊伍庫及帳號檔；更新只替換 dylib，不用範例設定覆蓋舊設定。
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
-4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，點擊開啟面板，按 × 收起。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示 `0.5.11-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，閒置點一下展開快捷列，再點 PC 開設定，按 × 關閉面板。按鈕／面板外的觸控會穿透，遊戲維持 key window。
+5. 面板標頭應顯示 `0.5.12-orbs`，載入、功能及儲存狀態每秒更新，開關自動儲存。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
 | 狀態 | 含義 |
 |---|---|
-| 藍色「就緒」 | dylib／GUI 已載入，功能關閉或尚未選擇 |
-| 黃色「載入」 | 初始化或等待登入、API、遊戲資源表等條件；點開查看原因 |
-| 綠色「啟用」 | 至少一項功能通過啟用條件；面板會標明個別功能及部分啟用狀態 |
+| 藍色 PC | dylib／GUI 已載入，功能關閉或尚未選擇 |
+| 黃色 PC | 初始化或等待登入、API、遊戲資源表等條件；點開查看原因 |
+| 綠色 PC | 至少一項功能通過啟用條件；面板會標明個別功能及部分啟用狀態 |
 | 紅色「錯誤」 | dylib 已載入，但遊戲校驗、hook 或儲存失敗；仍可複製診斷 |
 | 紅色「停止自動／停止轉珠」 | 點擊立即取消自動流程；求路、技能動畫及等待回合也可停止 |
 | 沒有 PC 按鈕 | 載入或視窗顯示未完成；不能只憑此判定是哪一步失敗 |
@@ -102,11 +102,11 @@ bash ios/build.sh
 首次啟動會建立 config.json。預設值見 [config.example.json](config.example.json)，所有寫入關閉；可直接用面板設定。
 
 1. 保持診斷模式，在遊戲內儲存一次隊伍，讓面板偵測 API。
-2. 點 PC，按 **套用偵測到的 API**；只儲存 host／path，不記錄 sid、key 或完整 query。
+2. 閒置點 PC 展開，再點 PC 開設定，按 **套用偵測到的 API**；只儲存 host／path，不記錄 sid、key 或完整 query。
 3. 開啟 **功能總開關** 和要使用的 **Skin／BGM／隊伍徽章**。面板會顯示「已套用」、有效徽章數量或尚在等待的原因。
 4. 要測試背景計時修正，可另外開啟該開關；它不依賴 Skin／BGM 的 API 設定。
 
-PC 面板的「單人入口設定」可修改 mode／source 的全部允許開關及整數清單；多人操作不能由設定開啟。這些選項與功能開關共用 config.json，儲存後每秒重新讀取。也可手動編輯 `battle`、`experimentalWrites`、`features`、`apiHosts`／`apiPaths`。無效設定會停用修改並顯示錯誤，切換開關可重新儲存有效設定。
+PC 面板的「單人入口設定」可修改 mode／source 的全部允許開關及整數清單；多人套隊／技能／連續／計時寫入不能由設定開啟；轉一次須符合獨立的本機窗口條件。這些選項與功能開關共用 config.json，儲存後每秒重新讀取。也可手動編輯 `battle`、`experimentalWrites`、`features`、`apiHosts`／`apiPaths`。無效設定會停用修改並顯示錯誤，切換開關可重新儲存有效設定。
 
 皮膚／BGM／徽章寫入同時要求 target 校驗、frame／network hook、已觀察的主執行緒 frame、成功登入解析及可用本地儲存。若登入早於 hooks 安裝，重新啟動遊戲以重新觀察登入；不要單純把非零 pid 當成登入完成。
 
@@ -126,6 +126,6 @@ PC 面板的「單人入口設定」可修改 mode／source 的全部允許開�
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.3-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.12-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

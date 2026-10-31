@@ -1,6 +1,6 @@
 # 石田雨龍 × 白哉：GameWith 基本模板
 
-原版從 0.5.6 起支援整包匯入。本目錄的 [光 T＋心四連](team-plan.json)／[光 T＋心 L](team-plan-heart-l.json) 已於 2026-10-31 加入首盤保留白哉，需包含本批 `intervalMode`／`startAfter` 的新版 dylib；對應 0.5.12，建置與回歸結果見開發紀錄。新版可在自動轉珠 → 隊伍／關卡策略貼入 JSON、驗證預覽後儲存並選用。包含原六步開場、變身確認、限定本體的循環與至少九光條件；參見 [格式與限制](../../docs/team-plan-config.md)。
+原版從 0.5.6 起支援整包匯入。本目錄的 [光 T＋心四連](team-plan.json)／[光 T＋心 L](team-plan-heart-l.json) 已於 2026-10-31 加入首盤保留白哉，需包含本批 `intervalMode`／`startAfter` 的新版 dylib；對應 0.5.12，[CI 84](https://github.com/hugotang/padcheaper/actions/runs/41171594592) 已通過編譯與自動回歸，真機技能與 CD 仍待驗收。新版可在自動轉珠 → 隊伍／關卡策略貼入 JSON、驗證預覽後儲存並選用。包含原六步開場、變身確認、限定本體的循環與至少九光條件；參見 [格式與限制](../../docs/team-plan-config.md)。
 
 
 來源：[GameWith 石田雨竜のテンプレパーティ](https://xn--0ck4aw2h.gamewith.jp/article/show/574233#basic)，2026-10-29 讀取。這份資料對應文章的第一組「おすすめテンプレパーティ」，不包含無卯之花、無夜一、試煉因陀羅或各地下城的替換編成。
