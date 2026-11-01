@@ -56,7 +56,8 @@ static void EnemyComboSessionTests() {
     engine = [FakeOrbEngine new]; SetAssistBoard(engine, 0);
     engine->live.enemyCombo.turns[0] = 3; engine->live.enemyCombo.thresholds[0] = 14;
     engine->live.automation.enemyEffects = PHOrbEnemyComboAbsorb; engine->bypassComboWithSkill = YES;
-    session = AssistSession(engine, AssistSettings(NO, @[], @[@{@"slot":@1,@"every":@1,@"enemy":@"combo_absorb"}]));
+    NSMutableDictionary *bypassRule = [PHOrbDefaultSkillRule() mutableCopy]; bypassRule[@"enemy"] = @"combo_absorb";
+    session = AssistSession(engine, AssistSettings(NO, @[], @[bypassRule]));
     Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.size() == 1 &&
         ![session.snapshot[@"goalPlan"][@"enemyComboActive"] boolValue] && engine->releases == 1,
         "configured bypass skill executes before fresh countermeasure capture");
