@@ -12,7 +12,7 @@ static void ShapeSpaceSessionTests() {
     for (unsigned i = 0; i < 400 && ![session.snapshot[@"searchTrace"][@"status"] isEqual:@"incompatible-goals"]; ++i)
         Tick(session,engine,Frame());
     Check([session.snapshot[@"searchTrace"][@"status"] isEqual:@"incompatible-goals"] &&
-        [session.snapshot[@"message"] containsString:@"珠色比例"] && ![session.snapshot[@"canExecute"] boolValue] && !engine->stages,
+        [session.snapshot[@"message"] containsString:@"珠數或空間"] && ![session.snapshot[@"canExecute"] boolValue] && !engine->stages,
         "shape-space failure gives a specific explanation without publishing an executable preview");
     Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[]}],
         "changing the goal after a space failure remains available");

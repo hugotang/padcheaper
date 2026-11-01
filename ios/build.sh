@@ -93,22 +93,21 @@ cp -R ios/templates/halloween-ciel-gamewith-579537 "$build_dir/templates/"
 cp ios/docs/release-0.5.5.md "$build_dir/release-0.5.5.md"
 cp ios/docs/release-0.5.4.md "$build_dir/release-0.5.4.md"
 cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
+cp ios/docs/release-0.5.2.md ios/docs/release-0.5.1.md "$build_dir/"
 cp ios/docs/uryu-byakuya-0.5.2.md "$build_dir/uryu-byakuya-0.5.2.md"
 cp ios/docs/development.md "$build_dir/development.md"
 cp ios/docs/enemy-aware-automation.md "$build_dir/enemy-aware-automation.md"
 cp ios/docs/battle-observation.md "$build_dir/battle-observation.md"
 cp ios/docs/enemy-action-observation.md "$build_dir/enemy-action-observation.md"
 cp ios/docs/enemy-selector-analysis.md "$build_dir/enemy-selector-analysis.md"
-cp ios/research/orb-enemy-selector-20261101.json "$build_dir/orb-enemy-selector-20261101.json"
 cp ios/docs/enemy-dispatch-analysis.md "$build_dir/enemy-dispatch-analysis.md"
-cp ios/research/orb-enemy-dispatch-20261101.json "$build_dir/orb-enemy-dispatch-20261101.json"
 cp ios/docs/enemy-damage-analysis.md "$build_dir/enemy-damage-analysis.md"
-cp ios/research/orb-enemy-damage-20261101.json "$build_dir/orb-enemy-damage-20261101.json"
 cp ios/docs/assist-recovery.md "$build_dir/assist-recovery.md"
 cp ios/targets/orbs-23.6.0.json "$build_dir/orb-target.json"
 mkdir -p "$build_dir/third_party/pazusoba"
 cp ios/third_party/pazusoba/LICENSE ios/third_party/pazusoba/NOTICE.md "$build_dir/third_party/pazusoba/"
 mkdir -p "$build_dir/research"
+cp ios/research/orb-enemy-selector-20261101.json ios/research/orb-enemy-dispatch-20261101.json ios/research/orb-enemy-damage-20261101.json "$build_dir/research/"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
 cp ios/research/orb-shape-0407.json "$build_dir/research/"
 cp ios/research/orb_shape_probe.cpp ios/research/orb_shape_benchmark.py ios/research/orb-shape-results.json "$build_dir/research/"
@@ -152,6 +151,10 @@ for notes in directory.glob("*.md"):
                      ("](../.github/workflows/ios-dylib.yml)",
                       "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
         content = content.replace(old, new)
+    for source, target in (("pad-23.6.0.json", "target.json"),
+                           ("battle-23.6.0.json", "battle-target.json"),
+                           ("orbs-23.6.0.json", "orb-target.json")):
+        content = content.replace("](../targets/" + source + ")", "](" + target + ")")
     notes.write_text(content, encoding="utf-8")
 for template_notes in (directory / "templates").glob("*/README.md"):
     template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(

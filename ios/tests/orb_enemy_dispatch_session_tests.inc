@@ -32,10 +32,10 @@ static void EnemyDispatchSessionTests() {
     engine->enemyActionFixture = ready; reads = engine->enemyActionReads;
     for (unsigned i = 0; i < 12 && engine->enemyActionReads == reads; ++i) Tick(session, engine, Frame(), 0.11);
     engine->live.board.types[0] = uint8_t((engine->live.board.types[0] + 1) % 6);
-    Tick(session, engine, Frame(), 0.01); snapshot = [session snapshot];
+    Tick(session, engine, Frame(), 0.11); snapshot = [session snapshot];
     Check(!snapshot[@"battleObservation"][@"enemyActions"] &&
         ![snapshot[@"battleObservationDescription"] containsString:@"行動入口："],
-        "board change immediately discards conditional entry and tick data");
+        "the next idle board read discards conditional entry and tick data");
     [session queueStop:@"end dispatch presentation fixture"];
     for (auto kind : {PHOrbMultiplayerThree, PHOrbMultiplayerFour, PHOrbMultiplayerEight, PHOrbMultiplayerThreeSolo}) {
         engine = [FakeOrbEngine new]; SeedObservation(engine); engine->enemyActionFixture = ready;

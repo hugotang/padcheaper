@@ -29,10 +29,13 @@ static void EnemyActionSessionTests() {
     engine->enemyActionFixture = ready; reads = engine->enemyActionReads;
     for (unsigned i = 0; i < 12 && engine->enemyActionReads == reads; ++i) Tick(session, engine, Frame(), 0.11);
     engine->live.board.types[0] = uint8_t((engine->live.board.types[0] + 1) % 6);
-    Tick(session, engine, Frame(), 0.01);
+    // The idle board read runs at 0.10 s; invalidate on that next read,
+    // before the separate 0.75 s diagnostic capture is due.
+    reads = engine->enemyActionReads;
+    Tick(session, engine, Frame(), 0.11);
     trace = [session snapshot][@"battleObservation"];
-    Check(![trace[@"current"] boolValue] && !trace[@"enemyActions"],
-        "board changes remove enemy definitions immediately even before a scheduled capture");
+    Check(![trace[@"current"] boolValue] && !trace[@"enemyActions"] && engine->enemyActionReads == reads,
+        "the next idle board read removes enemy definitions before another diagnostic capture");
     reads = engine->enemyActionReads;
     engine->failObservation = YES;
     for (unsigned i = 0; i < 12; ++i) Tick(session, engine, Frame(), 0.11);

@@ -10,7 +10,11 @@ static void SetAssistBoard(FakeOrbEngine *engine, unsigned turns = 2) {
     for (unsigned cell : {24u,25u,26u,27u}) board.types[cell] = 5;
     // One harmless legal swap isolates policy/state-machine behavior from search difficulty.
     board.tapeMask = ((UINT64_C(1) << 30) - 1) & ~((UINT64_C(1) << 3) | (UINT64_C(1) << 4));
+    for (unsigned i = 0; i < 30; ++i)
+        board.flags[i] = (board.flags[i] & ~PHOrbFlagTape) |
+            ((board.tapeMask & (UINT64_C(1) << i)) ? PHOrbFlagTape : 0);
     board.fixedStart = 4;
+    Check(PHOrbBoardValid(&board), "assist session fixture satisfies native board metadata invariants");
     engine->live.assistRecovery = {}; engine->live.assistRecovery.valid = true;
     engine->live.assistRecovery.turns = turns; engine->live.assistRecovery.perColor[3] = 2;
     engine->live.assistRecovery.providers[3] = 1; engine->live.assistRecovery.colors[0] = 8;

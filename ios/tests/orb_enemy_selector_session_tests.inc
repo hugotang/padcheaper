@@ -34,10 +34,10 @@ static void EnemySelectorSessionTests() {
     engine->enemyActionFixture = ready; reads = engine->enemyActionReads;
     for (unsigned i = 0; i < 12 && engine->enemyActionReads == reads; ++i) Tick(session, engine, Frame(), 0.11);
     engine->live.board.types[0] = uint8_t((engine->live.board.types[0] + 1) % 6);
-    Tick(session, engine, Frame(), 0.01); snapshot = [session snapshot];
+    Tick(session, engine, Frame(), 0.11); snapshot = [session snapshot];
     Check(!snapshot[@"battleObservation"][@"enemyActions"] &&
         ![snapshot[@"battleObservationDescription"] containsString:@"選招分支："],
-        "stale board context immediately removes selector candidates along with raw action data");
+        "the next idle board read removes stale selector candidates along with raw action data");
     [session queueStop:@"end selector presentation fixture"];
     for (auto kind : {PHOrbMultiplayerThree, PHOrbMultiplayerFour, PHOrbMultiplayerEight, PHOrbMultiplayerThreeSolo}) {
         engine = [FakeOrbEngine new]; SeedObservation(engine); engine->enemyActionFixture = ready;

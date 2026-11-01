@@ -512,6 +512,8 @@ static void ExecutionTraceSessionTests() {
     [session queueOnce];
     for (unsigned i = 0; i < 2000 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
     Check([[[session snapshot][@"executionHistory"] lastObject] isEqual:retained] &&
-        [[session snapshot][@"message"] containsString:@"毒 30 顆"] && ![[session snapshot][@"startSent"] boolValue],
+        [[session snapshot][@"message"] containsString:@"毒／猛毒消除最多 30 顆"] &&
+        [[[session snapshot][@"searchTrace"][@"evaluation"] objectForKey:@"poisonErased"] unsignedIntValue] == 30 &&
+        ![[session snapshot][@"startSent"] boolValue],
         "failed poison search preserves the last executed route, explains remaining poison and sends no input");
 }

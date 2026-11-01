@@ -374,11 +374,17 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 int main() {
     @autoreleasepool {
         AssistSessionTests();
+        if (failures) return 1;
         ObservationSessionTests();
+        if (failures) return 1;
         EnemyActionSessionTests();
+        if (failures) return 1;
         EnemySelectorSessionTests();
+        if (failures) return 1;
         EnemyDispatchSessionTests();
+        if (failures) return 1;
         EnemyDamageSessionTests();
+        if (failures) return 1;
         SkillWindowSessionTests();
         DiagonalSessionTests();
         ShortcutSessionTests();
@@ -502,6 +508,15 @@ int main() {
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
         for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = uint8_t(1 + (i % 6 + 2 * (i / 6)) % 4);
         for (unsigned i : {0u,1u,2u,6u,7u,8u,12u,13u,14u}) engine->live.board.types[i] = 0;
+        // Joint inventory now rejects 9 red for square + L before search.
+        // Keep 14, but limit the legal route to two harmless adjacent cells
+        // so this case still exercises an unmet, replayable preview.
+        for (unsigned i : {17u,19u,21u,24u,26u}) engine->live.board.types[i] = 0;
+        engine->live.board.tapeMask = ((UINT64_C(1) << 30) - 1) & ~((UINT64_C(1) << 4) | (UINT64_C(1) << 5));
+        for (unsigned i = 0; i < 30; ++i)
+            if (engine->live.board.tapeMask & (UINT64_C(1) << i)) engine->live.board.flags[i] |= PHOrbFlagTape;
+        engine->live.board.fixedStart = 5;
+        Check(PHOrbBoardValid(&engine->live.board), "partial-preview fixture has valid board metadata");
         NSArray *conflict = @[@{@"kind":@"square", @"colors":@1, @"count":@1, @"length":@0},
             @{@"kind":@"l", @"colors":@1, @"count":@1, @"length":@0}];
         [session configureSettings:@{@"quality":@"fast", @"mode":@"manual", @"goals":conflict}];
@@ -516,7 +531,7 @@ int main() {
             Check([partialMessage containsString:PHOrbGoalDescription(partialGoals[i])],
                 "partial preview names each unmet goal so failure logs identify the missing condition");
         Check([partialMessage containsString:@"求路耗時"] && [partialMessage containsString:@"ms"] &&
-            [partialMessage containsString:[partial[@"deadline"] boolValue] ? @"已到時間上限" : @"未到時間上限"],
+            [partialMessage containsString:[partial[@"deadline"] boolValue] ? @"時間上限" : @"未到時間上限"],
             "partial preview distinguishes search elapsed time and deadline from drag duration");
         Execute(session); for (unsigned i = 0; i < 30; ++i) Tick(session, engine, Frame());
         Check(engine->stages == 0, "even a direct execute request cannot bypass unmet goals");

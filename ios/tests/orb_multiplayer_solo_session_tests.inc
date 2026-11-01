@@ -10,6 +10,10 @@ static void MultiplayerSoloSessionTests() {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetSessionContinuation(engine, seat);
         PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
         Tick(session, engine, Frame());
+        // Idle sessions intentionally do not read guest memory until orb
+        // monitoring has been requested. Observe without granting a gesture.
+        [session queueRead]; [session queueStop:@"observe continuation"];
+        Tick(session, engine, Frame(), 0.12);
         Check([session.snapshot[@"canOnce"] boolValue] && ![session.snapshot[@"canStart"] boolValue] &&
             [session.snapshot[@"multiplayerMessage"] containsString:@"單人續玩"] &&
             [session.snapshot[@"onceReadiness"][@"multiplayer"][@"timeSource"] isEqual:@"move-timer"],
