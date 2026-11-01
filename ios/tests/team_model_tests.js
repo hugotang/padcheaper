@@ -41,6 +41,59 @@ check('explicit active buffs, no implicit cast skills',()=>{
  assert.ok(Math.abs(r.shield.total[0]-.97894)<1e-12);assert.equal(r.totals.hp,613829);
  assert.equal(r.totals.rcv,733290);assert.equal(calc.evaluate(real).shield.active,0);
 });
+const skillContext={matches:plain,width:7,height:6,activeSkills:[{key:'3:body:0',elapsed:0},{key:'2:body:0',elapsed:0}]};
+check('real Unohana and Haschwalth skills, duration and cooldown',()=>{
+ const r=calc.evaluate(real,skillContext),hp=r.skillOptions.find(s=>s.key==='2:body:0'),shield=r.skillOptions.find(s=>s.key==='3:body:0');
+ assert.equal(hp.cooldown,5);assert.equal(shield.cooldown,5);assert.equal(hp.minimumCooldown,5);
+ assert.deepEqual(hp.effects.map(e=>[e.kind,e.turns,e.value]),[['board',1,'7x6'],['rcv',1,3],['hp',1,3]]);
+ assert.deepEqual(shield.effects.map(e=>[e.kind,e.turns,e.value]),[['shield',5,35]]);
+ assert.equal(r.totals.hp,1227657);assert.equal(r.totals.rcv,733290);assert.ok(Math.abs(r.shield.total[0]-.97894)<1e-12);
+ assert.equal(r.context.skillUses,2);assert.equal(r.survivalAuthorized,false);
+});
+check('max HP skill does not heal the additional capacity',()=>{
+ const r=calc.evaluate(real,{...skillContext,matches:[]});
+ assert.equal(r.recovery.startingHP,409219);assert.equal(r.recovery.afterHP,409219);
+ assert.equal(calc.evaluate(real,{...skillContext,matches:[],hpBasis:'effective'}).recovery.startingHP,1227657);
+ assert.equal(calc.evaluate(real,{...skillContext,hpPercent:0}).recovery.afterHP,1227657);
+ assert.throws(()=>calc.evaluate(real,{...skillContext,width:6,height:5}),/盤面/);
+});
+check('one-turn HP and five-turn shield expire at distinct turns',()=>{
+ let r=calc.evaluate(real,{matches:plain,activeSkills:[{key:'2:body:0',elapsed:1},{key:'3:body:0',elapsed:4}]});
+ assert.equal(r.totals.hp,409219);assert.equal(r.totals.rcv,244430);assert.ok(Math.abs(r.shield.total[0]-.97894)<1e-12);
+ r=calc.evaluate(real,{matches:plain,activeSkills:[{key:'2:body:0',elapsed:1},{key:'3:body:0',elapsed:5}]});
+ assert.equal(r.shield.total[0],.9676);
+});
+check('Byakuya replaces only HP; skill order preserves Unohana RCV',()=>{
+ const c={...skillContext,activeSkills:[...skillContext.activeSkills,{key:'4:body:0',elapsed:0}]};
+ let r=calc.evaluate(real,c);assert.equal(r.totals.hp,613829);assert.equal(r.totals.rcv,733290);
+ assert.equal(r.activeSkills.selected.find(s=>s.key==='2:body:0').effects.find(e=>e.kind==='hp').overwritten,true);
+ c.activeSkills=[{key:'4:body:0',elapsed:0},...skillContext.activeSkills];r=calc.evaluate(real,c);assert.equal(r.totals.hp,1227657);
+ assert.throws(()=>calc.evaluate(real,{...skillContext,hpMultiplier:1.5}),/重複/);
+});
+check('actual skill level affects cooldown, expiry never restores an overwritten shield',()=>{
+ const t=structuredClone(real);t.slots[3].body.skill=1;assert.equal(calc.evaluate(t).skillOptions.find(s=>s.key==='3:body:0').cooldown,9);
+ const r=calc.evaluate(real,{matches:plain,activeSkills:[{key:'3:body:0',elapsed:3},{key:'5:assist:0',elapsed:2}]});
+ assert.equal(r.shield.active,0);assert.equal(r.activeSkills.selected[0].effects[0].overwritten,true);
+ assert.throws(()=>calc.evaluate(real,{activeSkills:[{key:'3:body:0',elapsed:-1}]}),/回合/);
+ assert.throws(()=>calc.evaluate(real,{activeSkills:[{key:'3:body:0'},{key:'3:body:0'}]}),/重複/);
+});
+check('attribute shield applies only to its stated attribute',()=>{
+ const r=calc.evaluate(real,{matches:plain,activeSkills:[{key:'4:assist:0'}]});
+ assert.equal(r.shield.total[0],.9676);assert.equal(r.shield.total[4],1);
+});
+check('delayed and evolved skill choices retain timing and reject random effects',()=>{
+ const sm=require('../editor/team-skills.js').createModel({activeSkills:[
+  [1,232,[2,3],1,8,'stages',''],[2,3,[1,50],1,8,'first',''],[3,3,[5,35],1,5,'second',''],
+  [4,248,[2,3],1,10,'delayed',''],[5,118,[2,3],1,3,'random',''],[6,244,[1,99],1,3,'bad','']]});
+ const options=sm.describe({id:1,active:1},{skill:1},0,'body');assert.equal(options[1].cooldown,5);
+ assert.throws(()=>sm.project(options,[{key:'0:body:0'},{key:'0:body:1'}]),/階段/);
+ const delayed=sm.describe({id:4,active:4},{skill:1},1,'body');
+ assert.equal(sm.project(delayed,[{key:'1:body:0',elapsed:1}]).effects.length,0);
+ assert.equal(sm.project(delayed,[{key:'1:body:0',elapsed:2}]).effects[0].remaining,5);
+ assert.equal(sm.project(delayed,[{key:'1:body:0',elapsed:7}]).effects.length,0);
+ assert.equal(sm.describe({id:5,active:5},{skill:1},2,'body')[0].selectable,false);
+ assert.equal(sm.describe({id:6,active:6},{skill:1},2,'body')[0].selectable,false);
+});
 check('heart L is separate from light L',()=>{
  const r=calc.evaluate(real,{matches:[{attr:3,n:3},{attr:5,n:5,shape:'l'}]});
  assert.equal(r.shield.heartL,.25);assert.ok(Math.abs(r.shield.total[0]-.9757)<1e-12);

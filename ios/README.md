@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.18-orbs` 新增 [單人離線隊伍試算](docs/team-model.md) 與本體／超同步／武裝／潛覺圖示，不需進入關卡即可比較最終型態 HP、回復力和消珠條件減傷。Windows 25 項模型及瀏覽器檢查已通過；本版 iPhoneOS 建置與完整 CI 待執行，見 [更新說明](docs/release-0.5.18.md)。Auto 的存活放行仍未接通。
+`0.5.18-orbs` 新增 [單人離線隊伍試算](docs/team-model.md)、全部覺醒圖示、主動技能 CD／持續期／效果覆蓋，以及 [關卡對比與可更新攻略庫](docs/team-dungeon.md)。從轉珠面板點「隊伍對比」直接載入擷取紀錄；新關卡與攻略 JSON 無需重編 dylib。32 項隊伍及 13 項關卡模型、瀏覽器已通過；最終 iPhoneOS／完整 CI 待執行，見 [更新說明](docs/release-0.5.18.md)。Auto 存活放行仍未接通。
 
 2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。新增 [全層關卡 JSON 匯出](docs/dungeon-report.md) 及保守首消 Combo 對策。見 [更新說明](docs/release-0.5.17.md) 與 [開發紀錄](docs/development.md)。省 T 的光 L＋心四、三光三心耐久放行仍未接通。
 

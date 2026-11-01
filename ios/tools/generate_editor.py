@@ -17,7 +17,11 @@ html = (root / "editor.html").read_text(encoding="utf-8")
 for marker, text in [
     ("/*__FORMATION_MODEL__*/", (root / "formation.js").read_text(encoding="utf-8")),
     ("/*__CATALOG__*/", json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")),
+    ("/*__TEAM_SKILLS__*/", (root / "team-skills.js").read_text(encoding="utf-8")),
     ("/*__TEAM_MODEL__*/", (root / "team-model.js").read_text(encoding="utf-8")),
+    ("/*__TEAM_DUNGEON__*/", (root / "team-dungeon.js").read_text(encoding="utf-8")),
+    ("/*__DUNGEON_GUIDES__*/", json.dumps(json.loads((root / "dungeon-guides.json").read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")),
+    ("/*__TEAM_DUNGEON_VIEW__*/", (root / "team-dungeon-view.js").read_text(encoding="utf-8")),
     ("/*__TEAM_CATALOG__*/", json.dumps(team_catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")),
     ("/*__TEAM_VIEW__*/", (root / "team-view.js").read_text(encoding="utf-8")),
     ("__AWAKENING_SPRITE__", base64.b64encode((root / "assets/awoken.png").read_bytes()).decode("ascii")),

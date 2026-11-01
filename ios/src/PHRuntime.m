@@ -81,6 +81,7 @@ static CFAbsoluteTime PHLastStatus;
 static NSUInteger PHFrameCount;
 static NSString *PHFolder;
 static NSDictionary *PHOrbDungeonExportResult;
+static NSDictionary *PHOrbDungeonComparisonResult;
 static BOOL PHProbeLogged;
 static NSUInteger PHBootstrapGeneration;
 static NSString *PHStartupState;
@@ -685,6 +686,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     NSDictionary *music = [PHMusicTracker snapshot];
     NSMutableDictionary *orbs = [[PHOrbTracker snapshot] mutableCopy];
     orbs[@"dungeonExportResult"] = PHOrbDungeonExportResult ?: @{};
+    if (PHOrbDungeonComparisonResult) orbs[@"dungeonComparisonResult"] = PHOrbDungeonComparisonResult;
     orbs[@"canSetQuality"] = @(PHStorageReady && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue]);
     orbs[@"qualityMessage"] = PHOrbQualityNotice ?: @"";
     orbs[@"canSetThornPolicy"] = orbs[@"canSetQuality"];
@@ -1008,6 +1010,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         PHLastStatus = now;
         NSMutableDictionary *status = [snapshot mutableCopy];
         [status removeObjectForKey:@"formationLibrary"];
+        // A requested comparison is an in-memory, one-shot handoff. Keep the
+        // full capture out of the periodically persisted status snapshot.
+        NSMutableDictionary *statusOrbs = [orbs mutableCopy];
+        [statusOrbs removeObjectForKey:@"dungeonComparisonResult"];
+        status[@"orbState"] = statusOrbs;
         status[@"formationLibraryCount"] = @([PHFormationLibrary[@"teams"] count]);
         status[@"formationSelectedID"] = PHFormationLibrary[@"selected"] ?: @"";
         PHWriteJSON(status, @"status.json");
@@ -1041,6 +1048,20 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if (![value isKindOfClass:NSString.class]) return;
         PHOrbDungeonExportResult = PHOrbExportDungeonReport([PHOrbTracker dungeonReport], PH_RUNTIME_VERSION,
             value, [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES]);
+        return;
+    }
+    if ([action isEqual:@"orbsDungeonCompare"]) {
+        if (![value isKindOfClass:NSString.class] || ![value length] || [value length] > 80) return;
+        NSDictionary *report = [PHOrbTracker dungeonReport];
+        NSData *data = [NSJSONSerialization isValidJSONObject:report] ?
+            [NSJSONSerialization dataWithJSONObject:report options:0 error:NULL] : nil;
+        BOOL available = [report[@"available"] boolValue] && data.length > 0 && data.length <= 16000000;
+        PHOrbDungeonComparisonResult = available ? @{@"requestID":value,@"ok":@YES,@"report":report} :
+            @{@"requestID":value,@"ok":@NO,@"message":@"尚無可對比的關卡資料，或資料超過 16 MB。請先收集全層資料。"};
+        return;
+    }
+    if ([action isEqual:@"orbsDungeonComparisonTaken"]) {
+        if ([PHOrbDungeonComparisonResult[@"requestID"] isEqual:value]) PHOrbDungeonComparisonResult = nil;
         return;
     }
     if ([action isEqual:@"orbsExecute"]) {

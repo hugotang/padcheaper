@@ -55,7 +55,7 @@ cp ios/docs/badge-timer.md "$build_dir/badge-timer.md"
 cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
-cp ios/docs/team-model.md ios/docs/release-0.5.18.md "$build_dir/"
+cp ios/docs/team-model.md ios/docs/team-dungeon.md ios/docs/release-0.5.18.md "$build_dir/"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
@@ -116,8 +116,12 @@ cp ios/editor/assets/awoken.png ios/editor/assets/latent.png ios/editor/assets/N
 cp ios/editor/*.js ios/editor/*.json ios/editor/editor.html "$build_dir/editor-source/"
 cp ios/editor/assets/* "$build_dir/editor-source/assets/"
 cp ios/tools/generate_editor.py ios/tools/update_team_catalog.py "$build_dir/editor-source/"
+mkdir -p "$build_dir/tools"
+cp ios/tools/compare_team_dungeon.js "$build_dir/tools/"
+cp ios/editor/dungeon-guides.json "$build_dir/dungeon-guides.json"
 mkdir -p "$build_dir/research"
 cp ios/research/solo-team-model-20261101.json "$build_dir/research/"
+cp ios/research/team-skill-dungeon-20261101.json "$build_dir/research/"
 cp ios/research/orb-enemy-selector-20261101.json ios/research/orb-enemy-dispatch-20261101.json ios/research/orb-enemy-damage-20261101.json "$build_dir/research/"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
 cp ios/research/orb-shape-0407.json "$build_dir/research/"
@@ -180,6 +184,8 @@ metadata = {
     "dylib_version": version,
     "gui": "mobile team overview and member sheet; acknowledged atomic library saves; immutable applied-recipe matching; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
     "solo_team_model": "offline selected formation and unique final transforms; native-derived HP/RCV stat formulas, known conditional leader shields and no-skyfall heart-heal estimate; explicit unknowns and branch choices; no badge or live-state import; no survival automation authorization",
+    "team_active_skills": "explicit body/assist skill scenarios with CD, duration, delayed/staged effects and per-category replacement; Unohana HP/RCV x3 and 7x6 for one turn; Haschwalth 35% shield for five turns; Byakuya HP x1.5 for one turn; increased maximum HP does not heal",
+    "team_dungeon_comparison": "one-tap in-memory captured report to selected formation, or JSON file/paste; all captured floors, observed/inferred ATK provenance, conditional multi-enemy and rage scenarios, partial/unknown effects, explicit HP and recovery assumptions; importable and separately persisted guide JSON, bundled dated GameWith Lv5 notes; no live enemy forecast or Auto survival authorization",
     "formation_awakenings": "embedded body/super-sync/assist/latent sprites, all-team counts and per-member sources; equivalent SB and common status resistance; PADDashFormation pinned asset sources and GPL-3.0 notice included",
     "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
     "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual/current native leader goals; local turn/view/source and current parameter checks, explicit 4P extra-skill helper handling; every route requires goals, native timing and swap/release acknowledgement; pending device verification",

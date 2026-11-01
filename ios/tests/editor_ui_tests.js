@@ -11,7 +11,7 @@ const {pathToFileURL}=require('node:url');
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://mapaler.github.io/**',r=>r.abort());
  await page.addInitScript(()=>{
-  window.__requests=[];window.__hold=false;window.__fail=false;window.__dismiss=0;window.__apply=0;
+  window.__requests=[];window.__hold=false;window.__fail=false;window.__dismiss=0;window.__apply=0;window.__guideRequests=[];window.__guideFail=false;
   window.__ack=(r,ok=true)=>{
    if(ok){window.__saved=JSON.parse(JSON.stringify(r.library));window.__battle.automaticTeamTitle=r.library.teams.find(t=>t.id===r.library.selected).team.title;}
    PHFormationUI.saveResult({requestID:r.requestID,ok,message:ok?'saved':'測試寫入失敗',battle:window.__battle});
@@ -27,6 +27,10 @@ const {pathToFileURL}=require('node:url');
    } else if(action==='persist'){window.__requests.push(value);if(!window.__hold)setTimeout(()=>window.__ack(value,!window.__fail),30);}
    else if(action==='dismiss')window.__dismiss++;
    else if(action==='applySaved')window.__apply++;
+   else if(action==='saveDungeonGuides'){window.__guideRequests.push(value);setTimeout(()=>{
+    if(!window.__guideFail)window.__savedGuides=value.library;
+    PHFormationUI.guideSaveResult({requestID:value.requestID,ok:!window.__guideFail,message:'模擬攻略寫入失敗'});
+   },20);}
   }}}};
  });
  await page.goto(pathToFileURL(path.resolve('build/editor-preview.html')).href);
@@ -110,6 +114,23 @@ const {pathToFileURL}=require('node:url');
  const beforeScenario=await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply}));
  await page.selectOption('#calc-preset','light-heart');
  assert.equal(await page.locator('#calc-shield').innerText(),'96.76%');assert.equal(await page.locator('#calc-rcv').innerText(),'244,430');
+ const unohana=page.locator('#calc-skills [data-skill="2:body:0"]'),haschwalth=page.locator('#calc-skills [data-skill="3:body:0"]');
+ assert.match(await unohana.innerText(),/最大 HP ×3 · 1 回合/);assert.match(await haschwalth.innerText(),/35% 減傷 · 5 回合/);
+ await haschwalth.locator('button').click();await unohana.locator('button').click();
+ assert.equal(await page.locator('#calc-hp').innerText(),'1,227,657');assert.equal(await page.locator('#calc-rcv').innerText(),'733,290');
+ assert.equal(await page.locator('#calc-shield').innerText(),'97.894%');assert.equal(await page.locator('#calc-board').inputValue(),'7x6');
+ assert.equal(await page.evaluate(()=>PHFormationUI.getTeamCalculation().recovery.startingHP),409219);
+ await page.locator('#calc-skills [data-skill="4:body:0"] button').click();
+ assert.equal(await page.locator('#calc-hp').innerText(),'613,829');assert.equal(await page.locator('#calc-rcv').innerText(),'733,290');
+ assert.match(await unohana.innerText(),/覆蓋/);
+ await page.locator('#calc-skills [data-skill="4:body:0"] button').click();
+ await unohana.locator('input').fill('1');await unohana.locator('input').dispatchEvent('change');
+ assert.equal(await page.locator('#calc-hp').innerText(),'409,219');assert.equal(await page.locator('#calc-board').inputValue(),'6x5');
+ assert.equal(await page.locator('#calc-shield').innerText(),'97.894%');
+ await haschwalth.locator('input').fill('5');await haschwalth.locator('input').dispatchEvent('change');
+ assert.equal(await page.locator('#calc-shield').innerText(),'96.76%');
+ await unohana.locator('button').click();await haschwalth.locator('button').click();
+ assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeScenario,'active skill simulation never casts, persists or applies');
  await page.selectOption('#calc-preset','light-l-heart4');
  assert.equal(await page.locator('#calc-shield').innerText(),'96.76%');const heart4=await page.evaluate(()=>PHFormationUI.getTeamCalculation().recovery.heart);
  await page.selectOption('#calc-preset','light-t-heart4');
@@ -124,6 +145,59 @@ const {pathToFileURL}=require('node:url');
  assert.equal(await page.locator('#calc-hp').innerText(),'409,219');
  assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeScenario,'scenarios never persist or apply a formation');
  await page.locator('#calc-conditions summary').click();
+ const dungeonFixture=await page.evaluate(()=>{
+  const hex=a=>Array.from(new Uint8Array(a.buffer)).map(x=>x.toString(16).padStart(2,'0')).join('');
+  const defs=[],catalogs=[];
+  for(let slot=1;slot<=3;slot++){
+   const raw=new DataView(new ArrayBuffer(220));raw.setInt32(0,1000+slot,true);raw.setInt8(12,1);raw.setBigUint64(128,1n,true);raw.setBigUint64(136,100850n,true);raw.setFloat32(144,1,true);raw.setUint16(176,10,true);
+   const action=new DataView(new ArrayBuffer(72)),op=slot===2?15:92,p=slot===2?[10,10,100,0,0,0,0,0]:[1,1,1,0,0,0,0,0],attached=slot===2?0:100;
+   action.setInt32(0,slot,true);action.setUint16(4,op,true);p.forEach((v,i)=>action.setInt32(16+i*4,v,true));action.setInt32(68,attached,true);
+   defs.push({actionID:slot,opcode:op,parameters:p,attachedAttackPercentRaw:attached,known:true,rawHex:hex(action)});
+   catalogs.push({slot,catalogID:1000+slot,level:10,catalogPrefixRawHex:hex(raw),rows:[{row:1,actionID:slot,operandsRaw:[100,0,0,0]}]});
+  }
+  return {schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.0-106878',dungeon:12,floor:3,totalFloors:1,allDefinitionsCaptured:true,
+   floorDefinitions:[{wave:0,rawCaptureComplete:true,catalogs,definitions:defs}],observations:[{wave:0,enemies:[{slot:1,catalogID:1001,level:10,baseAttack:2521250,identityKnown:true,memoryKnown:true}]}]};
+ });
+ await page.locator('#calc-dungeon-details > summary').click();
+ await page.locator('#calc-dungeon-file').setInputFiles({name:'dungeon-fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(dungeonFixture))});
+ await page.waitForFunction(()=>PHFormationUI.getDungeonComparison()?.floors.length===1);
+ assert.match(await page.locator('#calc-dungeon-status').innerText(),/ATK ×25/);
+ assert.match(await page.locator('.dungeon-floor > summary').innerText(),/需提高 HP/);
+ await page.locator('.dungeon-floor > summary').click();
+ assert.match(await page.locator('.dungeon-comparison').innerText(),/637,176/);
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonComparison().survivalAuthorized),false);
+ await page.screenshot({path:path.resolve('build/editor-browser/team-dungeon-390.png'),fullPage:true});
+ await page.evaluate(()=>PHFormationUI.importDungeonText('{"schema":99}'));
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonComparison()),null);
+ assert.equal(await page.locator('#calc-dungeon-results').innerText(),'');
+ assert.match(await page.locator('#calc-dungeon-error').innerText(),/相容版本/);
+ await page.evaluate(value=>PHFormationUI.showDungeonComparison(value),dungeonFixture);
+ assert.equal(await page.locator('#calc-dungeon-details').getAttribute('open'),'');
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonComparison().floors.length),1);
+ assert.equal(await page.locator('#calc-dungeon-error').innerText(),'');
+ assert.equal(await page.locator('#calc-dungeon-guide').innerText(),'');
+ const externalGuides={schema:1,kind:'PADCheaper-dungeon-guides',guides:[{dungeon:12,subDungeon:3,totalFloors:1,title:'新關卡資料包',
+  checkedAt:'2026-11-01',sources:['https://example.com/guide'],notes:['無需重編測試'],floors:[{number:1,text:'新關卡留技提示'}]}]};
+ await page.locator('#calc-guide-management > summary').click();
+ await page.locator('#calc-guide-file').setInputFiles({name:'new-dungeon-guides.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(externalGuides))});
+ await page.waitForFunction(()=>PHFormationUI.getDungeonComparison()?.guide?.title==='新關卡資料包');
+ assert.match(await page.locator('#calc-dungeon-guide').innerText(),/無需重編測試/);
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonGuides().guides.length),2,'new guide preserves packaged guide');
+ await page.evaluate(()=>{window.__guideFail=true;});await page.locator('#calc-guide-save').click();
+ await page.waitForFunction(()=>document.getElementById('calc-guide-status').textContent.includes('目前只在本頁'));
+ assert.equal(await page.evaluate(()=>window.__savedGuides),undefined);
+ await page.evaluate(()=>{window.__guideFail=false;});await page.locator('#calc-guide-save').click();
+ await page.waitForFunction(()=>document.getElementById('calc-guide-status').textContent.includes('攻略庫已儲存'));
+ assert.equal(await page.evaluate(()=>window.__savedGuides.guides.length),2);
+ const updated=JSON.parse(JSON.stringify(externalGuides));updated.guides[0].title='同關卡更新';
+ await page.evaluate(value=>PHFormationUI.importDungeonGuides(value),updated);
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonGuides().guides.length),2);
+ assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonComparison().guide.title),'同關卡更新');
+ await page.evaluate(()=>PHFormationUI.importDungeonGuides('{"schema":99}'));
+ assert.match(await page.locator('#calc-guide-status').innerText(),/原攻略庫保留/);
+ await page.locator('#calc-guide-management > summary').click();
+ await page.locator('#calc-dungeon-clear').click();await page.locator('#calc-dungeon-details > summary').click();
+ assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeScenario,'dungeon imports never persist or apply a formation');
  await page.locator('#calc-member-details summary').click();
  for(const [width,height] of [[320,700],[390,844],[430,932],[768,1024],[844,390]]) {
   await page.setViewportSize({width,height});assert.equal(await fits(),true,'offline calculator width '+width);

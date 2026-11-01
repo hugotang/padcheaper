@@ -2,6 +2,7 @@
 // numbers. This module never reads the game or grants permission to auto-play.
 (function (root) {
   'use strict';
+  const skillModule=typeof module==='object'&&module.exports?require('./team-skills.js'):root.PHTeamSkills;
   const f32 = Math.fround;
   const round = n => n < 0 ? -Math.floor(-n + .5) : Math.floor(n + .5);
   const count = (values, id) => values.filter(v => v === id).length;
@@ -23,8 +24,9 @@
   function context(value={}) {
     if(value.mode!==undefined && value.mode!=='solo')throw new Error('隊伍試算僅限單人');
     const c={phase:'final',finalForms:{},width:6,height:5,floor:1,parts:0,benefit:'none',hpPercent:100,
-      skillUses:0,activeShield:0,hpMultiplier:1,rcvMultiplier:1,matches:[],...value};
+      skillUses:0,activeShield:0,hpMultiplier:1,rcvMultiplier:1,hpBasis:'base',activeSkills:[],matches:[],...value};
     if (!['current','final'].includes(c.phase) || !['none','sun','moon','both'].includes(c.benefit)) throw new Error('未知試算情境');
+    if(!['base','effective'].includes(c.hpBasis))throw new Error('未知起始 HP 基準');
     if (![[6,5],[7,6],[5,4]].some(([w,h])=>w===c.width&&h===c.height)) throw new Error('盤面尺寸未支援');
     for(const [key,lo,hi,integer] of [['floor',1,100,true],['parts',0,20,true],['hpPercent',0,100,false],
       ['skillUses',0,30,true],['activeShield',0,100,false],['hpMultiplier',.01,100,false],['rcvMultiplier',0,100,false]])
@@ -54,8 +56,9 @@
     const cards=new Map(facts.cards.map(r=>{
       const e=formation.cards.get(r[0]);
       if(!e) throw new Error('缺少圖鑑資料 #'+r[0]);
-      return [r[0],{...e,types:r[1],baseMax:r[2],limit:r[3],curves:r.slice(4,7),leader:r[7],to:r[8],rarity:r[9],collab:r[10]}];
+      return [r[0],{...e,types:r[1],baseMax:r[2],limit:r[3],curves:r.slice(4,7),leader:r[7],to:r[8],rarity:r[9],collab:r[10],active:r[11]||0}];
     }));
+    const skillModel=skillModule.createModel(facts);
     const skills=new Map(facts.skills.map(r=>[r[0],{id:r[0],type:r[1],p:r[2]}]));
     const resolvedSkills=new Map();
     function leaves(id,ancestors=[]) {
@@ -140,6 +143,20 @@
     function evaluate(team,value={}) {
       team=formation.normalize(team);const c=context(value),members=team.slots.map((s,i)=>member(s,i,c));
       const issues=[],notes=[],rules=[];
+      const skillOptions=members.filter(m=>m.id&&m.known!==false).flatMap(m=>[
+        ...skillModel.describe(m.card,team.slots[m.slot].body,m.slot,'body',m.transformed),
+        ...skillModel.describe(cards.get(team.slots[m.slot].assist.id),team.slots[m.slot].assist,m.slot,'assist')]);
+      const activeSkills=skillModel.project(skillOptions,c.activeSkills);
+      const activeEffect=kind=>activeSkills.effects.find(e=>e.kind===kind);
+      const skillShield=activeEffect('shield'),skillHP=activeEffect('hp'),skillRCV=activeEffect('rcv'),skillBoard=activeEffect('board');
+      if(skillShield&&c.activeShield!==0||skillHP&&c.hpMultiplier!==1||skillRCV&&c.rcvMultiplier!==1)
+        throw new Error('已選技能與手動倍率重複；請把對應手動盾設 0、倍率設 1');
+      const hpMultiplier=skillHP?.value??c.hpMultiplier,rcvMultiplier=skillRCV?.value??c.rcvMultiplier;
+      const evaluationHPPercent=c.hpBasis==='base'?Math.min(100,c.hpPercent/hpMultiplier):c.hpPercent;
+      c.skillUses=Math.max(c.skillUses,activeSkills.selected.filter(s=>s.elapsed===0).length);
+      const activeShield=skillShield?Array.from({length:5},(_,a)=>(skillShield.attrs&2**a)?skillShield.value/100:0):Array(5).fill(c.activeShield/100);
+      if(skillBoard&&skillBoard.value!==c.width+'x'+c.height)throw new Error('所選技能盤面為 '+skillBoard.value+'，請同步調整盤面尺寸');
+      for(const s of skillOptions)if(c.activeSkills.some(ch=>ch.key===s.key))notes.push(...s.notes);
       const issue=s=>{if(!issues.includes(s))issues.push(s);};
       for(const m of members) if(m.known===false)issue('位置 '+(m.slot+1)+'：'+m.form.reason);
       const allAwakenings=members.filter(m=>m.known!==false).flatMap(m=>m.awakenings);
@@ -209,7 +226,7 @@
         for(let a=0;a<5;a++)if(mask&2**a)leaderRemain[a]*=(100-percent)/100;
       }
       function rule(s,label,active) {rules.push({slot:s.slot,skill:s.id,label,active});}
-      const atHP=(threshold,high)=>high?c.hpPercent>=threshold:c.hpPercent<=threshold;
+      const atHP=(threshold,high)=>high?evaluationHPPercent>=threshold:evaluationHPPercent<=threshold;
       const rcvFlag=(p,i,j,m)=>p[i]===2||p[j]===2?p[m]:0;
       for(const s of sourceSkills) {
         const p=[...s.p,...Array(16).fill(0)],t=s.type;let active=true,n=0;
@@ -239,7 +256,7 @@
           case 136:case 137:
             for(const start of [0,4])stat(p[start+1],p[start+3],t===136?p[start]:0,t===137?p[start]:0);break;
           case 38:case 43:
-            active=t===38&&p[0]===100?c.hpPercent===100:atHP(p[0],t===43);
+            active=t===38&&p[0]===100?evaluationHPPercent===100:atHP(p[0],t===43);
             if(p[1]!==100){active=false;notes.push('機率盾不計入保證減傷（技能 '+s.id+'）');}
             shield(p[2],31,active);hpConditional=true;rule(s,'HP '+(t===43?'至少 ':'至多 ')+p[0]+'%：減傷 '+p[2]+'%',active);break;
           case 39:case 44:
@@ -250,7 +267,7 @@
             active=atHP(p[0],t===123||t===131);stat(0,p[4],p[1],p[2],active);
             if(t>=130){shield(p[6],p[5],active);hpConditional=true;}rule(s,'HP 條件回復／減傷',active);break;
           case 183:
-            active=p[2]>0&&c.hpPercent>=p[2];shield(p[4],31,active);stat(0,p[7],p[0],p[1],c.hpPercent<=(p[5]||p[2]));hpConditional=true;rule(s,'HP 條件減傷 '+p[4]+'%',active);break;
+            active=p[2]>0&&evaluationHPPercent>=p[2];shield(p[4],31,active);stat(0,p[7],p[0],p[1],evaluationHPPercent<=(p[5]||p[2]));hpConditional=true;rule(s,'HP 條件減傷 '+p[4]+'%',active);break;
           case 100:active=c.skillUses>0;stat(0,rcvFlag(p,0,1,2),0,0,active);rule(s,'本回合使用技能',active);break;
           case 133:case 270:
             active=c.skillUses>=(t===270?p[0]:1);stat(0,p[t===270?2:3],t===270?31:p[0],t===270?0:p[1],active);rule(s,'本回合使用技能',active);break;
@@ -283,12 +300,12 @@
       const teamHP=count(allAwakenings,46),teamRCV=count(allAwakenings,47);
       const hpAwake=f32(1+f32(f32(teamHP)*f32(.05))),rcvAwake=f32(1+f32(f32(teamRCV)*f32(.2)));
       const perMember=members.map((m,i)=>({...m,hp:round(m.stats[0]*hpFactors[i]*hpAwake),rcv:round(m.stats[2]*rcvFactors[i]*rcvAwake),hpFactor:hpFactors[i],rcvFactor:rcvFactors[i]}));
-      const hp=Math.min(0x7fffffff,round(perMember.reduce((n,m)=>n+m.hp,0)*c.hpMultiplier));
-      const rcv=round(perMember.reduce((n,m)=>n+m.rcv,0)*c.rcvMultiplier);
+      const baseHP=perMember.reduce((n,m)=>n+m.hp,0),hp=Math.min(0x7fffffff,round(baseHP*hpMultiplier));
+      const rcv=round(perMember.reduce((n,m)=>n+m.rcv,0)*rcvMultiplier);
       const heartL=shape(32,'l')?Math.min(1,count(allAwakenings,59)*.05):0;
       const resist=Array.from({length:5},(_,a)=>Math.min(1,count(allAwakenings,4+a)*.07+
         members.reduce((n,m)=>n+count(m.latents,6+a)*.01+count(m.latents,32+a)*.025,0)));
-      const remaining=leaderRemain.map((n,a)=>n*(1-resist[a])*(1-heartL)*(1-c.activeShield/100));
+      const remaining=leaderRemain.map((n,a)=>n*(1-resist[a])*(1-heartL)*(1-activeShield[a]));
       const known=!issues.length;
       const loadoutKnown=members.every(m=>m.known!==false)&&!sourceSkills.some(s=>s.type===213);
       const protection={dark:Math.min(1,effectiveCount(allAwakenings,11)*.2),jammer:Math.min(1,effectiveCount(allAwakenings,12)*.2),
@@ -301,16 +318,17 @@
         return perMember.reduce((n,m)=>n+m.stats[2]*rcvFactors[m.slot]*rcvAwake*factor*
           (g.n===4?pow32(1.5,effectiveCount(m.awakenings,29)):1),0);
       });
-      const heal=Math.max(0,Math.floor(recoveryGroups.reduce((a,b)=>a+b,0)*(combo?1+.25*(combo-1):0)*c.rcvMultiplier));
-      const startingHP=Math.floor(hp*c.hpPercent/100),afterHP=Math.min(hp,startingHP+heal);
+      const heal=Math.max(0,Math.floor(recoveryGroups.reduce((a,b)=>a+b,0)*(combo?1+.25*(combo-1):0)*rcvMultiplier));
+      const startingHP=Math.min(hp,Math.floor((c.hpBasis==='base'?baseHP:hp)*c.hpPercent/100)),afterHP=Math.min(hp,startingHP+heal);
       if(hpConditional)notes.push('HP 條件按輸入百分比評估；連擊途中跨門檻須另算，不表示整段承傷均有盾。');
       if(sourceSkills.some(s=>[13,14,198].includes(s.type)))notes.push('根性、自動回復及回血門檻效果未計入心珠回復估值。');
       const skillBoost=effectiveCount(allAwakenings,21)+count(allAwakenings,145)*2-count(allAwakenings,105)+
         members.reduce((n,m)=>n+(m.awakenings.includes(59)?count(m.latents,47)*3:0),0);
       return {schema:1,mode:'solo-offline',context:c,known,loadoutKnown,issues,notes:[...new Set(notes)],members:perMember,skillBoost,protection,
-        totals:{hp:known?hp:null,rcv:known?rcv:null},awakenings:counts,teamHP,teamRCV,bonusCombos,combos:combo,
-        rules,shield:{leader:known?leaderRemain.map(n=>1-n):null,resist,heartL,active:c.activeShield/100,
-          total:known?remaining.map(n=>1-n):null},recovery:{estimated:true,heart:known?heal:null,afterHP:known?afterHP:null},
+        skillOptions,activeSkills:{...activeSkills,hpMultiplier,rcvMultiplier,shield:activeShield},
+        totals:{hp:known?hp:null,baseHP:known?baseHP:null,rcv:known?rcv:null},awakenings:counts,teamHP,teamRCV,bonusCombos,combos:combo,
+        rules,shield:{leader:known?leaderRemain.map(n=>1-n):null,resist,heartL,hpConditional,active:Math.min(...activeShield),activeByAttribute:activeShield,
+          total:known?remaining.map(n=>1-n):null},recovery:{estimated:true,heart:known?heal:null,startingHP:known?startingHP:null,afterHP:known?afterHP:null},
         provenance:{revision:facts.revision,numbering:'encyclopedia'},survivalAuthorized:false};
     }
     return Object.freeze({evaluate,forms,cards,effectiveCount});

@@ -326,7 +326,7 @@
 @property(nonatomic, strong) UILabel *playerDescription;
 @property(nonatomic, strong) UILabel *decisionDescription;
 @property(nonatomic, strong) UILabel *battleObservationDescription;
-@property(nonatomic, strong) UIButton *dungeonCaptureButton, *dungeonExportButton;
+@property(nonatomic, strong) UIButton *dungeonCaptureButton, *dungeonExportButton, *dungeonCompareButton;
 @property(nonatomic, strong) UILabel *dungeonDescription, *dungeonNotice;
 @property(nonatomic, strong) NSURL *dungeonShareDirectory;
 @property(nonatomic, strong) UIButton *editRecovery;
@@ -401,6 +401,7 @@
     self.battleObservationDescription.accessibilityIdentifier = @"padcheaper.orbsBattleObservation";
     self.dungeonCaptureButton = [self button:@"收集全層資料" selector:@selector(captureDungeon) identifier:@"padcheaper.orbsDungeonCapture"];
     self.dungeonExportButton = [self button:@"匯出關卡 JSON…" selector:@selector(exportDungeon:) identifier:@"padcheaper.orbsDungeonExport"];
+    self.dungeonCompareButton = [self button:@"隊伍對比" selector:@selector(openDungeonComparison) identifier:@"padcheaper.orbsDungeonCompare"];
     self.dungeonDescription = [self label:13 weight:UIFontWeightRegular];
     self.dungeonDescription.accessibilityIdentifier = @"padcheaper.orbsDungeonDescription";
     self.dungeonNotice = [self label:13 weight:UIFontWeightRegular];
@@ -483,12 +484,14 @@
     UIStackView *actions = [[UIStackView alloc] initWithArrangedSubviews:@[autoActions, manualActions]];
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:actions];
+    UIStackView *dungeonActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.dungeonExportButton,self.dungeonCompareButton]];
+    dungeonActions.spacing = 10; dungeonActions.distribution = UIStackViewDistributionFillEqually;
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
         self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
         self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription,
         assistRow, self.assistRecoveryDescription,
-        self.dungeonCaptureButton, self.dungeonExportButton, self.dungeonDescription, self.dungeonNotice,
+        self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
         self.battleObservationDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -562,6 +565,7 @@
     NSDictionary *dungeon = state[@"dungeonReport"] ?: @{};
     self.dungeonCaptureButton.enabled = ![state[@"multiplayerActive"] boolValue];
     self.dungeonExportButton.enabled = [dungeon[@"available"] boolValue] && !self.dungeonShareDirectory;
+    self.dungeonCompareButton.enabled = [dungeon[@"available"] boolValue] && self.compareDungeon != nil && !self.presentedViewController;
     if ([dungeon[@"available"] boolValue]) {
         NSString *progress = [dungeon[@"allDefinitionsCaptured"] boolValue] ? @"全層行動定義已收集" :
             [dungeon[@"allFloorsCaptured"] boolValue] ? @"部分行動定義缺失，已標記" : @"等待穩定盤面繼續收集";
@@ -713,6 +717,19 @@
 - (void)clearDungeonShare {
     if (self.dungeonShareDirectory) [NSFileManager.defaultManager removeItemAtURL:self.dungeonShareDirectory error:NULL];
     self.dungeonShareDirectory = nil;
+}
+- (void)openDungeonComparison {
+    if (!self.dungeonCompareButton.enabled || self.presentedViewController || !self.compareDungeon) return;
+    NSString *request = NSUUID.UUID.UUIDString;
+    self.action(@"orbsDungeonCompare",request);
+    NSDictionary *result = self.snapshot()[@"orbState"][@"dungeonComparisonResult"];
+    self.action(@"orbsDungeonComparisonTaken",request);
+    if (![result[@"requestID"] isEqual:request] || ![result[@"ok"] boolValue] || ![result[@"report"] isKindOfClass:NSDictionary.class]) {
+        self.dungeonNotice.text = [result[@"requestID"] isEqual:request] ? result[@"message"] : @"尚未取得對比資料，請稍後重試。";
+        [self refresh]; return;
+    }
+    void (^open)(NSDictionary *) = [self.compareDungeon copy];
+    open(result[@"report"]);
 }
 - (void)dealloc {
     if (_dungeonShareDirectory) [NSFileManager.defaultManager removeItemAtURL:_dungeonShareDirectory error:NULL];

@@ -5,4 +5,5 @@
 - (instancetype)initWithTeam:(NSDictionary *)team library:(NSDictionary *)library battle:(NSDictionary *)battle
     snapshot:(PHOverlaySnapshot)snapshot action:(PHOverlayAction)action close:(dispatch_block_t)close;
 - (void)updateBattle:(NSDictionary *)battle;
+- (void)showDungeonComparison:(NSDictionary *)report;
 @end

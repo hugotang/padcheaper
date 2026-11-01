@@ -537,6 +537,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 - (void)openFormation {
     if (self.formationWindow) return;
     self.action(@"orbsStop", nil);
+    self.state = self.snapshot();
     UIWindowScene *scene = self.view.window.windowScene;
     UIWindow *guest = nil;
     for (UIWindow *candidate in scene.windows) if (candidate.isKeyWindow) { guest = candidate; break; }
@@ -573,6 +574,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.orbController = [[PHOrbController alloc] initWithSnapshot:self.snapshot action:self.action close:^{
         [weakSelf closeOrbs];
     }];
+    self.orbController.compareDungeon = ^(NSDictionary *report) {
+        [weakSelf closeOrbs];
+        [weakSelf openFormation];
+        [weakSelf.formationController showDungeonComparison:report];
+    };
     self.orbWindow = scene ? [[UIWindow alloc] initWithWindowScene:scene] : [[UIWindow alloc] initWithFrame:self.view.window.bounds];
     self.orbWindow.windowLevel = UIWindowLevelAlert + 2;
     self.orbWindow.rootViewController = self.orbController;

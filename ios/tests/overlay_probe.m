@@ -22,6 +22,7 @@ static void *PHProbeDylib;
 
 @interface UIViewController (PHProbeOverlayState)
 - (void)updateWithSnapshot:(NSDictionary *)snapshot;
+- (void)openOrbs;
 @end
 
 static NSDictionary *PHProbeJSON(NSString *name) {
@@ -754,7 +755,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             orbFixture = @{@"orbState":goalFailure}; [orbController refresh];
             UIButton *captureDungeon = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonCapture");
             UIButton *exportDungeon = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonExport");
-            PHProbeCheck(captureDungeon.enabled && !exportDungeon.enabled,@"Empty dungeon history offers capture and disables empty file export");
+            UIButton *compareDungeon = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonCompare");
+            PHProbeCheck(captureDungeon.enabled && !exportDungeon.enabled && !compareDungeon.enabled,@"Empty dungeon history offers capture and disables empty export/comparison");
             orbAction = nil; [captureDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck([orbAction isEqual:@"orbsDungeonCapture"],@"Read-only dungeon capture has a distinct action from starting a solver");
             NSDictionary *dungeonFixture = @{@"schema":@1,@"kind":@"PADCheaper-dungeon-report",@"available":@YES,
@@ -763,6 +765,21 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"floors":@[@{@"wave":@0},@{@"wave":@1}],@"floorDefinitions":@[@{@"wave":@0},@{@"wave":@1}],
                 @"observations":@[@{@"wave":@0,@"hp":@1000}]};
             goalFailure[@"dungeonReport"] = dungeonFixture; [orbController refresh];
+            __block NSDictionary *comparedReport = nil;
+            void (^originalComparison)(NSDictionary *) = orbController.compareDungeon;
+            orbController.compareDungeon = ^(NSDictionary *report) { comparedReport = report; };
+            [compareDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!comparedReport && [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonNotice")).text containsString:@"尚未取得"],
+                @"Missing comparison acknowledgment keeps the current panel and shows a retry");
+            [orbController setValue:[^(NSString *action,id value) {
+                if ([action isEqual:@"orbsDungeonCompare"]) goalFailure[@"dungeonComparisonResult"] = @{@"requestID":value,@"ok":@YES,@"report":dungeonFixture};
+                if ([action isEqual:@"orbsDungeonComparisonTaken"]) [goalFailure removeObjectForKey:@"dungeonComparisonResult"];
+            } copy] forKey:@"action"];
+            [compareDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([comparedReport isEqual:dungeonFixture] && !goalFailure[@"dungeonComparisonResult"] && !orbController.presentedViewController,
+                @"Comparison passes the acknowledged capture in memory and consumes it without opening a share sheet");
+            orbController.compareDungeon = originalComparison;
+            [orbController setValue:[^(NSString *action,id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
             [exportDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(!orbController.presentedViewController &&
                 [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonNotice")).text containsString:@"尚未完成"],
@@ -1675,12 +1692,27 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Execute passes the displayed preview generation and returns to game");
             if (PHProbeLegacy()) PHProbeLegacyOverlay = overlay;
             PHProbePlanStorage(overlay);
-            PHProbeOpenPanel(overlay);
-            UIButton *formation = (UIButton *)PHProbeFind(overlay, @"padcheaper.formationOpen");
-            [formation sendActionsForControlEvents:UIControlEventTouchUpInside];
+            // Exercise the real orb -> formation window transition with a
+            // partial capture before the editor's asynchronous ready handshake.
+            [overlay.rootViewController openOrbs];
+            PHOrbController *comparisonController = [overlay.rootViewController valueForKey:@"orbController"];
+            UIWindow *comparisonWindow = [overlay.rootViewController valueForKey:@"orbWindow"];
+            [comparisonController loadViewIfNeeded];
+            NSMutableDictionary *comparisonState = [@{@"dungeonReport":@{@"available":@YES}} mutableCopy];
+            NSDictionary *partialCapture = @{@"schema":@1,@"kind":@"PADCheaper-dungeon-report",@"target":@"jp.gungho.pad-ios-23.6.0-106878",
+                @"dungeon":@12,@"floor":@3,@"totalFloors":@2,@"allDefinitionsCaptured":@NO,@"observations":@[],
+                @"floorDefinitions":@[@{@"wave":@0,@"rawCaptureComplete":@NO},@{@"wave":@1,@"rawCaptureComplete":@NO}]};
+            [comparisonController setValue:[^NSDictionary *{ return @{@"orbState":comparisonState}; } copy] forKey:@"snapshot"];
+            [comparisonController setValue:[^(NSString *action,id value) {
+                if ([action isEqual:@"orbsDungeonCompare"]) comparisonState[@"dungeonComparisonResult"] = @{@"requestID":value,@"ok":@YES,@"report":partialCapture};
+                if ([action isEqual:@"orbsDungeonComparisonTaken"]) [comparisonState removeObjectForKey:@"dungeonComparisonResult"];
+            } copy] forKey:@"action"];
+            [comparisonController refresh];
+            [(UIButton *)PHProbeFind(comparisonWindow,@"padcheaper.orbsDungeonCompare") sendActionsForControlEvents:UIControlEventTouchUpInside];
             UIWindow *formationWindow = [overlay.rootViewController valueForKey:@"formationWindow"];
             self.formationWeb = (WKWebView *)PHProbeFind(formationWindow, @"padcheaper.formationWeb");
-            PHProbeCheck(formationWindow.isKeyWindow && self.formationWeb != nil, @"formation editor has an editable web view and keyboard-capable window");
+            PHProbeCheck(formationWindow.isKeyWindow && self.formationWeb != nil && [overlay.rootViewController valueForKey:@"orbWindow"] == nil,
+                @"Dungeon comparison opens the keyboard-capable formation window and closes its originating orb panel");
             [self checkFormation];
         }),
     ];
@@ -1699,17 +1731,22 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             return;
         }
         NSString *script = @"(()=>{const m=PHFormation.createModel(PH_CATALOG);let t=m.empty();"
+            "const d=PHFormationUI.getDungeonComparison(),direct=!!d&&d.floors.length===2&&document.getElementById('calc-dungeon-details').open;"
+            "document.getElementById('calc-dungeon-clear').click();document.getElementById('calc-dungeon-details').open=false;"
+            "PHFormationUI.importDungeonGuides({schema:1,kind:'PADCheaper-dungeon-guides',guides:[{dungeon:12,subDungeon:3,totalFloors:2,"
+            "title:'GUI 自訂攻略',checkedAt:'2026-11-01',floors:[{number:2,text:'第二層留技'}]}]});document.getElementById('calc-guide-save').click();"
             "t.title='隊伍 A';"
             "const ids=[[14238,14132,153],[14246,13334,142],[14240,8484,111],[14244,13711,142],[14234,13535,142],[14234,12460,142]];"
             "ids.forEach(([b,a,s],i)=>{t=m.selectCard(t,i,'body',b);t=m.selectCard(t,i,'assist',a);t.slots[i].body.superAwakening=s;});"
             "PHFormationUI.receive({team:t});document.getElementById('save').click();"
-            "return {bodies:document.querySelectorAll('#body-grid .card').length,assists:document.querySelectorAll('#assist-grid .card').length,"
+            "return {direct,bodies:document.querySelectorAll('#body-grid .card').length,assists:document.querySelectorAll('#assist-grid .card').length,"
             "name:document.getElementById('selected-name').textContent,applyDisabled:document.getElementById('apply-all').disabled,"
             "calculation:PHFormationUI.getTeamCalculation().mode,offlineIcons:document.querySelectorAll('#calc-awakenings .awakening-icon').length,"
             "embeddedIcons:getComputedStyle(document.querySelector('#calc-awakenings .awakening-icon')).backgroundImage.includes('data:image/png;base64,'),"
             "survival:PHFormationUI.getTeamCalculation().survivalAuthorized,"
             "fits:document.documentElement.scrollWidth<=innerWidth};})()";
         [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *failure) {
+            PHProbeCheck([value[@"direct"] boolValue],@"Native comparison handoff survives editor initialization and opens the imported partial capture");
             PHProbeCheck(!failure && [value[@"bodies"] isEqual:@6] && [value[@"assists"] isEqual:@6], @"editor renders all six bodies and all six weapons");
             PHProbeCheck([value[@"name"] containsString:@"14238 猫猫"] && [value[@"fits"] boolValue], @"portrait editor uses the correct encyclopedia identity and fits the viewport");
             PHProbeCheck([value[@"applyDisabled"] boolValue], @"formation apply remains disabled for an unmatched target");
@@ -1722,6 +1759,10 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 }
 
 - (void)verifyFormation {
+    NSData *guideData = [NSData dataWithContentsOfFile:[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper/dungeon-guides.json"]];
+    NSDictionary *guideLibrary = guideData ? [NSJSONSerialization JSONObjectWithData:guideData options:0 error:NULL] : nil;
+    PHProbeCheck([guideLibrary[@"kind"] isEqual:@"PADCheaper-dungeon-guides"] && [guideLibrary[@"guides"] count] == 2,
+        @"Imported guides reach their separate atomic JSON file without modifying the formation configuration");
     NSDictionary *team = PHProbeJSON(@"formation.json");
     PHProbeCheck([team[@"slots"] count] == 6 && [team[@"slots"][0][@"body"][@"id"] isEqual:@14238] &&
         [team[@"slots"][5][@"assist"][@"skill"] isEqual:@1], @"formation save reaches the native validator and persists all six drafts");
@@ -1841,14 +1882,17 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
 - (void)checkRestartedFormation {
     self.formationAttempts++;
     if (!self.formationWeb) { PHProbeCheck(NO, @"Restarted editor must open"); PHProbeReport(@"done"); return; }
-    NSString *script = @"window.PHFormationUI&&PHFormationUI.initialized?PHFormationUI.getLibrary():null";
+    NSString *script = @"window.PHFormationUI&&PHFormationUI.initialized?{library:PHFormationUI.getLibrary(),guides:PHFormationUI.getDungeonGuides()}:null";
     [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *error) {
         if (error || ![value isKindOfClass:NSDictionary.class]) {
             if (self.formationAttempts < 60) [self performSelector:@selector(checkRestartedFormation) withObject:nil afterDelay:0.5];
             else { PHProbeCheck(NO, @"Restarted editor bridge did not initialize"); PHProbeReport(@"done"); }
             return;
         }
-        PHProbeCheck([value isEqual:PHProbeRestartLibrary], @"Process restart reloads every saved team and the selected draft through the bridge");
+        PHProbeCheck([value[@"library"] isEqual:PHProbeRestartLibrary], @"Process restart reloads every saved team and the selected draft through the bridge");
+        NSArray *guides = value[@"guides"][@"guides"];
+        PHProbeCheck(guides.count == 2 && [guides.lastObject[@"title"] isEqual:@"GUI 自訂攻略"],
+            @"Process restart reloads externally imported guide data without rebuilding the dylib");
         [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
             PHProbeCheck(snapshot != nil && !failure, @"Restarted library snapshot must render");
             NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";

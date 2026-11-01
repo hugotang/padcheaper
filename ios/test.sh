@@ -15,6 +15,7 @@ python3 ios/tools/generate_leaders.py
 python3 ios/tests/leader_catalog_tests.py
 node ios/tests/formation_tests.js
 node ios/tests/team_model_tests.js
+node ios/tests/team_dungeon_tests.js
 
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
     ios/src/PHInputModel.c ios/tests/input_model_tests.c -o "$build_dir/input-model-tests"

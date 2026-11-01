@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "target": "jp.gungho.pad-ios-23.6.0-106878",
+  "date": "2026-11-01",
+  "scope": "offline-active-skill-and-captured-dungeon-scenarios",
+  "device_verified": false,
+  "enemy_forecast": false,
+  "survival_authorization": false,
+  "source_evidence": {
+    "native-skill-dungeon-20261101.json": "78d494cf1129ac71dc73bd55ddd8cae1eef0445d90718e91fdb66601cff7ae49",
+    "native-heart-effects.json": "4ea00adcbed2ba319c94d0013791b1045cff48aee2c11be93bdc869144245acb"
+  },
+  "findings": [
+    {
+      "function": "0x1005c5df0 / type237",
+      "result": "Changes temporary maximum HP; clamps current HP only if over new maximum. Does not add HP when maximum increases. Later same-category effect overwrites."
+    },
+    {
+      "function": "0x1005fb690",
+      "result": "Temporary negative signed amount represents percent of base HP, max calculation rounds via 0x1000480e0; fixed dungeon HP can override, not included by offline normal context."
+    },
+    {
+      "function": "0x1005c5df0 / type3,21,50",
+      "result": "All-attribute shield clears attribute-specific skill shields; attribute shield clears all skill shield slots. RCV type50 attr5 stores its multiplier and duration."
+    },
+    {
+      "function": "0x1005a331c -> 0x1004847c4",
+      "result": "Each enemy uses current dungeon pointer for stat multipliers. Enemy subobject+88 attack derives from catalog curve then dungeon scale."
+    },
+    {
+      "function": "0x10047fcec -> 0x10048199c",
+      "result": "Enemy HP/ATK/DEF curve blocks at catalog+104/+128/+152; min/max u64, power float; enemy maximum level u16+176. Level1=min; later levels round min+(max-min)*pow((level-1)/(maxLevel-1),power)."
+    },
+    {
+      "function": "0x100241df0 -> 0x10023e524",
+      "result": "Dungeon string options3/4/5 contain HP/ATK/DEF ten-thousandths. The dump lacks options; scale inferred from matching live observations remains explicit provenance."
+    },
+    {
+      "function": "0x10056025c / type46 -> 0x10055d468 and 0x10055c534",
+      "result": "Enemy attribute change chooses one of first five supplied attributes unequal to current attribute. If all candidates match current, leaf is infeasible. 150% attached records on floors13-15 are therefore conditional on a prior attribute change."
+    },
+    {
+      "function": "0x100569f34",
+      "result": "Raw attack percent/enrage float32 then signed round. Skill/leader/heart-L/resist layers remain ordered. Offline team shield product is an estimate, not exact native assembled defense proof."
+    }
+  ],
+  "active_skills": {
+    "14060": {
+      "slot": 3,
+      "max_hp": 3,
+      "rcv": 3,
+      "board": "7x6",
+      "turns": 1,
+      "max_skill_cd": 5
+    },
+    "14048": {
+      "slot": 4,
+      "shield_percent": 35,
+      "turns": 5,
+      "max_skill_cd": 5
+    },
+    "14065": {
+      "slots": [
+        5,
+        6
+      ],
+      "max_hp": 1.5,
+      "turns": 1,
+      "max_skill_cd": 2
+    }
+  },
+  "validation": {
+    "windows_team_and_dungeon_models": "pending-final-source",
+    "editor_browser": "pending-final-source",
+    "ios_ci": "pending",
+    "device_verified": false
+  },
+  "guide_sources": [
+    {
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/61061",
+      "checked_date": "2026-11-01",
+      "captured_html_sha256": "e5c9e2e38a62f542e6d95aa1667f81c0d08a2108657d2458bbcf2e5250db5a57"
+    },
+    {
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/565958",
+      "checked_date": "2026-11-01",
+      "captured_html_sha256": "e4db4fdb4eaaf2346ede58fa949473a2e909db2f098c5cedf445ee931a5281be"
+    }
+  ],
+  "guide_storage": "Importable non-executable JSON, matched by dungeon/subDungeon plus optional enemy checks, separately saved and reloaded; no rebuild for new dungeon notes."
+}

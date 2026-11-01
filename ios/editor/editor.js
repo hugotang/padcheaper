@@ -230,7 +230,10 @@
           if(value.library){savedLibrary=value.stored===false?null:model.normalizeLibrary(library);savedJSON=savedLibrary?JSON.stringify(savedLibrary):'';}
         }
         if(value.recent)recent=[...new Set(value.recent)].filter(id=>model.cards.has(id)).slice(0,24);
-        battle=value.battle||battle;render();this.initialized=true;
+        battle=value.battle||battle;render();
+        if(value.dungeonGuides)teamView.dungeon.setGuides(value.dungeonGuides);
+        if(value.dungeonComparison)this.showDungeonComparison(value.dungeonComparison);
+        this.initialized=true;
       });
     },
     setState(value) {battle=value||{};renderGrid();renderState();},
@@ -238,6 +241,17 @@
     importText(value) {guarded(()=>{readFields();const imported=model.parseImport(value);commitTeam(imported.team,'匯入隊伍');resetFields();$('management').open=false;render();toast((imported.notice||'已匯入隊伍')+' 尚未儲存。');});},
     getTeam() {return clone(team);},
     getTeamCalculation() {return clone(teamView.getResult());},
+    getDungeonComparison() {return clone(teamView.dungeon.getResult());},
+    importDungeonText(value) {teamView.dungeon.importText(value);},
+    importDungeonGuides(value) {teamView.dungeon.importGuides(value);},
+    getDungeonGuides() {return clone(teamView.dungeon.getGuides());},
+    guideSaveResult(value) {teamView.dungeon.guideSaveResult(value);},
+    showDungeonComparison(value) {
+      closeEditor();
+      teamView.dungeon.importText(value);
+      $('calc-dungeon-details').open=true;
+      requestAnimationFrame(()=>$('calc-dungeon-details').scrollIntoView({block:'start'}));
+    },
     getLibrary() {return model.updateLibraryTeam(library,team);},
     getSaveState() {return {pending:Boolean(pending),dirty:dirty(),error:lastSaveError,savedLibrary:clone(savedLibrary)};},
     whenSaved() {return savePromise;},

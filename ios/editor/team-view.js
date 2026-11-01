@@ -1,4 +1,4 @@
-/* global PHTeamModel, PH_CATALOG, PH_TEAM_CATALOG */
+/* global PHTeamModel, PHTeamSkills, PHTeamDungeonView, PH_CATALOG, PH_TEAM_CATALOG */
 // Read-only view of a normalized formation. Simulation choices are transient
 // and never enter native presets, persisted libraries, or battle mutations.
 (function(root) {
@@ -13,7 +13,8 @@
   }
   function create(formation,getTeam,portrait) {
     const model=PHTeamModel.createModel(PH_CATALOG,PH_TEAM_CATALOG,formation);
-    let phase='final',lastKey='',lastResult=null,finalForms={},formationKey='',custom=[],infoTimer;
+    const skillModel=PHTeamSkills.createModel(PH_TEAM_CATALOG);
+    let phase='final',lastKey='',lastResult=null,finalForms={},formationKey='',custom=[],infoTimer,activeChoices=[],skillRosterKey='',skillDefinitions=[],boardBeforeSkill=null;
     const inputs={'calc-hp-percent':'hpPercent','calc-shield-buff':'activeShield','calc-hp-buff':'hpMultiplier',
       'calc-rcv-buff':'rcvMultiplier','calc-floor':'floor','calc-parts':'parts','calc-skill-uses':'skillUses'};
     function iconButton(id,latent=false,info='calc-icon-info',suffix='',inactive=false) {
@@ -23,7 +24,7 @@
         if(info==='calc-icon-info'){clearTimeout(infoTimer);infoTimer=setTimeout(()=>{$(info).hidden=true;},6500);}};return b;
     }
     function settings() {
-      const c={phase,finalForms,benefit:$('calc-benefit').value};
+      const c={phase,finalForms,activeSkills:activeChoices,benefit:$('calc-benefit').value,hpBasis:$('calc-hp-basis').value};
       for(const [id,key] of Object.entries(inputs)) {
         if($(id).value.trim()==='')throw new Error('請填寫完整試算條件');c[key]=Number($(id).value);
       }
@@ -33,6 +34,7 @@
         'light-t-heart4':[g(3,5,'t'),g(5,4,'four')],'light-heart-l':[g(3,3),g(5,5,'l')],custom}[$('calc-preset').value];
       return c;
     }
+    const dungeonView=PHTeamDungeonView.create(model,getTeam,settings);
     function renderGroups() {
       $('calc-groups').replaceChildren();
       custom.forEach((g,index)=>{
@@ -47,6 +49,56 @@
         remove.onclick=()=>{custom.splice(index,1);renderGroups();render();};row.append(attr,shape,remove);$('calc-groups').append(row);
       });
       $('calc-add-group').disabled=custom.length>=14;
+    }
+    function effectText(e) {
+      const label=e.kind==='shield'?(e.attrs===31?'':PHTeamModel.attrNames.filter((_,a)=>e.attrs&2**a).join('／')+'屬性 ')+e.value+'% 減傷':
+        e.kind==='hp'?'最大 HP ×'+e.value:e.kind==='rcv'?'回復力 ×'+e.value:'盤面 '+e.value.replace('x','×');
+      return label+' · '+e.turns+' 回合'+(e.delay?' · '+e.delay+' 回合後生效':'');
+    }
+    function renderSkills(options,projection) {
+      const container=$('calc-skills'),other=$('calc-other-skills');container.replaceChildren();other.replaceChildren();
+      const sorted=options.slice().sort((a,b)=>a.slot-b.slot||a.kind.localeCompare(b.kind)||a.stage-b.stage);
+      for(const s of sorted) {
+        const row=element('div','skill-row'),description=element('div','skill-content'),choice=activeChoices.find(c=>c.key===s.key);
+        row.dataset.skill=s.key;
+        description.append(element('strong','','位置 '+(s.slot+1)+' · '+(s.kind==='body'?'本體':'武裝')+' #'+s.cardId+
+          (s.stages>1?' · 階段 '+(s.stage+1)+'/'+s.stages:'')),element('div','skill-name',s.name));
+        description.append(element('div','skill-effect',s.effects.map(effectText).join('；')||'無本模型可切換的 HP／回復／盾效果'));
+        const duration=Math.max(0,...s.effects.filter(e=>e.kind!=='board'&&e.delay===0).map(e=>e.turns));
+        description.append(element('div','quiet','CD '+s.cooldown+' · 滿技 CD '+s.minimumCooldown+(s.cooldownNote?' · '+s.cooldownNote:'')+
+          (s.kind==='body'&&duration>=s.cooldown&&duration>0&&s.stages===1?' · 回合數可覆蓋 CD，實戰仍受延遲／封技影響':'')));
+        if(s.issues.length||s.notes.length)description.append(element('div','calc-warning',[...s.issues,...s.notes].join('；')));
+        const detail=element('details','skill-description'),summary=element('summary','','技能原文');detail.append(summary,element('p','quiet',s.description));description.append(detail);
+        row.append(description);
+        if(s.selectable) {
+          const controls=element('div','skill-controls'),toggle=element('button',choice?'active':'',choice?'已計入試算':'計入試算');
+          toggle.type='button';toggle.setAttribute('aria-pressed',String(Boolean(choice)));
+          toggle.onclick=()=>{
+            if(choice)activeChoices=activeChoices.filter(c=>c.key!==s.key);
+            else {
+              const categories=s.effects.map(e=>e.kind);
+              activeChoices=activeChoices.filter(c=>{const other=options.find(o=>o.key===c.key);return other&&
+                !(other.slot===s.slot&&other.kind===s.kind);});
+              activeChoices.push({key:s.key,elapsed:0});
+              for(const [kind,id,value] of [['shield','calc-shield-buff','0'],['hp','calc-hp-buff','1'],['rcv','calc-rcv-buff','1']])
+                if(categories.includes(kind))$(id).value=value;
+            }
+            render();
+          };controls.append(toggle);
+          if(choice) {
+            const label=element('label','','施放後經過回合'),elapsed=element('input','');elapsed.type='number';elapsed.min='0';elapsed.max='9999';
+            elapsed.inputMode='numeric';elapsed.value=String(choice.elapsed);elapsed.setAttribute('aria-label','位置 '+(s.slot+1)+' '+(s.kind==='body'?'本體':'武裝')+'施放後經過回合');
+            elapsed.onchange=()=>{choice.elapsed=elapsed.value===''?NaN:Number(elapsed.value);render();};label.append(elapsed);controls.append(label);
+            const projected=projection?.selected.find(c=>c.key===s.key);
+            const states=(projected?.effects||s.effects).map(e=>e.overwritten?'此類效果已覆蓋':choice.elapsed<e.delay?'等待 '+(e.delay-choice.elapsed)+' 回合':choice.elapsed>=e.delay+e.turns?'已到期':'剩 '+(e.delay+e.turns-choice.elapsed)+' 回合');
+            controls.append(element('div','quiet',[...new Set(states)].join('；')));
+          }
+          row.append(controls);
+        }
+        (s.selectable&&s.kind==='body'?container:other).append(row);
+      }
+      if(!container.childElementCount)container.append(element('p','quiet',options.length?'此隊本體沒有可切換的 HP／回復／盾效果。':'選好隊員／型態後顯示技能。'));
+      $('calc-other-skill-title').textContent='武裝與其他技能（'+other.childElementCount+'）';
     }
     function clearResult(error) {
       for(const id of ['calc-hp','calc-rcv','calc-shield','calc-heal'])$(id).textContent='—';
@@ -81,10 +133,18 @@
       try {
         team=getTeam();const key=JSON.stringify(team.slots.map(s=>s.body.id));
         if(key!==formationKey){formationKey=key;finalForms={};}
+        const roster=JSON.stringify([phase,finalForms,team.slots.map(s=>[s.body.id,s.body.skill,s.assist.id,s.assist.skill])]);
+        if(roster!==skillRosterKey){skillRosterKey=roster;activeChoices=[];}
+        const projection=skillModel.project(skillDefinitions,activeChoices);
+        const board=projection.effects.find(e=>e.kind==='board');
+        if(board){if(boardBeforeSkill===null)boardBeforeSkill=$('calc-board').value;$('calc-board').value=board.value;}
+        else if(boardBeforeSkill!==null){$('calc-board').value=boardBeforeSkill;boardBeforeSkill=null;}
+        $('calc-board').disabled=Boolean(board);
         c=settings();const request=JSON.stringify([team,c]);if(request===lastKey)return;lastKey=request;
         const result=model.evaluate(team,c);lastResult=result;$('calc-error').hidden=true;
-        const initial=model.evaluate(team,{...c,phase:'current',matches:[]}),final=model.evaluate(team,{...c,phase:'final',matches:[]});
-        $('calc-comparison').textContent='HP 比較：編隊型態 '+number(initial.totals.hp)+' → 最終型態 '+number(final.totals.hp);
+        skillDefinitions=result.skillOptions;renderSkills(skillDefinitions,result.activeSkills);
+        const initial=model.evaluate(team,{...c,phase:'current',activeSkills:[],matches:[]}),final=model.evaluate(team,{...c,phase:'final',activeSkills:[],matches:[]});
+        $('calc-comparison').textContent='HP 比較（未計下方選取技能）：編隊型態 '+number(initial.totals.hp)+' → 最終型態 '+number(final.totals.hp);
         $('calc-forms').replaceChildren();
         for(const m of result.members)if(m.form.reason) {
           const label=element('label','','位置 '+(m.slot+1)+' · '+m.form.reason),select=element('select','');
@@ -96,7 +156,7 @@
         $('calc-hp').textContent=number(result.totals.hp);$('calc-rcv').textContent=number(result.totals.rcv);
         $('calc-shield').textContent=result.shield.total?percent(Math.min(...result.shield.total)):'未完整';
         $('calc-heal').textContent=number(result.recovery.heart);
-        $('calc-after').textContent='消珠 '+c.matches.length+' 組＋隊長加算 '+result.bonusCombos+' = '+result.combos+' Combo · 回復後 HP 估值 '+number(result.recovery.afterHP);
+        $('calc-after').textContent='消珠 '+c.matches.length+' 組＋隊長加算 '+result.bonusCombos+' = '+result.combos+' Combo · 起始 HP '+number(result.recovery.startingHP)+' → 回復後估值 '+number(result.recovery.afterHP);
         $('calc-resists').replaceChildren();if(result.shield.total)for(let a=0;a<5;a++)$('calc-resists').append(element('span','',PHTeamModel.attrNames[a]+' '+percent(result.shield.total[a])));
         const filled=team.slots.filter(s=>s.body.id).length;
         $('calc-quick').textContent=filled+' / 6 人 · '+(result.loadoutKnown?'此型態 SB '+result.skillBoost:'覺醒資料未完整')+
@@ -120,11 +180,11 @@
           b.dataset.awakening=key;b.append(element('span','',String(n)));$('calc-awakenings').append(b);
         }
         if(!Object.keys(result.awakenings).length)$('calc-awakenings').append(element('span','quiet',filled?'選好型態後顯示覺醒。':'先選擇隊員。'));
-        $('calc-icon-info').hidden=true;renderMembers(result);
-      } catch(e) {lastKey='';clearResult(e.message);}
+        $('calc-icon-info').hidden=true;renderMembers(result);dungeonView.render();
+      } catch(e) {lastKey='';clearResult(e.message);renderSkills(skillDefinitions);dungeonView.render();}
     }
     for(const mode of ['current','final'])$('calc-'+mode).onclick=()=>{phase=mode;render();};
-    for(const id of [...Object.keys(inputs),'calc-benefit','calc-skill-uses'])$(id).onchange=render;
+    for(const id of [...Object.keys(inputs),'calc-benefit','calc-hp-basis'])$(id).onchange=render;
     $('calc-board').onchange=()=>{renderGroups();render();};
     $('calc-preset').onchange=()=>{$('calc-custom').hidden=$('calc-preset').value!=='custom';renderGroups();render();};
     $('calc-add-group').onclick=()=>{if(custom.length<14)custom.push({attr:3,n:3,shape:'match'});renderGroups();render();};
@@ -134,7 +194,7 @@
       if(card)card.awakenings.forEach((a,i)=>$('selected-awakenings').append(iconButton(a,false,'selected-icon-info',
         ' · 第 '+(i+1)+' 個'+(value.awakenings>=0&&i>=value.awakenings?' · 未開啟':''),value.awakenings>=0&&i>=value.awakenings)));
     }
-    return {render,renderSelection,icon,iconButton,getResult:()=>lastResult};
+    return {render,renderSelection,icon,iconButton,getResult:()=>lastResult,dungeon:dungeonView};
   }
   root.PHTeamView={create,icon};
 })(globalThis);

@@ -3,6 +3,15 @@
 #import <WebKit/WebKit.h>
 #include "PHFormationGenerated.h"
 
+static NSURL *PHFormationGuidesURL(void) {
+    return [NSURL fileURLWithPath:[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support/PADHelper/dungeon-guides.json"]];
+}
+static BOOL PHFormationGuidesValid(id value) {
+    return [value isKindOfClass:NSDictionary.class] && [value[@"schema"] isEqual:@1] &&
+        [value[@"kind"] isEqual:@"PADCheaper-dungeon-guides"] && [value[@"guides"] isKindOfClass:NSArray.class] &&
+        [value[@"guides"] count] <= 64 && [NSJSONSerialization isValidJSONObject:value];
+}
+
 @interface PHFormationController () <WKScriptMessageHandler, WKNavigationDelegate>
 @property(nonatomic, strong) WKWebView *web;
 @property(nonatomic, copy) NSDictionary *team;
@@ -11,6 +20,8 @@
 @property(nonatomic, copy) PHOverlaySnapshot snapshot;
 @property(nonatomic, copy) PHOverlayAction action;
 @property(nonatomic, copy) dispatch_block_t close;
+@property(nonatomic, copy) NSDictionary *comparisonReport;
+@property(nonatomic) BOOL editorReady;
 @end
 
 @implementation PHFormationController
@@ -59,6 +70,10 @@
     self.battle = battle;
     [self send:@"setState" value:battle ?: @{}];
 }
+- (void)showDungeonComparison:(NSDictionary *)report {
+    self.comparisonReport = report;
+    if (self.editorReady) [self send:@"showDungeonComparison" value:report];
+}
 - (void)finish {
     [self.web endEditing:YES];
     // Break WKUserContentController's strong reference to its message handler.
@@ -77,7 +92,21 @@
         NSDictionary *current = self.snapshot ? self.snapshot() : nil;
         initial[@"stored"] = current[@"formationLibraryStored"] ?: @NO;
         initial[@"recent"] = [NSUserDefaults.standardUserDefaults arrayForKey:@"PADCheaper.formationRecent"] ?: @[];
+        NSFileHandle *guideFile = [NSFileHandle fileHandleForReadingFromURL:PHFormationGuidesURL() error:NULL];
+        NSData *guideData = [guideFile readDataUpToLength:1000001 error:NULL]; [guideFile closeAndReturnError:NULL];
+        id guides = guideData.length && guideData.length <= 1000000 ? [NSJSONSerialization JSONObjectWithData:guideData options:0 error:NULL] : nil;
+        if (PHFormationGuidesValid(guides)) initial[@"dungeonGuides"] = guides;
+        if (self.comparisonReport) initial[@"dungeonComparison"] = self.comparisonReport;
         [self send:@"receive" value:initial];
+        self.editorReady = YES;
+    } else if ([action isEqual:@"saveDungeonGuides"] && [value isKindOfClass:NSDictionary.class]) {
+        NSString *requestID = value[@"requestID"];
+        if (![requestID isKindOfClass:NSString.class] || !requestID.length || requestID.length > 80) return;
+        id library = value[@"library"];
+        NSData *data = PHFormationGuidesValid(library) ? [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL] : nil;
+        BOOL saved = data.length > 0 && data.length <= 1000000 && [data writeToURL:PHFormationGuidesURL() options:NSDataWritingAtomic error:NULL];
+        if (saved) [NSFileManager.defaultManager setAttributes:@{NSFilePosixPermissions:@0600} ofItemAtPath:PHFormationGuidesURL().path error:NULL];
+        [self send:@"guideSaveResult" value:@{@"requestID":requestID,@"ok":@(saved),@"message":saved ? @"攻略庫已儲存" : @"攻略格式、大小或寫入失敗"}];
     } else if ([action isEqual:@"persist"] && [value isKindOfClass:NSDictionary.class]) {
         NSString *requestID = value[@"requestID"];
         if (![requestID isKindOfClass:NSString.class] || !requestID.length || requestID.length > 80) return;
@@ -114,6 +143,10 @@
         [self send:@"notify" value:@"已複製，可在 PADDashFormation 開啟此隊伍"];
     } else if ([action isEqual:@"reference"]) {
         [UIApplication.sharedApplication openURL:[NSURL URLWithString:@"https://mapaler.github.io/PADDashFormation/solo.html?l=zh-hant&s=ja"] options:@{} completionHandler:nil];
+    } else if ([action isEqual:@"dungeonReference"] && [value isKindOfClass:NSString.class] && [value length] <= 2048) {
+        NSURL *url = [NSURL URLWithString:value];
+        if ([url.scheme.lowercaseString isEqual:@"https"] && url.host.length && !url.user.length && !url.password.length)
+            [UIApplication.sharedApplication openURL:url options:@{} completionHandler:nil];
     } else if ([action isEqual:@"restore"] && PHFormationReadRestoreSlot(value, NULL)) {
         self.action(@"battleRestoreSlot", value);
         [self finish];

@@ -17,7 +17,29 @@ def generate(directory, revision, editor):
             or editor["skill_sha256"] != digests[1]):
         raise ValueError("Team and editor catalogs must use identical pinned inputs")
     cards, skills = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
-    rows, records = [], {}
+    rows, records, active_records = [], {}, {}
+
+    def active_children(skill):
+        if skill["type"] in (116, 118, 232, 233):
+            return skill["params"]
+        if skill["type"] == 248:
+            return skill["params"][1:]
+        return []
+
+    def collect_active(index, ancestors=()):
+        if not index:
+            return
+        if index in ancestors or len(ancestors) >= 16:
+            raise ValueError("Cyclic or excessive active skill references")
+        if index in active_records:
+            return
+        skill = skills[index]
+        assert skill["id"] == index and all(type(p) is int for p in skill["params"])
+        active_records[index] = [index, skill["type"], skill["params"],
+                                 skill["maxLevel"], skill["initialCooldown"],
+                                 skill["name"], skill["description"]]
+        for child in active_children(skill):
+            collect_active(child, (*ancestors, index))
 
     def collect(index, ancestors=()):
         if not index:
@@ -43,14 +65,16 @@ def generate(directory, revision, editor):
         rows.append([card["id"], card["types"], card["maxLevel"],
                      card.get("limitBreakIncr", 0), *curves,
                      card.get("leaderSkillId", 0), card.get("henshinTo", []),
-                     card.get("rarity", 0), card.get("collabId", 0)])
+                     card.get("rarity", 0), card.get("collabId", 0), card.get("activeSkillId", 0)])
         collect(card.get("leaderSkillId", 0))
+        collect_active(card.get("activeSkillId", 0))
     ids = {r[0] for r in rows}
     assert all(target in ids for row in rows for target in row[8])
     return dict(schema=1, source=editor["source"], revision=revision,
                 region="ja", numbering="encyclopedia", card_sha256=digests[0],
                 skill_sha256=digests[1], cards=rows,
-                skills=[records[i] for i in sorted(records)])
+                skills=[records[i] for i in sorted(records)],
+                activeSkills=[active_records[i] for i in sorted(active_records)])
 
 
 def main():
@@ -63,7 +87,7 @@ def main():
     result = generate(args.directory, args.revision, editor)
     args.output.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n",
                            encoding="utf-8")
-    print(f"Solo facts: {len(result['cards'])} cards, {len(result['skills'])} leader records")
+    print(f"Solo facts: {len(result['cards'])} cards, {len(result['skills'])} leader records, {len(result['activeSkills'])} active records")
 
 
 if __name__ == "__main__":
