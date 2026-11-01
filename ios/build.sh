@@ -75,6 +75,7 @@ cp ios/docs/release-0.5.11.md "$build_dir/release-0.5.11.md"
 cp ios/docs/release-0.5.12.md "$build_dir/release-0.5.12.md"
 cp ios/docs/release-0.5.13.md "$build_dir/release-0.5.13.md"
 cp ios/docs/release-0.5.14.md "$build_dir/release-0.5.14.md"
+cp ios/docs/release-0.5.15.md "$build_dir/release-0.5.15.md"
 cp ios/docs/orb-multiplayer-once.md ios/docs/orb-0511-log-analysis.md "$build_dir/"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
@@ -169,6 +170,8 @@ metadata = {
     "battle_observation": "optional read-only stable single-player current enemy HP/effects, assist-void/L-provider eligibility and table-based skill charge thresholds; separate optional fingerprints; no native getter calls, enemy action forecast, shield/healing calculation or survival-based automation; pending device verification",
     "enemy_action_observation": "optional current solo catalog/AI/raw action definitions with bounded double reads, partial control descriptions and compound order; separate fingerprints; cached IDs are not forecasts; unknown branches, damage, shield/healing, spawn generations and survival remain unsupported; pending device verification",
     "enemy_selector_analysis": "optional conditional ordinary row-zero traversal with current AI state and all HP percentages; flags/counters, legacy second-pass inheritance and conservative candidate branches; bounded states/candidates/shared steps/weighted pool, unknown frontiers retained, attached attack before status; separate fingerprints; actual next entry, projected AI, damage and survival remain unknown; pending device verification",
+    "enemy_dispatch_analysis": "optional conditional dispatch entry, countdown tick and post-selection accounting checkpoints; preserves cache/compound/override branches and unknown preparation suffixes; independent fingerprints and bounded double reads; post-player state and actual next entry remain unknown; pending device verification",
+    "enemy_damage_analysis": "optional conditional resolved-damage, survival, cleanup, snapshot and phase checkpoints; preserves native signed/unsigned and floating-point boundaries; three non-exhaustive probes assume unchanged captured fields, callback suffixes stay unknown; independent fingerprints and bounded double reads; no team damage, next-hit survival or automation authorization; pending device verification",
     "assist_recovery_l": "opt-in ordinary solo continuous policy; fresh read-only L providers and duration, all base goals retained, up to 12 allocations sharing one search deadline, recheck before input and confirm next stable duration zero; no native queue-capacity guarantee, partial recovery or survival defer; pending device verification",
     "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
     "multiplayer_peer_exit": "4P accepts initialized peer recovery sync 5/step 2 and a validated remote-seat departure at sync 15 or retained flag 0x10000; local status/connection/clock/board checks still required; recovery entry cancels old input; 3P/8P unchanged; device verification pending",

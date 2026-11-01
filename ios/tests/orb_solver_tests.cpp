@@ -160,9 +160,18 @@ static void ShapeTests() {
           "inventory failure yields no executable route, without relying on skyfall");
     auto conflict = ShapeBoard(6,5,squareCells);
     options.goals.items[options.goals.count++] = {PHOrbGoalL, 1, 1, 0};
+    Check(PHOrbSolve(conflict, options, cancel, route) == PHOrbSolveStatus::InsufficientOrbs && !route.count && !route.evaluated,
+          "nine red orbs cannot supply independent red square and L groups; reject before search");
+    // Enough inventory is not a route proof: this fixed one-step window
+    // cannot rearrange the five extra red orbs into an L.
+    for (unsigned i : {17u,19u,21u,24u,26u}) conflict.types[i] = 0;
+    conflict.tapeMask = ((UINT64_C(1) << 30) - 1) & ~((UINT64_C(1) << 4) | (UINT64_C(1) << 5));
+    for (unsigned i = 0; i < 30; ++i)
+        if (conflict.tapeMask & (UINT64_C(1) << i)) conflict.flags[i] |= PHOrbFlagTape;
+    conflict.fixedStart = 5;
     Check(PHOrbSolve(conflict, options, cancel, route) == PHOrbSolveStatus::GoalsUnmet && !route.goalsMet &&
           route.count == 2 && route.matchedGoals < route.goalCount,
-          "nine red orbs cannot form disjoint red square and L; a legal partial route is explicitly unmet");
+          "sufficient inventory with a blocked rearrangement yields an explicitly unmet preview");
     PHOrbBoard replay{};
     Check(PHOrbReplay(&conflict, &route, route.count - 1, &replay), "an unmet route remains usable for explanatory preview only");
 }

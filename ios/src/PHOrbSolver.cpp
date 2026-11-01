@@ -28,6 +28,7 @@ struct Context {
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
+    unsigned borderRepairWeight = 2;
     std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
     bool diagonal = false;
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
@@ -354,7 +355,7 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
             // existing conservative no-same-colour-neighbour contract.
             const Bits interfering = !exact ? 0 : goal.kind == PHOrbGoalFour ?
                 MarkedRuns(color | pattern.cells, context) & pattern.border : color & pattern.border;
-            unsigned cost = 2 * (missing + Count(interfering));
+            unsigned cost = 2 * missing + context.borderRepairWeight * Count(interfering);
             hint.value = 3072 * size / (size + cost);
             if (hints.count == HintLimit && hint.value < hints.items.back().value) continue;
             const Bits supply = color & ~pattern.cells & ~used & ~context.blocked;
@@ -844,12 +845,15 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
         const bool recover = context.shapeGoals && options.recoveryPasses;
         const bool retain = context.shapeGoals && options.backtrackLimit && options.steps >= 12;
+        bool stableShapeRecovery = context.variants > 1 && context.shapeGoals > 1;
+        for (unsigned g = 0; g < options.goals.count; ++g)
+            if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
         const auto primaryDeadline = recover ? start + (deadline - start) * 2 / 3 : deadline;
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
                           Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false) {
             ++passes;
-            // Recovery changes stableHints, so it must not inherit the main
-            // pass's heuristic scores. Exact validation is still unchanged.
+            // Recovery changes hint policy/repair weights, so it must not
+            // inherit another pass's scores. Exact validation is unchanged.
             evaluationCache.nextPass();
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
@@ -936,6 +940,14 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // when no single layout is phase-independent. Never delete those
             // possibilities from exact evaluation or the recovery search.
             recovery.stableHints = false;
+            if (stableShapeRecovery) {
+                // Moving an interfering border orb can fill a hole in the
+                // same drag. Try a lower repair cost while retaining stable
+                // layouts; otherwise an easy phase-specific shape can crowd
+                // out that repair again. This affects guidance only.
+                recovery.stableHints = true;
+                recovery.borderRepairWeight = 1;
+            }
             const auto now = Clock::now();
             const auto recoveryDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = starts;
@@ -947,7 +959,11 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             if (now >= deadline) { timedOut = true; break; }
             const auto passDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = std::move(frontier.nodes); ++backtracks;
-            search(context, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
+            Context revisit = context;
+            // Keep a phase-specific alternative when the whole-board
+            // recovery used stable templates. Do not add passes or time.
+            if (stableShapeRecovery && saved.empty()) revisit.stableHints = false;
+            search(revisit, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
         }
         // Permitting survivable thorn contacts changes beam competition even
         // if the final best path has no damage: temporary complete shapes can
