@@ -293,6 +293,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSString *_liveReadReason;
     double _lastReadUptime;
     PHOrbSnapshot _observationState;
+    NSDictionary *_enemyActionObservation;
     double _observationAt, _observationUptime, _observationDurationMS;
     NSMutableArray<NSDictionary *> *_onceReadinessHistory;
     NSDictionary *_onceReadinessKey;
@@ -345,6 +346,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!read || !_frame.ready || !_frame.enabled || !ObservationWindow(_live) || active || _oneShot ||
         (_live.automation.valid && _live.automation.busy)) {
         _observationState = {};
+        _enemyActionObservation = nil;
         _observationState.observation.status = _live.multiplayer.kind != PHOrbMultiplayerNone ? PHOrbObservationMultiplayer :
             read ? PHOrbObservationTransition : PHOrbObservationUnavailable;
         _observationUptime = _observationDurationMS = 0;
@@ -353,6 +355,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (![_engine respondsToSelector:@selector(observeBattle:)]) return;
     if (_observationState.observation.status == PHOrbObservationReady && !ObservationContextMatches(_observationState, _live)) {
         _observationState = {};
+        _enemyActionObservation = nil;
         _observationState.observation.status = PHOrbObservationChanged;
         _observationUptime = _observationDurationMS = 0;
     }
@@ -362,6 +365,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const double started = NSProcessInfo.processInfo.systemUptime;
     PHOrbSnapshot captured = _live;
     [_engine observeBattle:&captured];
+    _enemyActionObservation = nil;
+    if (captured.observation.status == PHOrbObservationReady && [_engine respondsToSelector:@selector(observeEnemyActions:)])
+        _enemyActionObservation = [_engine observeEnemyActions:&captured];
     _observationDurationMS = std::max(0.0, NSProcessInfo.processInfo.systemUptime - started) * 1000;
     _observationState = captured;
     _observationAt = time; _observationUptime = NSProcessInfo.processInfo.systemUptime;
@@ -1749,7 +1755,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const bool observationCurrent = liveReadable && _frame.ready && _frame.enabled && !_inputFault && ![self executing] &&
         !_oneShot && observationAge >= 0 && observationAge <= 1500 &&
         _observationState.observation.status == PHOrbObservationReady && ObservationContextMatches(_observationState, _live);
-    NSDictionary *observation = BattleObservationTrace(_observationState, observationCurrent, observationAge, _observationDurationMS);
+    NSDictionary *observation = BattleObservationTrace(_observationState, observationCurrent, observationAge, _observationDurationMS,
+        _enemyActionObservation);
     NSDictionary *onceReadiness = @{@"canOnce":@(canOnce), @"blockers":onceBlockers,
         @"frameReady":@(_frame.ready), @"frameEnabled":@(_frame.enabled), @"monitoring":@(_monitoring),
         @"readSucceeded":@(_hasLive), @"liveReadable":@(liveReadable), @"present":@(_live.present),
@@ -1842,7 +1849,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"decisionWave":@(_decisionState.wave),
         @"playerStatus":PHOrbSurvivalDescription(&_live), @"confirmedSkillRules":@(_confirmedRules),
         @"battleObservation":observation,
-        @"battleObservationDescription":multiplayer ? @"" : BattleObservationDescription(_observationState.observation, observationCurrent),
+        @"battleObservationDescription":multiplayer ? @"" : BattleObservationDescription(_observationState.observation, observationCurrent,
+            _enemyActionObservation),
         @"obstacles":PHOrbObstacleDescription(&_live), @"usedSkillGroups":@(_usedGroups),
         @"activeProfile":_activeProfile,
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),

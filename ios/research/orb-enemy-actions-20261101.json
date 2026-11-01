@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "baseline_commit": "e498755",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Static IDA pseudocode/disassembly and original bytes; source/JSON/AST/lexical review only. No game function, generator, compiler, test, benchmark, GUI, CI or package execution.",
+  "native_evidence": [
+    {
+      "va": "0x100532e38",
+      "finding": "Action table count header+0x27c7988, pointer+0x27c7990, stride72, signed id<count comparison. Reader additionally rejects negative IDs and caps count at0x20000. Record+4 u16 opcode, +16 eight signed params, +48 ratio and +52..68 AI parameters."
+    },
+    {
+      "va": "0x1006968a4",
+      "finding": "Downloaded data29 stores record ID at+0, name/help pool indices at+8/+12, opcode+4, skp1..8 at+16, ratio+48 and aip0..4 at+52. Metadata header+0x27c7980 is native format/version/count/checksum; no string pool is read by diagnostics."
+    },
+    {
+      "va": "0x10053550c",
+      "finding": "data029.bin loader enforces serialized format4, caps count0x20000, allocates72*count and loads raw record fields. Header metadata and content hashes retained, but full native checksum is not executed or claimed verified."
+    },
+    {
+      "va": "0x1005a331c",
+      "finding": "Enemy slot initialized at impl+753464+i*2984. Actual param subobject begins+536; level comes from spawn descriptor+8 and is stored u16+312. AI flags/counter/action count+1720/+1724/+1728, budget+2004 and packed compound+2012 reset here. Parts flag0x100 requires a separate model."
+    },
+    {
+      "va": "0x1004847c4",
+      "finding": "Enemy parameter init stores actual catalog ID at subobject+44 (enemy+580) and pointer at+0 (enemy+536). Derived HP64+56/+72 and attack64+88/+104 include dungeon scaling; do not recalculate from ordinary card defaults."
+    },
+    {
+      "va": "0x10052fc4c",
+      "finding": "Normal IDs index840-byte catalog rows; special IDs use modulo100000 then +828 links, bounded128. Allocation count save+0x5ef15c distinguishes ordinary count+0x5ef158. Reader checks exact pointer and ID and refuses extra helper ID10000000."
+    },
+    {
+      "va": "0x10055e544",
+      "finding": "Reads all64 rows at parameter+236 with stride8; zero IDs are skipped. Uses flags/control helper, budgets, HP, feasibility, weights and RNG. Source flags at parameter+224 bit1 choose this selector; the alternative is0x10055ede0. Never invoke either for observation."
+    },
+    {
+      "va": "0x10055badc",
+      "finding": "Control helper mutates AI flags/counter and cursor. Selected descriptions only:0x15..26 excluding gaps,0x2b..2d,0x5b. HP<= and>= at0x10055bf30/58 use actual scalar UCVTF (pseudocode aliases misleading).0x17 and0x5b store B-1 then caller increments, while HP/counter/level and0x2b store B-2 then increment. Final zero-based targets B and B-1 respectively. No predicates executed by this parser."
+    },
+    {
+      "va": "0x100561c4c",
+      "finding": "Dispatcher uses compound continuation, cached selection path, two selectors; increments action count and AI budget, subtracts cost and sets rootID<<9|0xf0. Selected/cached fields do not alone identify the next action."
+    },
+    {
+      "va": "0x1005619ac",
+      "finding": "Compound83 uses low nibble progress to fetch positive child IDs from record+16, terminates on nonpositive, skips82 or infeasible child. No proven eight-child index stop. Preserve eight raw params and positive prefix, mark all-eight-positive unterminated, nested compounds and cycles unknown."
+    },
+    {
+      "va": "0x1005601b4",
+      "finding": "Positive action record+68 becomes enemy+2024 percent and prepends attack animation.0x100566a0c executes it through0x100569f34 before the action effect. Relation only labeled for recognized status effects88/141; other opcodes retained raw."
+    },
+    {
+      "va": "0x100567d00",
+      "finding": "Effect88 increases signed ten-bit awoken-bind duration impl+738908 and updates effective team state. Kind recognized only; no duration/healing/survival simulation."
+    },
+    {
+      "va": "0x100568b68",
+      "finding": "Effect141 sets assist-void duration impl+739980 with fresh bit, updates members. Recognized as assist void, not assist consumption."
+    },
+    {
+      "va": "0x100569f34",
+      "finding": "Attack64 enemy+624/+640, multiply by coefficient and active enrage(+2128 float/+2144 signed16), round, optional fixed override, add and clear protected+2032. Layered shields/resistance round after each stage; resolve and special-mode branches. Current values do not establish future shield lifetime or an upper damage bound."
+    },
+    {
+      "va": "0x1005a04f4",
+      "finding": "Countdown reset usually uses parameter+100 but dungeon/special state overrides exist. Countdown decrementation and post-player-attack scheduling remain unverified; expose raw countdown only."
+    },
+    {
+      "va": "0x10056ab74",
+      "finding": "Negative selected ID can execute default normal attack while action flag is active. Empty table/negative selection must never become a zero-damage next-turn forecast."
+    }
+  ],
+  "scope": {
+    "ordinary_single_player_only": true,
+    "multiplayer_and_three_player_solo_continuation": false,
+    "optional_new_guards": 32,
+    "existing_operation_guards": 114,
+    "existing_observation_guards": 15,
+    "existing_assist_policy_guards": 45,
+    "rows_per_enemy": 64,
+    "max_enemies": 8,
+    "records_shared_across_enemies": 192,
+    "depth_limit": 8,
+    "data_bytes_per_collection": 131072,
+    "data_reads_per_collection": 256,
+    "collections": 2,
+    "budget_excludes": "Table headers, existing read-only automation/member checks, code guards, cross-observation check and final existing board read. Reported counters are for one collection, not total diagnostic duration.",
+    "sampling": "Existing optional observation interval0.75s, public age<=1.5s. Independent dictionary outside copied PHOrbSnapshot.",
+    "native_calls_or_mutations": false,
+    "generator_source_updated_but_not_run": true,
+    "unknowns_never_authorize_auto": true
+  },
+  "unsupported": [
+    "complete selector control flow, feasibility, random branch set and side effects",
+    "default attack, fixed or percentage attacks and multihit event semantics",
+    "countdown scheduling after player action",
+    "post-player-action enemy HP interval, killing, resurrection and next-floor preemptives",
+    "verified spawn generation across samples",
+    "future effective shield duration/recomputation and elemental resistance",
+    "heart-four healing, poison/assist-restoration ordering",
+    "cleanse deadlines, assist-overcharge scheduling and required-rescue deferral",
+    "L+heart-four survival stall with T omitted",
+    "whole catalog native checksum and device read cost"
+  ],
+  "written_cases": {
+    "parser": "duplicate child order/dedup, positive prefix/raw suffix, eight-positive unterminated, unknown opcode, invalid/unreadable IDs, cyclic/nested/deep graphs, shared record cap, jump target conventions, bind/fallback never guessed attack",
+    "native": "all64 rows/gaps, variant identity, attack/enrage/countdown raw, attached attack, exact hashes, no guest changes/native helper calls, corrupt/NaN stats, bounds/parts,12 races, coherent HP with earlier observation, empty table, shared byte budget, multiple enemies, independent guard failure, all multiplayer exclusions; positive supported baseline, SHA-256 abc known vector, 64-bit high halves/sign bounds, invalid short encoding, HP above maximum, direct phase22/held window, catalog link cycle",
+    "session": "current table presentation, no forecast promotion, throttling, stale clearing, independent failure, board/context invalidation and all multiplayer exclusions"
+  },
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "benchmarks_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_audit": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "baseline_commit": "e498755",
+      "json_files": 5,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 13,
+      "local_includes": 75,
+      "local_document_links": 112,
+      "test_entry_points_written": 3,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "orb_policy": 45,
+        "orb_optional_enemy_actions": 32,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "original_174_orb_guards_unchanged": true,
+      "new_32_match_saved_ida_originals_and_disk": true,
+      "enemy_lookup_failure_byte_isolated_from_old_orb_guards": true,
+      "operation_gate_and_input_stage_unchanged": true,
+      "existing_automation_model_unchanged": true,
+      "optional_data_not_in_copied_snapshot": true,
+      "forecast_and_survival_fields_remain_false": true,
+      "workflow_dispatch_only": true,
+      "generated_files_configs_templates_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "source_sha256_lf": {
+        "ios/src/PHEnemyActions.h": "5f628a042fde8f7bcd6d5ed0a7a4cfb5a7fa6455b39ca1951a148bce15517922",
+        "ios/src/PHOrbEnemyActions.inc": "4c8aa96b0a724ac68fbc597d0503ee88b9c73e6793638fed8af850959213a43d",
+        "ios/src/PHOrbNative.mm": "3ea32fd018a8348862a75ad18c829195e62d4321800488eb80e219ed066a753a",
+        "ios/src/PHOrbObservationPresentation.inc": "953cf43c6928cd15fc0b553ec778269831bc8813450187c5b284295cf5f9a69e",
+        "ios/src/PHOrbSession.h": "05601689f2d1f7724e2d24c85eda1e216632a4b057500d3556ba34e9f797c834",
+        "ios/src/PHOrbSession.mm": "cdf12337f663c76a8cf9e17a4b76eda5ac96f7dd5fd8fc17b7264aac14d01a16",
+        "ios/tests/enemy_action_model_tests.inc": "ffedea03082877238453ca878ee188044c2e98ea1ebca4cb5e2e679467401732",
+        "ios/tests/orb_enemy_action_native_tests.inc": "7da8305f97dc001ce6125f9b139728826a72a32ab2aecea20c4cb6dbb9b904a7",
+        "ios/tests/orb_enemy_action_session_tests.inc": "58ce55526b3331e51c183c517edb3ea9bd124b34bde7974457dbe6cb38f5814a",
+        "ios/tests/orb_native_tests.mm": "0899e2b3f22528a430b0cb76a3896b2b58facd63b1921b215c7dbbd447c425a9",
+        "ios/tests/orb_session_tests.mm": "331e0331b313097e14daeb9b613aac1478ac5b4e47a86ddf2c0b5c71676ff6e2",
+        "ios/tests/orb_skill_native_tests.inc": "7cfd3d0921399f711d28ceeeb13f96db61344544dae7a27f5d7a4a12e20e5fc7",
+        "ios/tests/orb_solver_tests.cpp": "07924e4602584874601b0f31e806786b1e018f7c2a49f183445cf0dc84a7b562",
+        "ios/tools/generate_orbs.py": "dde886dfeaf548d70b90b301b0b340a1c87ee7a8ecc359ec454fa4c50038f02e",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b",
+        "ios/build.sh": "3719f577a5c3eae58491197a9d95b7ab62c13363e1f59282dab2025209cbecf9",
+        "ios/targets/orbs-23.6.0.json": "0a65da6b022f693388ab0dfd33776e5d7682db60ea2eaa510f4ee30f0951ca47"
+      },
+      "limits": "No compilation, case execution, selector/AI execution, native timing, device, shield/healing, survival or performance result."
+    },
+    "header_declaration_review": {
+      "source": "https://github.com/apple-oss-distributions/CommonCrypto/blob/main/include/CommonDigest.h",
+      "sha256_lf": "83a9705bbc8d44f27ee61801064ee99288496a038d623f152aa30db6819e9ca6",
+      "finding": "CC_SHA256 declares API_AVAILABLE(macos(10.4), ios(2.0)) with no deprecation annotation; libSystem linkage documented.",
+      "limit": "Upstream header review only. No local Apple SDK or compilation checked."
+    }
+  }
+}

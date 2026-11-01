@@ -10,6 +10,9 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <type_traits>
+#include <CommonCrypto/CommonDigest.h>
+#include "PHEnemyActions.h"
 
 namespace {
 constexpr size_t PoolStride = 172, PoolCount = 256;
@@ -335,6 +338,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbSkillChoice.inc"
 #include "PHOrbSkillDiagnostics.inc"
 #include "PHOrbObservation.inc"
+#include "PHOrbEnemyActions.inc"
 #include "PHOrbAssistRecovery.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
@@ -531,6 +535,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return;
     }
     ReadBattleObservation(*state);
+}
+- (NSDictionary *)observeEnemyActions:(const PHOrbSnapshot *)state {
+    if (!state || !NSThread.isMainThread || _staged || _multiplayerDisabled || !state->identity.header ||
+        _verifiedHeader != state->identity.header) return EnemyActionStatus(@"unavailable");
+    return ReadEnemyActions(*state);
 }
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state) return NO;

@@ -24,6 +24,7 @@ static vm_prot_t dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
 static unsigned changeContinuationDuringRead;
 static bool changeContinuationDuringCoordinateRead;
 static unsigned observationMutation;
+static unsigned enemyActionMutation;
 static bool changeAssistDuringCoordinateRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
@@ -48,6 +49,33 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    // Change state after the first raw enemy copy, before the confirmation.
+    if (enemyActionMutation && enemyActionMutation <= 10 && address == Impl + PHOrbEnemyOffset && length == 2984) {
+        const unsigned mutation = enemyActionMutation; enemyActionMutation = 0;
+        const uintptr_t enemy = Impl + PHOrbEnemyOffset;
+        const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(enemy + PHOrbEnemyActionsParameterOffset));
+        if (mutation == 1) Store<uint32_t>(reinterpret_cast<uint8_t *>(enemy + 1720), 5);
+        if (mutation == 2) Store<uint32_t>(reinterpret_cast<uint8_t *>(enemy + 1680), 7);
+        if (mutation == 3) Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHOrbEnemyActionsCountRVA), 511);
+        if (mutation == 4) Store<uintptr_t>(reinterpret_cast<uint8_t *>(enemy + PHOrbEnemyActionsParameterOffset), parameter + 840);
+        if (mutation == 5) reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
+        if (mutation == 6) Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHBattleKey1RVA), 19);
+        if (mutation == 7) Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattlePhaseOffset), 0);
+        if (mutation == 8) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleDragPointerOffset), Impl + PHOrbPoolOffset);
+        if (mutation == 9) {
+            const uintptr_t token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset));
+            *reinterpret_cast<uint8_t *>(token) = 9;
+        }
+        if (mutation == 10) *reinterpret_cast<uint8_t *>(Input + 0xd5) = 1;
+    }
+    if (enemyActionMutation == 11 && address == Header + 0x1d00000 + 3 * 72 && length == 72) {
+        enemyActionMutation = 0;
+        Store<int32_t>(reinterpret_cast<uint8_t *>(address + 16), 6);
+    }
+    if (enemyActionMutation == 12 && address == reinterpret_cast<uintptr_t>(catalogBytes.data()) + 400 * PHBattleCatalogStride && length == 840) {
+        enemyActionMutation = 0;
+        Store<int32_t>(reinterpret_cast<uint8_t *>(address + PHOrbEnemyActionsRowsOffset + 63 * 8), 8);
+    }
     if (observationMutation && observationMutation != 6 && address == Impl + PHOrbObservationAssistVoidOffset) {
         const unsigned mutation = observationMutation; observationMutation = 0;
         if (mutation == 1) Store<uint16_t>(reinterpret_cast<uint8_t *>(address), 7);
@@ -172,7 +200,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     rejectBattleProtection = false;
     implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
-    observationMutation = 0;
+    observationMutation = enemyActionMutation = 0;
     changeAssistDuringCoordinateRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);

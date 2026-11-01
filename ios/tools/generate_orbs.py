@@ -51,6 +51,14 @@ def generate(manifest):
                                  'assist_recovery': 'current-eligibility-only', 'enemies': 'current-hp-effects',
                                  'native_getters': False, 'enemy_forecast': False, 'survival_authorization': False,
                                  'optional_guards': True},
+                             'enemy_action_observation': {'mode': 'optional-read-only-stable-single-player',
+                                 'capture': 'bounded-double-read-current-catalog-and-AI-state',
+                                 'rows': 64, 'max_records': 192, 'max_depth': 8,
+                                 'read_bytes_per_pass': 131072, 'read_calls_per_pass': 256,
+                                 'compound': 'ordered-positive-prefix-with-cycle-and-nesting-markers',
+                                 'controls': 'descriptions-and-raw-operands-only', 'unknown_opcodes': 'retained',
+                                 'native_getters': False, 'spawn_identity': False, 'enemy_forecast': False,
+                                 'survival_authorization': False, 'guards': 'separate-optional-only', 'device_verified': False},
                              'assist_recovery_goals': {'mode': 'opt-in-single-player-continuous',
                                  'capture': 'fresh-double-read-before-plan-and-input', 'combine': 'retain-base-and-heart-goals',
                                  'amount': 'current-effective-L-per-distinct-member-color-per-first-wave-group',
@@ -148,7 +156,41 @@ def generate(manifest):
         'PHOrbAssistRecoveryOrdinaryDispatch1RVA',
         'PHOrbAssistRecoveryOrdinaryDispatch2RVA',
     }
-    required |= observation_guards | assist_recovery_guards
+    enemy_action_guards = {
+        'PHOrbEnemyActionsCatalogLookupRVA',
+        'PHOrbEnemyActionsCatalogChainRVA',
+        'PHOrbEnemyActionsCatalogAllocationRVA',
+        'PHOrbEnemyActionsParameterInitRVA',
+        'PHOrbEnemyActionsEnemyInitRVA',
+        'PHOrbEnemyActionsEnemyAIInitRVA',
+        'PHOrbEnemyActionsLookupRVA',
+        'PHOrbEnemyActionsSelectEntryRVA',
+        'PHOrbEnemyActionsRowsRVA',
+        'PHOrbEnemyActionsSelectModeRVA',
+        'PHOrbEnemyActionsAIStateRVA',
+        'PHOrbEnemyActionsCompoundDispatchRVA',
+        'PHOrbEnemyActionsControlOnceRVA',
+        'PHOrbEnemyActionsControlFlagsRVA',
+        'PHOrbEnemyActionsControlCounterRVA',
+        'PHOrbEnemyActionsControlHPRVA',
+        'PHOrbEnemyActionsControlJumpRVA',
+        'PHOrbEnemyActionsControlTargetRVA',
+        'PHOrbEnemyActionsCompoundRVA',
+        'PHOrbEnemyActionsAttackStatsRVA',
+        'PHOrbEnemyActionsAttributeRVA',
+        'PHOrbEnemyActionsAttachedAttackRVA',
+        'PHOrbEnemyActionsAwokenBindRVA',
+        'PHOrbEnemyActionsAssistVoidRVA',
+        'PHOrbEnemyActionsProtectedFloatRVA',
+        'PHOrbEnemyActionsProtectedShortRVA',
+        'PHOrbEnemyActionsProtectedNumericRVA',
+        'PHOrbEnemyActionsOverrideRVA',
+        'PHOrbEnemyActionsCountdownRVA',
+        'PHOrbEnemyActionsTableMetadataRVA',
+        'PHOrbEnemyActionsTableLoadRVA',
+        'PHOrbEnemyActionsRecordLoadRVA',
+    }
+    required |= observation_guards | assist_recovery_guards | enemy_action_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -187,6 +229,17 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbAssistRecovery')} != assist_recovery_fields:
         raise ValueError('Unreviewed assist recovery layout')
+    enemy_action_fields = {
+        'PHOrbEnemyActionsMetadataRVA': 0x27c7980,
+        'PHOrbEnemyActionsCountRVA': 0x27c7988,
+        'PHOrbEnemyActionsPointerRVA': 0x27c7990,
+        'PHOrbEnemyActionsParameterOffset': 0x218,
+        'PHOrbEnemyActionsCatalogIDOffset': 0x244,
+        'PHOrbEnemyActionsRowsOffset': 0xec,
+    }
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbEnemyActions')} != enemy_action_fields:
+        raise ValueError('Unreviewed optional enemy action layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():
@@ -203,7 +256,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -217,6 +270,11 @@ def generate(manifest):
         if guard['name'] in assist_recovery_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbAssistRecoveryTextGuardCount = sizeof(PHOrbAssistRecoveryTextGuards) / sizeof(PHOrbAssistRecoveryTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemyActionsTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_action_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemyActionsTextGuardCount = sizeof(PHOrbEnemyActionsTextGuards) / sizeof(PHOrbEnemyActionsTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 

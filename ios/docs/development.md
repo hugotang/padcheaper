@@ -4,6 +4,20 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-01：敵人行動定義與 AI 狀態，源碼待建置
+
+本批接入 [敵人行動唯讀解析](enemy-action-observation.md)：穩定普通單人取樣時保存目前敵人的實際 catalog／特殊版本參數、64 列行動、72-byte 原始定義與 SHA-256、HP／上限／攻擊／憤怒／倒數和 AI 執行狀態。部分旗標／計數／HP／level 條件以描述保留，opcode 83 保留複合子招次序與重複 ID，88／141 識別覺醒無效／武裝無效及附帶先攻擊。其他 opcode／巢狀／循環／超限明示未知；原生四位元複合 index 未證明在八子招後停止，八個全正 ID 不算完整。
+
+只讀本次載入資料，不呼叫選招器、RNG、getter 或原生執行函式。資料區雙讀，每遍所有敵人共用 192 定義／深度 8／128 KiB／256 次 block 預算，另外核對入場／來源／表頭／phase／wave／key／持珠／手指及最後盤面。與較早戰況觀察的 HP／parts 交叉核對。行動表 dictionary 不進每幀 snapshot；沿用 0.75 秒取樣與 1.5 秒年齡限制。32 組新指紋獨立於 114 操作＋15 舊診斷＋45 L 政策，失配僅清除本組診斷。多人（含 3 人單人續玩）不啟用。
+
+明確區分 raw capture／結構支援與下一回合預測；selected ID 是快取，空表也可能普通攻擊，原始攻擊未換算承傷。`enemyForecastKnown`／`damageBoundKnown`／`survivalKnown`／`spawnIdentityKnown`／`nextFloorKnown` 固定 false。本批未新增延後必要救援、預放解覺醒、L＋心四連耐久或刪 T 的決策。
+
+已寫 parser／native／session 案例，覆蓋空列後續／第 64 列、重複子招與原始後綴、未知／非法／循環／深度／筆數／資料預算、特殊 catalog 鏈、protected／NaN、附帶攻擊、空表不推定零傷害、12 種讀取競態、多敵人及資料撤下／多人隔離。**尚未編譯、執行測試／benchmark／GUI／generator、dispatch CI 或製作 dylib；先前所有未建置批次仍未驗證。** source manifest、嚴格 generator 與日後打包清單同步，generated header／版本及 E:\ipa 舊交付檔未更新。靜態核對與研究證據見 [研究資料](../research/orb-enemy-actions-20261101.json)。
+
+本批靜態核對通過：5 份 JSON 唯一鍵、2 份 Python AST、6 段嵌入式 Python、13 份 C／Objective-C／C++ 字串／註解／括號、75 個本地 include 與 112 個文件連結。206 組 orb（114 操作＋15 舊診斷＋45 L 政策＋32 新診斷）、34 組 battle、17 組 runtime 指紋均吻合原始 Mach-O、UUID、SHA-256；原有 174 組 orb 指紋、決策模型與輸入流程未變。新增 3 個案例入口、選招 lookup 失配案例的位元組隔離及 `git diff --check` 已核對，並保存正規化源碼雜湊。另補 SHA-256 已知向量、完整結構正例、64-bit 高位／short 非法編碼、HP 上限、catalog 循環及直接 phase 22／持珠案例；均未執行。這些靜態檢查不能代替編譯或真機驗證。
+
+下一步是支援足夠的原生選招／fallback、我方攻擊後敵方 HP 分支與傷害事件，再核對減傷有效期、心四回復和後續技能可用性；目前觀察不是存活授權。
+
 ## 2026-11-01：武裝無效時補 L，源碼待建置
 
 使用者要求繼續下一步。本批把 [武裝回復 L](assist-recovery.md) 接入普通單人連續模式，新增獨立 `assistRecoveryL` 開關。舊設定和一般策略預設關閉，雨龍兩份整包及手動開場後策略庫預先開啟。技能／必要救援照原順序先完成，再以本次新讀取的有效 L、潛覺及屬性枚舉足量 L；保留所有原目標和心珠條件，不刪光 T，不推定存活。多人及 3 人單人續玩不套用。

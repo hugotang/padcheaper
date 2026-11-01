@@ -43,7 +43,8 @@ NSString *ObservationColors(uint8_t colors) {
     return [selected componentsJoinedByString:@"／"];
 }
 
-NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current, double ageMS, double durationMS) {
+NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current, double ageMS, double durationMS,
+    NSDictionary *enemyActions) {
     const auto &observation = captured.observation;
     NSMutableDictionary *trace = [@{@"status":ObservationStatusName(observation.status), @"current":@(current),
         @"ageMS":@(ageMS), @"readDurationMS":@(durationMS), @"diagnosticOnly":@YES,
@@ -55,6 +56,7 @@ NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current
     // Do not display stale facts with a small-print freshness warning. The
     // previous observation is discarded from the public trace immediately.
     if (!current) return trace;
+    trace[@"enemyActions"] = enemyActions ?: @{@"status":@"not-requested", @"enemyForecastKnown":@NO};
     [trace addEntriesFromDictionary:@{@"dungeon":@(captured.identity.dungeon), @"floor":@(captured.identity.floor),
         @"wave":@(captured.wave), @"phase":@(captured.phase), @"hpKnown":@(observation.hpKnown),
         @"hp":ObservationValue(observation.hpKnown, @(observation.hp)),
@@ -113,7 +115,7 @@ NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current
     return trace;
 }
 
-NSString *BattleObservationDescription(const PHOrbBattleObservation &observation, bool current) {
+NSString *BattleObservationDescription(const PHOrbBattleObservation &observation, bool current, NSDictionary *enemyActions) {
     if (!current) {
         if (observation.status == PHOrbObservationNotRequested || observation.status == PHOrbObservationMultiplayer) return @"";
         return @"戰況診斷：等待新的穩定單人資料；尚不能判斷耐久。";
@@ -121,6 +123,12 @@ NSString *BattleObservationDescription(const PHOrbBattleObservation &observation
     NSMutableArray *lines = [NSMutableArray arrayWithObject:observation.enemiesKnown ?
         [NSString stringWithFormat:@"戰況診斷：%u 個存活敵人。下一擊／減傷／回血尚未解析。", observation.activeEnemies] :
         @"戰況診斷：敵人資料不完整。下一擊／減傷／回血尚未解析。"];
+    if ([enemyActions[@"status"] isEqual:@"ready"]) {
+        [lines addObject:[NSString stringWithFormat:@"敵人行動表：已讀 %lu 筆定義；下一回合可達招式尚未判定。",
+            (unsigned long)[enemyActions[@"definitions"] count]]];
+        if (![enemyActions[@"definitionCaptureComplete"] boolValue] || ![enemyActions[@"structureSupported"] boolValue])
+            [lines addObject:@"行動表仍有未支援或不完整資料，詳見複製紀錄。"];
+    } else if (enemyActions) [lines addObject:@"敵人行動表：等待新的穩定資料。"];
     if (observation.assistVoidKnown) [lines addObject:observation.assistVoidTurns > 0 ?
         [NSString stringWithFormat:@"暫時武裝無效：%d 回合", observation.assistVoidTurns] : @"目前沒有暫時武裝無效。"];
     else [lines addObject:@"暫時武裝無效：未能確認。"];

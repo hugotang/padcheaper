@@ -20,6 +20,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     NSString *readFailureReason;
     NSUInteger observationReads;
     BOOL failObservation;
+    NSDictionary *enemyActionFixture;
+    NSUInteger enemyActionReads;
     NSUInteger assistReads;
     BOOL failAssist, changeAssistOnStart, changeAssistOnMove;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
@@ -103,6 +105,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     ++observationReads;
     state->observation = live.observation;
     if (failObservation) { state->observation = {}; state->observation.status = PHOrbObservationUnavailable; }
+}
+- (NSDictionary *)observeEnemyActions:(const PHOrbSnapshot *)state {
+    ++enemyActionReads;
+    return enemyActionFixture ?: @{@"status":@"unavailable", @"enemyForecastKnown":@NO};
 }
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     ++assistReads;
@@ -359,12 +365,14 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
 #include "orb_observation_session_tests.inc"
+#include "orb_enemy_action_session_tests.inc"
 #include "orb_assist_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         AssistSessionTests();
         ObservationSessionTests();
+        EnemyActionSessionTests();
         SkillWindowSessionTests();
         DiagonalSessionTests();
         ShortcutSessionTests();

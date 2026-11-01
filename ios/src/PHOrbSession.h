@@ -31,6 +31,9 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 // Enrich a stable snapshot with read-only diagnostics. Failure is optional
 // data unavailability, never a new automation or gesture blocker.
 - (void)observeBattle:(PHOrbSnapshot *)state;
+// Bounded action definitions and current AI state, never next-turn authority.
+// Stored outside PHOrbSnapshot so normal planning/input copies remain small.
+- (NSDictionary *)observeEnemyActions:(const PHOrbSnapshot *)state;
 @end
 
 @interface PHOrbSession : NSObject
