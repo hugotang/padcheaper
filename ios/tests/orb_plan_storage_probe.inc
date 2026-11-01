@@ -132,7 +132,9 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     } else if (diagonalMoved) [files moveItemAtPath:diagonalBackup toPath:path error:NULL];
     NSDictionary *beforeAssist = PHProbeJSON(@"config.json");
     NSNumber *oldAssist = beforeAssist[@"orbs"][@"assistRecoveryL"] ?: @NO;
-    NSNumber *newAssist = @(!oldAssist.boolValue);
+    // Objective-C C promotes !BOOL to int; boxing that expression creates
+    // numeric 0/1, which the JSON-Boolean contract correctly rejects.
+    NSNumber *newAssist = oldAssist.boolValue ? @NO : @YES;
     NSString *assistBackup = [path stringByAppendingFormat:@".assist-probe-%@",NSUUID.UUID.UUIDString];
     BOOL assistMoved = [files moveItemAtPath:path toPath:assistBackup error:NULL];
     BOOL assistBlocked = assistMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
@@ -142,8 +144,9 @@ static void PHProbePlanStorage(UIWindow *overlay) {
         NSDictionary *failedAssist = snapshot();
         PHProbeCheck([failedAssist[@"config"] isEqual:beforeAssist] &&
             [failedAssist[@"orbState"][@"assistRecoveryL"] isEqual:oldAssist] &&
+            ![failedAssist[@"storageReady"] boolValue] &&
             [failedAssist[@"orbState"][@"assistRecoveryMessage"] length] > 0,
-            @"Failed assist policy save preserves common settings and the selected profile");
+            @"Real failed assist disk write marks storage unavailable and preserves settings and the selected profile");
         BOOL repairedAssist = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:assistBackup toPath:path error:NULL];
         PHProbeCheck(repairedAssist,@"Assist fixture restores its original canonical file");
         if (!repairedAssist) return;
@@ -158,6 +161,14 @@ static void PHProbePlanStorage(UIWindow *overlay) {
         action(@"orbsQuality",@"fast");
         PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"assistRecoveryL"] isEqual:newAssist],
             @"Quality changes preserve the independent assist policy");
+        action(@"orbsAssistRecoveryL",oldAssist);
+        NSDictionary *assistRestoredDisk = PHProbeJSON(@"config.json"), *assistRestoredState = snapshot();
+        NSDictionary *assistRestoredProfile = profileNamed(configProfiles(assistRestoredDisk),library[@"selected"]);
+        PHProbeCheck([assistRestoredDisk[@"orbs"][@"assistRecoveryL"] isEqual:oldAssist] &&
+            [assistRestoredProfile[@"settings"][@"assistRecoveryL"] isEqual:oldAssist] &&
+            [assistRestoredState[@"orbState"][@"assistRecoveryL"] isEqual:oldAssist] &&
+            ![assistRestoredState[@"orbState"][@"assistRecoveryMessage"] length],
+            @"Assist policy can be saved in both Boolean directions after storage recovery");
     } else if (assistMoved) [files moveItemAtPath:assistBackup toPath:path error:NULL];
     BOOL restored = [original writeToFile:path options:NSDataWritingAtomic error:NULL];
     NSDictionary *reloaded = snapshot();

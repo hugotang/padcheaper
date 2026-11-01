@@ -156,7 +156,7 @@ for notes in directory.glob("*.md"):
                            ("orbs-23.6.0.json", "orb-target.json")):
         content = content.replace("](../targets/" + source + ")", "](" + target + ")")
     notes.write_text(content, encoding="utf-8")
-for template_notes in (directory / "templates").glob("*/README.md"):
+for template_notes in (directory / "templates").glob("*/*.md"):
     template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(
         "](../../docs/", "](../../"), encoding="utf-8")
 sha = hashlib.sha256(binary.read_bytes()).hexdigest()
