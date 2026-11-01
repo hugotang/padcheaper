@@ -303,6 +303,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSUInteger _dungeonCursor, _dungeonRefreshCursor, _dungeonDropped;
     NSArray *_dungeonFloors, *_dungeonMetadata;
     NSMutableDictionary *_dungeonPages, *_dungeonDefinitionSets;
+    NSDictionary *_dungeonLastStop;
     NSMutableArray *_dungeonSamples;
     NSDictionary *_dungeonSampleKey;
     NSString *_dungeonTableSHA, *_dungeonStatus;
@@ -553,6 +554,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _readQueued = false; _hasStable = false;
     _message = reason ?: @"已停止";
     if (skillRunning) _message = [_message stringByAppendingString:@"；已啟動的技能由遊戲完成"];
+    if (_dungeonBound && cancelledIntent &&
+        ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
+         (wasAutomatic && _autoBound && PHBattleSameIdentity(&_dungeonIdentity,&_autoOrigin.identity)))) {
+        _dungeonLastStop = @{@"reason":_message, @"sessionPhase":_phase, @"autoTurn":@(_autoTurn),
+            @"waveKnown":@(_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)),
+            @"wave":@(_live.wave), @"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime * 1000))};
+    }
     if (_recordingExecution) {
         [self recordExecution:@"cancelled" state:_hasLive ? &_live : nullptr evaluation:nil];
         NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
@@ -1613,7 +1621,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (_dungeonBound && frame.player &&
         (frame.player != _dungeonIdentity.player || frame.epoch != _dungeonIdentity.epoch)) {
         _dungeonBound = false; _dungeonFloors = nil; _dungeonPages = nil; _dungeonSamples = nil;
-        _dungeonDefinitionSets = nil; _dungeonSampleKey = nil; _dungeonMetadata = nil;
+        _dungeonDefinitionSets = nil; _dungeonSampleKey = nil; _dungeonMetadata = nil; _dungeonLastStop = nil;
         _dungeonTableSHA = nil; _dungeonStatus = @"not-requested"; _dungeonIdentity = {};
         _dungeonCursor = _dungeonRefreshCursor = _dungeonDropped = 0;
     }

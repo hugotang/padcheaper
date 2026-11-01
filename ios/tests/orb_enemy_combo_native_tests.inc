@@ -82,9 +82,16 @@ static void EnemyComboNativeTests() {
         "unchanged enemy evidence permits a scoped native start");
     NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, state.board.tokens[0]);
     Check([engine finishInput:nil], "enemy countermeasure start restores the real input manager");
+    state = CaptureEnemyCombo(engine);
+    Check(state.dragged == state.board.tokens[0] &&
+        [engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:nil],
+        "fresh owned-drag evidence permits a held frame before absorption changes");
+    NativeInputFrame(); Check([engine finishInput:nil], "unchanged held frame restores input");
     Protected(enemy + PHOrbEnemyComboThresholdOffset, 9, 0x6a875a8b);
     const unsigned completedWrites = writes;
-    Check(![engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:nil] && writes == completedWrites,
+    NSString *holdReason = nil;
+    Check(![engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:&holdReason] &&
+        writes == completedWrites && [holdReason containsString:@"Combo"],
         "changed absorption does not emit another hold");
     Check([engine stageCell:0 down:NO beginning:NO expected:&state frame:Frame() reason:nil],
         "an owned release is still possible when the enemy requirement changes");

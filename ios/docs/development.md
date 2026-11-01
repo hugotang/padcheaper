@@ -16,6 +16,8 @@
 
 沿用「在你認爲合適的時候編譯測試」授權。當前 Windows 模型／solver 回歸已通過，包括減 Combo、上限吸收、首消／連鎖差異與全部共享轉轉相位；generator 已重生，417 組指紋（366 orb＋34 battle＋17 runtime）全部符合原始 IPA。macOS 原生／session／規劃、arm64 編譯、瀏覽器與四份 GUI 尚待整合驗證。尚未交付 0.5.17，不改寫任何既有交付目錄。
 
+首輪 [CI 92](https://github.com/hugotang/padcheaper/actions/runs/41300529153) 通過模型／solver，但新 Combo 原生放手測例使用了持珠前快照，因此正常盤面一致性保護拒絕放手；已改為讀取持珠後快照，先確認相同狀態可 hold，再修改門檻驗證只允許 release。另將 Auto 停止原因獨立保留，防止設定訊息或離場遮蓋，補上重載設定／離場／新場清除案例。待下一輪完整驗證，CI 92 沒有產生 dylib。
+
 ## 2026-11-01：0.5.16-orbs 規劃停止診斷，編譯驗證完成
 
 2026-11-01，`0.5.16-orbs` 已由 [CI 91](https://github.com/hugotang/padcheaper/actions/runs/41291829392) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次截圖已檢視，377 組指紋與原始 IPA 一致。這是自動驗證；新版仍待真機驗收。

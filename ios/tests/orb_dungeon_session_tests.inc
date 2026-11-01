@@ -84,4 +84,19 @@ static void DungeonSessionTests() {
         Check(!engine->dungeonReads && ![session.dungeonReport[@"available"] boolValue] && !engine->stages && !engine->skillAttempts,
             "dungeon recorder does not read or operate any multiplayer mode");
     }
+    engine = [FakeOrbEngine new]; SetAssistBoard(engine,0); SeedObservation(engine);
+    engine->dungeonFixtures = DungeonPages(@"stop-reason");
+    engine->live.enemyCombo.turns[0] = 3; engine->live.enemyCombo.thresholds[0] = 14;
+    session = [[PHOrbSession alloc] initWithEngine:engine];
+    [session queueDungeonCapture]; DungeonTicks(session,engine,3); [session queueAutomatic];
+    Check(UntilPhase(session,engine,@"stopped") && [session.dungeonReport[@"lastStopReason"] containsString:@"Combo"],
+        "an automatic rejection is recorded independently of later UI messages");
+    NSDictionary *stop = session.dungeonReport[@"lastStop"];
+    Check([session configureQuality:@"balanced"] && [session.dungeonReport[@"lastStop"] isEqual:stop],
+        "reloading idle settings cannot replace the retained automatic stop reason");
+    engine->live.present = engine->live.valid = false; DungeonTicks(session,engine,1);
+    Check([session.dungeonReport[@"lastStop"] isEqual:stop], "leaving after a failure keeps its original stop reason");
+    engine->live.present = engine->live.valid = true; ++engine->live.identity.entryHash[0];
+    DungeonTicks(session,engine,1);
+    Check(![session.dungeonReport[@"lastStop"] count], "a new entry cannot inherit the previous entry's stop reason");
 }

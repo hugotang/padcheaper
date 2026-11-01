@@ -8,6 +8,7 @@
     _dungeonIdentity = state->identity; _dungeonBound = true;
     _dungeonFloors = @[]; _dungeonPages = [NSMutableDictionary dictionary];
     _dungeonSamples = [NSMutableArray array]; _dungeonSampleKey = nil;
+    _dungeonLastStop = nil;
     _dungeonDefinitionSets = [NSMutableDictionary dictionary];
     _dungeonTableSHA = @""; _dungeonMetadata = @[];
     _dungeonCursor = _dungeonRefreshCursor = _dungeonDropped = 0; _dungeonCaptureAt = 0;
@@ -109,12 +110,13 @@
     report[@"observedDefinitions"] = [_dungeonDefinitionSets copy] ?: @{};
     report[@"randomAlternativesKnown"] = @NO; report[@"preemptiveSelectionKnown"] = @NO;
     report[@"historicalOnly"] = @YES;
+    report[@"lastStop"] = _dungeonLastStop ?: @{};
+    report[@"lastStopReason"] = _dungeonLastStop[@"reason"] ?: @"";
     report[@"captureLimits"] = @{@"floors":@100, @"definitionsPerFloor":@192, @"observations":@128,
         @"observedDefinitionSets":@256, @"actionReadBytesPerPass":@131072, @"actionReadCallsPerPass":@256,
         @"futureAIStateKnown":@NO};
     if (_dungeonBound && PHBattleSameIdentity(&_dungeonIdentity,&_traceOrigin.identity)) {
         report[@"lastSearch"] = _searchTrace ?: @{};
-        report[@"lastStopReason"] = _message ?: @"";
     }
     return [report copy];
 }
