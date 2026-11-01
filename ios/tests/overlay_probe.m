@@ -10,6 +10,7 @@
 #import <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <math.h>
+#include <stdlib.h>
 
 static NSString *PHProbeRoot;
 static NSMutableArray<NSString *> *PHProbeFailures;
@@ -36,6 +37,30 @@ static BOOL PHProbeLegacy(void) {
 
 static void PHProbeCheck(BOOL condition, NSString *message) {
     if (!condition) [PHProbeFailures addObject:message];
+}
+
+static BOOL PHProbeHasAwakeningArtwork(UIImage *image) {
+    CGImageRef source = image.CGImage;
+    if (!source) return NO;
+    size_t width = CGImageGetWidth(source), height = CGImageGetHeight(source);
+    if (!width || !height || width > 4096 || height > 4096) return NO;
+    unsigned char *pixels = calloc(width * height, 4);
+    if (!pixels) return NO;
+    CGColorSpaceRef colors = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(pixels, width, height, 8, width * 4, colors,
+        kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    size_t artwork = 0;
+    if (context) {
+        CGContextDrawImage(context, CGRectMake(0, 0, width, height), source);
+        // Bright yellow/green sprite pixels are absent from the dark UI,
+        // pale text and mint buttons in this dedicated awakening viewport.
+        for (size_t i = 0; i < width * height; i++)
+            if (pixels[i * 4] > 100 && pixels[i * 4 + 1] > 130 && pixels[i * 4 + 2] < 90) artwork++;
+        CGContextRelease(context);
+    }
+    CGColorSpaceRelease(colors);
+    free(pixels);
+    return artwork > 100;
 }
 
 #include "orb_plan_storage_probe.inc"
@@ -1766,12 +1791,29 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     NSDictionary *team = PHProbeJSON(@"formation.json");
     PHProbeCheck([team[@"slots"] count] == 6 && [team[@"slots"][0][@"body"][@"id"] isEqual:@14238] &&
         [team[@"slots"][5][@"assist"][@"skill"] isEqual:@1], @"formation save reaches the native validator and persists all six drafts");
-    [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *error) {
-        PHProbeCheck(snapshot != nil && !error, @"formation portrait snapshot must render");
-        NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
-        NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
-        [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
-        [self exerciseFailedFormationSave];
+    NSString *script = @"const icons=[...document.querySelectorAll('#calc-awakenings .awakening-icon')];"
+        "const urls=[...new Set(icons.map(e=>getComputedStyle(e).backgroundImage))];"
+        "const images=await Promise.all(urls.map(async css=>{const image=new Image();"
+        "image.src=css.slice(4,-1).replaceAll(String.fromCharCode(34),'');await image.decode();"
+        "return {width:image.naturalWidth,height:image.naturalHeight};}));"
+        "document.getElementById('calc-awakening-title').scrollIntoView({block:'start'});"
+        "await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));"
+        "return {icons:icons.length,images,sized:icons.every(e=>e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20)};";
+    [self.formationWeb callAsyncJavaScript:script arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *failure) {
+        PHProbeCheck(!failure && [result[@"icons"] integerValue] > 0 && [result[@"sized"] boolValue] &&
+            [result[@"images"] count] == 1 && [result[@"images"][0][@"width"] isEqual:@96] &&
+            [result[@"images"][0][@"height"] isEqual:@4928],
+            @"Embedded awakening sprite must decode at its original dimensions before visual capture");
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *error) {
+                PHProbeCheck(snapshot != nil && !error, @"formation portrait snapshot must render");
+                PHProbeCheck(PHProbeHasAwakeningArtwork(snapshot), @"Awakening overview must paint colored sprite artwork, not only counts or CSS URLs");
+                NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+                NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
+                [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
+                [self exerciseFailedFormationSave];
+            }];
+        });
     }];
 }
 
