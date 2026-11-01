@@ -1,6 +1,6 @@
 # 敵方行動預判與技能保留設計
 
-0.5.17 源碼進度：新增 [全層 JSON 匯出](dungeon-report.md) 及 [會實際參與求路的 Combo 吸收對策與有序威脅模型](enemy-countermeasures.md)。Combo 門檻與減 Combo 在技能後讀取，以首消合併原目標，變動時撤銷輸入；威脅事件仍是條件模型，不授權省 T／三光三心。本批整合待驗證，以下舊版段落保留歷史，最新結果見 [開發紀錄](development.md)。
+0.5.17 源碼進度：新增 [全層 JSON 匯出](dungeon-report.md) 及 [會實際參與求路的 Combo 吸收對策與有序威脅模型](enemy-countermeasures.md)。Combo 門檻與減 Combo 在技能後讀取，以首消合併原目標，變動時撤銷輸入；威脅事件仍是條件模型，不授權省 T／三光三心。本批整合已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過，以下舊版段落保留歷史，最新結果見 [開發紀錄](development.md)。
 
 0.5.15 驗證更新：本頁已實作部分的模型／原生／session 案例與 iOS 編譯已由 [CI 90](https://github.com/hugotang/padcheaper/actions/runs/41283642862) 通過。整包另通過編隊瀏覽器及四份 GUI；GUI 覆蓋設定和模擬 L／充能文字，未逐層驗證敵人分析子層，真機仍待驗收。以下「尚未建置／執行」文字保留提交當時紀錄。完整下一擊／減傷／回血及耐久決策仍未完成，結果與限制見 [開發紀錄](development.md)。
 

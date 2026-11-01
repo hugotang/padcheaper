@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-0.5.17-orbs 新增 [全層關卡 JSON 匯出](docs/dungeon-report.md)，首層即可收集本次入場載入的後續各層敵人與行動，離場後仍可匯出。同時加入單人連續模式的 Combo 吸收對策，保守預留減 Combo 並以首消驗證。本批 Windows 模型及原始 IPA 指紋已核對，iOS 整合驗證尚待完成，尚未交付新版。完整下一擊、光 L＋心四／三光三心耐久放行仍未接通。見 [更新說明](docs/release-0.5.17.md)、[敵人對策](docs/enemy-countermeasures.md) 及 [開發紀錄](docs/development.md)。
+2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。新增 [全層關卡 JSON 匯出](docs/dungeon-report.md) 及保守首消 Combo 對策。見 [更新說明](docs/release-0.5.17.md) 與 [開發紀錄](docs/development.md)。省 T 的光 L＋心四、三光三心耐久放行仍未接通。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 

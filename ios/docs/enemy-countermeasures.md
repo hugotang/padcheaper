@@ -1,6 +1,6 @@
 # 敵人對策：Combo 吸收與有序威脅
 
-0.5.17 源碼已加入下列功能；本批原生／session／iOS 整合驗證尚待執行。最新結果以 [開發紀錄](development.md) 為準，真機仍待驗收。
+0.5.17 的下列功能已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過模型／原生／session、iOS 編譯、簽章與介面回歸。完整結果見 [開發紀錄](development.md)，真機仍待驗收。
 
 ## 實際參與自動決策的部分
 

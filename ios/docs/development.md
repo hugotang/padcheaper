@@ -4,7 +4,9 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-01：0.5.17-orbs 全層匯出與 Combo 對策，整合待驗證
+## 2026-11-01：0.5.17-orbs 全層匯出與 Combo 對策，編譯驗證完成
+
+2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。
 
 本批新增 [全層 JSON 匯出](dungeon-report.md)：首層即可讀取本次入場載入的全層 spawn、獨立 catalog／版本鏈、64 列行動及 referenced records；保留穩定玩家窗口的實戰狀態，離場後仍可匯出。來源以目前敵人的 spawn 指標／wave 綁定，雙讀及末次入場／盤面覆核；缺漏／超限明確標記。UI 有收集與匯出按鈕、層數進度、實際 JSON 檔與系統分享／取消清理。上限 100 層、128 筆狀態、256 組觀察定義；新一場及帳號切換清除，不含帳號認證、不自動傳送。未載入的隨機分歧與未來 AI 不當成已知。
 
@@ -14,11 +16,13 @@
 
 **省 T 的光 L＋心四及三光三心仍未接上自動放行。** 完整攻擊後分支、路徑回血／有效盾、換層先制及下一次救援仍有缺口。使用者已回報以手動完成該關，無需要求重打一遍。優先累積可實際執行的敵人對策；本批詳細範圍見 [敵人對策](enemy-countermeasures.md)。
 
-沿用「在你認爲合適的時候編譯測試」授權。當前 Windows 模型／solver 回歸已通過，包括減 Combo、上限吸收、首消／連鎖差異與全部共享轉轉相位；generator 已重生，417 組指紋（366 orb＋34 battle＋17 runtime）全部符合原始 IPA。macOS 原生／session／規劃、arm64 編譯、瀏覽器與四份 GUI 尚待整合驗證。尚未交付 0.5.17，不改寫任何既有交付目錄。
+沿用「在你認爲合適的時候編譯測試」授權。當前 Windows 模型／solver 回歸已通過，包括減 Combo、上限吸收、首消／連鎖差異與全部共享轉轉相位；generator 已重生，417 組指紋（366 orb＋34 battle＋17 runtime）全部符合原始 IPA。macOS 原生／session／規劃、arm64 編譯、瀏覽器與四份 GUI 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過。
 
-首輪 [CI 92](https://github.com/hugotang/padcheaper/actions/runs/41300529153) 通過模型／solver，但新 Combo 原生放手測例使用了持珠前快照，因此正常盤面一致性保護拒絕放手；已改為讀取持珠後快照，先確認相同狀態可 hold，再修改門檻驗證只允許 release。另將 Auto 停止原因獨立保留，防止設定訊息或離場遮蓋，補上重載設定／離場／新場清除案例。待下一輪完整驗證，CI 92 沒有產生 dylib。
+首輪 [CI 92](https://github.com/hugotang/padcheaper/actions/runs/41300529153) 通過模型／solver，但新 Combo 原生放手測例使用了持珠前快照，因此正常盤面一致性保護拒絕放手；已改為讀取持珠後快照，先確認相同狀態可 hold，再修改門檻驗證只允許 release。另將 Auto 停止原因獨立保留，防止設定訊息或離場遮蓋，補上重載設定／離場／新場清除案例。修正及後續回歸已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過；CI 92 沒有產生 dylib。
 
-[CI 93](https://github.com/hugotang/padcheaper/actions/runs/41300881294) 已通過全部原生讀取／輸入案例；新 session 的解吸收測例省略技能規則必填欄位，被設定檢查拒絕。已改用完整預設規則再設定 Combo 条件，待重跑後續完整套件；CI 93 沒有產生 dylib。
+[CI 93](https://github.com/hugotang/padcheaper/actions/runs/41300881294) 已通過全部原生讀取／輸入案例；新 session 的解吸收測例省略技能規則必填欄位，被設定檢查拒絕。已改用完整預設規則再設定 Combo 條件，後續完整套件已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過；CI 93 沒有產生 dylib。
+
+來源 `9d3b21286f87835761920dfb7854dd12e0957753`；dylib 5,270,720 bytes，最低 iOS 15.0；SHA-256 `eb858455b0049bf41f279ec4b05919cb936e1f61f5b7f8a93e9c74f8a2393758`。交付 `E:/ipa/PADCheaper-0.5.17-orbs` 及同名 ZIP；原有交付保留。二進位、metadata、manifest 與範本／研究 JSON 保持同一 CI 原件，文件驗證結果另行更新。本版 Windows 模型／solver 已重跑，舊效能 benchmark 保留歷史身份；`device_verified=false`。
 
 ## 2026-11-01：0.5.16-orbs 規劃停止診斷，編譯驗證完成
 

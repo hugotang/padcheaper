@@ -1,6 +1,6 @@
 # 0.5.17-orbs：全層關卡匯出與敵人 Combo 對策
 
-源碼與案例已完成，本批原生／session／iOS 整合驗證尚待執行。最新結果見 [開發紀錄](development.md)；尚未交付新版，真機仍待驗收。
+2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。完整結果見 [開發紀錄](development.md)。
 
 新增「收集全層資料」及「匯出關卡 JSON…」。進入一般單人關卡，停在可轉珠盤面後收集；首層即可讀取這次入場已載入的所有層數、敵人與行動定義，不需逐層通關。畫面會顯示已收集／總層數。匯出會開啟系統分享介面，可存到「檔案」後提供 JSON 分析。Auto 也會累積資料，失敗時可直接匯出，無需打字逐隻描述。
 
@@ -13,3 +13,5 @@
 另加入連擊、重力、增傷及附帶異常的有序事件模型，作為敵方承傷判定的基礎。**尚未放行省 T 的光 L＋心四或三光三心**：路徑回血／盾、攻擊後分支、換層先制及下一次救援仍未完整接通。詳細範圍見 [敵人對策](enemy-countermeasures.md)。
 
 保留既有 config。完全關閉遊戲後替換新 dylib；LiveContainer 需重新簽署。真機先確認面板為 0.5.17-orbs；下次正常入場時即可匯出，不需要重打已手動過關的關卡。
+
+來源 `9d3b21286f87835761920dfb7854dd12e0957753`；dylib 5,270,720 bytes，最低 iOS 15.0；SHA-256 `eb858455b0049bf41f279ec4b05919cb936e1f61f5b7f8a93e9c74f8a2393758`。交付 `E:/ipa/PADCheaper-0.5.17-orbs` 及同名 ZIP；原有交付保留。二進位、metadata、manifest 與範本／研究 JSON 保持同一 CI 原件，文件驗證結果另行更新。本版 Windows 模型／solver 已重跑，舊效能 benchmark 保留歷史身份；`device_verified=false`。
