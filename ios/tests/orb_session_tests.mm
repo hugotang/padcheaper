@@ -368,6 +368,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_enemy_action_session_tests.inc"
 #include "orb_enemy_selector_session_tests.inc"
 #include "orb_enemy_dispatch_session_tests.inc"
+#include "orb_enemy_damage_session_tests.inc"
 #include "orb_assist_session_tests.inc"
 
 int main() {
@@ -377,6 +378,7 @@ int main() {
         EnemyActionSessionTests();
         EnemySelectorSessionTests();
         EnemyDispatchSessionTests();
+        EnemyDamageSessionTests();
         SkillWindowSessionTests();
         DiagonalSessionTests();
         ShortcutSessionTests();

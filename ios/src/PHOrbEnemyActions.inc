@@ -221,9 +221,11 @@ NSMutableDictionary *EnemyActionStatus(NSString *status) {
 
 #include "PHOrbEnemyDispatch.inc"
 #include "PHOrbEnemySelector.inc"
+#include "PHOrbEnemyDamage.inc"
 
 NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorCodeKnown,
-    const EnemyDispatchCapture *dispatch, NSString *dispatchStatus) {
+    const EnemyDispatchCapture *dispatch, NSString *dispatchStatus,
+    const EnemyDamageCapture *damage, NSString *damageStatus) {
     NSMutableDictionary *out = EnemyActionStatus(@"ready");
     NSMutableArray *enemies = [NSMutableArray array], *definitions = [NSMutableArray array];
     ES::Budget selectorBudget{};
@@ -290,6 +292,8 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorC
             @{@"status":dispatchStatus, @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
         entry[@"selectorAnalysis"] = selectorCodeKnown ? EnemySelectorTrace(enemy, capture.graph, selectorBudget, dispatch, slot) :
             @{@"status":@"unavailable", @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
+        entry[@"damageAnalysis"] = damage ? EnemyDamageTrace(enemy, *damage, slot) :
+            @{@"status":damageStatus, @"postPlayerStateKnown":@NO, @"enemyForecastKnown":@NO};
         [enemies addObject:entry];
     }
     for (unsigned index = 0; index < capture.graph.count; ++index) {
@@ -347,6 +351,7 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorC
             EnemyActionHex(dispatch->redirectDefinition.bytes.data(), EA::RecordBytes) : NSNull.null,
         @"redirectDefinitionKnown":@(dispatch->redirectDefinitionKnown)}];
     out[@"dispatchAnalysis"] = dispatchTrace;
+    out[@"damageAnalysis"] = EnemyDamageSummary(damage, damageStatus);
     out[@"enemies"] = enemies; out[@"definitions"] = definitions;
     return out;
 }
@@ -373,14 +378,19 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
     EnemyActionCapture capture{}, confirmation{};
     EnemyDispatchCapture dispatch{}, dispatchConfirmation{};
     const bool dispatchCodeKnown = CheckEnemyDispatchCode(header);
+    EnemyDamageCapture damage{}, damageConfirmation{};
+    const bool damageCodeKnown = CheckEnemyDamageCode(header);
     EnemyActionTables finalTables{};
     if (!CollectEnemyActions(first, key1, key2, capture)) return EnemyActionStatus(@"unavailable");
     const bool dispatchRead = dispatchCodeKnown && CollectEnemyDispatch(first, capture, key1, key2, dispatch);
+    const bool damageRead = damageCodeKnown && CollectEnemyDamage(first, capture, key1, key2, damage);
     if (!EnemyActionsMatchObservation(state.observation, capture)) return EnemyActionStatus(@"changed");
     if (!ReadAutomationFields(second) || second.automation.busy || !CollectEnemyActions(second, key1, key2, confirmation))
         return EnemyActionStatus(@"changed");
     const bool dispatchSecondRead = dispatchRead && CollectEnemyDispatch(second, confirmation, key1, key2, dispatchConfirmation);
     const bool dispatchMatches = dispatchSecondRead && !std::memcmp(&dispatch, &dispatchConfirmation, sizeof(dispatch));
+    const bool damageSecondRead = damageRead && CollectEnemyDamage(second, confirmation, key1, key2, damageConfirmation);
+    const bool damageMatches = damageSecondRead && !std::memcmp(&damage, &damageConfirmation, sizeof(damage));
     if (std::memcmp(&capture, &confirmation, sizeof(capture)) || !PHOrbSameAutomation(&first, &second) ||
         !ReadEnemyActionTables(header, finalTables) || finalTables.catalog != capture.tables.catalog ||
         finalTables.actions != capture.tables.actions || finalTables.catalogCount != capture.tables.catalogCount ||
@@ -404,5 +414,7 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
         !PHOrbSameTurn(&state, &final) || state.moves != final.moves || final.phase != state.phase ||
         !PHOrbSameLeaders(&state, &final) || !PHOrbSamePlanBoard(&state.board, &final.board)) return EnemyActionStatus(@"changed");
     return EnemyActionTrace(capture, CheckEnemySelectorCode(header), dispatchMatches ? &dispatch : nullptr,
-        dispatchMatches ? @"ready" : dispatchRead && dispatchSecondRead ? @"changed" : @"unavailable");
+        dispatchMatches ? @"ready" : dispatchRead && dispatchSecondRead ? @"changed" : @"unavailable",
+        damageMatches ? &damage : nullptr,
+        damageMatches ? @"ready" : damageRead && damageSecondRead ? @"changed" : @"unavailable");
 }

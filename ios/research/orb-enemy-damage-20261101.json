@@ -1,0 +1,712 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "baseline_commit": "959f4e9",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "IDA pseudocode/disassembly and original/current/disk-byte comparison; source/JSON/AST/lexical review only. No generator, compiler, test cases, benchmark, GUI, game functions, CI or packaging execution.",
+  "scope": {
+    "mode": "optional-read-only-stable-single-player",
+    "scope": "local-post-resolver-field-checkpoints",
+    "snapshots": "raw-current-and-conditional-refresh",
+    "probes": "three-non-exhaustive-assumed-effective-damage-values",
+    "phase": "conditional-hp-count-and-target-animation-fields",
+    "read_bytes_per_pass": 4096,
+    "read_calls_per_pass": 64,
+    "resolver_side_effects": false,
+    "post_player_state": false,
+    "enemy_forecast": false,
+    "survival_authorization": false,
+    "guards": "separate-optional-only",
+    "device_verified": false
+  },
+  "native_evidence": [
+    {
+      "function": "0x100563adc",
+      "finding": "Special-mode predicate before resolver; effective-damage helper 0x100562f74 mutates enemy state and an independent absorption flag can skip HP settlement. Numeric raw damage is insufficient. Separate protected signed-byte+2704>0 path unless descriptor bit4 bypasses: ordinary HP checkpoint stays unknown there."
+    },
+    {
+      "function": "0x100563adc",
+      "checkpoints": [
+        "0x100563cfc",
+        "0x100563d68",
+        "0x100563e34",
+        "0x100563ec8",
+        "0x100563ef4",
+        "0x100563f64",
+        "0x100563fc4"
+      ],
+      "finding": "Native 64-bit SUB plus signed clamp to zero and maximum; HP phase before survival. Positive effective damage with impl+780784 callback stops exported suffix. Enabled super floor applies before existing normal bit and before lethal special then normal-resolve comparison. Model stops before shadow copies and later bookkeeping."
+    },
+    {
+      "function": "0x100563adc",
+      "finding": "Existing bit8 forces super floor unconditionally when enabled; existing bit1 forces HP1. Special ID>=0 and enabled dungeon actions on original lethal path set bit1, flags532|2, countdown0, HP1. Normal resolve alone does not reset countdown or set flag2. Exact immediate byte==1 invokes global cleanup and can rewrite both snapshots before subsequent normal threshold test."
+    },
+    {
+      "function": "0x10056463c",
+      "finding": "Normal enable/percentage u16+2892; double(percent)/100 * signedMaximumHP then 0x10004818c. Signed snapshot+120 >= threshold sets survival bit1. Helper itself does not test lethal HP."
+    },
+    {
+      "function": "0x1005645b0",
+      "finding": "Super enabled by u16+2894; signed snapshot+120 strictly > 0x10051e2c8 trigger and currentHP strictly < 0x100395038 floor; then bit8 set."
+    },
+    {
+      "function": "0x10051e2c8/0x100395038",
+      "finding": "Super trigger/floor both enabled by u16+2894. Nonzero u64+2904 overrides both via unsigned integer-to-double. Otherwise u16+2894 trigger or +2896 floor multiplies signed maximum before division by100. Round via 0x10004818c; preserve native FP order. Model rejects signed conversion range >=2^63 rather than invent saturation."
+    },
+    {
+      "function": "0x10004818c",
+      "finding": "Add +/-0.5 according to sign then FCVTZS X0. Modeled supported nonnegative threshold domain; large conversion or nonfinite remains unknown."
+    },
+    {
+      "function": "0x1005639c8/0x10004810c",
+      "finding": "Signed protected phase+2464 masked with0xffffffdf admits only0 or0x20. Nonparts living HP and signed16+2912>=1. Double hp/max*100 narrowed to float, then float trunc/add-one helper. <=threshold sets phase|1 and exactly immediate==1 sets|4. HP0 does not trigger before survival restoration; cleanup can check again."
+    },
+    {
+      "function": "0x10060583c",
+      "caller_checkpoint": "0x10060a94c",
+      "finding": "Per-slot routine copies protected currentHP independently to plain signed64+120 and+128, clears dword+60 and flag532 bit0x80 plus other attack bookkeeping. Called after cleanup/wait early returns in 0x10060a758. Captured snapshot provenance is not assumed to be next-attack HP; conditional local refresh exported separately."
+    },
+    {
+      "function": "0x10060a55c",
+      "finding": "Ascending all-slot cleanup only byte+1==1; paired bit1 and flag532 bit2 skip entire enemy including super bit. Otherwise clear bit1 then bit8; add flags0x20/0x80 when immediate lowbit clear, run HP-phase each time. External animation callbacks and other-enemy effects not projected."
+    },
+    {
+      "function": "0x10060d1f0",
+      "checkpoints": [
+        "0x10060dae8",
+        "0x10060dd58",
+        "0x10060df58",
+        "0x10060df88",
+        "0x10060dfd4",
+        "0x10060e5ac"
+      ],
+      "finding": "Alternate phase uses sum of raw unsigned byte+1 across ALL enemy slots including parts, not HP percent. Living nonparts and signed16+2968>=1 with phase bits0x20/2 clear, sum<=threshold sets|0x11, exact immediate1 adds4. Then bit1&&!bit2 requests first target, sets2, phase19 and target impl+777336. Model assumes scan reaches this enemy and no earlier return/target; it does not select actual target."
+    },
+    {
+      "function": "0x1005b3498/0x1005b36b4",
+      "finding": "Assumed phase19 target after animation wait: no bit4 => countdown0; bit4 with bit0x10 => signed16+2970, else unsigned16+2914. Selected1680=0, phase|8, interpolation and other animation fields, global phase20. Phase20 waits before returning2. Model projects only represented countdown/selected/phase fields; target timing and other effects unknown."
+    },
+    {
+      "function": "0x100562f74",
+      "checkpoints": [
+        "0x100563574",
+        "0x100563594"
+      ],
+      "finding": "Protected unsigned16+2320 nonzero and color mask+2288 can add scaled resolved damage (scale+2304) to protected override+2336. Thus dispatch override state can change even before ordinary HP settlement. Absorption can mutate HP through0x10047e60c. Full resolver not modeled or invoked."
+    },
+    {
+      "function": "0x100570dd8/0x100571040/0x1005a03b0",
+      "finding": "Protected byte/short salt0x6a875a8b with canonical width checks in adapter; dungeon pointer+24 u16 bit0x80 enables actions. New reads independently collect current fields without native getters."
+    }
+  ],
+  "capture": {
+    "read_limit_per_pass": {
+      "bytes": 4096,
+      "calls": 64,
+      "excludes": "code guards and existing shared identity/board reads"
+    },
+    "maximum_enemies": 8,
+    "maximum_data_reads": 46,
+    "maximum_data_bytes": 1983,
+    "impl_offsets": {
+      "immediate_byte": 601627,
+      "special_marker_u32": 734824,
+      "callback_pointer_private": 780784
+    },
+    "enemy_blocks": {
+      "life_76_bytes": 60,
+      "phase_protected_16_bytes": 2464,
+      "separate_hp_protected_16_bytes": 2704,
+      "thresholds_88_bytes": 2892,
+      "override_protected_48_bytes": 2288
+    },
+    "consistency": "Independent double capture + full byte comparison, existing final board/key/phase/wave/move/input/entry checks retained. Extra failure removes only damage diagnostics. Raw pointers, protected words and keys never exported.",
+    "observed_snapshots": "Raw signed64 at enemy+120 and+128, not assumed next attack origin.",
+    "parts": "excluded from settlement; raw active byte retained in aggregate"
+  },
+  "model_contract": {
+    "input": "Explicit already resolved damage with HP-settlement permitted and post-resolver state; raw team damage cannot supply this contract.",
+    "runtime_probes": [
+      "zero-effective-damage",
+      "leave-one-before-survival",
+      "lethal-before-survival"
+    ],
+    "probe_assumptions": [
+      "captured represented fields unchanged by resolver",
+      "absorption skip absent",
+      "external animation/helper callbacks do not alter represented fields",
+      "no inference about call timing or hit order"
+    ],
+    "non_exhaustive": true,
+    "callback": "positive damage and captured HP callback => known prefix, unknown suffix",
+    "checkpoints": [
+      "after HP clamp/HP phase before survival",
+      "after survival before shadow copies",
+      "assumed batch snapshot local fields",
+      "assumed global cleanup local enemy fields",
+      "assumed phase scan local fields",
+      "assumed chosen-target animation local fields"
+    ],
+    "never_promoted": [
+      "actual player damage",
+      "post-player state",
+      "next action reachability",
+      "enemy damage bound",
+      "player survival",
+      "skill deadlines"
+    ]
+  },
+  "isolated_guard_group": {
+    "array": "PHOrbEnemyDamageTextGuards",
+    "guards": [
+      {
+        "name": "PHOrbEnemyDamageSnapshotFirstRVA",
+        "va": "0x1006058a4",
+        "rva": "0x6058a4",
+        "length": 64,
+        "bytes": "545307d1551307d1e00315aa91acfd97f60300aae00314aa8eacfd97e803002a088116aa497306d1280100f9e00315aa88acfd97f50300aae00314aa85acfd97",
+        "sha256": "4cb6c91f8e3fd94a2149ef859a608b63e9b3a0a458f480b01549dee7eae89bac"
+      },
+      {
+        "name": "PHOrbEnemyDamageSnapshotSecondRVA",
+        "va": "0x1006058d0",
+        "rva": "0x6058d0",
+        "length": 64,
+        "bytes": "e00315aa88acfd97f50300aae00314aa85acfd97e803002a088115aa495306d1280100f9480340790879181248030079486307d11f0100b9683a40f90001198b",
+        "sha256": "39ade6c596496a663d6a059fe8a6e26761492d41a07a379900311cfe054cc12c"
+      },
+      {
+        "name": "PHOrbEnemyDamageSnapshotCallerRVA",
+        "va": "0x10060a944",
+        "rva": "0x60a944",
+        "length": 64,
+        "bytes": "e00313aa01008052bcebff97683a40f908cd429100a11991bb61e997ff2700b9200e0037150e0037e002188b5899fd971f0400716b0d0054683a40f929348552",
+        "sha256": "29f52e9f86a61315c390c301bd4487e9a5e23ea9a72c5609b442408839495ac5"
+      },
+      {
+        "name": "PHOrbEnemyDamageSpecialGateRVA",
+        "va": "0x100563b18",
+        "rva": "0x563b18",
+        "length": 64,
+        "bytes": "f60301aaf40300aae45f00b9ffb70079ff670139083840f908cd429100a1199144fdeb97a002003468af00d008c11e9169f6915208696938c80128375f430071",
+        "sha256": "b1e671f8c0ac5fb27273e94af49ebe5558a4fc9947805b9017d61594c867ebf0"
+      },
+      {
+        "name": "PHOrbEnemyDamageResolverCallRVA",
+        "va": "0x100563ba0",
+        "rva": "0x563ba0",
+        "length": 64,
+        "bytes": "e86b0191e96f0191e92300a9e5730191e00314aa01008052e20316aae30317aae40315aae60313aae7031aaaeafcff97f50300aafb6b41397f030071e813999a",
+        "sha256": "28949a62fd7a32b159e7edabb44289bb40f689ebc0adcf7caf6f2a0638513ccf"
+      },
+      {
+        "name": "PHOrbEnemyDamageSeparateGateRVA",
+        "va": "0x100563c84",
+        "rva": "0x563c84",
+        "length": 64,
+        "bytes": "60422a91543400941f000071f9d79f1ad70000b4081c0013e90240393f011e720409407af9d79f1ae86f4139e84700b9e81800373902003460c21f912301eb97",
+        "sha256": "1cd6de808003dab19618bccc94f05cf536597792811dd153a3701f15578232e0"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPSubtractRVA",
+        "va": "0x100563cfc",
+        "rva": "0x563cfc",
+        "length": 64,
+        "bytes": "604201917d330094fc0300aa600201917a330094e803002a080115cb1c811cab440200546082099174330094f80300aa6042099171330094e803002a088118aa",
+        "sha256": "3f81f82d77db7930a089257d07791067ecdaa89a10d8b4c11a3b23bc60b27b7b"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPClampRVA",
+        "va": "0x100563d38",
+        "rva": "0x563d38",
+        "length": 64,
+        "bytes": "088118aa9f0308eb4d010054608209916b330094f80300aa6042099168330094e803002a1c8118aa020000141c0080d260020191e1031caa8ad6ea97e00314aa",
+        "sha256": "d1fdd82982e10da4e71c1585e1bad5246ffe30751d9208eca0fc04ff6e89c403"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPPhaseCallRVA",
+        "va": "0x100563d68",
+        "rva": "0x563d68",
+        "length": 64,
+        "bytes": "60020191e1031caa8ad6ea97e00314aae10313aa13ffff97bf0600f18b050054883a40f9093e9d526901a072086969f8e80400b46042019155330094f80300aa",
+        "sha256": "1a737de035810d533f05e413d240b0de086611098bf62979d5faafbc9fdf15f4"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPCallbackRVA",
+        "va": "0x100563e0c",
+        "rva": "0x563e0c",
+        "length": 64,
+        "bytes": "08f542910001329138330094e20300aa080340f9088140f9e00318aae1031caa0041201e00013fd6689e567988040034e00313aa7ec4f897fc0300aa68f24039",
+        "sha256": "7490260725418bdf02ee4b07a972a2bddefac15cc3385ba6e8e396a48bf66c76"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperFloorGateRVA",
+        "va": "0x100563e34",
+        "rva": "0x563e34",
+        "length": 64,
+        "bytes": "689e567988040034e00313aa7ec4f897fc0300aa68f24039880318376042019128330094f80300aa6002019125330094e803002a088118aa1f011cebca020054",
+        "sha256": "522dc849e5fbe98d3703966fa19d8f182976a8a6970a0d4650e20127e7453b99"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperTriggerCallRVA",
+        "va": "0x100563e64",
+        "rva": "0x563e64",
+        "length": 64,
+        "bytes": "e803002a088118aa1f011cebca020054e00313aace0100946002003460020191e1031caa44d6ea97883a40f969c385522901a072086969381f05007141010054",
+        "sha256": "f41e0be2589367bf3a1246f2eb919da5b48f4bf2f09959da8f3f5a432e7b07c7"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperImmediateRVA",
+        "va": "0x100563e90",
+        "rva": "0x563e90",
+        "length": 64,
+        "bytes": "69c385522901a072086969381f05007141010054e00314aaad9902949f0700f1cb0000547cf207a90400001460020191e1031caa35d6ea9768f2403968070037",
+        "sha256": "dfa308efc5eee19ff408c2c84eb6b29e59fc3d0280508109758c7401f89cd1ab"
+      },
+      {
+        "name": "PHOrbEnemyDamageNormalExistingRVA",
+        "va": "0x100563ec8",
+        "rva": "0x563ec8",
+        "length": 64,
+        "bytes": "68f24039680700376042019108330094f80300aa6002019105330094e803002a088118aa1f0100f1ac060054681e41b96803f837e00314aa2cf1009400030034",
+        "sha256": "d1384b190c034b6e81b3e56bde2ab9bd461fc0c524021acc7ffe5802a12c350a"
+      },
+      {
+        "name": "PHOrbEnemyDamageSpecialLethalRVA",
+        "va": "0x100563ef4",
+        "rva": "0x563ef4",
+        "length": 64,
+        "bytes": "681e41b96803f837e00314aa2cf100940003003468f240390801003268f20039682a447908011f32682a047960a20491010080520b3300946002019121008052",
+        "sha256": "85a0b23fe1cf2159a735cdf96dbab01ffe22482d2a156317d6ef75a3504a565c"
+      },
+      {
+        "name": "PHOrbEnemyDamageSpecialSnapshotRVA",
+        "va": "0x100563f30",
+        "rva": "0x563f30",
+        "length": 64,
+        "bytes": "2100805219d6ea97883a40f969c385522901a072086969381f050071c1000054e00314aa8299029428008052000d084e6082873ce00313aab5010094c0020034",
+        "sha256": "c6d693ef611155dde67a706176414ac877c185bd147763de9520d79ff23d7d22"
+      },
+      {
+        "name": "PHOrbEnemyDamageNormalCallRVA",
+        "va": "0x100563f64",
+        "rva": "0x563f64",
+        "length": 64,
+        "bytes": "e00313aab5010094c002003468f240390801003268f20039600201912100805205d6ea97883a40f969c385522901a072086969381f05007141010054e00314aa",
+        "sha256": "8fcd5153aab29c5591ecba9079dbc3ee1ed0bc92b86530376941545a33578637"
+      },
+      {
+        "name": "PHOrbEnemyDamageNormalSnapshotRVA",
+        "va": "0x100563f88",
+        "rva": "0x563f88",
+        "length": 64,
+        "bytes": "883a40f969c385522901a072086969381f05007141010054e00314aa6e99029428008052000d084e6082873c040000146002019121008052f6d5ea97600642ad",
+        "sha256": "c8044ed421d69ba6b2d5863afd7cd454d7106515f72635e3e5f624bdd0062911"
+      },
+      {
+        "name": "PHOrbEnemyDamageNormalThresholdRVA",
+        "va": "0x100564670",
+        "rva": "0x564670",
+        "length": 64,
+        "bytes": "0001629e619a567d21d8617e280be8d20201679e2118621e2008601ec08eeb97683e40f91f0100ebaa000054000080520700001400008052c0035fd668f24039",
+        "sha256": "8826e9059104afbbcd35bf5d2046caf4531b2d69421f0bb28246ef9a9cc68ef7"
+      },
+      {
+        "name": "PHOrbEnemyDamageNormalFlagRVA",
+        "va": "0x100564690",
+        "rva": "0x564690",
+        "length": 64,
+        "bytes": "683e40f91f0100ebaa000054000080520700001400008052c0035fd668f240390801003268f2003920008052fd7b41a9f44fc2a8c0035fd6010400b4282000d1",
+        "sha256": "780b69e4f5f7076a17cdc3fc076c80b12709022db4329ff6bd5d177994077ff9"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperThresholdGateRVA",
+        "va": "0x10051e2c8",
+        "rva": "0x51e2c8",
+        "length": 64,
+        "bytes": "089c567928010034f44fbea9fd7b01a9fd430091f30300aa08ac45f9a80000b40001639e11000014000080d2c0035fd660820991fe490194f40300aa60420991",
+        "sha256": "1f19729dd9202a17e6f2c35c05d3a09febdea217e3dd7a31de1e2f2246d2f387"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperThresholdMathRVA",
+        "va": "0x10051e2fc",
+        "rva": "0x51e2fc",
+        "length": 64,
+        "bytes": "fe490194f40300aa60420991fb490194e803002a088114aa0001629e619e567d21d8617e2008601e280be8d20101679e0018611efd7b41a9f44fc2a895a7ec17",
+        "sha256": "88bea97e378e9c0316b7032bd78211e2466229ff9c1a17df3a1ee8c98047d28f"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperFloorSourceRVA",
+        "va": "0x100395038",
+        "rva": "0x395038",
+        "length": 64,
+        "bytes": "089c567928010034f44fbea9fd7b01a9fd430091f30300aa08ac45f9a80000b40001639e11000014000080d2c0035fd660820991a26e0794f40300aa60420991",
+        "sha256": "75c8e049bcac310dbfdbb56aa72ed1d3d96d07a874c98489d0db22f8885f89fc"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperFloorMathRVA",
+        "va": "0x10039506c",
+        "rva": "0x39506c",
+        "length": 64,
+        "bytes": "a26e0794f40300aa604209919f6e0794e803002a088114aa0001629e61a2567d21d8617e2008601e280be8d20101679e0018611efd7b41a9f44fc2a839ccf217",
+        "sha256": "9e5836ba55de26ca99a0ebf9b20d4f0947f072ae5d398ca51596f0d52b14a359"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperSnapshotCompareRVA",
+        "va": "0x1005645cc",
+        "rva": "0x5645cc",
+        "length": 64,
+        "bytes": "3fe7fe97683e40f91f0100eb4d020054e00313aa96c2f897f40300aa6042019142310094f50300aa600201913f310094e803002a088115aa1f0114ebca000054",
+        "sha256": "93656ee233a1d2edb7dfc6d1d4b8872f589287a57e46e6aee0fb456a3364dbdd"
+      },
+      {
+        "name": "PHOrbEnemyDamageSuperCurrentCompareRVA",
+        "va": "0x1005645f4",
+        "rva": "0x5645f4",
+        "length": 64,
+        "bytes": "600201913f310094e803002a088115aa1f0114ebca00005468f2403908011d3268f20039200080520200001400008052fd7b42a9f44f41a9f657c3a8c0035fd6",
+        "sha256": "39a50524c4192dc3af790e0db81ffd1c165568176e61953784612fcd2ad5c93f"
+      },
+      {
+        "name": "PHOrbEnemyDamageRoundThresholdRVA",
+        "va": "0x10004818c",
+        "rva": "0x4818c",
+        "length": 64,
+        "bytes": "0820601e01106c1e02107c1e41bc611e2028601e0000789ec0035fd60100621e2200621e00c0221e4104401f68740090007944fd2020601eec000054083cf8d2",
+        "sha256": "8e3d6ecda24f108524590acba95e52191bcb4d5f3354ae1b526fd5258ca00daf"
+      },
+      {
+        "name": "PHOrbEnemyDamageCeilFloatRVA",
+        "va": "0x10004810c",
+        "rva": "0x4810c",
+        "length": 64,
+        "bytes": "0820201e01b8a15e21d8215e24c4201e6000005401102e1e0028211e0000381ec0035fd60820601e01b8e15e21d8615e24c4601e6000005401106e1e0028611e",
+        "sha256": "5598edbad65b6ebc87b57620c9fbe05f40952942efc2f7c211419a5dc7b29a9d"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPPhaseGateRVA",
+        "va": "0x1005639e4",
+        "rva": "0x5639e4",
+        "length": 64,
+        "bytes": "20802691fc3400941f781a72c1060054e00313aa3ad8ea976006003468c2d6791f0500710b0600546042019139340094f50300aa6002019136340094e803002a",
+        "sha256": "eaf70a7fbad2ec29e98b5b4799090ef88247e863851f3170cd7f5566b02249df"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPPhaseRatioRVA",
+        "va": "0x100563a2c",
+        "rva": "0x563a2c",
+        "length": 64,
+        "bytes": "6082099131340094f50300aa604209912e340094e803002a088115aa0001629e0019601e280be8d20101679e0008611e0040621eab91eb9768c2d6791f00086b",
+        "sha256": "740837c23881c54edef99e1d04a514ba2045a1efe57e0320a0b6b85deef4d18e"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPPhaseFlagsRVA",
+        "va": "0x100563a70",
+        "rva": "0x563a70",
+        "length": 64,
+        "bytes": "60822691d9340094e80300aa6082269101010032f3340094883a40f969c385522901a072086969381f0500716101005460822691cd340094e80300aa60822691",
+        "sha256": "5d32592da5a1d6423492ce82eb7fa4999c15ea1fedd15560d14f3c60a1b4ca24"
+      },
+      {
+        "name": "PHOrbEnemyDamageHPPhaseImmediateRVA",
+        "va": "0x100563a88",
+        "rva": "0x563a88",
+        "length": 64,
+        "bytes": "883a40f969c385522901a072086969381f0500716101005460822691cd340094e80300aa6082269101011e32fd7b43a9f44f42a9f65741a9e923c46ce3340014",
+        "sha256": "b3ef209340e5df17a2309c308279e653529f4deea87f82b574c61f7928426d40"
+      },
+      {
+        "name": "PHOrbEnemyDamageLivingOrdinaryRVA",
+        "va": "0x100019ae0",
+        "rva": "0x19ae0",
+        "length": 64,
+        "bytes": "0828447928024037f44fbea9fd7b01a9fd430091f30300aa00400191fe5b1594f40300aa60020191fb5b1594e803002a088114aa1f0100f1e0d79f1afd7b41a9",
+        "sha256": "493409b05773b9925ac9d5bebe9ff4e34a13a2e931b8d946ddba534eaef8d52b"
+      },
+      {
+        "name": "PHOrbEnemyDamageCleanupGateRVA",
+        "va": "0x10060a5c0",
+        "rva": "0x60a5c0",
+        "length": 64,
+        "bytes": "793a40f93403168b880640391f050071010a005488f24039280500363b03168b682b4479680908376883c2790001221e6887c2790101221e02103e1ee00313aa",
+        "sha256": "f4b4a5dd1031d33ca18fa0b267fd8eec150f7e4815c2a6edc501fca42813bec6"
+      },
+      {
+        "name": "PHOrbEnemyDamageCleanupNormalRVA",
+        "va": "0x10060a644",
+        "rva": "0x60a644",
+        "length": 64,
+        "bytes": "88f2403908191f1288f20039683a40f90869773888000037682b447908011b32682b0479e00313aae10314aad664fd9788f240393a008052a80418363a03168b",
+        "sha256": "90002fb5a169f9e2f3aacb358a285ada4f51c50769a53900d4aa76d8f28c1501"
+      },
+      {
+        "name": "PHOrbEnemyDamageCleanupSuperRVA",
+        "va": "0x10060a6d8",
+        "rva": "0x60a6d8",
+        "length": 64,
+        "bytes": "88f2403908791c1288f20039683a40f908697738a80000372803168b092944792901193209290479e00313aae10314aab064fd973a008052683a40f90001188b",
+        "sha256": "03101cba41ae6322fd676ade9ad458e51c2aa29d05a520b780a0fdb42584c339"
+      },
+      {
+        "name": "PHOrbEnemyDamageActiveSumLoadRVA",
+        "va": "0x10060dad8",
+        "rva": "0x60dad8",
+        "length": 64,
+        "bytes": "080340f9e81700f91601178bc82a4479ca06403969030012ea7306294901092a3f010071e9079f1a1f0118723b019b1ac0422a91b38cfd971f0400718b080054",
+        "sha256": "d348df17f4d286ab732e6a9e43008322ba7044e603a6b30fa6d93a31b7988aba"
+      },
+      {
+        "name": "PHOrbEnemyDamageActiveSumAddRVA",
+        "va": "0x10060dd54",
+        "rva": "0x60dd54",
+        "length": 64,
+        "bytes": "e97346299c03090b080340f909909b526901a0720001098b628bfd97f7a22e91b50600111f00156beceaff5411000014e80b40f9080d41f908314039e90b40b9",
+        "sha256": "540813fdfc4460ef29c0ae7879929b90bd6057d72158514c8f0209e557677859"
+      },
+      {
+        "name": "PHOrbEnemyDamageCountPhaseGateRVA",
+        "va": "0x10060df58",
+        "rva": "0x60df58",
+        "length": 64,
+        "bytes": "686bf7781f050071ab0300546803178b15e107d1e00315aa9a8bfd9700032837e00315aa978bfd97a0020837686bf7789f03086b4c020054e00315aa918bfd97",
+        "sha256": "615a33ab2196ce453cc735c49ef1d8c0f18f06edd02726d18505cb043d096ff3"
+      },
+      {
+        "name": "PHOrbEnemyDamageCountPhaseFlagsRVA",
+        "va": "0x10060df88",
+        "rva": "0x60df88",
+        "length": 64,
+        "bytes": "9f03086b4c020054e00315aa918bfd97280280520100082ae00315aaab8bfd97080340f969c385522901a072086969381f050071c1000054e00315aa858bfd97",
+        "sha256": "e9365a6dc2641f111c7d41ff747e68322df1f7c7ff9f5fdb5f5a75188b155690"
+      },
+      {
+        "name": "PHOrbEnemyDamageCountPhaseImmediateRVA",
+        "va": "0x10060dfa8",
+        "rva": "0x60dfa8",
+        "length": 64,
+        "bytes": "080340f969c385522901a072086969381f050071c1000054e00315aa858bfd9701001e32e00315aaa08bfd976803178b15e107d1e00315aa7e8bfd9780000036",
+        "sha256": "30e0534a8b779353aa94dbb19fdb04985dd67acb438a2c89acf7cf32c4a3e8fd"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseTargetGateRVA",
+        "va": "0x10060dfd4",
+        "rva": "0x60dfd4",
+        "length": 64,
+        "bytes": "6803178b15e107d1e00315aa7e8bfd9780000036e00315aa7b8bfd97e02d0836080340f909909b526901a0720001098bbc8afd97f7a22e91d60600111f00166b",
+        "sha256": "e21c286011ba210c291be4b5e80f87140cca995e5972a832704ff555dbba7671"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseTargetStoreRVA",
+        "va": "0x10060e5ac",
+        "rva": "0x60e5ac",
+        "length": 64,
+        "bytes": "7403178b93e207d1e00313aa088afd9701001f32e00313aa238afd97080340f90849429100e12591610280525f89fd97080340f989622ed10a8f9b526a01a072",
+        "sha256": "f74a68b354fd6d7ef39280dd94fe8c6e0ca93332e4b9acffc8b770b0916c216a"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseAnimationWaitRVA",
+        "va": "0x1005b34bc",
+        "rva": "0x5b34bc",
+        "length": 64,
+        "bytes": "156969f8350200b4145a8152f6598112170280523700a072a02640f9400600b4080040f9082540f900013fd6c0050037683a40f9a90240b92a59141b0b01178b",
+        "sha256": "42f76c2279c4779056a4d170ab091f597c1d22807362a244f5fea08d6895e133"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseCountdownGateRVA",
+        "va": "0x1005b3588",
+        "rva": "0x5b3588",
+        "length": 64,
+        "bytes": "a082269113f6fe9720011037a0a20491010080520d000014fd7b43a9f44f42a9f65741a9f85fc4a8c0035fd6a082269108f6fe9760002037a1c6567902000014",
+        "sha256": "00be560ac9712a8d08853dd592bd7e1239255a7bec4a031a0681f129ed4a1726"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseIntervalsRVA",
+        "va": "0x1005b35b4",
+        "rva": "0x5b35b4",
+        "length": 64,
+        "bytes": "a082269108f6fe9760002037a1c6567902000014a136d779a0a2049161f5fe97a0220e91e003271ef435f197f4ac00d094c21e9101102c1e28f29152886a6838",
+        "sha256": "de2c58f1c1b9ecd6f1317614af0a8f068bb58280dfb099a53665fe93e7935772"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseSelectedClearRVA",
+        "va": "0x1005b3614",
+        "rva": "0x5b3614",
+        "length": 64,
+        "bytes": "a0220e9100102e1ee635f197bfa20bb9bf9206b90010231e28f29152886a6838080120378822579100a11991b0adff971f0000720010231e0150221e201c201e",
+        "sha256": "bad4beccbfb4b902aaee9a5c7e186beb020ec7312de986790416bbc4dfcb8a71"
+      },
+      {
+        "name": "PHOrbEnemyDamagePhaseAnimationFlagsRVA",
+        "va": "0x1005b3654",
+        "rva": "0x5b3654",
+        "length": 64,
+        "bytes": "0190221e0018211ea0a207bda0822691ddf5fe97e80300aaa082269101011d32f7f5fe97683a40f908dd429100b11b91e003271e0110291eca35f197683a40f9",
+        "sha256": "b0dd2e087c23c027f38532f04888edbd6cb2584a449de796320912f83b1c5e6c"
+      },
+      {
+        "name": "PHOrbEnemyDamageOverrideAccumulationGateRVA",
+        "va": "0x100563574",
+        "rva": "0x563574",
+        "length": 64,
+        "bytes": "80422491b2360094c002003480c22391af360094680240b90824c81a2802003680022491aa360094e803002a287f089b0001239e0859a8520101271e0018211e",
+        "sha256": "dd2e2fe19d0f23719a05133db2b794b04a220e87d7973b5afe8dc17d3c74e3f8"
+      },
+      {
+        "name": "PHOrbEnemyDamageOverrideAccumulationWriteRVA",
+        "va": "0x100563594",
+        "rva": "0x563594",
+        "length": 64,
+        "bytes": "80022491aa360094e803002a287f089b0001239e0859a8520101271e0018211e4b91eb97fa0300aa808224917e230094e80300aa8082249101011a0bf0240094",
+        "sha256": "92a1eb433cb3dcd1259a2747c3e54c9a0ad3082f9ef854e7f2712b5e45746831"
+      },
+      {
+        "name": "PHOrbEnemyDamageUnsignedShortRVA",
+        "va": "0x100571040",
+        "rva": "0x571040",
+        "length": 64,
+        "bytes": "090840b9e83701b00a1142b928b300900b0145b9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+        "sha256": "e4a6e23766b77781654c1fbe864223aa35eaa5b9e13d599efaeeebec166033e0"
+      },
+      {
+        "name": "PHOrbEnemyDamageSignedByteRVA",
+        "va": "0x100570dd8",
+        "rva": "0x570dd8",
+        "length": 64,
+        "bytes": "090840b9e83701d00a1142b928b300b00b0145b9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+        "sha256": "6566bb8b64264a402784f47853e5c3a43d180d93660ac557d4b5fc4add866e64"
+      },
+      {
+        "name": "PHOrbEnemyDamageActionEnabledRVA",
+        "va": "0x1005a03b0",
+        "rva": "0x5a03b0",
+        "length": 64,
+        "bytes": "083840f909e481526901a072086969f8880000b408314079001d0753c0035fd600008052c0035fd6083840f909e481526901a072086969f8a80000b408854039",
+        "sha256": "4418967af6dc1c140ff58c822f37e5372650beba8a02dd2edf593098e397550d"
+      },
+      {
+        "name": "PHOrbEnemyDamageSpecialMarkerRVA",
+        "va": "0x100063048",
+        "rva": "0x63048",
+        "length": 64,
+        "bytes": "f44fbea9fd7b01a9fd430091c85201b008c13791143940f993ce4291686a46b989be9252a958a7721f01096ba101005488f64291000132919d3614941f040071",
+        "sha256": "24e65456f3d171e264e0e104c3134ecc51f59545a41de3f84719747592a84da9"
+      }
+    ]
+  },
+  "written_cases": {
+    "model": [
+      "normal >= versus super > snapshot thresholds",
+      "super/current floor equality",
+      "existing survival flags and special countdown zero",
+      "HP phase before floor and after cleanup",
+      "immediate exact1 versus lowbit",
+      "special cleanup skip includes bit8",
+      "float-narrow percentage boundary",
+      "out-of-range FP-to-signed conversion",
+      "native subtract wrap",
+      "signed versus unsigned phase intervals",
+      "unknown resolver/callback/parts",
+      "conditional batch snapshot"
+    ],
+    "native": [
+      "old diagnostics work without new guards",
+      "raw snapshots and overrides",
+      "no native calls or guest mutations",
+      "read budget and pointer overflow",
+      "byte widths and invalid override16",
+      "isolated guard mismatch",
+      "double-read snapshot/threshold/phase/immediate/callback races",
+      "global identity loss",
+      "parts in raw active-byte sum",
+      "eight-slot budget",
+      "3/4/8/3solo exclusion"
+    ],
+    "session": [
+      "conditional wording",
+      "withdraw stale probes on optional refresh failure",
+      "board-change invalidation",
+      "no skill/input side effects",
+      "multiplayer exclusion"
+    ]
+  },
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "benchmarks_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_review_status": "passed",
+    "static_review": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "baseline_commit": "959f4e9",
+      "json_files": 6,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 12,
+      "local_includes": 84,
+      "local_document_links": 123,
+      "test_entry_points_written": 3,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "orb_policy": 45,
+        "orb_optional_enemy_actions": 32,
+        "orb_optional_enemy_selector": 27,
+        "orb_optional_enemy_dispatch": 39,
+        "orb_optional_enemy_damage": 54,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "original_272_orb_guards_unchanged": true,
+      "all_guards_match_ida_original_current_and_disk": true,
+      "damage_failure_case_byte_isolated": true,
+      "old_action_capture_data_and_consistency_preserved": true,
+      "operation_gate_input_and_automation_model_unchanged": true,
+      "optional_extra_data_not_in_copied_snapshot": true,
+      "forecast_and_survival_fields_remain_false": true,
+      "workflow_dispatch_only": true,
+      "generated_files_configs_templates_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "benchmarks_executed": false,
+      "gui_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "device_verified": false,
+      "source_sha256_lf": {
+        "ios/src/PHEnemyDamage.h": "458b3b570c28db7e4a870a754013bc2f0ed0fb651f11f15c120b6a278d956293",
+        "ios/src/PHOrbEnemyActions.inc": "8dcf41da3f2393f42ef15e3494c3d903d95d8d8f4e4716a790b81ad1e5eba778",
+        "ios/src/PHOrbEnemyDamage.inc": "e2e09ddaac6a394d62c839dd06a000e4d6f205164a4533daec1582c7aceb7a9c",
+        "ios/src/PHOrbNative.mm": "4f75afc0c31be90ee56f47e2d6953ab8affdbcf1e48fa98752f14e7ebb776d09",
+        "ios/src/PHOrbObservationPresentation.inc": "3c71c73b3f7b0d19737c24a7e9e9ea58d81d9e5894bce68099c29b868439c927",
+        "ios/tests/enemy_damage_model_tests.inc": "a6b3a6c72a9a310da58092dad5acc59239016d644ecc85b5c64daa443a8748a0",
+        "ios/tests/orb_enemy_damage_native_tests.inc": "a64cd8b6dcc52e928b24fe469f9803d06a6a2b9ded05a656dcd3c43a4dd58ed0",
+        "ios/tests/orb_enemy_damage_session_tests.inc": "ad4cf6b7fac9fd3c39da2207b97f06b5582232d32078fd2f9bd51782b014facd",
+        "ios/tests/orb_native_tests.mm": "9a87a74111f9fb075c81d17de36e4468e124d6252d216d383d6facaa127b5117",
+        "ios/tests/orb_session_tests.mm": "4d366ba809e2326386b847f3d5b4bf4093808b52487b3e80821bb92bcb8e3adf",
+        "ios/tests/orb_skill_native_tests.inc": "93cea0413ba18b3ec80994c9e275ee4c32732a34518533ac3e1952a8c0d4a251",
+        "ios/tests/orb_solver_tests.cpp": "c7114257080039b074ee4c2c63beabaa25d5f079487107129444112dfd3a67e6",
+        "ios/tools/generate_orbs.py": "2899208f95eba54edd90f864efaf617ce3400e34c26738f767d38b1634af0c1e",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b",
+        "ios/build.sh": "bca62d493dd4a61810a5e5f02fc917d9789f00907891e09bb80f13d7092fedf0",
+        "ios/targets/orbs-23.6.0.json": "6f96f182f98d4ee0d7cbab3e1c17bd539c6750acaac7c43f02a03838b305ff83"
+      },
+      "limits": "No compilation or case/model execution. No real effective damage, hit order, phase target, shield/healing, skill deadline, survival or performance result."
+    }
+  }
+}

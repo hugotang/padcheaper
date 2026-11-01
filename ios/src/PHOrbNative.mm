@@ -15,6 +15,7 @@
 #include "PHEnemyActions.h"
 #include "PHEnemySelector.h"
 #include "PHEnemyDispatch.h"
+#include "PHEnemyDamage.h"
 
 namespace {
 constexpr size_t PoolStride = 172, PoolCount = 256;

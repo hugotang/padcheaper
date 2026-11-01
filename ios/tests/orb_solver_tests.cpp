@@ -2,6 +2,7 @@
 #include "PHEnemyActions.h"
 #include "PHEnemySelector.h"
 #include "PHEnemyDispatch.h"
+#include "PHEnemyDamage.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -182,11 +183,13 @@ static void ShapeTests() {
 #include "enemy_action_model_tests.inc"
 #include "enemy_selector_model_tests.inc"
 #include "enemy_dispatch_model_tests.inc"
+#include "enemy_damage_model_tests.inc"
 
 int main() {
     EnemyActionModelTests();
     EnemySelectorModelTests();
     EnemyDispatchModelTests();
+    EnemyDamageModelTests();
     MultiplayerModelTests();
     DiagonalSolverTests();
     ShapeTests();

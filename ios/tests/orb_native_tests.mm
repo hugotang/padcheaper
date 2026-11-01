@@ -27,6 +27,8 @@ static unsigned observationMutation;
 static unsigned enemyActionMutation;
 static unsigned enemyDispatchMutation;
 static bool rejectEnemyDispatchRead;
+static unsigned enemyDamageMutation;
+static bool rejectEnemyDamageRead;
 static bool changeAssistDuringCoordinateRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
@@ -50,8 +52,19 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (rejectEnemyDispatchRead && address == Impl + PHOrbEnemyDispatchCacheOffset) return NO;
+    if (rejectEnemyDamageRead && address == Impl + PHOrbEnemyDamageImmediateOffset) return NO;
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (enemyDamageMutation && address == Impl + PHOrbEnemyOffset + 2288 && length == 48) {
+        const unsigned mutation = enemyDamageMutation; enemyDamageMutation = 0;
+        const uintptr_t enemy = Impl + PHOrbEnemyOffset;
+        if (mutation == 1) Store<int64_t>(reinterpret_cast<uint8_t *>(enemy + 120), 777);
+        if (mutation == 2) Store<uint16_t>(reinterpret_cast<uint8_t *>(enemy + 2892), 25);
+        if (mutation == 3) *reinterpret_cast<uint8_t *>(enemy + 2464) ^= 1u;
+        if (mutation == 4) *reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDamageImmediateOffset) = 1;
+        if (mutation == 5) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDamageCallbackOffset), Impl);
+        if (mutation == 6) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Header + PHBattleImplRVA), 0);
+    }
     if (enemyDispatchMutation && address == Impl + PHOrbEnemyOffset + 2736 && length == 16) {
         const unsigned mutation = enemyDispatchMutation; enemyDispatchMutation = 0;
         if (mutation == 1) *reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDispatchCacheOffset) ^= 1u;
@@ -212,6 +225,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
     observationMutation = enemyActionMutation = 0;
     enemyDispatchMutation = 0; rejectEnemyDispatchRead = false;
+    enemyDamageMutation = 0; rejectEnemyDamageRead = false;
     changeAssistDuringCoordinateRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);

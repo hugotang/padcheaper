@@ -65,6 +65,15 @@ def generate(manifest):
                                  'read_bytes_per_pass': 4096, 'read_calls_per_pass': 64,
                                  'post_player_state': False, 'enemy_forecast': False, 'survival_authorization': False,
                                  'guards': 'separate-optional-only', 'device_verified': False},
+                             'enemy_damage_analysis': {'mode': 'optional-read-only-stable-single-player',
+                                 'scope': 'local-post-resolver-field-checkpoints',
+                                 'snapshots': 'raw-current-and-conditional-refresh',
+                                 'probes': 'three-non-exhaustive-assumed-effective-damage-values',
+                                 'phase': 'conditional-hp-count-and-target-animation-fields',
+                                 'read_bytes_per_pass': 4096, 'read_calls_per_pass': 64,
+                                 'resolver_side_effects': False, 'post_player_state': False,
+                                 'enemy_forecast': False, 'survival_authorization': False,
+                                 'guards': 'separate-optional-only', 'device_verified': False},
                              'enemy_selector_analysis': {'mode': 'optional-read-only-stable-single-player',
                                  'entry': 'conditional-ordinary-row-zero-current-AI-state',
                                  'hp': 'all-native-percentages-0-through-100',
@@ -278,7 +287,28 @@ def generate(manifest):
         'PHOrbEnemyDispatchUnsignedByteEncodingRVA',
         'PHOrbEnemyDispatchUnsignedShortEncodingRVA',
     }
-    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards
+    enemy_damage_guards = {
+        'PHOrbEnemyDamageSnapshotFirstRVA', 'PHOrbEnemyDamageSnapshotSecondRVA', 'PHOrbEnemyDamageSnapshotCallerRVA',
+        'PHOrbEnemyDamageSpecialGateRVA', 'PHOrbEnemyDamageResolverCallRVA', 'PHOrbEnemyDamageSeparateGateRVA',
+        'PHOrbEnemyDamageHPSubtractRVA', 'PHOrbEnemyDamageHPClampRVA', 'PHOrbEnemyDamageHPPhaseCallRVA', 'PHOrbEnemyDamageHPCallbackRVA',
+        'PHOrbEnemyDamageSuperFloorGateRVA', 'PHOrbEnemyDamageSuperTriggerCallRVA', 'PHOrbEnemyDamageSuperImmediateRVA',
+        'PHOrbEnemyDamageNormalExistingRVA', 'PHOrbEnemyDamageSpecialLethalRVA', 'PHOrbEnemyDamageSpecialSnapshotRVA',
+        'PHOrbEnemyDamageNormalCallRVA', 'PHOrbEnemyDamageNormalSnapshotRVA',
+        'PHOrbEnemyDamageNormalThresholdRVA', 'PHOrbEnemyDamageNormalFlagRVA',
+        'PHOrbEnemyDamageSuperThresholdGateRVA', 'PHOrbEnemyDamageSuperThresholdMathRVA',
+        'PHOrbEnemyDamageSuperFloorSourceRVA', 'PHOrbEnemyDamageSuperFloorMathRVA',
+        'PHOrbEnemyDamageSuperSnapshotCompareRVA', 'PHOrbEnemyDamageSuperCurrentCompareRVA',
+        'PHOrbEnemyDamageRoundThresholdRVA', 'PHOrbEnemyDamageCeilFloatRVA',
+        'PHOrbEnemyDamageHPPhaseGateRVA', 'PHOrbEnemyDamageHPPhaseRatioRVA', 'PHOrbEnemyDamageHPPhaseFlagsRVA', 'PHOrbEnemyDamageHPPhaseImmediateRVA',
+        'PHOrbEnemyDamageLivingOrdinaryRVA', 'PHOrbEnemyDamageCleanupGateRVA', 'PHOrbEnemyDamageCleanupNormalRVA', 'PHOrbEnemyDamageCleanupSuperRVA',
+        'PHOrbEnemyDamageActiveSumLoadRVA', 'PHOrbEnemyDamageActiveSumAddRVA', 'PHOrbEnemyDamageCountPhaseGateRVA',
+        'PHOrbEnemyDamageCountPhaseFlagsRVA', 'PHOrbEnemyDamageCountPhaseImmediateRVA', 'PHOrbEnemyDamagePhaseTargetGateRVA', 'PHOrbEnemyDamagePhaseTargetStoreRVA',
+        'PHOrbEnemyDamagePhaseAnimationWaitRVA', 'PHOrbEnemyDamagePhaseCountdownGateRVA', 'PHOrbEnemyDamagePhaseIntervalsRVA',
+        'PHOrbEnemyDamagePhaseSelectedClearRVA', 'PHOrbEnemyDamagePhaseAnimationFlagsRVA',
+        'PHOrbEnemyDamageOverrideAccumulationGateRVA', 'PHOrbEnemyDamageOverrideAccumulationWriteRVA',
+        'PHOrbEnemyDamageUnsignedShortRVA', 'PHOrbEnemyDamageSignedByteRVA', 'PHOrbEnemyDamageActionEnabledRVA', 'PHOrbEnemyDamageSpecialMarkerRVA',
+    }
+    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -336,6 +366,13 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyDispatch')} != enemy_dispatch_fields:
         raise ValueError('Unreviewed optional enemy dispatch layout')
+    enemy_damage_fields = {
+        'PHOrbEnemyDamageImmediateOffset': 601627, 'PHOrbEnemyDamageSpecialOffset': 734824,
+        'PHOrbEnemyDamageCallbackOffset': 780784,
+    }
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbEnemyDamage')} != enemy_damage_fields:
+        raise ValueError('Unreviewed optional enemy damage layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():
@@ -352,7 +389,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -381,6 +418,11 @@ def generate(manifest):
         if guard['name'] in enemy_dispatch_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbEnemyDispatchTextGuardCount = sizeof(PHOrbEnemyDispatchTextGuards) / sizeof(PHOrbEnemyDispatchTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemyDamageTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_damage_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemyDamageTextGuardCount = sizeof(PHOrbEnemyDamageTextGuards) / sizeof(PHOrbEnemyDamageTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 

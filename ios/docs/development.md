@@ -4,6 +4,18 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-01：敵人受傷後根性與變階段，源碼待建置
+
+接續 [受傷後局部檢查點](enemy-damage-analysis.md)，新增純值模型及獨立唯讀診斷：保留原生 HP 快照、一般／超根性門檻與不同比較、phase 先於根性回復、特殊存活將 countdown 歸零、清理與快照重寫順序，以及 HP／active byte 合計兩種變階段條件。保留浮點運算次序、float 縮窄與 signed／unsigned interval；越界數值轉換回報未知。
+
+原生傷害解析器可能在扣 HP 前改變 HP 與選招 override，正傷害還可能呼叫外部 HP callback。本批不把隊伍原始傷害或目前 snapshot 直接當作完整攻擊後狀態；只提供三個非完整的「假設有效傷害」probe 和獨立的條件快照／清理／phase scan／目標 animation 欄位。callback 存在時停在前綴，所有實際下一招、承傷與存活結論維持 unknown，auto／技能／救援決策未放寬。
+
+54 組新指紋與原有 272 組 orb 分開；每遍額外資料上限 4096 bytes／64 reads、獨立雙讀及共用末次盤面／身分核對。新失配只撤本組，parts 只參與原生 active byte 合計，3／4／8 人及 3 人單人續玩不取樣。已寫 model／native／session 案例並接上入口，source manifest、嚴格 generator 與日後打包清單同步。
+
+**本批及先前未建置批次尚未編譯、執行測試／GUI／benchmark／generator、dispatch CI 或製作 dylib。0.5.14／CI 87 不驗證本批。** generated header、版本與 E:\ipa 交付保持原件；原生證據和靜態核對記於 [研究資料](../research/orb-enemy-damage-20261101.json)。
+
+本批已通過源碼格式／JSON 唯一鍵／Python AST／本地 include 和文件連結檢查，新增三組案例入口已核對。326 組 orb（114 操作＋15 舊診斷＋45 L 政策＋32 行動＋27 selector＋39 dispatch＋54 damage）、34 組 battle、17 組 runtime 指紋均吻合 IDA original／current 與磁碟 Mach-O、UUID／SHA-256。原有 272 組 orb、操作／auto 模型、設定及 generated 檔未變，失配案例的位元組隔離及 `git diff --check` 通過。這些靜態結果不等同編譯、測例或真機通過；正規化源碼雜湊與檢查統計存入研究資料。
+
 ## 2026-11-01：敵人選招入口與更新時序，源碼待建置
 
 接續 [入口與檢查點](enemy-dispatch-analysis.md)，新增獨立唯讀 dispatch context，區分倒數／HP 與原生旗標、排程前 hook、無技能但仍普攻、複合續招、快取、特殊 predicate、override、opcode180 改起始列與普通第 1 列入口。條件 tick 只在明示「到達函式、沒有外部提早返回、其餘狀態不變」時清快取及扣正倒數，不把一次玩家操作直接當成一次 tick。

@@ -148,7 +148,17 @@ NSString *BattleObservationDescription(const PHOrbBattleObservation &observation
             }
             [lines addObject:[NSString stringWithFormat:@"行動入口：%lu 個敵人已按目前狀態分類，%lu 個未確認；倒數推演假設其餘狀態不變。",
                 (unsigned long)classified, (unsigned long)unknown]];
-            [lines addObject:@"我方傷害與敵人變階段尚未推演；不能據此延後救援或判斷安全回合。"];
+            [lines addObject:@"我方行動後的完整狀態仍未確認；不能據此延後救援或判斷安全回合。"];
+        }
+        if ([enemyActions[@"damageAnalysis"][@"status"] isEqual:@"ready"]) {
+            NSUInteger captured = 0, unknown = 0;
+            for (NSDictionary *enemy in enemyActions[@"enemies"]) {
+                if ([enemy[@"damageAnalysis"][@"status"] isEqual:@"conditional"]) ++captured;
+                else ++unknown;
+            }
+            [lines addObject:[NSString stringWithFormat:@"根性與變階段：%lu 個敵人已取樣，%lu 個未確認；僅列假設傷害下的局部結果。",
+                (unsigned long)captured, (unsigned long)unknown]];
+            [lines addObject:@"實際傷害、攻擊次序與敵人下一招仍未知；不作耐久判定。"];
         }
     } else if (enemyActions) [lines addObject:@"敵人行動表：等待新的穩定資料。"];
     if (observation.assistVoidKnown) [lines addObject:observation.assistVoidTurns > 0 ?
