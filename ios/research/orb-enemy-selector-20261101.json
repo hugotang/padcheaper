@@ -1,0 +1,470 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-01",
+  "status": "source-only-unbuilt",
+  "baseline_commit": "b2c688d",
+  "binary": {
+    "workspace_copy": ".build/ida-multiplayer/pad",
+    "size": 21573888,
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "delivered_files_modified": false
+  },
+  "method": "Static IDA pseudocode/disassembly and original/current bytes, disk byte and source/JSON/AST/lexical review only. No game function, generator, compiler, test, benchmark, GUI, CI or packaging execution.",
+  "scope": {
+    "entry_assumption": "ordinary selector row zero using captured flags/counter/level/AI budget",
+    "hp_assumption": "all native normalized percentages in [0,100], with open and closed branch endpoints; no pre-player HP pruning",
+    "selectors": [
+      "ordered-weighted",
+      "legacy-two-pass"
+    ],
+    "candidate_semantics": "conservative conditional superset only when conditionalWalkComplete; otherwise partial-with-unknown-frontier",
+    "ordinary_leaf_opcodes": [
+      47,
+      49,
+      82,
+      83,
+      88,
+      141
+    ],
+    "probability_and_feasibility": "unmodeled may-select and may-skip; no native RNG/helper calls",
+    "budgets": {
+      "states_per_enemy": 512,
+      "candidates_per_enemy": 256,
+      "steps_per_capture": 4096,
+      "native_weighted_entries_per_path": 64
+    },
+    "forbidden_inferences": [
+      "actual next dispatch entry",
+      "post-player AI projection",
+      "cross-enemy action order",
+      "zero damage for no selection",
+      "effective status duration",
+      "damage/shield/healing bound",
+      "survival or rescue defer",
+      "future floor preemptives"
+    ],
+    "multiplayer_including_three_player_solo": false,
+    "new_game_data_fields": false
+  },
+  "native_evidence": [
+    {
+      "va": "0x10055badc",
+      "finding": "Control returns -2 continue, -3 end pass, -1 ordinary leaf, or nonnegative row ID immediate return. Reviewed flags use any-bit tests. Set/clear/OR/XOR mutate +1720; unsigned counter +1724 increment only <=0x7ffffffe, decrement only nonzero, conditional replace from row B."
+    },
+    {
+      "va": "0x10055bf30",
+      "related": [
+        "0x10055bf58"
+      ],
+      "finding": "Native HP comparisons use (HP/maxHP)*100 versus unsigned byte A converted by UCVTF; actual double comparisons, not integer HP truncation. <= and >= create inclusive endpoints and exclusive complement."
+    },
+    {
+      "va": "0x10055c034",
+      "related": [
+        "0x10055c4c4"
+      ],
+      "finding": "0x17/0x5b store B-1 then caller increment, final zero-based target B. HP/counter/level/0x2b store B-2 then increment, final target B-1. Invalid endpoints stop model as unknown rather than clamping."
+    },
+    {
+      "va": "0x100f13b8c",
+      "finding": "Static 72*u16 selector classification table: bit0 only on 21..38 and 43..45. Original and current bytes match. Supported ordinary leaves do not use this control-classification shortcut."
+    },
+    {
+      "va": "0x10055e770",
+      "finding": "Ordered selector calls control before duplicate rejection, signed +64 cost, +56 HP and opcode exclusions 0/47/49. +4 nonzero A gates primary chance; +5 nonzero B appends row byte to a 64-byte pool before feasibility. Zero row IDs skip to next row."
+    },
+    {
+      "va": "0x10055e988",
+      "finding": "Pool append has no proven independent cap before indexing local byte[64]. Backward loops can add duplicate rows. Model counts each append and marks weighted-pool-limit before append65, independent of its membership bitset."
+    },
+    {
+      "va": "0x10055e9c8",
+      "related": [
+        "0x10055f17c",
+        "0x10055f9e4"
+      ],
+      "finding": "Native chances use wrapped 32-bit products, integer division/casts and floating clamp, and update RNG. No exact probability emulator added; supported leaves retain both selection and rejection."
+    },
+    {
+      "va": "0x10055ea60",
+      "related": [
+        "0x10055eab0"
+      ],
+      "finding": "On ordinary ordered exhaustion/end-pass, native rechecks pooled feasibility and selects by B weights; model retains all possible pooled rows and possible no-ID, using terminal flags/counter."
+    },
+    {
+      "va": "0x10055f02c",
+      "finding": "Legacy primary 47 bypasses ordinary HP/A filter but shares signed cost and later chance with row A;49 rejected. Primary candidate effects remain unmodeled. Other reviewed leaves use A!=0 and +56 HP threshold."
+    },
+    {
+      "va": "0x10055f1e0",
+      "related": [
+        "0x10055f214",
+        "0x10055f244",
+        "0x10055f2c0"
+      ],
+      "finding": "Second scan starts at row0 with no flags/counter reset. Literal action ID36 terminates before lookup. Control executes again; cost retained; second chance uses B and no ordinary HP filter.47/49 excluded. Model inherits first-pass state and HP partition."
+    },
+    {
+      "va": "0x100561c4c",
+      "finding": "Dispatcher can enter compound continuation first, use positive cached selection when impl+601588==1, select alternate entry or overrides. It updates action count and AI budget after selection. Current board stability alone does not establish next call entry or post-player AI state. These remain out of scope."
+    },
+    {
+      "va": "0x1005619ac",
+      "related": [
+        "0x100561a44"
+      ],
+      "finding": "Compound83 prepares positive child IDs in low-nibble order; child82 is skipped before feasibility. First nonpositive stops. No proven eight-child stop; nested83 execution is not recursively flattened by this model."
+    },
+    {
+      "va": "0x100561e00",
+      "related": [
+        "0x10056ac10",
+        "0x10056acc4"
+      ],
+      "finding": "Root82 converts selected ID to -1. Active negative selections can flow to normal attack through0x100569f34. No-ID/empty rows/root82 never prove zero damage."
+    },
+    {
+      "va": "0x1005601b4",
+      "related": [
+        "0x100566c28",
+        "0x100567d00",
+        "0x100568b68"
+      ],
+      "finding": "Positive record+68 prepares attached attack; effect executor invokes damage before status effect. For reviewed88/141, description retains attached attack then status attempt with raw parameter0; no effective damage/duration calculated."
+    },
+    {
+      "va": "0x100566a0c",
+      "finding": "General action effects and compound progression remain only partially understood. Opcode9 changes enemy defense and must not be guessed as ordinary attack; opcode7 healing,8 attack stockpile,15 multihit and47 percent attack need distinct damage modeling."
+    }
+  ],
+  "isolated_guard_group": {
+    "array": "PHOrbEnemySelectorTextGuards",
+    "count": 27,
+    "failure": "selector unavailable; raw action observation and existing operation gates retained",
+    "guards": [
+      {
+        "name": "PHOrbEnemySelectorControlCompareRVA",
+        "va": "0x10055be28",
+        "rva": "0x55be28",
+        "length": 64,
+        "bytes": "e9be46b9680280b9880e088b0a5140393f010a6b69290054a6010014e9be46b956000014e9ba46b9680280b9880e088b0a5140393f010a6ac033005408514138",
+        "sha256": "49f99d53e2dfca4e45af46964ac2b218e60114d324fce31071068447069325fb"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlXorRVA",
+        "va": "0x10055be6c",
+        "rva": "0x55be6c",
+        "length": 64,
+        "bytes": "680280b9880e088b08514039e9ba46b92801084a7c010014680280b9880e088b085140390a000014e8be46b9083200340805005106000014e8be46b9e9771f32",
+        "sha256": "c302a3838c242e7c6140b094bd1df96f3b3e222ced371431b915a32a0f5af29d"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlEmitClearRVA",
+        "va": "0x10055bed0",
+        "rva": "0x55bed0",
+        "length": 64,
+        "bytes": "e8be46b92830003408050071e8be06b9c02f0054680280b9880e088b001140b97b010014680280b9880e088b08514039e9ba46b92801280a5a010014e9724279",
+        "sha256": "ff57919a667d3a2d9f1629ae5b59f1e53f1125624ae62905522978cf2d1d0afd"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlEqualRVA",
+        "va": "0x10055bf0c",
+        "rva": "0x55bf0c",
+        "length": 64,
+        "bytes": "e972427902000014e9be46b9680280b9880e088b0a5140393f010a6b002200546b010014280be8d20101679e0008611e680280b9880e088b0151403d21d8617e",
+        "sha256": "8542862ef8c5f48941d8c4c7fea0ca7cdf7c0c32f628eb09c9501a89cbddf78b"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlFlagsLevelRVA",
+        "va": "0x10055bf74",
+        "rva": "0x55bf74",
+        "length": 64,
+        "bytes": "0020611e8a1f005457010014e9ba46b9680280b9880e088b0a5140393f010a6aa11e005450010014e9724279680280b9880e088b0a5140393f010a6bc21d0054",
+        "sha256": "8fb86cf49beacf9605edb6f3b4300be098f0e79ea7b48d9aba485458d8f54c2e"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlSetElseJumpRVA",
+        "va": "0x10055c018",
+        "rva": "0x55c018",
+        "length": 64,
+        "bytes": "e8ba46b9690280b9890e098b2a5140391f010a6a002200542851413808050051270100143f010a6b6d23005425010014e00317aa9f08ff97e84240f91f0100eb",
+        "sha256": "aa69d4b70f3122359a199cacda5f5bc2d398da0a2fc2afc55f59f04883e80682"
+      },
+      {
+        "name": "PHOrbEnemySelectorControlStoreRVA",
+        "va": "0x10055c46c",
+        "rva": "0x55c46c",
+        "length": 64,
+        "bytes": "08010a2ae8ba06b91900001400008052ca0a407988420091690280b9080d098b091140395fbd0271810000541f00096b8a0000540e0000141f00096b8c010054",
+        "sha256": "af3529d3d0844ba5942fd02e905b0ce895c158f71fe0bacfb76479efc4c3f167"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedControlRVA",
+        "va": "0x10055e770",
+        "rva": "0x55e770",
+        "length": 64,
+        "bytes": "dbf4ff971f080031e00900541f0c00310017005460f1ff36f81740b91f040031410900541c7f409388f37dd3216b68b8e00314aaf200009480080037e80a4079",
+        "sha256": "8ac89c12b606f520fe8cf9e90588b24a1eb617639de492f350240b6717530eb3"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedFiltersRVA",
+        "va": "0x10055e7ac",
+        "rva": "0x55e7ac",
+        "length": 64,
+        "bytes": "e80a40791f1d017168000054a97a6878a908003769aa4f79ea4240b95f01096b6c070054290be8d22001679e0009601ee93a40b92101621e0020611e8c060054",
+        "sha256": "ecbae38f0239c4d5ff9630d275d701b6cfe922cb71abfee07412f5c3029520b2"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedLoopRVA",
+        "va": "0x10055e8b4",
+        "rva": "0x55e8b4",
+        "length": 64,
+        "bytes": "f81740b908070011e81700b91fff0071f80308aa2bf1ff54650000141f91007121ffff5462000014600641f9c0feffb4fc1240b9e459fa97600641f901008052",
+        "sha256": "d48acd50fb1ca774aec28847229ceadb1485e2fde6897a747348485cfa06cf9e"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedPoolRVA",
+        "va": "0x10055e988",
+        "rva": "0x55e988",
+        "length": 64,
+        "bytes": "3c0f1c8b8817403988000034e863009118c93b387b070011f5031caaa84e40386805003400102e1ee00314aae10313aae20317aadef6ff970820201e8d040054",
+        "sha256": "25cdfdcaa34f341d75bc85d84f3c4b1622dd42faa11f231b017f40020ec0a161"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedProbabilityRVA",
+        "va": "0x10055e9c8",
+        "rva": "0x55e9c8",
+        "length": 64,
+        "bytes": "e8264629287d081ba9024039087d091be9a39052693daa72087d299b09fd7fd308fd65930801090b0101221e0008211e0020291e20cd201e2039201e883a40f9",
+        "sha256": "478a96ac6fe79e7ff158dd0cf59ccddddaa4536e6eedba7c25a5db7e7fa30b72"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedFallbackRVA",
+        "va": "0x10055ea60",
+        "rva": "0x55ea60",
+        "length": 64,
+        "bytes": "7f0700718bd9ff5417008052f6031b2af86300911af09152fb1f8052fc0316aa08038039350f088ba10240b988af00f008c11e9100011a8be850ff97800100b4",
+        "sha256": "235c8bd0882a565bbe16e42305668e3887542d80689be8656b4a45c070e972cf"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedRecheckRVA",
+        "va": "0x10055eaa0",
+        "rva": "0x55eaa0",
+        "length": 64,
+        "bytes": "e20300aa00102e1ee00314aae10313aaa1f6ff970820201e89000054a8164039f702080b020000141b030039180700919c0700f161fdff54883a40f9092e8552",
+        "sha256": "0bf306a0d634d3bea2412c0e6d99140154c47197afb78a769dfb20a76077c28c"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacyControlRVA",
+        "va": "0x10055efd0",
+        "rva": "0x55efd0",
+        "length": 64,
+        "bytes": "c3f2ff971f080031000400541f0c003100100054e0f2ff36fb2b40b91f04003161030054787f409319f37dd3816b79b8e00314aadafeff97a0020037a83a40b9",
+        "sha256": "ab2e63d993bd0d7d5826524522378a62347ab08cf0a7aa4d1635c29eb5c8c1ad"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacyFiltersRVA",
+        "va": "0x10055f02c",
+        "rva": "0x55f02c",
+        "length": 64,
+        "bytes": "3fbd0071600200543fc5007120010054890f188b29114039c90000340001621e2021601e6d01005402000014fb2b40b968070011e82b00b97fff0071fb0308aa",
+        "sha256": "cb7b31271b225303dd3ac7dec20fc709d06da3187b859b83b97d7eba61829ac1"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacySecondEntryRVA",
+        "va": "0x10055f1e0",
+        "rva": "0x55f1e0",
+        "length": 64,
+        "bytes": "fb0316aa1c008052ff2700b917f0915219f0a7521a2e85523a01a072780e41f916b30391e8031caa087d7d93c16a68b8e10500343f90007160e0ff546003178b",
+        "sha256": "9806d09705a138081aecd49b78bd7262aaec41ff25b82b5c26378450f95d7b99"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacyRowSentinelRVA",
+        "va": "0x10055f20c",
+        "rva": "0x55f20c",
+        "length": 64,
+        "bytes": "c16a68b8e10500343f90007160e0ff546003178b064fff97400500b4f50300aa02730391e4930091e00314aae10313aae30315aa0041601e26f2ff971f080031",
+        "sha256": "82fbc32e3cec96f14596d0446df875a95fa0cd7e5cc3e9a71e468d66ce2b2fe4"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacySecondControlRVA",
+        "va": "0x10055f244",
+        "rva": "0x55f244",
+        "length": 64,
+        "bytes": "26f2ff971f080031e00300541f0c003180deff5440dfff36fc2740b91f04003141030054887f4093e80f00f918f17dd3c16a78b8e00314aa3cfeff9760020037",
+        "sha256": "4f07da2a0fcea3ea1d71cf579b9fbe11d623000f4ef3be23b187e4ef4e1a0927"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacySecondFiltersRVA",
+        "va": "0x10055f294",
+        "rva": "0x55f294",
+        "length": 64,
+        "bytes": "f92f00b9a80a4079080500511f710171083a0054ab4d00906be11f91890000106a79687829090a8b20011fd6ff2f00b9c8010014fc2740b988070011e82700b9",
+        "sha256": "9e249f363b3a1b2e84bcc00c2d35125b8603e3abad5a9e998ed7de8b55610d9c"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacySecondaryChanceRVA",
+        "va": "0x10055f9e4",
+        "rva": "0x55f9e4",
+        "length": 64,
+        "bytes": "e80f40f9c80e088b08154039e8c6ff34a93240b9287d081b0001221ee12f40bd2008201e0800381e893a40f92a697ab8ab7f88526b00a0726cd89352cc04a072",
+        "sha256": "a5ce26c0d2228c1f288c50eb44461bdb2cd3f8b2b4c360a938bc9726b9795dfa"
+      },
+      {
+        "name": "PHOrbEnemySelectorCompoundEligibilityRVA",
+        "va": "0x100561a44",
+        "rva": "0x561a44",
+        "length": 64,
+        "bytes": "080840791f4901712003005400102e1ee00314aae10313aae20315aab5eaff970820201e49020054e00314aae10313aae20315aaf9f9ff9760a247bd08000014",
+        "sha256": "757f3ea3696677274349755b59e378dbdce80c7e1fd19451c6284167656b514a"
+      },
+      {
+        "name": "PHOrbEnemySelectorRoot82FallbackRVA",
+        "va": "0x100561e00",
+        "rva": "0x561e00",
+        "length": 64,
+        "bytes": "000100b4080840791f490171a100005408008012689206b908103e1e24000014619246b908103e1e2104f83788af009008c11e9109f091520001098bff43ff97",
+        "sha256": "7dc255c1da4d3d0bd41aafceca0bf6a9e41987310926f985b04efaed38dc6165"
+      },
+      {
+        "name": "PHOrbEnemySelectorAttachedDamageOrderRVA",
+        "va": "0x100566c28",
+        "rva": "0x566c28",
+        "length": 64,
+        "bytes": "68825f3908011f3268821f3960ea47bd00d8217e0859a8520101271e0018211ee00314aae10313aa2200805203008012b70c0094390b00141f8101718d060054",
+        "sha256": "3d4f070ca472fcebd07caf8f3e592a2a7e04dc2077879011ec1e4f5795cb9483"
+      },
+      {
+        "name": "PHOrbEnemySelectorNegativeSelectionAttackRVA",
+        "va": "0x10056acc4",
+        "rva": "0x56acc4",
+        "length": 64,
+        "bytes": "a80240394002003488030034683a40f989fe89526901a0720001098bd8180094a002083600102e1ee00313aae10315aa02008052030080128efcff970e000014",
+        "sha256": "5717538cd8cfd60adc6168f8eb64e60a3d8f36bd7f2ad7956104a2795f04679c"
+      },
+      {
+        "name": "PHOrbEnemySelectorOrderedLeafMaskRVA",
+        "va": "0x10055e7ec",
+        "rva": "0x55e7ec",
+        "length": 64,
+        "bytes": "1fc50071e8000054290080522921c89aea4751b24a00e0f23f010aea810500541f390271600600541f750171810b0054e8264629287d081b290f1c8b29114039",
+        "sha256": "fdfb3eb917740dfd172ad3249e3a28d756ebc1a7027b69bc3e2e268601ef8cd0"
+      },
+      {
+        "name": "PHOrbEnemySelectorLegacyCostRVA",
+        "va": "0x10055f074",
+        "rva": "0x55f074",
+        "length": 64,
+        "bytes": "3f910071400b005468aa4f79a94240b93f01086bacfeff54a83e40b916350012e8cec1791f0500710b010054c87e081b0001231e0859a8520101271e0018211e",
+        "sha256": "0e8c8c77acdeefd98e3343e0013f457bbf836efd4bc5539dbcc481bf8825af91"
+      }
+    ]
+  },
+  "control_classification_original": {
+    "va": "0x100f13b8c",
+    "u16_count": 72,
+    "one_indices": [
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      43,
+      44,
+      45
+    ],
+    "bytes": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001000100010001000100010001000100010001000100010001000100010001000100000000000000000001000100010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "sha256": "977f44178d763650a352677a270323129a1f0eb08765d902d78805a8ae2cfcec"
+  },
+  "written_cases": {
+    "model": "flags and counters including unsigned boundaries; distinct jump conventions; HP equality/open complements and contradictory branches; legacy inherited state and ID36 distinction; signed cost and candidate origin; unknown frontiers, loops, limits/shared budget; cached-only IDs; ordered compound duplicates and 82 fallback",
+    "native": "existing capture without selector guards, all-HP adaptation, candidate/sequence presentation, no writes or native feasibility calls, isolated guard failure, partial frontier, multiplayer exclusion",
+    "session": "conditional/unknown counts, explicit forecast unknown, guard-loss candidate clearing, stale context clearing and multiplayer exclusion"
+  },
+  "validation": {
+    "compiled": false,
+    "tests_executed": false,
+    "generators_executed": false,
+    "benchmarks_executed": false,
+    "gui_executed": false,
+    "ci_dispatched": false,
+    "packaged": false,
+    "device_verified": false,
+    "static_audit": {
+      "status": "passed",
+      "method": "source-format-lexical-AST-original-byte-review-only",
+      "baseline_commit": "b2c688d",
+      "json_files": 6,
+      "python_ast_files": 2,
+      "embedded_python_blocks": 6,
+      "source_files": 11,
+      "local_includes": 65,
+      "local_document_links": 111,
+      "test_entry_points_written": 3,
+      "guards": {
+        "orb_operation": 114,
+        "orb_optional_observation": 15,
+        "orb_policy": 45,
+        "orb_optional_enemy_actions": 32,
+        "orb_optional_enemy_selector": 27,
+        "battle": 34,
+        "runtime": 17
+      },
+      "original_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+      "original_binary_uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+      "original_206_orb_guards_unchanged": true,
+      "all_guards_match_ida_original_current_and_disk": true,
+      "selector_guard_failure_byte_isolated_from_previous_guards": true,
+      "control_classification_matches_disk": true,
+      "operation_gate_and_input_stage_unchanged": true,
+      "existing_automation_model_unchanged": true,
+      "optional_data_not_in_copied_snapshot": true,
+      "no_additional_game_data_fields_or_reads": true,
+      "forecast_and_survival_fields_remain_false": true,
+      "workflow_dispatch_only": true,
+      "generated_files_configs_templates_unchanged": true,
+      "compiled": false,
+      "tests_executed": false,
+      "generators_executed": false,
+      "benchmarks_executed": false,
+      "gui_executed": false,
+      "ci_dispatched": false,
+      "packaged": false,
+      "device_verified": false,
+      "source_sha256_lf": {
+        "ios/src/PHEnemySelector.h": "547fda8b3ed57f40e2dac293f07640f9c5392aec9d75b70f81108fe1089371b0",
+        "ios/src/PHOrbEnemyActions.inc": "553a1111f18ccce0c94334b6d1100c0e089a5093cdd2e4aa153e8a46a9799887",
+        "ios/src/PHOrbEnemySelector.inc": "68f7cffe299ea02fb7a7337407aeabc5c448e6999433e85db863a527e698a778",
+        "ios/src/PHOrbNative.mm": "58ac6aedecf6423da7718070eaa3b43331bf76a032775991dd0639c045009cd5",
+        "ios/src/PHOrbObservationPresentation.inc": "ca065657e19a2c00b37da1f9d6f41c1283fc65f993c4fe9f290c9db905107cd6",
+        "ios/tests/enemy_selector_model_tests.inc": "169be2c7e4b9f5826ccf0da1989de975077bc208d3595ba83ac20c0ae5a27154",
+        "ios/tests/orb_enemy_selector_native_tests.inc": "330afd519b0ed15bd3139e62815a1c9531584002bf43fdbd4d7ed4cbb011e604",
+        "ios/tests/orb_enemy_selector_session_tests.inc": "d432e753fbacb46607890a6c1d01de76be0e646f4e7f67219ed3ba1cd4c38461",
+        "ios/tests/orb_session_tests.mm": "2efe1984c682d539de5105dd0cb47080b295df895d6304cfff7a47bd7292aa16",
+        "ios/tests/orb_skill_native_tests.inc": "55b17475477f6a81203c5d37384615ca45aba11a628bfb4c6e4bd5fe293c60ca",
+        "ios/tests/orb_solver_tests.cpp": "69fb42dea4691ee5ff7bbc61a61accb2f85808cc53d76676a54d441301dbf09f",
+        "ios/tools/generate_orbs.py": "2ca88669a53372d3a35117097fbab5149523ff61f17771d17bb026c5490d7f5d",
+        "ios/tools/generate_battle.py": "9b8e9a3edf04bd6447d47296b88ec1f98b9cdffa36d4a88c881e7c1a48540a0b",
+        "ios/build.sh": "db38ef8026696c7e3301db4c7ab5fad7d3fa97c8cf43d6ad04730e374aafff8d",
+        "ios/targets/orbs-23.6.0.json": "02609e9dc9ec02eec0881e80fc73b702642990a4640e6507ed765b5c82cabdbf"
+      },
+      "limits": "No compilation, case execution, selector/AI execution, native timing, device, shield/healing, survival or performance result."
+    }
+  }
+}

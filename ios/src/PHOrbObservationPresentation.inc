@@ -128,6 +128,18 @@ NSString *BattleObservationDescription(const PHOrbBattleObservation &observation
             (unsigned long)[enemyActions[@"definitions"] count]]];
         if (![enemyActions[@"definitionCaptureComplete"] boolValue] || ![enemyActions[@"structureSupported"] boolValue])
             [lines addObject:@"行動表仍有未支援或不完整資料，詳見複製紀錄。"];
+        if ([enemyActions[@"selectorAnalysis"][@"status"] isEqual:@"ready"]) {
+            NSUInteger complete = 0, incomplete = 0, candidates = 0;
+            for (NSDictionary *enemy in enemyActions[@"enemies"]) {
+                NSDictionary *selector = enemy[@"selectorAnalysis"];
+                if ([selector[@"conditionalWalkComplete"] boolValue]) ++complete;
+                else ++incomplete;
+                candidates += [selector[@"candidates"] count];
+            }
+            [lines addObject:[NSString stringWithFormat:@"選招分支：%lu 個敵人的條件分支已分析，%lu 個未完整；保留 %lu 組候選。",
+                (unsigned long)complete, (unsigned long)incomplete, (unsigned long)candidates]];
+            [lines addObject:@"候選涵蓋不同血量情況，尚不能確認下一招或判斷耐久。"];
+        }
     } else if (enemyActions) [lines addObject:@"敵人行動表：等待新的穩定資料。"];
     if (observation.assistVoidKnown) [lines addObject:observation.assistVoidTurns > 0 ?
         [NSString stringWithFormat:@"暫時武裝無效：%d 回合", observation.assistVoidTurns] : @"目前沒有暫時武裝無效。"];

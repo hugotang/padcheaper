@@ -1,6 +1,6 @@
 # 敵人行動定義與目前 AI 狀態
 
-2026-11-01，**源碼與案例已寫，尚未編譯、執行測試或真機驗證**。0.5.14 不含本批。[完整設計](enemy-aware-automation.md) 的下一擊／減傷／回血和 L＋心四連耐久仍未開放。本批先取得可供後續核對的原生定義，不改必要救援、技能使用、求路或輸入授權。
+2026-11-01，**源碼與案例已寫，尚未編譯、執行測試或真機驗證**。0.5.14 不含本批。[完整設計](enemy-aware-automation.md) 的下一擊／減傷／回血和 L＋心四連耐久仍未開放。本批先取得可供後續核對的原生定義，不改必要救援、技能使用、求路或輸入授權。後續已增加 [選招條件分支分析](enemy-selector-analysis.md)，同樣待建置；以下保留本批原始收集範圍。
 
 ## 本批輸出
 
@@ -13,7 +13,7 @@
 | `status=ready` | 本次有界雙讀及目前窗口核對通過；個別敵人／定義仍可未知 |
 | `rawCaptureComplete` | 本批選定欄位、全部列及可識別引用已完整收集，沒有超限或無法讀取；不代表所有 opcode 的其他語意／引用都已支援 |
 | `definitionCaptureComplete`／`structureSupported` | 上述收集完整，且本批辨識的結構沒有未知 opcode、循環、巢狀複合或非法跳轉 |
-| `enemyForecastKnown`／`actionReachabilityKnown` | 本版固定 false；沒有模擬選招或證明下一回合可達集合 |
+| `enemyForecastKnown`／`actionReachabilityKnown` | 固定 false；後續條件遍歷亦未證明下一回合實際可達集合 |
 | `damageBoundKnown`／`survivalKnown` | 本版固定 false；原始攻擊數字不是下一擊傷害 |
 | `spawnIdentityKnown`／`nextFloorKnown` | 本版固定 false；沒有跨取樣的 spawn 世代或未生成樓層資料 |
 

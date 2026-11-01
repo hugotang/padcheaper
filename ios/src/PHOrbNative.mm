@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <CommonCrypto/CommonDigest.h>
 #include "PHEnemyActions.h"
+#include "PHEnemySelector.h"
 
 namespace {
 constexpr size_t PoolStride = 172, PoolCount = 256;

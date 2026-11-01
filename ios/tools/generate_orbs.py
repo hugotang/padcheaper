@@ -59,6 +59,18 @@ def generate(manifest):
                                  'controls': 'descriptions-and-raw-operands-only', 'unknown_opcodes': 'retained',
                                  'native_getters': False, 'spawn_identity': False, 'enemy_forecast': False,
                                  'survival_authorization': False, 'guards': 'separate-optional-only', 'device_verified': False},
+                             'enemy_selector_analysis': {'mode': 'optional-read-only-stable-single-player',
+                                 'entry': 'conditional-ordinary-row-zero-current-AI-state',
+                                 'hp': 'all-native-percentages-0-through-100',
+                                 'modes': ['ordered-weighted', 'legacy-two-pass'],
+                                 'state_limit_per_enemy': 512, 'candidate_limit_per_enemy': 256,
+                                 'step_limit_per_capture': 4096, 'weighted_pool_limit_per_path': 64,
+                                 'unknown_frontier': 'partial-no-exclusion-proof',
+                                 'feasibility': 'may-select-and-may-skip', 'probabilities': False,
+                                 'sequence': 'positive-prefix-duplicates-kept-attached-attack-before-status',
+                                 'native_calls': False, 'projected_AI_state': False, 'next_entry': False,
+                                 'enemy_forecast': False, 'damage_bound': False, 'survival_authorization': False,
+                                 'guards': 'separate-optional-only', 'device_verified': False},
                              'assist_recovery_goals': {'mode': 'opt-in-single-player-continuous',
                                  'capture': 'fresh-double-read-before-plan-and-input', 'combine': 'retain-base-and-heart-goals',
                                  'amount': 'current-effective-L-per-distinct-member-color-per-first-wave-group',
@@ -190,7 +202,36 @@ def generate(manifest):
         'PHOrbEnemyActionsTableLoadRVA',
         'PHOrbEnemyActionsRecordLoadRVA',
     }
-    required |= observation_guards | assist_recovery_guards | enemy_action_guards
+    enemy_selector_guards = {
+        'PHOrbEnemySelectorControlCompareRVA',
+        'PHOrbEnemySelectorControlXorRVA',
+        'PHOrbEnemySelectorControlEmitClearRVA',
+        'PHOrbEnemySelectorControlEqualRVA',
+        'PHOrbEnemySelectorControlFlagsLevelRVA',
+        'PHOrbEnemySelectorControlSetElseJumpRVA',
+        'PHOrbEnemySelectorControlStoreRVA',
+        'PHOrbEnemySelectorOrderedControlRVA',
+        'PHOrbEnemySelectorOrderedFiltersRVA',
+        'PHOrbEnemySelectorOrderedLoopRVA',
+        'PHOrbEnemySelectorOrderedPoolRVA',
+        'PHOrbEnemySelectorOrderedProbabilityRVA',
+        'PHOrbEnemySelectorOrderedFallbackRVA',
+        'PHOrbEnemySelectorOrderedRecheckRVA',
+        'PHOrbEnemySelectorLegacyControlRVA',
+        'PHOrbEnemySelectorLegacyFiltersRVA',
+        'PHOrbEnemySelectorLegacySecondEntryRVA',
+        'PHOrbEnemySelectorLegacyRowSentinelRVA',
+        'PHOrbEnemySelectorLegacySecondControlRVA',
+        'PHOrbEnemySelectorLegacySecondFiltersRVA',
+        'PHOrbEnemySelectorLegacySecondaryChanceRVA',
+        'PHOrbEnemySelectorCompoundEligibilityRVA',
+        'PHOrbEnemySelectorRoot82FallbackRVA',
+        'PHOrbEnemySelectorAttachedDamageOrderRVA',
+        'PHOrbEnemySelectorNegativeSelectionAttackRVA',
+        'PHOrbEnemySelectorOrderedLeafMaskRVA',
+        'PHOrbEnemySelectorLegacyCostRVA',
+    }
+    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -256,7 +297,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -275,6 +316,11 @@ def generate(manifest):
         if guard['name'] in enemy_action_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbEnemyActionsTextGuardCount = sizeof(PHOrbEnemyActionsTextGuards) / sizeof(PHOrbEnemyActionsTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemySelectorTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_selector_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemySelectorTextGuardCount = sizeof(PHOrbEnemySelectorTextGuards) / sizeof(PHOrbEnemySelectorTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 

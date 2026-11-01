@@ -219,9 +219,12 @@ NSMutableDictionary *EnemyActionStatus(NSString *status) {
             @"countdown-timing", @"effective-shield-lifetime", @"healing-order", @"future-skill-deadlines"]} mutableCopy];
 }
 
-NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture) {
+#include "PHOrbEnemySelector.inc"
+
+NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorCodeKnown) {
     NSMutableDictionary *out = EnemyActionStatus(@"ready");
     NSMutableArray *enemies = [NSMutableArray array], *definitions = [NSMutableArray array];
+    ES::Budget selectorBudget{};
     bool complete = !(capture.graph.issues & EA::CaptureIssues) && !capture.readBudgetExceeded;
     bool supported = !capture.graph.issues;
     for (unsigned slot = 0; slot < capture.enemyCount; ++slot) {
@@ -281,6 +284,8 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture) {
             }
             entry[@"rows"] = rows;
         }
+        entry[@"selectorAnalysis"] = selectorCodeKnown ? EnemySelectorTrace(enemy, capture.graph, selectorBudget) :
+            @{@"status":@"unavailable", @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
         [enemies addObject:entry];
     }
     for (unsigned index = 0; index < capture.graph.count; ++index) {
@@ -317,6 +322,11 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture) {
     out[@"readByteLimit"] = @(EA::MaxReadBytes); out[@"readCallLimit"] = @(EA::MaxReads);
     out[@"readBudgetExceeded"] = @(capture.readBudgetExceeded);
     out[@"issues"] = EnemyActionIssues(capture.graph.issues);
+    out[@"selectorAnalysis"] = @{@"status":selectorCodeKnown ? @"ready" : @"unavailable", @"version":@(ES::Version),
+        @"stateLimitPerEnemy":@(ES::MaxStates), @"candidateLimitPerEnemy":@(ES::MaxCandidates),
+        @"weightedPoolLimitPerPath":@(EA::Rows),
+        @"stepLimitPerCapture":@(ES::MaxCaptureSteps), @"steps":@(selectorBudget.steps),
+        @"diagnosticOnly":@YES, @"enemyForecastKnown":@NO, @"damageBoundKnown":@NO, @"survivalKnown":@NO};
     out[@"enemies"] = enemies; out[@"definitions"] = definitions;
     return out;
 }
@@ -367,5 +377,5 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
         !final.valid || !final.settled || final.boardTransition || final.dragged || !PHInputIsQuiet(&final.input) ||
         !PHOrbSameTurn(&state, &final) || state.moves != final.moves || final.phase != state.phase ||
         !PHOrbSameLeaders(&state, &final) || !PHOrbSamePlanBoard(&state.board, &final.board)) return EnemyActionStatus(@"changed");
-    return EnemyActionTrace(capture);
+    return EnemyActionTrace(capture, CheckEnemySelectorCode(header));
 }

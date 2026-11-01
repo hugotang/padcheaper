@@ -1,5 +1,6 @@
 #include "PHOrbSolver.h"
 #include "PHEnemyActions.h"
+#include "PHEnemySelector.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -178,9 +179,11 @@ static void ShapeTests() {
 #include "orb_diagonal_solver_tests.inc"
 #include "orb_multiplayer_model_tests.inc"
 #include "enemy_action_model_tests.inc"
+#include "enemy_selector_model_tests.inc"
 
 int main() {
     EnemyActionModelTests();
+    EnemySelectorModelTests();
     MultiplayerModelTests();
     DiagonalSolverTests();
     ShapeTests();
