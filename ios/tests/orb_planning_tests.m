@@ -10,6 +10,7 @@ static NSDictionary *Profile(NSArray *goals) { return @{@"goals":goals, @"warnin
 
 #include "orb_recovery_planning_tests.inc"
 #include "orb_assist_planning_tests.inc"
+#include "orb_enemy_combo_planning_tests.inc"
 #include "orb_leader_fixture.h"
 
 static void MultiplayerLeaderPlanningTests(void) {
@@ -155,6 +156,7 @@ int main(void) {
               "paired minimum-combo clauses merge to the stronger threshold");
         RecoveryPlanningTests();
         AssistPlanningTests();
+        EnemyComboPlanningTests();
         MultiplayerLeaderPlanningTests();
     }
     printf("Orb planning tests: %s\n", failures ? "FAILED" : "passed");

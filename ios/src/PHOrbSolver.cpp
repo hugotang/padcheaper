@@ -487,6 +487,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             pending &= ~group;
             const unsigned count = Count(group);
             ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
+            if (!wave) ++result.firstWaveCombos;
             if (color == PHOrbPoison || color == PHOrbMortalPoison) result.poisonErased += uint8_t(count);
             if (color == PHOrbMortalPoison) result.mortalPoisonErased += uint8_t(count);
             if (!wave && color == 5 && count == 4) {
@@ -522,7 +523,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     }
     for (unsigned g = 0; g < context.goals.count; ++g) {
         const auto &goal = context.goals.items[g];
-        if (goal.kind == PHOrbGoalCombo) result.goalHits[g] = result.combos;
+        if (goal.kind == PHOrbGoalCombo) result.goalHits[g] = context.goals.comboFirstWave ? result.firstWaveCombos : result.combos;
         if (goal.kind == PHOrbGoalColors) result.goalHits[g] = uint8_t(Count(matchedColors & goal.colors));
         if (result.goalHits[g] >= goal.count) { ++result.matchedGoals; score.goalProgress[g] = 4096; }
         // Public replay validation needs actual hits only. Avoid template
@@ -588,6 +589,7 @@ Score Evaluate(Cells cells, const Context &context) {
         auto &a = worst.result;
         const auto &b = variant.result;
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
+        a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
         a.poisonErased = std::max(a.poisonErased, b.poisonErased);
         a.mortalPoisonErased = std::max(a.mortalPoisonErased, b.mortalPoisonErased);
         a.unmatchedBombs = std::max(a.unmatchedBombs, b.unmatchedBombs);

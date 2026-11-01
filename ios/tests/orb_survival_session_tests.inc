@@ -48,10 +48,11 @@ static void SurvivalSessionTests() {
                 [[session snapshot][@"message"] containsString:@"敵人效果無法確認"],
                 "unavailable required rules still stop when their triggering condition cannot be established");
         } else {
-            Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.empty() &&
+            FinishSurvivalAttempt(session,engine);
+            Check(![[session snapshot][@"automatic"] boolValue] && !engine->stages && engine->skillOrder.empty() &&
+                [[session snapshot][@"message"] containsString:@"敵人對策"] &&
                 [[[session snapshot][@"ruleDecisions"] componentsJoinedByString:@" "] containsString:@"略過"],
-                "bound, reserved or absent optional actors retain legacy skipping even with unknown enemy conditions");
-            [session queueStop:@"end optional unknown-condition fixture"];
+                "optional actors still skip, while unknown current enemies block the independent countermeasure before input");
         }
     }
 

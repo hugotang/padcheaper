@@ -452,6 +452,41 @@ bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssis
         !memcmp(a->latents, b->latents, sizeof(a->latents));
 }
 
+bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboState *b) {
+    return a && b && a->valid && b->valid && a->enemyCount == b->enemyCount && a->aliveMask == b->aliveMask &&
+        a->bypassTurns == b->bypassTurns && a->bypassDelay == b->bypassDelay &&
+        a->adjustmentTurns == b->adjustmentTurns && a->adjustment == b->adjustment &&
+        a->subtractTurns == b->subtractTurns && a->subtract == b->subtract &&
+        !memcmp(a->upperTurns,b->upperTurns,sizeof(a->upperTurns)) &&
+        !memcmp(a->hp, b->hp, sizeof(a->hp)) && !memcmp(a->flags, b->flags, sizeof(a->flags)) &&
+        !memcmp(a->turns, b->turns, sizeof(a->turns)) && !memcmp(a->thresholds, b->thresholds, sizeof(a->thresholds));
+}
+
+bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *minimum) {
+    if (minimum) *minimum = 0;
+    if (!state || !minimum || !state->valid || !state->enemyCount || state->enemyCount > 8 ||
+        !state->aliveMask || (unsigned)state->aliveMask >= (1u << state->enemyCount)) return false;
+    const bool bypass = (int16_t)(uint16_t)(state->bypassTurns << 6) > 0 &&
+        (int16_t)(uint16_t)(state->bypassDelay << 6) <= 0;
+    for (unsigned slot = 0; slot < state->enemyCount; ++slot) {
+        if (state->flags[slot] & 0x100u) return false; // Parts cannot be silently skipped.
+        const bool alive = state->hp[slot] && state->hp[slot] <= INT64_MAX;
+        if (alive != ((state->aliveMask & (1u << slot)) != 0)) return false;
+        if (alive && (int16_t)state->upperTurns[slot] > 0) return false; // Requires a maximum and bounded bonuses/skyfall.
+        if (!alive || bypass || (int16_t)state->turns[slot] <= 0 || (int16_t)state->thresholds[slot] < 1) continue;
+        const unsigned needed = state->thresholds[slot] + 1u;
+        if (needed > *minimum) *minimum = needed;
+    }
+    if (*minimum) {
+        // Positive bonuses are not credited. Subtraction remains a debit even
+        // if an unmodelled leader/awakening bonus might offset it in the game.
+        if ((int16_t)(uint16_t)(state->adjustmentTurns << 6) > 0 && state->adjustment < 0)
+            *minimum += (unsigned)-(int)state->adjustment;
+        if ((int16_t)(uint16_t)(state->subtractTurns << 6) > 0) *minimum += state->subtract;
+    }
+    return true;
+}
+
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height) {
     if (!width || !height || width * height > PHOrbMaxCells || a >= width * height || b >= width * height) return false;
     return (a / width == b / width && (a + 1 == b || b + 1 == a)) ||

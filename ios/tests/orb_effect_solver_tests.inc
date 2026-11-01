@@ -1,6 +1,6 @@
 // Independent effect oracle: whole-line runs, disjoint-set components, then
 // column reconstruction. No production matching, phase or replay helpers.
-struct EffectOracleResult { unsigned combos = 0, erased = 0, poison = 0, bombs = 0, mortal = 0; };
+struct EffectOracleResult { unsigned combos = 0, erased = 0, poison = 0, bombs = 0, mortal = 0, firstCombos = 0; };
 static EffectOracleResult EffectOracle(const PHOrbBoard &board) {
     EffectOracleResult result;
     const unsigned w = board.width, h = board.height, n = w * h, run = board.minErase ? board.minErase : 3;
@@ -32,6 +32,9 @@ static EffectOracleResult EffectOracle(const PHOrbBoard &board) {
             if (sizes[root(*it)] < board.minMatch) it = marked.erase(it); else ++it;
         if (first) {
             for (unsigned i = 0; i < n; ++i) result.bombs += cells[i] == 9 && !marked.count(i);
+            std::set<unsigned> initialGroups;
+            for (unsigned i : marked) initialGroups.insert(root(i));
+            result.firstCombos = unsigned(initialGroups.size());
             first = false;
         }
         if (marked.empty()) return result;

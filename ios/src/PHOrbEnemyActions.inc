@@ -73,7 +73,7 @@ bool EnemyActionRecord(void *context, uint32_t id, EA::Record &record) {
 }
 
 bool EnemyActionParameter(EnemyActionCapture &capture, EnemyActionEntry &enemy,
-    std::array<uint8_t, 840> &bytes) {
+    std::array<uint8_t, 840> &bytes, bool requireCurrent = true) {
     const auto &tables = capture.tables;
     const uint32_t id = enemy.catalogID;
     if (!id || id > INT32_MAX || id == 10000000 || (id >= tables.catalogCount && id <= 100000)) return false;
@@ -86,7 +86,7 @@ bool EnemyActionParameter(EnemyActionCapture &capture, EnemyActionEntry &enemy,
         const uintptr_t address = tables.catalog + size_t(index) * PHBattleCatalogStride;
         if (!EnemyActionRead(capture, address, bytes.data(), bytes.size())) return false;
         if (Load<uint32_t>(bytes.data()) == id) {
-            if (address != enemy.parameter) return false;
+            if (requireCurrent && address != enemy.parameter) return false;
             enemy.catalogIndex = index;
             return true;
         }
@@ -222,10 +222,33 @@ NSMutableDictionary *EnemyActionStatus(NSString *status) {
 #include "PHOrbEnemyDispatch.inc"
 #include "PHOrbEnemySelector.inc"
 #include "PHOrbEnemyDamage.inc"
+#include "PHOrbEnemyThreat.inc"
+
+NSDictionary *EnemyActionDefinitionTrace(const EA::Node &node) {
+    NSMutableDictionary *entry = [@{@"actionID":@(node.id), @"known":@(node.known),
+        @"issues":EnemyActionIssues(node.issues)} mutableCopy];
+    if (node.known) {
+        const auto &record = node.record;
+        NSMutableArray *parameters = [NSMutableArray array], *children = [NSMutableArray array];
+        for (unsigned i = 0; i < 8; ++i) [parameters addObject:@(record.parameter(i))];
+        if (record.opcode() == 83) for (unsigned i = 0; i < 8 && record.parameter(i) > 0; ++i) [children addObject:@(record.parameter(i))];
+        [entry addEntriesFromDictionary:@{@"opcode":@(record.opcode()),
+            @"kind":[NSString stringWithUTF8String:EA::Kind(record.opcode())], @"parameters":parameters,
+            @"recordIDRaw":@(record.word(0)),
+            @"rawHex":EnemyActionHex(record.bytes.data(), record.bytes.size()),
+            @"sha256":EnemyActionDigest(record.bytes.data(), record.bytes.size()),
+            @"weightsRaw":@[@(record.word(48)), @(record.word(52))], @"hpThresholdRaw":@(record.word(56)),
+            @"heuristicRaw":@(record.word(60)), @"aiCostRaw":@(record.word(64)),
+            @"attachedAttackPercentRaw":@(record.word(68)),
+            @"attachedAttackPrecedesEffect":record.opcode() == 88 || record.opcode() == 141 ? @(record.word(68) > 0) : NSNull.null}];
+        if (record.opcode() == 83) entry[@"childrenInOrder"] = children;
+    }
+    return entry;
+}
 
 NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorCodeKnown,
     const EnemyDispatchCapture *dispatch, NSString *dispatchStatus,
-    const EnemyDamageCapture *damage, NSString *damageStatus) {
+    const EnemyDamageCapture *damage, NSString *damageStatus, bool threatCodeKnown) {
     NSMutableDictionary *out = EnemyActionStatus(@"ready");
     NSMutableArray *enemies = [NSMutableArray array], *definitions = [NSMutableArray array];
     ES::Budget selectorBudget{};
@@ -294,30 +317,11 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorC
             @{@"status":@"unavailable", @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
         entry[@"damageAnalysis"] = damage ? EnemyDamageTrace(enemy, *damage, slot) :
             @{@"status":damageStatus, @"postPlayerStateKnown":@NO, @"enemyForecastKnown":@NO};
+        entry[@"threatEvents"] = EnemyThreatTrace(enemy,capture.graph,threatCodeKnown);
         [enemies addObject:entry];
     }
-    for (unsigned index = 0; index < capture.graph.count; ++index) {
-        const auto &node = capture.graph.nodes[index];
-        NSMutableDictionary *entry = [@{@"actionID":@(node.id), @"known":@(node.known),
-            @"issues":EnemyActionIssues(node.issues)} mutableCopy];
-        if (node.known) {
-            const auto &record = node.record;
-            NSMutableArray *parameters = [NSMutableArray array], *children = [NSMutableArray array];
-            for (unsigned i = 0; i < 8; ++i) [parameters addObject:@(record.parameter(i))];
-            if (record.opcode() == 83) for (unsigned i = 0; i < 8 && record.parameter(i) > 0; ++i) [children addObject:@(record.parameter(i))];
-            [entry addEntriesFromDictionary:@{@"opcode":@(record.opcode()),
-                @"kind":[NSString stringWithUTF8String:EA::Kind(record.opcode())], @"parameters":parameters,
-                @"recordIDRaw":@(record.word(0)),
-                @"rawHex":EnemyActionHex(record.bytes.data(), record.bytes.size()),
-                @"sha256":EnemyActionDigest(record.bytes.data(), record.bytes.size()),
-                @"weightsRaw":@[@(record.word(48)), @(record.word(52))], @"hpThresholdRaw":@(record.word(56)),
-                @"heuristicRaw":@(record.word(60)), @"aiCostRaw":@(record.word(64)),
-                @"attachedAttackPercentRaw":@(record.word(68)),
-                @"attachedAttackPrecedesEffect":record.opcode() == 88 || record.opcode() == 141 ? @(record.word(68) > 0) : NSNull.null}];
-            if (record.opcode() == 83) entry[@"childrenInOrder"] = children;
-        }
-        [definitions addObject:entry];
-    }
+    for (unsigned index = 0; index < capture.graph.count; ++index)
+        [definitions addObject:EnemyActionDefinitionTrace(capture.graph.nodes[index])];
     out[@"rawCaptureComplete"] = @(complete);
     out[@"definitionCaptureComplete"] = @(complete && supported);
     out[@"structureSupported"] = @(complete && supported);
@@ -416,5 +420,5 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
     return EnemyActionTrace(capture, CheckEnemySelectorCode(header), dispatchMatches ? &dispatch : nullptr,
         dispatchMatches ? @"ready" : dispatchRead && dispatchSecondRead ? @"changed" : @"unavailable",
         damageMatches ? &damage : nullptr,
-        damageMatches ? @"ready" : damageRead && damageSecondRead ? @"changed" : @"unavailable");
+        damageMatches ? @"ready" : damageRead && damageSecondRead ? @"changed" : @"unavailable", CheckEnemyThreatCode(header));
 }

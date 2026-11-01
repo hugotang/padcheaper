@@ -28,12 +28,16 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 // Fresh action-specific capture, including during the same owned drag.
 // An enabled policy requires this method; the optional observation is not used.
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
+// Required by single-player continuous enemy countermeasures, never borrowed
+// from observeEnemyActions or the optional battle observation cache.
+- (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Enrich a stable snapshot with read-only diagnostics. Failure is optional
 // data unavailability, never a new automation or gesture blocker.
 - (void)observeBattle:(PHOrbSnapshot *)state;
 // Bounded action definitions and current AI state, never next-turn authority.
 // Stored outside PHOrbSnapshot so normal planning/input copies remain small.
 - (NSDictionary *)observeEnemyActions:(const PHOrbSnapshot *)state;
+- (NSDictionary *)observeDungeon:(const PHOrbSnapshot *)state waveIndex:(NSUInteger)index;
 @end
 
 @interface PHOrbSession : NSObject
@@ -44,6 +48,10 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 - (BOOL)configureSettings:(NSDictionary *)settings;
 - (BOOL)configureProfiles:(NSDictionary *)library;
 - (void)queueRead;
+// Enables only read-only recording; does not solve, cast skills, or drag.
+- (void)queueDungeonCapture;
+// Retained loaded floors and actual observations, without account identifiers.
+- (NSDictionary *)dungeonReport;
 // Explicit one-click read/solve/execute, without continuous skill rules.
 // Multiplayer binds immediately to the current eligible local operation window.
 - (void)queueOnce;

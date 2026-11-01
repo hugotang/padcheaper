@@ -574,6 +574,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     __block id orbValue = nil;
     __block NSDictionary *shareDraft = nil, *shareConfig = nil;
     __block NSURL *shareDirectory = nil;
+    __block NSURL *dungeonShareDirectory = nil;
     __block UIDocumentPickerViewController *profilePicker = nil;
     __block PHOverlaySnapshot restoreOriginalSnapshot = nil;
     __block PHOverlayAction restoreOriginalAction = nil;
@@ -751,6 +752,60 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             goalFailure = [baseOrbFixture[@"orbState"] mutableCopy];
             goalFailure[@"goalMode"] = @"manual"; goalFailure[@"goalMessage"] = @"目標未能儲存，仍保留原設定";
             orbFixture = @{@"orbState":goalFailure}; [orbController refresh];
+            UIButton *captureDungeon = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonCapture");
+            UIButton *exportDungeon = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonExport");
+            PHProbeCheck(captureDungeon.enabled && !exportDungeon.enabled,@"Empty dungeon history offers capture and disables empty file export");
+            orbAction = nil; [captureDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([orbAction isEqual:@"orbsDungeonCapture"],@"Read-only dungeon capture has a distinct action from starting a solver");
+            NSDictionary *dungeonFixture = @{@"schema":@1,@"kind":@"PADCheaper-dungeon-report",@"available":@YES,
+                @"dungeon":@1,@"floor":@2,@"capturedFloors":@2,@"totalFloors":@2,@"samples":@1,
+                @"allFloorsCaptured":@YES,@"allDefinitionsCaptured":@YES,@"historicalOnly":@YES,@"survivalKnown":@NO,
+                @"floors":@[@{@"wave":@0},@{@"wave":@1}],@"floorDefinitions":@[@{@"wave":@0},@{@"wave":@1}],
+                @"observations":@[@{@"wave":@0,@"hp":@1000}]};
+            goalFailure[@"dungeonReport"] = dungeonFixture; [orbController refresh];
+            [exportDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!orbController.presentedViewController &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonNotice")).text containsString:@"尚未完成"],
+                @"Missing export acknowledgment leaves a visible retry and does not open an unrelated file");
+            [orbController setValue:[^(NSString *action, id value) {
+                orbAction = action; orbValue = value;
+                if ([action isEqual:@"orbsDungeonExport"]) {
+                    typedef NSDictionary *(*ExportDungeon)(NSDictionary *,NSString *,NSString *,NSURL *);
+                    ExportDungeon exportReport = (ExportDungeon)dlsym(PHProbeDylib,"PHOrbExportDungeonReport");
+                    PHProbeCheck(exportReport != NULL,@"Dylib provides its real dungeon JSON exporter");
+                    goalFailure[@"dungeonExportResult"] = exportReport ? exportReport(dungeonFixture,@"fixture",value,
+                        [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES]) : @{};
+                }
+            } copy] forKey:@"action"];
+            [orbController.view layoutIfNeeded];
+            UIScrollView *dumpScroll = PHProbeScrollParent(exportDungeon);
+            [dumpScroll scrollRectToVisible:[exportDungeon convertRect:exportDungeon.bounds toView:dumpScroll] animated:NO];
+            PHProbeRender(self.window,orbWindow,@"orbs-dungeon-report");
+            [exportDungeon sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"dungeon-share-visible", ^BOOL {
+            return PHProbePresented(orbController,@"padcheaper.orbsDungeonShareSheet",NO);
+        }, ^{
+            UIActivityViewController *sheet = (UIActivityViewController *)orbController.presentedViewController;
+            dungeonShareDirectory = [orbController valueForKey:@"dungeonShareDirectory"];
+            NSArray<NSURL *> *files = [NSFileManager.defaultManager contentsOfDirectoryAtURL:dungeonShareDirectory
+                includingPropertiesForKeys:nil options:0 error:NULL];
+            NSData *data = files.count == 1 ? [NSData dataWithContentsOfURL:files.firstObject] : nil;
+            NSDictionary *report = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+            PHProbeCheck([sheet isKindOfClass:UIActivityViewController.class] && [report[@"floorDefinitions"] count] == 2 &&
+                [report[@"historicalOnly"] boolValue] && !report[@"pid"] && !report[@"entryHash"],
+                @"System share sheet receives an actual all-floor JSON file without account identifiers");
+            PHProbeRender(self.window,orbWindow,@"orbs-dungeon-share");
+            [sheet dismissViewControllerAnimated:YES completion:^{
+                if (sheet.completionWithItemsHandler) sheet.completionWithItemsHandler(nil,NO,nil,nil);
+            }];
+        }),
+        PHProbeStep(@"dungeon-share-cancelled", ^BOOL { return PHProbeClosed(orbController,self.window); }, ^{
+            PHProbeCheck(![NSFileManager.defaultManager fileExistsAtPath:dungeonShareDirectory.path] &&
+                [goalFailure[@"dungeonReport"][@"available"] boolValue] &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsDungeonNotice")).text containsString:@"仍保留"],
+                @"Cancelling file sharing removes its temporary file and keeps the dungeon history");
+            [orbController setValue:[^(NSString *action,id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
             [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsGoalEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
         PHProbeStep(@"failed-goal-editor-visible", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsGoalEditor", NO); }, ^{

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.16-orbs",
+  "prototype_version": "0.5.17-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -258,6 +258,60 @@
       "survival_authorization": false,
       "guards": "separate-optional-only",
       "device_verified": false
+    },
+    "enemy_combo_countermeasure": {
+      "mode": "single-player-continuous",
+      "capture": "fresh-double-read-before-plan-and-input",
+      "requirement": "maximum-live-threshold-plus-one-or-active-bypass",
+      "combine": "retain-base-heart-and-assist-goals",
+      "combo_credit": "first-removal-only-minus-current-debits",
+      "max_combos": 14,
+      "unknown": "stop",
+      "survival_authorization": false,
+      "guards": "separate-policy-only",
+      "device_verified": false,
+      "upper_absorption": "stop-until-maximum-combo-proof"
+    },
+    "enemy_threat_events": {
+      "mode": "conditional-captured-definitions",
+      "opcodes": [
+        15,
+        17,
+        18,
+        19,
+        47,
+        50,
+        82,
+        88,
+        89,
+        107,
+        140,
+        141
+      ],
+      "order": "attached-hit-before-effect-compound-duplicates-retained",
+      "max_events": 128,
+      "bound": "before-player-shields-current-attack-assumption",
+      "gravity_hp": "requires-post-player-bound",
+      "unknown_events": "retained",
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "dungeon_report": {
+      "mode": "read-only-stable-single-player",
+      "scope": "loaded-entry-all-floors",
+      "max_floors": 100,
+      "max_spawns_per_floor": 8,
+      "capture": "one-floor-double-read-bound-to-current-spawn",
+      "retention": "most-recent-entry-in-memory",
+      "export": "explicit-json-file",
+      "random_alternatives": false,
+      "future_AI_state": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
     }
   },
   "user_report": {
@@ -368,7 +422,17 @@
     "PHOrbEnemyDispatchRedirectOffset": "0xb505c",
     "PHOrbEnemyDamageImmediateOffset": "0x92e1b",
     "PHOrbEnemyDamageSpecialOffset": "0xb3668",
-    "PHOrbEnemyDamageCallbackOffset": "0xbe9f0"
+    "PHOrbEnemyDamageCallbackOffset": "0xbe9f0",
+    "PHOrbEnemyComboThresholdOffset": "0x8a0",
+    "PHOrbEnemyComboDurationOffset": "0x8b0",
+    "PHOrbEnemyComboBypassOffset": "0xb4768",
+    "PHOrbDungeonDumpCountAddress": "0x2a9d1dc",
+    "PHOrbDungeonDumpWavesAddress": "0x2a9d1e0",
+    "PHOrbDungeonDumpSpawnPointerOffset": "0x688",
+    "PHOrbDungeonDumpSpawnWaveOffset": "0x204",
+    "PHOrbEnemyComboAdjustmentOffset": "0xb46cc",
+    "PHOrbEnemyComboSubtractOffset": "0xb4aa0",
+    "PHOrbEnemyComboUpperDurationOffset": "0x980"
   },
   "guards": [
     {
@@ -2978,6 +3042,326 @@
       "length": 64,
       "bytes": "f44fbea9fd7b01a9fd430091c85201b008c13791143940f993ce4291686a46b989be9252a958a7721f01096ba101005488f64291000132919d3614941f040071",
       "sha256": "24e65456f3d171e264e0e104c3134ecc51f59545a41de3f84719747592a84da9"
+    },
+    {
+      "name": "PHOrbEnemyComboThresholdRVA",
+      "va": "0x1005635d4",
+      "rva": "0x5635d4",
+      "length": 64,
+      "bytes": "bf0600716b05005480c222913c3600941f040071eb04005480822291383600941f00156b6b040054e83a40f908d1429109d14e7929651a53293d00133f050071",
+      "sha256": "38865ba553333274df5896efe475262745bb3abac235f49df4f5e5e2e49eb46a"
+    },
+    {
+      "name": "PHOrbEnemyComboBypassRVA",
+      "va": "0x100563600",
+      "rva": "0x563600",
+      "length": 64,
+      "bytes": "08d1429109d14e7929651a53293d00133f0500710b01005408d54e7908651a53083d00131f0101716a000054e8031caa1300001476000036f90319cb0d000014",
+      "sha256": "21d46864399ad0e27cbfd6a5ea6e36fd8577e0bfdaec003881a0e786869f9755"
+    },
+    {
+      "name": "PHOrbEnemyThreatPrepareAttachedRVA",
+      "va": "0x1005601b4",
+      "rva": "0x5601b4",
+      "length": 64,
+      "bytes": "220500b4f44fbea9fd7b01a9fd430091f40302aa484440b91f0500710b040054f30301aa1efb009460a207bd08e0a75289af00b029c11e910a3d8c52ea18a072",
+      "sha256": "b3b8ac4f887ee8f2ad17089d30a5d90cab26be971bde7c186d427128781afc46"
+    },
+    {
+      "name": "PHOrbEnemyThreatPrepareOrderRVA",
+      "va": "0x1005602a0",
+      "rva": "0x5602a0",
+      "length": 64,
+      "bytes": "e10313aaf9fdff977f2a0d7978621a9100e4004f000300ade10313aae20315aabdffff97a80a4079090500513fd10271680100548a4d00f04ac922918b000010",
+      "sha256": "68966259197b9a5d6a4f533370bb80c51da494119d0903c177fb6d3eb23af118"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiRangeRVA",
+      "va": "0x100560d60",
+      "rva": "0x560d60",
+      "length": 64,
+      "bytes": "883a40f9aa2642290b2e85522b01a0720c696bb829010a4baa7f88526a00a0726dd89352cd04a0728a350a1b0a692bb8487d1053087d091b08414a0ba91240b9",
+      "sha256": "02eaaea53f80dbe8c751f4840cc4c3b4ecb2d07965362bc2247a97d946e60f60"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiClampRVA",
+      "va": "0x100560d94",
+      "rva": "0x560d94",
+      "length": 64,
+      "bytes": "087d091b08414a0ba91240b92841880b1f3d0071e901805208b1891a689a06b97f9e06b9b9feff1768d89352c804a072a97f88526900a0728a3a40f90b2e8552",
+      "sha256": "f2e9e435a0a171fb2eedaf1789d69a208f3066a21c215ccacf49098a8e209f59"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiHitRVA",
+      "va": "0x1005648b0",
+      "rva": "0x5648b0",
+      "length": 64,
+      "bytes": "699e46b9aa22d61a3f010a6aa101005428010a2a689e06b960a246bd00d8215ee102271e0018211ee00314aae10313aa220080520300801293150094689a46b9",
+      "sha256": "10bf95e0cd7a1d69b6d73ff3de6c5603f483a3b3465bb51fc2d1092dd3df3729"
+    },
+    {
+      "name": "PHOrbEnemyThreatPercentParamRVA",
+      "va": "0x1005604bc",
+      "rva": "0x5604bc",
+      "length": 64,
+      "bytes": "a4040014a81640b9a1040014090080d21f450171ea179f1aaa4a2a8b4a4100916ba21a914c6969b86c6929b8291100913f4100f181ffff541f450171a1920054",
+      "sha256": "65c2933eb1e0641fd8c46c83e2fb69d35e2592e17566e9db288491cbbe5eb3a2"
+    },
+    {
+      "name": "PHOrbEnemyThreatPercentExecuteRVA",
+      "va": "0x100568884",
+      "rva": "0x568884",
+      "length": 64,
+      "bytes": "609a46bd00d8215e0859a8520101271e0018211ee00314aae10313aa22008052030080122f000014e00314aae10313aa8fc4ff971b04001460020191010080d2",
+      "sha256": "06f09670b7bc2bd5887a032d841407754a21642daf693436e170801c7b494e1e"
+    },
+    {
+      "name": "PHOrbEnemyThreatGravityRVA",
+      "va": "0x100568928",
+      "rva": "0x568928",
+      "length": 64,
+      "bytes": "bf920171400100546000221e619a46bd21d8215e0008211e0859a8520101271e0018211ec37deb97e30300aae003271ee00314aae10313aa2200805274050094",
+      "sha256": "8aebee5c2cc4d8ef69633daef1c6c11bbaa4c9fb2de36414f85aff387c3496bf"
+    },
+    {
+      "name": "PHOrbEnemyThreatDamageEnrageRVA",
+      "va": "0x100569f84",
+      "rva": "0x569f84",
+      "length": 64,
+      "bytes": "20802191d21b00941f0400718b000054604221914f1b00940808281e60020a91d41a0094f70300aa60c20991d11a0094e803002a088117aa0001229e0009201e",
+      "sha256": "4b105e7bcd60004edb420809424efa55064465b91aaba640bdcb47feddd3b883"
+    },
+    {
+      "name": "PHOrbEnemyThreatDamageAdditionRVA",
+      "va": "0x100569fc4",
+      "rva": "0x569fc4",
+      "length": 64,
+      "bytes": "c776eb97df020071d7c2801a60c21f91f9080094f60300aa60c21f91010080526b0a0094883a40f908cd429100a1199115e4eb97883a40f9e000003408dd4291",
+      "sha256": "6a19e5e5c61d43b708f25e7a0fb1e51bb84c69e76c2a81e6cfc89568921854eb"
+    },
+    {
+      "name": "PHOrbEnemyThreatFloatRoundRVA",
+      "va": "0x100047ae0",
+      "rva": "0x47ae0",
+      "length": 64,
+      "bytes": "0820201e01102c1e02103c1e41bc211e2028201e0000381ec0035fd6287c0853297c10534a7c08534b7c105301102e1e0020211e21cc201e0820201ee003271e",
+      "sha256": "7fa5b500ac6445c98774d4c8ddc2e9cc0a077b3d24e30d6e9a07a4e9ca77328b"
+    },
+    {
+      "name": "PHOrbEnemyThreatLayerRoundRVA",
+      "va": "0x1000481a8",
+      "rva": "0x481a8",
+      "length": 64,
+      "bytes": "0100621e2200621e00c0221e4104401f68740090007944fd2020601eec000054083cf8d20001679e2020601e2040601e450000540001679e0820601e01106c1e",
+      "sha256": "5a1d9b26d30af9b8498179ca211b5cd5726c7df23eba10143755bb6ddad82f66"
+    },
+    {
+      "name": "PHOrbEnemyThreatGravityFloorRVA",
+      "va": "0x100048058",
+      "rva": "0x48058",
+      "length": 64,
+      "bytes": "0820201e01b8a15e21d8215e24d4201e6000005401103e1e0028211e0000381ec0035fd606103c1e8208061f4428241e4020201e8494201ea00c061f0228251e",
+      "sha256": "660fd95bb78b6639bbd8108364ff06ae4ead924207d570e64901ede70d74d304"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageParamsRVA",
+      "va": "0x1005603c8",
+      "rva": "0x5603c8",
+      "length": 64,
+      "bytes": "a81640b9689a06b914000014883a40f9aa26422929010a4b0a2e85522a01a0720b696ab8ac7f88526c00a0726dd89352cd04a0726b350c1b0b692ab8687d1053",
+      "sha256": "d40443317d94bc5a10ff59d85f277b93b3b4a69d6514d132685ef4f8b9988c81"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageFirstParamRVA",
+      "va": "0x1005602ec",
+      "rva": "0x5602ec",
+      "length": 64,
+      "bytes": "a81240b9689a06b9a81640b94b00001408008012689206b900103e1e16050014a81240b90e050014090080d2aa5200916ba21a914cb57f29ac410c2a6c6929b8",
+      "sha256": "26aad06937831ffd6d63a7a6b9e38d124029ed1a652e60f6ef1a8631b8100f39"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageApplyRVA",
+      "va": "0x1005671fc",
+      "rva": "0x5671fc",
+      "length": 64,
+      "bytes": "6132cd796082219151270094609e46bd00d8215e0859a8520101271e0018211e60422191ce2600942800805268022d39be090014619a46b91fe10071e8008052",
+      "sha256": "394480984ffcb3a93d5495dff954786073319621047bb510ea92486c8fd1597e"
+    },
+    {
+      "name": "PHOrbEnemyThreatAwokenApplyRVA",
+      "va": "0x100567d28",
+      "rva": "0x567d28",
+      "length": 64,
+      "bytes": "89cb88526901a0720a6969786b324d794c651a538c3d00134b010b0b6b2500129f0500714bc900544a1516126a010a2a4a0600146132cd796042229179240094",
+      "sha256": "bbf8c175555d087f486ae8300cd72b10f627a1b4cd35a1071430e50fa9160524"
+    },
+    {
+      "name": "PHOrbEnemyThreatAssistApplyRVA",
+      "va": "0x100568b68",
+      "rva": "0x568b68",
+      "length": 64,
+      "bytes": "ff1b00b908008052893a40f98a5189526a01a0722b696a78ac2240796b1115128b2500336b0116322b692a78ffa30039ff2700b916be8052173e82527701a072",
+      "sha256": "f7e187ad8f03c8cbfcf97940853e7091d38aaad6088971e0b38cf05e3eb1313c"
+    },
+    {
+      "name": "PHOrbEnemyThreatUnmatchableRVA",
+      "va": "0x100568410",
+      "rva": "0x568410",
+      "length": 64,
+      "bytes": "d6060011df86017121ffff54883a40f9a92240798af888526a01a0720b696a786b1115122b2500336901163209692a78883a40f909696a782979141209692a78",
+      "sha256": "af968d3ac90b8654084342d70da5ee35c5fae6bffd1e8fe537cca8d316901a5d"
+    },
+    {
+      "name": "PHOrbEnemyThreatUnmatchableRandomRVA",
+      "va": "0x100568450",
+      "rva": "0x568450",
+      "length": 64,
+      "bytes": "a81640b92896f837893a40f929d1429120211f91013d00124a110094c30400146132cd7960c221917d040014e00314aaf2caff97e00314aa01008052c31cec97",
+      "sha256": "6c5b66296b2c83edfe3a5d55576ae67c375e64384d7c2b554ceb6df8d1f14597"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayParamsRVA",
+      "va": "0x10055fd2c",
+      "rva": "0x55fd2c",
+      "length": 64,
+      "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291f40303aae21300f9f50300aa1b0080d2ffff0229885d00f008b142f9080140f9",
+      "sha256": "0aea826fc186fb3f99901372db834810ecd70a8033e2323ee7f275ef887c9671"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayTargetsRVA",
+      "va": "0x10055fda0",
+      "rva": "0x55fda0",
+      "length": 64,
+      "bytes": "e0021c8b01008052edfe0094a00c0034f3021c8b60220791a2440094200c00349401f8379f0a0071e00000549f06007101010054fb0000347f170071a0000054",
+      "sha256": "d86933894984b1af2b8677bb5f794e3997957ac882a8c577938f3247dc1bc0aa"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayApplyRVA",
+      "va": "0x1005672f4",
+      "rva": "0x5672f4",
+      "length": 64,
+      "bytes": "160080d277621a91889382526801a07218f10c9108102a1ed9b98c52791fad729a3a40f94803188b08a117d1080140391f05007181030054fb6a76b87f070071",
+      "sha256": "ef66378ef574072964d29e7618e4f94f8cf0fe3069ddc2c0f0e65b7d3c4f10a2"
+    },
+    {
+      "name": "PHOrbDungeonDumpCountRVA",
+      "va": "0x1005a0268",
+      "rva": "0x5a0268",
+      "length": 64,
+      "bytes": "88ad00b008c11e9189459752891ea0720069e978c0035fd6083e9d526801a072006868f8200100b4fd7bbfa9fd030091080040f9087140f900013fd6fd7bc1a8",
+      "sha256": "e06d8e74296b5797cc0fd2fa69913508246951e28634d2c19caeba80d3213731"
+    },
+    {
+      "name": "PHOrbDungeonDumpLoadCountRVA",
+      "va": "0x10044689c",
+      "rva": "0x44689c",
+      "length": 64,
+      "bytes": "130080d288459752881ea072206b2878282f7d911641299158469752981ea0721a4597529a1ea072685500f0086946bd1b658452e00315aaf56df89708218052",
+      "sha256": "be4f9a32bdfc32e32db52ef17a3acee899f0e33ebfb110e103cb63377a7a5c8d"
+    },
+    {
+      "name": "PHOrbDungeonDumpLoadStrideRVA",
+      "va": "0x1004469e0",
+      "rva": "0x4469e0",
+      "length": 64,
+      "bytes": "948200919c0700f121f8ff5473060091d62204917f9201f1c1f6ff54ffb2007103030054e00315aa886df897082a8452a81ea072206b28b8e00315aafd6df897",
+      "sha256": "5436c0f47cb1373859b6c0ba20aefd1b640daad0af01f04626ab5ef5c28496f3"
+    },
+    {
+      "name": "PHOrbDungeonDumpParseEntryRVA",
+      "va": "0x100690bac",
+      "rva": "0x690bac",
+      "length": 64,
+      "bytes": "e81340f908151b8b15190079170500b91a110079eaa745290a150079140d00f9091100b9e81f40f90005009108004039092500513f090071630000541f810071",
+      "sha256": "10ea759d1cec1d5408ffdf9b8d921f3a7cdc4f1cf6ec4e4170fe66ee6e5a8d82"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnWaveRVA",
+      "va": "0x1005a3e18",
+      "rva": "0x5a3e18",
+      "length": 64,
+      "bytes": "0821805269ad00d029c11e912827289b082d7d9114c128918106c079083b40f913909b527301a0720001138b4433ff97083b40f90001138b2933ff971f040071",
+      "sha256": "859cbdb39a03783ff0891f37ea60ab9d7c5d84abc402704ab58a9544768e6a68"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnEntryRVA",
+      "va": "0x1005a3e90",
+      "rva": "0x5a3e90",
+      "length": 64,
+      "bytes": "810640b91af0915280031a8b6c2ffe97f50300aa21031b8be00318aae20314aa030080521afdff97a21e407980031a8be1b300916434fd97083b40f909cd8652",
+      "sha256": "1fe17cff4c8971a27135d02e611f9c32ee5b2b491b15e801594f941855a73f26"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnCatalogRVA",
+      "va": "0x1005a33d4",
+      "rva": "0x5a33d4",
+      "length": 64,
+      "bytes": "810640b977ad00d0f7c21e9108f09152e002088b1932fe97f80300aac83a40f908cd429100a1199113ffea97a0000037810640b908f09152e002088b3631fe97",
+      "sha256": "d08a4ed944a7fff47423d20edf52609d7fd28c5292070b349a1becef0c1739bd"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnLevelRVA",
+      "va": "0x1005a3414",
+      "rva": "0x5a3414",
+      "length": 64,
+      "bytes": "081f4079e91784520801090b684a027982124079627202797f1e003908208052680200797fd200787f4a00397f8e00397f22007977620891810640b9c83a40f9",
+      "sha256": "39474f0a061c7e3c5a51b9305bbb836dc4b8281cd8fa4b790039298dd3df29bf"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnBindingRVA",
+      "va": "0x1005a3378",
+      "rva": "0x5a3378",
+      "length": 64,
+      "bytes": "c83a40f90849429100a13d9163efff97600a0479744603f9880680b929b19652099fa272097d299b2afd7fd329fd6d9329010a0b0ad490522a00a07228a10a1b",
+      "sha256": "567883b4cac041ef61de477dba5cf5f278908759afc18ec249cb00b08020de7a"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentRVA",
+      "va": "0x1004a9434",
+      "rva": "0x4a9434",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009100201f9105000094e803004b007d800afd7bc1a8c0035fd6f44fbea9fd7b01a9fd430091f30300aa0808537908651a53083d00131f050071",
+      "sha256": "2d9172ff7356833ca7ce60746772d61681f1c891f4d5ad622ddaee148be7287f"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentSubtractRVA",
+      "va": "0x1004a948c",
+      "rva": "0x4a948c",
+      "length": 64,
+      "bytes": "68925a7908651a53083d00131f0500718b00005460323591e71e03949402004be00314aafd7b41a9f44fc2a8c0035fd6fd7bbfa9fd03009100201f91e3ffff97",
+      "sha256": "2538c896d2be90e6812178bb46ed168cc0176f247f5b7b884302d6912ed6ee93"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentSkipRVA",
+      "va": "0x1005fc188",
+      "rva": "0x5fc188",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa083840f949c685522901a0720a6969784a0500110a69297808cd4291004116919fb4fa97683a40f9084942911f040071",
+      "sha256": "c4415fb57f765392d4845fbd04178298f30a5a14f98617b44785347024a28eec"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentRecordRVA",
+      "va": "0x1005facf8",
+      "rva": "0x5facf8",
+      "length": 64,
+      "bytes": "eb2bb96de923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f60306aaf30305aaf40304aa4840601e2940601e0a40201ef70303aaf80302aa",
+      "sha256": "703e5702d0b8d57ec23629d161cebf5ab35671213c519950a1acbd1037e8c3bd"
+    },
+    {
+      "name": "PHOrbEnemyComboActualCountRVA",
+      "va": "0x100615424",
+      "rva": "0x615424",
+      "length": 64,
+      "bytes": "06008052bcdaff97e30300aae71740f9883a40f909c885522901a072086969b808050011e80300b9e26300910503198be00314aae10316aae40313aae60315aa",
+      "sha256": "553b6c971d20b0b9af19f2baee3f580b666db904285f55e0185f460f2fd19e33"
+    },
+    {
+      "name": "PHOrbEnemyComboUpperThresholdRVA",
+      "va": "0x1005638d4",
+      "rva": "0x5638d4",
+      "length": 64,
+      "bytes": "bf0600718b030054800226917c3500941f0400710b03005480422691b22200941f00156b8c02005476000036f90319cb0d00001480321791e003271e2775f297",
+      "sha256": "7eb69a636e0618323f890ef06aef7b669f2e8739c0612dc4773a7eeb925f6eb9"
     }
   ],
   "thorn_budget": {

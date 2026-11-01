@@ -146,6 +146,8 @@ NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary
         @"message":message, @"warning":warning, @"unsupported":unsupported.array};
 }
 
+#include "PHOrbEnemyComboPlanning.inc"
+
 NSDictionary *PHOrbPlanForLeaders(const PHOrbSnapshot *state) {
     static NSDictionary *catalog;
     static dispatch_once_t once;

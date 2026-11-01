@@ -33,7 +33,7 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHDeckPersistence.m ios/src/PHUnlockRestoration.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m ios/src/PHOrbDungeonReport.m \
     "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
     "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHMusic.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit -framework UniformTypeIdentifiers \
@@ -77,6 +77,9 @@ cp ios/docs/release-0.5.13.md "$build_dir/release-0.5.13.md"
 cp ios/docs/release-0.5.14.md "$build_dir/release-0.5.14.md"
 cp ios/docs/release-0.5.15.md "$build_dir/release-0.5.15.md"
 cp ios/docs/release-0.5.16.md "$build_dir/release-0.5.16.md"
+cp ios/docs/release-0.5.17.md "$build_dir/release-0.5.17.md"
+cp ios/docs/dungeon-report.md "$build_dir/dungeon-report.md"
+cp ios/docs/enemy-countermeasures.md "$build_dir/enemy-countermeasures.md"
 cp ios/docs/orb-multiplayer-once.md ios/docs/orb-0511-log-analysis.md "$build_dir/"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
@@ -176,6 +179,9 @@ metadata = {
     "enemy_selector_analysis": "optional conditional ordinary row-zero traversal with current AI state and all HP percentages; flags/counters, legacy second-pass inheritance and conservative candidate branches; bounded states/candidates/shared steps/weighted pool, unknown frontiers retained, attached attack before status; separate fingerprints; actual next entry, projected AI, damage and survival remain unknown; pending device verification",
     "enemy_dispatch_analysis": "optional conditional dispatch entry, countdown tick and post-selection accounting checkpoints; preserves cache/compound/override branches and unknown preparation suffixes; independent fingerprints and bounded double reads; post-player state and actual next entry remain unknown; pending device verification",
     "enemy_damage_analysis": "optional conditional resolved-damage, survival, cleanup, snapshot and phase checkpoints; preserves native signed/unsigned and floating-point boundaries; three non-exhaustive probes assume unchanged captured fields, callback suffixes stay unknown; independent fingerprints and bounded double reads; no team damage, next-hit survival or automation authorization; pending device verification",
+    "enemy_combo_countermeasure": "ordinary solo continuous mode captures live absorption and Combo debits after skills; first removal must exceed the maximum lower threshold plus current debits unless active bypass is confirmed; upper absorption stops; retains base and assist goals, rechecks before input, no positive bonus/cascade/skyfall/survival credit; pending device verification",
+    "dungeon_report": "read-only capture of all loaded entry floors from a stable solo player window, exact current spawn binding, per-floor catalog variants and action definitions with explicit missing data, bounded retained observations and same-entry stop trace; real JSON file and system share sheet with cancellation cleanup; no random-alternative or future-AI proof; pending device verification",
+    "enemy_threat_events": "ordered conditional attack, gravity, enrage and status events from captured definitions; repeated compound children and attached-hit order retained; native rounding and one-time addition modeled; pre-shield bounds assume captured attack state, gravity requires post-player HP; not an actual next-turn forecast or survival authorization; pending device verification",
     "assist_recovery_l": "opt-in ordinary solo continuous policy; fresh read-only L providers and duration, all base goals retained, up to 12 allocations sharing one search deadline, recheck before input and confirm next stable duration zero; no native queue-capacity guarantee, partial recovery or survival defer; pending device verification",
     "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
     "multiplayer_peer_exit": "4P accepts initialized peer recovery sync 5/step 2 and a validated remote-seat departure at sync 15 or retained flag 0x10000; local status/connection/clock/board checks still required; recovery entry cancels old input; 3P/8P unchanged; device verification pending",

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
+#import "PHOrbDungeonReport.h"
 #include <chrono>
 
 namespace {
@@ -208,6 +209,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
     NSMutableArray *hits = [NSMutableArray array];
     for (unsigned g = 0; g < goals.count; ++g) [hits addObject:@(value.goalHits[g])];
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
+        @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
         @"hazardsSafe":@(value.hazardsSafe), @"poisonErased":@(value.poisonErased),
         @"mortalPoisonErased":@(value.mortalPoisonErased),
         @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours)};
@@ -270,7 +272,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSString *_phase, *_message, *_quality, *_goalMode;
     bool _thornComboPriority, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
     bool _assistAwaitingResult;
-    double _assistCheckedAt;
+    double _assistCheckedAt, _enemyComboCheckedAt;
     PHOrbSnapshot _assistReleased;
     NSDictionary *_assistTrace;
     NSArray *_manualGoals;
@@ -295,6 +297,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _observationState;
     NSDictionary *_enemyActionObservation;
     double _observationAt, _observationUptime, _observationDurationMS;
+    PHBattleIdentity _dungeonIdentity;
+    bool _dungeonBound;
+    double _dungeonCaptureAt;
+    NSUInteger _dungeonCursor, _dungeonRefreshCursor, _dungeonDropped;
+    NSArray *_dungeonFloors, *_dungeonMetadata;
+    NSMutableDictionary *_dungeonPages, *_dungeonDefinitionSets;
+    NSMutableArray *_dungeonSamples;
+    NSDictionary *_dungeonSampleKey;
+    NSString *_dungeonTableSHA, *_dungeonStatus;
     NSMutableArray<NSDictionary *> *_onceReadinessHistory;
     NSDictionary *_onceReadinessKey;
     NSUInteger _boardTransitionFrames;
@@ -342,8 +353,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     }
     return self;
 }
+#include "PHOrbDungeonSession.inc"
 - (void)refreshBattleObservation:(BOOL)read active:(BOOL)active time:(NSTimeInterval)time {
-    if (!read || !_frame.ready || !_frame.enabled || !ObservationWindow(_live) || active || _oneShot ||
+    if (!read || !_frame.ready || !_frame.enabled || _live.identity.player != _frame.player ||
+        _live.identity.epoch != _frame.epoch || !ObservationWindow(_live) || active || _oneShot ||
         (_live.automation.valid && _live.automation.busy)) {
         _observationState = {};
         _enemyActionObservation = nil;
@@ -362,6 +375,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     // Invalidating evidence must not reset the attempt clock. Rapid board,
     // skill or read-window changes cannot turn diagnostics into frame polling.
     if (_observationAt > 0 && time >= _observationAt && time - _observationAt < 0.75) return;
+    [self captureDungeonPage:&_live time:time];
     const double started = NSProcessInfo.processInfo.systemUptime;
     PHOrbSnapshot captured = _live;
     [_engine observeBattle:&captured];
@@ -371,6 +385,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _observationDurationMS = std::max(0.0, NSProcessInfo.processInfo.systemUptime - started) * 1000;
     _observationState = captured;
     _observationAt = time; _observationUptime = NSProcessInfo.processInfo.systemUptime;
+    [self retainDungeonSample:&captured];
 }
 - (BOOL)executing {
     return [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] || [_phase isEqual:@"releasing"];
@@ -396,7 +411,12 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     trace[@"reason"] = reason ?: @""; trace[@"planAvailable"] = _goalPlan[@"available"] ?: @NO;
     trace[@"goalsKnown"] = @(goalsKnown); trace[@"goals"] = PHOrbGoalsJSON(&goals);
     trace[@"goalCount"] = @(goals.count);
-    trace[@"baseGoals"] = _goalPlan[@"assistRecoveryBaseGoals"] ?: trace[@"goals"];
+    trace[@"baseGoals"] = _goalPlan[@"enemyCounterBaseGoals"] ?: _goalPlan[@"assistRecoveryBaseGoals"] ?: trace[@"goals"];
+    trace[@"enemyCountermeasure"] = @{@"comboActive":_goalPlan[@"enemyComboActive"] ?: @NO,
+        @"minimumCombo":_goalPlan[@"enemyComboRequired"] ?: @0,
+        @"firstRemovalOnly":_goalPlan[@"enemyComboFirstWave"] ?: @NO,
+        @"message":_goalPlan[@"enemyCounterMessage"] ?: @"", @"blocker":_goalPlan[@"enemyCounterBlocker"] ?: @"",
+        @"stateKnown":@(_preview.enemyCombo.valid), @"survivalKnown":@NO};
     trace[@"stepLimit"] = @(_solveOptions.steps); trace[@"budgetMS"] = @(_solveOptions.milliseconds);
     trace[@"assistRecovery"] = _assistTrace;
     trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
@@ -405,6 +425,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _searchTrace = [trace copy];
 }
 #include "PHOrbAssistSession.inc"
+#include "PHOrbEnemyComboSession.inc"
 - (void)recordExecution:(NSString *)status state:(const PHOrbSnapshot *)state evaluation:(NSDictionary *)evaluation {
     if (!_recordingExecution || !_executionHistory.count) return;
     NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
@@ -869,6 +890,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     // still gets an unthrottled read after native coordinate conversion.
     if (_preview.assistRecovery.valid && ([_phase isEqual:@"solving"] || [_phase isEqual:@"preview"]) &&
         (_now < _assistCheckedAt || _now - _assistCheckedAt >= 0.25) && ![self validateAssistRecovery:state]) return NO;
+    if (_preview.enemyCombo.valid && ([_phase isEqual:@"solving"] || [_phase isEqual:@"preview"]) &&
+        (_now < _enemyComboCheckedAt || _now - _enemyComboCheckedAt >= 0.25) && ![self validateEnemyCombo:state]) return NO;
     if (!state->boardTransition && state->phase == 2 &&
         !state->automation.window && beforeTouch && [self hasPendingSkillWindow:state] &&
         !PersistentSkillWindow(state->automation)) {
@@ -1098,6 +1121,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (!_route.thornContacts) return YES;
     PHOrbSolveOptions options = _solveOptions; options.thorns = state->thorns;
     if (!PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) return NO;
+    options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
     return PHOrbEvaluateRoute(state->board, _route, options, evaluation, damage, contacts) &&
         evaluation.goalsMet && evaluation.hazardsSafe && contacts == _route.thornContacts;
@@ -1109,6 +1133,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     [self clearRoute];
     _readQueued = false; _preview = _live;
     _preview.assistRecovery = {};
+    _preview.enemyCombo = {};
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
@@ -1132,6 +1157,16 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
     _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
+    if (_automatic) {
+        if (![self captureEnemyCombo:&_preview]) {
+            NSMutableDictionary *plan = [_goalPlan mutableCopy];
+            plan[@"available"] = @NO; plan[@"message"] = _message;
+            plan[@"enemyCounterMessage"] = _message; plan[@"enemyCounterBlocker"] = @"state-unavailable";
+            _goalPlan = [plan copy];
+            [self recordPlanningStatus:@"enemy-counter-unavailable" reason:_message]; return;
+        }
+        _goalPlan = PHOrbPlanWithEnemyCombo(_goalPlan, &_preview, YES);
+    }
     if (_automatic && _assistRecoveryL) {
         if (![self captureAssistRecovery:&_preview]) {
             NSMutableDictionary *plan = [_goalPlan mutableCopy];
@@ -1168,6 +1203,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         return;
     }
     const double available = TimeAvailable(_live);
+    options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
     const bool multiplayer = !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer);
     double remaining = available;
     if (multiplayer) {
@@ -1215,6 +1251,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             if (cancel->load(std::memory_order_relaxed) || (assistCandidates.count && spent >= options.milliseconds)) break;
             PHOrbSolveOptions trial = options;
             if (assistCandidates.count && !PHOrbReadGoals(assistCandidates[choice][@"goals"], &trial.goals)) continue;
+            trial.goals.comboFirstWave = options.goals.comboFirstWave;
             if (assistCandidates.count) trial.milliseconds = unsigned(options.milliseconds - spent) / unsigned(choices - choice);
             if (!trial.milliseconds) break;
             PHOrbRoute candidate{};
@@ -1488,7 +1525,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         // Fall through to the existing owned-orb release path when needed.
     }
     if (_automatic && ([_phase isEqual:@"arming"] || [_phase isEqual:@"running"]) &&
-        ![self validateAssistRecovery:&current]) {
+        (![self validateAssistRecovery:&current] || ![self validateEnemyCombo:&current])) {
         // A failure revokes holds, while retaining the existing owned release.
         if (![_phase isEqual:@"releasing"]) return;
     }
@@ -1573,6 +1610,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (void)afterFrame:(PHBattleFrame)frame time:(NSTimeInterval)time {
     _frame = frame; _now = time;
+    if (_dungeonBound && frame.player &&
+        (frame.player != _dungeonIdentity.player || frame.epoch != _dungeonIdentity.epoch)) {
+        _dungeonBound = false; _dungeonFloors = nil; _dungeonPages = nil; _dungeonSamples = nil;
+        _dungeonDefinitionSets = nil; _dungeonSampleKey = nil; _dungeonMetadata = nil;
+        _dungeonTableSHA = nil; _dungeonStatus = @"not-requested"; _dungeonIdentity = {};
+        _dungeonCursor = _dungeonRefreshCursor = _dungeonDropped = 0;
+    }
     if (_inputFault) return;
     const BOOL active = [self executing];
     // Keep observing scene exits after transient read failures. Otherwise a
@@ -1888,6 +1932,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"decisionWave":@(_decisionState.wave),
         @"playerStatus":PHOrbSurvivalDescription(&_live), @"confirmedSkillRules":@(_confirmedRules),
         @"battleObservation":observation,
+        @"dungeonReport":[self dungeonReportSummary],
         @"battleObservationDescription":multiplayer ? @"" : BattleObservationDescription(_observationState.observation, observationCurrent,
             _enemyActionObservation),
         @"obstacles":PHOrbObstacleDescription(&_live), @"usedSkillGroups":@(_usedGroups),
@@ -1909,6 +1954,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
         @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace,
         @"assistRecoveryStatus":_goalPlan[@"assistRecoveryMessage"] ?: @"",
+        @"enemyCounterStatus":_goalPlan[@"enemyCounterMessage"] ?: @"",
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,

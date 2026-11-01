@@ -292,7 +292,7 @@
 }
 @end
 
-@interface PHOrbController ()
+@interface PHOrbController () <UIAdaptivePresentationControllerDelegate>
 @property(nonatomic, copy) PHOverlaySnapshot snapshot;
 @property(nonatomic, copy) PHOverlayAction action;
 @property(nonatomic, copy) void (^close)(void);
@@ -326,6 +326,9 @@
 @property(nonatomic, strong) UILabel *playerDescription;
 @property(nonatomic, strong) UILabel *decisionDescription;
 @property(nonatomic, strong) UILabel *battleObservationDescription;
+@property(nonatomic, strong) UIButton *dungeonCaptureButton, *dungeonExportButton;
+@property(nonatomic, strong) UILabel *dungeonDescription, *dungeonNotice;
+@property(nonatomic, strong) NSURL *dungeonShareDirectory;
 @property(nonatomic, strong) UIButton *editRecovery;
 @property(nonatomic, strong) UILabel *recoveryDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
@@ -396,6 +399,12 @@
     self.decisionDescription.accessibilityIdentifier = @"padcheaper.orbsDecisions";
     self.battleObservationDescription = [self label:13 weight:UIFontWeightRegular];
     self.battleObservationDescription.accessibilityIdentifier = @"padcheaper.orbsBattleObservation";
+    self.dungeonCaptureButton = [self button:@"收集全層資料" selector:@selector(captureDungeon) identifier:@"padcheaper.orbsDungeonCapture"];
+    self.dungeonExportButton = [self button:@"匯出關卡 JSON…" selector:@selector(exportDungeon:) identifier:@"padcheaper.orbsDungeonExport"];
+    self.dungeonDescription = [self label:13 weight:UIFontWeightRegular];
+    self.dungeonDescription.accessibilityIdentifier = @"padcheaper.orbsDungeonDescription";
+    self.dungeonNotice = [self label:13 weight:UIFontWeightRegular];
+    self.dungeonNotice.accessibilityIdentifier = @"padcheaper.orbsDungeonNotice";
     self.editRecovery = [self button:@"低血時的心珠目標" selector:@selector(editRecoverySettings) identifier:@"padcheaper.orbsRecoveryEdit"];
     self.recoveryDescription = [self label:13 weight:UIFontWeightRegular];
     self.recoveryDescription.accessibilityIdentifier = @"padcheaper.orbsRecoveryDescription";
@@ -479,6 +488,7 @@
         self.goalMode, self.editGoals, self.goalDescription,
         self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription,
         assistRow, self.assistRecoveryDescription,
+        self.dungeonCaptureButton, self.dungeonExportButton, self.dungeonDescription, self.dungeonNotice,
         self.battleObservationDescription, self.decisionDescription,
         self.status, self.boardView, self.slider, self.position, self.availability, note]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -549,6 +559,16 @@
     self.playerDescription.hidden = !self.playerDescription.text.length;
     self.battleObservationDescription.text = state[@"battleObservationDescription"] ?: @"";
     self.battleObservationDescription.hidden = !self.battleObservationDescription.text.length;
+    NSDictionary *dungeon = state[@"dungeonReport"] ?: @{};
+    self.dungeonCaptureButton.enabled = ![state[@"multiplayerActive"] boolValue];
+    self.dungeonExportButton.enabled = [dungeon[@"available"] boolValue] && !self.dungeonShareDirectory;
+    if ([dungeon[@"available"] boolValue]) {
+        NSString *progress = [dungeon[@"allDefinitionsCaptured"] boolValue] ? @"全層行動定義已收集" :
+            [dungeon[@"allFloorsCaptured"] boolValue] ? @"部分行動定義缺失，已標記" : @"等待穩定盤面繼續收集";
+        self.dungeonDescription.text = [NSString stringWithFormat:@"關卡 %@－%@：%@／%@ 層 · %@\n已保存 %@ 筆實戰狀態。離場後可匯出；再進新一場會更換紀錄。",
+            dungeon[@"dungeon"], dungeon[@"floor"], dungeon[@"capturedFloors"], dungeon[@"totalFloors"], progress, dungeon[@"samples"]];
+    } else self.dungeonDescription.text = @"進入單人關卡後收集本次載入的所有樓層、敵人與行動定義。轉珠及技能操作會暫停收集；資料保留至下一場或程式關閉。";
+    self.dungeonNotice.hidden = !self.dungeonNotice.text.length;
     NSMutableArray *decisions = [NSMutableArray array];
     NSArray *rows = state[@"ruleDecisions"] ?: @[];
     if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];
@@ -620,7 +640,7 @@
     BOOL leaderMode = [mode isEqual:@"leaders"];
     BOOL liveLeaders = leaderMode && [state[@"multiplayerActive"] boolValue] && ![state[@"busy"] boolValue];
     NSDictionary *plan = (liveLeaders ? state[@"liveLeaderPlan"] : state[@"goalPlan"]) ?: @{};
-    NSArray *editableGoals = plan[@"baseGoals"] ?: plan[@"goals"];
+    NSArray *editableGoals = plan[@"baseGoals"] ?: plan[@"enemyCounterBaseGoals"] ?: plan[@"assistRecoveryBaseGoals"] ?: plan[@"goals"];
     self.editGoals.hidden = ![mode isEqual:@"manual"] && !(leaderMode && [plan[@"available"] boolValue] && editableGoals.count);
     self.editGoals.enabled = self.goalMode.enabled;
     UIButtonConfiguration *editConfig = self.editGoals.configuration;
@@ -640,6 +660,7 @@
                 PHOrbGoalDescription(activeGoals[i]), hits[i], activeGoals[i][@"count"]]];
         }
     }
+    if ([state[@"enemyCounterStatus"] length]) [goalLines addObject:state[@"enemyCounterStatus"]];
     if ([plan[@"warning"] length]) [goalLines addObject:plan[@"warning"]];
     else if (leaderMode) [goalLines addObject:@"僅規劃珠型與最低門檻，不代表完整隊長技已發動。"];
     NSString *goalMessage = state[@"goalMessage"];
@@ -684,6 +705,51 @@
     [self.boardView setNeedsDisplay];
 }
 - (void)readBoard { self.action(@"orbsRead", nil); [self refresh]; }
+- (void)captureDungeon {
+    self.action(@"orbsDungeonCapture",nil);
+    self.dungeonNotice.text = @"已開始收集。停在可轉珠的盤面即可收集全層，不需要逐層通關。";
+    [self refresh];
+}
+- (void)clearDungeonShare {
+    if (self.dungeonShareDirectory) [NSFileManager.defaultManager removeItemAtURL:self.dungeonShareDirectory error:NULL];
+    self.dungeonShareDirectory = nil;
+}
+- (void)dealloc {
+    if (_dungeonShareDirectory) [NSFileManager.defaultManager removeItemAtURL:_dungeonShareDirectory error:NULL];
+}
+- (void)exportDungeon:(UIButton *)sender {
+    if (self.presentedViewController) return;
+    NSString *request = NSUUID.UUID.UUIDString;
+    self.action(@"orbsDungeonExport",request);
+    NSDictionary *result = self.snapshot()[@"orbState"][@"dungeonExportResult"];
+    if (![result[@"requestID"] isEqual:request] || ![result[@"ok"] boolValue]) {
+        self.dungeonNotice.text = [result[@"requestID"] isEqual:request] ? result[@"message"] : @"關卡匯出尚未完成，請稍後重試。";
+        [self refresh]; return;
+    }
+    [self clearDungeonShare];
+    self.dungeonShareDirectory = [NSURL fileURLWithPath:result[@"directoryPath"] isDirectory:YES];
+    NSURL *file = [NSURL fileURLWithPath:result[@"filePath"]];
+    self.dungeonNotice.text = result[@"message"];
+    UIActivityViewController *activity = [[UIActivityViewController alloc] initWithActivityItems:@[file] applicationActivities:nil];
+    activity.view.accessibilityIdentifier = @"padcheaper.orbsDungeonShareSheet";
+    activity.popoverPresentationController.sourceView = sender;
+    activity.popoverPresentationController.sourceRect = sender.bounds;
+    __weak PHOrbController *weakSelf = self;
+    activity.completionWithItemsHandler = ^(UIActivityType type, BOOL completed, NSArray *items, NSError *error) {
+        (void)type; (void)items;
+        PHOrbController *controller = weakSelf; [controller clearDungeonShare];
+        controller.dungeonNotice.text = error ? @"分享未完成，可重新匯出。" : completed ? @"關卡資料已分享。" : @"已取消分享，收集的資料仍保留。";
+        [controller refresh];
+    };
+    activity.presentationController.delegate = self;
+    [self presentViewController:activity animated:YES completion:nil];
+    [self refresh];
+}
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    if ([presentationController.presentedViewController isKindOfClass:UIActivityViewController.class]) {
+        [self clearDungeonShare]; [self refresh];
+    }
+}
 - (void)changeQuality {
     NSInteger index = self.qualityControl.selectedSegmentIndex;
     if (index >= 0 && index < 3 && self.qualityControl.enabled) self.action(@"orbsQuality", @[@"fast", @"balanced", @"thorough"][(NSUInteger)index]);
@@ -726,7 +792,7 @@
     BOOL copyLeaders = !manualSelection && [self.state[@"goalMode"] isEqual:@"leaders"];
     BOOL liveLeaders = copyLeaders && [self.state[@"multiplayerActive"] boolValue];
     NSDictionary *plan = liveLeaders ? self.state[@"liveLeaderPlan"] : self.state[@"goalPlan"];
-    NSArray *baseGoals = plan[@"baseGoals"] ?: plan[@"goals"];
+    NSArray *baseGoals = plan[@"baseGoals"] ?: plan[@"enemyCounterBaseGoals"] ?: plan[@"assistRecoveryBaseGoals"] ?: plan[@"goals"];
     if (copyLeaders && (![plan[@"available"] boolValue] || !baseGoals.count)) return;
     NSArray *goals = copyLeaders ? baseGoals : self.state[@"goals"];
     if (!goals.count) goals = @[@{@"kind":@"l", @"colors":@63, @"count":@1, @"length":@0}];

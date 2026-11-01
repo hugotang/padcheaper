@@ -122,7 +122,7 @@ static void SkillFixture() {
     uintptr_t enemy = Impl + PHOrbEnemyOffset;
     Protected(enemy + 64, 100, 0x766cfc6d); Protected(enemy + 80, 0, 0x766cfc6d);
     Put<uint8_t>(enemy + 23, 255);
-    for (uintptr_t offset : {uintptr_t(2400), uintptr_t(2192), uintptr_t(2256), uintptr_t(2224), uintptr_t(2176), uintptr_t(2240)})
+    for (uintptr_t offset : {uintptr_t(2400), uintptr_t(2192), uintptr_t(2256), uintptr_t(2224), uintptr_t(2176), uintptr_t(2240), uintptr_t(2432)})
         Protected(enemy + offset, 0, 0x6a875a8b);
 }
 static void ConsumedAssistReadTests() {

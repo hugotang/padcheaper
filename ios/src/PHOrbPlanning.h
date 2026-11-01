@@ -19,6 +19,8 @@ FOUNDATION_EXPORT NSDictionary *PHOrbPlanWithRecovery(NSDictionary *plan, NSDict
 // whose predicted first-wave L amount covers the current assist-void duration.
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanWithAssistRecovery(NSDictionary *plan, BOOL enabled,
     const PHOrbSnapshot *state, BOOL automatic);
+FOUNDATION_EXPORT NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan,
+    const PHOrbSnapshot *state, BOOL automatic);
 // Board objectives only, never a claim that the complete leader skill fired.
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanForLeaders(const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary *catalog);

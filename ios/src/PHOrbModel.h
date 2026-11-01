@@ -26,7 +26,10 @@ typedef enum {
 // Length is used by Match (at least this many orbs) and Exact (exactly this
 // many actually removed orbs in a first-wave group, without a shape constraint).
 typedef struct { uint8_t kind, colors, count, length; } PHOrbGoal;
-typedef struct { uint8_t count; PHOrbGoal items[PHOrbMaxGoals]; } PHOrbGoalSet;
+typedef struct {
+    uint8_t count; PHOrbGoal items[PHOrbMaxGoals];
+    bool comboFirstWave; // Internal enemy policy; never serialized as a saved goal.
+} PHOrbGoalSet;
 
 typedef struct {
     uint32_t hp, maximumHP, pendingDamage;
@@ -35,6 +38,7 @@ typedef struct {
 
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
+    uint8_t firstWaveCombos;
     uint8_t poisonErased, unmatchedBombs, heartFours;
     bool goalsMet, hazardsSafe;
     uint8_t mortalPoisonErased; // Subset of poisonErased; maxima are independent across spinner phases.
@@ -175,6 +179,17 @@ typedef struct {
     bool valid, fresh;
 } PHOrbAssistRecoveryState;
 
+// Current enemy countermeasures, captured again for this action. This is not
+// an enemy AI forecast. Raw durations retain flags for exact race checks.
+typedef struct {
+    uint64_t hp[8];
+    uint16_t flags[8], turns[8], thresholds[8], upperTurns[8], bypassTurns, bypassDelay;
+    uint16_t adjustmentTurns, subtractTurns, subtract;
+    int8_t adjustment;
+    uint8_t enemyCount, aliveMask;
+    bool valid;
+} PHOrbEnemyComboState;
+
 typedef enum {
     PHOrbSpinnerInactive, PHOrbSpinnerReady, PHOrbSpinnerBadCount,
     PHOrbSpinnerBadPeriod, PHOrbSpinnerBadColors, PHOrbSpinnerBadRows,
@@ -264,6 +279,7 @@ typedef struct {
     PHOrbMultiplayerState multiplayer;
     PHOrbBattleObservation observation;
     PHOrbAssistRecoveryState assistRecovery;
+    PHOrbEnemyComboState enemyCombo;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -313,6 +329,9 @@ bool PHOrbGoalsValid(const PHOrbGoalSet *goals);
 unsigned PHOrbRequiredShapeOrbs(const PHOrbGoalSet *goals, unsigned color);
 bool PHOrbShapeInventoryAvailable(const PHOrbBoard *board, const PHOrbGoalSet *goals);
 bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssistRecoveryState *b);
+bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboState *b);
+// Zero means no additional Combo goal. False means evidence is unavailable.
+bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *minimum);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);

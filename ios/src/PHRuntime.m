@@ -10,6 +10,7 @@
 #import "PHDeckPersistence.h"
 #import "PHBattleSession.h"
 #import "PHOrbSession.h"
+#import "PHOrbDungeonReport.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbProfiles.h"
 #import <UIKit/UIKit.h>
@@ -79,6 +80,7 @@ static CFAbsoluteTime PHLastMaintenance;
 static CFAbsoluteTime PHLastStatus;
 static NSUInteger PHFrameCount;
 static NSString *PHFolder;
+static NSDictionary *PHOrbDungeonExportResult;
 static BOOL PHProbeLogged;
 static NSUInteger PHBootstrapGeneration;
 static NSString *PHStartupState;
@@ -682,6 +684,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     NSDictionary *timer = [PHTimerTracker snapshot];
     NSDictionary *music = [PHMusicTracker snapshot];
     NSMutableDictionary *orbs = [[PHOrbTracker snapshot] mutableCopy];
+    orbs[@"dungeonExportResult"] = PHOrbDungeonExportResult ?: @{};
     orbs[@"canSetQuality"] = @(PHStorageReady && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue]);
     orbs[@"qualityMessage"] = PHOrbQualityNotice ?: @"";
     orbs[@"canSetThornPolicy"] = orbs[@"canSetQuality"];
@@ -1032,6 +1035,13 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if ([action isEqual:@"orbsRead"]) {
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
         [PHOrbTracker queueRead]; return;
+    }
+    if ([action isEqual:@"orbsDungeonCapture"]) { [PHOrbTracker queueDungeonCapture]; return; }
+    if ([action isEqual:@"orbsDungeonExport"]) {
+        if (![value isKindOfClass:NSString.class]) return;
+        PHOrbDungeonExportResult = PHOrbExportDungeonReport([PHOrbTracker dungeonReport], PH_RUNTIME_VERSION,
+            value, [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES]);
+        return;
     }
     if ([action isEqual:@"orbsExecute"]) {
         if ([value isKindOfClass:NSNumber.class]) [PHOrbTracker queueExecute:[value unsignedIntegerValue]];

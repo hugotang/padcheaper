@@ -93,6 +93,26 @@ def generate(manifest):
                                  'native_queue_capacity_confirmed': False,
                                  'confirmation': 'next-stable-native-duration-zero', 'survival_authorization': False,
                                  'guards': 'separate-policy-only', 'device_verified': False},
+                             'enemy_threat_events': {'mode': 'conditional-captured-definitions',
+                                 'opcodes': [15, 17, 18, 19, 47, 50, 82, 88, 89, 107, 140, 141],
+                                 'order': 'attached-hit-before-effect-compound-duplicates-retained',
+                                 'max_events': 128, 'bound': 'before-player-shields-current-attack-assumption',
+                                 'gravity_hp': 'requires-post-player-bound', 'unknown_events': 'retained',
+                                 'enemy_forecast': False, 'survival_authorization': False,
+                                 'guards': 'separate-optional-only', 'device_verified': False},
+                             'enemy_combo_countermeasure': {'mode': 'single-player-continuous',
+                                 'capture': 'fresh-double-read-before-plan-and-input',
+                                 'requirement': 'maximum-live-threshold-plus-one-or-active-bypass',
+                                 'combine': 'retain-base-heart-and-assist-goals',
+                                 'combo_credit': 'first-removal-only-minus-current-debits', 'max_combos': 14,
+                                 'upper_absorption': 'stop-until-maximum-combo-proof',
+                                 'unknown': 'stop', 'survival_authorization': False,
+                                 'guards': 'separate-policy-only', 'device_verified': False},
+                             'dungeon_report': {'mode': 'read-only-stable-single-player', 'scope': 'loaded-entry-all-floors',
+                                 'max_floors': 100, 'max_spawns_per_floor': 8, 'capture': 'one-floor-double-read-bound-to-current-spawn',
+                                 'retention': 'most-recent-entry-in-memory', 'export': 'explicit-json-file',
+                                 'random_alternatives': False, 'future_AI_state': False, 'enemy_forecast': False,
+                                 'survival_authorization': False, 'guards': 'separate-optional-only', 'device_verified': False},
                              'recovery_goal': {'mode': 'continuous-only', 'hp_percent': [1, 100], 'groups': [1, 3],
                                                'shapes': ['match', 'four'], 'combine': 'post-skill-conjunction'}}:
         raise ValueError('Unreviewed orb scope')
@@ -308,7 +328,16 @@ def generate(manifest):
         'PHOrbEnemyDamageOverrideAccumulationGateRVA', 'PHOrbEnemyDamageOverrideAccumulationWriteRVA',
         'PHOrbEnemyDamageUnsignedShortRVA', 'PHOrbEnemyDamageSignedByteRVA', 'PHOrbEnemyDamageActionEnabledRVA', 'PHOrbEnemyDamageSpecialMarkerRVA',
     }
-    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards
+    enemy_combo_guards = {'PHOrbEnemyCombo' + name + 'RVA' for name in (
+        'Threshold', 'Bypass', 'Adjustment', 'AdjustmentSubtract', 'AdjustmentSkip', 'AdjustmentRecord', 'ActualCount', 'UpperThreshold')}
+    enemy_threat_guards = {'PHOrbEnemyThreat' + name + 'RVA' for name in (
+        'PrepareAttached', 'PrepareOrder', 'MultiRange', 'MultiClamp', 'MultiHit', 'PercentParam', 'PercentExecute',
+        'Gravity', 'DamageEnrage', 'DamageAddition', 'FloatRound', 'LayerRound', 'GravityFloor',
+        'EnrageParams', 'EnrageFirstParam', 'EnrageApply', 'AwokenApply', 'AssistApply',
+        'Unmatchable', 'UnmatchableRandom', 'DelayParams', 'DelayTargets', 'DelayApply')}
+    dungeon_dump_guards = {'PHOrbDungeonDump' + name + 'RVA' for name in (
+        'Count', 'LoadCount', 'LoadStride', 'ParseEntry', 'SpawnWave', 'SpawnEntry', 'SpawnCatalog', 'SpawnLevel', 'SpawnBinding')}
+    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | enemy_threat_guards | dungeon_dump_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -347,6 +376,17 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbAssistRecovery')} != assist_recovery_fields:
         raise ValueError('Unreviewed assist recovery layout')
+    enemy_combo_fields = {'PHOrbEnemyComboThresholdOffset': 2208, 'PHOrbEnemyComboDurationOffset': 2224,
+        'PHOrbEnemyComboBypassOffset': 739176, 'PHOrbEnemyComboAdjustmentOffset': 739020,
+        'PHOrbEnemyComboSubtractOffset': 740000, 'PHOrbEnemyComboUpperDurationOffset': 2432}
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbEnemyCombo')} != enemy_combo_fields:
+        raise ValueError('Unreviewed enemy Combo layout')
+    dungeon_dump_fields = {'PHOrbDungeonDumpCountAddress': 0x2a9d1dc, 'PHOrbDungeonDumpWavesAddress': 0x2a9d1e0,
+        'PHOrbDungeonDumpSpawnPointerOffset': 1672, 'PHOrbDungeonDumpSpawnWaveOffset': 516}
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbDungeonDump')} != dungeon_dump_fields:
+        raise ValueError('Unreviewed dungeon report layout')
     enemy_action_fields = {
         'PHOrbEnemyActionsMetadataRVA': 0x27c7980,
         'PHOrbEnemyActionsCountRVA': 0x27c7988,
@@ -389,7 +429,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | enemy_threat_guards | dungeon_dump_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -423,6 +463,21 @@ def generate(manifest):
         if guard['name'] in enemy_damage_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbEnemyDamageTextGuardCount = sizeof(PHOrbEnemyDamageTextGuards) / sizeof(PHOrbEnemyDamageTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemyComboTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_combo_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemyComboTextGuardCount = sizeof(PHOrbEnemyComboTextGuards) / sizeof(PHOrbEnemyComboTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemyThreatTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_threat_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemyThreatTextGuardCount = sizeof(PHOrbEnemyThreatTextGuards) / sizeof(PHOrbEnemyThreatTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbDungeonDumpTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in dungeon_dump_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbDungeonDumpTextGuardCount = sizeof(PHOrbDungeonDumpTextGuards) / sizeof(PHOrbDungeonDumpTextGuards[0]);']
     return '\n'.join(lines) + '\n'
 
 

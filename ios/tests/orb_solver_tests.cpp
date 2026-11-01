@@ -177,6 +177,7 @@ static void ShapeTests() {
 }
 
 #include "orb_effect_solver_tests.inc"
+#include "orb_enemy_combo_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
 #include "orb_exact_solver_tests.inc"
 #include "orb_thorn_solver_tests.inc"
@@ -193,12 +194,15 @@ static void ShapeTests() {
 #include "enemy_selector_model_tests.inc"
 #include "enemy_dispatch_model_tests.inc"
 #include "enemy_damage_model_tests.inc"
+#include "enemy_threat_model_tests.inc"
 
 int main() {
     EnemyActionModelTests();
     EnemySelectorModelTests();
     EnemyDispatchModelTests();
     EnemyDamageModelTests();
+    EnemyThreatModelTests();
+    EnemyComboSolverTests();
     MultiplayerModelTests();
     DiagonalSolverTests();
     ShapeTests();

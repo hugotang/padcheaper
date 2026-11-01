@@ -2,6 +2,7 @@
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
 #import "PHOrbPlanning.h"
+#import "PHOrbDungeonReport.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -22,8 +23,12 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL failObservation;
     NSDictionary *enemyActionFixture;
     NSUInteger enemyActionReads;
+    NSArray *dungeonFixtures;
+    NSUInteger dungeonReads;
     NSUInteger assistReads, failAssistRead;
     BOOL failAssist, changeAssistOnStart, changeAssistOnMove;
+    NSUInteger enemyComboReads;
+    BOOL failEnemyCombo, bypassComboWithSkill;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
@@ -57,6 +62,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         live.automation.hpKnown = live.automation.statusKnown = true;
         live.automation.hp = live.automation.maximumHP = 1000;
         live.assistRecovery.valid = true; // Explicit synthetic no-void state, not diagnostic cache data.
+        live.enemyCombo.valid = true; live.enemyCombo.enemyCount = live.enemyCombo.aliveMask = 1;
+        live.enemyCombo.hp[0] = 1000;
         live.thorns = {1000,1000,0,true}; live.unmatchableKnown = true;
         live.automation.activeEnemies = 1;
         for (unsigned i = 0; i < 6; ++i) {
@@ -110,6 +117,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     ++enemyActionReads;
     return enemyActionFixture ?: @{@"status":@"unavailable", @"enemyForecastKnown":@NO};
 }
+- (NSDictionary *)observeDungeon:(const PHOrbSnapshot *)state waveIndex:(NSUInteger)index {
+    ++dungeonReads;
+    return index < dungeonFixtures.count ? dungeonFixtures[index] : @{@"status":@"unavailable"};
+}
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     ++assistReads;
     state->assistRecovery = {};
@@ -129,6 +140,17 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
             evidence.retainedAssists |= 1u << slot;
     }
     return state->assistRecovery.valid;
+}
+- (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    ++enemyComboReads; state->enemyCombo = {};
+    if (failEnemyCombo || staged || !frame.ready || !frame.enabled || live.phase != 2 ||
+        (!live.settled && !live.dragged) || live.automation.busy || live.boardTransition ||
+        live.multiplayer.kind != PHOrbMultiplayerNone || !PHInputIsQuiet(&live.input)) {
+        if (reason) *reason = @"fixture enemy Combo evidence unavailable";
+        return NO;
+    }
+    state->enemyCombo = live.enemyCombo;
+    return state->enemyCombo.valid;
 }
 - (void)armMultiplayerOnce:(BOOL)armed {
     if (armed && !multiplayerArmed) ++multiplayerArms;
@@ -239,6 +261,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
             live.obstacles = 0; live.ordinary = true; tickSpinners = NO;
         }
         if (healWithSkill) live.automation.hp = live.automation.maximumHP;
+        if (bypassComboWithSkill) { live.enemyCombo.bypassTurns = 1; live.automation.playerBypass |= PHOrbEnemyComboAbsorb; }
         if (makeHeartsWithSkill) for (unsigned i = 0; i < 4; ++i) live.board.types[i] = 5;
         if (clearPlayerStatusWithSkill) {
             live.automation.playerEffects = 0;
@@ -370,10 +393,14 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_enemy_dispatch_session_tests.inc"
 #include "orb_enemy_damage_session_tests.inc"
 #include "orb_assist_session_tests.inc"
+#include "orb_enemy_combo_session_tests.inc"
+#include "orb_dungeon_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         AssistSessionTests();
+        EnemyComboSessionTests();
+        DungeonSessionTests();
         if (failures) return 1;
         ObservationSessionTests();
         if (failures) return 1;

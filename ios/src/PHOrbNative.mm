@@ -10,12 +10,14 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include <type_traits>
 #include <CommonCrypto/CommonDigest.h>
 #include "PHEnemyActions.h"
 #include "PHEnemySelector.h"
 #include "PHEnemyDispatch.h"
 #include "PHEnemyDamage.h"
+#include "PHEnemyThreat.h"
 
 namespace {
 constexpr size_t PoolStride = 172, PoolCount = 256;
@@ -342,7 +344,9 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbSkillDiagnostics.inc"
 #include "PHOrbObservation.inc"
 #include "PHOrbEnemyActions.inc"
+#include "PHOrbDungeonDump.inc"
 #include "PHOrbAssistRecovery.inc"
+#include "PHOrbEnemyCombo.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
     if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
@@ -544,6 +548,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         _verifiedHeader != state->identity.header) return EnemyActionStatus(@"unavailable");
     return ReadEnemyActions(*state);
 }
+- (NSDictionary *)observeDungeon:(const PHOrbSnapshot *)state waveIndex:(NSUInteger)index {
+    if (!state || !NSThread.isMainThread || _staged || _multiplayerDisabled || !state->identity.header ||
+        _verifiedHeader != state->identity.header || index >= DungeonDumpMaxWaves) return DungeonDumpStatus(@"unavailable");
+    return ReadDungeonDump(*state,unsigned(index));
+}
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state) return NO;
     state->assistRecovery = {};
@@ -551,6 +560,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         !state->identity.header || frame.header != state->identity.header || _verifiedHeader != state->identity.header ||
         !CheckAssistRecoveryCode(state->identity.header) || !ReadAssistRecoveryFields(*state)) {
         if (reason) *reason = @"武裝回復 L：原生資料或前後一致性未確認，已停止";
+        return NO;
+    }
+    return YES;
+}
+- (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!state) return NO;
+    state->enemyCombo = {};
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !frame.ready || !frame.enabled ||
+        !state->identity.header || frame.header != state->identity.header || _verifiedHeader != state->identity.header ||
+        !CheckEnemyComboCode(state->identity.header) || !ReadEnemyComboFields(*state)) {
+        if (reason) *reason = @"敵人對策：Combo 吸收資料或前後一致性未確認，已停止";
         return NO;
     }
     return YES;
@@ -822,7 +842,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     // Revalidate the policy evidence after coordinate conversion, at the
     // last boundary before input. Cleanup releases remain possible on failure.
-    if (down && expected->assistRecovery.valid) {
+    if (down && (expected->assistRecovery.valid || expected->enemyCombo.valid)) {
         PHOrbSnapshot final{};
         NSString *finalReason = nil;
         const BOOL readFinal = !multiplayer && [self readAutomation:&final frame:frame reason:&finalReason];
@@ -832,15 +852,23 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             !PHOrbSameAutomationExceptWindow(expected, &final) || !PHInputIsQuiet(&final.input) ||
             !PHOrbCanEnterThorn(&final, unsigned(cell))) {
             if (reason) *reason = !readFinal && finalReason.length ? finalReason :
-                @"武裝回復 L：輸入前盤面、隊員或操作條件已改變，未繼續輸入";
+                @"敵人對策／武裝回復 L：輸入前盤面、隊員或操作條件已改變，未繼續輸入";
             return NO;
         }
-        if (![self readAssistRecovery:&final frame:frame reason:&finalReason]) {
+        if (expected->assistRecovery.valid && ![self readAssistRecovery:&final frame:frame reason:&finalReason]) {
             if (reason) *reason = finalReason ?: @"武裝回復 L：輸入前資料無法確認，未繼續輸入";
             return NO;
         }
-        if (!PHOrbSameAssistRecovery(&expected->assistRecovery, &final.assistRecovery)) {
+        if (expected->assistRecovery.valid && !PHOrbSameAssistRecovery(&expected->assistRecovery, &final.assistRecovery)) {
             if (reason) *reason = @"武裝無效、有效 L 或提供隊員已改變，未繼續輸入";
+            return NO;
+        }
+        if (expected->enemyCombo.valid && ![self readEnemyCombo:&final frame:frame reason:&finalReason]) {
+            if (reason) *reason = finalReason ?: @"敵人對策：輸入前資料未確認，未繼續輸入";
+            return NO;
+        }
+        if (expected->enemyCombo.valid && !PHOrbSameEnemyCombo(&expected->enemyCombo, &final.enemyCombo)) {
+            if (reason) *reason = @"敵人 Combo 吸收或解吸收已改變，未繼續輸入";
             return NO;
         }
         live = final;
