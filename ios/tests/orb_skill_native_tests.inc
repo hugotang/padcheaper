@@ -404,11 +404,13 @@ static void TemporarySkillNativeTests() {
 #include "orb_observation_native_tests.inc"
 #include "orb_enemy_action_native_tests.inc"
 #include "orb_enemy_selector_native_tests.inc"
+#include "orb_enemy_dispatch_native_tests.inc"
 
 static void SkillNativeTests() {
     ObservationNativeTests();
     EnemyActionNativeTests();
     EnemySelectorNativeTests();
+    EnemyDispatchNativeTests();
     ConsumedAssistReadTests();
     for (unsigned phase : {2u, 22u}) {
         SkillFixture(); FixtureSkillEngine *openingEngine = [FixtureSkillEngine new];

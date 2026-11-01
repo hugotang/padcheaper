@@ -4,6 +4,18 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-01：敵人選招入口與更新時序，源碼待建置
+
+接續 [入口與檢查點](enemy-dispatch-analysis.md)，新增獨立唯讀 dispatch context，區分倒數／HP 與原生旗標、排程前 hook、無技能但仍普攻、複合續招、快取、特殊 predicate、override、opcode180 改起始列與普通第 1 列入口。條件 tick 只在明示「到達函式、沒有外部提早返回、其餘狀態不變」時清快取及扣正倒數，不把一次玩家操作直接當成一次 tick。
+
+選招候選另附「假設 fresh selector 已返回該 ID、招式準備之前」的 checkpoint：uint32 行動數 wrap、protected count 至 60000、signed16 回充／上限的原生 clamp 次序、root82 提前負返回、low-u16 成本扣減和 packed compound。缺定義只保留已知前綴；不以 lookup 未讀到當原生無招。新診斷失敗只撤本組，原有行動表／row-zero 候選與 auto 決策維持。
+
+原生研究確認我方傷害／生存與變階段流程會改倒數、selected 或分支旗標，所以當前倒數或一次條件 tick 不能排除下一招。`postPlayerStateKnown`／`nextEntryKnown`／承傷與存活仍 false，尚未開放延後救援、防跳武裝或 L＋心四耐久。多人含 3 人單人續玩仍不取樣。
+
+39 組新指紋與原有 233 組 orb 分開；額外資料每遍上限 4096 bytes／64 reads，雙讀及共用入場／盤面末次覆核。已寫 model／native／session 案例，source manifest、嚴格 generator 與日後打包清單同步。**本批與先前未建置批次尚未編譯、執行測試／GUI／benchmark／generator、dispatch CI 或製作 dylib。0.5.14／CI 87 不驗證這些變更。** generated header、版本及 E:\ipa 舊交付未更新；[研究記錄](../research/orb-enemy-dispatch-20261101.json) 保存證據與靜態核對。
+
+本批靜態核對通過：6 份 JSON 唯一鍵、2 份 Python AST、6 段嵌入式 Python、13 份 C／Objective-C／C++ 字串／註解／括號、79 個本地 include 及 121 個文件連結。272 組 orb（114 操作＋15 舊診斷＋45 L 政策＋32 行動＋27 selector＋39 dispatch）、34 組 battle、17 組 runtime 指紋均與 IDA original／current 及磁碟 Mach-O 位元組、UUID、SHA-256 相符。原有 233 組 orb 指紋、操作／auto 模型、設定及 generated 檔未變；新增 3 個案例入口與獨立失配位元組已核對。結果及正規化源碼雜湊寫入研究 JSON；以上不等同編譯、測例通過或真機驗證。
+
 ## 2026-11-01：敵人選招條件分支，源碼待建置
 
 接續 [選招分支分析](enemy-selector-analysis.md)，從已收集的 64 列與 AI 狀態走有界普通選招流程：保留全 0～100 HP 百分比區間、旗標／unsigned 計數／level 條件、有序加權與舊式兩輪。第二輪繼承第一輪狀態，action ID 36 與 opcode 36 分開；未知列不假定跳過，超限不當無招。主候選、加權池候選和第二輪候選保留來源與返回時的 AI 狀態。

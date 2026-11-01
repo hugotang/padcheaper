@@ -2,6 +2,8 @@
 
 2026-11-01，**源碼與案例已寫，尚未編譯、執行測試或真機驗證**。接續 [行動定義與目前 AI 狀態](enemy-action-observation.md)，本批分析普通單人行動列的條件分支，為 [敵人感知自動模式](enemy-aware-automation.md) 建立中間資料。0.5.14 不含本批。
 
+後續已另加 [選招入口與條件檢查點](enemy-dispatch-analysis.md) 源碼及案例。每個候選可附獨立的 `postSelectionCheckpoint`，假設它由 fresh selector 返回後推演到招式準備之前；本頁的 row-zero 候選與 `aiStateProjected=false`／`nextEntryKnown=false` 含義不變。實際我方行動後狀態尚未確認。
+
 ## 分析的含義
 
 `battleObservation.enemyActions.enemies[].selectorAnalysis` 回答：「假設原生選招器由第 1 列進入，使用本次 AI 旗標／計數／level／budget，敵方正規化 HP 百分比可為 0 至 100，哪些行動列可能被選到？」**這不是下一回合預測**。實際入口可能走快取、複合續招、特殊／override 或其他起點；我方行動和前一隻敵人也可能改變狀態。本批沒有證明這些前提在下一回合成立。

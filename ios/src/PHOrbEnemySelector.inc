@@ -1,6 +1,6 @@
 // Conditional row traversal over an already captured graph. The only extra
-// memory reads are optional code guards; no game data reads, writes, native
-// calls, live scheduling or automation authorization are introduced here.
+// memory reads here are optional code guards. A separately guarded dispatch
+// capture can add conditional post-selection checkpoints; never authorization.
 namespace ES = PHEnemySelector;
 
 bool CheckEnemySelectorCode(uintptr_t header) {
@@ -46,7 +46,8 @@ NSDictionary *EnemySelectorSequence(const EA::Graph &graph, int32_t id) {
         @"definitionOrderKnown":@(sequence.structureKnown), @"normalAttackFallbackRetained":@(sequence.fallbackRetained),
         @"executionKnown":@NO, @"damageBoundKnown":@NO, @"effectsResolved":@NO};
 }
-NSDictionary *EnemySelectorTrace(const EnemyActionEntry &enemy, const EA::Graph &graph, ES::Budget &budget) {
+NSDictionary *EnemySelectorTrace(const EnemyActionEntry &enemy, const EA::Graph &graph, ES::Budget &budget,
+    const EnemyDispatchCapture *dispatch = nullptr, unsigned slot = 0) {
     if (!enemy.rowsKnown || !enemy.stateKnown || (enemy.flags & 0x100u))
         return @{@"status":@"unavailable", @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
     ES::Input input{};
@@ -60,12 +61,15 @@ NSDictionary *EnemySelectorTrace(const EnemyActionEntry &enemy, const EA::Graph 
     NSMutableArray *candidates = [NSMutableArray array], *sequences = [NSMutableArray array];
     NSMutableSet *described = [NSMutableSet set];
     for (const auto &candidate : result.candidates) {
-        [candidates addObject:@{@"row":@(candidate.row + 1), @"actionID":@(candidate.id),
+        NSMutableDictionary *item = [@{@"row":@(candidate.row + 1), @"actionID":@(candidate.id),
             @"origin":[NSString stringWithUTF8String:ES::OriginName(candidate.origin)],
             @"nativeHPPercent":@{@"minimum":@(candidate.hp.low), @"maximum":@(candidate.hp.high),
                 @"minimumExclusive":@(candidate.hp.lowOpen), @"maximumExclusive":@(candidate.hp.highOpen)},
             @"flagsAtReturn":@(candidate.flags), @"counterAtReturn":@(candidate.counter),
-            @"selectionGuaranteed":@NO}];
+            @"selectionGuaranteed":@NO} mutableCopy];
+        if (dispatch && slot < EA::MaxEnemies) item[@"postSelectionCheckpoint"] =
+            EnemyDispatchSelectionTrace(enemy, dispatch->enemies[slot], graph, candidate.id);
+        [candidates addObject:item];
         if (![described containsObject:@(candidate.id)]) {
             [described addObject:@(candidate.id)];
             [sequences addObject:EnemySelectorSequence(graph, candidate.id)];

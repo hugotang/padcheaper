@@ -4,6 +4,15 @@
 
 0.5.12 增加明確點擊的 3／4／8 人「轉一次」；其他自動輸入與戰鬥寫入仍限定單人。多人連續模式、技能、套隊及計時寫入保持停用。完整裝置診斷未加入 repo。
 
+## 待建置：敵人選招入口與更新時序
+
+1. 明確要求建置後才更新 generated header、執行新增 model／native／session 與既有回歸。核對 39 組 dispatch 指紋獨立於既有 233 組 orb；新指紋或讀取單獨失敗只撤 `dispatchAnalysis`／候選 checkpoint，不影響原始表及條件候選。
+2. 普通單人比較倒數、快取、複合續招、override、opcode180 起始列與特殊模式。`afterConditionalTick` 只是其餘狀態不變的假設；我方傷害觸發生存／變階段時，不得顯示成已確認安全回合。
+3. 核對 uint32 行動數、protected count 上限、signed16 回充／上限、low-u16 成本扣減、root82 負返回，以及缺定義只留 prefix。checkpoint 停在招式準備之前，不能當作招式執行完的狀態。
+4. 測 cache／special marker／hook 雙讀競態、active impl／金鑰／盤面變動、資料失效及新場次；舊入口立即撤下。3／4／8 人及 3 人單人續玩仍不取樣、不自動技能或連續輸入。真機量測整體讀取耗時和操作延遲。
+
+以上案例均未執行，詳見 [範圍與限制](enemy-dispatch-analysis.md)。下一招、承傷、回血及存活仍未知。
+
 ## 待建置：敵人選招條件分支
 
 1. 明確要求建置後才更新 generated header 並執行新增 model／native／session 案例。27 組 selector 指紋只控制候選分析；單獨失配時原始行動表、舊 L／CD 診斷與原有操作仍應可用。

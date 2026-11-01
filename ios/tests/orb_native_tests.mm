@@ -25,6 +25,8 @@ static unsigned changeContinuationDuringRead;
 static bool changeContinuationDuringCoordinateRead;
 static unsigned observationMutation;
 static unsigned enemyActionMutation;
+static unsigned enemyDispatchMutation;
+static bool rejectEnemyDispatchRead;
 static bool changeAssistDuringCoordinateRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
@@ -47,8 +49,16 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
     return Range(address, length);
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
+    if (rejectEnemyDispatchRead && address == Impl + PHOrbEnemyDispatchCacheOffset) return NO;
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (enemyDispatchMutation && address == Impl + PHOrbEnemyOffset + 2736 && length == 16) {
+        const unsigned mutation = enemyDispatchMutation; enemyDispatchMutation = 0;
+        if (mutation == 1) *reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDispatchCacheOffset) ^= 1u;
+        if (mutation == 2) Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDispatchSpecialOffset), ED::SpecialMarker);
+        if (mutation == 3) *reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyDispatchHookOffset) = 1;
+        if (mutation == 4) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Header + PHBattleImplRVA), 0);
+    }
     // Change state after the first raw enemy copy, before the confirmation.
     if (enemyActionMutation && enemyActionMutation <= 10 && address == Impl + PHOrbEnemyOffset && length == 2984) {
         const unsigned mutation = enemyActionMutation; enemyActionMutation = 0;
@@ -201,6 +211,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
     observationMutation = enemyActionMutation = 0;
+    enemyDispatchMutation = 0; rejectEnemyDispatchRead = false;
     changeAssistDuringCoordinateRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);

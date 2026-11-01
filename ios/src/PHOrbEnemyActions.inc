@@ -219,9 +219,11 @@ NSMutableDictionary *EnemyActionStatus(NSString *status) {
             @"countdown-timing", @"effective-shield-lifetime", @"healing-order", @"future-skill-deadlines"]} mutableCopy];
 }
 
+#include "PHOrbEnemyDispatch.inc"
 #include "PHOrbEnemySelector.inc"
 
-NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorCodeKnown) {
+NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorCodeKnown,
+    const EnemyDispatchCapture *dispatch, NSString *dispatchStatus) {
     NSMutableDictionary *out = EnemyActionStatus(@"ready");
     NSMutableArray *enemies = [NSMutableArray array], *definitions = [NSMutableArray array];
     ES::Budget selectorBudget{};
@@ -284,7 +286,9 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorC
             }
             entry[@"rows"] = rows;
         }
-        entry[@"selectorAnalysis"] = selectorCodeKnown ? EnemySelectorTrace(enemy, capture.graph, selectorBudget) :
+        entry[@"dispatchAnalysis"] = dispatch ? EnemyDispatchTrace(enemy, *dispatch, capture.graph, slot) :
+            @{@"status":dispatchStatus, @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
+        entry[@"selectorAnalysis"] = selectorCodeKnown ? EnemySelectorTrace(enemy, capture.graph, selectorBudget, dispatch, slot) :
             @{@"status":@"unavailable", @"nextEntryKnown":@NO, @"enemyForecastKnown":@NO};
         [enemies addObject:entry];
     }
@@ -327,6 +331,22 @@ NSDictionary *EnemyActionTrace(const EnemyActionCapture &capture, bool selectorC
         @"weightedPoolLimitPerPath":@(EA::Rows),
         @"stepLimitPerCapture":@(ES::MaxCaptureSteps), @"steps":@(selectorBudget.steps),
         @"diagnosticOnly":@YES, @"enemyForecastKnown":@NO, @"damageBoundKnown":@NO, @"survivalKnown":@NO};
+    NSMutableDictionary *dispatchTrace = [@{@"status":dispatchStatus, @"version":@(ED::Version),
+        @"readByteLimit":@(ED::MaxReadBytes), @"readCallLimit":@(ED::MaxReads),
+        @"diagnosticOnly":@YES, @"postPlayerStateKnown":@NO, @"nextEntryKnown":@NO,
+        @"enemyForecastKnown":@NO, @"damageBoundKnown":@NO, @"survivalKnown":@NO} mutableCopy];
+    if (dispatch) [dispatchTrace addEntriesFromDictionary:@{
+        @"readBytes":@(dispatch->readBytes), @"readCalls":@(dispatch->readCalls),
+        @"cacheModeRaw":@(dispatch->context.cacheMode), @"preDispatchHookRaw":@(dispatch->context.preDispatchHook),
+        @"specialMarkerRaw":@(dispatch->context.specialMarker), @"loopStateRaw":@(dispatch->context.loopState),
+        @"actionsEnabled":@(dispatch->context.actionsEnabled), @"redirectSlotRaw":@(dispatch->context.redirectSlot),
+        @"redirectActionCached":dispatch->context.redirectSlot >= 0 ? @(dispatch->redirectAction) : NSNull.null,
+        @"redirectFlagsRaw":dispatch->context.redirectSlot >= 0 ? @(dispatch->redirectFlags) : NSNull.null,
+        @"redirectRowRaw":dispatch->context.redirect == ED::Redirect::RowChange ? @(dispatch->context.redirectRow) : NSNull.null,
+        @"redirectDefinitionHex":dispatch->redirectDefinitionKnown ?
+            EnemyActionHex(dispatch->redirectDefinition.bytes.data(), EA::RecordBytes) : NSNull.null,
+        @"redirectDefinitionKnown":@(dispatch->redirectDefinitionKnown)}];
+    out[@"dispatchAnalysis"] = dispatchTrace;
     out[@"enemies"] = enemies; out[@"definitions"] = definitions;
     return out;
 }
@@ -351,11 +371,17 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
          (!first.automation.hpKnown || state.observation.hp != first.automation.hp ||
           state.observation.maximumHP != first.automation.maximumHP))) return EnemyActionStatus(@"changed");
     EnemyActionCapture capture{}, confirmation{};
+    EnemyDispatchCapture dispatch{}, dispatchConfirmation{};
+    const bool dispatchCodeKnown = CheckEnemyDispatchCode(header);
     EnemyActionTables finalTables{};
     if (!CollectEnemyActions(first, key1, key2, capture)) return EnemyActionStatus(@"unavailable");
+    const bool dispatchRead = dispatchCodeKnown && CollectEnemyDispatch(first, capture, key1, key2, dispatch);
     if (!EnemyActionsMatchObservation(state.observation, capture)) return EnemyActionStatus(@"changed");
-    if (!ReadAutomationFields(second) || second.automation.busy || !CollectEnemyActions(second, key1, key2, confirmation) ||
-        std::memcmp(&capture, &confirmation, sizeof(capture)) || !PHOrbSameAutomation(&first, &second) ||
+    if (!ReadAutomationFields(second) || second.automation.busy || !CollectEnemyActions(second, key1, key2, confirmation))
+        return EnemyActionStatus(@"changed");
+    const bool dispatchSecondRead = dispatchRead && CollectEnemyDispatch(second, confirmation, key1, key2, dispatchConfirmation);
+    const bool dispatchMatches = dispatchSecondRead && !std::memcmp(&dispatch, &dispatchConfirmation, sizeof(dispatch));
+    if (std::memcmp(&capture, &confirmation, sizeof(capture)) || !PHOrbSameAutomation(&first, &second) ||
         !ReadEnemyActionTables(header, finalTables) || finalTables.catalog != capture.tables.catalog ||
         finalTables.actions != capture.tables.actions || finalTables.catalogCount != capture.tables.catalogCount ||
         finalTables.catalogRecords != capture.tables.catalogRecords || finalTables.actionCount != capture.tables.actionCount ||
@@ -377,5 +403,6 @@ NSDictionary *ReadEnemyActions(const PHOrbSnapshot &state) {
         !final.valid || !final.settled || final.boardTransition || final.dragged || !PHInputIsQuiet(&final.input) ||
         !PHOrbSameTurn(&state, &final) || state.moves != final.moves || final.phase != state.phase ||
         !PHOrbSameLeaders(&state, &final) || !PHOrbSamePlanBoard(&state.board, &final.board)) return EnemyActionStatus(@"changed");
-    return EnemyActionTrace(capture, CheckEnemySelectorCode(header));
+    return EnemyActionTrace(capture, CheckEnemySelectorCode(header), dispatchMatches ? &dispatch : nullptr,
+        dispatchMatches ? @"ready" : dispatchRead && dispatchSecondRead ? @"changed" : @"unavailable");
 }

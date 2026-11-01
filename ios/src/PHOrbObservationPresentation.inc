@@ -140,6 +140,16 @@ NSString *BattleObservationDescription(const PHOrbBattleObservation &observation
                 (unsigned long)complete, (unsigned long)incomplete, (unsigned long)candidates]];
             [lines addObject:@"候選涵蓋不同血量情況，尚不能確認下一招或判斷耐久。"];
         }
+        if ([enemyActions[@"dispatchAnalysis"][@"status"] isEqual:@"ready"]) {
+            NSUInteger classified = 0, unknown = 0;
+            for (NSDictionary *enemy in enemyActions[@"enemies"]) {
+                if ([enemy[@"dispatchAnalysis"][@"current"][@"conditionalRouteClassified"] boolValue]) ++classified;
+                else ++unknown;
+            }
+            [lines addObject:[NSString stringWithFormat:@"行動入口：%lu 個敵人已按目前狀態分類，%lu 個未確認；倒數推演假設其餘狀態不變。",
+                (unsigned long)classified, (unsigned long)unknown]];
+            [lines addObject:@"我方傷害與敵人變階段尚未推演；不能據此延後救援或判斷安全回合。"];
+        }
     } else if (enemyActions) [lines addObject:@"敵人行動表：等待新的穩定資料。"];
     if (observation.assistVoidKnown) [lines addObject:observation.assistVoidTurns > 0 ?
         [NSString stringWithFormat:@"暫時武裝無效：%d 回合", observation.assistVoidTurns] : @"目前沒有暫時武裝無效。"];
