@@ -1,6 +1,6 @@
 # 武裝無效時補 L
 
-0.5.16 診斷修正：規劃失敗保存本次盤面、原有目標及各色保證／可能珠數，`solverStarted=false` 區分尚未求路；訊息按實際形狀組數計算。武裝讀取失敗保留當次 `failedRead`，較早的求路按場次／回合／位置標記。自動驗證進度見 [0.5.16 說明](release-0.5.16.md)。
+0.5.16 診斷修正：規劃失敗保存本次盤面、原有目標及各色保證／可能珠數，`solverStarted=false` 區分尚未求路；訊息按實際形狀組數計算。武裝讀取失敗保留當次 `failedRead`，較早的求路按場次／回合／位置標記。已由 [CI 91](https://github.com/hugotang/padcheaper/actions/runs/41291829392) 通過完整回歸、arm64 編譯、簽章、瀏覽器與四份 GUI；見 [0.5.16 說明](release-0.5.16.md)。
 
 0.5.15 驗證更新：本頁已實作部分的模型／原生／session 案例與 iOS 編譯已由 [CI 90](https://github.com/hugotang/padcheaper/actions/runs/41283642862) 通過。整包另通過編隊瀏覽器及四份 GUI；GUI 覆蓋設定和模擬 L／充能文字，未逐層驗證敵人分析子層，真機仍待驗收。以下「尚未建置／執行」文字保留提交當時紀錄。完整下一擊／減傷／回血及耐久決策仍未完成，結果與限制見 [開發紀錄](development.md)。
 
