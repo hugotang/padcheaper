@@ -1,4 +1,4 @@
-/* global PHFormation, PH_CATALOG */
+/* global PHFormation, PH_CATALOG, PHTeamView */
 (() => {
   'use strict';
   const model = PHFormation.createModel(PH_CATALOG), $ = id => document.getElementById(id);
@@ -7,6 +7,7 @@
   let library = model.createLibrary(), team = model.selectedTeam(library), savedLibrary = null;
   let selected = {slot:0,kind:'body'}, battle = {}, recent = [], savedJSON = '', pending = null;
   let sequence = 0, saveTimer, toastTimer, lastSaveError = '', savePromise = Promise.resolve({ok:true}), resolveSave;
+  const teamView = PHTeamView.create(model,()=>team,portrait);
   const bridge = (action,value) => {
     const handler = window.webkit?.messageHandlers?.formation;
     if (!handler) return false;
@@ -95,6 +96,7 @@
   }
   function renderFields() {
     const v=member(),c=model.cards.get(v.id),assist=selected.kind==='assist';
+    teamView.renderSelection(v);
     $('team-title').value=team.title;
     $('editor-title').textContent='位置 '+(selected.slot+1)+(selected.slot===0?' · 隊長':selected.slot===5?' · 助人':'');
     $('slots-label').textContent=(selected.slot+1)+' / 6';
@@ -114,10 +116,10 @@
     if(!assist) {
       const available=c?.supers.length?c.supers:c?.sync?[c.sync]:[];
       const choices=[[-1,available.length?'自動 · '+model.awakeningName(available[0]):'自動 · 無超覺醒'],[0,'不啟用'],...available.map(id=>[id,model.awakeningName(id)])];
-      for(const [value,label] of choices) {const b=document.createElement('button');b.textContent=label;b.className=value===v.superAwakening?'active':'';b.dataset.super=value;b.onclick=()=>update({superAwakening:value});$('super-options').append(b);}
+      for(const [value,label] of choices) {const b=document.createElement('button');if(value>0)b.append(teamView.icon(value));b.append(document.createTextNode(label));b.className=value===v.superAwakening?'active':'';b.dataset.super=value;b.onclick=()=>update({superAwakening:value});$('super-options').append(b);}
       const used=v.latents.reduce((n,id)=>n+model.latentCost(id),0);
       $('latent-title').textContent='潛在覺醒 · '+used+' / '+(c?.latentSlots||6)+' 格（點擊移除）';
-      $('latent-list').replaceChildren();v.latents.forEach((id,index)=>{const b=document.createElement('button');b.textContent=model.latentName(id)+' ×';b.onclick=()=>update({latents:v.latents.filter((_,i)=>i!==index)});$('latent-list').append(b);});
+      $('latent-list').replaceChildren();v.latents.forEach((id,index)=>{const b=document.createElement('button');b.append(teamView.icon(id,true),document.createTextNode(model.latentName(id)+' ×'));b.onclick=()=>update({latents:v.latents.filter((_,i)=>i!==index)});$('latent-list').append(b);});
     }
     const destination=Number($('slot-destination').value);
     options($('slot-destination'),team.slots.map((_,i)=>[i,'位置 '+(i+1)]).filter(([i])=>i!==selected.slot),destination!==selected.slot&&destination>=0?destination:(selected.slot+1)%6);
@@ -156,7 +158,7 @@
     $('undo').disabled=$('editor-undo').disabled=!history().length;
     const steps=history(),last=steps[steps.length-1];$('undo').setAttribute('aria-label',last?'撤銷'+last.label:'沒有可撤銷的編輯');
   }
-  function render() { renderLibrary();renderFields();renderGrid();renderState(); }
+  function render() { renderLibrary();renderFields();renderGrid();renderState();teamView.render(); }
   function chooseCard(id) {
     guarded(()=>{readFields();commitTeam(model.selectCard(team,selected.slot,selected.kind,id),'選擇角色');
       if(id){recent=[id,...recent.filter(n=>n!==id)].slice(0,24);bridge('recent',recent);}
@@ -235,6 +237,7 @@
     saveResult:receiveSave,
     importText(value) {guarded(()=>{readFields();const imported=model.parseImport(value);commitTeam(imported.team,'匯入隊伍');resetFields();$('management').open=false;render();toast((imported.notice||'已匯入隊伍')+' 尚未儲存。');});},
     getTeam() {return clone(team);},
+    getTeamCalculation() {return clone(teamView.getResult());},
     getLibrary() {return model.updateLibraryTeam(library,team);},
     getSaveState() {return {pending:Boolean(pending),dirty:dirty(),error:lastSaveError,savedLibrary:clone(savedLibrary)};},
     whenSaved() {return savePromise;},

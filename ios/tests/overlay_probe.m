@@ -1705,11 +1705,17 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             "PHFormationUI.receive({team:t});document.getElementById('save').click();"
             "return {bodies:document.querySelectorAll('#body-grid .card').length,assists:document.querySelectorAll('#assist-grid .card').length,"
             "name:document.getElementById('selected-name').textContent,applyDisabled:document.getElementById('apply-all').disabled,"
+            "calculation:PHFormationUI.getTeamCalculation().mode,offlineIcons:document.querySelectorAll('#calc-awakenings .awakening-icon').length,"
+            "embeddedIcons:getComputedStyle(document.querySelector('#calc-awakenings .awakening-icon')).backgroundImage.includes('data:image/png;base64,'),"
+            "survival:PHFormationUI.getTeamCalculation().survivalAuthorized,"
             "fits:document.documentElement.scrollWidth<=innerWidth};})()";
         [self.formationWeb evaluateJavaScript:script completionHandler:^(id value, NSError *failure) {
             PHProbeCheck(!failure && [value[@"bodies"] isEqual:@6] && [value[@"assists"] isEqual:@6], @"editor renders all six bodies and all six weapons");
             PHProbeCheck([value[@"name"] containsString:@"14238 猫猫"] && [value[@"fits"] boolValue], @"portrait editor uses the correct encyclopedia identity and fits the viewport");
             PHProbeCheck([value[@"applyDisabled"] boolValue], @"formation apply remains disabled for an unmatched target");
+            PHProbeCheck([value[@"calculation"] isEqual:@"solo-offline"] && [value[@"offlineIcons"] integerValue] > 0 &&
+                [value[@"embeddedIcons"] boolValue] && [value[@"survival"] isEqual:@NO],
+                @"Offline team calculation and embedded awakening icons work in WKWebView without survival authorization");
             [self performSelector:@selector(verifyFormation) withObject:nil afterDelay:0.5];
         }];
     }];

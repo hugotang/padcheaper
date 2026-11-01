@@ -55,7 +55,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: PADCheaper-Editor-browser-${{ github.run_number }}
-          path: build/editor-browser/*.png
+          path: |
+            build/editor-browser/*.png
+            build/team-model/test-result.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -105,6 +107,7 @@ jobs:
           print('Download the run artifact and replace the dylib through the existing Dopamine rootless injection setup. LiveContainer users must re-sign there before loading.')
           print('Version **' + metadata['dylib_version'] + '** includes a mobile team overview and member sheet, 64 saved teams, full-slot swap/copy, undo, recent cards and pinch zoom.')
           print('Formation saves require a matching native success receipt. Real disk-write failure preserves the editor draft and the previously selected automatic entry team.')
+          print('0.5.18: offline solo formation model compares current and final forms, HP/RCV, explicit leader/awakening shields and no-skyfall heart-heal estimates. Complete body/super-sync/assist/latent icons and common resistances are available offline. Unknown conditions and ambiguous transforms are explicit. Scenario controls never persist or apply the formation, and do not authorize Auto survival relaxation. PADDashFormation icon sources and GPL-3.0 notice are included.')
           print('0.5.17: all-floor JSON export captures this entry\'s loaded spawns, catalog variants, action definitions and bounded live observations from stable solo windows; retained after exit, with explicit partial data and a system file share sheet. No unspawned alternatives or future AI are claimed. Continuous Combo countermeasures require first-removal counts above the highest lower-absorption threshold plus current debits, unless fresh active bypass is confirmed. Upper absorption stops. Skills run first; base and assist goals stay required; evidence changes revoke input. No positive bonus, cascade, skyfall or survival credit; L/heart-only and three-light/three-heart defense remain unavailable.')
           print('Reviewed 3P solo continuation accepts the retained local board after native cleanup, using the native move timer. The transition cancels old gesture intent and still requires a fresh explicit tap. Incomplete recovery, invalid ownership/timing and resolution remain blocked. Retains 4P to 3P entry reset and verified remote-exit handling.')
           print('Spinner shape search reuses bounded layout scores and guides hard-shape goals without requiring thorns; exact goals, all shared phases and the original time/path budgets remain enforced. Dense shape conflicts use a necessary separator bound. Battle core protection no longer requires unused allocation-tail pages; actually used modal pointers are checked separately.')

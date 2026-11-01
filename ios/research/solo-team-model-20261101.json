@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "date": "2026-11-01",
+  "target": "jp.gungho.pad 23.6.0 / 106878",
+  "native_binary_sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
+  "catalog_revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+  "native_evidence": {
+    "native-stats.json": "ce7b9eea9b338323a9dd19608824d15556f87e4dc02ed8dd77d457e08e5319a4",
+    "native-member.json": "54eac4c5841c52d2172b1262283303f8821bea615fe54e9c33e839e7457f2ee0",
+    "native-stat-core.json": "e798b46b27eebb7d345779e8320c3f3fb7764f9c7902c99405f3de444733a445",
+    "native-stat-calculation.json": "cf84a712f62c0f4ced9dc28df258de2227dbe84c9b89cad422a83d8e3c0b7643",
+    "native-stat-rules.json": "5c0920458cb508aa510ae5fb07c8f456277d51c508f70bf9b6ec0774288e321a",
+    "native-recovery.json": "52806d079b26f9e30c5e8bc69071c6883e31556bc8f318512a5541e9c92f1756",
+    "native-heart.json": "443d19b3e19b70a2b96f2de1fa5149ee1101a426b368a4f7f69739c6b9c90657",
+    "native-heart-effects.json": "4ea00adcbed2ba319c94d0013791b1045cff48aee2c11be93bdc869144245acb",
+    "native-awakening-counts.json": "bb250680c0f207e7c45323ec4b7a10b6904e0c4407d33a2a6ed3f487e0f337dc"
+  },
+  "functions": {
+    "0x100480B3C": "base stat curve",
+    "0x100480BC4": "limit break and super limit break delta",
+    "0x10047FCEC": "base, voice, latent, flat awakenings, plus and assist inheritance",
+    "0x100481320": "stat-awakening multiply and rounded delta",
+    "0x10004818C": "round half away from zero",
+    "0x100070C6C": "team HP awakening float multiplier",
+    "0x100070CFC": "team recovery awakening float multiplier",
+    "0x10006FB04": "per-member maximum HP rounding and sum",
+    "0x1005AC4C8": "heart-four owner recovery and fractional group accumulation"
+  },
+  "recorded_observation": {
+    "source": "User supplied first-floor dungeon 7802-5 report; original private report not redistributed",
+    "template": "ishida-uryu-gamewith-574233/formation.json",
+    "phase": "current",
+    "hp": 397834
+  },
+  "limits": [
+    "Independent offline model only; no native call or battle integration",
+    "Heart-heal calculation remains an estimate; exact enhanced-orb and total-combo float order not fully audited",
+    "No enemy-next-action, damage projection or Auto survival authorization"
+  ],
+  "device_verified": false
+}
