@@ -16,6 +16,8 @@
 
 先前 CI 95 在追加技能／關卡功能時取消，沒有交付產物。尚未完成本批最終 iPhoneOS arm64、原生／solver 回歸及四份 GUI；未產出 0.5.18 交付。稍後手動 dispatch 同一來源，完成後另記結果。詳見 [隊伍模型](team-model.md)、[關卡對比](team-dungeon.md) 及 [更新說明](release-0.5.18.md)。
 
+首輪 [CI 96](https://github.com/hugotang/padcheaper/actions/runs/41316812747) 通過全部原生／模型回歸、arm64 編譯／簽章及瀏覽器。Scene GUI 已通過直接對比、攻略寫入和離線模型，但搜尋框聚焦時被新增覺醒區推到鍵盤可見範圍下方；現把搜尋列放到編輯內容最前，保留全部圖示，補 390px 可見高度與實際命中測試。另一項橫向測試失敗是對比流程按預期收合面板後，案例仍假設面板已展開；改由 PC 按鈕開啟後保留原有邊界及觸控檢查。修正待下一次完整 CI，不交付 CI 96 產物。
+
 ## 2026-11-01：0.5.17-orbs 全層匯出與 Combo 對策，編譯驗證完成
 
 2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。

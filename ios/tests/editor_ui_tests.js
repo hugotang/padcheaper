@@ -64,6 +64,15 @@ const {pathToFileURL}=require('node:url');
   return visible;
  });
  assert.equal(pan,true,'editor navigation follows the visual viewport when the keyboard pans it');
+ await page.setViewportSize({width:390,height:390});
+ await page.locator('#search').focus();
+ const keyboardControls=await page.evaluate(()=>['editor-done','kind-body','kind-assist','previous-slot','next-slot','search'].map(id=>{
+  const el=document.getElementById(id),r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+  return {id,visible:r.top>=0&&r.bottom<=innerHeight&&el.contains(hit)};
+ }));
+ assert.deepEqual(keyboardControls.filter(r=>!r.visible),[],'navigation and search remain reachable with a 390px keyboard viewport and the full awakening block');
+ await page.screenshot({path:path.resolve('build/editor-browser/editor-keyboard-390.png')});
+ await page.setViewportSize({width:390,height:844});
  assert.equal(await page.locator('#level').inputValue(),'120');
  assert.equal(await page.evaluate(()=>PHFormationUI.getTeam().slots[0].body.level),0,'displayed maximum retains sentinel');
  await page.locator('#level').fill('110');await page.locator('#level').dispatchEvent('change');

@@ -1958,6 +1958,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         UIWindow *overlay = PHProbeOverlay(self.window.windowScene);
+        // The dungeon comparison transition closes its originating orb panel.
+        // Reopen through the actual PC controls before checking expanded layout.
+        PHProbeOpenPanel(overlay);
         UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
         [overlay layoutIfNeeded];
         if (CGRectGetWidth(overlay.bounds) <= CGRectGetHeight(overlay.bounds) && self.landscapeAttempts < 8) {
