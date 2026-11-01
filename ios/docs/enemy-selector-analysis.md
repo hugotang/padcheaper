@@ -1,5 +1,7 @@
 # 敵人選招的條件分支分析
 
+0.5.15 驗證更新：本頁已實作部分的模型／原生／session 案例與 iOS 編譯已由 [CI 90](https://github.com/hugotang/padcheaper/actions/runs/41283642862) 通過。整包另通過編隊瀏覽器及四份 GUI；GUI 覆蓋設定和模擬 L／充能文字，未逐層驗證敵人分析子層，真機仍待驗收。以下「尚未建置／執行」文字保留提交當時紀錄。完整下一擊／減傷／回血及耐久決策仍未完成，結果與限制見 [開發紀錄](development.md)。
+
 2026-11-01，**源碼與案例已寫，尚未編譯、執行測試或真機驗證**。接續 [行動定義與目前 AI 狀態](enemy-action-observation.md)，本批分析普通單人行動列的條件分支，為 [敵人感知自動模式](enemy-aware-automation.md) 建立中間資料。0.5.14 不含本批。
 
 後續已另加 [選招入口與條件檢查點](enemy-dispatch-analysis.md) 源碼及案例。每個候選可附獨立的 `postSelectionCheckpoint`，假設它由 fresh selector 返回後推演到招式準備之前；本頁的 row-zero 候選與 `aiStateProjected=false`／`nextEntryKnown=false` 含義不變。實際我方行動後狀態尚未確認。

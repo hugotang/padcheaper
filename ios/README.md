@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-2026-11-01，`0.5.15-orbs` 已進入使用者授權的編譯驗證，包含 3 人單人續玩、記憶體範圍修正、轉轉搜尋／猛毒政策、武裝回復 L 與敵人唯讀診斷。目前測試進行中，完成前不代表通過；結果見 [開發紀錄](docs/development.md)、[更新說明](docs/release-0.5.15.md)。真機同步及技能效果仍待驗收。
+2026-11-01，`0.5.15-orbs` 已由 [CI 90](https://github.com/hugotang/padcheaper/actions/runs/41283642862) 通過完整自動回歸、iPhoneOS arm64 編譯與嚴格簽章、瀏覽器及四份 GUI。包含 3 人單人續玩、開場讀取修正、轉轉搜尋／猛毒政策、武裝回復 L 及敵人唯讀診斷。結果見 [開發紀錄](docs/development.md)、[更新說明](docs/release-0.5.15.md)；真機同步及技能效果仍待驗收。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
