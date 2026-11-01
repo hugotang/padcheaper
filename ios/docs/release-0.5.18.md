@@ -8,6 +8,8 @@
 
 HP 與回血試算仍有明確界線：未計徽章、完整遊戲狀態或所有隊長／敵人機制，部分數值是估值。此版沒有接通 Auto 的省 T／光心耐久存活放行。詳細用法見 [隊伍模型](team-model.md) 及 [關卡對比與攻略庫](team-dungeon.md)。
 
-本機模型及瀏覽器檢查已通過；本批最終 iPhoneOS arm64 編譯、完整原生回歸與 Scene／舊式視窗首次／重啟共四份 GUI 仍待手動 CI。結果更新於 [開發紀錄](development.md)，先前版本不代替本版驗證。
+2026-11-01，`0.5.18-orbs` 已由 [CI 98](https://github.com/hugotang/padcheaper/actions/runs/41321037478) 通過 32 項隊伍模型、13 項關卡／攻略模型、完整模型／solver／原生／session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。「隊伍對比」跨視窗／WebKit 初始化傳遞、攻略原子儲存及程序重啟載入均通過。本版按鈕、技能、覺醒圖案及實際 17 層對比畫面已檢視；原生覺醒圖示另通過圖片解碼與截圖彩色像素檢查。417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。完整結果見 [開發紀錄](development.md)。
+
+來源 `a8a323d92eea1155a440450d7c6c313c3ad08fd8`；dylib 10,424,224 bytes，最低 iOS 15.0；SHA-256 `babc9907c83395d62928020a41a077d35f5e85b69b7da83a14190b64ee70536d`。交付目錄為 `E:/ipa/PADCheaper-0.5.18-orbs` 及同名 ZIP；既有交付保留。二進位、metadata、manifest、模型／CLI 與範本／研究 JSON 保持同一 CI 原件，文件驗證結果另行更新。包內 `comparisons/dungeon-7802-5/` 是使用該包 CLI／模型產生的私有離線報告，不含原始 dump；`dungeon-guides.json` 可直接匯入與更新。舊研究及效能 benchmark 保留歷史身份；`device_verified=false`。
 
 更新時完全關閉遊戲，再替換新版 dylib；LiveContainer 需重新簽署。原有設定及隊伍庫保留；開啟「編輯六人隊伍」即可試算，已有關卡紀錄則可按「隊伍對比」。圖示原始檔與 GPL-3.0 授權附於 `third_party/PADDashFormation/`。
