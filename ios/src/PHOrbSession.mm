@@ -386,6 +386,24 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _executionElapsed = 0;
     _recordingExecution = false;
 }
+- (void)recordPlanningStatus:(NSString *)status reason:(NSString *)reason {
+    // The capture is created before mechanism reads or plan validation. A
+    // blocked attempt must not borrow a previous route, evaluation or board.
+    NSMutableDictionary *trace = [_searchTrace mutableCopy];
+    PHOrbGoalSet goals{};
+    const BOOL goalsKnown = PHOrbReadGoals(_goalPlan[@"goals"], &goals);
+    trace[@"status"] = status; trace[@"solverStarted"] = @([status isEqual:@"searching"]);
+    trace[@"reason"] = reason ?: @""; trace[@"planAvailable"] = _goalPlan[@"available"] ?: @NO;
+    trace[@"goalsKnown"] = @(goalsKnown); trace[@"goals"] = PHOrbGoalsJSON(&goals);
+    trace[@"goalCount"] = @(goals.count);
+    trace[@"baseGoals"] = _goalPlan[@"assistRecoveryBaseGoals"] ?: trace[@"goals"];
+    trace[@"stepLimit"] = @(_solveOptions.steps); trace[@"budgetMS"] = @(_solveOptions.milliseconds);
+    trace[@"assistRecovery"] = _assistTrace;
+    trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
+    trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
+    trace[@"assistRecoveryBlocker"] = _goalPlan[@"assistRecoveryBlocker"] ?: @"";
+    _searchTrace = [trace copy];
+}
 #include "PHOrbAssistSession.inc"
 - (void)recordExecution:(NSString *)status state:(const PHOrbSnapshot *)state evaluation:(NSDictionary *)evaluation {
     if (!_recordingExecution || !_executionHistory.count) return;
@@ -1096,19 +1114,42 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     options.thornComboPriority = _thornComboPriority;
     options.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     options.diagonal = _diagonal;
+    _solveOptions = options;
+    _traceOrigin = _preview;
+    _searchTrace = @{@"schema":@2, @"generation":@(_generation), @"status":@"planning", @"solverStarted":@NO,
+        @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
+        @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
+        @"leaderContext":LeaderTrace(_preview),
+        @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview",
+        @"multiplayer":MultiplayerTrace(_preview),
+        @"turn":@(_automatic ? _autoTurn : 0), @"observedTurn":@(_observedTurn), @"wave":@(_preview.wave),
+        @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
+        @"board":BoardTrace(_preview.board), @"quality":_quality,
+        @"thornComboPriority":@(options.thornComboPriority),
+        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
     _skillWindowWaitAt = 0;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
     _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
     if (_automatic && _assistRecoveryL) {
-        if (![self captureAssistRecovery:&_preview]) return;
+        if (![self captureAssistRecovery:&_preview]) {
+            NSMutableDictionary *plan = [_goalPlan mutableCopy];
+            plan[@"available"] = @NO; plan[@"message"] = _message;
+            plan[@"assistRecoveryMessage"] = _message; plan[@"assistRecoveryBlocker"] = @"state-unavailable";
+            _goalPlan = [plan copy];
+            [self recordPlanningStatus:@"assist-unavailable" reason:_message]; return;
+        }
         _goalPlan = PHOrbPlanWithAssistRecovery(_goalPlan, YES, &_preview, YES);
         NSDictionary *previous = [_assistTrace[@"status"] isEqual:@"observed-clear"] ?
             [_assistTrace dictionaryWithValuesForKeys:@[@"status", @"beforeTurns", @"observedTurns", @"turn",
                 @"actualConfirmed", @"lOnlyAmountConfirmed"]] : nil;
         NSMutableDictionary *trace = [[self assistRecoveryTrace:&_preview.assistRecovery status:
             [_goalPlan[@"available"] boolValue] ? @"planned" : @"blocked"] mutableCopy];
+        trace[@"baseGoals"] = _goalPlan[@"assistRecoveryBaseGoals"] ?: _goalPlan[@"goals"] ?: @[];
+        trace[@"inventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
+        trace[@"blocker"] = _goalPlan[@"assistRecoveryBlocker"] ?: @"";
+        trace[@"reason"] = _goalPlan[@"assistRecoveryMessage"] ?: @"";
         if (previous) trace[@"previousOutcome"] = previous;
         _assistTrace = [trace copy];
     } else _assistTrace = @{};
@@ -1122,6 +1163,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _recoveryTurn = _automatic ? _autoTurn : 0;
     if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
         _phase = @"blocked"; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
+        [self recordPlanningStatus:@"planning-blocked" reason:_message];
         if (_automatic || _oneShot) [self queueStop:_message];
         return;
     }
@@ -1130,11 +1172,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     double remaining = available;
     if (multiplayer) {
         if (!PHOrbCanPreview(&_live) || available <= TimeMargin + StepDuration(_live)) {
-            [self queueStop:@"多人本機操作窗口已關閉或時間不足，未開始求路"]; return;
+            NSString *reason = @"多人本機操作窗口已關閉或時間不足，未開始求路";
+            [self recordPlanningStatus:@"window-closed" reason:reason]; [self queueStop:reason]; return;
         }
         if (_live.multiplayer.kind != PHOrbMultiplayerThreeSolo) {
             const double searchRoom = _live.multiplayer.remainingSeconds - ArmDelay - TimeMargin - StepDuration(_live);
-            if (searchRoom < 0.05) { [self queueStop:@"多人本機操作時間不足，未開始求路"]; return; }
+            if (searchRoom < 0.05) {
+                NSString *reason = @"多人本機操作時間不足，未開始求路";
+                [self recordPlanningStatus:@"window-closed" reason:reason]; [self queueStop:reason]; return;
+            }
             options.milliseconds = std::min(options.milliseconds, unsigned(std::min(1.0, searchRoom) * 1000));
             remaining = std::min(available, _live.multiplayer.remainingSeconds - ArmDelay - double(options.milliseconds) / 1000);
         }
@@ -1147,20 +1193,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
     _solveOptions = options;
-    _traceOrigin = _preview;
-    _searchTrace = @{@"schema":@1, @"generation":@(_generation), @"status":@"searching",
-        @"goalMode":_goalMode, @"leadersValid":@(_preview.leadersValid),
-        @"leaderNumbers":@[@(_preview.leaderNumbers[0]), @(_preview.leaderNumbers[1])],
-        @"leaderContext":LeaderTrace(_preview),
-        @"scope":_automatic ? @"continuous" : _oneShot ? @"once" : @"preview",
-        @"multiplayer":MultiplayerTrace(_preview),
-        @"turn":@(_automatic ? _autoTurn : 0), @"wave":@(_preview.wave),
-        @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
-        @"board":BoardTrace(_preview.board), @"goals":PHOrbGoalsJSON(&options.goals),
-        @"quality":_quality, @"stepLimit":@(options.steps), @"budgetMS":@(options.milliseconds),
-        @"thornComboPriority":@(options.thornComboPriority),
-        @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal),
-        @"assistRecovery":_assistTrace, @"assistRecoveryL":_goalPlan[@"assistRecoveryActive"] ?: @NO};
+    [self recordPlanningStatus:@"searching" reason:nil];
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
@@ -1202,6 +1235,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
             trace[@"candidateAttempts"] = [attempts copy];
             trace[@"goals"] = PHOrbGoalsJSON(&checkedOptions.goals);
+            trace[@"goalCount"] = @(checkedOptions.goals.count);
             trace[@"totalElapsedMS"] = @(searchElapsed);
             session->_solveOptions = checkedOptions;
             if (selectedAssist.count) {
@@ -1819,7 +1853,12 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         }
     }
     NSString *traceRelation = !_searchTrace.count ? @"none" : !liveReadable ? @"current-unreadable" :
-        PHBattleSameIdentity(&_traceOrigin.identity, &_live.identity) ? @"captured-in-same-battle" : @"captured-in-earlier-battle";
+        !PHBattleSameIdentity(&_traceOrigin.identity, &_live.identity) ? @"captured-in-earlier-battle" :
+        !PHOrbSameTurn(&_traceOrigin, &_live) ? @"captured-in-different-turn-context" :
+        ([_searchTrace[@"observedTurn"] unsignedIntegerValue] && _observedTurn &&
+            [_searchTrace[@"observedTurn"] unsignedIntegerValue] != _observedTurn) ? @"captured-in-earlier-turn" :
+        !HasBoardObservation(_live) ? @"current-board-unreadable" :
+        SamePosition(_traceOrigin, _live) ? @"captured-at-current-position" : @"captured-at-earlier-position";
     const bool decisionCurrent = liveReadable && _decisionTurn &&
         PHBattleSameIdentity(&_decisionState.identity, &_live.identity) && PHOrbSameLeaders(&_decisionState, &_live);
     BOOL canExecute = !multiplayer && preview && _route.goalsMet && _route.hazardsSafe && _frame.enabled && !_inputFault && _hasLive && PHOrbCanPreview(&_live) &&
@@ -1873,6 +1912,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,
         @"recoveryStatus":_goalPlan[@"recoveryMessage"] ?: @"", @"recoveryTurn":@(_recoveryTurn),
         @"goalMode":_goalMode, @"goals":_manualGoals, @"goalPlan":_goalPlan,
+        @"plannedGoalCount":_searchTrace[@"goalCount"] ?: @0, @"goalEvaluationAvailable":@(_route.count > 1),
         @"goalCount":@(_route.goalCount), @"matchedGoals":@(_route.matchedGoals), @"goalsMet":@(_route.goalsMet),
         @"hazardsSafe":@(_route.hazardsSafe), @"poisonErased":@(_route.poisonErased), @"unmatchedBombs":@(_route.unmatchedBombs),
         @"mortalPoisonErased":@(_route.mortalPoisonErased),

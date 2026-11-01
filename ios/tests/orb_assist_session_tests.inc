@@ -25,7 +25,76 @@ static PHOrbSession *AssistSession(FakeOrbEngine *engine, NSDictionary *settings
     Check([session configureSettings:settings ?: AssistSettings(YES)], "assist policy settings accepted");
     Tick(session,engine,Frame()); [session queueAutomatic]; return session;
 }
+static void AssistPlanningTraceTests() {
+    NSArray *base = @[@{@"kind":@"t",@"colors":@8,@"count":@1,@"length":@0},
+        @{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
+    FakeOrbEngine *engine = [FakeOrbEngine new]; SetAssistBoard(engine,0);
+    for (unsigned i = 0; i < 30; ++i) if (engine->live.board.types[i] == 3) engine->live.board.types[i] = 2;
+    for (unsigned i : {0u,1u,2u,7u,13u}) engine->live.board.types[i] = 3;
+    PHOrbSession *session = AssistSession(engine,AssistSettings(YES,base));
+    Check(UntilPhase(session,engine,@"turnWaiting"), "trace regression first executes its original T and heart-four goals");
+    NSDictionary *executed = [session.snapshot[@"executionHistory"] lastObject];
+    NSDictionary *previousSearch = session.snapshot[@"searchTrace"];
+    NSUInteger stages = engine->stages;
+    engine->live.board = {}; auto &board = engine->live.board;
+    board.width = 7; board.height = 6;
+    for (unsigned i = 0; i < 42; ++i) {
+        board.tokens[i] = i + 200; board.types[i] = i < 9 ? 3 : 5;
+        board.x[i] = 20 + (i % 7) * 50; board.y[i] = 100 + (i / 7) * 50;
+    }
+    board.spinnerMask = UINT64_C(1) << 8; board.spinnerColors = 63;
+    engine->live.assistRecovery.turns = 3; engine->live.assistRecovery.perColor[3] = 4;
+    Check(PHOrbBoardValid(&board), "shortage trace fixture has eight guaranteed light orbs and a ninth on a spinner");
+    Check(!NextOrbTurn(session,engine), "new assist shortage stops before dispatching another search");
+    NSDictionary *snapshot = session.snapshot, *trace = snapshot[@"searchTrace"];
+    Check([trace[@"status"] isEqual:@"planning-blocked"] && ![trace[@"solverStarted"] boolValue] &&
+        ![trace[@"generation"] isEqual:previousSearch[@"generation"]] &&
+        [trace[@"board"][@"width"] isEqual:@7] && [trace[@"board"][@"types"] count] == 42 &&
+        [trace[@"goals"] isEqual:base] && [trace[@"baseGoals"] isEqual:base] &&
+        [trace[@"assistRecoveryInventory"][3][@"guaranteed"] isEqual:@8] &&
+        [trace[@"assistRecoveryInventory"][3][@"possible"] isEqual:@9] &&
+        [trace[@"reason"] containsString:@"10 顆"] && [trace[@"assistRecovery"][@"beforeTurns"] isEqual:@3],
+        "pre-search stop captures the new board, original goals, full-phase inventory and current mechanism");
+    Check(!trace[@"path"] && !trace[@"evaluation"] && !trace[@"candidateAttempts"] &&
+        ![snapshot[@"goalEvaluationAvailable"] boolValue] && [snapshot[@"plannedGoalCount"] isEqual:@2] &&
+        [snapshot[@"goalCount"] isEqual:@0] && [snapshot[@"confirmed"] isEqual:@0] &&
+        [snapshot[@"searchTraceRelation"] isEqual:@"captured-at-current-position"] &&
+        engine->stages == stages && engine->releases == 1 &&
+        [[snapshot[@"executionHistory"] lastObject] isEqual:executed],
+        "blocked planning has no stale result or new input and preserves the actual prior release record");
+    Check([NSJSONSerialization isValidJSONObject:snapshot], "blocked planning diagnostics remain serializable");
+    Check([session configureSettings:AssistSettings(NO)], "stopped automatic settings may be reloaded");
+    for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"searchTrace"] isEqual:trace], "idle configuration reload retains the captured stop evidence");
+
+    for (bool finalRead : {false,true}) {
+        engine = [FakeOrbEngine new]; SetAssistBoard(engine,0);
+        session = AssistSession(engine);
+        Check(UntilPhase(session,engine,@"turnWaiting"), "mechanism read failure fixture retains a completed first turn");
+        executed = [session.snapshot[@"executionHistory"] lastObject]; previousSearch = session.snapshot[@"searchTrace"];
+        engine->live.phase = 2; engine->live.moves = 0;
+        Check(UntilPhase(session,engine,@"autoWaiting"), "second turn reaches its new decision boundary");
+        engine->live.board.types[29] = 2;
+        // The first read is stable pre-skill evidence; the second is final goal capture.
+        engine->failAssistRead = engine->assistReads + (finalRead ? 2 : 1);
+        for (unsigned i = 0; i < 100 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+        snapshot = session.snapshot; trace = snapshot[@"searchTrace"];
+        NSDictionary *failure = snapshot[@"assistRecoveryTrace"][@"failedRead"];
+        Check(![snapshot[@"automatic"] boolValue] && [failure[@"turn"] isEqual:@2] &&
+            [failure[@"boardRead"] boolValue] && [failure[@"board"][@"types"][29] isEqual:@2] &&
+            ![snapshot[@"assistRecoveryTrace"][@"known"] boolValue] && engine->releases == 1 &&
+            [[snapshot[@"executionHistory"] lastObject] isEqual:executed],
+            "failed mechanism reads save their own current board without mutating prior execution evidence");
+        if (finalRead) Check([trace[@"status"] isEqual:@"assist-unavailable"] && ![trace[@"solverStarted"] boolValue] &&
+            [trace[@"turn"] isEqual:@2] && !trace[@"evaluation"] && !trace[@"path"] &&
+            [trace[@"board"][@"types"][29] isEqual:@2] && ![snapshot[@"goalEvaluationAvailable"] boolValue],
+            "final mechanism read failure replaces the old search with an unexecuted current capture");
+        else Check([trace isEqual:previousSearch] && [snapshot[@"searchTraceRelation"] isEqual:@"captured-in-earlier-turn"],
+            "a failure before planning identifies the retained search as an earlier turn");
+    }
+}
 static void AssistSessionTests() {
+    AssistPlanningTraceTests();
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetAssistBoard(engine); engine->failObservation = YES;
     NSArray *heart = @[@{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
     PHOrbSession *session = AssistSession(engine,AssistSettings(YES,heart));

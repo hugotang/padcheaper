@@ -930,6 +930,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb planned goals: %@ / route evaluated %@ / search status %@ / solver started %@",
+        orbs[@"plannedGoalCount"], orbs[@"goalEvaluationAvailable"],
+        orbs[@"searchTrace"][@"status"] ?: @"none", orbs[@"searchTrace"][@"solverStarted"] ?: @NO];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb leader context: %@\nOrb live leader plan: %@",
         orbs[@"leaderContext"], orbs[@"liveLeaderPlan"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb captured search: %@ / current read valid %@; history records are retained after stopping",

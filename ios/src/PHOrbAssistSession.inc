@@ -28,7 +28,12 @@
         ![_engine readAssistRecovery:state frame:_frame reason:&reason] || !state->assistRecovery.valid) {
         NSMutableDictionary *trace = [_assistTrace mutableCopy];
         trace[@"status"] = @"unavailable"; trace[@"known"] = @NO; trace[@"actualConfirmed"] = @NO;
-        trace[@"reason"] = reason ?: @"缺少可核對的原生資料"; _assistTrace = [trace copy];
+        trace[@"reason"] = reason ?: @"缺少可核對的原生資料";
+        const bool boardRead = HasBoardObservation(*state);
+        trace[@"failedRead"] = @{@"turn":@(_autoTurn), @"observedTurn":@(_observedTurn),
+            @"wave":@(state->wave), @"phase":@(state->phase), @"sessionPhase":_phase, @"boardRead":@(boardRead),
+            @"board":boardRead ? BoardTrace(state->board) : @{}};
+        _assistTrace = [trace copy];
         [self queueStop:reason ?: @"武裝回復 L：缺少可核對的原生資料，已停止"]; return NO;
     }
     _assistCheckedAt = _now;

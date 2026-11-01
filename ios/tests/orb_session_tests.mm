@@ -22,7 +22,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL failObservation;
     NSDictionary *enemyActionFixture;
     NSUInteger enemyActionReads;
-    NSUInteger assistReads;
+    NSUInteger assistReads, failAssistRead;
     BOOL failAssist, changeAssistOnStart, changeAssistOnMove;
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
@@ -113,7 +113,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     ++assistReads;
     state->assistRecovery = {};
-    if (failAssist || staged || !frame.ready || !frame.enabled || live.phase != 2 ||
+    if (failAssist || (failAssistRead && assistReads == failAssistRead) || staged || !frame.ready || !frame.enabled || live.phase != 2 ||
         (!live.settled && !live.dragged) || live.automation.busy || live.boardTransition ||
         live.multiplayer.kind != PHOrbMultiplayerNone || !PHInputIsQuiet(&live.input)) {
         if (reason) *reason = @"fixture assist evidence unavailable";

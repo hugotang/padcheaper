@@ -30,6 +30,21 @@ static void AssistPlanningTests(void) {
     state.assistRecovery.perColor[4] = 0; plan = PHOrbPlanWithAssistRecovery(base, YES, &state, YES);
     Check(![plan[@"available"] boolValue] && [plan[@"message"] containsString:@"10 顆"],
         "insufficient joint T/L inventory stops without weakening the T");
+    Check([plan[@"assistRecoveryBlocker"] isEqual:@"insufficient-inventory"] &&
+        [plan[@"assistRecoveryInventory"][3][@"guaranteed"] isEqual:@9] &&
+        [plan[@"assistRecoveryInventory"][3][@"baseShapeOrbs"] isEqual:@5] &&
+        [plan[@"assistRecoveryInventory"][3][@"lCapacity"] isEqual:@0] &&
+        [plan[@"goals"] isEqual:base[@"goals"]],
+        "blocked inventory retains the base demand and guaranteed counts without adding an unplanned L");
+    state = AssistBoard(13, 0, 2); state.assistRecovery.perColor[4] = 0;
+    plan = PHOrbPlanWithAssistRecovery(RecoveryBase(@[Goal(@"square",8,1,0)]), YES, &state, YES);
+    Check(![plan[@"available"] boolValue] && [plan[@"message"] containsString:@"14 顆"] &&
+        ![plan[@"message"] containsString:@"T＋L"] && [plan[@"assistRecoveryInventory"][3][@"baseShapeOrbs"] isEqual:@9],
+        "square plus L reports fourteen light orbs rather than the unrelated T/L example");
+    state = AssistBoard(4, 0, 2); state.assistRecovery.perColor[4] = 0;
+    plan = PHOrbPlanWithAssistRecovery(RecoveryBase(@[]), YES, &state, YES);
+    Check(![plan[@"available"] boolValue] && [plan[@"message"] containsString:@"5 顆"] &&
+        ![plan[@"message"] containsString:@"10 顆"], "one L without another shape needs five orbs, not ten");
 
     state = AssistBoard(10, 0, 4);
     plan = PHOrbPlanWithAssistRecovery(RecoveryBase(@[]), YES, &state, YES);
@@ -61,8 +76,15 @@ static void AssistPlanningTests(void) {
         [plan[@"goals"] isEqual:six[@"goals"]], "goal overflow never drops a leader or saved requirement");
 
     state = AssistBoard(10, 0, 2); state.board.spinnerMask = UINT64_C(1) << 9; state.board.spinnerColors = 63;
-    Check(![PHOrbPlanWithAssistRecovery(base, YES, &state, YES)[@"available"] boolValue],
+    plan = PHOrbPlanWithAssistRecovery(base, YES, &state, YES);
+    Check(![plan[@"available"] boolValue] && [plan[@"assistRecoveryInventory"][3][@"guaranteed"] isEqual:@9] &&
+        [plan[@"assistRecoveryInventory"][3][@"possible"] isEqual:@10],
         "a spinner cannot lend its currently observed tenth light orb to every phase");
+    state = AssistBoard(5, 5, 6);
+    plan = PHOrbPlanWithAssistRecovery(RecoveryBase(@[]), YES, &state, YES);
+    Check(![plan[@"available"] boolValue] && [plan[@"message"] containsString:@"光珠保證 5"] &&
+        [plan[@"message"] containsString:@"暗珠保證 5"] && [plan[@"message"] containsString:@"剩 6 回合"] &&
+        ![plan[@"message"] containsString:@"T＋L"], "mixed-color shortage reports each eligible capacity and the actual duration");
     for (unsigned scenario = 0; scenario < 7; ++scenario) {
         state = AssistBoard(10, 0, 2);
         if (scenario == 0) state.assistRecovery.valid = false;

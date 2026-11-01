@@ -76,6 +76,7 @@ cp ios/docs/release-0.5.12.md "$build_dir/release-0.5.12.md"
 cp ios/docs/release-0.5.13.md "$build_dir/release-0.5.13.md"
 cp ios/docs/release-0.5.14.md "$build_dir/release-0.5.14.md"
 cp ios/docs/release-0.5.15.md "$build_dir/release-0.5.15.md"
+cp ios/docs/release-0.5.16.md "$build_dir/release-0.5.16.md"
 cp ios/docs/orb-multiplayer-once.md ios/docs/orb-0511-log-analysis.md "$build_dir/"
 cp ios/docs/orb-spinner-thorn-search.md "$build_dir/orb-spinner-thorn-search.md"
 cp ios/docs/opening-resize-music.md "$build_dir/opening-resize-music.md"
@@ -217,6 +218,7 @@ metadata = {
     "orb_shape_search": "bitset runs/groups/gravity preserve exact four and conservative shape borders; spinner multi-shape primary search focuses costly exact shapes even without thorns; intermediate thorn repairs can complete heart fours later; final HP/damage/heart/hazard gates unchanged; phase-stable hints, missing-goal recovery, two discarded-frontier revisits and zero-contact pass share original time/path budgets; device verification pending",
     "orb_evaluation_cache": "spinner shape candidates reuse up to 4096 per-pass pure color-layout scores with full-cell equality; route contact/heart gates are applied after copying the score, and session release validation is uncached; evaluationCalls/cacheHits measure candidate scoring only; performance comparison pending",
     "orb_shape_space": "a necessary single-color T/distinct-color four separator bound can report incompatible goals before beam search; it allows arbitrary placements independently in each spinner phase and does not treat other timeouts as infeasibility; goals with no phase-stable layout use per-phase hints immediately; regression and device verification pending",
+    "orb_planning_diagnostics": "schema 2 captures the current board before plan validation; planning-blocked and assist-unavailable retain base goals, reason and guaranteed per-color inventory without a stale path/evaluation; solverStarted separates pre-search rejection from searched failure; read failures carry their own current snapshot; trace relation distinguishes battle, turn, unreadable board and position; previous execution records are retained",
     "automatic_orb_leaders": "read-only current leader/helper IDs; offline structured minimum board conditions; unknown rules block automatic planning; HP, skill use, awakening/attack-attribute validity, added combos and damage are not evaluated",
     "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
     "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",

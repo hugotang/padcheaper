@@ -39,6 +39,16 @@ static void DiagonalSessionTests() {
             [record[@"releaseEvaluation"][@"heartFours"] isEqual:@1],
             "a directly accepted diagonal token exchange and thorn contact require acknowledgment before release");
         NSDictionary *captured = session.snapshot[@"searchTrace"];
+        Check([session.snapshot[@"searchTraceRelation"] isEqual:@"current-board-unreadable"],
+            "resolution metadata cannot label an old search board as the current position");
+        engine->live.phase = 2; engine->live.moves = 0;
+        for (unsigned i = 0; i < 7; ++i) Tick(session,engine,Frame());
+        Check([session.snapshot[@"searchTraceRelation"] isEqual:@"captured-in-earlier-turn"],
+            "a resolved turn is distinct from the captured starting position even within the same wave");
+        ++engine->live.wave;
+        for (unsigned i = 0; i < 7; ++i) Tick(session,engine,Frame());
+        Check([session.snapshot[@"searchTraceRelation"] isEqual:@"captured-in-different-turn-context"],
+            "a new wave in the same battle does not make a retained search current");
         engine->failRead = YES;
         for (unsigned i = 0; i < 7; ++i) Tick(session,engine,Frame());
         Check([session.snapshot[@"lastReadIssue"][@"reason"] length] && ![session.snapshot[@"liveReadValid"] boolValue] &&
