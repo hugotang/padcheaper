@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.22-orbs` 新增 [按樓層攻略開技與 B1 高 Combo](docs/release-0.5.22.md)：活動策略可開啟「按 GameWith 樓層攻略開技」，先完成指定技能再轉珠；B1 先比首消 Combo 及消珠數，B5 補齊救盤備案。保留原生技能確認與同場接續，開關需重新匯入新版活動 JSON。Windows 模型／solver 已通過，完整編譯驗證待完成，真機待驗收。
+`0.5.22-orbs` 新增 [按樓層攻略開技與 B1 高 Combo](docs/release-0.5.22.md)：活動策略可開啟「按 GameWith 樓層攻略開技」，先完成指定技能再轉珠；B1 先比首消 Combo 及消珠數，B5 補齊救盤備案。保留原生技能確認與同場接續，開關需重新匯入新版活動 JSON。[CI 112](https://github.com/hugotang/padcheaper/actions/runs/41412227956) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；430 組指紋符合原始 IPA，真機穩定性待驗收。
 
 `0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；426 組指紋符合原始 IPA，真機待驗收。
 

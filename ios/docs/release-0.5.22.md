@@ -23,4 +23,6 @@ B1 改成先比較實際首消 Combo，再比較消珠數，最後比較步數�
 
 使用者提供兩份 0.5.21 成功通關紀錄，分別為本場 9 次／7 次轉珠、各 6 次技能；另一份在 B5 缺珠停止。新版本針對這些分歧改善技能供珠與救援，不能用三份舊版紀錄宣稱新版通關率。詳見 [對照分析](eight-player-b5-followup.md)。
 
-驗證待完成：Windows 模型／solver 已通過。24 個固定種子的生成盤面比較，首消 Combo 合計由 160 提高至 164，4 盤各增加 1、20 盤相同；這是桌面同預算比較，不是真機效能或穩過證明。完整 macOS 原生／Session／設定、iPhoneOS arm64 及 GUI 待驗證，`device_verified=false`。
+Windows 模型／solver 已通過。24 個固定種子的生成盤面比較，首消 Combo 合計由 160 提高至 164，4 盤各增加 1、20 盤相同；這是桌面同預算比較，不是真機效能或穩過證明。2026-11-02，`0.5.22-orbs` 已由 [CI 112](https://github.com/hugotang/padcheaper/actions/runs/41412227956) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟共四份 GUI。攻略開關的匯入、保存、取消、失敗保留、重開；技能優先、CD、停止接續、防重送及新場重置；B1 首消 Combo／獨立回放及首盤證據保留均經同一來源驗證。430 組指紋符合原始 IPA，畫面已檢視。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。
+
+二進位來源 `e6f2aeedf88f1c92e2e8dccacf907a3360e5f4ff`；dylib 10,495,712 bytes，最低 iOS 15.0；SHA-256 `3e80c0deb0b26e8c8b609af070b9037c1fe6f4e2e5b81d2f4de35ed5aebd7b26`。交付目錄 `E:/ipa/PADCheaper-0.5.22-orbs` 及同名 ZIP。二進位、metadata、manifests、活動 JSON 均為同一 CI 原件；驗證文件另行提交。

@@ -4,13 +4,17 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-02：0.5.22-orbs，樓層攻略開技與 B1 高 Combo，待編譯驗證
+## 2026-11-02：0.5.22-orbs，樓層攻略開技與 B1 高 Combo，編譯驗證完成
+
+2026-11-02，`0.5.22-orbs` 已由 [CI 112](https://github.com/hugotang/padcheaper/actions/runs/41412227956) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟共四份 GUI。攻略開關的匯入、保存、取消、失敗保留、重開；技能優先、CD、停止接續、防重送及新場重置；B1 首消 Combo／獨立回放及首盤證據保留均經同一來源驗證。430 組指紋符合原始 IPA，畫面已檢視。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。
+
+二進位來源 `e6f2aeedf88f1c92e2e8dccacf907a3360e5f4ff`；dylib 10,495,712 bytes，最低 iOS 15.0；SHA-256 `3e80c0deb0b26e8c8b609af070b9037c1fe6f4e2e5b81d2f4de35ed5aebd7b26`。交付目錄 `E:/ipa/PADCheaper-0.5.22-orbs` 及同名 ZIP。二進位、metadata、manifests、活動 JSON 均為同一 CI 原件；驗證文件另行提交。
 
 使用者要求增加按 GameWith 樓層開技的選項、改善 B1 低 Combo／留珠及提升通關穩定性。新增預設關閉的活動 `guide`、各層有序技能分支及 B1 `comboPriority`；舊 JSON 相容。原生完成回報逐格記錄，本層只開一次攻略序列，同場停止／改設定後保留已確認前綴，下一場重置。B5 加上位置 1／2 單獨救盤；B6 無生存證據仍不消一回合等 CD。[0.5.22 說明](release-0.5.22.md) 及 [真機紀錄比較](eight-player-b5-followup.md) 區分消法、傷害與擊倒。
 
-B1 先比首消 Combo、消珠數，再比步數；普通 beam 候選與額外搜尋共用原始預算。Windows 模型／solver 已通過；24 個生成盤面由首消總計 160 到 164，4 盤提升、無降低，耗時仍在各盤原有 800 ms 上限內。這不是實機驗證。新增原生／Session／設定／GUI 案例待完整 macOS／iPhoneOS／GUI 建置，先前 CI 不代表新來源通過。保留 B1 第一筆放手紀錄及停止當下原生條件，私人診斷不提交。沿用使用者的編譯測試授權完成本批；舊交付不覆蓋。
+B1 先比首消 Combo、消珠數，再比步數；普通 beam 候選與額外搜尋共用原始預算。Windows 模型／solver 已通過；24 個生成盤面由首消總計 160 到 164，4 盤提升、無降低，耗時仍在各盤原有 800 ms 上限內。這不是實機驗證。新增原生／Session／設定／GUI 案例已由 [CI 112](https://github.com/hugotang/padcheaper/actions/runs/41412227956) 在同一來源完整通過。保留 B1 第一筆放手紀錄及停止當下原生條件，私人診斷不提交。沿用使用者的編譯測試授權完成本批；舊交付不覆蓋。
 
-[CI 111](https://github.com/hugotang/padcheaper/actions/runs/41411734778) 已通過策略／solver／原生回歸，Session 編譯因 Objective-C++ ivar 不接受陣列的 in-class `{}` 初始化而失敗；改在 `initWithEngine:` 初始化。未產出或交付 dylib，修正後待完整重跑。
+[CI 111](https://github.com/hugotang/padcheaper/actions/runs/41411734778) 已通過策略／solver／原生回歸，Session 編譯因 Objective-C++ ivar 不接受陣列的 in-class `{}` 初始化而失敗；改在 `initWithEngine:` 初始化。該輪未產出或交付 dylib；修正後 [CI 112](https://github.com/hugotang/padcheaper/actions/runs/41412227956) 完整通過，失敗紀錄保留在交付驗證附件。
 
 ## 2026-11-02：0.5.21-orbs，8 人技能確認與同場接續，編譯驗證完成
 
