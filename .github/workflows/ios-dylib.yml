@@ -79,7 +79,8 @@ jobs:
           retention-days: 30
 
       - name: Verify floating GUI in iOS Simulator
-        timeout-minutes: 12
+        # Four iPhone launches (~9 min) plus one iPad boot and launch.
+        timeout-minutes: 20
         run: |
           set -o pipefail
           mkdir -p build/ios-ui-tests

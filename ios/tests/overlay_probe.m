@@ -35,6 +35,12 @@ static NSDictionary *PHProbeJSON(NSString *name) {
 static BOOL PHProbeLegacy(void) {
     return [NSBundle.mainBundle.infoDictionary[@"PHProbeLegacy"] boolValue];
 }
+// Screenshot/report prefix. The iPad run sets PHProbePrefix so its renders do
+// not overwrite the iPhone ones collected from the same build directory.
+static NSString *PHProbePrefix(void) {
+    NSString *prefix = NSBundle.mainBundle.infoDictionary[@"PHProbePrefix"];
+    return prefix.length ? prefix : PHProbeLegacy() ? @"legacy" : @"overlay";
+}
 
 static void PHProbeCheck(BOOL condition, NSString *message) {
     if (!condition) [PHProbeFailures addObject:message];
@@ -206,7 +212,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
         [gameView drawViewHierarchyInRect:gameView.bounds afterScreenUpdates:YES];
         [overlayView drawViewHierarchyInRect:gameView.bounds afterScreenUpdates:YES];
     }];
-    NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+    NSString *prefix = PHProbePrefix();
     NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:
                      [NSString stringWithFormat:@"Documents/%@-%@.png", prefix, name]];
     [UIImagePNGRepresentation(image) writeToFile:path atomically:YES];
@@ -1972,7 +1978,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *error) {
                 PHProbeCheck(snapshot != nil && !error, @"formation portrait snapshot must render");
                 PHProbeCheck(PHProbeHasAwakeningArtwork(snapshot), @"Awakening overview must paint colored sprite artwork, not only counts or CSS URLs");
-                NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+                NSString *prefix = PHProbePrefix();
                 NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@-formation-portrait.png", prefix]];
                 [UIImagePNGRepresentation(snapshot) writeToFile:path atomically:YES];
                 [self exerciseFailedFormationSave];
@@ -2072,7 +2078,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [NSString stringWithFormat:@"Focused input must leave editor navigation and search visible: %@", value]);
         [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
             PHProbeCheck(snapshot != nil && !failure, @"Focused editor snapshot must render");
-            NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+            NSString *prefix = PHProbePrefix();
             [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
                 [NSString stringWithFormat:@"Documents/%@-formation-focused.png", prefix]] atomically:YES];
             NSString *close = @"document.activeElement.blur();document.getElementById('editor-done').click();"
@@ -2101,7 +2107,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             @"Process restart reloads externally imported guide data without rebuilding the dylib");
         [self.formationWeb takeSnapshotWithConfiguration:nil completionHandler:^(UIImage *snapshot, NSError *failure) {
             PHProbeCheck(snapshot != nil && !failure, @"Restarted library snapshot must render");
-            NSString *prefix = PHProbeLegacy() ? @"legacy" : @"overlay";
+            NSString *prefix = PHProbePrefix();
             [UIImagePNGRepresentation(snapshot) writeToFile:[NSHomeDirectory() stringByAppendingPathComponent:
                 [NSString stringWithFormat:@"Documents/%@-formation-restart.png", prefix]] atomically:YES];
             NSString *close = @"document.getElementById('close').click();return await PHFormationUI.whenSaved();";

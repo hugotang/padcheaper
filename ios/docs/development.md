@@ -12,6 +12,7 @@
 - B6 準備判斷的轉色合成、攻擊珠計數與「消三珠後仍保留」判斷抽成純 C 的 `PHOrbEightModel.h`，`PHOrbEight.m` 改為呼叫，判斷式與原本逐條相同。新增 `ios/tests/orb_eight_model_tests.c`（順序合成、差一回合 CD、遮罩／綁定／狀態／未知技能／全盤改色／生珠／特殊珠拒絕、轉色後總數、保留量與主色門檻），已加入 `test.sh`；mingw `-Wall -Wextra -Werror` 語法檢查通過，未執行。
 - `ios/tools/windows-tests.sh`：Windows 本機建置並執行模型、8 人模型與求路回歸；`BASELINE=<commit>` 時另建舊版求路器並比對路線摘要。
 - `ios/tools/package_delivery.py`：從成功的 CI run 下載產物，檢查 dylib 雜湊、所有步驟與四份 GUI 報告，拒絕覆蓋既有交付，產生 `verification.json`、`PACKAGE_SHA256SUMS`、ZIP 與 `.zip.sha256`；永遠標記 `device_verified=false`。
+- iPad 支援（使用者 2026-11-03 表示 iPhone 與 iPad 都使用）：轉珠頁在 regular 寬度且寬度 ≥ 900 pt 時，「本場」卡片與設定卡片改為左右兩欄（最大寬 980 pt），iPad 直向 11 吋與 iPhone 維持單欄；PC 浮動面板原本已限 352×600 pt，不變。`gui-test.sh` 在 iPhone 四輪後另建 13 吋 iPad 模擬器（直向寬度可觸發兩欄）跑一次 Scene probe，截圖前綴 `ipad-`（probe 新增 `PHProbePrefix`）；GUI 步驟時限由 12 改為 20 分鐘（CI 118 的 iPhone 四輪已用 513 秒）。iPad 的 probe 斷言可能暴露 iPhone 尺寸假設，需看本次 CI 結果；iPad 橫向與分割畫面仍無自動截圖。
 - `.gitattributes`：文字檔一律 LF，圖片與二進位標為 binary；`git add --renormalize` 確認沒有任何檔案內容改變。
 
 ## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證完成

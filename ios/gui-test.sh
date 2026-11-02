@@ -208,3 +208,36 @@ PY
 codesign --force --sign - --timestamp=none "$legacy_app"
 run_probe "$legacy_app" com.example.PADCheaperLegacyProbe legacy
 restart_probe "$legacy_app" com.example.PADCheaperLegacyProbe legacy
+
+# The same runtime on an iPad (users play on both). A fresh regular-width
+# device runs the Scene probe once; renders use the "ipad" prefix so they do
+# not replace the iPhone screenshots above.
+cleanup
+device_type="$(xcrun simctl list --json | python3 -c '
+import json, sys
+inventory = json.load(sys.stdin)
+pads = [t for t in inventory["devicetypes"] if t.get("productFamily") == "iPad"]
+if not pads:
+    raise SystemExit("No iPad simulator device type available")
+# 13-inch portrait is regular width >= 900 pt, so the two-column orb page is rendered.
+preferred = [t for t in pads if t["name"].startswith(("iPad Pro 13-inch", "iPad Air 13-inch", "iPad Pro (12.9-inch)"))]
+print((preferred or pads)[-1]["identifier"])
+')"
+device_id="$(run_limited 45 xcrun simctl create 'PADCheaper iPad probe' "$device_type" "$runtime_id")"
+run_limited 45 xcrun simctl boot "$device_id"
+run_limited 240 xcrun simctl bootstatus "$device_id" -b
+xcrun simctl status_bar "$device_id" override --time '9:41' --batteryState charged --batteryLevel 100
+ipad_app="$build_dir/IPadProbe.app"
+cp -R "$app_dir" "$ipad_app"
+python3 - "$ipad_app" <<'PY'
+from pathlib import Path
+import plistlib
+import sys
+
+app = Path(sys.argv[1])
+info = plistlib.loads((app / "Info.plist").read_bytes())
+info["PHProbePrefix"] = "ipad"
+(app / "Info.plist").write_bytes(plistlib.dumps(info))
+PY
+codesign --force --sign - --timestamp=none "$ipad_app"
+run_probe "$ipad_app" jp.gungho.pad ipad
