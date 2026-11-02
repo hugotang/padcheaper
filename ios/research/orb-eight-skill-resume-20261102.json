@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-02",
+  "status": "source-review-tests-written-build-pending",
+  "device_verified": false,
+  "binary": {
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec"
+  },
+  "method": "Read-only IDA decompilation, caller references and original instruction bytes. Private diagnostics remain outside the repository.",
+  "reported_symptoms": [
+    "0.5.20 B2 ordinary skill completed but Auto stopped with unconfirmed skill-use count",
+    "0.5.20 B5 ordinary skill completed; phase2 local board stable, five prior releases, same stop reason",
+    "Repeated Auto erased displayed turn/move/skill counters and previous activity log"
+  ],
+  "native_evidence": [
+    {"va": "0x1005cb714", "finding": "Initial effect capture reads selected source byte at impl+0x92e1c. When stored root at impl+0x92e20 is negative, records selected skill and member+1292 catalog ID at impl+0x92e28; increments protected global use count at impl+0xb5048 once, capped255."},
+    {"va": "0x1005cb7cc", "finding": "Only if selected skill contains type268 does native increment protected member+488(body) or+504(assist). These are limited-use counters, not all-skill history. Supported ordinary 8P conversion/generation effects do not contain268."},
+    {"va": "0x1005cba20", "finding": "Stores executing visible member index as int16 at impl+0xb7eb6. Necessary for duplicate fixed characters occupying separate slots."},
+    {"va": "0x1005cce18", "finding": "Native phase22 state machine calls the effect routine at0x1005cd0dc and0x1005cd450; resets root to-1 at0x1005cd2c4 before new application. Composite root is counted once and retained while children complete."},
+    {"va": "0x1005cc374", "finding": "Existing native start receipt remains phase22 plus selected member state2. Completion evidence is separate from this immediate start acknowledgement."}
+  ],
+  "fixed_skill_source": "Use actual six-slot native parameter pointers and fixed variant catalog chain, current stage/level, active skill record, supported effect signature and cooldown. Never substitute the ordinary encyclopedia's active skill by displayed monster number.",
+  "receipt": {
+    "root_skill_offset": "0x92e20",
+    "catalog_id_offset": "0x92e28",
+    "visible_slot_offset": "0xb7eb6",
+    "source_offset": "0x92e1c",
+    "global_use_offset": "0xb5048",
+    "new_guards": 4,
+    "requirements": ["same match identity/clock/local seat", "same fixed team", "known actual active skill", "body source0", "exact visible slot", "exact skill ID and catalog ID", "global uses increments exactly1 below saturation", "stable playable board before next action"],
+    "not_receipts": ["ordinary member limited-use increment", "cooldown drop alone", "board change alone", "stale same-skill record without new count", "ambiguous native start"]
+  },
+  "resume": {
+    "same_match_memory_only": true,
+    "preserve_confirmed_counters_and_stop_cause": true,
+    "paused_pending_receipt_observation": "native-frame read-only, no arming/calls/input; retain late completion before later manual skills overwrite latest native record",
+    "fresh_board_required": true,
+    "changed_turn_floor_profile_discards_remainder": true,
+    "uncertain_skill_replay": false,
+    "new_match_requires_click": true
+  },
+  "verification": {
+    "status": "written-not-executed",
+    "files": ["ios/tests/orb_eight_solver_tests.inc", "ios/tests/orb_eight_native_tests.inc", "ios/tests/orb_eight_session_tests.inc", "ios/tests/orb_readiness_probe.inc"],
+    "device_verified": false
+  }
+}

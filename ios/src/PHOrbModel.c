@@ -213,6 +213,16 @@ bool PHOrbSameEightTeam(const PHOrbEightState *a, const PHOrbEightState *b) {
     return a && b && a->valid && b->valid && !memcmp(a, b, sizeof(*a));
 }
 
+bool PHOrbEightSkillAcknowledged(const PHOrbSnapshot *before, const PHOrbSnapshot *after, unsigned slot) {
+    if (slot >= 6 || !PHOrbSameEightMatch(before, after) || !before->automation.valid || !after->automation.valid ||
+        !PHOrbSameEightTeam(&before->eight, &after->eight) || !before->eight.members[slot].skillKnown ||
+        before->automation.skillUses >= 255 || after->automation.skillUses != before->automation.skillUses + 1) return false;
+    const PHOrbEightSkillReceipt *r = &after->eightReceipt;
+    return r->valid && r->source == 0 && r->slot == slot &&
+        r->skill == before->eight.members[slot].activeSkill &&
+        r->catalogID == before->eight.members[slot].catalogID;
+}
+
 static bool PHOrbMultiplayerRemoteExit(const PHOrbMultiplayerState *state) {
     // 0x10000DD10 records the affected seat and its disconnected/retired
     // status. A local departure or an unconfirmed seat is not a peer event.
@@ -351,7 +361,9 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!PHOrbSameTurn(a, b) || a->boardTransition || b->boardTransition || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
         a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary || a->unmatchableKnown != b->unmatchableKnown ||
         !PHOrbSamePlanBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
-    if (a->multiplayer.kind == PHOrbMultiplayerEight && !PHOrbSameEightTeam(&a->eight, &b->eight)) return false;
+    if (a->multiplayer.kind == PHOrbMultiplayerEight && (!PHOrbSameEightTeam(&a->eight, &b->eight) ||
+        a->eightReceipt.valid != b->eightReceipt.valid || (a->eightReceipt.valid &&
+        memcmp(&a->eightReceipt, &b->eightReceipt, sizeof(a->eightReceipt))))) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
         x->windowBlocksKnown != y->windowBlocksKnown || x->windowBlocks != y->windowBlocks ||

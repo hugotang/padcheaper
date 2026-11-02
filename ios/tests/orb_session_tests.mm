@@ -33,7 +33,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
-    BOOL eightArmed;
+    BOOL eightArmed, eightSkillInFlight;
+    NSUInteger eightProgressReads, eightReceiptFault;
     NSUInteger multiplayerArms;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
@@ -109,6 +110,17 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     return [self read:state frame:frame reason:reason];
+}
+- (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    ++eightProgressReads;
+    Check(!eightArmed && !staged,"paused 8P progress has no action lease or staged gesture");
+    if (![self read:state frame:frame reason:reason]) return NO;
+    if (!frame.enabled || !PHOrbSameEightMatch(expected,state) || PHOrbBattleEnded(state)) {
+        state->automation = {}; state->eight = {}; state->eightReceipt = {};
+    }
+    state->automation.window = false;
+    return YES;
 }
 - (void)observeBattle:(PHOrbSnapshot *)state {
     ++observationReads;
@@ -191,6 +203,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     }
     Check(!live.dragged && !staged && !live.automation.busy, "skills and orb gestures never overlap");
     activeSkill = slot; skillOrder.push_back(slot); skillFrames = 4;
+    eightSkillInFlight = live.multiplayer.kind == PHOrbMultiplayerEight;
     live.automation.members[slot].selection = UINT32_MAX;
     live.phase = 22; live.automation.members[slot].state = 2; live.automation.busy = true;
     return rejectStartedSkill ? PHOrbSkillRejected : PHOrbSkillStarted;
@@ -255,12 +268,37 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         }
         chosenSource[activeSkill] = PHOrbSkillBody;
         if (!failSkillAck) ++live.automation.skillUses;
-        if (eightArmed && !failSkillAck) {
-            ++live.automation.members[activeSkill].skillUses[0]; live.automation.members[activeSkill].charge = 0;
+        if (eightSkillInFlight) {
+            // Native effects finish after Stop. Ordinary effects never touch
+            // the separate type-268 limited-use member counters.
+            eightSkillInFlight = NO;
+            live.automation.members[activeSkill].charge = 0;
             const auto &effect = live.eight.members[activeSkill];
+            live.eightReceipt = {effect.activeSkill,effect.catalogID,uint16_t(activeSkill),0,true};
+            if (eightReceiptFault == 1) live.eightReceipt.valid = false;
+            if (eightReceiptFault == 2) live.eightReceipt.slot = (activeSkill + 1) % 6;
+            if (eightReceiptFault == 3) ++live.eightReceipt.skill;
+            if (eightReceiptFault == 4) ++live.eightReceipt.catalogID;
+            if (eightReceiptFault == 5) live.eightReceipt.source = 1;
+            if (eightReceiptFault == 6) ++live.automation.skillUses;
             for (unsigned i = 0; i < live.board.width * live.board.height; ++i) {
                 const unsigned type = live.board.types[i];
                 if (type < 6 && !(live.board.flags[i] & PHOrbFlagLocked)) live.board.types[i] = effect.convert[type];
+            }
+            // Deterministic generated-board fixture. Production rereads the
+            // game's random result; no synthetic distribution is a promise.
+            unsigned generatedColors = 0, replace = 0;
+            for (unsigned c = 0; c < 6; ++c) if (effect.generate[c]) generatedColors |= 1u << c;
+            for (unsigned c = 0; c < 6; ++c) for (unsigned n = 0; n < effect.generate[c]; ++n) {
+                while (replace < live.board.width * live.board.height &&
+                    ((generatedColors & (1u << live.board.types[replace])) || (live.board.flags[replace] & PHOrbFlagLocked))) ++replace;
+                if (replace < live.board.width * live.board.height) live.board.types[replace++] = c;
+            }
+            if (effect.boardColors) {
+                std::vector<uint8_t> colors;
+                for (unsigned c = 0; c < 6; ++c) if (effect.boardColors & (1u << c)) colors.push_back(c);
+                for (unsigned i = 0; i < live.board.width * live.board.height; ++i)
+                    if (!(live.board.flags[i] & PHOrbFlagLocked)) live.board.types[i] = colors[(i / 12) % colors.size()];
             }
         }
         if (hasteFirst) unavailableSkills[0] = NO;

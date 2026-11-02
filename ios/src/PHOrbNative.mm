@@ -562,6 +562,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     return YES;
 }
+- (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (![self read:state frame:frame reason:reason]) return NO;
+    if (!frame.enabled || !PHOrbSameEightMatch(expected,state) || PHOrbBattleEnded(state)) return YES;
+    if (!ReadEightAutomation(*state)) {
+        if (reason) *reason = @"8 人暫停期間的技能進度未通過核對";
+        return NO;
+    }
+    state->automation.window = false; // Observation never grants skill authority.
+    return YES;
+}
 - (void)observeBattle:(PHOrbSnapshot *)state {
     if (!state) return;
     state->observation = {};

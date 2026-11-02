@@ -152,6 +152,8 @@ def generate(manifest):
                 'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA', 'PHOrbLeaderCatalogAllocateRVA',
                 'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA',
                 'PHOrbEightCompetitiveSkillRVA', 'PHOrbEightSkillOwnerRVA',
+                'PHOrbEightSkillReceiptStartRVA', 'PHOrbEightSkillReceiptCountRVA',
+                'PHOrbEightSkillReceiptOwnerRVA', 'PHOrbEightSkillReceiptSlotRVA',
                 'PHOrbTerminalDispatchRVA', 'PHOrbTerminalTableLowRVA', 'PHOrbTerminalTableHighRVA',
                 'PHOrbDungeonClearDispatchRVA', 'PHOrbDungeonClearResultRVA',
                 'PHOrbCompetitiveResultDispatchRVA', 'PHOrbCompetitiveResultRVA'}
@@ -418,6 +420,11 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyDamage')} != enemy_damage_fields:
         raise ValueError('Unreviewed optional enemy damage layout')
+    receipt_fields = {'PHOrbEightReceiptSkillOffset': 0x92e20,
+        'PHOrbEightReceiptCatalogOffset': 0x92e28, 'PHOrbEightReceiptSlotOffset': 0xb7eb6}
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbEightReceipt')} != receipt_fields:
+        raise ValueError('Unreviewed native 8P skill receipt layout')
     lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():

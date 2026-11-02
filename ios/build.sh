@@ -58,6 +58,7 @@ cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/team-model.md ios/docs/team-dungeon.md ios/docs/release-0.5.18.md "$build_dir/"
 cp ios/docs/release-0.5.19.md ios/docs/orb-eight-player-design.md "$build_dir/"
 cp ios/docs/release-0.5.20.md "$build_dir/"
+cp ios/docs/release-0.5.21.md "$build_dir/"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
@@ -126,6 +127,7 @@ mkdir -p "$build_dir/research"
 cp ios/research/solo-team-model-20261101.json "$build_dir/research/"
 cp ios/research/eight-player-cup-20261102.json "$build_dir/research/"
 cp ios/research/orb-auto-readiness-stop-20261102.json "$build_dir/research/"
+cp ios/research/orb-eight-skill-resume-20261102.json "$build_dir/research/"
 cp ios/research/team-skill-dungeon-20261101.json "$build_dir/research/"
 cp ios/research/orb-enemy-selector-20261101.json ios/research/orb-enemy-dispatch-20261101.json ios/research/orb-enemy-damage-20261101.json "$build_dir/research/"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
@@ -254,7 +256,8 @@ metadata = {
     "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",
     "entry_board_limit": "board dimensions and generated opening board remain from the native constructor; ordinary team refresh does not regenerate them",
     "multiplayer_write_policy": "Team replacement, timer, BGM and packet mutations remain blocked in multiplayer. Explicit local once supports mode 7/11/10 selector 1 and reviewed mode 7 selector 2 continuation. Explicit mode 10 selector 1 Auto additionally permits native local skills and fresh per-board gesture leases within the current 8P match, ending on results, manual input, ownership/clock/entry change or a failed check. No rematching; multiplayer device synchronization unverified",
-    "eight_player_auto": "One explicit current-match intent; all six native fixed variants and supported effects checked twice; native skill can-use/start and exact member/global use receipts; next-board detection includes repeated floors; portable strict activity JSON; first-removal goals, linked group/row heuristic and confirmed leader bonuses; exact score/damage and deliberate survival-based stalls are unavailable",
+    "eight_player_auto": "One explicit current-match intent; all six in-match fixed variants, supported effects and cooldowns checked twice, independent of ordinary catalog skills; native can-use/start and exact root/catalog/visible-slot/body receipt plus one global use; limited-use counters are not ordinary skill history; next-board detection includes repeated floors; portable strict activity JSON and first-removal goals; exact score/damage and survival-based stalls unavailable",
+    "eight_player_resume": "Same-match Stop/Auto preserves confirmed skill and release counts, sequence cursor and stop cause; pending native completion is observed read-only after Stop; resume freshly reads and replans the current board; manual turn/floor or profile changes discard stale sequence remainder; ambiguous receipts never authorize recast; new match requires click",
     "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "All mode categories except multiplayer; source/multi zero defaults; editable mode/source GUI filters; legacy multi settings load but cannot override single-player restriction",
     "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",

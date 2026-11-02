@@ -418,6 +418,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled,
         @"An unvalidated guest keeps both input shortcuts disabled after unfolding");
     PHProbeColdEightAuto(self.window,overlay);
+    PHProbeEightResume(self.window,overlay);
     PHProbeFloatingTargets(overlay);
     CGPoint oldShortcutCenter = [onceShortcut convertPoint:CGPointMake(CGRectGetMidX(onceShortcut.bounds), CGRectGetMidY(onceShortcut.bounds)) toView:overlay];
     [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];

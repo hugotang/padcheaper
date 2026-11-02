@@ -141,10 +141,23 @@ bool CollectEightTeam(const PHOrbSnapshot &state, PHOrbEightState &out, uint32_t
     return true;
 }
 
+bool ReadEightReceipt(PHOrbSnapshot &state) {
+    auto &r = state.eightReceipt;
+    r = {};
+    const uintptr_t impl = state.identity.impl;
+    if (!PHReadU32(impl + PHOrbEightReceiptSkillOffset,&r.skill) ||
+        !PHReadU32(impl + PHOrbEightReceiptCatalogOffset,&r.catalogID) ||
+        !PHReadU16(impl + PHOrbEightReceiptSlotOffset,&r.slot) ||
+        !PHReadU8(impl + PHOrbSkillSelectedSourceOffset,&r.source)) return false;
+    r.valid = r.skill > 0 && r.skill < state.eight.skillCount && r.catalogID > 0 &&
+        r.catalogID <= INT32_MAX && r.slot < 6 && r.source < 2;
+    return true;
+}
+
 bool ReadEightAutomation(PHOrbSnapshot &state) {
     if (!PHOrbEightMatchReady(&state)) return true; // Results/transition metadata stays observable.
     // During resolve only metadata is needed. Skill animation is observed to
-    // acknowledge the actual member use without relying on a stale leader pair.
+    // acknowledge the native root/owner/slot and global use count.
     if (state.phase != 2 && state.phase != 22) return true;
     if (state.phase == 2 && !PHOrbMultiplayerWindow(&state)) return true;
     uint32_t key1 = 0, key2 = 0, last1 = 0, last2 = 0;
@@ -152,9 +165,10 @@ bool ReadEightAutomation(PHOrbSnapshot &state) {
     PHOrbSnapshot first = state, second = state;
     if (!CheckObservationCode(header) || !ConfirmMultiplayerIdentity(state) ||
         !PHReadU32(header + PHBattleKey1RVA,&key1) || !PHReadU32(header + PHBattleKey2RVA,&key2) ||
-        !ReadAutomationFields(first,true) || !CollectEightTeam(first,first.eight,key1,key2) ||
-        !ReadAutomationFields(second,true) || !CollectEightTeam(second,second.eight,key1,key2) ||
+        !ReadAutomationFields(first,true) || !CollectEightTeam(first,first.eight,key1,key2) || !ReadEightReceipt(first) ||
+        !ReadAutomationFields(second,true) || !CollectEightTeam(second,second.eight,key1,key2) || !ReadEightReceipt(second) ||
         !PHOrbSameEightTeam(&first.eight,&second.eight) ||
+        std::memcmp(&first.eightReceipt,&second.eightReceipt,sizeof(first.eightReceipt)) ||
         std::memcmp(&first.automation,&second.automation,sizeof(first.automation))) return false;
     if (state.phase == 2 && (state.settled || state.dragged) && !first.automation.busy) {
         if (!CheckEnemyComboCode(header) || !CollectEnemyCombo(first,key1,key2,first.enemyCombo) ||
@@ -169,5 +183,6 @@ bool ReadEightAutomation(PHOrbSnapshot &state) {
         !PHReadU32(state.identity.impl + PHOrbMoveSerialOffset,&moves) || moves != state.moves ||
         !PHReadPointer(state.identity.impl + PHBattleDragPointerOffset,&dragged) || dragged != state.dragged) return false;
     state.automation = first.automation; state.eight = first.eight; state.enemyCombo = first.enemyCombo;
+    state.eightReceipt = first.eightReceipt;
     return true;
 }

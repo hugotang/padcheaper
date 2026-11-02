@@ -144,7 +144,7 @@ NSDictionary *EightTeamTrace(const PHOrbSnapshot &state) {
         for (unsigned c = 0; c < 6; ++c) { [convert addObject:@(m.convert[c])]; [generate addObject:@(m.generate[c])]; }
         [members addObject:@{@"slot":@(slot + 1),@"number":@(a.number),@"catalogID":@(m.catalogID),
             @"sourceSlot":@(m.sourceSlot),@"activeSkill":@(m.activeSkill),@"rootSkill":@(m.rootSkill),
-            @"leaderSkill":@(m.leaderSkill),@"cooldown":@(m.cooldown),@"charge":@(a.charge),@"uses":@(a.skillUses[0]),
+            @"leaderSkill":@(m.leaderSkill),@"cooldown":@(m.cooldown),@"charge":@(a.charge),@"limitedUses":@(a.skillUses[0]),
             @"skillKnown":@(m.skillKnown),@"leaderKnown":@(m.leaderKnown),@"convert":convert,@"generate":generate,
             @"boardColors":@(m.boardColors),@"unlock":@(m.unlock),@"noSkyfall":@(m.noSkyfall),
             @"attackColors":@(m.attackColors),@"attackLength":@(m.attackLength),@"attackPercent":@(m.attackPercent),
@@ -360,8 +360,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     double _autoPhaseAt, _autoStartAt;
     bool _automatic, _autoBound, _sawResolve, _skillAcknowledged, _watchPlayerState;
     bool _eightAutomatic, _eightTeamBound, _eightSkillPending, _eightSkillStarted, _eightBoardSubmitted;
-    PHOrbSnapshot _eightHistory, _eightSubmission, _eightSkillBefore, _eightLastObserved;
-    NSDictionary *_eightHistoryProfile;
+    bool _eightSkillAcknowledged, _eightSkillSettled, _eightResuming, _eightDiscardSequence, _eightPausedResolve;
+    PHOrbSnapshot _eightHistory, _eightSubmission, _eightSkillBefore, _eightSkillAfter, _eightLastObserved;
+    NSDictionary *_eightHistoryProfile, *_eightLastStop;
+    NSUInteger _eightResumes;
     NSUInteger _eightSlot, _eightSequenceCursor, _eightSequenceStep;
     uint8_t _eightAttemptedSlots;
     NSArray *_eightSequence;
@@ -575,8 +577,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 - (void)queueStop:(NSString *)reason {
     const bool wasAutomatic = _automatic;
+    const bool wasEightAutomatic = _eightAutomatic;
     const bool pendingStart = [self executing] && _awaitingStart && _startSent;
-    const bool skillRunning = [_phase isEqual:@"skillWaiting"] || _openingInFlight || (_eightSkillPending && _eightSkillStarted);
+    const bool skillRunning = [_phase isEqual:@"skillWaiting"] || _openingInFlight ||
+        (_eightSkillPending && _eightSkillStarted && _hasLive && _live.phase == 22);
     const bool cancelledIntent = _automatic || _readQueued || [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         [_phase isEqual:@"arming"] || [_phase isEqual:@"running"] ||
         ([_phase isEqual:@"releasing"] && _releaseComplete);
@@ -588,6 +592,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _readQueued = false; _hasStable = false;
     _message = reason ?: @"已停止";
     if (skillRunning) _message = [_message stringByAppendingString:@"；已啟動的技能由遊戲完成"];
+    if (wasEightAutomatic) _eightLastStop = @{@"reason":_message,@"sessionPhase":_phase,
+        @"autoTurn":@(_autoTurn),@"autoMoves":@(_autoMoves),@"autoSkills":@(_autoSkills),
+        @"wave":@(_live.wave),@"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
          (wasAutomatic && _autoBound && PHBattleSameIdentity(&_dungeonIdentity,&_autoOrigin.identity)))) {
@@ -1716,9 +1723,21 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         time - _lastRead < (readinessOnly ? 0.25 : 0.10)) return;
     _lastRead = time;
     PHOrbSnapshot current{}; NSString *reason = nil;
-    BOOL read = (_automatic || _openingInFlight || _openingPuzzlePending ||
+    const bool eightProgress = !_automatic && !_oneShot && !active && !_readQueued &&
+        ([_phase isEqual:@"stopped"] || [_phase isEqual:@"idle"]) &&
+        _eightSkillPending && _eightSkillStarted && (!_eightSkillAcknowledged || !_eightSkillSettled) &&
+        [_engine respondsToSelector:@selector(readEightProgress:expected:frame:reason:)];
+    BOOL read = eightProgress ? [_engine readEightProgress:&current expected:&_eightHistory frame:frame reason:&reason] :
+        (_automatic || _openingInFlight || _openingPuzzlePending ||
         (_historyBound && AcceptedSkillTiming(_historyRules))) ?
         [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
+    if (!_automatic && read && PHOrbSameEightMatch(&_eightHistory,&current)) {
+        [self rememberEightSkill:&current];
+        if (ResolvingOrbs(current.phase) || current.multiplayer.resolvePending) {
+            if (_eightBoardSubmitted) _sawResolve = true;
+            else _eightPausedResolve = true;
+        }
+    }
     _hasLive = read; _live = current;
     _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     if (!readinessOnly) [self refreshBattleObservation:read active:active time:time];
@@ -2027,6 +2046,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"battleEnded":@(battleEnded),
         @"eightAutomatic":@(_eightAutomatic), @"eightSkillPending":@(_eightSkillPending),
         @"eightTeam":EightTeamTrace(_live.eight.valid ? _live : _eightLastObserved),
+        @"eightProgress":[self eightProgressTrace],
         @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),
         @"ruleDecisions":[_ruleDecisions copy], @"decisionTurn":@(_decisionTurn),
         @"decisionObservedTurn":@(_decisionObservedTurn),

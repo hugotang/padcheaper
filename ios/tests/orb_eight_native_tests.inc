@@ -14,6 +14,8 @@ static void EightNativeFixture(unsigned seat) {
         Put<uint32_t>(address + PHBattleCatalogIDOffset,1000000u + numbers[slot]);
         Put<uintptr_t>(address + PHBattleCardParamOffset,parameter);
         Put<uint32_t>(parameter + 84,slot == 5 ? 1000 : 1000 + slot);
+        // The ordinary catalog entry intentionally has another active skill.
+        Put<uint32_t>(catalog + numbers[slot] * PHBattleCatalogStride + 84,2000 + slot);
         Put<uint16_t>(address + 1298,1); ObservationSetCharge(slot,20);
     }
     Put<uint32_t>(Header + PHSaveRVA + PHOrbLeaderCatalogRecordsOffset,14610);
@@ -25,6 +27,9 @@ static void EightNativeFixture(unsigned seat) {
     SetSkillRecord(900,138,{901,902,903}); SetSkillRecord(901,163,{});
     SetSkillRecord(902,182,{17,6,1000,0}); SetSkillRecord(903,219,{17,12,1});
     readinessFixture = {1001,0,4,4};
+    Put<uint32_t>(Impl + PHOrbEightReceiptSkillOffset,UINT32_MAX);
+    Put<uint16_t>(Impl + PHOrbEightReceiptSlotOffset,UINT16_MAX);
+    Put<uint8_t>(Impl + PHOrbSkillSelectedSourceOffset,1); // Stale source without a receipt is not a cast.
 }
 static void EightNativeTests() {
     for (bool eight : {false,true}) for (uint32_t terminal : {28u,29u,30u,31u,67u,68u}) {
@@ -52,10 +57,11 @@ static void EightNativeTests() {
             "8P explicit match reader verifies all six fixed variant records and local bank");
         if (!state.eight.valid) std::fprintf(stderr,"8P native read: %s\n",reason.UTF8String);
         Check(state.eight.members[0].generate[0] == 6 && state.eight.members[0].generate[4] == 6 &&
+            state.eight.members[1].activeSkill == 1001 && state.eight.members[1].catalogID == 1001726 &&
             state.eight.members[1].convert[5] == 4 && state.eight.members[3].boardColors == 49 &&
             state.eight.members[0].addedCombos == 1 && state.eight.members[5].noSkyfall &&
             !state.eight.members[4].skillKnown && !writes && !canUseCalls && !readinessCalls,
-            "fixed semantic reads are passive, independently identify slots and leave unsupported opponent effects uncastable");
+            "fixed semantic reads follow in-match variants, not ordinary catalog skills, and independently identify slots");
         Check([engine useSkill:1 request:PHOrbSkillRequest{PHOrbSkillBody,1001} expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted &&
             skillStartCalls == 1 && canUseCalls == 1 && !writes,
             "8P uses normal native can-use/start with a current fixed skill constraint");
@@ -64,6 +70,34 @@ static void EightNativeTests() {
         [engine armEightPlayerAuto:nullptr];
         Check([engine readAutomation:&after frame:Frame() reason:&reason] && !after.eight.valid && !after.automation.valid,
             "revoking Auto stops automation reads and further skill authorization");
+        Put<uint32_t>(Impl + PHOrbEightReceiptSkillOffset,1001);
+        Put<uint32_t>(Impl + PHOrbEightReceiptCatalogOffset,state.eight.members[1].catalogID);
+        Put<uint16_t>(Impl + PHOrbEightReceiptSlotOffset,1);
+        Put<uint8_t>(Impl + PHOrbSkillSelectedSourceOffset,0);
+        Protected(Impl + PHOrbSkillUsesOffset,state.automation.skillUses + 1,0x6a875a8b);
+        Check([engine readEightProgress:&after expected:&state frame:Frame() reason:&reason] &&
+            after.automation.valid && !after.automation.window && after.eightReceipt.valid &&
+            after.automation.members[1].skillUses[0] == state.automation.members[1].skillUses[0] &&
+            PHOrbEightSkillAcknowledged(&state,&after,1),
+            "paused native reader confirms root, owner, visible slot and total with unchanged limited-use count");
+        Check([engine useSkill:1 request:PHOrbSkillRequest{PHOrbSkillBody,1001} expected:&after frame:Frame() reason:nil] == PHOrbSkillRejected &&
+            [engine readAutomation:&after frame:Frame() reason:nil] && !after.eight.valid &&
+            skillStartCalls == 1 && canUseCalls == 1 && !writes,
+            "read-only pending-skill observation never re-arms native skill or gesture authority");
+    }
+    for (unsigned change = 0; change < 5; ++change) {
+        EightNativeFixture(7); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot before{}, after{};
+        [engine read:&before frame:Frame() reason:nil]; [engine armEightPlayerAuto:&before];
+        [engine readAutomation:&before frame:Frame() reason:nil]; [engine armEightPlayerAuto:nullptr];
+        if (change == 0) changeEightReceiptDuringRead = true;
+        if (change == 1) rejectEightReceiptRead = true;
+        if (change == 2) Put<uint64_t>(Impl + PHOrbMultiMatchClockOffset,1);
+        if (change == 3) Protected(Impl + PHBattlePhaseOffset,68,0x766cfc6d);
+        PHBattleFrame frame = Frame(); if (change == 4) frame.enabled = false;
+        const BOOL read = [engine readEightProgress:&after expected:&before frame:frame reason:nil];
+        Check((change < 2 ? !read : read) && !after.eight.valid && !after.automation.valid &&
+            !writes && !readinessCalls && !canUseCalls && !skillStartCalls,
+            "paused receipt race/read failure rejects evidence; new match, results or disabled feature has metadata only");
     }
     for (unsigned change = 0; change < 7; ++change) {
         EightNativeFixture(6); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot before{};

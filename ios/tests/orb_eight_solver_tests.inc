@@ -23,6 +23,40 @@ static void EightSolverTests() {
     Check(!PHOrbSameEightMatch(&s,&other),"new entry nonce cannot inherit 8P Auto");
     other = MultiplayerModelState(4,3);
     Check(!PHOrbEightMatchReady(&other),"8P match helper never authorizes 4P");
+    auto beforeSkill = s;
+    beforeSkill.eight.valid = beforeSkill.automation.valid = true;
+    beforeSkill.eight.members[1].skillKnown = true;
+    beforeSkill.eight.members[1].activeSkill = 1001;
+    beforeSkill.eight.members[1].catalogID = 1001726;
+    beforeSkill.automation.skillUses = 2;
+    auto afterSkill = beforeSkill;
+    afterSkill.automation.skillUses = 3;
+    afterSkill.eightReceipt = {1001,1001726,1,0,true};
+    Check(PHOrbEightSkillAcknowledged(&beforeSkill,&afterSkill,1) &&
+        !afterSkill.automation.members[1].skillUses[0],
+        "ordinary 8P skills acknowledge with native root/owner/slot and total while limited uses remain zero");
+    for (unsigned bad = 0; bad < 12; ++bad) {
+        auto changed = afterSkill;
+        if (bad == 0) changed.eightReceipt.valid = false;
+        if (bad == 1) changed.eightReceipt.slot = 5;
+        if (bad == 2) ++changed.eightReceipt.skill;
+        if (bad == 3) ++changed.eightReceipt.catalogID;
+        if (bad == 4) changed.eightReceipt.source = 1;
+        if (bad == 5) --changed.automation.skillUses;
+        if (bad == 6) ++changed.automation.skillUses;
+        if (bad == 7) ++changed.multiplayer.clockStart;
+        if (bad == 8) changed.automation.valid = false;
+        if (bad == 9) changed.eight.valid = false;
+        if (bad == 10) changed.eight.members[1].skillSignature = 42;
+        if (bad == 11) changed.identity.entryHash[0]++;
+        Check(!PHOrbEightSkillAcknowledged(&beforeSkill,&changed,1),
+            "receipt needs exact owner, body, slot, skill, one new use and the original match/team");
+    }
+    beforeSkill.eight.members[5] = beforeSkill.eight.members[1];
+    afterSkill.eight = beforeSkill.eight;
+    Check(!PHOrbEightSkillAcknowledged(&beforeSkill,&afterSkill,5),"duplicate fixed cards cannot share a visible-slot receipt");
+    beforeSkill.automation.skillUses = afterSkill.automation.skillUses = 255;
+    Check(!PHOrbEightSkillAcknowledged(&beforeSkill,&afterSkill,1),"saturated use total cannot prove a new cast");
     PHOrbSolveOptions options;
     options.activity.firstWaveOnly = true; options.activity.colors = 17;
     options.activity.comboWeight = 400; options.activity.rowWeight = 1500; options.activity.linkWeight = 2500;

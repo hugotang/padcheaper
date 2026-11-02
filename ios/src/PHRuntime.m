@@ -905,7 +905,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb multiplayer: %@\nMultiplayer support: explicit local once in 3/4/8P; 8P Auto is scoped to one current match with native skills and fresh per-board gestures; synchronization not device-verified",
         orbs[@"multiplayer"] ?: @{}];
     diagnostics = [diagnostics stringByAppendingFormat:@"\n8P fixed team: %@",orbs[@"eightTeam"] ?: @{}];
-    for (NSString *key in @[@"onceReadiness", @"runtimeReadiness", @"onceReadinessHistory"]) {
+    for (NSString *key in @[@"onceReadiness", @"runtimeReadiness", @"onceReadinessHistory", @"eightProgress"]) {
         NSData *data = [NSJSONSerialization dataWithJSONObject:orbs[key] ?: @{} options:NSJSONWritingSortedKeys error:NULL];
         diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb %@: %@", key,
             data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null"];

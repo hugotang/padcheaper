@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.20-orbs",
+  "prototype_version": "0.5.21-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -389,6 +389,9 @@
     "PHOrbPendingDamageOffset": "0xb7e68",
     "PHOrbPendingThornDamageOffset": "0xb7e6c",
     "PHOrbSkillSelectedSourceOffset": "0x92e1c",
+    "PHOrbEightReceiptSkillOffset": "0x92e20",
+    "PHOrbEightReceiptCatalogOffset": "0x92e28",
+    "PHOrbEightReceiptSlotOffset": "0xb7eb6",
     "PHOrbSkillFamilyOffset": "0x300",
     "PHOrbMultiClockNumeratorRVA": "0x2c6f634",
     "PHOrbMultiClockDenominatorRVA": "0x2c6f638",
@@ -3390,6 +3393,38 @@
       "sha256": "29a52f59a84c97c1b745ecb3835ab7d1962014e5a76fb2352476e9d24fc13f82",
       "va": "0x10000efec",
       "length": 64
+    },
+    {
+      "name": "PHOrbEightSkillReceiptStartRVA",
+      "va": "0x1005cb774",
+      "rva": "0x5cb774",
+      "length": 64,
+      "bytes": "683a40f90949429137214eb97704f836f60300aa20210eb98a0e45b92a290eb908d54291002101912996fe971ff8037148010054773a40f918098a527801a072",
+      "sha256": "0833d010a2922c638f237d9ce2d68a4f09ed9925db593e1df7ca4af397cd9936"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptCountRVA",
+      "va": "0x1005cb7b4",
+      "rva": "0x5cb7b4",
+      "length": 64,
+      "bytes": "e002188b2296fe9708040011e002188b013d00127284fe97e00316aa81218052020080d2aee2ff9760010034bf020071083d8052093f80523711889a8002178b",
+      "sha256": "41f921e767ceec2997b28ff456072998f1ceba8ba07a2db83f4c4422fcee24ea"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptOwnerRVA",
+      "va": "0x1005cb9f4",
+      "rva": "0x5cb9f4",
+      "length": 64,
+      "bytes": "5f190039572100b808c5429108c10791890208cb29fd4493ec738bd24c9cbaf2ec3dd7f2acc4e9f2297d0c9b490100796a0140390a020035293d40930abe8052",
+      "sha256": "7c2e910c88b5e4ce648128ce76db3db93e811adea0d3274470e275483fce4cb0"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptSlotRVA",
+      "va": "0x1005cba04",
+      "rva": "0x5cba04",
+      "length": 64,
+      "bytes": "890208cb29fd4493ec738bd24c9cbaf2ec3dd7f2acc4e9f2297d0c9b490100796a0140390a020035293d40930abe805237212a9bff3f0039e0821391a1020052",
+      "sha256": "d85bb23d4793a6ffb67cc8e5b6e01dc444449aabf0848401a6685b4a28191390"
     },
     {
       "name": "PHOrbTerminalDispatchRVA",

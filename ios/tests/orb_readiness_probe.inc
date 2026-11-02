@@ -8,6 +8,120 @@
     BOOL armed;
 }
 @end
+
+static void PHProbeReadinessTick(PHOrbSession *session, NSTimeInterval time);
+
+@interface PHProbeEightResumeEngine : PHProbeReadinessEngine {
+@public
+    NSUInteger skills, progressReads, activeSlot;
+}
+- (void)completeSkill;
+@end
+@implementation PHProbeEightResumeEngine
+- (instancetype)init {
+    if ((self = [super init])) {
+        NSData *data = [NSData dataWithContentsOfFile:[NSBundle.mainBundle pathForResource:@"eight-activity" ofType:@"json"]];
+        NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+        NSDictionary *profile = package[@"profile"];
+        live.multiplayer.countdownReady = 1; live.wave = 1;
+        live.automation.valid = live.automation.window = live.automation.boardKnown = live.automation.enemiesKnown = true;
+        live.automation.windowBlocksKnown = true; live.automation.activeEnemies = 1;
+        live.eight.valid = true; live.eight.teamBank = 55; live.eight.catalog = 66; live.eight.skills = 77;
+        live.enemyCombo.valid = true; live.enemyCombo.enemyCount = live.enemyCombo.aliveMask = 1; live.enemyCombo.hp[0] = 100;
+        for (unsigned slot = 0; slot < 6; ++slot) {
+            NSDictionary *source = profile[@"activity"][@"members"][slot];
+            PHOrbSkillMember *member = &live.automation.members[slot]; PHOrbEightMember *m = &live.eight.members[slot];
+            member->active = true; member->number = [source[@"number"] unsignedIntValue]; member->selection = UINT32_MAX;
+            member->sourceCatalogIDs[0] = member->number; member->charge = 20;
+            m->sourceSlot = slot; m->catalogID = 1000000 + member->number; m->parameter = 100 + slot;
+            m->activeSkill = m->rootSkill = 1000 + slot; m->leaderSkill = 900; m->cooldown = [source[@"cooldown"] unsignedIntValue];
+            m->skillKnown = ![source[@"effect"] isEqual:@"observe"]; m->leaderKnown = m->noSkyfall = true;
+            m->boardColors = [source[@"boardColors"] unsignedIntValue]; m->unlock = [source[@"unlock"] boolValue];
+            for (unsigned c = 0; c < 6; ++c) { m->convert[c] = [source[@"convert"][c] unsignedIntValue]; m->generate[c] = [source[@"generate"][c] unsignedIntValue]; }
+            m->attackColors = m->comboColors = 17; m->attackLength = 6; m->comboLength = 12; m->attackPercent = 1000; m->addedCombos = 1;
+        }
+        for (unsigned i = 0; i < 30; ++i) live.board.types[i] = i / 15 + 1;
+    }
+    return self;
+}
+- (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    ++progressReads; *state = live; state->automation.window = false; return frame.ready && frame.enabled;
+}
+- (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!armed || slot >= 6 || live.phase != 2 || request.source != PHOrbSkillBody || request.skill != live.eight.members[slot].activeSkill)
+        return PHOrbSkillRejected;
+    ++skills; activeSlot = slot;
+    live.phase = 22; live.automation.busy = true; live.automation.members[slot].state = 2;
+    return PHOrbSkillStarted;
+}
+- (void)completeSkill {
+    live.phase = 2; live.automation.busy = false; live.automation.members[activeSlot].state = 0;
+    live.automation.members[activeSlot].charge = 0; ++live.automation.skillUses;
+    const PHOrbEightMember *m = &live.eight.members[activeSlot];
+    live.eightReceipt = (PHOrbEightSkillReceipt){m->activeSkill,m->catalogID,(uint16_t)activeSlot,0,true};
+    for (unsigned i = 0; i < 30; ++i) live.board.types[i] = m->convert[live.board.types[i]];
+}
+@end
+
+static void PHProbeEightResume(UIWindow *guest, UIWindow *overlay) {
+    PHOverlaySnapshot originalSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
+    PHOverlayAction originalAction = [overlay.rootViewController valueForKey:@"action"];
+    NSNumber *expanded = [overlay.rootViewController valueForKey:@"expanded"];
+    NSNumber *collapsed = [overlay.rootViewController valueForKey:@"shortcutsCollapsed"];
+    PHProbeEightResumeEngine *engine = [PHProbeEightResumeEngine new];
+    PHOrbSession *session = [[NSClassFromString(@"PHOrbSession") alloc] initWithEngine:engine];
+    NSData *data = [NSData dataWithContentsOfFile:[NSBundle.mainBundle pathForResource:@"eight-activity" ofType:@"json"]];
+    NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSDictionary *profile = package[@"profile"];
+    PHProbeCheck(session && profile && [session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,@"profiles":@[profile]}],
+        @"8P resume GUI uses a real Session with the bundled activity and fixed-skill fixture");
+    NSMutableDictionary *state = [originalSnapshot() mutableCopy];
+    PHOverlaySnapshot snapshot = [^{ state[@"orbState"] = session.snapshot; return state; } copy];
+    [overlay.rootViewController setValue:snapshot forKey:@"snapshot"];
+    [overlay.rootViewController setValue:[^(NSString *action, id value) {
+        if ([action isEqual:@"orbsObserve"]) [session monitorReadiness];
+        if ([action isEqual:@"orbsStart"]) [session queueAutomatic];
+        if ([action isEqual:@"orbsStop"]) [session queueStop:@"GUI pause during skill"];
+    } copy] forKey:@"action"];
+    [overlay.rootViewController setValue:@NO forKey:@"expanded"];
+    [overlay.rootViewController setValue:@NO forKey:@"shortcutsCollapsed"];
+    [session monitorReadiness]; NSTimeInterval time = 200;
+    PHProbeReadinessTick(session,time); [overlay.rootViewController updateWithSnapshot:snapshot()];
+    UIButton *start = (UIButton *)PHProbeFind(overlay,@"padcheaper.orbsAutoShortcut");
+    [start sendActionsForControlEvents:UIControlEventTouchUpInside];
+    for (unsigned i = 0; i < 200 && !engine->skills && [session.snapshot[@"automatic"] boolValue]; ++i) {
+        time += 0.05; PHProbeReadinessTick(session,time);
+        [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.005]];
+    }
+    [overlay.rootViewController updateWithSnapshot:snapshot()];
+    PHProbeCheck(engine->skills == 1 && [session.snapshot[@"eightSkillPending"] boolValue] && [start.currentTitle isEqual:@"停止"],
+        @"8P board shortage starts exactly one native fixed skill and leaves Stop available");
+    [start sendActionsForControlEvents:UIControlEventTouchUpInside];
+    [engine completeSkill]; time += 0.3; PHProbeReadinessTick(session,time);
+    [overlay.rootViewController updateWithSnapshot:snapshot()];
+    PHProbeCheck(!engine->armed && engine->progressReads && !engine->inputCalls && start.enabled &&
+        [session.snapshot[@"eightProgress"][@"skillAcknowledged"] boolValue] && !engine->live.automation.members[1].skillUses[0],
+        @"Skill completes after UI Stop with zero limited uses, no input authority and Auto available again");
+    PHProbeRender(guest,overlay,@"orbs-eight-skill-paused");
+    [start sendActionsForControlEvents:UIControlEventTouchUpInside];
+    for (unsigned i = 0; i < 25 && ![session.snapshot[@"autoSkills"] isEqual:@1]; ++i) {
+        time += 0.05; PHProbeReadinessTick(session,time);
+    }
+    [overlay.rootViewController updateWithSnapshot:snapshot()];
+    PHProbeCheck(engine->armed && engine->skills == 1 && !engine->inputCalls &&
+        [session.snapshot[@"autoSkills"] isEqual:@1] && [session.snapshot[@"eightProgress"][@"resumes"] isEqual:@1] &&
+        [session.snapshot[@"eightProgress"][@"lastStop"] count] && [start.currentTitle isEqual:@"停止"],
+        @"UI Auto resumes the same match with one confirmed skill, retained stop reason and no duplicate cast");
+    PHProbeRender(guest,overlay,@"orbs-eight-skill-resumed");
+    [session queueStop:@"GUI resume probe done"];
+    [overlay.rootViewController setValue:originalSnapshot forKey:@"snapshot"];
+    [overlay.rootViewController setValue:originalAction forKey:@"action"];
+    [overlay.rootViewController setValue:expanded forKey:@"expanded"];
+    [overlay.rootViewController setValue:collapsed forKey:@"shortcutsCollapsed"];
+    [overlay.rootViewController updateWithSnapshot:originalSnapshot()];
+}
 @implementation PHProbeReadinessEngine
 - (instancetype)init {
     if ((self = [super init])) {

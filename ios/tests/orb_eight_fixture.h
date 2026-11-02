@@ -11,6 +11,7 @@ static NSDictionary *EightProfileFixture(void) {
 static void EightTeamFixture(PHOrbSnapshot *s, NSDictionary *profile) {
     memset(&s->automation,0,sizeof(s->automation));
     memset(&s->eight,0,sizeof(s->eight));
+    memset(&s->eightReceipt,0,sizeof(s->eightReceipt));
     memset(&s->enemyCombo,0,sizeof(s->enemyCombo));
     s->automation.valid = s->automation.boardKnown = s->automation.enemiesKnown = s->automation.window = true;
     s->automation.windowBlocksKnown = true; s->automation.activeEnemies = 1;

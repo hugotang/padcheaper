@@ -32,6 +32,7 @@ static bool rejectEnemyDamageRead;
 static bool changeAssistDuringCoordinateRead;
 static bool changeComboDuringCoordinateRead, changeComboDuringRead, rejectComboRead;
 static bool changeDungeonDuringRead, rejectDungeonRead;
+static bool changeEightReceiptDuringRead, rejectEightReceiptRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
 static std::vector<uint8_t> catalogBytes(14730 * PHBattleCatalogStride);
 static const uintptr_t Header = reinterpret_cast<uintptr_t>(guest.data());
@@ -53,12 +54,17 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
     return Range(address, length);
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
+    if (rejectEightReceiptRead && address == Impl + PHOrbEightReceiptSkillOffset) return NO;
     if (rejectDungeonRead && address == Header + PHOrbDungeonDumpWavesAddress) return NO;
     if (rejectComboRead && address == Impl + PHOrbEnemyOffset + PHOrbEnemyComboThresholdOffset) return NO;
     if (rejectEnemyDispatchRead && address == Impl + PHOrbEnemyDispatchCacheOffset) return NO;
     if (rejectEnemyDamageRead && address == Impl + PHOrbEnemyDamageImmediateOffset) return NO;
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (changeEightReceiptDuringRead && address == Impl + PHOrbEightReceiptSkillOffset) {
+        changeEightReceiptDuringRead = false;
+        *reinterpret_cast<uint32_t *>(address) ^= 1u;
+    }
     if (changeDungeonDuringRead && address == Header + PHOrbDungeonDumpWavesAddress && length >= 264) {
         changeDungeonDuringRead = false;
         *reinterpret_cast<uint8_t *>(address + 12) ^= 1u;
@@ -245,6 +251,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     changeAssistDuringCoordinateRead = false;
     changeComboDuringCoordinateRead = changeComboDuringRead = rejectComboRead = false;
     changeDungeonDuringRead = rejectDungeonRead = false;
+    changeEightReceiptDuringRead = rejectEightReceiptRead = false;
     const auto save = Header + PHSaveRVA, game = Header + PHGameMainRVA;
     Put<uint16_t>(save, 0x0101); Put<uint32_t>(save + PHPlayerIDOffset, 42);
     Put<uintptr_t>(Header + PHSceneTableRVA + 24, game); Put<uintptr_t>(game + 0x70, Impl);

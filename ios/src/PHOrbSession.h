@@ -28,6 +28,10 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
 @optional
+// Observe an already-started 8P match while paused. This does not arm skills
+// or input; it can retain a native receipt that completes after Stop.
+- (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Fresh action-specific capture, including during the same owned drag.
 // An enabled policy requires this method; the optional observation is not used.
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;

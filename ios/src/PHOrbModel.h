@@ -84,7 +84,7 @@ enum {
 
 typedef struct {
     uint32_t selection; // Raw native skill choice; UINT32_MAX means automatic base/assist selection.
-    uint16_t number, charge, assistCatalogID, skillLevel[2], skillUses[2];
+    uint16_t number, charge, assistCatalogID, skillLevel[2], skillUses[2]; // skillUses counts type-268 limited uses only.
     uint16_t sourceCatalogIDs[2]; // Native source body/assist; choice eligibility uses these before transformation.
     // Current usable form is number. During a validated native temporary
     // transformation, identityNumber/identityAssist retain the underlying
@@ -142,6 +142,16 @@ typedef struct {
     uint32_t catalogCount, catalogRecords, skillCount;
     bool valid;
 } PHOrbEightState;
+
+// Native effect receipt: the root skill and catalog are retained at first
+// application, and the executing slot/source identify that particular use.
+// Per-member +488/+504 counters only count limited-use (type 268) skills.
+typedef struct {
+    uint32_t skill, catalogID;
+    uint16_t slot;
+    uint8_t source;
+    bool valid;
+} PHOrbEightSkillReceipt;
 
 // Optional, timestamped observations for diagnostics only. Neither these
 // fields nor their absence participate in skill or gesture authorization.
@@ -302,6 +312,7 @@ typedef struct {
     PHOrbAssistRecoveryState assistRecovery;
     PHOrbEnemyComboState enemyCombo;
     PHOrbEightState eight;
+    PHOrbEightSkillReceipt eightReceipt;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -347,6 +358,7 @@ bool PHOrbBattleEnded(const PHOrbSnapshot *state);
 bool PHOrbEightMatchReady(const PHOrbSnapshot *state);
 bool PHOrbSameEightMatch(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSameEightTeam(const PHOrbEightState *a, const PHOrbEightState *b);
+bool PHOrbEightSkillAcknowledged(const PHOrbSnapshot *before, const PHOrbSnapshot *after, unsigned slot);
 bool PHOrbInputContextReady(const PHOrbSnapshot *state);
 const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status);
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state);

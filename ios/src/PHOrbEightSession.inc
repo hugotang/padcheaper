@@ -1,5 +1,31 @@
 // One explicit match intent, fresh native gesture leases and skill receipts.
 // Ordinary solo opening, formation and recovery rules never enter this path.
+- (void)rememberEightSkill:(const PHOrbSnapshot *)state {
+    if (state->eight.valid) _eightLastObserved = *state;
+    if (_eightSkillPending && _eightSkillStarted && PHOrbEightSkillAcknowledged(&_eightSkillBefore,state,unsigned(_eightSlot))) {
+        if (!_eightSkillAcknowledged) { _eightSkillAcknowledged = true; _eightSkillAfter = *state; }
+        if (!_eightSkillSettled && PHOrbCanPreview(state) && !state->automation.busy) {
+            _eightSkillSettled = true; _eightSkillAfter = *state;
+        }
+    }
+}
+
+- (NSDictionary *)eightProgressTrace {
+    const auto &r = _eightLastObserved.eightReceipt;
+    return @{@"sameMatch":@(PHOrbSameEightMatch(&_eightHistory,&_live)),@"resumes":@(_eightResumes),
+        @"skillPending":@(_eightSkillPending),@"skillStarted":@(_eightSkillStarted),
+        @"skillAcknowledged":@(_eightSkillAcknowledged),@"skillSettled":@(_eightSkillSettled),
+        @"pendingSlot":@(_eightSkillPending ? _eightSlot + 1 : 0),
+        @"beforeTotalUses":@(_eightSkillBefore.automation.skillUses),
+        @"confirmedTotalUses":@(_eightSkillAfter.automation.skillUses),
+        @"latestTotalUses":@(_eightLastObserved.automation.skillUses),
+        @"receipt":@{@"valid":@(r.valid),@"skill":@(r.skill),@"catalogID":@(r.catalogID),
+            @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
+        @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),
+        @"attemptedSlots":@(_eightAttemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
+        @"lastStop":_eightLastStop ?: @{}};
+}
+
 - (void)startEightAutomatic:(const PHOrbSnapshot *)state {
     if (!PHOrbEightMatchReady(state) || !PHOrbCanPreview(state) || state->moves ||
         TimeAvailable(*state) <= ArmDelay + TimeMargin + StepDuration(*state)) {
@@ -12,34 +38,36 @@
     const bool sameMatch = PHOrbSameEightMatch(&_eightHistory,state);
     if (!sameMatch) {
         _eightHistory = *state; _eightSkillPending = _eightSkillStarted = _eightBoardSubmitted = _sawResolve = false;
+        _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillBefore = _eightSkillAfter = _eightLastObserved = {};
+        _eightDiscardSequence = _eightPausedResolve = false;
         _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
+        _eightResumes = 0; _eightLastStop = nil;
+        _autoTurn = 1; _autoMoves = _autoSkills = 0;
+        [_automationLog removeAllObjects];
     } else if (_eightSkillPending && !_eightSkillStarted) {
         [self queueStop:@"本場上次技能啟動結果不明，不會重複施放；請手動完成本場"]; return;
     }
     const bool sameProfile = [_eightHistoryProfile isEqual:selected ?: @{}];
-    if (!sameProfile) { _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; }
-    if (sameMatch && !_eightSkillPending && !_eightBoardSubmitted &&
-        (_eightHistory.wave != state->wave || _eightHistory.multiplayer.turnSerial != state->multiplayer.turnSerial)) {
-        _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
-    }
-    _eightHistoryProfile = selected ?: @{};
+    // Keep a pending skill's original cursor until its receipt is consumed.
+    // A new profile/board can discard the remainder only after that accounting.
     if (![_engine armEightPlayerAuto:state]) {
         [self queueStop:@"8 人本場操作身分未確認，未啟動 Auto"]; return;
     }
+    _eightResuming = sameMatch; _eightDiscardSequence |= sameMatch && !sameProfile;
+    _eightHistoryProfile = selected ?: @{};
+    if (sameMatch) ++_eightResumes;
     [self cancelWorker]; [self clearRoute];
     _automatic = _eightAutomatic = _autoBound = _monitoring = true;
     _eightTeamBound = _hasStable = _readQueued = false;
     _autoOrigin = *state; _autoStartAt = _autoPhaseAt = _now;
-    _autoTurn = 1; _autoMoves = _autoSkills = 0;
     _activeProfile = selected ?: @{};
     _skillWindowWaitAt = 0; _goalPlan = @{}; _assistTrace = @{}; _assistAwaitingResult = false;
-    [_automationLog removeAllObjects];
     if (selected) [self loadSettings:PHOrbCanonicalSettings(selected[@"settings"])];
     _watchPlayerState = false;
     _phase = _eightSkillPending ? @"eightSkillWaiting" : _eightBoardSubmitted ? @"turnWaiting" : @"autoWaiting";
-    _message = @"8 人本場 Auto 準備中；點停止可立即中斷";
-    [self logAutomation:selected ? [NSString stringWithFormat:@"8 人活動：%@",selected[@"name"]] :
-        @"8 人通用盤面 Auto；使用目前盤面目標"];
+    _message = sameMatch ? @"8 人同場接續中；保留已確認進度並重讀目前盤面" : @"8 人本場 Auto 準備中；點停止可立即中斷";
+    [self logAutomation:sameMatch ? @"8 人同場接續：保留回合、開技與停止紀錄，重新讀盤" :
+        selected ? [NSString stringWithFormat:@"8 人活動：%@",selected[@"name"]] : @"8 人通用盤面 Auto；使用目前盤面目標"];
 }
 
 - (BOOL)observeEightAutomation:(PHOrbSnapshot *)state read:(BOOL)read reason:(NSString *)reason {
@@ -69,12 +97,7 @@
             [self queueStop:@"8 人固定隊伍或技能版本已改變，Auto 停止"]; return NO;
         }
     }
-    if (_eightSkillPending && state->automation.valid) {
-        const auto &before = _eightSkillBefore.automation.members[_eightSlot];
-        const auto &after = state->automation.members[_eightSlot];
-        if (after.skillUses[0] == unsigned(before.skillUses[0]) + 1 &&
-            state->automation.skillUses == unsigned(_eightSkillBefore.automation.skillUses) + 1) _skillAcknowledged = true;
-    }
+    [self rememberEightSkill:state];
     const bool beforeTouch = [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
         ([_phase isEqual:@"arming"] && !_startSent);
     if (beforeTouch && (!PHOrbCanPreview(state) || !PHOrbSameAutomation(&_preview,state) ||
@@ -113,23 +136,43 @@
     }
     if (_eightBoardSubmitted) {
         ++_autoTurn; _eightBoardSubmitted = _sawResolve = false;
+        _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
         _eightHistory = _live;
         _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
         [self waitForAutomationBoard]; return;
     }
     if (_eightSkillPending) {
-        if (!_eightSkillStarted || !_skillAcknowledged) {
-            [self queueStop:@"8 人技能使用次數未確認，保留紀錄避免重複施放"]; return;
+        if (!_eightSkillStarted || !_eightSkillAcknowledged) {
+            [self queueStop:@"8 人技能生效紀錄未確認，保留進度避免重複施放"]; return;
         }
         _eightSkillPending = false;
         if (_eightSequenceStep < _eightSequence.count) ++_eightSequenceStep;
         ++_autoSkills;
-        [self logAutomation:[NSString stringWithFormat:@"B%u：位置 %lu 技能已確認完成",_live.wave + 1,(unsigned long)_eightSlot + 1]];
+        [self logAutomation:[NSString stringWithFormat:@"B%u：位置 %lu 技能已確認完成",_eightSkillBefore.wave + 1,(unsigned long)_eightSlot + 1]];
+        if (!_eightPausedResolve && _live.wave == _eightSkillBefore.wave && _live.multiplayer.turnSerial == _eightSkillBefore.multiplayer.turnSerial &&
+            _eightSkillSettled && PHOrbSamePlanBoard(&_eightSkillAfter.board,&_live.board) &&
+            PHOrbEightSkillAcknowledged(&_eightSkillBefore,&_live,unsigned(_eightSlot))) _eightHistory = _live;
+        else _eightResuming = _eightDiscardSequence = true;
         [self waitForAutomationBoard]; return;
     }
+    if (_eightResuming) {
+        const bool newTurn = _eightPausedResolve || _eightHistory.wave != _live.wave ||
+            _eightHistory.multiplayer.turnSerial != _live.multiplayer.turnSerial;
+        if (newTurn || _eightDiscardSequence || !PHOrbSamePlanBoard(&_eightHistory.board,&_live.board) ||
+            _eightHistory.automation.skillUses != _live.automation.skillUses) {
+            _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0;
+            if (newTurn) { ++_autoTurn; _eightAttemptedSlots = 0; }
+            [self logAutomation:@"接續時盤面、回合或策略已改變，依目前盤面重新規劃"];
+        }
+        _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
+    }
+    _eightHistory = _live;
     if (_eightSequenceStep < _eightSequence.count) {
         const NSUInteger slot = [_eightSequence[_eightSequenceStep] unsignedIntegerValue] - 1;
         const auto &m = _live.automation.members[slot];
+        if (_live.automation.skillUses >= 255) {
+            [self queueStop:@"8 人技能總計數已達上限，無法確認新的施放，已停止"]; return;
+        }
         if (!_live.automation.window) {
             if (!_skillWindowWaitAt) _skillWindowWaitAt = _now;
             if (_now - _skillWindowWaitAt > SkillWindowTimeout) [self queueStop:PHOrbSkillWindowDescription(&_live.automation)];
@@ -163,7 +206,8 @@
         [self logAutomation:reason ?: @"遊戲判定此技能不可用，重讀盤面後重新求路"];
         [self waitForAutomationBoard]; return;
     }
-    _eightSkillPending = true; _eightSkillStarted = result == PHOrbSkillStarted; _skillAcknowledged = false;
+    _eightSkillPending = true; _eightSkillStarted = result == PHOrbSkillStarted;
+    _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillAfter = {};
     if (!_eightSkillStarted) { [self queueStop:reason ?: @"8 人技能啟動未確認，本場不會重試此意圖"]; return; }
     _phase = @"eightSkillWaiting"; _hasStable = false; _autoPhaseAt = _now;
     _message = [NSString stringWithFormat:@"B%u：位置 %lu 技能已啟動，等待生效",state->wave + 1,(unsigned long)_eightSlot + 1];
