@@ -94,16 +94,21 @@ static void PHProbeOpenPanel(UIWindow *overlay) {
     UIButton *bubble = (UIButton *)PHProbeFind(overlay, @"padcheaper.bubble");
     PHProbeCheck(panel && bubble, @"Settings entry and panel must exist");
     if (!panel || !bubble || !panel.hidden) return;
+    // Settings has its own gear in the shortcut capsule; the bubble only
+    // expands/collapses (or stops a running job).
     if ([[overlay.rootViewController valueForKey:@"shortcutsCollapsed"] boolValue])
         [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
-    [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
-    PHProbeCheck(!panel.hidden, @"PC settings remain reachable through the folded shortcut entry");
+    UIButton *settings = (UIButton *)PHProbeFind(overlay, @"padcheaper.settingsShortcut");
+    PHProbeCheck(settings && !settings.hidden, @"Expanded shortcuts expose a dedicated settings button");
+    [settings sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(!panel.hidden, @"Settings remain reachable from the folded entry in two taps");
 }
 
 static void PHProbeFloatingTargets(UIWindow *overlay) {
     NSMutableArray<UIView *> *controls = [NSMutableArray array];
     for (NSString *identifier in @[@"padcheaper.bubble", @"padcheaper.orbsOnceShortcut",
-                                   @"padcheaper.orbsAutoShortcut", @"padcheaper.collapseShortcuts"]) {
+                                   @"padcheaper.orbsAutoShortcut", @"padcheaper.settingsShortcut",
+                                   @"padcheaper.collapseShortcuts"]) {
         UIView *control = PHProbeFind(overlay, identifier);
         PHProbeCheck(control && !control.hidden && CGRectContainsRect(overlay.bounds, control.frame) &&
             CGRectGetWidth(control.bounds) >= 44 && CGRectGetHeight(control.bounds) >= 44,
@@ -407,10 +412,12 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     UIButton *onceShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsOnceShortcut");
     UIButton *autoShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsAutoShortcut");
     UIButton *collapseShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.collapseShortcuts");
-    PHProbeCheck(onceShortcut && autoShortcut && collapseShortcut &&
-        onceShortcut.hidden && autoShortcut.hidden && collapseShortcut.hidden &&
+    UIButton *settingsShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.settingsShortcut");
+    PHProbeCheck(onceShortcut && autoShortcut && collapseShortcut && settingsShortcut &&
+        onceShortcut.hidden && autoShortcut.hidden && collapseShortcut.hidden && settingsShortcut.hidden &&
+        PHProbeFind(overlay, @"padcheaper.shortcutBar").hidden &&
         PHProbeFind(overlay, @"padcheaper.orbsShortcutStatus").hidden,
-        @"Initial overlay hides all shortcut controls and status behind one PC button");
+        @"Initial overlay hides all shortcut controls and status behind one bubble");
     PHProbeRender(self.window, overlay, @"bubble");
     [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHOverlaySnapshot readinessSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
@@ -419,8 +426,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         ![readinessState[@"automatic"] boolValue] && ![readinessState[@"searchTrace"] count],
         @"First PC expansion reaches the real runtime observation action without solving or starting Auto");
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
-    PHProbeCheck(panel.hidden && !onceShortcut.hidden && !autoShortcut.hidden && !collapseShortcut.hidden,
-        @"First PC tap expands shortcuts without opening settings");
+    PHProbeCheck(panel.hidden && !onceShortcut.hidden && !autoShortcut.hidden && !collapseShortcut.hidden &&
+        !settingsShortcut.hidden && !PHProbeFind(overlay, @"padcheaper.shortcutBar").hidden,
+        @"First bubble tap expands the shortcut capsule without opening settings");
     PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled,
         @"An unvalidated guest keeps both input shortcuts disabled after unfolding");
     PHProbeColdEightAuto(self.window,overlay);
@@ -1606,14 +1614,15 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Disabled shortcuts retain a visible result without requiring the settings page");
             NSString *stoppedMessage = shortcutStatus.text;
             NSMutableArray<NSValue *> *oldShortcutCenters = [NSMutableArray array];
-            for (UIView *control in @[onceShortcut, autoShortcut, collapseShortcut, shortcutStatus])
+            UIButton *settingsShortcut = (UIButton *)PHProbeFind(overlay, @"padcheaper.settingsShortcut");
+            for (UIView *control in @[onceShortcut, autoShortcut, settingsShortcut, collapseShortcut, shortcutStatus])
                 [oldShortcutCenters addObject:[NSValue valueWithCGPoint:[control convertPoint:
                     CGPointMake(CGRectGetMidX(control.bounds), CGRectGetMidY(control.bounds)) toView:overlay]]];
             shortcutAction = nil; shortcutActionCount = 0;
             [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             PHProbeCheck(shortcutActionCount == 0 && !bubble.hidden && onceShortcut.hidden && autoShortcut.hidden &&
-                collapseShortcut.hidden && shortcutStatus.hidden &&
+                collapseShortcut.hidden && settingsShortcut.hidden && shortcutStatus.hidden &&
                 [[overlay.rootViewController valueForKey:@"shortcutsCollapsed"] boolValue],
                 @"Folded controls and status stay hidden after refresh without changing execution or configuration");
             for (NSValue *point in oldShortcutCenters)
@@ -1623,9 +1632,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck(shortcutActionCount == 0 && !shortcutStatus.hidden && [shortcutStatus.text isEqual:stoppedMessage] &&
                 !onceShortcut.enabled && !autoShortcut.enabled,
                 @"Unfolding restores the last result and preserves disabled input gates");
-            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            [settingsShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(!PHProbeFind(overlay, @"padcheaper.panel").hidden && onceShortcut.hidden &&
-                autoShortcut.hidden && collapseShortcut.hidden && shortcutStatus.hidden,
+                autoShortcut.hidden && collapseShortcut.hidden && settingsShortcut.hidden && shortcutStatus.hidden,
                 @"Opening settings hides the complete floating row");
             [(UIButton *)PHProbeFind(overlay, @"padcheaper.close") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 0 && !collapseShortcut.hidden && !shortcutStatus.hidden &&
@@ -1636,6 +1645,15 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             // reattaching the live editor window solely for a screenshot
             // starts a UIKit scene transition unrelated to the user action.
             PHProbeRender(self.window, overlay, @"orb-shortcuts");
+            shortcutAction = nil; shortcutActionCount = 0;
+            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(shortcutActionCount == 0 && onceShortcut.hidden && settingsShortcut.hidden &&
+                PHProbeFind(overlay, @"padcheaper.panel").hidden &&
+                [[overlay.rootViewController valueForKey:@"shortcutsCollapsed"] boolValue],
+                @"An expanded idle bubble folds the capsule and never opens settings or dispatches input");
+            [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!onceShortcut.hidden && ![[overlay.rootViewController valueForKey:@"shortcutsCollapsed"] boolValue],
+                @"The bubble toggles the capsule back open");
             for (NSNumber *automatic in @[@NO, @YES]) {
               NSArray<NSString *> *phases = automatic.boolValue ? @[@"autoWaiting", @"solving", @"skillWaiting", @"turnWaiting"] :
                   @[@"reading", @"solving", @"arming", @"running", @"releasing"];

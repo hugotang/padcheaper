@@ -15,6 +15,7 @@
 - iPad：使用者 iPhone 與 iPad 都用，主要是 11 吋 iPad（直向，寬 820 pt）。曾加入寬度 900 pt 以上的轉珠頁兩欄版面，因 11 吋直向用不到且沒有截圖驗證，已撤回；iPad UI 暫不另做。`gui-test.sh` 在 iPhone 四輪後另建 11 吋 iPad 模擬器跑一次 Scene probe，截圖前綴 `ipad-`（probe 新增 `PHProbePrefix`），目的只是確認 iPad 不會壞；GUI 步驟時限由 12 改為 20 分鐘（CI 118 的 iPhone 四輪已用 513 秒）。probe 斷言可能暴露 iPhone 尺寸假設，需看本次 CI。
 - PC 浮動面板：原本 25 項排成一長列，改為「常用／隊伍與入場（單人）／外觀與音樂／計時／診斷與 API」五張卡片，功能總開關、編隊與轉珠入口放最上方。面板按鈕改為與轉珠頁一致的藍色 tinted 樣式（仍是 `UIButtonTypeSystem` 與 `setTitle:`，probe 檢查的標題與無動畫行為不變），寫死的 RGB 色相改為系統色，面板固定深色外觀。浮動 PC 按鈕與三個快捷鍵的尺寸、位置與白字不變。所有 accessibility identifier 保留；需看 CI 截圖。
 - 版本紀錄：新增 `ios/CHANGELOG.md`（25 個版本的索引，連到各版說明與開發紀錄）；README 開頭 20 段逐版說明原文移入 CHANGELOG「原 README 版本摘要」，README 只保留目前版本、功能概覽、載入方式與多人限制等長期說明。`build.sh` 一併打包 CHANGELOG（連結由既有的 `docs/` 改寫規則處理）。
+- 浮動按鈕重新設計（使用者同意）：原 56 pt「PC」圓鈕依狀態兼任展開、開設定與停止，且狀態只看邊框。改為 48 pt「轉珠」按鈕加一條膠囊列「轉一次／自動（執行中為停止）／⚙ 設定／⌄ 收合」，順序固定，停止永遠在同一格。轉珠按鈕只負責展開／收合，執行中一點即停；設定只從 ⚙ 進入，執行中 ⚙ 停用，且永遠不會觸發停止。膠囊背景不接收觸控，按鈕間隙仍穿透給遊戲。保留所有既有 identifier，新增 `padcheaper.settingsShortcut`、`padcheaper.shortcutBar`。GUI probe 改為從 ⚙ 開設定、展開狀態點轉珠按鈕會收合，並把 ⚙ 納入 44 pt、畫面內、不重疊與點擊歸屬檢查。文字按鈕不加圖示（iOS 15 調整圖文間距的 API 已棄用，`-Werror` 會擋）。需看 CI 截圖並在 iPhone／11 吋 iPad 實機試手感。
 - `.gitattributes`：文字檔一律 LF，圖片與二進位標為 binary；`git add --renormalize` 確認沒有任何檔案內容改變。
 
 ## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證完成

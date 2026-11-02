@@ -26,6 +26,8 @@
 @property(nonatomic, strong) UIButton *orbOnceShortcut;
 @property(nonatomic, strong) UIButton *orbAutoShortcut;
 @property(nonatomic, strong) UIButton *collapseShortcut;
+@property(nonatomic, strong) UIButton *settingsShortcut;
+@property(nonatomic, strong) UIView *shortcutBar;
 @property(nonatomic, strong) UILabel *orbShortcutStatus;
 @property(nonatomic, strong) UIView *panel;
 @property(nonatomic, strong) UILabel *statusLabel;
@@ -153,14 +155,14 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 
     self.bubble = [UIButton buttonWithType:UIButtonTypeCustom];
     self.bubble.backgroundColor = [UIColor colorWithRed:0.08 green:0.11 blue:0.16 alpha:0.97];
-    self.bubble.layer.cornerRadius = 28;
+    self.bubble.layer.cornerRadius = 24;
     self.bubble.layer.borderWidth = 2;
     self.bubble.layer.shadowColor = UIColor.blackColor.CGColor;
     self.bubble.layer.shadowOpacity = 0.35;
     self.bubble.layer.shadowRadius = 6;
     self.bubble.layer.shadowOffset = CGSizeMake(0, 2);
-    self.bubble.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    self.bubble.titleLabel.numberOfLines = 2;
+    self.bubble.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
+    self.bubble.titleLabel.numberOfLines = 1;
     self.bubble.titleLabel.textAlignment = NSTextAlignmentCenter;
     self.bubble.accessibilityIdentifier = @"padcheaper.bubble";
     [self.bubble addTarget:self action:@selector(tapBubble) forControlEvents:UIControlEventTouchUpInside];
@@ -169,14 +171,28 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.view addSubview:self.bubble];
 
     self.orbOnceShortcut = [self button:@"轉一次" action:@selector(runOrbsOnce) identifier:@"padcheaper.orbsOnceShortcut"];
-    self.orbAutoShortcut = [self button:@"開始自動" action:@selector(runOrbsAutomatically) identifier:@"padcheaper.orbsAutoShortcut"];
-    self.collapseShortcut = [self button:@"收合" action:@selector(collapseShortcuts) identifier:@"padcheaper.collapseShortcuts"];
-    for (UIButton *shortcut in @[self.orbOnceShortcut, self.orbAutoShortcut, self.collapseShortcut]) {
+    self.orbAutoShortcut = [self button:@"自動" action:@selector(runOrbsAutomatically) identifier:@"padcheaper.orbsAutoShortcut"];
+    self.collapseShortcut = [self button:@"" action:@selector(collapseShortcuts) identifier:@"padcheaper.collapseShortcuts"];
+    self.settingsShortcut = [self button:@"" action:@selector(openSettingsShortcut) identifier:@"padcheaper.settingsShortcut"];
+    // The capsule is decoration only: it never takes touches, so the gaps
+    // between buttons still pass through to the game like the rest of the screen.
+    self.shortcutBar = [UIView new];
+    self.shortcutBar.userInteractionEnabled = NO; self.shortcutBar.hidden = YES;
+    self.shortcutBar.backgroundColor = [UIColor colorWithRed:0.08 green:0.11 blue:0.16 alpha:0.94];
+    self.shortcutBar.layer.cornerRadius = 26; self.shortcutBar.layer.cornerCurve = kCACornerCurveContinuous;
+    self.shortcutBar.layer.borderWidth = 1; self.shortcutBar.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.18].CGColor;
+    self.shortcutBar.layer.shadowColor = UIColor.blackColor.CGColor; self.shortcutBar.layer.shadowOpacity = 0.3;
+    self.shortcutBar.layer.shadowRadius = 6; self.shortcutBar.layer.shadowOffset = CGSizeMake(0, 2);
+    self.shortcutBar.accessibilityIdentifier = @"padcheaper.shortcutBar";
+    [self.view insertSubview:self.shortcutBar belowSubview:self.bubble];
+    [self.settingsShortcut setImage:[UIImage systemImageNamed:@"gearshape.fill"] forState:UIControlStateNormal];
+    [self.collapseShortcut setImage:[UIImage systemImageNamed:@"chevron.down"] forState:UIControlStateNormal];
+    for (UIButton *shortcut in @[self.orbOnceShortcut, self.orbAutoShortcut, self.settingsShortcut, self.collapseShortcut]) {
         shortcut.hidden = YES;
-        shortcut.backgroundColor = [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
-        shortcut.layer.borderWidth = 1;
-        shortcut.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
-        shortcut.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+        shortcut.backgroundColor = [UIColor colorWithWhite:1 alpha:0.10];
+        shortcut.layer.cornerRadius = 22;
+        shortcut.tintColor = UIColor.whiteColor;
+        shortcut.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
         [shortcut setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         for (NSLayoutConstraint *constraint in shortcut.constraints) if (constraint.firstAttribute == NSLayoutAttributeHeight)
             constraint.constant = 44;
@@ -184,8 +200,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     }
     self.orbOnceShortcut.accessibilityLabel = @"自動轉一次，使用目前盤面目標";
     self.orbAutoShortcut.accessibilityLabel = @"開始自動轉珠，沿用目前技能規則";
+    self.orbOnceShortcut.backgroundColor = [UIColor.systemBlueColor colorWithAlphaComponent:0.9];
+    self.settingsShortcut.backgroundColor = self.collapseShortcut.backgroundColor = UIColor.clearColor;
+    self.settingsShortcut.accessibilityLabel = @"開啟 PADCheaper 設定";
     self.collapseShortcut.accessibilityLabel = @"收合浮動快捷列";
-    self.collapseShortcut.accessibilityHint = @"只保留 PC 按鈕；執行中的工作仍可按它停止";
+    self.collapseShortcut.accessibilityHint = @"只保留轉珠按鈕；執行中的工作仍可按它停止";
     self.orbShortcutStatus = PHLabel(11, UIFontWeightMedium);
     self.orbShortcutStatus.hidden = YES;
     self.orbShortcutStatus.numberOfLines = 1;
@@ -294,7 +313,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.feedbackLabel = PHLabel(12, UIFontWeightMedium);
     self.feedbackLabel.textColor = UIColor.systemGreenColor;
     UILabel *note = PHLabel(11, UIFontWeightRegular);
-    note.text = @"PC 按鈕代表 dylib 已載入；綠色代表功能已通過啟用條件。Skin／BGM 仍需遊戲已有資源。";
+    note.text = @"浮動「轉珠」按鈕代表 dylib 已載入，外圈顏色是狀態（綠色：功能已通過啟用條件）。點它展開轉一次／自動／設定；執行中點它停止。Skin／BGM 仍需遊戲已有資源。";
     note.textColor = [UIColor colorWithWhite:1 alpha:0.55];
     UIStackView *body = [[UIStackView alloc] initWithArrangedSubviews:@[
         self.statusLabel, self.reasonLabel,
@@ -351,31 +370,38 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [super viewDidLayoutSubviews];
     CGRect safe = [self usableBounds];
     CGFloat width = CGRectGetWidth(safe), height = CGRectGetHeight(safe);
-    CGFloat x = CGRectGetMinX(safe) + 28 + MAX(0, width - 56) * self.position.x;
-    CGFloat y = CGRectGetMinY(safe) + 28 + MAX(0, height - 56) * self.position.y;
-    const CGFloat shortcutsWidth = 196;
+    // Bubble 48 pt; capsule = 4 pt padding + Once 72 + Auto 84 + Settings 44 +
+    // Collapse 44 with 4 pt gaps, 44 pt tall. Fixed order keeps Stop in place.
+    const CGFloat half = 24, gap = 6, barWidth = 260, barHeight = 52;
+    CGFloat x = CGRectGetMinX(safe) + half + MAX(0, width - 2 * half) * self.position.x;
+    CGFloat y = CGRectGetMinY(safe) + half + MAX(0, height - 2 * half) * self.position.y;
     const BOOL onRight = x >= CGRectGetMidX(safe);
-    const CGFloat sideRoom = onRight ? x - 28 - CGRectGetMinX(safe) : CGRectGetMaxX(safe) - x - 28;
-    CGFloat shortcutsX = onRight ? x - 28 - 6 - shortcutsWidth : x + 28 + 6;
-    shortcutsX = PHClamp(shortcutsX, CGRectGetMinX(safe), CGRectGetMaxX(safe) - shortcutsWidth);
-    CGFloat shortcutsY = y - 22;
-    if (!self.shortcutsCollapsed && !self.expanded && sideRoom < shortcutsWidth + 6) {
-        // While dragging near the middle, wrap the row above/below the bubble
-        // instead of clamping the buttons across its stop/drag target.
+    const CGFloat sideRoom = onRight ? x - half - CGRectGetMinX(safe) : CGRectGetMaxX(safe) - x - half;
+    CGFloat barX = onRight ? x - half - gap - barWidth : x + half + gap;
+    barX = PHClamp(barX, CGRectGetMinX(safe), CGRectGetMaxX(safe) - barWidth);
+    CGFloat barY = y - barHeight / 2;
+    if (!self.shortcutsCollapsed && !self.expanded && sideRoom < barWidth + gap) {
+        // Near the middle, place the capsule above/below the bubble instead of
+        // clamping it across the bubble's stop/drag target.
         const BOOL below = y < CGRectGetMidY(safe);
-        y = below ? PHClamp(y, CGRectGetMinY(safe) + 28, CGRectGetMaxY(safe) - 78) :
-                    PHClamp(y, CGRectGetMinY(safe) + 78, CGRectGetMaxY(safe) - 28);
-        shortcutsX = PHClamp(x - shortcutsWidth / 2, CGRectGetMinX(safe), CGRectGetMaxX(safe) - shortcutsWidth);
-        shortcutsY = below ? y + 34 : y - 78;
+        const CGFloat reach = half + gap + barHeight;
+        y = below ? PHClamp(y, CGRectGetMinY(safe) + half, CGRectGetMaxY(safe) - reach) :
+                    PHClamp(y, CGRectGetMinY(safe) + reach, CGRectGetMaxY(safe) - half);
+        barX = PHClamp(x - barWidth / 2, CGRectGetMinX(safe), CGRectGetMaxX(safe) - barWidth);
+        barY = below ? y + half + gap : y - half - gap - barHeight;
     }
-    self.bubble.frame = CGRectMake(x - 28, y - 28, 56, 56);
-    self.orbOnceShortcut.frame = CGRectMake(shortcutsX, shortcutsY, 64, 44);
-    self.orbAutoShortcut.frame = CGRectMake(shortcutsX + 70, shortcutsY, 76, 44);
-    self.collapseShortcut.frame = CGRectMake(shortcutsX + 152, shortcutsY, 44, 44);
-    CGRect controls = CGRectUnion(self.bubble.frame, CGRectMake(shortcutsX, shortcutsY, shortcutsWidth, 44));
+    self.bubble.frame = CGRectMake(x - half, y - half, 2 * half, 2 * half);
+    self.shortcutBar.frame = CGRectMake(barX, barY, barWidth, barHeight);
+    self.shortcutBar.layer.shadowPath = [UIBezierPath bezierPathWithRoundedRect:self.shortcutBar.bounds cornerRadius:26].CGPath;
+    const CGFloat rowX = barX + 4, rowY = barY + 4;
+    self.orbOnceShortcut.frame = CGRectMake(rowX, rowY, 72, 44);
+    self.orbAutoShortcut.frame = CGRectMake(rowX + 76, rowY, 84, 44);
+    self.settingsShortcut.frame = CGRectMake(rowX + 164, rowY, 44, 44);
+    self.collapseShortcut.frame = CGRectMake(rowX + 212, rowY, 44, 44);
+    CGRect controls = CGRectUnion(self.bubble.frame, self.shortcutBar.frame);
     CGFloat statusY = CGRectGetMaxY(controls) + 25 <= CGRectGetMaxY(safe) ?
         CGRectGetMaxY(controls) + 3 : CGRectGetMinY(controls) - 25;
-    CGFloat statusWidth = MIN(258, width);
+    CGFloat statusWidth = MIN(barWidth, width);
     CGFloat statusX = PHClamp(CGRectGetMinX(controls), CGRectGetMinX(safe), CGRectGetMaxX(safe) - statusWidth);
     self.orbShortcutStatus.frame = CGRectMake(statusX, statusY, statusWidth, 22);
     CGFloat panelWidth = MIN(352, width), panelHeight = MIN(600, height);
@@ -389,10 +415,10 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     CGPoint translation = [pan translationInView:self.view];
     CGRect safe = [self usableBounds];
     CGPoint center = self.bubble.center;
-    center.x = PHClamp(center.x + translation.x, CGRectGetMinX(safe) + 28, CGRectGetMaxX(safe) - 28);
-    center.y = PHClamp(center.y + translation.y, CGRectGetMinY(safe) + 28, CGRectGetMaxY(safe) - 28);
-    self.position = CGPointMake((center.x - CGRectGetMinX(safe) - 28) / MAX(1, CGRectGetWidth(safe) - 56),
-                               (center.y - CGRectGetMinY(safe) - 28) / MAX(1, CGRectGetHeight(safe) - 56));
+    center.x = PHClamp(center.x + translation.x, CGRectGetMinX(safe) + 24, CGRectGetMaxX(safe) - 24);
+    center.y = PHClamp(center.y + translation.y, CGRectGetMinY(safe) + 24, CGRectGetMaxY(safe) - 24);
+    self.position = CGPointMake((center.x - CGRectGetMinX(safe) - 24) / MAX(1, CGRectGetWidth(safe) - 48),
+                               (center.y - CGRectGetMinY(safe) - 24) / MAX(1, CGRectGetHeight(safe) - 48));
     [pan setTranslation:CGPointZero inView:self.view];
     if (pan.state == UIGestureRecognizerStateEnded || pan.state == UIGestureRecognizerStateCancelled) {
         self.position = CGPointMake(center.x < CGRectGetMidX(safe) ? 0 : 1, self.position.y);
@@ -420,7 +446,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self.view setNeedsLayout];
         [self.view layoutIfNeeded];
         UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, self.bubble);
-    } else [self openPanel];
+    } else [self collapseShortcuts];
 }
 
 - (void)collapseShortcuts {
@@ -429,6 +455,13 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.view setNeedsLayout];
     [self.view layoutIfNeeded];
     UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, self.bubble);
+}
+
+// The gear only opens settings. Unlike the bubble it never stops a job, so a
+// stale tap during a run is ignored (the gear is also disabled while busy).
+- (void)openSettingsShortcut {
+    if ([self.snapshot()[@"orbState"][@"busy"] boolValue]) return;
+    [self openPanel];
 }
 
 - (void)openPanel {
@@ -639,12 +672,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     UIColor *color = active ? UIColor.systemGreenColor : error ? UIColor.systemRedColor :
                      ready ? UIColor.systemBlueColor : UIColor.systemOrangeColor;
     NSString *shortStatus = active ? @"啟用" : error ? @"錯誤" : ready ? @"就緒" : @"載入";
-    NSString *bubbleTitle = error ? shortStatus : self.shortcutsCollapsed ? @"展開" : @"設定";
-    [self.bubble setTitle:[@"PC\n" stringByAppendingString:bubbleTitle] forState:UIControlStateNormal];
+    [self.bubble setTitle:error ? shortStatus : @"轉珠" forState:UIControlStateNormal];
     [self.bubble setTitleColor:color forState:UIControlStateNormal];
     self.bubble.layer.borderColor = color.CGColor;
     self.bubble.accessibilityLabel = [NSString stringWithFormat:@"PADCheaper 已載入，%@，%@", shortStatus,
-        self.shortcutsCollapsed ? @"展開轉珠快捷列" : @"開啟設定面板"];
+        self.shortcutsCollapsed ? @"展開轉珠快捷列" : @"收合轉珠快捷列"];
     self.bubble.accessibilityValue = self.shortcutsCollapsed ? @"快捷列已收合" : @"快捷列已展開";
     self.bubble.accessibilityHint = @"可拖動到螢幕另一側";
     NSDictionary *orbs = state[@"orbState"];
@@ -653,13 +685,16 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.panel.hidden = !self.expanded;
     const BOOL shortcutsHidden = self.expanded || self.shortcutsCollapsed;
     self.orbOnceShortcut.hidden = self.orbAutoShortcut.hidden = self.collapseShortcut.hidden = shortcutsHidden;
+    self.settingsShortcut.hidden = self.shortcutBar.hidden = shortcutsHidden;
+    self.settingsShortcut.enabled = !orbBusy;
     self.orbOnceShortcut.enabled = [orbs[@"canOnce"] boolValue];
     self.orbAutoShortcut.enabled = orbBusy || [orbs[@"canStart"] boolValue];
-    [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"開始自動" forState:UIControlStateNormal];
     NSString *stopLabel = [orbs[@"automatic"] boolValue] ? @"停止自動轉珠" : @"停止本次轉珠";
     self.orbAutoShortcut.accessibilityLabel = orbBusy ? stopLabel : @"開始自動轉珠，沿用目前策略";
-    self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor.systemRedColor colorWithAlphaComponent:0.85] :
-        [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
+    self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor.systemRedColor colorWithAlphaComponent:0.9] :
+        [UIColor colorWithWhite:1 alpha:0.12];
+    [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"自動" forState:UIControlStateNormal];
+    self.orbOnceShortcut.alpha = self.orbOnceShortcut.enabled ? 1 : 0.45;
     NSString *orbMessage = [orbs[@"message"] isKindOfClass:NSString.class] ? orbs[@"message"] : @"";
     NSString *lastMessage = orbMessage;
     if (!orbBusy && [orbs[@"multiplayerMessage"] length])
@@ -675,7 +710,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.orbShortcutStatus.hidden = shortcutsHidden || !orbMessage.length ||
         ([orbs[@"phase"] isEqual:@"idle"] && ![orbs[@"multiplayerActive"] boolValue]);
     if (orbBusy) {
-        [self.bubble setTitle:[orbs[@"automatic"] boolValue] ? @"停止\n自動" : @"停止\n轉珠" forState:UIControlStateNormal];
+        [self.bubble setTitle:@"停止" forState:UIControlStateNormal];
         [self.bubble setTitleColor:UIColor.systemRedColor forState:UIControlStateNormal];
         self.bubble.layer.borderColor = UIColor.systemRedColor.CGColor;
         self.bubble.accessibilityLabel = stopLabel;
