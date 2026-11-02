@@ -19,9 +19,9 @@ static void RecordedSpinnerSolverTests() {
     const auto original = board;
     std::atomic_bool cancel{false};
     const auto status = PHOrbSolve(board,options,cancel,route);
-    std::printf("Recorded spinner-only fixture: status=%u goals=%u/%u steps=%u elapsed=%u ms deadline=%u evaluated=%u\n",
+    std::printf("Recorded spinner-only fixture: status=%u goals=%u/%u steps=%u elapsed=%u ms deadline=%u evaluated=%u passes=%u backtracks=%u depth=%u\n",
         unsigned(status),route.matchedGoals,route.goalCount,route.count ? route.count - 1 : 0,
-        route.elapsedMS,route.deadlineReached,route.evaluated);
+        route.elapsedMS,route.deadlineReached,route.evaluated,route.searchPasses,route.backtracks,route.exploredDepth);
     Check(status == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe && route.count <= 49 &&
         std::memcmp(&board,&original,sizeof(board)) == 0,
         "spinner-only hard-shape search should recover the recorded 0.5.13 miss within the original budget");

@@ -997,7 +997,12 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 recovery.borderRepairWeight = 1;
             }
             const auto now = Clock::now();
-            const auto recoveryDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
+            // Stable spinner repair needs enough depth to finish both shapes.
+            // Halving its remaining time can interrupt a solvable recovery,
+            // then spend more work on shallower discarded frontiers. Let it
+            // use the original deadline; completed unsuccessful passes still
+            // leave their unused time for the existing bounded backtracks.
+            const auto recoveryDeadline = stableShapeRecovery || saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = starts;
             search(recovery, 0, found ? best.score.focus : 0, recoveryDeadline, false);
         }
