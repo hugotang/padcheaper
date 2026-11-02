@@ -30,6 +30,84 @@ static void EightWaitForSkill(PHOrbSession *session, FakeOrbEngine *engine) {
     for (unsigned i = 0; i < 3000 && !engine->skillFrames && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
     Check(engine->skillFrames && [session.snapshot[@"eightSkillPending"] boolValue],"fixture reaches an in-flight native skill");
 }
+static void EightGuideSessionTests() {
+    for (bool enabled : {false,true}) for (unsigned wave : {1u,2u,3u}) {
+        FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = wave;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+        EightSelectProfile(session,EightGuideProfileFixture(enabled)); [session queueAutomatic];
+        EightRunUntilRelease(session,engine,1);
+        const NSUInteger slot = wave == 3 ? 0 : wave;
+        Check(engine->skillOrder == (enabled ? std::vector<NSUInteger>{slot} : std::vector<NSUInteger>{}),
+            "guide enabled casts the floor opener before an already-solvable board; disabled keeps board-first behavior");
+        EightNextBoard(engine,false); engine->live.automation.members[slot].charge = 20;
+        EightRunUntilRelease(session,engine,2);
+        Check(engine->skillAttempts == (enabled ? 1u : 0u),"a repeated floor with enough orbs does not replay its guide opener");
+        [session queueStop:@"fixture done"];
+    }
+    for (unsigned pause = 0; pause < 3; ++pause) {
+        FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = 4;
+        for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = i % 6;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+        EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic]; EightWaitForSkill(session,engine);
+        if (pause == 1) for (unsigned i = 0; i < 50 && [session.snapshot[@"autoSkills"] unsignedIntegerValue] < 1; ++i) Tick(session,engine,Frame());
+        [session queueStop:@"pause guide prefix"];
+        if (pause == 2) EightSelectProfile(session,EightGuideProfileFixture(NO));
+        for (unsigned i = 0; i < 25; ++i) Tick(session,engine,Frame());
+        [session queueAutomatic]; EightRunUntilRelease(session,engine,1);
+        Check(engine->skillOrder == (pause == 2 ? std::vector<NSUInteger>{3} : std::vector<NSUInteger>{3,5}) &&
+            [session.snapshot[@"autoSkills"] unsignedIntegerValue] == engine->skillOrder.size(),
+            "guide resumes after the confirmed Ney exactly once; disabling discards the unsent opener remainder");
+        [session queueStop:@"fixture done"];
+    }
+    FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = 1; engine->live.automation.members[1].charge = 0;
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+    for (unsigned i = 0; i < 100 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue] && !engine->skillAttempts && !engine->stages &&
+        [session.snapshot[@"message"] containsString:@"攻略指定技能"],"guide cooldown failure stops with a specific reason before any puzzle");
+    engine->live.automation.members[1].charge = 20; Tick(session,engine,Frame()); [session queueAutomatic];
+    EightRunUntilRelease(session,engine,1);
+    Check(engine->skillOrder == std::vector<NSUInteger>{1},"fresh native readiness after a stop permits the previously unavailable guide opener");
+    [session queueStop:@"fixture done"];
+
+    engine = EightEngineFixture(); engine->live.wave = 1; engine->unavailableSkills[1] = YES;
+    session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+    for (unsigned i = 0; i < 100 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    [session queueAutomatic];
+    for (unsigned i = 0; i < 100 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check(engine->skillAttempts == 1 && !engine->stages && ![session.snapshot[@"automatic"] boolValue],
+        "native unavailable guide skill is not silently skipped or spammed across resume");
+
+    // Toggle on after a confirmed off-mode rescue. The cast remains accounted
+    // for even though the selected profile no longer compares equal.
+    engine = EightEngineFixture(); engine->live.wave = 1; EightWaterWood(engine);
+    session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightGuideProfileFixture(NO)); [session queueAutomatic]; EightWaitForSkill(session,engine);
+    [session queueStop:@"enable guide after cast"];
+    EightSelectProfile(session,EightGuideProfileFixture(YES));
+    for (unsigned i = 0; i < 25; ++i) Tick(session,engine,Frame());
+    [session queueAutomatic]; EightRunUntilRelease(session,engine,1);
+    Check(engine->skillOrder == std::vector<NSUInteger>{1} && [session.snapshot[@"autoSkills"] isEqual:@1],
+        "turning the guide on retains a confirmed same-floor off-mode skill");
+    [session queueStop:@"fixture done"];
+
+    engine = EightEngineFixture();
+    session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic]; EightRunUntilRelease(session,engine,1);
+    NSDictionary *first = session.snapshot[@"eightProgress"][@"firstPuzzle"];
+    Check([first[@"wave"] isEqual:@0] && [first[@"releaseConfirmed"] boolValue] &&
+        [session.snapshot[@"searchTrace"][@"eightPolicy"][@"comboPriority"] boolValue],"B1 retains confirmed release evidence and the actual Combo policy");
+    for (unsigned turn = 2; turn <= 4; ++turn) { EightNextBoard(engine,false); EightRunUntilRelease(session,engine,turn); }
+    Check([session.snapshot[@"eightProgress"][@"firstPuzzle"] isEqual:first],"B1 evidence survives the last-three-executions history bound");
+    [session queueStop:@"new match"];
+    EightNextBoard(engine,false); ++engine->live.multiplayer.clockStart; engine->live.wave = 1;
+    Tick(session,engine,Frame()); [session queueAutomatic]; EightRunUntilRelease(session,engine,5);
+    Check([session.snapshot[@"eightProgress"][@"firstPuzzle"] count] == 0 &&
+        [session.snapshot[@"autoMoves"] isEqual:@1] && engine->skillOrder == std::vector<NSUInteger>{1},
+        "new explicit match resets retained B1 evidence and completed guide slots");
+    [session queueStop:@"fixture done"];
+}
 static void EightResumeTests() {
     // B2 and B5 use ordinary activity skills whose limited-use counters stay0.
     for (unsigned wave : {1u,4u}) {
@@ -213,4 +291,5 @@ static void EightSessionTests() {
         [session queueStop:@"fixture done"];
     }
     EightResumeTests();
+    EightGuideSessionTests();
 }

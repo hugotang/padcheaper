@@ -4,6 +4,7 @@
 
 struct PHOrbActivityObjective {
     bool firstWaveOnly = false;
+    bool comboPriority = false; // Maximize actual first-removal Combo before style/step cost.
     uint8_t colors = 0, linkLength = 12;
     uint16_t comboWeight = 0, rowWeight = 0, linkWeight = 0, stepCost = 0;
 };

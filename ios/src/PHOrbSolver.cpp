@@ -677,6 +677,10 @@ bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoi
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
     if (!thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (activity.firstWaveOnly) {
+        if (activity.comboPriority) {
+            if (ar.firstWaveCombos != br.firstWaveCombos) return ar.firstWaveCombos > br.firstWaveCombos;
+            if (ar.erased != br.erased) return ar.erased > br.erased;
+        }
         const int av = ar.activityValue - int(a.length - 1) * activity.stepCost;
         const int bv = br.activityValue - int(b.length - 1) * activity.stepCost;
         if (av != bv) return av > bv;
@@ -733,7 +737,8 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
     const auto order = [focus, thornComboPriority, &context](const Node &a, const Node &b) {
         return BetterForSearch(a, b, focus, thornComboPriority, context.allowPoisonWithHeartFour, context.activity);
     };
-    if (!context.shapeGoals || keep < 4 || keep == next.size()) {
+    const bool comboSearch = context.activity.firstWaveOnly && context.activity.comboPriority;
+    if ((!context.shapeGoals && !comboSearch) || keep < 4 || keep == next.size()) {
         std::partial_sort(next.begin(), next.begin() + keep, next.end(), order);
         next.resize(keep); beam.swap(next); return;
     }
@@ -776,7 +781,8 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
         const size_t cap = std::min(size_t(128), keep);
         std::unordered_set<uint64_t> alternatives;
         for (size_t i = 0; i < next.size() && discarded->size() < cap; ++i)
-            if (!selected[i] && alternatives.insert(LayoutKey(next[i], context)).second) discarded->push_back(next[i]);
+            if (!selected[i] && alternatives.insert(comboSearch ? Hash(next[i],context.width * context.height) :
+                    LayoutKey(next[i], context)).second) discarded->push_back(next[i]);
     }
     // Interleave reserved candidates so a deadline halfway through the next
     // layer can still explore them instead of expanding all elites first.
@@ -892,7 +898,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         visited.reserve(options.beam * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
         const bool recover = context.shapeGoals && options.recoveryPasses;
-        const bool retain = context.shapeGoals && options.backtrackLimit && options.steps >= 12;
+        const bool comboSearch = context.activity.firstWaveOnly && context.activity.comboPriority;
+        const bool retain = (context.shapeGoals || comboSearch) && options.backtrackLimit && options.steps >= 12;
+        unsigned comboUpper = 0, comboCounts[PHOrbTypes] = {0};
+        for (unsigned i = 0; i < size; ++i) if (!(context.unmatchable & (1u << initial[i]))) ++comboCounts[initial[i]];
+        const unsigned comboGroup = std::max(context.minErase,context.minMatch);
+        for (unsigned count : comboCounts) comboUpper += count / comboGroup;
+        if (context.variants > 1) comboUpper = size / comboGroup;
         bool stableShapeRecovery = context.variants > 1 && context.shapeGoals > 1;
         for (unsigned g = 0; g < options.goals.count; ++g)
             if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
@@ -957,7 +969,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 // Keep at most two small frontiers from early and middle
                 // depths. These are genuinely discarded nodes, not copies
                 // of the beam that the first pass already expanded.
-                const bool checkpoint = saveFrontiers && !met() && saved.size() < options.backtrackLimit &&
+                const bool checkpoint = saveFrontiers && (!met() || comboSearch) && saved.size() < options.backtrackLimit &&
                     (depth + 1 == options.steps / 4 || depth + 1 == options.steps / 2);
                 if (checkpoint) {
                     Frontier frontier{depth + 1, {}};
@@ -979,6 +991,15 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 const unsigned needed = Needed(goal, board.width, board.height) * goal.count;
                 if (needed > largestShape) { largestShape = needed; primaryFocus = g; }
             }
+        }
+        if (comboSearch) {
+            // Keep the compact baseline beam as a candidate source before
+            // adding diverse starts. Both passes share the original deadline,
+            // and final selection always uses the strict Combo-first order.
+            // Diversity must not discard a route the ordinary beam can find.
+            Context baseline = context; baseline.activity.comboPriority = false;
+            beam = starts;
+            search(baseline, 0, primaryFocus, primaryDeadline, false);
         }
         beam = starts;
         search(context, 0, primaryFocus, primaryDeadline, retain);
@@ -1006,7 +1027,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             beam = starts;
             search(recovery, 0, found ? best.score.focus : 0, recoveryDeadline, false);
         }
-        while (!saved.empty() && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
+        while (!saved.empty() && (!met() || (comboSearch && best.score.result.firstWaveCombos < comboUpper)) &&
+               !timedOut && !cancel.load(std::memory_order_relaxed)) {
             auto frontier = std::move(saved.back()); saved.pop_back();
             const auto now = Clock::now();
             if (now >= deadline) { timedOut = true; break; }

@@ -1,5 +1,75 @@
 #include "orb_eight_fixture.h"
+static void EightGuideProfilesTests(void) {
+    NSDictionary *profile = EightGuideProfileFixture(YES), *activity = profile[@"activity"];
+    NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),PHOrbExportProfileData(profile,NULL),NULL);
+    Check(PHOrbEightGuideEnabled(library[@"profiles"][0][@"activity"]) &&
+        [library[@"profiles"][0][@"activity"] isEqual:activity],"guide switch and ordered branches survive portable export/import");
+    NSMutableDictionary *legacy = [activity mutableCopy]; [legacy removeObjectForKey:@"guide"];
+    NSMutableArray *floors = [legacy[@"floors"] mutableCopy]; NSMutableDictionary *first = [floors[0] mutableCopy];
+    [first removeObjectForKey:@"comboPriority"]; floors[0] = first; legacy[@"floors"] = floors;
+    Check(PHOrbEightActivityValid(legacy) && !PHOrbEightGuideEnabled(legacy),"legacy activity remains valid and cannot silently enable guide skills");
+    for (NSDictionary *bad in @[@{@"enabled":@YES,@"floors":@[]},
+        @{@"enabled":@YES,@"floors":activity[@"guide"][@"floors"],@"script":@"x"}]) {
+        NSMutableDictionary *invalid = [activity mutableCopy]; invalid[@"guide"] = bad;
+        Check(!PHOrbEightActivityValid(invalid),"guide must cover exactly the activity floors and cannot contain extra instructions");
+    }
+    for (id bad in @[@1,@0,@"true",NSNull.null]) {
+        NSMutableDictionary *invalid = [activity mutableCopy], *guide = [activity[@"guide"] mutableCopy];
+        guide[@"enabled"] = bad; invalid[@"guide"] = guide;
+        Check(!PHOrbEightActivityValid(invalid),"guide permission requires an actual JSON Boolean");
+        invalid = [activity mutableCopy]; first = [floors[0] mutableCopy]; first[@"comboPriority"] = bad;
+        NSMutableArray *invalidFloors = [floors mutableCopy]; invalidFloors[0] = first; invalid[@"floors"] = invalidFloors;
+        Check(!PHOrbEightActivityValid(invalid),"Combo priority rejects malformed Boolean values");
+    }
+    for (NSDictionary *bad in @[@{@"slots":@[@2,@2],@"requireInventory":@NO},
+        @{@"slots":@[@5],@"requireInventory":@NO},@{@"slots":@[@0],@"requireInventory":@NO},
+        @{@"slots":@[@2],@"requireInventory":@1},@{@"slots":@[@2],@"requireInventory":@NO,@"script":@"x"}]) {
+        NSMutableDictionary *invalid = [activity mutableCopy], *guide = [activity[@"guide"] mutableCopy];
+        NSMutableArray *guideFloors = [guide[@"floors"] mutableCopy]; guideFloors[1] = @[bad]; guide[@"floors"] = guideFloors;
+        invalid[@"guide"] = guide; Check(!PHOrbEightActivityValid(invalid),"guide rejects duplicate, opponent, invalid slots and extra instructions");
+    }
+    PHOrbSnapshot s = {0}; s.board.width = 6; s.board.height = 5; EightTeamFixture(&s,profile);
+    for (unsigned i = 0; i < 30; ++i) s.board.types[i] = i < 15 ? 0 : 4;
+    Check(!PHOrbEightGuideDecision(EightGuideProfileFixture(NO)[@"activity"],&s,0,0),"disabled guide does not request any opener");
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] count] == 0,"B1 maximizes Combo without a guide skill");
+    for (unsigned wave = 1; wave <= 3; ++wave) {
+        s.wave = wave; unsigned slot = wave == 3 ? 1 : wave + 1;
+        Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@(slot)]],
+            "B2/B3/B4 opener runs even when the board already meets its match goal");
+    }
+    s.wave = 1; s.automation.members[1].charge = 0;
+    Check(![PHOrbEightGuideDecision(activity,&s,0,0)[@"available"] boolValue],"required unavailable guide skill cannot silently become a puzzle");
+    Check([PHOrbEightGuideDecision(activity,&s,2,2)[@"sequence"] count] == 0,"confirmed guide skill survives cooldown and attempted mask");
+    EightTeamFixture(&s,profile); s.wave = 3; s.automation.members[0].charge = 0;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@6]],"B4 can use the independently ready second Sonia");
+    s.automation.members[0].charge = 20;
+    Check([PHOrbEightGuideDecision(activity,&s,32,32)[@"sequence"] count] == 0,"completed alternative prevents spending the other Sonia after profile changes");
+    s.wave = 4;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@6]],"B5 preserves Ney if generation can supply twelve");
+    for (unsigned i = 0; i < 30; ++i) s.board.types[i] = i % 6;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@6]],"B5 uses Ney then Sonia if generation alone lacks twelve");
+    s.automation.members[3].charge = 0;
+    Check([PHOrbEightGuideDecision(activity,&s,8,8)[@"sequence"] isEqual:@[@6]],"paused B5 resumes only the remainder of the confirmed prefix");
+    // Synthetic equivalent inventory exercises both missing B5 rescue slots.
+    s.board.types[1] = 0; // Six fire, five dark, four water.
+    s.automation.members[5].charge = 0; NSUInteger cursor = 0;
+    Check([PHOrbEightSkillSequence(activity,&s,0,&cursor) isEqual:@[@1]],"B5 can rescue with independent first Sonia while Ney and second Sonia recharge");
+    s.automation.members[0].charge = 0;
+    for (unsigned i = 0; i < 30; ++i) s.board.types[i] = i < 6 ? 0 : i < 13 ? 1 : i < 18 ? 4 : 5;
+    cursor = 0;
+    Check([PHOrbEightSkillSequence(activity,&s,0,&cursor) isEqual:@[@2]],"B5 can rescue six fire plus seven water with Kagutsuchi alone");
+    EightTeamFixture(&s,profile); s.wave = 5;
+    s.enemyCombo.turns[0] = 1; s.enemyCombo.thresholds[0] = 5;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@2]],"B6 uses retained Ney before Kagutsuchi");
+    s.automation.members[3].charge = 0;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@2]],"B6 can skip spent Ney when current conversion has adequate inventory");
+    s.automation.members[3].charge = 20;
+    Check([PHOrbEightGuideDecision(activity,&s,2,2)[@"sequence"] count] == 0,"confirmed Kagutsuchi cannot be followed by an out-of-order Ney");
+    s.automation.members[1].charge = s.automation.members[3].charge = 0;
+    Check(![PHOrbEightGuideDecision(activity,&s,0,0)[@"available"] boolValue],"B6 never creates an unsupported wait turn for unavailable guide skills");
+}
 static void EightProfilesTests(void) {
+    EightGuideProfilesTests();
     NSDictionary *profile = EightProfileFixture();
     Check(profile && PHOrbEightActivityValid(profile[@"activity"]),"portable 8P activity validates independently of ordinary team skills");
     NSData *data = PHOrbExportProfileData(profile,NULL);

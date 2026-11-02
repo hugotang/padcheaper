@@ -23,6 +23,9 @@
             @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
         @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),
         @"attemptedSlots":@(_eightAttemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
+        @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightGuidePrepared),
+        @"guideSequence":@(_eightSequenceGuide),@"floorSkillMask":@(_live.wave < _eightFloorSkillMask.size() ? _eightFloorSkillMask[_live.wave] : 0),
+        @"firstPuzzle":_eightFirstPuzzle ?: @{},
         @"lastStop":_eightLastStop ?: @{}};
 }
 
@@ -41,6 +44,8 @@
         _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillBefore = _eightSkillAfter = _eightLastObserved = {};
         _eightDiscardSequence = _eightPausedResolve = false;
         _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
+        _eightGuidePrepared = _eightSequenceGuide = false; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
+        _eightFirstPuzzle = nil;
         _eightResumes = 0; _eightLastStop = nil;
         _autoTurn = 1; _autoMoves = _autoSkills = 0;
         [_automationLog removeAllObjects];
@@ -139,6 +144,7 @@
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
         _eightHistory = _live;
         _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
+        _eightGuidePrepared = _eightSequenceGuide = false;
         [self waitForAutomationBoard]; return;
     }
     if (_eightSkillPending) {
@@ -148,6 +154,8 @@
         _eightSkillPending = false;
         if (_eightSequenceStep < _eightSequence.count) ++_eightSequenceStep;
         ++_autoSkills;
+        if (_eightSkillBefore.wave < _eightFloorSkillMask.size())
+            _eightFloorSkillMask[_eightSkillBefore.wave] |= uint8_t(1u << _eightSlot);
         [self logAutomation:[NSString stringWithFormat:@"B%u：位置 %lu 技能已確認完成",_eightSkillBefore.wave + 1,(unsigned long)_eightSlot + 1]];
         if (!_eightPausedResolve && _live.wave == _eightSkillBefore.wave && _live.multiplayer.turnSerial == _eightSkillBefore.multiplayer.turnSerial &&
             _eightSkillSettled && PHOrbSamePlanBoard(&_eightSkillAfter.board,&_live.board) &&
@@ -161,12 +169,30 @@
         if (newTurn || _eightDiscardSequence || !PHOrbSamePlanBoard(&_eightHistory.board,&_live.board) ||
             _eightHistory.automation.skillUses != _live.automation.skillUses) {
             _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0;
-            if (newTurn) { ++_autoTurn; _eightAttemptedSlots = 0; }
+            _eightGuidePrepared = _eightSequenceGuide = false;
+            if (newTurn) {
+                ++_autoTurn; _eightAttemptedSlots = 0;
+                if (_eightHistory.wave < _eightFloorSubmitted.size()) _eightFloorSubmitted[_eightHistory.wave] = true;
+            }
             [self logAutomation:@"接續時盤面、回合或策略已改變，依目前盤面重新規劃"];
         }
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
     }
     _eightHistory = _live;
+    if (!_eightGuidePrepared && PHOrbEightGuideEnabled(_activeProfile[@"activity"])) {
+        _eightGuidePrepared = true;
+        if (_live.wave >= _eightFloorSubmitted.size()) { [self queueStop:@"已超出攻略樓層上限"]; return; }
+        if (!_eightFloorSubmitted[_live.wave]) {
+            NSDictionary *decision = PHOrbEightGuideDecision(_activeProfile[@"activity"],&_live,
+                _eightFloorSkillMask[_live.wave],_eightAttemptedSlots);
+            if (![decision[@"available"] boolValue]) {
+                _eightGuidePrepared = false; [self queueStop:decision[@"message"]]; return;
+            }
+            _eightSequence = decision[@"sequence"]; _eightSequenceStep = 0; _eightSequenceGuide = _eightSequence.count > 0;
+            if (_eightSequenceGuide) [self logAutomation:[NSString stringWithFormat:
+                @"B%u：攻略開技 %@，完成後再求路",_live.wave + 1,[_eightSequence componentsJoinedByString:@"→"]]];
+        }
+    }
     if (_eightSequenceStep < _eightSequence.count) {
         const NSUInteger slot = [_eightSequence[_eightSequenceStep] unsignedIntegerValue] - 1;
         const auto &m = _live.automation.members[slot];
@@ -203,6 +229,7 @@
     _eightAttemptedSlots |= uint8_t(1u << _eightSlot); _skillWindowWaitAt = 0;
     if (result == PHOrbSkillUnavailable) {
         _eightSequence = nil; _eightSequenceStep = 0;
+        if (_eightSequenceGuide) _eightGuidePrepared = false;
         [self logAutomation:reason ?: @"遊戲判定此技能不可用，重讀盤面後重新求路"];
         [self waitForAutomationBoard]; return;
     }
@@ -226,6 +253,10 @@
         options->activity.rowWeight = [weights[@"row"] unsignedIntValue];
         options->activity.linkWeight = [weights[@"link"] unsignedIntValue];
         options->activity.stepCost = [weights[@"step"] unsignedIntValue];
+        // Older cup profiles without the new key already describe B1 as
+        // combo-only (zero row/link weights). Preserve that intent on upgrade.
+        options->activity.comboPriority = floor[@"comboPriority"] ? [floor[@"comboPriority"] boolValue] :
+            state->wave == 0 && options->activity.comboWeight > 0 && !options->activity.rowWeight && !options->activity.linkWeight;
         return PHOrbEightPlan(a,state);
     }
     // Generic 8P Auto uses only the user's board goals and current absorption;
@@ -254,6 +285,7 @@
     // Only one search budget per observed board; a new search follows an
     // actual skill effect, with a bounded six-slot attempt mask per turn.
     _eightSequence = sequence; _eightSequenceStep = 0;
+    _eightSequenceGuide = false;
     [self clearRoute]; [self waitForAutomationBoard];
     [self logAutomation:[NSString stringWithFormat:@"B%u：本次未找到達標路徑，依活動策略開技後重讀",_live.wave + 1]];
     return YES;

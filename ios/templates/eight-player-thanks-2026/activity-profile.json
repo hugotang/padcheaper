@@ -192,7 +192,8 @@
             "row": 0,
             "link": 0,
             "step": 35
-          }
+          },
+          "comboPriority": true
         },
         {
           "goals": [
@@ -275,6 +276,12 @@
           "sequences": [
             [
               6
+            ],
+            [
+              1
+            ],
+            [
+              2
             ],
             [
               4,
@@ -329,7 +336,93 @@
             "step": 35
           }
         }
-      ]
+      ],
+      "guide": {
+        "enabled": false,
+        "floors": [
+          [],
+          [
+            {
+              "slots": [
+                2
+              ],
+              "requireInventory": false
+            }
+          ],
+          [
+            {
+              "slots": [
+                3
+              ],
+              "requireInventory": false
+            }
+          ],
+          [
+            {
+              "slots": [
+                1
+              ],
+              "requireInventory": false
+            },
+            {
+              "slots": [
+                6
+              ],
+              "requireInventory": false
+            }
+          ],
+          [
+            {
+              "slots": [
+                6
+              ],
+              "requireInventory": true
+            },
+            {
+              "slots": [
+                4,
+                6
+              ],
+              "requireInventory": false
+            },
+            {
+              "slots": [
+                1
+              ],
+              "requireInventory": true
+            },
+            {
+              "slots": [
+                4,
+                1
+              ],
+              "requireInventory": false
+            }
+          ],
+          [
+            {
+              "slots": [
+                4,
+                2
+              ],
+              "requireInventory": false
+            },
+            {
+              "slots": [
+                2
+              ],
+              "requireInventory": true
+            },
+            {
+              "slots": [
+                2,
+                3
+              ],
+              "requireInventory": true
+            }
+          ]
+        ]
+      }
     }
   }
 }

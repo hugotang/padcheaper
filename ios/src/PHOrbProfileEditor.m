@@ -1,5 +1,6 @@
 #import "PHOrbProfileEditor.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbEight.h"
 #import "PHOrbPlanning.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
@@ -54,6 +55,7 @@
     self.view.backgroundColor = UIColor.systemBackgroundColor; self.view.accessibilityIdentifier = @"padcheaper.orbsProfileEditor";
     UILabel *title = [self label:@"隊伍／關卡策略"]; title.font = [UIFont boldSystemFontOfSize:22];
     UIButton *cancel = [self button:@"取消"]; [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
+    cancel.accessibilityIdentifier = @"padcheaper.orbsProfileCancel";
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]]; header.spacing = 12;
     header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
     UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO;
@@ -129,6 +131,28 @@
         [choices addObject:action];
     }
     choose.menu = [UIMenu menuWithTitle:@"選擇要編輯及使用的策略" children:choices]; [self.rows addArrangedSubview:choose];
+    if (record[@"activity"]) {
+        NSDictionary *guide = record[@"activity"][@"guide"];
+        UISwitch *guideSwitch = [UISwitch new]; guideSwitch.on = PHOrbEightGuideEnabled(record[@"activity"]);
+        guideSwitch.enabled = guide != nil;
+        guideSwitch.accessibilityIdentifier = @"padcheaper.orbsEightGuideSkills";
+        guideSwitch.accessibilityLabel = @"按 GameWith 樓層攻略開技";
+        __weak UISwitch *weakGuideSwitch = guideSwitch;
+        [guideSwitch addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+            NSMutableDictionary *activity = [record[@"activity"] mutableCopy];
+            NSMutableDictionary *changed = [activity[@"guide"] mutableCopy];
+            if (!changed) return;
+            changed[@"enabled"] = @(weakGuideSwitch.on); activity[@"guide"] = changed; record[@"activity"] = activity;
+        }] forControlEvents:UIControlEventValueChanged];
+        UIStackView *guideRow = [[UIStackView alloc] initWithArrangedSubviews:
+            @[[self label:@"按 GameWith 樓層攻略開技"],guideSwitch]];
+        guideRow.spacing = 12; guideRow.alignment = UIStackViewAlignmentCenter; [self.rows addArrangedSubview:guideRow];
+        UILabel *guideHelp = [self label:guide ?
+            @"開啟：先完成本層指定技能再求路，可減少攻擊珠不足造成的多回合。關閉：現盤達標就轉，失敗才選救盤技能。儲存並選用後生效。B1 一律優先高 Combo。" :
+            @"本策略未含攻略開技分支；匯入新版活動 JSON 後可啟用。B1 仍優先高 Combo。"];
+        guideHelp.accessibilityIdentifier = @"padcheaper.orbsEightGuideHelp";
+        [self.rows addArrangedSubview:guideHelp];
+    }
     UISwitch *autoSelect = [UISwitch new]; autoSelect.on = [self.draft[@"autoSelect"] boolValue];
     autoSelect.accessibilityIdentifier = @"padcheaper.orbsProfileAutoSelect"; __weak UISwitch *weakSwitch = autoSelect;
     [autoSelect addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {

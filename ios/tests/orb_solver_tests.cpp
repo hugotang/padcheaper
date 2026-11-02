@@ -18,7 +18,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 
 // Independent oracle: scan complete runs, union marked neighbors, then rebuild
 // each column from its survivors. It does not call the production evaluator.
-static std::pair<unsigned, unsigned> Oracle(const PHOrbBoard &board) {
+static std::pair<unsigned, unsigned> Oracle(const PHOrbBoard &board, bool firstOnly = false) {
     const unsigned w = board.width, h = board.height, n = w * h;
     std::vector<int> cells(board.types, board.types + n);
     unsigned combos = 0, erased = 0;
@@ -47,6 +47,7 @@ static std::pair<unsigned, unsigned> Oracle(const PHOrbBoard &board) {
         std::set<unsigned> groups;
         for (unsigned i : marked) { groups.insert(root(i)); cells[i] = -1; }
         combos += unsigned(groups.size()); erased += unsigned(marked.size());
+        if (firstOnly) return {combos, erased};
         for (unsigned column = 0; column < w; ++column) {
             std::vector<int> survivors;
             for (unsigned row = 0; row < h; ++row) if (cells[row * w + column] >= 0) survivors.push_back(cells[row * w + column]);

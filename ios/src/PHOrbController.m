@@ -2,6 +2,7 @@
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbEight.h"
 #import "PHOrbProfileEditor.h"
 #import "PHOrbRuleEditor.h"
 #import "PHOrbRecoveryEditor.h"
@@ -542,6 +543,8 @@
     self.profileDescription.text = profileMessage.length ? profileMessage : [NSString stringWithFormat:@"%@%@",
         profile[@"name"] ?: @"通用設定", [profiles[@"autoSelect"] boolValue] ? @" · 開始時自動配對" : @""];
     self.profileDescription.textColor = profileMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    if (activity) self.profileDescription.text = [self.profileDescription.text stringByAppendingFormat:@"\n%@ · B1 高 Combo 優先",
+        PHOrbEightGuideEnabled(profile[@"activity"]) ? @"按攻略先開技" : @"現盤優先，缺珠才開技"];
     if ([state[@"opening"][@"count"] unsignedIntegerValue]) self.profileDescription.text =
         [self.profileDescription.text stringByAppendingFormat:@"\n開場進度 %@／%@%@", state[@"opening"][@"completed"],
             state[@"opening"][@"count"], [state[@"opening"][@"inFlight"] boolValue] ? @" · 等待確認" : @""];

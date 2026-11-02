@@ -262,6 +262,25 @@ int main(void) {
             "one config roundtrip retains the full team, opener, loop and goals together");
         atomic[@"formations"] = @{};
         Check(!PHConfigurationIsValid(atomic), "invalid embedded formation library rejects the full config");
+        for (NSNumber *enabled in @[@NO,@YES]) {
+            NSData *profileData = [NSData dataWithContentsOfFile:@"ios/templates/eight-player-thanks-2026/activity-profile.json"];
+            NSMutableDictionary *eightPackage = [NSJSONSerialization JSONObjectWithData:profileData options:NSJSONReadingMutableContainers error:NULL];
+            NSMutableDictionary *eightProfile = eightPackage[@"profile"];
+            eightProfile[@"activity"][@"guide"][@"enabled"] = enabled;
+            NSMutableDictionary *eightConfig = [PHDefaultConfiguration() mutableCopy];
+            eightConfig[@"orbProfiles"] = @{@"schema":@1,@"selected":eightProfile[@"id"],@"autoSelect":@NO,@"profiles":@[eightProfile]};
+            eightConfig[@"orbs"] = PHOrbCanonicalSettings(eightProfile[@"settings"]);
+            NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+            NSData *data = [NSJSONSerialization dataWithJSONObject:eightConfig options:0 error:NULL];
+            Check(PHConfigurationIsValid(eightConfig) && [data writeToFile:path options:NSDataWritingAtomic error:NULL],
+                "8P guide preference participates in the full atomic configuration");
+            NSDictionary *reload = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfFile:path] options:0 error:NULL];
+            NSDictionary *selected = PHOrbProfileNamed(PHConfigurationOrbProfiles(reload),eightProfile[@"id"]);
+            Check(PHConfigurationIsValid(reload) && [selected[@"activity"] isEqual:eightProfile[@"activity"]] &&
+                [selected[@"activity"][@"guide"][@"enabled"] isEqual:enabled],
+                "disk reload preserves both guide modes, current selection and complete floor branches");
+            [NSFileManager.defaultManager removeItemAtPath:path error:NULL];
+        }
         printf("Bundle identity and configuration tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

@@ -617,6 +617,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     __block NSString *orbAction = nil;
     __block id orbValue = nil;
     __block NSDictionary *shareDraft = nil, *shareConfig = nil;
+    __block NSDictionary *eightGuideLibrary = nil, *eightGuideDraft = nil;
+    __block NSMutableDictionary *eightGuideState = nil;
     __block NSURL *shareDirectory = nil;
     __block NSURL *dungeonShareDirectory = nil;
     __block UIDocumentPickerViewController *profilePicker = nil;
@@ -1093,6 +1095,90 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         PHProbeStep(@"recovery-retry-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
             PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:wantedHearts],
                 @"Acknowledged recovery retry saves the retained policy and returns keyboard focus to the game");
+            __typeof__(&PHOrbDefaultProfiles) defaults = (__typeof__(&PHOrbDefaultProfiles))dlsym(PHProbeDylib,"PHOrbDefaultProfiles");
+            __typeof__(&PHOrbProfilesImportingData) importing = (__typeof__(&PHOrbProfilesImportingData))dlsym(PHProbeDylib,"PHOrbProfilesImportingData");
+            NSData *data = [NSData dataWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"eight-activity" withExtension:@"json"]];
+            eightGuideLibrary = defaults && importing ? importing(defaults(),data,NULL) : nil;
+            PHProbeCheck(eightGuideLibrary != nil,@"Guide UI starts with the bundled validated activity");
+            eightGuideState = [baseOrbFixture[@"orbState"] mutableCopy];
+            eightGuideState[@"profiles"] = eightGuideLibrary ?: @{}; eightGuideState[@"profileMessage"] = @"";
+            eightGuideState[@"quality"] = @"thorough"; eightGuideState[@"goalMode"] = @"combo";
+            eightGuideState[@"goals"] = @[]; eightGuideState[@"rules"] = @[]; eightGuideState[@"recovery"] = @{@"hpAtMost":@0,@"groups":@1,@"shape":@"match"};
+            orbFixture = @{@"orbState":eightGuideState}; orbAction = nil; orbValue = nil;
+            [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
+            [orbController refresh];
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-off-visible", ^BOOL { return PHProbePresented(orbController,@"padcheaper.orbsProfileEditor",YES); }, ^{
+            UIViewController *editor = orbController.presentedViewController;
+            UISwitch *toggle = (UISwitch *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideSkills");
+            [editor.view layoutIfNeeded];
+            CGRect rect = [toggle convertRect:toggle.bounds toView:orbWindow];
+            PHProbeCheck(toggle.enabled && !toggle.on && CGRectContainsRect(orbWindow.bounds,rect) &&
+                [((UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideHelp")).text containsString:@"儲存並選用"],
+                @"Saved guide switch defaults off and its activation instructions are visible at the top of the editor");
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-guide-off");
+            toggle.on = YES; [toggle sendActionsForControlEvents:UIControlEventValueChanged];
+            NSDictionary *draft = [editor valueForKey:@"draft"];
+            PHProbeCheck([draft[@"profiles"][0][@"activity"][@"guide"][@"enabled"] boolValue] &&
+                ![eightGuideLibrary[@"profiles"][0][@"activity"][@"guide"][@"enabled"] boolValue] && !orbAction,
+                @"Toggling guide changes the reviewable draft only");
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileCancel") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-cancelled", ^BOOL { return PHProbeClosed(orbController,self.window); }, ^{
+            PHProbeCheck(!orbAction && [eightGuideState[@"profiles"] isEqual:eightGuideLibrary],@"Cancelling guide edits preserves the saved selection");
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-save-retry", ^BOOL { return PHProbePresented(orbController,@"padcheaper.orbsProfileEditor",YES); }, ^{
+            UIViewController *editor = orbController.presentedViewController;
+            UISwitch *toggle = (UISwitch *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideSkills");
+            PHProbeCheck(!toggle.on,@"Reopening after Cancel restores the off preference");
+            toggle.on = YES; [toggle sendActionsForControlEvents:UIControlEventValueChanged];
+            eightGuideState[@"profileMessage"] = @"策略未能儲存，仍保留原設定";
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(orbController.presentedViewController == editor && toggle.on &&
+                [((UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsProfileNotice")).text containsString:@"未能儲存"] &&
+                ![eightGuideState[@"profiles"][@"profiles"][0][@"activity"][@"guide"][@"enabled"] boolValue],
+                @"Failed guide save keeps the edited switch and leaves effective preference off");
+            eightGuideDraft = orbValue[@"library"];
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-guide-save-failed");
+            [orbController setValue:[^(NSString *action, id value) {
+                orbAction = action; orbValue = value;
+                if ([action isEqual:@"orbsProfiles"]) {
+                    eightGuideState[@"profiles"] = value[@"library"]; eightGuideState[@"profileMessage"] = @"";
+                    orbFixture = @{@"orbState":eightGuideState};
+                }
+            } copy] forKey:@"action"];
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-saved", ^BOOL { return PHProbeClosed(orbController,self.window); }, ^{
+            PHProbeCheck([eightGuideState[@"profiles"] isEqual:eightGuideDraft] &&
+                [eightGuideDraft[@"profiles"][0][@"activity"][@"guide"][@"enabled"] boolValue],@"Acknowledged guide save publishes the complete floor plan");
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-on-reopened", ^BOOL { return PHProbePresented(orbController,@"padcheaper.orbsProfileEditor",YES); }, ^{
+            UIViewController *editor = orbController.presentedViewController;
+            PHProbeCheck([(UISwitch *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideSkills") isOn],@"Reopening the saved activity keeps guide enabled");
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-guide-on");
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileCancel") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-legacy-open", ^BOOL { return PHProbeClosed(orbController,self.window); }, ^{
+            NSMutableDictionary *library = [NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:eightGuideLibrary options:0 error:NULL]
+                options:NSJSONReadingMutableContainers error:NULL];
+            [library[@"profiles"][0][@"activity"] removeObjectForKey:@"guide"];
+            eightGuideState[@"profiles"] = library; orbFixture = @{@"orbState":eightGuideState}; [orbController refresh];
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsProfileEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-legacy-visible", ^BOOL { return PHProbePresented(orbController,@"padcheaper.orbsProfileEditor",YES); }, ^{
+            UIViewController *editor = orbController.presentedViewController;
+            UISwitch *toggle = (UISwitch *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideSkills");
+            PHProbeCheck(!toggle.enabled && !toggle.on &&
+                [((UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsEightGuideHelp")).text containsString:@"匯入新版"],
+                @"Legacy profile explains the new JSON requirement without inventing guide branches");
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-guide-legacy");
+            [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileCancel") sendActionsForControlEvents:UIControlEventTouchUpInside];
+        }),
+        PHProbeStep(@"eight-guide-finished", ^BOOL { return PHProbeClosed(orbController,self.window); }, ^{
             [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
             profileFailure = [baseOrbFixture[@"orbState"] mutableCopy];
             profileFailure[@"recovery"] = wantedHearts;

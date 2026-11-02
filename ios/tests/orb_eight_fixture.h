@@ -8,6 +8,13 @@ static NSDictionary *EightProfileFixture(void) {
     NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
     return package[@"profile"];
 }
+static NSDictionary *EightGuideProfileFixture(BOOL enabled) {
+    NSMutableDictionary *profile = [EightProfileFixture() mutableCopy];
+    NSMutableDictionary *activity = [profile[@"activity"] mutableCopy];
+    NSMutableDictionary *guide = [activity[@"guide"] mutableCopy];
+    guide[@"enabled"] = @(enabled); activity[@"guide"] = guide; profile[@"activity"] = activity;
+    return profile;
+}
 static void EightTeamFixture(PHOrbSnapshot *s, NSDictionary *profile) {
     memset(&s->automation,0,sizeof(s->automation));
     memset(&s->eight,0,sizeof(s->eight));

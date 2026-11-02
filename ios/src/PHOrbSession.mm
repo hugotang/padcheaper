@@ -367,6 +367,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     NSUInteger _eightSlot, _eightSequenceCursor, _eightSequenceStep;
     uint8_t _eightAttemptedSlots;
     NSArray *_eightSequence;
+    bool _eightGuidePrepared, _eightSequenceGuide;
+    std::array<uint8_t,100> _eightFloorSkillMask{};
+    std::array<bool,100> _eightFloorSubmitted{};
+    NSDictionary *_eightFirstPuzzle;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
@@ -453,6 +457,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"message":_goalPlan[@"enemyCounterMessage"] ?: @"", @"blocker":_goalPlan[@"enemyCounterBlocker"] ?: @"",
         @"stateKnown":@(_preview.enemyCombo.valid), @"survivalKnown":@NO};
     trace[@"stepLimit"] = @(_solveOptions.steps); trace[@"budgetMS"] = @(_solveOptions.milliseconds);
+    if (_eightAutomatic) trace[@"eightPolicy"] = @{@"guideSkills":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),
+        @"comboPriority":@(_solveOptions.activity.comboPriority),@"firstRemovalOnly":@YES,
+        @"leaderAddedCombos":_goalPlan[@"leaderAddedCombos"] ?: @0,@"damageKnown":@NO};
     trace[@"assistRecovery"] = _assistTrace;
     trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
     trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
@@ -594,7 +601,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (skillRunning) _message = [_message stringByAppendingString:@"；已啟動的技能由遊戲完成"];
     if (wasEightAutomatic) _eightLastStop = @{@"reason":_message,@"sessionPhase":_phase,
         @"autoTurn":@(_autoTurn),@"autoMoves":@(_autoMoves),@"autoSkills":@(_autoSkills),
-        @"wave":@(_live.wave),@"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
+        @"wave":@(_live.wave),@"nativePhase":@(_live.phase),@"battleEnded":@(PHOrbBattleEnded(&_live)),
+        @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),
+        @"remainingSeconds":@(_live.multiplayer.remainingSeconds),
+        @"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
          (wasAutomatic && _autoBound && PHBattleSameIdentity(&_dungeonIdentity,&_autoOrigin.identity)))) {
@@ -1815,6 +1825,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                         ++_autoMoves; _sawResolve = ResolvingOrbs(current.phase) ||
                             (_eightAutomatic && current.multiplayer.resolvePending); _hasStable = false;
                         if (_eightAutomatic) {
+                            if (_preview.wave < _eightFloorSubmitted.size()) _eightFloorSubmitted[_preview.wave] = true;
+                            if (!_eightFirstPuzzle && _preview.wave == 0) _eightFirstPuzzle = [_executionHistory.lastObject copy];
                             _eightSubmission = _expected;
                             _eightSubmission.moves = std::max(current.moves,_expected.moves);
                             _eightBoardSubmitted = true;

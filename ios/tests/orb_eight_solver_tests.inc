@@ -1,4 +1,32 @@
+static void EightComboPriorityTests() {
+    auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.activity.firstWaveOnly = options.activity.comboPriority = true; options.activity.colors = 17;
+    options.activity.comboWeight = 1600; options.activity.stepCost = 35;
+    options.goals = Goals(PHOrbGoalMatch,17,1,3); options.goals.comboFirstWave = true;
+    std::atomic_bool cancel{false};
+    // Generated boards only. Baseline minima came from 0.5.21's bounded beam;
+    // the independent run/flood-fill oracle checks every selected route.
+    const unsigned seeds[]{1,2,3,6,7,10,17,20,22,24};
+    const unsigned minimum[]{8,6,7,7,7,8,8,7,8,8};
+    for (unsigned n = 0; n < sizeof(seeds)/sizeof(*seeds); ++n) {
+        const auto board = Board(6,5,seeds[n]); PHOrbRoute route{}; PHOrbBoard replay{};
+        const auto status = PHOrbSolve(board,options,cancel,route);
+        Check(status == PHOrbSolveStatus::Solved && route.count <= options.steps + 1 &&
+            PHOrbReplay(&board,&route,route.count-1,&replay),"B1 priority stays within the original path budget");
+        const auto actual = Oracle(replay,true);
+        Check(actual.first == route.combos && actual.second == route.erased && actual.first >= minimum[n],
+            "B1 generated-board routes meet the baseline and independently replay as first-removal combos");
+    }
+    options.steps = 4; options.milliseconds = 1000; options.backtrackLimit = 0;
+    options.activity.comboWeight = 1; options.activity.stepCost = 10000;
+    auto board = Board(6,5,6); PHOrbRoute priority{}, shortPath{};
+    Check(PHOrbSolve(board,options,cancel,priority) == PHOrbSolveStatus::Solved,"Combo-first search finds a bounded candidate");
+    options.activity.comboPriority = false;
+    Check(PHOrbSolve(board,options,cancel,shortPath) == PHOrbSolveStatus::Solved &&
+        priority.combos > shortPath.combos,"large step penalty cannot buy fewer B1 Combo in priority mode");
+}
 static void EightSolverTests() {
+    EightComboPriorityTests();
     auto s = MultiplayerModelState(8,7), other = s;
     for (uint32_t phase : {28u,29u,30u,31u,67u,68u}) {
         other = s; other.phase = phase;
@@ -72,6 +100,13 @@ static void EightSolverTests() {
     board.types[5] = board.types[11] = 3;
     Check(PHOrbEvaluateWithOptions(board,options,result) && !result.goalsMet && !result.linkGroups[0],
         "less than twelve removed in one group does not satisfy super-link goal");
+    board = ShapeBoard(6,5,{0,1,2,6,7,8,12,13,14,18,19,20});
+    options.goals = Goals(PHOrbGoalMatch,1,1,12);
+    Check(PHOrbEvaluateWithOptions(board,options,result) && result.goalsMet && result.linkGroups[0] == 1 && !result.rowGroups[0],
+        "twelve connected removed orbs need no full horizontal row");
+    board = ShapeBoard(6,5,{0,1,2,3,4,5,18,19,20,21,22,23});
+    Check(PHOrbEvaluateWithOptions(board,options,result) && !result.goalsMet && !result.linkGroups[0] && result.rowGroups[0] == 2,
+        "two separated six-orb rows do not form a twelve-link");
     bool foundCascade = false;
     for (unsigned seed = 1; seed <= 100 && !foundCascade; ++seed) {
         board = Board(6,5,seed); PHOrbEvaluation ordinary{}, first{};

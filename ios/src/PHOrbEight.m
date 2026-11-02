@@ -15,8 +15,28 @@ static BOOL EVector(id values, unsigned lo, unsigned hi) {
     for (id value in values) if (!EInt(value,lo,hi)) return NO;
     return YES;
 }
+static BOOL EBool(id value) {
+    return [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
+}
+static BOOL EOptionalKeys(id value, NSArray *required, NSArray *optional) {
+    if (![value isKindOfClass:NSDictionary.class]) return NO;
+    NSSet *keys = [NSSet setWithArray:[value allKeys]];
+    NSMutableSet *allowed = [NSMutableSet setWithArray:required]; [allowed addObjectsFromArray:optional];
+    return [[NSSet setWithArray:required] isSubsetOfSet:keys] && [keys isSubsetOfSet:allowed];
+}
+static BOOL ESequence(id sequence, NSDictionary *a) {
+    if (![sequence isKindOfClass:NSArray.class] || ![sequence count] || [sequence count] > 6) return NO;
+    unsigned mask = 0;
+    for (id value in sequence) {
+        if (!EInt(value,1,6)) return NO;
+        unsigned slot = [value unsignedIntValue] - 1;
+        if ((mask & (1u << slot)) || [a[@"members"][slot][@"effect"] isEqual:@"observe"]) return NO;
+        mask |= 1u << slot;
+    }
+    return YES;
+}
 BOOL PHOrbEightActivityValid(id a) {
-    if (!EKeys(a,@[@"schema",@"mode",@"width",@"height",@"source",@"members",@"leader",@"floors"]) ||
+    if (!EOptionalKeys(a,@[@"schema",@"mode",@"width",@"height",@"source",@"members",@"leader",@"floors"],@[@"guide"]) ||
         !EInt(a[@"schema"],1,1) || !EInt(a[@"mode"],8,8) || !EInt(a[@"width"],5,7) || !EInt(a[@"height"],4,6) ||
         !PHOrbDimensionsSupported([a[@"width"] unsignedIntValue],[a[@"height"] unsignedIntValue]) ||
         ![a[@"source"] isKindOfClass:NSString.class] || [a[@"source"] length] > 2048 ||
@@ -43,19 +63,21 @@ BOOL PHOrbEightActivityValid(id a) {
         CFGetTypeID((__bridge CFTypeRef)leader[@"noSkyfall"]) != CFBooleanGetTypeID()) return NO;
     for (id f in a[@"floors"]) {
         PHOrbGoalSet goals = {0};
-        if (!EKeys(f,@[@"goals",@"sequences",@"searchMS",@"weights"]) || !PHOrbReadGoals(f[@"goals"],&goals) || !goals.count ||
+        if (!EOptionalKeys(f,@[@"goals",@"sequences",@"searchMS",@"weights"],@[@"comboPriority"]) ||
+            (f[@"comboPriority"] && !EBool(f[@"comboPriority"])) || !PHOrbReadGoals(f[@"goals"],&goals) || !goals.count ||
             !EInt(f[@"searchMS"],50,1000) || ![f[@"sequences"] isKindOfClass:NSArray.class] || [f[@"sequences"] count] > 6 ||
             !EKeys(f[@"weights"],@[@"combo",@"row",@"link",@"step"])) return NO;
         for (id value in [f[@"weights"] allValues]) if (!EInt(value,0,10000)) return NO;
-        for (id sequence in f[@"sequences"]) {
-            if (![sequence isKindOfClass:NSArray.class] || ![sequence count] || [sequence count] > 6) return NO;
-            unsigned mask = 0;
-            for (id value in sequence) {
-                if (!EInt(value,1,6)) return NO;
-                unsigned slot = [value unsignedIntValue] - 1;
-                if ((mask & (1u << slot)) || [a[@"members"][slot][@"effect"] isEqual:@"observe"]) return NO;
-                mask |= 1u << slot;
-            }
+        for (id sequence in f[@"sequences"]) if (!ESequence(sequence,a)) return NO;
+    }
+    id guide = a[@"guide"];
+    if (guide) {
+        if (!EKeys(guide,@[@"enabled",@"floors"]) || !EBool(guide[@"enabled"]) ||
+            ![guide[@"floors"] isKindOfClass:NSArray.class] || [guide[@"floors"] count] != [a[@"floors"] count]) return NO;
+        for (id branches in guide[@"floors"]) {
+            if (![branches isKindOfClass:NSArray.class] || [branches count] > 6) return NO;
+            for (id branch in branches) if (!EKeys(branch,@[@"slots",@"requireInventory"]) ||
+                !EBool(branch[@"requireInventory"]) || !ESequence(branch[@"slots"],a)) return NO;
         }
     }
     return YES;
@@ -132,6 +154,57 @@ static BOOL EInventory(const PHOrbGoalSet *goals, const unsigned counts[6], unsi
         if (available < goal->count) return NO;
     }
     return YES;
+}
+
+BOOL PHOrbEightGuideEnabled(NSDictionary *a) { return [a[@"guide"][@"enabled"] boolValue]; }
+
+NSDictionary *PHOrbEightGuideDecision(NSDictionary *a, const PHOrbSnapshot *s, uint8_t completed, uint8_t attempted) {
+    if (!PHOrbEightGuideEnabled(a)) return nil;
+    if (!s || !s->eight.valid || !s->automation.valid || !s->automation.boardKnown ||
+        s->wave >= [a[@"guide"][@"floors"] count])
+        return @{@"available":@NO,@"message":@"攻略開技需要本層固定技能與盤面資料"};
+    NSArray *branches = a[@"guide"][@"floors"][s->wave];
+    if (!branches.count) return @{@"available":@YES,@"sequence":@[],@"message":@"本層攻略不指定技能"};
+    // A fulfilled alternative wins before considering another ready branch.
+    // Changing profiles after a confirmed cast must not spend a second opener.
+    for (NSDictionary *branch in branches) {
+        unsigned mask = 0;
+        for (NSNumber *value in branch[@"slots"]) mask |= 1u << (value.unsignedIntValue - 1);
+        if ((completed & mask) == mask)
+            return @{@"available":@YES,@"sequence":@[],@"message":@"本層攻略技能已確認完成"};
+    }
+    for (NSDictionary *branch in branches) {
+        NSMutableArray *remaining = [NSMutableArray array]; BOOL ready = YES;
+        for (NSNumber *value in branch[@"slots"]) {
+            unsigned slot = value.unsignedIntValue - 1;
+            if (completed & (1u << slot)) {
+                // Only an already-completed prefix can be resumed. Reversing
+                // Ney -> conversion would replace the converted board.
+                if (remaining.count) { ready = NO; break; }
+                continue;
+            }
+            const PHOrbEightMember *m = &s->eight.members[slot];
+            const PHOrbSkillMember *member = &s->automation.members[slot];
+            if ((attempted & (1u << slot)) || !m->skillKnown || member->bound || member->state || member->charge < m->cooldown) {
+                ready = NO; break;
+            }
+            [remaining addObject:value];
+        }
+        if (!ready) continue;
+        if (remaining.count && [branch[@"requireInventory"] boolValue]) {
+            // Use the same bounded effect feasibility check as recovery. This
+            // chooses the branch only; the resulting board is always reread.
+            NSMutableDictionary *trial = [a mutableCopy];
+            NSMutableArray *floors = [a[@"floors"] mutableCopy];
+            NSMutableDictionary *floor = [floors[s->wave] mutableCopy]; floor[@"sequences"] = @[remaining];
+            floors[s->wave] = floor; trial[@"floors"] = floors;
+            NSUInteger cursor = 0;
+            if (!PHOrbEightSkillSequence(trial,s,attempted,&cursor)) continue;
+        }
+        return @{@"available":@YES,@"sequence":[remaining copy],@"message":@"依本層攻略先開技，再讀盤求路"};
+    }
+    return @{@"available":@NO,@"message":[NSString stringWithFormat:
+        @"B%u：攻略指定技能尚未就緒或無可用分支，未略過開技；可停止後關閉攻略開技選項。",s->wave + 1]};
 }
 
 NSArray *PHOrbEightSkillSequence(NSDictionary *a, const PHOrbSnapshot *s, uint8_t attempted, NSUInteger *cursor) {
