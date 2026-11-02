@@ -46,10 +46,16 @@ static void EightAfterPreparationBoard(FakeOrbEngine *engine) {
     std::copy(std::begin(cells),std::end(cells),engine->live.board.types);
 }
 static void EightPreparationSessionTests() {
-    for (unsigned scenario = 0; scenario < 4; ++scenario) {
+    for (unsigned scenario = 0; scenario < 5; ++scenario) {
         FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
         PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
         EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+        if (scenario == 4) {
+            [session queueStop:@"manual pause before planning"];
+            Check([session.snapshot[@"eightProgress"][@"firstBlocked"] count] == 0,
+                "manual Stop does not consume the first blocked-board evidence");
+            [session queueAutomatic];
+        }
         EightRunUntilRelease(session,engine,1);
         NSDictionary *prepared = session.snapshot[@"eightProgress"][@"preparation"];
         NSDictionary *blocked = session.snapshot[@"eightProgress"][@"firstBlocked"];
@@ -66,7 +72,7 @@ static void EightPreparationSessionTests() {
         if (scenario == 3) engine->live.automation.members[2].charge = 2;
         Tick(session,engine,Frame());
         if (scenario == 1) [session queueAutomatic];
-        if (scenario >= 2) {
+        if (scenario == 2 || scenario == 3) {
             for (unsigned i = 0; i < 500 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
             Check(![session.snapshot[@"automatic"] boolValue] && !engine->skillAttempts && engine->releases == 1,
                 "unexpected next-turn absorption or CD stops without a second preparation");

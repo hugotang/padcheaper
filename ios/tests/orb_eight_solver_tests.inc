@@ -69,6 +69,21 @@ static void EightPreparationSolverTests() {
     options.activity.linkRewardLimit = 0;
     Check(PHOrbEvaluateWithOptions(board,options,value) && value.activityValue == 5000,
         "legacy profiles retain their explicit per-group heuristic");
+    options.activity.linkRewardLimit = 1; options.activity.attackWeights[0] = 3; options.activity.attackWeights[4] = 1;
+    options.activity.attackRowPercent[0] = options.activity.attackRowPercent[4] = 540;
+    options.activity.attackLinkMultiplier = 12; options.activity.attackLinkComboBonus = 2;
+    // Same geometry and number of combos: exchanging the attack colors must
+    // favor more main-color output while preserving a valid dark-link route.
+    const uint8_t mixed[30]{0,0,0,0,0,0, 1,2,1,2,1,2, 4,4,4,4,4,4, 4,4,4,4,4,4, 2,1,2,1,2,1};
+    std::copy(std::begin(mixed),std::end(mixed),board.types);
+    options.goals = Goals(PHOrbGoalMatch,17,1,12);
+    PHOrbEvaluation darkLink{}, fireLink{};
+    Check(PHOrbEvaluateWithOptions(board,options,darkLink) && darkLink.goalsMet && darkLink.linkGroups[4] == 1,
+        "dark link remains eligible with the primary-color contribution policy");
+    for (unsigned i = 0; i < 30; ++i) if (board.types[i] == 0 || board.types[i] == 4) board.types[i] ^= 4;
+    Check(PHOrbEvaluateWithOptions(board,options,fireLink) && fireLink.goalsMet &&
+        fireLink.activityValue > darkLink.activityValue && fireLink.firstWaveCombos == darkLink.firstWaveCombos,
+        "otherwise equivalent layouts prefer the stronger configured main-color contribution");
 }
 static void EightSolverTests() {
     EightPreparationSolverTests();

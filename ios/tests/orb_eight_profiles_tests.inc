@@ -40,6 +40,16 @@ static void EightPreparationProfilesTests(void) {
         p[key] = @1000; g[@"preparation"] = p; bad[@"guide"] = g;
         Check(!PHOrbEightActivityValid(bad),"preparation recipe rejects invalid bounds");
     }
+    for (unsigned bad = 0; bad < 4; ++bad) {
+        NSMutableDictionary *changed = [a mutableCopy]; NSMutableArray *floors = [a[@"floors"] mutableCopy];
+        NSMutableDictionary *floor = [floors[1] mutableCopy], *attack = [floor[@"attack"] mutableCopy];
+        if (bad == 0) attack[@"weights"] = @[@3,@0];
+        if (bad == 1) attack[@"rowPercent"] = @[@540,@0,@0,@0,@540,@10001];
+        if (bad == 2) attack[@"linkMultiplier"] = @0;
+        if (bad == 3) attack[@"linkComboBonus"] = @21;
+        floor[@"attack"] = attack; floors[1] = floor; changed[@"floors"] = floors;
+        Check(!PHOrbEightActivityValid(changed),"relative attack ranking validates every bounded assumption");
+    }
 }
 static void EightGuideProfilesTests(void) {
     NSDictionary *profile = EightGuideProfileFixture(YES), *activity = profile[@"activity"];

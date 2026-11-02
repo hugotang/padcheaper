@@ -615,8 +615,6 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),
         @"remainingSeconds":@(_live.multiplayer.remainingSeconds),
         @"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
-    if (wasEightAutomatic && !_eightFirstBlocked && PHOrbCanPreview(&_live))
-        [self rememberEightBlock:_eightLastStop];
     _eightPreparing = false;
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
@@ -1301,6 +1299,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
         _phase = @"blocked"; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
         [self recordPlanningStatus:@"planning-blocked" reason:_message];
+        if (_eightAutomatic) [self rememberEightBlock:_goalPlan];
         if (_automatic || _oneShot) [self queueStop:_message];
         return;
     }
@@ -1400,6 +1399,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
+            if (session->_eightAutomatic && result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::Cancelled)
+                [session rememberEightBlock:@{@"message":@"本次求路未取得完整輸出路徑",@"search":session->_searchTrace}];
             if (session->_eightAutomatic && (result == PHOrbSolveStatus::InsufficientOrbs ||
                 result == PHOrbSolveStatus::GoalsUnmet || result == PHOrbSolveStatus::NoRoute) &&
                 [session recoverEightSolve]) return;
@@ -1457,6 +1458,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             if (!route.goalsMet) {
                 NSArray<NSDictionary *> *goals = PHOrbGoalsJSON(&checkedOptions.goals);
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];
+                if (checkedOptions.activity.preparation) [missing addObject:
+                    @"未找到只消一組三珠、無後續連鎖且保留轉色珠量足夠的路徑"];
                 for (unsigned g = 0; g < checkedOptions.goals.count; ++g) if (route.goalHits[g] < checkedOptions.goals.items[g].count)
                     [missing addObject:[NSString stringWithFormat:@"未達成：%@（%u／%u）",
                         PHOrbGoalDescription(goals[g]), route.goalHits[g], checkedOptions.goals.items[g].count]];
