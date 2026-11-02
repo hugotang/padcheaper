@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.24-orbs` 加入 [B5兩技優先與改盤後救援](docs/release-0.5.24.md)：攻略先火奈→赤龍女，技能生效後重新考慮先前略過的轉色分支；已有解時，在原剩餘時間內尋找更有利的橫排。B6在保留珠與CD條件有利時優先1C再雙轉色，已就緒則直接雙開；診斷增加最新卡住盤面。需重匯活動JSON。Windows模型／solver已通過，完整手動CI驗證中，尚未交付新版。
+`0.5.24-orbs` 加入 [B5 兩技、B6 條件式準備與改盤後救援](docs/release-0.5.24.md)：攻略先火奈→赤龍女，技能生效後重新考慮先前略過的轉色分支；已有解時，在原剩餘時間內尋找更有利的橫排。B6 在保留珠與 CD 條件有利時優先 1C 再雙轉色，已就緒則直接雙開；診斷增加最新卡住盤面。需重匯活動 JSON。已通過 [CI 116](https://github.com/hugotang/padcheaper/actions/runs/41471306455) 完整回歸、arm64 編譯與四份 GUI，交付 `E:/ipa/PADCheaper-0.5.24-orbs` 及同名 ZIP；真機穩定性待驗證。
 
 `0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；426 組指紋符合原始 IPA，真機待驗收。
 
@@ -82,7 +82,7 @@ bash ios/build.sh
 
 ## Dopamine rootless 安裝
 
-完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.24 的 B5 兩技優先需 [重新匯入活動 JSON](templates/eight-player-thanks-2026/README.md)，開啟攻略開關並儲存；舊 JSON 保留原有策略。
+完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.24 的 B5 兩技優先與 B6 條件式準備需 [重新匯入活動 JSON](templates/eight-player-thanks-2026/README.md)，開啟攻略開關並儲存；舊 JSON 保留原有策略。
 
 ## LiveContainer 安裝
 
