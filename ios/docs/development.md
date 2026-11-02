@@ -4,13 +4,17 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-02：0.5.20-orbs，首次 Auto 與通關停止，待編譯驗證
+## 2026-11-02：0.5.20-orbs，首次 Auto 與通關停止，編譯驗證完成
+
+2026-11-02，`0.5.20-orbs` 已由 [CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。新增案例涵蓋首次展開 PC／轉珠面板、倒數後直接 Auto、無輸入的就緒觀察、通關時取消求路及手勢、晚到回呼不能操作結算、普通換層／下一盤繼續，以及新場不自行恢復。本次首次就緒及通關停止截圖已檢視；426 組指紋符合原始 IPA。GUI 使用真實 Session 與模擬原生 frame，不能代替 PAD 真機同步驗收。
 
 使用者回報 0.5.19 倒數後「轉一次」可按但 Auto 停用。私人診斷確認轉珠 Session 尚未做任何讀盤，而外層已辨認多人模式；Auto 的 8 人就緒條件依賴尚未產生的快照，形成首次啟動阻塞。PC 展開及轉珠面板開啟現在只請求就緒觀察，在原生 frame 以最高 4 Hz 讀盤；不啟動 solver、技能、手勢或戰鬥報告。Auto 點擊仍重新讀取本機窗口。
 
 另回應 Dungeon Clear 後仍等待下一盤：唯讀 IDA 核對 `impl+0x92978` 原生分派，28 為通關準備，29–31 為通關結果／離場，67／68 為對戰結果準備／處理；69 是 8 人下一盤，不能作結束判斷。新增七組原始字節指紋，Session 在已驗證的結束快照立即停止，原生讀取不再要求正在退場的隊員／技能資料。詳見 [0.5.20](release-0.5.20.md) 及 [分析紀錄](../research/orb-auto-readiness-stop-20261102.json)。
 
-已寫入首次讀盤／倒數、讀取與前景失敗、3／4 人限制、Auto 點擊重查、清關停止、晚到 solver 回呼、下一場不自行恢復、真實 Session 與 GUI action 串接的案例。Windows C11/C++17 模型／solver 回歸已通過，426 組指紋與原始 IPA 吻合，manifest 生成與 shell／JSON 靜態檢查通過。尚未完成本版 iPhoneOS 編譯、原生／Session／GUI 與交付驗證；延續使用者「繼續，在你認爲合適的時候編譯測試？」授權進行。舊交付保持原樣，真機待驗收。
+已寫入首次讀盤／倒數、讀取與前景失敗、3／4 人限制、Auto 點擊重查、清關停止、晚到 solver 回呼、下一場不自行恢復、真實 Session 與 GUI action 串接的案例。Windows C11/C++17 模型／solver 回歸已通過，426 組指紋與原始 IPA 吻合，manifest 生成與 shell／JSON 靜態檢查通過。沿用使用者「繼續，在你認爲合適的時候編譯測試？」授權，已由 [CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 完成本版 iPhoneOS 編譯、原生／Session／GUI；交付證據均核對同一來源。舊交付保持原樣，真機待驗收。
+
+二進位來源 `f6bc20142a4484ee8f0cf99a17303e19c0ab637e`；dylib 10,477,552 bytes，最低 iOS 15.0；SHA-256 `49b9da3d5af37221fcbc67a9ead634c6785f1e9b4581f231eff510461f1abcee`。交付目錄為 `E:/ipa/PADCheaper-0.5.20-orbs` 及同名 ZIP。二進位、metadata、manifests、活動範本及研究 JSON 保留同一 CI 原件，文件驗證結果另行提交。研究 JSON 保留源碼提交時的驗證狀態，本節及交付 verification.json 記錄最終結果。Windows 模型／solver 回歸通過，沒有新增效能比較或真機結果；`device_verified=false`。
 
 ## 2026-11-02：0.5.19-orbs，8 人本場 Auto 編譯驗證完成
 

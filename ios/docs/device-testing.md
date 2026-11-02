@@ -2,7 +2,7 @@
 
 ## 0.5.20：首次 Auto 與 Dungeon Clear 停止
 
-本版尚待完成編譯與自動驗證。交付後正常遊玩 8 人時，從重開遊戲開始，只展開 PC 或轉珠面板，不先按「讀盤」或「轉一次」；倒數完成且本機盤面可操作後，Auto 應可直接按。通關後應顯示停止，開始按鈕停用；不需等待其餘玩家或時間歸零。普通換層與 8 人下一盤應繼續，下一場須重新按 Auto。單人同樣核對 Dungeon Clear 即停止。
+[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已完成本版編譯、原生／Session／瀏覽器及四份 GUI 自動驗證。真機尚待驗收；更新後正常遊玩 8 人時，從重開遊戲開始，只展開 PC 或轉珠面板，不先按「讀盤」或「轉一次」；倒數完成且本機盤面可操作後，Auto 應可直接按。通關後應顯示停止，開始按鈕停用；不需等待其餘玩家或時間歸零。普通換層與 8 人下一盤應繼續，下一場須重新按 Auto。單人同樣核對 Dungeon Clear 即停止。
 
 若仍停用，複製當下診斷的 `onceReadiness`／`runtimeReadiness`，核對 `readinessMonitoring`、`readSucceeded`、`nativePhase`、倒數及本機窗口；保留停止原因與版本。模擬器自動測試和真機同步分別記錄，`device_verified=false`。
 
