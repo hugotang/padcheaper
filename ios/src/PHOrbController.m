@@ -335,7 +335,7 @@
 @property(nonatomic, strong) UIButton *editProfiles;
 @property(nonatomic, strong) UILabel *profileDescription;
 @property(nonatomic, strong) UILabel *eightDescription, *helpNote;
-@property(nonatomic, strong) UIButton *helpButton, *copyDiagnosticsButton;
+@property(nonatomic, strong) UIButton *helpButton, *diagnosticsCopyButton;
 @property(nonatomic, strong) UIStackView *actionBar;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
@@ -507,7 +507,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
     note.accessibilityIdentifier = @"padcheaper.orbsHelpNote"; note.hidden = YES; self.helpNote = note;
     self.helpButton = [self button:@"顯示使用說明" selector:@selector(toggleHelp) identifier:@"padcheaper.orbsHelp"];
-    self.copyDiagnosticsButton = [self button:@"複製診斷" selector:@selector(copyDiagnostics) identifier:@"padcheaper.orbsCopyDiagnostics"];
+    self.diagnosticsCopyButton = [self button:@"複製診斷" selector:@selector(copyDiagnostics) identifier:@"padcheaper.orbsCopyDiagnostics"];
     // SF Symbols (all iOS 13+) make the actions distinguishable at a glance.
     // Titles are set explicitly: the filled execute configuration replaced
     // the one built by -button:selector:identifier:.
@@ -517,7 +517,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
         @"wand.and.stars":@[self.editRules,@"編輯自動技能規則"], @"tray.and.arrow.down":@[self.dungeonCaptureButton,@"收集全層資料"],
         @"square.and.arrow.up":@[self.dungeonExportButton,@"匯出關卡 JSON…"], @"chart.bar":@[self.dungeonCompareButton,@"隊伍對比"],
         @"heart":@[self.editRecovery,@"低血時的心珠目標"], @"slider.horizontal.3":@[self.editProfiles,@"隊伍／關卡策略"],
-        @"questionmark.circle":@[self.helpButton,@"顯示使用說明"], @"doc.on.doc":@[self.copyDiagnosticsButton,@"複製診斷"]};
+        @"questionmark.circle":@[self.helpButton,@"顯示使用說明"], @"doc.on.doc":@[self.diagnosticsCopyButton,@"複製診斷"]};
     [symbols enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSArray *entry, BOOL *stop) {
         UIButton *button = entry[0]; UIButtonConfiguration *configuration = button.configuration;
         configuration.title = entry[1]; configuration.image = [UIImage systemImageNamed:name];
@@ -545,7 +545,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     [self.view addSubview:actions];
     UIStackView *dungeonActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.dungeonExportButton,self.dungeonCompareButton]];
     dungeonActions.spacing = 10; dungeonActions.distribution = UIStackViewDistributionFillEqually;
-    UIStackView *helpActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.helpButton,self.copyDiagnosticsButton]];
+    UIStackView *helpActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.helpButton,self.diagnosticsCopyButton]];
     helpActions.spacing = 10; helpActions.distribution = UIStackViewDistributionFillEqually;
     // What matters during a battle (state, preview, why it stopped) comes
     // first; settings that are changed between battles follow.
@@ -1028,12 +1028,12 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
 - (void)copyDiagnostics {
     // The same text as the PC panel's diagnostics, including eightProgress.
     UIPasteboard.generalPasteboard.string = self.snapshot()[@"diagnostics"] ?: @"PADCheaper 已載入，尚無診斷資料。";
-    UIButtonConfiguration *configuration = self.copyDiagnosticsButton.configuration;
-    configuration.title = @"已複製診斷"; self.copyDiagnosticsButton.configuration = configuration;
+    UIButtonConfiguration *configuration = self.diagnosticsCopyButton.configuration;
+    configuration.title = @"已複製診斷"; self.diagnosticsCopyButton.configuration = configuration;
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        UIButtonConfiguration *restored = weakSelf.copyDiagnosticsButton.configuration;
-        restored.title = @"複製診斷"; weakSelf.copyDiagnosticsButton.configuration = restored;
+        UIButtonConfiguration *restored = weakSelf.diagnosticsCopyButton.configuration;
+        restored.title = @"複製診斷"; weakSelf.diagnosticsCopyButton.configuration = restored;
     });
 }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations { return UIInterfaceOrientationMaskAll; }
