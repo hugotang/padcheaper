@@ -208,9 +208,15 @@
             [lines addObject:@"開始時會核對六格固定版本技能；技能與吸收狀態變更後重新讀盤。"];
             [self.rows addArrangedSubview:[self label:[lines componentsJoinedByString:@"\n"]]];
         }
-        [self.rows addArrangedSubview:[self label:[NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
+        [self.rows addArrangedSubview:[self label:record[@"activity"] ?
+            @"活動技能及樓層目標請更新活動 JSON；轉珠頁可調整求路品質。" :
+            [NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
             (unsigned long)[settings[@"rules"] count], (unsigned long)[settings[@"goals"] count]]]];
         [self.rows addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
+            NSMutableDictionary *updated = [editor.selected mutableCopy]; updated[@"settings"] = editor.workingSettings;
+            if (!PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[updated]})) {
+                editor.notice.text = @"目前設定與這份策略不相容；8 人活動不使用單人技能、低血補心或武裝 L 規則。"; return;
+            }
             editor.selected[@"settings"] = editor.workingSettings; [editor rebuild];
         }]];
         [self.rows addArrangedSubview:[self action:@"複製這份策略" identifier:@"padcheaper.orbsProfileCopy" handler:^(PHOrbProfileEditor *editor) {

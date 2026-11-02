@@ -368,7 +368,7 @@
     [self.view addSubview:scroll];
     UILabel *title = [self label:26 weight:UIFontWeightBold]; title.text = @"自動轉珠";
     UILabel *subtitle = [self label:14 weight:UIFontWeightRegular];
-    subtitle.text = @"6×5／7×6／5×4 · 單人連續／多人轉一次";
+    subtitle.text = @"6×5／7×6／5×4 · 單人／8 人本場 Auto";
     self.status = [self label:17 weight:UIFontWeightSemibold]; self.status.accessibilityIdentifier = @"padcheaper.orbsStatus";
     self.boardView = [PHOrbBoardView new];
     self.boardView.layer.cornerRadius = 12; self.boardView.clipsToBounds = YES;
@@ -470,7 +470,7 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
-    note.text = @"連續模式會先依規則使用技能，再讀盤求路；每次放完技能都重新判斷。只處理目前這場單人關卡，離開關卡或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n預計 Combo 不含天降、隊長及 Combo 珠加算；弱化珠照常判定消除，不估算傷害或回復量。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援 Combo／指定形狀／本機隊長盤面的浮動「轉一次」，需在自己的操作窗口按下。完成後停止；操作權切換或未完成同步會取消。多人避開有傷害的荊棘，不讀取單人 HP 預算；連續轉珠及技能規則仍限單人。";
+    note.text = @"單人 Auto 依技能規則處理；8 人 Auto 依選用的活動策略核對固定隊伍、開技及樓層目標，通用設定只轉珠。每次技能生效後重新讀盤。只處理目前這場，結算、離場或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n一般預計 Combo 不含天降、隊長及 Combo 珠加算；8 人活動另列已核對的隊長加算。弱化珠照常判定消除，不估算傷害、回復量或精確總分。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援浮動「轉一次」，需在自己的操作窗口按下，完成後停止。8 人另可按 Auto 接續本場；3／4 人保持轉一次。多人避開有傷害的荊棘；單人技能規則、開場、低血補心與武裝 L 回復不套用至 8 人活動。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
@@ -536,6 +536,8 @@
     self.editProfiles.enabled = [state[@"canSetProfiles"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSDictionary *profiles = state[@"profiles"] ?: PHOrbDefaultProfiles();
     NSDictionary *profile = [state[@"automatic"] boolValue] ? state[@"activeProfile"] : PHOrbProfileNamed(profiles, profiles[@"selected"]);
+    BOOL activity = profile[@"activity"] != nil;
+    BOOL eight = [state[@"eightAutomatic"] boolValue] || [state[@"multiplayer"][@"kind"] unsignedIntValue] == PHOrbMultiplayerEight;
     NSString *profileMessage = state[@"profileMessage"];
     self.profileDescription.text = profileMessage.length ? profileMessage : [NSString stringWithFormat:@"%@%@",
         profile[@"name"] ?: @"通用設定", [profiles[@"autoSelect"] boolValue] ? @" · 開始時自動配對" : @""];
@@ -543,9 +545,11 @@
     if ([state[@"opening"][@"count"] unsignedIntegerValue]) self.profileDescription.text =
         [self.profileDescription.text stringByAppendingFormat:@"\n開場進度 %@／%@%@", state[@"opening"][@"completed"],
             state[@"opening"][@"count"], [state[@"opening"][@"inFlight"] boolValue] ? @" · 等待確認" : @""];
-    self.editRules.enabled = [state[@"canSetRules"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    self.editRules.enabled = !activity && !eight && [state[@"canSetRules"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSMutableArray *ruleLines = [NSMutableArray array];
-    for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];
+    if (activity) [ruleLines addObject:@"技能依活動設定的樓層序列處理；每次生效後重讀盤面。"];
+    else if (eight) [ruleLines addObject:@"8 人通用設定只轉珠；匯入並選用活動策略後才自動開技。"];
+    else for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];
     if (!ruleLines.count) [ruleLines addObject:@"尚無技能規則；開始後只會連續轉珠。"];
     if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
         state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
@@ -574,7 +578,7 @@
     } else self.dungeonDescription.text = @"進入單人關卡後收集本次載入的所有樓層、敵人與行動定義。轉珠及技能操作會暫停收集；資料保留至下一場或程式關閉。";
     self.dungeonNotice.hidden = !self.dungeonNotice.text.length;
     NSMutableArray *decisions = [NSMutableArray array];
-    NSArray *rows = state[@"ruleDecisions"] ?: @[];
+    NSArray *rows = eight ? @[] : state[@"ruleDecisions"] ?: @[];
     if (rows.count) [decisions addObject:[NSString stringWithFormat:@"最近技能判斷 · 第 %@ 回合", state[@"decisionTurn"] ?: @0]];
     if (rows.count && state[@"decisionContextCurrent"] && ![state[@"decisionContextCurrent"] boolValue])
         [decisions addObject:@"以下保留先前技能判斷；目前戰鬥尚未確認或隊長已變更。"];
@@ -590,7 +594,7 @@
     }
     self.decisionDescription.text = [decisions componentsJoinedByString:@"\n"];
     self.decisionDescription.hidden = !decisions.count;
-    self.editRecovery.enabled = [state[@"canSetRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    self.editRecovery.enabled = !activity && !eight && [state[@"canSetRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *recoveryMessage = state[@"recoveryMessage"];
     NSMutableArray *recoveryLines = [NSMutableArray arrayWithObject:PHOrbRecoveryDescription(state[@"recovery"] ?: PHOrbDefaultRecovery())];
     if ([state[@"recoveryStatus"] length]) {
@@ -631,7 +635,7 @@
         @"目前避免一般毒及猛毒消除。確認這隊首消心四連可充分回血後開啟；設定會與目前策略一同儲存。";
     self.poisonDescription.textColor = poisonMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.assistRecoveryL.on = [state[@"assistRecoveryL"] boolValue];
-    self.assistRecoveryL.enabled = [state[@"canSetAssistRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    self.assistRecoveryL.enabled = !activity && !eight && [state[@"canSetAssistRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *assistMessage = state[@"assistRecoveryMessage"];
     NSString *assistStatus = state[@"assistRecoveryStatus"];
     self.assistRecoveryDescription.text = assistMessage.length ? assistMessage : assistStatus.length ? assistStatus :
@@ -640,7 +644,7 @@
     NSString *mode = state[@"goalMode"] ?: @"combo";
     NSUInteger modeIndex = [@[@"combo", @"manual", @"leaders"] indexOfObject:mode];
     self.goalMode.selectedSegmentIndex = modeIndex == NSNotFound ? 0 : (NSInteger)modeIndex;
-    self.goalMode.enabled = [state[@"canSetGoals"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
+    self.goalMode.enabled = !activity && [state[@"canSetGoals"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     BOOL leaderMode = [mode isEqual:@"leaders"];
     BOOL liveLeaders = leaderMode && [state[@"multiplayerActive"] boolValue] && ![state[@"busy"] boolValue];
     NSDictionary *plan = (liveLeaders ? state[@"liveLeaderPlan"] : state[@"goalPlan"]) ?: @{};
@@ -652,7 +656,9 @@
     NSArray *activeGoals = plan[@"goals"], *hits = state[@"goalHits"];
     BOOL hasGoalResults = !liveLeaders && [state[@"path"] count] && activeGoals.count && hits.count == activeGoals.count;
     NSMutableArray *goalLines = [NSMutableArray array];
-    if (leaderMode) {
+    if (activity && !hasGoalResults) {
+        [goalLines addObject:plan[@"message"] ?: @"盤面目標依活動設定的樓層處理；開始後核對本層狀態。"];
+    } else if (leaderMode) {
         [goalLines addObjectsFromArray:plan[@"leaders"] ?: @[]];
         if (!hasGoalResults) [goalLines addObject:plan[@"message"] ?: @"讀盤後，從目前隊長／助人帶入可辨識的盤面條件。"];
         [goalLines addObjectsFromArray:plan[@"unsupported"] ?: @[]];

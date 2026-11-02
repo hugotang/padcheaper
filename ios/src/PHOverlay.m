@@ -248,7 +248,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.filterToggle = [self button:@"單人入口設定 · mode／source" action:@selector(toggleFilters)
         identifier:@"padcheaper.filtersOpen"];
     UILabel *soloOnly = PHLabel(12, UIFontWeightRegular);
-    soloOnly.text = @"套隊、補回、還原及數值寫入僅限單人。3／4／8 人可在自己的盤面使用浮動「轉一次」。";
+    soloOnly.text = @"套隊、補回、還原及數值寫入僅限單人。3／4／8 人可用浮動「轉一次」；8 人另支援本場 Auto。";
     soloOnly.accessibilityIdentifier = @"padcheaper.singlePlayerOnly";
     self.filterSettings = [[UIStackView alloc] initWithArrangedSubviews:@[
         [self switchRow:@"允許所有 mode" key:@"allowAllModes"], [self filterButton:@"編輯 mode 清單" key:@"entryModes"],
@@ -627,7 +627,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.orbAutoShortcut.enabled = orbBusy || [orbs[@"canStart"] boolValue];
     [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"開始自動" forState:UIControlStateNormal];
     NSString *stopLabel = [orbs[@"automatic"] boolValue] ? @"停止自動轉珠" : @"停止本次轉珠";
-    self.orbAutoShortcut.accessibilityLabel = orbBusy ? stopLabel : @"開始自動轉珠，沿用目前技能規則";
+    self.orbAutoShortcut.accessibilityLabel = orbBusy ? stopLabel : @"開始自動轉珠，沿用目前策略";
     self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor colorWithRed:0.62 green:0.12 blue:0.15 alpha:0.96] :
         [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
     NSString *orbMessage = [orbs[@"message"] isKindOfClass:NSString.class] ? orbs[@"message"] : @"";
@@ -641,7 +641,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.orbOnceShortcut.accessibilityHint = [orbs[@"multiplayerMessage"] length] ? orbs[@"multiplayerMessage"] :
         @"讀取目前盤面並執行一條路徑";
     self.orbAutoShortcut.accessibilityHint = !orbBusy && [orbs[@"multiplayerActive"] boolValue] ?
-        @"多人只支援轉一次" : @"";
+        ([orbs[@"eightAutoAvailable"] boolValue] ? @"8 人 Auto 連續處理本場，結算時停止" : @"請查看目前多人操作狀態") : @"";
     self.orbShortcutStatus.hidden = shortcutsHidden || !orbMessage.length ||
         ([orbs[@"phase"] isEqual:@"idle"] && ![orbs[@"multiplayerActive"] boolValue]);
     if (orbBusy) {

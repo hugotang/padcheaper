@@ -687,12 +687,17 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             NSMutableDictionary *eightState = [baseOrbFixture[@"orbState"] mutableCopy];
             eightState[@"profiles"] = eightLibrary ?: PHOrbDefaultProfiles();
             eightState[@"multiplayerActive"] = @YES; eightState[@"canExecute"] = @NO;
+            eightState[@"multiplayer"] = @{@"kind":@(PHOrbMultiplayerEight)}; eightState[@"eightAutoAvailable"] = @YES;
             eightState[@"phase"] = @"idle"; eightState[@"message"] = @"8 人大感謝祭 2026 杯";
             eightState[@"multiplayerMessage"] = @"可轉一次，或按 Auto 連續處理本場\n8 人對戰 · 本機 8／8 · 剩餘 180 秒";
             orbFixture = @{@"orbState":eightState}; [orbController refresh];
             UIButton *eightStart = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStart");
             PHProbeCheck(eightStart.enabled && ![(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsExecute") isEnabled],
                 @"8P exposes match Auto while keeping preview execution separately gated");
+            PHProbeCheck(PHProbeFind(orbWindow,@"padcheaper.orbsRuleEdit") &&
+                ![(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsRuleEdit") isEnabled] &&
+                [((UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsRuleDescription")).text containsString:@"活動設定"],
+                @"8P activity describes its own skills and excludes the solo rule editor");
             [eightStart sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck([orbAction isEqual:@"orbsStart"],@"8P Auto dispatches the explicit existing start action");
             eightState[@"automatic"] = @YES; eightState[@"eightAutomatic"] = @YES;
