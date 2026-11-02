@@ -492,7 +492,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             }
             if (!wave) ++result.firstWaveCombos;
-            if (!wave && color < 6) {
+            if (context.activity.firstWaveOnly && !wave && color < 6) {
                 result.largestGroups[color] = uint8_t(std::max(unsigned(result.largestGroups[color]),count));
                 bool row = false;
                 const Bits rowMask = (Bits(1) << width) - 1;
@@ -610,11 +610,13 @@ Score Evaluate(Cells cells, const Context &context) {
         const auto &b = variant.result;
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
-        a.activityValue = std::min(a.activityValue,b.activityValue);
-        for (unsigned c = 0; c < 6; ++c) {
-            a.rowGroups[c] = std::min(a.rowGroups[c],b.rowGroups[c]);
-            a.linkGroups[c] = std::min(a.linkGroups[c],b.linkGroups[c]);
-            a.largestGroups[c] = std::min(a.largestGroups[c],b.largestGroups[c]);
+        if (context.activity.firstWaveOnly) {
+            a.activityValue = std::min(a.activityValue,b.activityValue);
+            for (unsigned c = 0; c < 6; ++c) {
+                a.rowGroups[c] = std::min(a.rowGroups[c],b.rowGroups[c]);
+                a.linkGroups[c] = std::min(a.linkGroups[c],b.linkGroups[c]);
+                a.largestGroups[c] = std::min(a.largestGroups[c],b.largestGroups[c]);
+            }
         }
         a.poisonErased = std::max(a.poisonErased, b.poisonErased);
         a.mortalPoisonErased = std::max(a.mortalPoisonErased, b.mortalPoisonErased);

@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t firstWaveCombos;
-    uint8_t rowGroups[6], linkGroups[6], largestGroups[6]; // First removal only; shapes, not native score receipts.
+    uint8_t rowGroups[6], linkGroups[6], largestGroups[6]; // Activity-only first removal; not native score receipts.
     int32_t activityValue; // Configured search heuristic, never a predicted match score.
     uint8_t poisonErased, unmatchedBombs, heartFours;
     bool goalsMet, hazardsSafe;
