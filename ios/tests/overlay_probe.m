@@ -731,9 +731,24 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             eightState[@"autoTurn"] = @7; eightState[@"autoMoves"] = @6; eightState[@"autoSkills"] = @4;
             eightState[@"activeProfile"] = eightLibrary[@"profiles"][0] ?: @{};
             eightState[@"multiplayerMessage"] = @"B6：首消 4 Combo＋已核對隊長加算 2\n8 人本場 Auto · 可按停止";
+            eightState[@"eightProgress"] = @{@"sameMatch":@YES,@"floor":@6,@"sequence":@[@2,@3],@"sequenceStep":@1,
+                @"guideSequence":@NO,@"preparation":@{@"status":@"next-turn-confirmed"},
+                @"lastBlocked":@{@"wave":@5,@"decision":@{@"message":@"B6：攻略指定技能無可用分支"}}};
             orbFixture = @{@"orbState":eightState}; [orbController refresh];
             PHProbeCheck(!eightStart.enabled && [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStop") isEnabled],
                 @"8P running state keeps Stop available and prevents a second start");
+            UILabel *eightProgressLabel = (UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsEightProgress");
+            PHProbeCheck(eightProgressLabel && !eightProgressLabel.hidden && [eightProgressLabel.text containsString:@"B6 · 第 7 回合"] &&
+                [eightProgressLabel.text containsString:@"救援技能 2→3（已完成 1／2）"] &&
+                [eightProgressLabel.text containsString:@"留珠準備：已確認"] && [eightProgressLabel.text containsString:@"最近卡住（B6）"],
+                @"8P Auto shows floor, sequence, preparation and latest blocked reason at a glance");
+            UILabel *helpNote = (UILabel *)PHProbeFind(orbWindow,@"padcheaper.orbsHelpNote");
+            UIButton *helpButton = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsHelp");
+            PHProbeCheck(helpNote.hidden && helpButton && PHProbeFind(orbWindow,@"padcheaper.orbsCopyDiagnostics"),
+                @"long orb help starts collapsed beside a diagnostics copy action");
+            [helpButton sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!helpNote.hidden,@"help button expands the orb usage notes");
+            [helpButton sendActionsForControlEvents:UIControlEventTouchUpInside];
             UIScrollView *eightScroll = PHProbeScrollParent(PHProbeFind(orbWindow,@"padcheaper.orbsBoard"));
             [eightScroll setContentOffset:CGPointMake(eightScroll.contentOffset.x,-eightScroll.adjustedContentInset.top) animated:NO];
             PHProbeRender(self.window,orbWindow,@"orbs-eight-auto");

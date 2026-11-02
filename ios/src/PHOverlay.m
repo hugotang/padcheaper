@@ -62,6 +62,11 @@
 - (void)updateWithSnapshot:(NSDictionary *)state;
 @end
 
+void PHOverlayHaptic(BOOL stop) {
+    if (stop) [[UINotificationFeedbackGenerator new] notificationOccurred:UINotificationFeedbackTypeWarning];
+    else [[[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium] impactOccurred];
+}
+
 static UILabel *PHLabel(CGFloat size, UIFontWeight weight) {
     UILabel *label = [UILabel new];
     label.font = [UIFont systemFontOfSize:size weight:weight];
@@ -383,6 +388,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     NSDictionary *state = self.snapshot();
     // Stop stays the first action, even when every other control is folded.
     if ([state[@"orbState"][@"busy"] boolValue]) {
+        PHOverlayHaptic(YES);
         self.action(@"orbsStop", nil);
         [self updateWithSnapshot:self.snapshot()];
     } else if (self.shortcutsCollapsed) {
@@ -405,6 +411,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 
 - (void)openPanel {
     if ([self.snapshot()[@"orbState"][@"busy"] boolValue]) {
+        PHOverlayHaptic(YES);
         self.action(@"orbsStop", nil);
         [self updateWithSnapshot:self.snapshot()];
         return;
@@ -429,14 +436,15 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 - (void)runOrbsOnce {
     NSDictionary *state = self.snapshot();
     if (![state[@"orbState"][@"canOnce"] boolValue]) return;
+    PHOverlayHaptic(NO);
     self.action(@"orbsOnce", nil);
     [self updateWithSnapshot:self.snapshot()];
 }
 
 - (void)runOrbsAutomatically {
     NSDictionary *state = self.snapshot();
-    if ([state[@"orbState"][@"busy"] boolValue]) self.action(@"orbsStop", nil);
-    else if ([state[@"orbState"][@"canStart"] boolValue]) self.action(@"orbsStart", nil);
+    if ([state[@"orbState"][@"busy"] boolValue]) { PHOverlayHaptic(YES); self.action(@"orbsStop", nil); }
+    else if ([state[@"orbState"][@"canStart"] boolValue]) { PHOverlayHaptic(NO); self.action(@"orbsStart", nil); }
     [self updateWithSnapshot:self.snapshot()];
 }
 

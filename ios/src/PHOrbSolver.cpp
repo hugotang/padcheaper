@@ -742,6 +742,46 @@ bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoi
     return std::lexicographical_compare(a.path.begin(), a.path.begin() + a.length, b.path.begin(), b.path.begin() + b.length);
 }
 
+// Exact membership of 64-bit candidate keys within one depth. Unlike
+// std::unordered_set it does not allocate per insert, and clear() is O(1).
+class VisitedSet {
+    std::vector<uint64_t> _keys;
+    std::vector<uint32_t> _stamps;
+    uint32_t _generation = 1;
+    size_t _count = 0;
+    static size_t Slot(uint64_t key, size_t mask) { return size_t(key ^ (key >> 31)) & mask; }
+    void grow() {
+        std::vector<uint64_t> keys(_keys.size() * 2);
+        std::vector<uint32_t> stamps(_keys.size() * 2, 0);
+        const size_t mask = keys.size() - 1;
+        for (size_t i = 0; i < _keys.size(); ++i) if (_stamps[i] == _generation) {
+            size_t j = Slot(_keys[i], mask);
+            while (stamps[j]) j = (j + 1) & mask;
+            stamps[j] = 1; keys[j] = _keys[i];
+        }
+        _keys.swap(keys); _stamps.swap(stamps); _generation = 1;
+    }
+public:
+    explicit VisitedSet(size_t expected) {
+        size_t capacity = 64;
+        while (capacity < expected * 2) capacity <<= 1;
+        _keys.resize(capacity); _stamps.assign(capacity, 0);
+    }
+    void clear() {
+        _count = 0;
+        if (++_generation == 0) { std::fill(_stamps.begin(), _stamps.end(), 0); _generation = 1; }
+    }
+    // Returns false when the key was already present in this generation.
+    bool insert(uint64_t key) {
+        if ((_count + 1) * 2 > _keys.size()) grow();
+        const size_t mask = _keys.size() - 1;
+        for (size_t i = Slot(key, mask);; i = (i + 1) & mask) {
+            if (_stamps[i] != _generation) { _stamps[i] = _generation; _keys[i] = key; ++_count; return true; }
+            if (_keys[i] == key) return false;
+        }
+    }
+};
+
 uint64_t Hash(const Node &node, unsigned size) {
     uint64_t hash = 14695981039346656037ULL;
     for (unsigned i = 0; i < size; ++i) {
@@ -941,8 +981,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
         EvaluationCache evaluationCache(context.variants > 1 && context.shapeGoals);
-        std::unordered_set<uint64_t> visited;
-        visited.reserve(options.beam * (options.diagonal ? 8 : 4));
+        // A beam holds at most max(beam, starts, saved frontier) parents.
+        VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
         const bool recover = context.shapeGoals && options.recoveryPasses;
         const bool comboSearch = context.activity.firstWaveOnly && context.activity.comboPriority;
@@ -956,6 +996,24 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         for (unsigned g = 0; g < options.goals.count; ++g)
             if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
         const auto primaryDeadline = recover ? start + (deadline - start) * 2 / 3 : deadline;
+        // Upper bounds for an exact stop: no skyfall, so each colour yields at
+        // most count/group combos and erases at most its own orbs.
+        unsigned erasedUpper = 0;
+        for (unsigned c = 0; c < PHOrbTypes; ++c) if (comboCounts[c] >= comboGroup) erasedUpper += comboCounts[c];
+        if (context.variants > 1) erasedUpper = size;
+        bool contactsPossible = false;
+        for (unsigned i = 0; i < size; ++i) contactsPossible |= budgetKnown && initialThorns[i] != 0;
+        // Deeper candidates are longer than best. When best already holds the
+        // maximum of every Better() key ranked above length, they can only lose.
+        // Activity scores have no known bound and are excluded. Requiring
+        // contact candidates to have been seen keeps the later contact pass
+        // gated exactly as before.
+        const auto cannotImprove = [&](unsigned depth) {
+            if (!found || context.activity.firstWaveOnly || depth + 2 <= best.length) return false;
+            const auto &r = best.score.result;
+            return r.hazardsSafe && r.goalsMet && !r.unmatchedBombs && !r.poisonErased && !best.thornDamage &&
+                r.combos >= comboUpper && r.erased >= erasedUpper && (hadContactCandidates || !contactsPossible);
+        };
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
                           Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false, bool activityRows = false) {
             ++passes;
@@ -964,6 +1022,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             evaluationCache.nextPass();
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
+                if (cannotImprove(depth)) break;
                 next.clear(); visited.clear();
                 for (const Node &parent : beam) {
                     unsigned current = parent.path[parent.length - 1];
@@ -979,7 +1038,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             // A successful main search can spend the remaining
                             // budget improving combos. Otherwise reserve time
                             // for a different score or a discarded frontier.
-                            if (now >= passDeadline && !met()) { passEnded = true; break; }
+                            // Optional row passes run only after a feasible
+                            // route exists, so they must honor their own share.
+                            if (now >= passDeadline && (!met() || activityRows)) { passEnded = true; break; }
                         }
                         if (cell < 0 || !PHOrbMoveAdjacent(current, unsigned(cell), board.width, board.height, options.diagonal) ||
                             (blocked & (Bits(1) << cell)) ||
@@ -993,8 +1054,17 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         child.path[child.length++] = uint8_t(cell);
                         std::swap(child.cells[current], child.cells[cell]);
                         std::swap(child.thorns[current], child.thorns[cell]);
-                        if (!visited.insert(Hash(child, size)).second) continue;
-                        child.score = evaluationCache.score(child.cells, scoring);
+                        if (!visited.insert(Hash(child, size))) continue;
+                        if (depth > firstDepth && child.cells[current] == child.cells[cell]) {
+                            // Parents past the first depth were scored by this
+                            // pass with this context. Only hazardsSafe may have
+                            // been relaxed for a pending heart four; restore the
+                            // exact value Evaluate() assigns.
+                            child.score = parent.score;
+                            child.score.result.hazardsSafe =
+                                ReleaseHazardsSafe(child.score.result, scoring.allowPoisonWithHeartFour);
+                            ++evaluationCache.hits;
+                        } else child.score = evaluationCache.score(child.cells, scoring);
                         const Score guidedScore = child.score;
                         if (activityRows) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
                         hadContactCandidates |= child.thornContacts != 0;
@@ -1097,18 +1167,27 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (met() && context.activity.firstWaveOnly && !context.activity.comboPriority &&
             !context.activity.preparation && context.variants == 1 && options.recoveryPasses &&
             context.goals.count < PHOrbMaxGoals) {
-            unsigned rowPasses = 0;
-            for (unsigned color = 0; color < 6 && rowPasses < 2; ++color) {
-                if (timedOut || cancel.load(std::memory_order_relaxed) || Clock::now() >= deadline) break;
-                if (!context.activity.attackWeights[color] || !context.activity.attackRowPercent[color] ||
-                    !(context.activity.colors & (1u << color)) || comboCounts[color] < board.width ||
-                    best.score.result.rowGroups[color]) continue;
+            // Choose candidates up front so the first color cannot consume
+            // the time reserved for the second; each pass gets an equal share
+            // of what remains (a pass that finishes early leaves its time).
+            unsigned rowColors[2], rowCount = 0;
+            for (unsigned color = 0; color < 6 && rowCount < 2; ++color)
+                if (context.activity.attackWeights[color] && context.activity.attackRowPercent[color] &&
+                    (context.activity.colors & (1u << color)) && comboCounts[color] >= board.width &&
+                    !best.score.result.rowGroups[color]) rowColors[rowCount++] = color;
+            for (unsigned i = 0; i < rowCount; ++i) {
+                const unsigned color = rowColors[i];
+                const auto now = Clock::now();
+                if (timedOut || cancel.load(std::memory_order_relaxed) || now >= deadline) break;
+                // An earlier row pass may already have produced this row.
+                if (best.score.result.rowGroups[color]) continue;
+                const auto passDeadline = now + (deadline - now) / (rowCount - i);
                 PHOrbGoalSet goals = context.goals;
                 goals.items[goals.count++] = {PHOrbGoalRow,uint8_t(1u << color),1,0};
                 auto activity = context.activity; activity.comboPriority = true;
                 const Context rows = MakeContext(board,goals,true,options.allowPoisonWithHeartFour,options.diagonal,activity);
-                beam = starts; ++rowPasses;
-                search(rows,0,goals.count-1,deadline,false,false,true);
+                beam = starts;
+                search(rows,0,goals.count-1,passDeadline,false,false,true);
             }
         }
         // Permitting survivable thorn contacts changes beam competition even

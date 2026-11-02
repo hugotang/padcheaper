@@ -375,6 +375,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     std::array<bool,100> _eightFloorSubmitted;
     NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightLastBlocked, *_eightPreparation, *_eightPreparationTrace;
     bool _eightPreparing, _eightPreparationUsed, _eightPreparationAwaiting;
+    // Priority: the current preparation pre-empted output on this board.
+    // Declined: that preferred search failed; output and rescue keep the
+    // whole board budget and preparation is not retried until a new turn.
+    bool _eightPreparationPriority, _eightPreparationDeclined;
     unsigned _eightPreparationSearchMS;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
@@ -1332,7 +1336,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
     if (_eightAutomatic && !_eightPreparing) {
         _eightPreparationSearchMS = 0;
-        if (!_eightPreparationUsed && _live.wave < _eightFloorSubmitted.size() && !_eightFloorSubmitted[_live.wave] &&
+        if (!_eightPreparationUsed && !_eightPreparationDeclined && _live.wave < _eightFloorSubmitted.size() && !_eightFloorSubmitted[_live.wave] &&
             [PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots)[@"available"] boolValue]) {
             // Both searches on this unchanged board share its original budget.
             _eightPreparationSearchMS = std::min(150u,options.milliseconds / 3);
@@ -1400,10 +1404,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
-            if (session->_eightAutomatic && result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::Cancelled)
+            // A failed preferred preparation is not an output failure: output
+            // was never searched on this board, so fall back instead of stopping.
+            const bool priorityPreparation = session->_eightPreparing && session->_eightPreparationPriority;
+            if (session->_eightAutomatic && result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::Cancelled && !priorityPreparation)
                 [session rememberEightBlock:@{@"message":@"本次求路未取得完整輸出路徑",@"search":session->_searchTrace}];
             if (session->_eightAutomatic && (result == PHOrbSolveStatus::InsufficientOrbs ||
-                result == PHOrbSolveStatus::GoalsUnmet || result == PHOrbSolveStatus::NoRoute) &&
+                result == PHOrbSolveStatus::GoalsUnmet || result == PHOrbSolveStatus::NoRoute ||
+                (priorityPreparation && result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::Cancelled)) &&
                 [session recoverEightSolve]) return;
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";

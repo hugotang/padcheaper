@@ -17,6 +17,18 @@
     }
 }
 
+// Board plan: the skill sequence, its rescue cursor and the guide opener check.
+- (void)resetEightPlan {
+    _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0;
+    _eightGuidePrepared = _eightSequenceGuide = false;
+}
+// Native turn: a new plan, the six-slot attempt mask and any preparation that
+// was declined on the previous turn's board. Add new per-turn state here.
+- (void)resetEightTurn {
+    [self resetEightPlan];
+    _eightAttemptedSlots = 0; _eightPreparationDeclined = false;
+}
+
 - (NSDictionary *)eightProgressTrace {
     const auto &r = _eightLastObserved.eightReceipt;
     return @{@"sameMatch":@(PHOrbSameEightMatch(&_eightHistory,&_live)),@"resumes":@(_eightResumes),
@@ -28,6 +40,7 @@
         @"latestTotalUses":@(_eightLastObserved.automation.skillUses),
         @"receipt":@{@"valid":@(r.valid),@"skill":@(r.skill),@"catalogID":@(r.catalogID),
             @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
+        @"floor":@(_live.wave + 1),@"sequence":_eightSequence ?: @[],
         @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),@"recoveryCursor":@(_eightSequenceCursor),
         @"attemptedSlots":@(_eightAttemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
         @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightGuidePrepared),
@@ -35,6 +48,7 @@
         @"firstPuzzle":_eightFirstPuzzle ?: @{},
         @"firstBlocked":_eightFirstBlocked ?: @{},@"lastBlocked":_eightLastBlocked ?: @{},@"preparation":_eightPreparationTrace ?: @{},
         @"preparationUsed":@(_eightPreparationUsed),@"preparationAwaiting":@(_eightPreparationAwaiting),
+        @"preparationDeclined":@(_eightPreparationDeclined),
         @"lastStop":_eightLastStop ?: @{}};
 }
 
@@ -52,11 +66,11 @@
         _eightHistory = *state; _eightSkillPending = _eightSkillStarted = _eightBoardSubmitted = _sawResolve = false;
         _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillBefore = _eightSkillAfter = _eightLastObserved = {};
         _eightDiscardSequence = _eightPausedResolve = false;
-        _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
-        _eightGuidePrepared = _eightSequenceGuide = false; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
+        [self resetEightTurn]; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
         _eightFirstPuzzle = nil;
         _eightFirstBlocked = _eightLastBlocked = _eightPreparation = _eightPreparationTrace = nil;
         _eightPreparing = _eightPreparationUsed = _eightPreparationAwaiting = false;
+        _eightPreparationPriority = _eightPreparationDeclined = false;
         _eightPreparationSearchMS = 0;
         _eightResumes = 0; _eightLastStop = nil;
         _autoTurn = 1; _autoMoves = _autoSkills = 0;
@@ -156,9 +170,7 @@
         ++_autoTurn; _eightBoardSubmitted = _sawResolve = false;
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
         _eightHistory = _live;
-        _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
-        _eightGuidePrepared = _eightSequenceGuide = false;
-        _eightPreparing = false;
+        [self resetEightTurn]; _eightPreparing = false;
         [self waitForAutomationBoard]; return;
     }
     if (_eightSkillPending) {
@@ -186,10 +198,9 @@
             _eightHistory.multiplayer.turnSerial != _live.multiplayer.turnSerial;
         if (newTurn || _eightDiscardSequence || !PHOrbSamePlanBoard(&_eightHistory.board,&_live.board) ||
             _eightHistory.automation.skillUses != _live.automation.skillUses) {
-            _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0;
-            _eightGuidePrepared = _eightSequenceGuide = false;
+            [self resetEightPlan];
             if (newTurn) {
-                ++_autoTurn; _eightAttemptedSlots = 0;
+                ++_autoTurn; [self resetEightTurn];
                 if (_eightHistory.wave < _eightFloorSubmitted.size()) _eightFloorSubmitted[_eightHistory.wave] = true;
             }
             [self logAutomation:@"接續時盤面、回合或策略已改變，依目前盤面重新規劃"];
@@ -232,11 +243,15 @@
         if (!_eightFloorSubmitted[_live.wave]) {
             NSDictionary *activity = _activeProfile[@"activity"];
             NSDictionary *preparation = PHOrbEightPreparationDecision(activity,&_live,_eightAttemptedSlots);
-            if (!_eightPreparationUsed && [activity[@"guide"][@"preparation"][@"preferBeforeOutput"] boolValue] &&
+            if (!_eightPreparationUsed && !_eightPreparationDeclined &&
+                [activity[@"guide"][@"preparation"][@"preferBeforeOutput"] boolValue] &&
                 [preparation[@"available"] boolValue] && [preparation[@"preferable"] boolValue]) {
                 const unsigned budget = std::min(OptionsForQuality(_quality).milliseconds,
                     [activity[@"floors"][_live.wave][@"searchMS"] unsignedIntValue]);
-                _eightPreparationSearchMS = std::min(150u,budget / 3);
+                // No output search shares this board yet. Give the bounded
+                // 12-step preparation half the floor budget (at least 150 ms);
+                // a failure still leaves turn time for the output fallback.
+                _eightPreparationSearchMS = std::min(budget,std::max(150u,budget / 2));
                 [self beginEightPreparation:preparation priority:YES]; return;
             }
             NSDictionary *decision = PHOrbEightGuideDecision(_activeProfile[@"activity"],&_live,
@@ -370,7 +385,7 @@
 }
 
 - (void)beginEightPreparation:(NSDictionary *)preparation priority:(BOOL)priority {
-    _eightPreparation = preparation; _eightPreparing = true;
+    _eightPreparation = preparation; _eightPreparing = true; _eightPreparationPriority = priority;
     _eightSequence = nil; _eightSequenceStep = 0; _eightSequenceGuide = false;
     _eightPreparationTrace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
         @"priority":@(priority),@"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
@@ -380,7 +395,21 @@
 
 - (BOOL)recoverEightSolve {
     if (!_eightAutomatic || !_activeProfile[@"activity"] || !PHOrbSameAutomation(&_preview,&_live) ||
-        !PHOrbSameEnemyCombo(&_preview.enemyCombo,&_live.enemyCombo) || _eightPreparing) return NO;
+        !PHOrbSameEnemyCombo(&_preview.enemyCombo,&_live.enemyCombo)) return NO;
+    if (_eightPreparing) {
+        // Only a preferred preparation falls back; an ordinary preparation
+        // already follows failed output and ready-skill searches.
+        if (!_eightPreparationPriority || _eightPreparationUsed) return NO;
+        _eightPreparing = _eightPreparationPriority = false; _eightPreparationDeclined = true;
+        _eightPreparationSearchMS = 0;
+        NSMutableDictionary *trace = [_eightPreparationTrace mutableCopy] ?: [NSMutableDictionary dictionary];
+        trace[@"status"] = @"priority-declined"; trace[@"search"] = _searchTrace ?: @{};
+        _eightPreparationTrace = [trace copy];
+        _eightSequence = nil; _eightSequenceStep = 0; _eightSequenceGuide = false; _eightGuidePrepared = false;
+        [self clearRoute]; [self waitForAutomationBoard];
+        [self logAutomation:[NSString stringWithFormat:@"B%u：限時內未找到合格的留珠準備路徑，改按攻略直接輸出",_live.wave + 1]];
+        return YES;
+    }
     NSArray *sequence = PHOrbEightSkillSequence(_activeProfile[@"activity"],&_live,_eightAttemptedSlots,&_eightSequenceCursor);
     if (!sequence.count) {
         if (_eightPreparationUsed || !_eightPreparationSearchMS || _live.wave >= _eightFloorSubmitted.size() || _eightFloorSubmitted[_live.wave]) return NO;

@@ -151,6 +151,33 @@ static void EightPreferredPreparationSessionTests() {
         [session queueStop:@"fixture done"];
     }
 }
+static void EightPreferredPreparationFallbackTests() {
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = cells[i] == 3 ? 1 : cells[i];
+    // Same preferable inventory as the preferred-preparation cases, but tape
+    // leaves only one swap (0-based cells 3/4) that forms no Combo: the preparation
+    // search must fail deterministically without any output search yet.
+    auto &board = engine->live.board;
+    board.tapeMask = ((UINT64_C(1) << 30) - 1) & ~((UINT64_C(1) << 3) | (UINT64_C(1) << 4));
+    for (unsigned i = 0; i < 30; ++i)
+        board.flags[i] = (board.flags[i] & ~PHOrbFlagTape) | ((board.tapeMask & (UINT64_C(1) << i)) ? PHOrbFlagTape : 0);
+    Check(PHOrbBoardValid(&board),"taped preferred-preparation fixture satisfies board invariants");
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightPreparationProfileFixture(YES)); [session queueAutomatic];
+    for (unsigned i = 0; i < 3000 && [session.snapshot[@"automatic"] boolValue] && !engine->skillAttempts; ++i) Tick(session,engine,Frame());
+    NSDictionary *progress = session.snapshot[@"eightProgress"];
+    Check(engine->skillAttempts && !engine->skillOrder.empty() && engine->skillOrder[0] == 1 && !engine->releases &&
+        ![progress[@"preparationUsed"] boolValue] && [progress[@"preparationDeclined"] boolValue] &&
+        [progress[@"preparation"][@"priority"] boolValue] && [progress[@"preparation"][@"status"] isEqual:@"priority-declined"],
+        "failed preferred preparation falls back to the guide output skill instead of stopping");
+    for (unsigned i = 0; i < 3000 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    progress = session.snapshot[@"eightProgress"];
+    Check(!engine->releases && ![progress[@"preparationUsed"] boolValue] && [progress[@"preparationDeclined"] boolValue] &&
+        [progress[@"preparation"][@"status"] isEqual:@"priority-declined"],
+        "a declined preparation is not retried with a smaller budget on the same turn");
+    [session queueStop:@"fixture done"];
+}
 static void EightGuideSessionTests() {
     for (bool enabled : {false,true}) for (unsigned wave : {1u,2u,3u}) {
         FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = wave;
@@ -407,6 +434,7 @@ static void EightChangedInventoryRecoveryTests() {
 static void EightSessionTests() {
     EightPreparationSessionTests();
     EightPreferredPreparationSessionTests();
+    EightPreferredPreparationFallbackTests();
     EightChangedInventoryRecoveryTests();
     FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Tick(session,engine,Frame()); [session configureQuality:@"fast"]; [session queueAutomatic];

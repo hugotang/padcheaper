@@ -334,12 +334,46 @@
 @property(nonatomic, strong) UILabel *recoveryDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
 @property(nonatomic, strong) UILabel *profileDescription;
+@property(nonatomic, strong) UILabel *eightDescription, *helpNote;
+@property(nonatomic, strong) UIButton *helpButton, *copyDiagnosticsButton;
+@property(nonatomic, strong) UIStackView *actionBar;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
 - (void)editGoalSettingsForManualSelection:(BOOL)manualSelection;
 - (void)changeGoalMode;
 @end
+
+// One glanceable 8P summary built from eightProgress; the detailed JSON
+// stays in the copied diagnostics.
+static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
+    NSDictionary *p = state[@"eightProgress"];
+    if (![p isKindOfClass:NSDictionary.class] || (![state[@"eightAutomatic"] boolValue] && ![p[@"sameMatch"] boolValue])) return @"";
+    NSMutableArray *lines = [NSMutableArray array];
+    NSString *floor = [p[@"floor"] unsignedIntegerValue] ? [NSString stringWithFormat:@"B%@ · ", p[@"floor"]] : @"";
+    [lines addObject:[NSString stringWithFormat:@"8 人進度：%@第 %@ 回合 · 轉珠 %@ · 技能 %@", floor,
+        state[@"autoTurn"] ?: @0, state[@"autoMoves"] ?: @0, state[@"autoSkills"] ?: @0]];
+    NSArray *sequence = [p[@"sequence"] isKindOfClass:NSArray.class] ? p[@"sequence"] : @[];
+    if (sequence.count) [lines addObject:[NSString stringWithFormat:@"%@技能 %@（已完成 %@／%lu）",
+        [p[@"guideSequence"] boolValue] ? @"攻略" : @"救援", [sequence componentsJoinedByString:@"→"],
+        p[@"sequenceStep"] ?: @0, (unsigned long)sequence.count]];
+    if ([p[@"skillPending"] boolValue]) [lines addObject:[NSString stringWithFormat:@"等待位置 %@ 技能由遊戲確認", p[@"pendingSlot"]]];
+    NSDictionary *preparation = [p[@"preparation"] isKindOfClass:NSDictionary.class] ? p[@"preparation"] : @{};
+    NSString *status = [preparation[@"status"] isKindOfClass:NSString.class] ? preparation[@"status"] : @"";
+    NSString *preparationText = @{@"planning":@"留珠準備：求路中", @"release-committed":@"留珠準備：已放手，等下一回合",
+        @"next-turn-confirmed":@"留珠準備：已確認，按保存的轉色技能輸出",
+        @"priority-declined":@"留珠準備：限時內無合格路徑，已改直接輸出"}[status];
+    if (preparationText) [lines addObject:preparationText];
+    NSDictionary *blocked = [p[@"lastBlocked"] isKindOfClass:NSDictionary.class] ? p[@"lastBlocked"] : @{};
+    NSString *blockedMessage = [blocked[@"decision"] isKindOfClass:NSDictionary.class] ? blocked[@"decision"][@"message"] : nil;
+    if ([blockedMessage isKindOfClass:NSString.class] && blockedMessage.length)
+        [lines addObject:[NSString stringWithFormat:@"最近卡住（B%u）：%@", [blocked[@"wave"] unsignedIntValue] + 1, blockedMessage]];
+    NSDictionary *lastStop = [p[@"lastStop"] isKindOfClass:NSDictionary.class] ? p[@"lastStop"] : @{};
+    NSString *stop = lastStop[@"reason"];
+    if (![state[@"automatic"] boolValue] && [stop isKindOfClass:NSString.class] && stop.length)
+        [lines addObject:[NSString stringWithFormat:@"上次停止：%@", stop]];
+    return [lines componentsJoinedByString:@"\n"];
+}
 
 @implementation PHOrbController
 - (instancetype)initWithSnapshot:(PHOverlaySnapshot)snapshot action:(PHOverlayAction)action close:(void (^)(void))close {
@@ -389,7 +423,7 @@
     [self.executeButton setTitle:@"執行一次" forState:UIControlStateNormal];
     self.stopButton = [self button:@"停止" selector:@selector(stop) identifier:@"padcheaper.orbsStop"];
     self.stopButton.tintColor = UIColor.systemRedColor;
-    [self.stopButton.widthAnchor constraintEqualToConstant:72].active = YES;
+    [self.stopButton.widthAnchor constraintEqualToConstant:96].active = YES;
     self.startButton = [self button:@"開始連續轉珠" selector:@selector(startAutomatic) identifier:@"padcheaper.orbsStart"];
     self.editRules = [self button:@"編輯自動技能規則" selector:@selector(editSkillRules) identifier:@"padcheaper.orbsRuleEdit"];
     self.ruleDescription = [self label:13 weight:UIFontWeightRegular];
@@ -471,6 +505,29 @@
     self.availability = [self label:13 weight:UIFontWeightRegular];
     self.availability.accessibilityIdentifier = @"padcheaper.orbsAvailability";
     UILabel *note = [self label:13 weight:UIFontWeightRegular]; note.textColor = UIColor.secondaryLabelColor;
+    note.accessibilityIdentifier = @"padcheaper.orbsHelpNote"; note.hidden = YES; self.helpNote = note;
+    self.helpButton = [self button:@"顯示使用說明" selector:@selector(toggleHelp) identifier:@"padcheaper.orbsHelp"];
+    self.copyDiagnosticsButton = [self button:@"複製診斷" selector:@selector(copyDiagnostics) identifier:@"padcheaper.orbsCopyDiagnostics"];
+    // SF Symbols (all iOS 13+) make the actions distinguishable at a glance.
+    // Titles are set explicitly: the filled execute configuration replaced
+    // the one built by -button:selector:identifier:.
+    NSDictionary<NSString *, NSArray *> *symbols = @{
+        @"viewfinder":@[self.readButton,@"讀盤並求路"], @"play.fill":@[self.executeButton,@"執行一次"],
+        @"stop.fill":@[self.stopButton,@"停止"], @"repeat":@[self.startButton,@"開始連續轉珠"],
+        @"wand.and.stars":@[self.editRules,@"編輯自動技能規則"], @"tray.and.arrow.down":@[self.dungeonCaptureButton,@"收集全層資料"],
+        @"square.and.arrow.up":@[self.dungeonExportButton,@"匯出關卡 JSON…"], @"chart.bar":@[self.dungeonCompareButton,@"隊伍對比"],
+        @"heart":@[self.editRecovery,@"低血時的心珠目標"], @"slider.horizontal.3":@[self.editProfiles,@"隊伍／關卡策略"],
+        @"questionmark.circle":@[self.helpButton,@"顯示使用說明"], @"doc.on.doc":@[self.copyDiagnosticsButton,@"複製診斷"]};
+    [symbols enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSArray *entry, BOOL *stop) {
+        UIButton *button = entry[0]; UIButtonConfiguration *configuration = button.configuration;
+        configuration.title = entry[1]; configuration.image = [UIImage systemImageNamed:name];
+        configuration.imagePadding = 6;
+        configuration.preferredSymbolConfigurationForImage =
+            [UIImageSymbolConfiguration configurationWithTextStyle:UIFontTextStyleSubheadline];
+        button.configuration = configuration;
+    }];
+    self.eightDescription = [self label:13 weight:UIFontWeightMedium];
+    self.eightDescription.accessibilityIdentifier = @"padcheaper.orbsEightProgress"; self.eightDescription.hidden = YES;
     note.text = @"單人 Auto 依技能規則處理；8 人 Auto 依選用的活動策略核對固定隊伍、開技及樓層目標，通用設定只轉珠。每次技能生效後重新讀盤。只處理目前這場，結算、離場或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n一般預計 Combo 不含天降、隊長及 Combo 珠加算；8 人活動另列已核對的隊長加算。弱化珠照常判定消除，不估算傷害、回復量或精確總分。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援浮動「轉一次」，需在自己的操作窗口按下，完成後停止。8 人另可按 Auto 接續本場；3／4 人保持轉一次。多人避開有傷害的荊棘；單人技能規則、開場、低血補心與武裝 L 回復不套用至 8 人活動。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
@@ -484,18 +541,26 @@
     autoActions.spacing = 10;
     UIStackView *actions = [[UIStackView alloc] initWithArrangedSubviews:@[autoActions, manualActions]];
     actions.axis = UILayoutConstraintAxisVertical; actions.spacing = 10; actions.translatesAutoresizingMaskIntoConstraints = NO;
+    self.actionBar = actions; // One row in compact height; see -viewWillLayoutSubviews.
     [self.view addSubview:actions];
     UIStackView *dungeonActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.dungeonExportButton,self.dungeonCompareButton]];
     dungeonActions.spacing = 10; dungeonActions.distribution = UIStackViewDistributionFillEqually;
-    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
-        self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow, self.poisonDescription,
-        self.goalMode, self.editGoals, self.goalDescription,
-        self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription, self.playerDescription,
-        assistRow, self.assistRecoveryDescription,
-        self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
-        self.battleObservationDescription, self.decisionDescription,
-        self.status, self.boardView, self.slider, self.position, self.availability, note]];
-    stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = NO;
+    UIStackView *helpActions = [[UIStackView alloc] initWithArrangedSubviews:@[self.helpButton,self.copyDiagnosticsButton]];
+    helpActions.spacing = 10; helpActions.distribution = UIStackViewDistributionFillEqually;
+    // What matters during a battle (state, preview, why it stopped) comes
+    // first; settings that are changed between battles follow.
+    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle,
+        [self section:@"本場" views:@[self.status, self.boardView, self.slider, self.position, self.availability,
+            self.eightDescription, self.decisionDescription]],
+        [self section:@"策略與求路" views:@[self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
+            self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow,
+            self.poisonDescription, self.goalMode, self.editGoals, self.goalDescription]],
+        [self section:@"技能與回復" views:@[self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription,
+            self.playerDescription, assistRow, self.assistRecoveryDescription]],
+        [self section:@"關卡資料" views:@[self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
+            self.battleObservationDescription]],
+        [self section:@"說明與診斷" views:@[helpActions, note]]]];
+    stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 16; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
     [NSLayoutConstraint activateConstraints:@[
@@ -519,6 +584,25 @@
     width.priority = UILayoutPriorityDefaultHigh; width.active = YES;
     [self refresh];
 }
+// A rounded inset-grouped card with a small heading; hidden rows collapse.
+- (UIStackView *)section:(NSString *)title views:(NSArray<UIView *> *)views {
+    UILabel *heading = [self label:13 weight:UIFontWeightSemibold];
+    heading.text = title; heading.textColor = UIColor.secondaryLabelColor; heading.accessibilityTraits = UIAccessibilityTraitHeader;
+    UIStackView *card = [[UIStackView alloc] initWithArrangedSubviews:[@[heading] arrayByAddingObjectsFromArray:views]];
+    card.axis = UILayoutConstraintAxisVertical; card.spacing = 10;
+    card.layoutMargins = UIEdgeInsetsMake(12, 12, 14, 12); card.layoutMarginsRelativeArrangement = YES;
+    card.backgroundColor = UIColor.secondarySystemBackgroundColor;
+    card.layer.cornerRadius = 14; card.layer.cornerCurve = kCACornerCurveContinuous;
+    return card;
+}
+- (void)viewWillLayoutSubviews {
+    [super viewWillLayoutSubviews];
+    // Landscape iPhones have little height: keep the four actions on one row
+    // so the scrolling content is not squeezed under two button rows.
+    const BOOL compact = self.traitCollection.verticalSizeClass == UIUserInterfaceSizeClassCompact;
+    self.actionBar.axis = compact ? UILayoutConstraintAxisHorizontal : UILayoutConstraintAxisVertical;
+    self.actionBar.distribution = compact ? UIStackViewDistributionFillEqually : UIStackViewDistributionFill;
+}
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     self.timer = [NSTimer timerWithTimeInterval:0.15 target:self selector:@selector(refresh) userInfo:nil repeats:YES];
@@ -531,6 +615,12 @@
     if (!self.isViewLoaded) return;
     self.status.text = [state[@"multiplayerMessage"] length] ? [NSString stringWithFormat:@"%@\n%@",
         state[@"message"] ?: @"等待初始化", state[@"multiplayerMessage"]] : state[@"message"] ?: @"等待初始化";
+    // Phase colour reads at a glance: working, needs attention, or fault.
+    NSString *phase = [state[@"phase"] isKindOfClass:NSString.class] ? state[@"phase"] : @"";
+    self.status.textColor = ([state[@"inputFault"] boolValue] || [phase isEqual:@"fault"]) ? UIColor.systemRedColor :
+        [phase isEqual:@"blocked"] ? UIColor.systemOrangeColor :
+        ([@[@"reading",@"solving",@"preview",@"arming",@"running",@"releasing"] containsObject:phase] ||
+            [state[@"automatic"] boolValue]) ? UIColor.systemGreenColor : UIColor.labelColor;
     self.readButton.enabled = [state[@"canRead"] boolValue]; self.executeButton.enabled = [state[@"canExecute"] boolValue];
     self.stopButton.enabled = [state[@"canStop"] boolValue];
     self.startButton.enabled = [state[@"canStart"] boolValue];
@@ -597,6 +687,8 @@
     }
     self.decisionDescription.text = [decisions componentsJoinedByString:@"\n"];
     self.decisionDescription.hidden = !decisions.count;
+    self.eightDescription.text = eight ? PHOrbEightProgressDescription(state) : @"";
+    self.eightDescription.hidden = !self.eightDescription.text.length;
     self.editRecovery.enabled = !activity && !eight && [state[@"canSetRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *recoveryMessage = state[@"recoveryMessage"];
     NSMutableArray *recoveryLines = [NSMutableArray arrayWithObject:PHOrbRecoveryDescription(state[@"recovery"] ?: PHOrbDefaultRecovery())];
@@ -836,14 +928,18 @@
     }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;
     editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    // Editors save explicitly; a stray swipe must not discard the draft (Cancel stays available).
+    editor.sheetPresentationController.prefersGrabberVisible = YES; editor.modalInPresentation = YES;
     [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)execute {
     if (![self.state[@"canExecute"] boolValue]) return;
+    PHOverlayHaptic(NO);
     self.action(@"orbsExecute", self.state[@"generation"]); self.close();
 }
 - (void)startAutomatic {
     if (![self.state[@"canStart"] boolValue]) return;
+    PHOverlayHaptic(NO);
     self.action(@"orbsStart", nil); [self refresh];
     if ([self.state[@"automatic"] boolValue]) self.close();
 }
@@ -861,9 +957,14 @@
     }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;
     editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    // Editors save explicitly; a stray swipe must not discard the draft (Cancel stays available).
+    editor.sheetPresentationController.prefersGrabberVisible = YES; editor.modalInPresentation = YES;
     [self presentViewController:editor animated:YES completion:nil];
 }
-- (void)stop { self.action(@"orbsStop", nil); [self refresh]; }
+- (void)stop {
+    if ([self.state[@"canStop"] boolValue]) PHOverlayHaptic(YES);
+    self.action(@"orbsStop", nil); [self refresh];
+}
 - (void)editRecoverySettings {
     if (!self.editRecovery.enabled || self.presentedViewController) return;
     __weak PHOrbController *weakSelf = self;
@@ -878,6 +979,8 @@
         }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;
     editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    // Editors save explicitly; a stray swipe must not discard the draft (Cancel stays available).
+    editor.sheetPresentationController.prefersGrabberVisible = YES; editor.modalInPresentation = YES;
     [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)editProfileSettings {
@@ -911,8 +1014,27 @@
         }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;
     editor.sheetPresentationController.detents = @[[UISheetPresentationControllerDetent largeDetent]];
+    // Editors save explicitly; a stray swipe must not discard the draft (Cancel stays available).
+    editor.sheetPresentationController.prefersGrabberVisible = YES; editor.modalInPresentation = YES;
     [self presentViewController:editor animated:YES completion:nil];
 }
 - (void)closePage { self.close(); }
+- (void)toggleHelp {
+    self.helpNote.hidden = !self.helpNote.hidden;
+    UIButtonConfiguration *configuration = self.helpButton.configuration;
+    configuration.title = self.helpNote.hidden ? @"顯示使用說明" : @"隱藏使用說明";
+    self.helpButton.configuration = configuration;
+}
+- (void)copyDiagnostics {
+    // The same text as the PC panel's diagnostics, including eightProgress.
+    UIPasteboard.generalPasteboard.string = self.snapshot()[@"diagnostics"] ?: @"PADCheaper 已載入，尚無診斷資料。";
+    UIButtonConfiguration *configuration = self.copyDiagnosticsButton.configuration;
+    configuration.title = @"已複製診斷"; self.copyDiagnosticsButton.configuration = configuration;
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        UIButtonConfiguration *restored = weakSelf.copyDiagnosticsButton.configuration;
+        restored.title = @"複製診斷"; weakSelf.copyDiagnosticsButton.configuration = restored;
+    });
+}
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations { return UIInterfaceOrientationMaskAll; }
 @end
