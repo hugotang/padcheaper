@@ -708,12 +708,17 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             PHProbeCheck([orbAction isEqual:@"orbsStart"],@"8P Auto dispatches the explicit existing start action");
             eightState[@"automatic"] = @YES; eightState[@"eightAutomatic"] = @YES;
             eightState[@"busy"] = @YES; eightState[@"canStart"] = @NO; eightState[@"canStop"] = @YES;
+            eightState[@"autoTurn"] = @7; eightState[@"autoMoves"] = @6; eightState[@"autoSkills"] = @4;
             eightState[@"activeProfile"] = eightLibrary[@"profiles"][0] ?: @{};
             eightState[@"multiplayerMessage"] = @"B6：首消 4 Combo＋已核對隊長加算 2\n8 人本場 Auto · 可按停止";
             orbFixture = @{@"orbState":eightState}; [orbController refresh];
             PHProbeCheck(!eightStart.enabled && [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStop") isEnabled],
                 @"8P running state keeps Stop available and prevents a second start");
+            UIScrollView *eightScroll = PHProbeScrollParent(PHProbeFind(orbWindow,@"padcheaper.orbsBoard"));
+            [eightScroll setContentOffset:CGPointMake(eightScroll.contentOffset.x,-eightScroll.adjustedContentInset.top) animated:NO];
             PHProbeRender(self.window,orbWindow,@"orbs-eight-auto");
+            PHProbeRevealBoard(orbWindow);
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-auto-board");
             [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStop") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck([orbAction isEqual:@"orbsStop"],@"8P Stop uses the existing immediate stop action");
             orbAction = nil; orbValue = nil; orbFixture = baseOrbFixture; [orbController refresh];
