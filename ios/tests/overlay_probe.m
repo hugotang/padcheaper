@@ -680,12 +680,18 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Native preview describes the selected step and starting cell");
             PHProbeRevealBoard(orbWindow);
             PHProbeRender(self.window, orbWindow, @"orbs-preview");
+            __typeof__(&PHOrbDefaultProfiles) defaultProfiles =
+                (__typeof__(&PHOrbDefaultProfiles))dlsym(PHProbeDylib,"PHOrbDefaultProfiles");
+            __typeof__(&PHOrbProfilesImportingData) importProfiles =
+                (__typeof__(&PHOrbProfilesImportingData))dlsym(PHProbeDylib,"PHOrbProfilesImportingData");
+            PHProbeCheck(defaultProfiles && importProfiles, @"8P profile helpers resolve from the loaded test dylib");
+            NSDictionary *eightBase = defaultProfiles ? defaultProfiles() : @{};
             NSData *eightData = [NSData dataWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"eight-activity" withExtension:@"json"]];
-            NSDictionary *eightLibrary = eightData ? PHOrbProfilesImportingData(PHOrbDefaultProfiles(),eightData,NULL) : nil;
+            NSDictionary *eightLibrary = eightData && importProfiles ? importProfiles(eightBase,eightData,NULL) : nil;
             PHProbeCheck(eightLibrary && [eightLibrary[@"selected"] isEqual:@"eight-thanks-2026"],
                 @"Bundled 8P activity imports through the actual portable profile validator");
             NSMutableDictionary *eightState = [baseOrbFixture[@"orbState"] mutableCopy];
-            eightState[@"profiles"] = eightLibrary ?: PHOrbDefaultProfiles();
+            eightState[@"profiles"] = eightLibrary ?: eightBase;
             eightState[@"multiplayerActive"] = @YES; eightState[@"canExecute"] = @NO;
             eightState[@"multiplayer"] = @{@"kind":@(PHOrbMultiplayerEight)}; eightState[@"eightAutoAvailable"] = @YES;
             eightState[@"phase"] = @"idle"; eightState[@"message"] = @"8 人大感謝祭 2026 杯";
