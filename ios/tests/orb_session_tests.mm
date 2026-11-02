@@ -404,6 +404,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
 #include "orb_eight_session_tests.inc"
+#include "orb_readiness_stop_session_tests.inc"
 #include "orb_observation_session_tests.inc"
 #include "orb_enemy_action_session_tests.inc"
 #include "orb_enemy_selector_session_tests.inc"
@@ -415,6 +416,8 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 
 int main() {
     @autoreleasepool {
+        ReadinessStopSessionTests();
+        if (failures) return 1;
         AssistSessionTests();
         EnemyComboSessionTests();
         DungeonSessionTests();

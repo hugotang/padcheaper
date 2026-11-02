@@ -5,6 +5,7 @@
 #import "PHOrbModel.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbSession.h"
 #import "PHConfiguration.h"
 #import "PHFormationModel.h"
 #import <dispatch/dispatch.h>
@@ -213,6 +214,8 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 
 typedef BOOL (^PHProbeCondition)(void);
 
+#include "orb_readiness_probe.inc"
+
 static NSDictionary *PHProbeStep(NSString *name, PHProbeCondition ready, dispatch_block_t action) {
     return @{@"name":name, @"ready":[ready copy], @"action":[action copy]};
 }
@@ -404,11 +407,17 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         @"Initial overlay hides all shortcut controls and status behind one PC button");
     PHProbeRender(self.window, overlay, @"bubble");
     [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHOverlaySnapshot readinessSnapshot = [overlay.rootViewController valueForKey:@"snapshot"];
+    NSDictionary *readinessState = readinessSnapshot()[@"orbState"];
+    PHProbeCheck([readinessState[@"onceReadiness"][@"readinessMonitoring"] boolValue] &&
+        ![readinessState[@"automatic"] boolValue] && ![readinessState[@"searchTrace"] count],
+        @"First PC expansion reaches the real runtime observation action without solving or starting Auto");
     UIView *panel = PHProbeFind(overlay, @"padcheaper.panel");
     PHProbeCheck(panel.hidden && !onceShortcut.hidden && !autoShortcut.hidden && !collapseShortcut.hidden,
         @"First PC tap expands shortcuts without opening settings");
     PHProbeCheck(!onceShortcut.enabled && !autoShortcut.enabled,
         @"An unvalidated guest keeps both input shortcuts disabled after unfolding");
+    PHProbeColdEightAuto(self.window,overlay);
     PHProbeFloatingTargets(overlay);
     CGPoint oldShortcutCenter = [onceShortcut convertPoint:CGPointMake(CGRectGetMidX(onceShortcut.bounds), CGRectGetMidY(onceShortcut.bounds)) toView:overlay];
     [collapseShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -535,7 +544,15 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     PHProbeReport(@"portrait");
     UIButton *orbs = (UIButton *)PHProbeFind(overlay, @"padcheaper.orbsOpen");
     PHProbeCheck(orbs != nil, @"Native auto-orb entry is visible");
+    PHOverlayAction beforeOrbOpenAction = [overlay.rootViewController valueForKey:@"action"];
+    __block NSUInteger orbOpenObservations = 0;
+    [overlay.rootViewController setValue:[^(NSString *action, id value) {
+        if ([action isEqual:@"orbsObserve"]) ++orbOpenObservations;
+        beforeOrbOpenAction(action,value);
+    } copy] forKey:@"action"];
     [orbs sendActionsForControlEvents:UIControlEventTouchUpInside];
+    PHProbeCheck(orbOpenObservations == 1,@"Opening the orb panel independently requests passive readiness");
+    [overlay.rootViewController setValue:beforeOrbOpenAction forKey:@"action"];
     UIWindow *orbWindow = [overlay.rootViewController valueForKey:@"orbWindow"];
     PHOrbController *orbController = [overlay.rootViewController valueForKey:@"orbController"];
     PHProbeCheck(orbWindow != nil && PHProbeFind(orbWindow, @"padcheaper.orbsBoard") != nil && self.window.isKeyWindow,
@@ -1307,15 +1324,18 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             [overlay.rootViewController setValue:[^{ return shortcutState; } copy] forKey:@"snapshot"];
             __block NSString *shortcutAction = nil;
             __block NSUInteger shortcutActionCount = 0;
+            __block NSUInteger shortcutObservationCount = 0;
             [overlay.rootViewController setValue:[^(NSString *action, id value) {
+                if ([action isEqual:@"orbsObserve"]) { shortcutObservationCount++; return; }
                 shortcutAction = action; shortcutActionCount++;
             } copy] forKey:@"action"];
             [overlay.rootViewController setValue:@NO forKey:@"expanded"];
             [overlay.rootViewController setValue:@YES forKey:@"shortcutsCollapsed"];
             [overlay.rootViewController updateWithSnapshot:shortcutState];
             [bubble sendActionsForControlEvents:UIControlEventTouchUpInside];
-            PHProbeCheck(shortcutActionCount == 0 && !shortcutStatus.hidden && PHProbeFind(overlay, @"padcheaper.panel").hidden,
-                @"Unfolding idle shortcuts restores status without dispatching a game or configuration action");
+            PHProbeCheck(shortcutActionCount == 0 && shortcutObservationCount == 1 &&
+                !shortcutStatus.hidden && PHProbeFind(overlay, @"padcheaper.panel").hidden,
+                @"Unfolding idle shortcuts requests passive readiness without dispatching a game or configuration action");
             PHProbeFloatingLayout(overlay);
             [onceShortcut sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(shortcutActionCount == 1 && [shortcutAction isEqual:@"orbsOnce"] && PHProbeFind(overlay, @"padcheaper.panel").hidden,

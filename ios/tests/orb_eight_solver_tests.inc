@@ -1,5 +1,19 @@
 static void EightSolverTests() {
     auto s = MultiplayerModelState(8,7), other = s;
+    for (uint32_t phase : {28u,29u,30u,31u,67u,68u}) {
+        other = s; other.phase = phase;
+        Check(PHOrbBattleEnded(&other) && !PHOrbEightMatchReady(&other) && !PHOrbCanPreview(&other),
+            "native clear/result phases close Auto before the global finished flag or deadline");
+        other.valid = false;
+        Check(!PHOrbBattleEnded(&other),"an unverified phase cannot be published as a confirmed result");
+        other.valid = true; other.present = false;
+        Check(!PHOrbBattleEnded(&other),"an absent scene is not a confirmed Dungeon Clear");
+    }
+    for (uint32_t phase : {0u,2u,3u,6u,18u,19u,20u,22u,26u,27u,48u,58u,65u,69u,UINT32_MAX}) {
+        other = s; other.phase = phase;
+        Check(!PHOrbBattleEnded(&other),"normal floor/skill transitions and unknown phases are not inferred as clear");
+    }
+    other = s;
     other.wave = 1; ++other.multiplayer.turnSerial; other.multiplayer.resolvePending = 1; other.multiplayer.networkFlags = 3;
     Check(PHOrbEightMatchReady(&other) && PHOrbSameEightMatch(&s,&other) && !PHOrbSameTurn(&s,&other) &&
         !PHOrbMultiplayerWindow(&other),"8P match identity survives local resolve while its gesture window closes");

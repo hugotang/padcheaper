@@ -341,6 +341,9 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
 bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state);
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
+// Reviewed native clear/result phases only; ordinary floor/skill transitions
+// (including 8P phase 69) are not terminal. Requires a valid metadata read.
+bool PHOrbBattleEnded(const PHOrbSnapshot *state);
 bool PHOrbEightMatchReady(const PHOrbSnapshot *state);
 bool PHOrbSameEightMatch(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSameEightTeam(const PHOrbEightState *a, const PHOrbEightState *b);

@@ -25,6 +25,8 @@ static void EightSessionTests() {
     for (unsigned i = 0; i < 20; ++i) Tick(session,engine,Frame());
     Check(engine->releases == 1 && [session.snapshot[@"automatic"] boolValue],"resolve frames do not replay the released board");
     for (unsigned turn = 2; turn <= 7; ++turn) {
+        engine->live.phase = 69; Tick(session,engine,Frame());
+        Check([session.snapshot[@"automatic"] boolValue],"native 8P next-board phase 69 preserves the current match intent");
         EightNextBoard(engine,turn != 3); // Includes a second turn on the same floor.
         EightRunUntilRelease(session,engine,turn);
     }

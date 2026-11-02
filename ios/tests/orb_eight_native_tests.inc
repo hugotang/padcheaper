@@ -27,6 +27,22 @@ static void EightNativeFixture(unsigned seat) {
     readinessFixture = {1001,0,4,4};
 }
 static void EightNativeTests() {
+    for (bool eight : {false,true}) for (uint32_t terminal : {28u,29u,30u,31u,67u,68u}) {
+        if (eight) EightNativeFixture(7); else SkillFixture();
+        FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{};
+        Check([engine read:&state frame:Frame() reason:nil],"terminal native fixture reads its initial board");
+        if (eight) Check([engine armEightPlayerAuto:&state],"terminal native fixture arms an explicit match");
+        Protected(Impl + PHBattlePhaseOffset,terminal,0x766cfc6d);
+        // Retired actor/skill storage must not hide valid clear metadata.
+        Put<uintptr_t>(Impl + PHBattleMemberOffset + PHBattleCardParamOffset,0);
+        Put<uintptr_t>(Impl + PHOrbTableOffset,0);
+        NSString *reason = nil;
+        Check([engine readAutomation:&state frame:Frame() reason:&reason] && PHOrbBattleEnded(&state) &&
+            !state.automation.valid && !state.automation.window && !state.eight.valid &&
+            !PHOrbCanPreview(&state) && ![engine armEightPlayerAuto:&state] &&
+            [reason containsString:@"結算"] && !writes && !readinessCalls && !canUseCalls && !skillStartCalls,
+            "native clear reader confirms phase/identity without consulting retired actors or calling native actions");
+    }
     for (unsigned seat = 0; seat < 8; ++seat) {
         EightNativeFixture(seat); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{}, after{}; NSString *reason = nil;
         Check([engine readAutomation:&state frame:Frame() reason:&reason] && !state.eight.valid && !state.automation.valid,

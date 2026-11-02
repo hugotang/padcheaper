@@ -20,6 +20,9 @@ constexpr double ArmDelay = 0.35;
 constexpr double AutomationSettle = 0.20, SkillTimeout = 30, TurnTimeout = 90;
 constexpr double SkillWindowTimeout = 3;
 bool ResolvingOrbs(uint32_t phase) { return phase >= 3 && phase <= 6; }
+NSString *BattleEndMessage(const PHOrbSnapshot &state) {
+    return state.phase >= 28 && state.phase <= 31 ? @"Dungeon Clear，Auto 已停止" : @"本場已進入結算，Auto 已停止";
+}
 bool AcceptedSkillTiming(NSArray *rules) {
     for (NSDictionary *rule in rules) if ([rule[@"enabled"] boolValue] && [rule[@"intervalMode"] isEqual:@"accepted"]) return true;
     return false;
@@ -69,6 +72,7 @@ NSString *MultiplayerModeName(PHOrbMultiplayerKind kind) {
 NSString *MultiplayerWaitMessage(const PHOrbSnapshot &state) {
     // Presentation only. PHOrbCanPreview and the final canOnce gate remain
     // authoritative; no message can grant input permission.
+    if (PHOrbBattleEnded(&state)) return @"本場已通關或進入結算";
     const auto &m = state.multiplayer;
     const bool continuation = m.kind == PHOrbMultiplayerThreeSolo;
     if (!m.known || !m.teamCount || m.localSeat >= m.teamCount || m.viewTeam >= m.teamCount)
@@ -341,7 +345,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     double _now, _lastRead, _requestedAt, _stableAt, _previewAt, _startedAt, _stepAt, _sentAt, _frameAt, _executionElapsed;
     double _skillWindowWaitAt;
     bool _hasLive, _hasStable, _readQueued, _staged, _releaseStaged, _releaseComplete;
-    bool _inputFault, _awaitingStart, _startSent, _monitoring, _oneShot, _oneShotBound;
+    bool _inputFault, _awaitingStart, _startSent, _monitoring, _readinessMonitoring, _oneShot, _oneShotBound;
     PHOrbSnapshot _oneShotOrigin;
     PHOrbSnapshot _autoOrigin, _skillBefore;
     NSUInteger _autoTurn, _autoMoves, _autoSkills, _skillRule, _decisionTurn, _recoveryTurn;
@@ -614,6 +618,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     else { _phase = @"stopped"; _recordingExecution = false; }
     if (cancelledIntent) ++_cancelled;
 }
+- (void)monitorReadiness {
+    _readinessMonitoring = true;
+}
 - (void)queueRead {
     if (_automatic || _oneShot || [self executing] || _inputFault || _openingInFlight) return;
     [self cancelWorker];
@@ -658,6 +665,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     _hasLive = read; _live = current;
     _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     [_engine armMultiplayerOnce:NO];
+    if (read && PHOrbBattleEnded(&current)) { [self queueStop:BattleEndMessage(current)]; return; }
     if (read && current.multiplayer.kind == PHOrbMultiplayerEight) {
         [self startEightAutomatic:&current]; return;
     }
@@ -806,6 +814,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 // Called on every observed native frame while armed, even during animation.
 // A skill's phase 22 is never evidence that an orb turn has completed.
 - (BOOL)observeAutomation:(PHOrbSnapshot *)state read:(BOOL)read reason:(NSString *)reason {
+    if (read && PHOrbBattleEnded(state)) {
+        [self queueStop:BattleEndMessage(*state)];
+        _ownedOrb = 0; _phase = @"stopped"; _recordingExecution = false;
+        return NO;
+    }
     if (_eightAutomatic) return [self observeEightAutomation:state read:read reason:reason];
     [self observeRuleHistory:state read:read];
     if (!_frame.ready || !_frame.enabled || _now < _autoPhaseAt) {
@@ -1562,6 +1575,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     BOOL read = (_automatic || _openingInFlight || _openingPuzzlePending ||
         (_historyBound && AcceptedSkillTiming(_historyRules))) ?
         [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
+    if (read && PHOrbBattleEnded(&current)) {
+        _hasLive = true; _live = current;
+        [self queueStop:BattleEndMessage(current)];
+        // The private manager is already removed; native result handling owns
+        // any former drag. Do not send a release into this terminal scene.
+        _ownedOrb = 0; _phase = @"stopped"; _recordingExecution = false;
+        return;
+    }
     if (!read || !current.valid || current.multiplayerDisabled ||
         !PHOrbSameTurn(&_expected, &current) || current.phase != 2) {
         // The private manager has already been removed. Never inject stale
@@ -1686,9 +1707,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const BOOL active = [self executing];
     // Keep observing scene exits after transient read failures. Otherwise a
     // multiplayer latch could survive into the next solo battle forever.
-    // Monitoring starts only after the user first asks to read a board.
-    if (!active && !_monitoring) return;
-    if (!active && !_automatic && !_oneShot && time - _lastRead < 0.10) return;
+    // Opening the orb UI also needs a first read before multiplayer buttons
+    // can become available. This observation alone never creates an intent.
+    if (!active && !_monitoring && !_readinessMonitoring) return;
+    const bool readinessOnly = !active && !_monitoring;
+    if (readinessOnly && (!frame.ready || !frame.enabled)) return;
+    if (!active && !_automatic && !_oneShot && time >= _lastRead &&
+        time - _lastRead < (readinessOnly ? 0.25 : 0.10)) return;
     _lastRead = time;
     PHOrbSnapshot current{}; NSString *reason = nil;
     BOOL read = (_automatic || _openingInFlight || _openingPuzzlePending ||
@@ -1696,7 +1721,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         [_engine readAutomation:&current frame:frame reason:&reason] : [_engine read:&current frame:frame reason:&reason];
     _hasLive = read; _live = current;
     _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
-    [self refreshBattleObservation:read active:active time:time];
+    if (!readinessOnly) [self refreshBattleObservation:read active:active time:time];
     if (!read) {
         _lastReadIssue = @{@"reason":reason ?: @"戰鬥資料未通過讀取校驗", @"phase":@(current.phase),
             @"valid":@(current.valid), @"automationValid":@(current.automation.valid),
@@ -1707,6 +1732,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             @"multiplayer":MultiplayerTrace(current),
             @"capturedSearchGeneration":_searchTrace[@"generation"] ?: @0};
     }
+    if (readinessOnly) return;
     if (_oneShot) {
         const bool multiplayer = _oneShotOrigin.multiplayer.kind != PHOrbMultiplayerNone;
         if (!read || !current.valid || !current.present || current.multiplayerDisabled || !_oneShotBound ||
@@ -1886,12 +1912,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const bool timeReady = TimeAvailable(_live) > ArmDelay + TimeMargin + StepDuration(_live);
     const bool multiplayerOnceReady = liveReadable && previewReady && leaderReady && timeReady;
     const bool busy = _automatic || _oneShot || [self executing];
-    const bool canOnce = _frame.ready && _frame.enabled && (!multiplayer || multiplayerOnceReady) &&
+    const bool battleEnded = PHOrbBattleEnded(&_live);
+    const bool canOnce = _frame.ready && _frame.enabled && !battleEnded && (!multiplayer || multiplayerOnceReady) &&
         !busy && !_inputFault && !_openingInFlight;
     const auto &multi = _live.multiplayer;
     NSMutableArray *onceBlockers = [NSMutableArray array];
     if (!_frame.ready) [onceBlockers addObject:@"frame-not-ready"];
     if (!_frame.enabled) [onceBlockers addObject:@"feature-disabled"];
+    if (battleEnded) [onceBlockers addObject:@"battle-ended"];
     if (busy) [onceBlockers addObject:@"busy"];
     if (_inputFault) [onceBlockers addObject:@"input-fault"];
     if (_openingInFlight) [onceBlockers addObject:@"opening-in-flight"];
@@ -1910,6 +1938,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         _enemyActionObservation);
     NSDictionary *onceReadiness = @{@"canOnce":@(canOnce), @"blockers":onceBlockers,
         @"frameReady":@(_frame.ready), @"frameEnabled":@(_frame.enabled), @"monitoring":@(_monitoring),
+        @"readinessMonitoring":@(_readinessMonitoring),
         @"readSucceeded":@(_hasLive), @"liveReadable":@(liveReadable), @"present":@(_live.present),
         @"boardRead":@(HasBoardObservation(_live)), @"previewReady":@(previewReady),
         @"settled":@(_live.settled), @"ordinary":@(_live.ordinary), @"boardTransition":@(_live.boardTransition),
@@ -1984,7 +2013,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         SamePosition(_live, _preview) && HasRouteTime(_live, _route) && [self hasThornBudget:&_live];
     return @{@"phase":_phase, @"message":_message, @"generation":@(_generation),
         @"canRead":@(_frame.ready && !_automatic && !_oneShot && ![self executing] && !_inputFault && !_openingInFlight), @"canExecute":@(canExecute && !_automatic && !_oneShot),
-        @"canStart":@(_frame.ready && _frame.enabled && (!multiplayer ||
+        @"canStart":@(_frame.ready && _frame.enabled && !battleEnded && (!multiplayer ||
             (PHOrbEightMatchReady(&_live) && PHOrbCanPreview(&_live) && !_live.moves && timeReady)) &&
             !_automatic && !_oneShot && ![self executing] && !_inputFault),
         @"canOnce":@(canOnce),
@@ -1995,6 +2024,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"busy":@(busy), @"canStop":@(busy || _readQueued || preview || [_phase isEqual:@"solving"]),
         @"automatic":@(_automatic), @"autoTurn":@(_autoTurn), @"autoMoves":@(_autoMoves), @"autoSkills":@(_autoSkills),
         @"eightAutoAvailable":@(PHOrbEightMatchReady(&_live)),
+        @"battleEnded":@(battleEnded),
         @"eightAutomatic":@(_eightAutomatic), @"eightSkillPending":@(_eightSkillPending),
         @"eightTeam":EightTeamTrace(_live.eight.valid ? _live : _eightLastObserved),
         @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),

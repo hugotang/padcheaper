@@ -387,6 +387,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self updateWithSnapshot:self.snapshot()];
     } else if (self.shortcutsCollapsed) {
         self.shortcutsCollapsed = NO;
+        self.action(@"orbsObserve", nil);
         [self updateWithSnapshot:state];
         [self.view setNeedsLayout];
         [self.view layoutIfNeeded];
@@ -569,6 +570,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 
 - (void)openOrbs {
     if (self.orbWindow || self.formationWindow || self.filterWindow) return;
+    self.action(@"orbsObserve", nil);
     UIWindowScene *scene = self.view.window.windowScene;
     __weak PHOverlayController *weakSelf = self;
     self.orbController = [[PHOrbController alloc] initWithSnapshot:self.snapshot action:self.action close:^{

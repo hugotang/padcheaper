@@ -57,6 +57,7 @@ cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/team-model.md ios/docs/team-dungeon.md ios/docs/release-0.5.18.md "$build_dir/"
 cp ios/docs/release-0.5.19.md ios/docs/orb-eight-player-design.md "$build_dir/"
+cp ios/docs/release-0.5.20.md "$build_dir/"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
@@ -124,6 +125,7 @@ cp ios/editor/dungeon-guides.json "$build_dir/dungeon-guides.json"
 mkdir -p "$build_dir/research"
 cp ios/research/solo-team-model-20261101.json "$build_dir/research/"
 cp ios/research/eight-player-cup-20261102.json "$build_dir/research/"
+cp ios/research/orb-auto-readiness-stop-20261102.json "$build_dir/research/"
 cp ios/research/team-skill-dungeon-20261101.json "$build_dir/research/"
 cp ios/research/orb-enemy-selector-20261101.json ios/research/orb-enemy-dispatch-20261101.json ios/research/orb-enemy-damage-20261101.json "$build_dir/research/"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
@@ -208,6 +210,8 @@ metadata = {
     "orb_memory_ranges": "read/write non-executable battle core ends at impl+0xbe000; each used modal pointer beyond the core is separately protected, without requiring unused allocation-tail pages",
     "fixed_multiplayer_leaders": "native parameter chains use total allocated catalog records for fixed variants; 4P extra helper contributes only its validated active skill; fixed leader board rules use dedicated skill facts; manual goals can be edited when leader data is unavailable",
     "orb_readiness_diagnostics": "current session and runtime button gates plus up to 16 distinct multiplayer states observed by UI snapshots, retained after exit; metadata-only release keeps the last complete observed board",
+    "orb_initial_readiness": "expanding PC shortcuts or opening the orb panel starts read-only native-frame readiness observation at most four times per second before any explicit solve; first 8P Auto becomes available after countdown and all local-window checks; no action intent or battle-report collection from UI observation",
+    "orb_clear_stop": "verified native clear/result phases 28-31 and 67/68 stop solo and 8P Auto without waiting for scene exit, finished flag or timer expiry; terminal metadata does not depend on retired actors; ordinary floor/skill transitions and 8P phase 69 continue; new matches require an explicit start; device verification pending",
     "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; confirmed consumeAssist and final puzzleAfter; accepted-use group intervals and startAfter persist within the same battle/strategy across stop/restart; atomic single-file config commit; source/skill constraints never force a native choice",
     "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended plus independent single/double Kenpachi plans; single Kenpachi uses Unohana #14061 after a seven-step opening with mandatory three-skill supply and absorption rescue only; no universal seamless-skill or healing guarantee",
     "diagonal_orbs": "optional default-off adjacent eight-direction search, replay and native acknowledgement; matching stays horizontal/vertical; atomically saved with selected profile/team plan; device verification pending",

@@ -175,8 +175,17 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
         (a->kind == PHOrbMultiplayerThree || a->kind == PHOrbMultiplayerThreeSolo || a->clockStart == b->clockStart);
 }
 
+bool PHOrbBattleEnded(const PHOrbSnapshot *state) {
+    // PAD 23.6.0: phase 28 prepares Dungeon Clear, 29..31 finish its
+    // results/exit flow. Competitive result preparation/handling is 67/68.
+    // See ios/research/orb-auto-readiness-stop-20261102.json.
+    return state && state->present && state->valid &&
+        ((state->phase >= 28 && state->phase <= 31) || state->phase == 67 || state->phase == 68);
+}
+
 bool PHOrbEightMatchReady(const PHOrbSnapshot *state) {
     if (!state || !state->valid || !state->present || state->multiplayerDisabled ||
+        PHOrbBattleEnded(state) ||
         state->identity.sourceMode || state->multiplayer.kind != PHOrbMultiplayerEight ||
         PHOrbMultiplayerMode(state->identity.entryMode, state->identity.multiplayer) != PHOrbMultiplayerEight) return false;
     const PHOrbMultiplayerState *m = &state->multiplayer;

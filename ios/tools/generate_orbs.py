@@ -151,7 +151,10 @@ def generate(manifest):
                 'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
                 'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA', 'PHOrbLeaderCatalogAllocateRVA',
                 'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA',
-                'PHOrbEightCompetitiveSkillRVA', 'PHOrbEightSkillOwnerRVA'}
+                'PHOrbEightCompetitiveSkillRVA', 'PHOrbEightSkillOwnerRVA',
+                'PHOrbTerminalDispatchRVA', 'PHOrbTerminalTableLowRVA', 'PHOrbTerminalTableHighRVA',
+                'PHOrbDungeonClearDispatchRVA', 'PHOrbDungeonClearResultRVA',
+                'PHOrbCompetitiveResultDispatchRVA', 'PHOrbCompetitiveResultRVA'}
     observation_guards = {'PHOrbObservationCooldownCacheRVA', 'PHOrbObservationBodyCooldownRVA',
         'PHOrbObservationTotalCooldownRVA', 'PHOrbObservationEvolvedCooldownRVA', 'PHOrbObservationEvolvedSkillRVA',
         'PHOrbObservationLatentRVA', 'PHOrbObservationLatentDecodeRVA', 'PHOrbObservationLAwakeningRVA',

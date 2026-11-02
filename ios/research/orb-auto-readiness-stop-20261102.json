@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.0-106878",
+  "inspected_on": "2026-11-02",
+  "status": "source-review-test-cases-written-build-pending",
+  "device_verified": false,
+  "binary": {
+    "uuid": "DD332AD4-4C92-3AAF-85D0-3892556A3A0E",
+    "sha256": "611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec"
+  },
+  "method": "Read-only IDA decompilation, original instruction bytes and native switch table. No game requests, timer writes or result mutations.",
+  "reported_symptom": "0.5.19 first 8P Auto disabled after countdown while once was enabled; user also reports Dungeon Clear does not immediately stop Auto.",
+  "first_use_cause": "Orb session monitoring and first snapshot were absent; runtime multiplayer gate required eightAutoAvailable from that snapshot before Auto could start observation.",
+  "readiness_fix": {
+    "triggers": [
+      "expand idle PC shortcuts",
+      "open orb panel"
+    ],
+    "idle_max_hz": 4,
+    "native_frame_only": true,
+    "solver": false,
+    "skills": false,
+    "input_intent": false,
+    "battle_report": false
+  },
+  "terminal_evidence": [
+    {
+      "va": "0x1005b5428",
+      "finding": "Native dispatcher decodes protected impl+0x92978, accepts 76 states, then uses unsigned16 offsets from 0x100f14ad0 and base 0x1005b51e4 with shift2."
+    },
+    {
+      "phase": 28,
+      "dispatch": "0x1005b5a10",
+      "callee": "0x1005850e4",
+      "finding": "Dungeon completion preparation and statistics; goes to29 normally or68 for modes10/11. Distinct from ordinary floor transitions."
+    },
+    {
+      "va": "0x100585cc4",
+      "finding": "Selector0 at0x100542b74 sends competitive mode to68; otherwise29; writes protected phase with0x100570b54."
+    },
+    {
+      "phase": 29,
+      "dispatch": "0x1005b5770",
+      "callee": "0x100586000",
+      "finding": "Completion/result handling proceeds to30."
+    },
+    {
+      "phase": 30,
+      "dispatch": "0x1005b5804",
+      "callee": "0x1005b3b58",
+      "finding": "Result exit transition proceeds to31."
+    },
+    {
+      "phase": 31,
+      "dispatch": "0x1005b5900",
+      "callee": "0x1005b3d7c",
+      "finding": "Exit waits for original transition, then clears the battle scene flag."
+    },
+    {
+      "phase": 67,
+      "dispatch": "0x1005b5558",
+      "callee": "0x1005872f4",
+      "finding": "Competitive result preparation; transitions to68 (mode11 may pass through57)."
+    },
+    {
+      "phase": 68,
+      "dispatch": "0x1005b59f0",
+      "callee": "0x1005880fc",
+      "finding": "Competitive result handling can precede or toggle the finished byte atimpl+0xb7e08; waiting for that byte alone is insufficient."
+    },
+    {
+      "phase": 69,
+      "dispatch": "0x1005b5494",
+      "callees": [
+        "0x1004da668",
+        "0x1004da680"
+      ],
+      "finding": "8P next-board flow, explicitly nonterminal; existing0x100013440 branch resets next-board flags."
+    }
+  ],
+  "change": {
+    "terminal_phases": [
+      28,
+      29,
+      30,
+      31,
+      67,
+      68
+    ],
+    "valid_metadata_required": true,
+    "ordinary_phase69_continues": true,
+    "retired_actor_read_required": false,
+    "new_match_requires_click": true,
+    "new_read_offsets": 0,
+    "new_guard_count": 7,
+    "packet_mutation": false,
+    "timer_mutation": false
+  },
+  "regressions": {
+    "status": "written-not-yet-executed",
+    "files": [
+      "ios/tests/orb_readiness_stop_session_tests.inc",
+      "ios/tests/orb_readiness_probe.inc",
+      "ios/tests/orb_eight_native_tests.inc",
+      "ios/tests/orb_eight_solver_tests.inc",
+      "ios/tests/orb_eight_session_tests.inc",
+      "ios/tests/overlay_probe.m"
+    ]
+  },
+  "guards": [
+    {
+      "name": "PHOrbTerminalDispatchRVA",
+      "va": "0x1005b5428",
+      "rva": "0x5b5428",
+      "length": 64,
+      "bytes": "0849429100e12591b1edfe971f2c017168edff54e803002ae94a00f029412b91eaecff102b7968784a090b8b40011fd6e00313aa0b36fe9720370034683a40f9",
+      "sha256": "ea25c050266151b88d0fa874d9cc9de7125a4b2e56de56d5c2e04e6921be8379"
+    },
+    {
+      "name": "PHOrbTerminalTableLowRVA",
+      "va": "0x100f14b08",
+      "rva": "0xf14b08",
+      "length": 64,
+      "bytes": "0b0263018801c7019001c800e500d5011602d100c101ce00cb00000000000701ad01e301b900d700b001be012002b301c500bc002c021302c200c401db01bf00",
+      "sha256": "e5a2d37fa4fcb5e7c36ef76fbb050fea0ba521537fa666e024018aa5216d4fb4"
+    },
+    {
+      "name": "PHOrbTerminalTableHighRVA",
+      "va": "0x100f14b50",
+      "rva": "0xf14b50",
+      "length": 64,
+      "bytes": "2f02e901f201dd000302ac002302290285013202fa01b60002000400110013000100030015000f000d003a00160019001a001c001e0020001f00220024002600",
+      "sha256": "4463d44cf91336cddbf53eea72e436647ba56b9f01f0a2de422ff54b65bc1129"
+    },
+    {
+      "name": "PHOrbDungeonClearDispatchRVA",
+      "va": "0x1005b5a10",
+      "rva": "0x5b5a10",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aaaf3dff97eefdff17e00313aa0ba3e997ebfdff17683a40f90849429100e12591a104805242ecfe97",
+      "sha256": "0b8c2b3c7a92ee7edf4f4e9964f21462feca133166ec22d02b7feb187124ba0e"
+    },
+    {
+      "name": "PHOrbDungeonClearResultRVA",
+      "va": "0x100585cc4",
+      "rva": "0x585cc4",
+      "length": 64,
+      "bytes": "00008052abf3fe97683a40f92001003409929f524901a0720ac285522a01a0721f6929381f692a388108805202000014a10380520849429100e1259195abff97",
+      "sha256": "d26d362acceed7aa32dda6de6d1ca27519b3708d0ac5e07fcd5e1190b63552d9"
+    },
+    {
+      "name": "PHOrbCompetitiveResultDispatchRVA",
+      "va": "0x1005b5558",
+      "rva": "0x5b5558",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aa6147ff971cffff17e00313aa0528ff9719ffff1708189452880ba072c96a68b829050011c96a28b8",
+      "sha256": "53108093fc40e331c04904730d89fc54878b998ecddaf0697b4cc605a9d20a9e"
+    },
+    {
+      "name": "PHOrbCompetitiveResultRVA",
+      "va": "0x1005b59f0",
+      "rva": "0x5b59f0",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aabd49ff97f6fdff17683a40f9093585522901a0722a0080520a692938e00313aaaf3dff97eefdff17",
+      "sha256": "5497d7d441534f8ff716fa2902468115ac35239ae2dddc2a592d6242c8bd461c"
+    }
+  ],
+  "privacy": "Raw private device diagnostic, account fields and filesystem attachment path are not included.",
+  "local_validation": {
+    "status": "passed",
+    "scope": "Windows model/solver including terminal phases; JSON, generator and shell syntax;426 original IPA guards. Native/Session/GUI and iPhoneOS build pending.",
+    "device_verified": false
+  }
+}

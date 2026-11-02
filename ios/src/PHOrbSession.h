@@ -50,6 +50,9 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 - (BOOL)configureQuality:(NSString *)quality;
 - (BOOL)configureSettings:(NSDictionary *)settings;
 - (BOOL)configureProfiles:(NSDictionary *)library;
+// Opening the orb UI requests bounded readiness reads only. This does not
+// queue a solve, collect battle reports, arm a gesture or start Auto.
+- (void)monitorReadiness;
 - (void)queueRead;
 // Enables only read-only recording; does not solve, cast skills, or drag.
 - (void)queueDungeonCapture;

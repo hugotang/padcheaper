@@ -527,12 +527,23 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     if (state->valid && !state->multiplayerDisabled && state->multiplayer.kind == PHOrbMultiplayerNone)
         ReadThornBudget(*state);
     if (state->multiplayer.kind == PHOrbMultiplayerEight && !_eightAuto) state->automation.window = false;
+    if (PHOrbBattleEnded(state)) {
+        state->automation.window = false;
+        if (reason) *reason = @"本場已通關或進入結算";
+    }
     if (_multiplayerDisabled && reason) *reason = @"本場多人模式或連線狀態已改變；離開關卡後才可重新操作";
     return YES;
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (![self read:state frame:frame reason:reason]) return NO;
     if (!state->present || !state->valid || state->multiplayerDisabled) return YES;
+    // Clear/result metadata is sufficient to stop. Team/skill objects may
+    // already be retiring, so do not require them to recognize completion.
+    if (PHOrbBattleEnded(state)) {
+        state->automation.window = false;
+        if (reason) *reason = @"本場已通關或進入結算";
+        return YES;
+    }
     if (state->multiplayer.kind == PHOrbMultiplayerEight && _eightAuto && PHOrbSameEightMatch(&_eightMatch,state)) {
         if (!ReadEightAutomation(*state)) {
             _eightAuto = false;

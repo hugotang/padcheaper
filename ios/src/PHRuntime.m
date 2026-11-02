@@ -1024,6 +1024,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqual:@"orbsObserve"]) { [PHOrbTracker monitorReadiness]; return; }
     if ([action isEqual:@"orbsOnce"] || [action isEqual:@"orbsStart"] || [action isEqual:@"orbsExecute"]) {
         NSDictionary *battle = [PHBattleTracker snapshot];
         if ([battle[@"restorePending"] boolValue] || [battle[@"pendingMask"] unsignedIntegerValue]) {

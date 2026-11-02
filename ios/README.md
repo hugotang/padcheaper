@@ -1,5 +1,7 @@
 # 編譯及載入 PADCheaper
 
+`0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。原始碼與案例已完成，本版編譯／原生／Session／GUI 驗證進行中，尚未交付。真機待驗收。
+
 `0.5.19-orbs` 接入 [8 人本場 Auto](docs/release-0.5.19.md)：原生本機技能、首消目標、每盤手勢與換層，結算後停止。附上可獨立匯入的 [大感謝祭 2026 杯設定](templates/eight-player-thanks-2026/README.md)。[CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；419 組指紋符合原始 IPA，實機同步／計分尚待驗收。
 
 `0.5.18-orbs` 新增 [單人離線隊伍試算](docs/team-model.md)、全部覺醒圖示、主動技能 CD／持續期／效果覆蓋，以及 [關卡對比與可更新攻略庫](docs/team-dungeon.md)。從轉珠面板點「隊伍對比」直接載入擷取紀錄；新關卡與攻略 JSON 無需重編 dylib。32 項隊伍及 13 項關卡模型、完整原生回歸、iPhoneOS 編譯／簽章、瀏覽器及四份 GUI 已由 [CI 98](https://github.com/hugotang/padcheaper/actions/runs/41321037478) 通過；417 組指紋符合原始 IPA，真機待驗收。見 [更新說明](docs/release-0.5.18.md)。Auto 存活放行仍未接通。
