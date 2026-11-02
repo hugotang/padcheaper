@@ -1,5 +1,6 @@
 #import "PHOrbEight.h"
 #import "PHOrbPlanning.h"
+#include "PHOrbEightModel.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 #include <string.h>
@@ -242,6 +243,17 @@ NSDictionary *PHOrbEightGuideDecision(NSDictionary *a, const PHOrbSnapshot *s, u
         @"B%u：攻略指定技能無可用分支（%@）",s->wave + 1,[details componentsJoinedByString:@"；"]]};
 }
 
+// Validated profile sequences hold one to six unique 1-based slots; a longer
+// array yields a count the composer rejects.
+static unsigned EightSlots(NSArray *sequence, uint8_t slots[6]) {
+    unsigned count = 0;
+    for (NSNumber *value in sequence) {
+        if (count == 6) return 7;
+        slots[count++] = (uint8_t)MIN(value.unsignedIntValue,255u);
+    }
+    return count;
+}
+
 NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot *s, uint8_t attempted) {
     NSDictionary *p = a[@"guide"][@"preparation"];
     if (!p || !PHOrbEightGuideEnabled(a) || !s || s->wave + 1 != [p[@"floor"] unsignedIntValue] ||
@@ -273,44 +285,19 @@ NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot
     const unsigned linkLength = [a[@"leader"][@"comboLength"] unsignedIntValue];
     unsigned readyAttackOrbs = 0;
     for (unsigned c = 0; c < 6; ++c) if (colors & (1u << c)) readyAttackOrbs += counts[c];
+    // What the current board plus already-charged conversions can supply now.
     for (NSArray *sequence in a[@"floors"][s->wave][@"sequences"]) {
-        uint8_t map[6] = {0,1,2,3,4,5}; BOOL knownNow = YES;
-        for (NSNumber *value in sequence) {
-            unsigned slot = value.unsignedIntValue - 1; const PHOrbEightMember *m = &s->eight.members[slot];
-            const PHOrbSkillMember *member = &s->automation.members[slot];
-            if ((attempted & (1u << slot)) || !member->active || !m->skillKnown || member->bound || member->state ||
-                member->charge < m->cooldown || m->boardColors) { knownNow = NO; break; }
-            for (unsigned c = 0; c < 6; ++c) if (m->generate[c] || m->convert[c] >= 6) knownNow = NO;
-            if (!knownNow) break;
-            for (unsigned c = 0; c < 6; ++c) map[c] = m->convert[map[c]];
-        }
-        if (!knownNow) continue;
-        unsigned attack = 0;
-        for (unsigned c = 0; c < 6; ++c) if (colors & (1u << map[c])) attack += counts[c];
-        readyAttackOrbs = MAX(readyAttackOrbs,attack);
+        uint8_t slots[6], map[6]; const unsigned count = EightSlots(sequence,slots);
+        if (PHOrbEightComposeConversion(s,slots,count,attempted,0,map,NULL))
+            readyAttackOrbs = MAX(readyAttackOrbs,PHOrbEightAttackOrbs(counts,map,colors));
     }
     for (NSArray *sequence in p[@"sequences"]) {
-        uint8_t conversion[6] = {0,1,2,3,4,5}; BOOL readyNext = YES, readyNow = YES;
-        for (NSNumber *value in sequence) {
-            unsigned slot = value.unsignedIntValue - 1; const PHOrbEightMember *m = &s->eight.members[slot];
-            const PHOrbSkillMember *member = &s->automation.members[slot];
-            if ((attempted & (1u << slot)) || !member->active || !m->skillKnown || member->bound || member->state ||
-                member->charge + 1u < m->cooldown || m->boardColors) { readyNext = NO; break; }
-            readyNow &= member->charge >= m->cooldown;
-            for (unsigned c = 0; c < 6; ++c) if (m->generate[c] || m->convert[c] >= 6) readyNext = NO;
-            if (!readyNext) break;
-            for (unsigned c = 0; c < 6; ++c) conversion[c] = m->convert[conversion[c]];
-        }
-        if (!readyNext) continue;
-        unsigned converted[6] = {0};
-        for (unsigned c = 0; c < 6; ++c) converted[conversion[c]] += counts[c];
-        BOOL canRetain = NO;
-        for (unsigned removed = 0; removed < 6; ++removed) if (counts[removed] >= 3) {
-            unsigned retained[6]; memcpy(retained,converted,sizeof(retained)); retained[conversion[removed]] -= 3;
-            for (unsigned c = 0; c < 6; ++c) if ((colors & (1u << c)) && retained[c] >= linkLength &&
-                retained[primary] >= [p[@"primaryMinimum"] unsignedIntValue]) canRetain = YES;
-        }
-        if (!canRetain) continue;
+        uint8_t slots[6], conversion[6]; bool readyNow = false;
+        const unsigned count = EightSlots(sequence,slots);
+        if (!PHOrbEightComposeConversion(s,slots,count,attempted,1,conversion,&readyNow) ||
+            !PHOrbEightCanRetainAfterThree(counts,conversion,colors,primary,linkLength,
+                [p[@"primaryMinimum"] unsignedIntValue])) continue;
+        unsigned converted[6]; PHOrbEightConvertedCounts(counts,conversion,converted);
         unsigned value = 0, attackOrbs = 0; NSMutableArray *map = [NSMutableArray array], *inventory = [NSMutableArray array];
         for (unsigned c = 0; c < 6; ++c) {
             [map addObject:@(conversion[c])]; [inventory addObject:@(converted[c])];

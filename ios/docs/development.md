@@ -4,6 +4,16 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-03：0.5.25 之後的結構整理，尚未編譯
+
+基於 `49f69a2`（`main` 已快轉到這個已驗證的 0.5.25 提交）。以下未經 macOS 編譯與測試；CI 118 不代表本批。
+
+- 8 人狀態按生命週期分成 `EightPlanState`（本盤技能序列、救援游標、攻略判斷）、`EightTurnState`（本回合嘗試遮罩、已放棄的優先準備）、`EightPreparationState`（本場唯一準備回合）。重設一律以 `= {}` 指派，新增欄位不必再逐處補重設；行為不變。`PHOrbSession.mm`／`PHOrbEightSession.inc` 以字詞邊界機械改名，舊 ivar 名稱已無殘留。
+- B6 準備判斷的轉色合成、攻擊珠計數與「消三珠後仍保留」判斷抽成純 C 的 `PHOrbEightModel.h`，`PHOrbEight.m` 改為呼叫，判斷式與原本逐條相同。新增 `ios/tests/orb_eight_model_tests.c`（順序合成、差一回合 CD、遮罩／綁定／狀態／未知技能／全盤改色／生珠／特殊珠拒絕、轉色後總數、保留量與主色門檻），已加入 `test.sh`；mingw `-Wall -Wextra -Werror` 語法檢查通過，未執行。
+- `ios/tools/windows-tests.sh`：Windows 本機建置並執行模型、8 人模型與求路回歸；`BASELINE=<commit>` 時另建舊版求路器並比對路線摘要。
+- `ios/tools/package_delivery.py`：從成功的 CI run 下載產物，檢查 dylib 雜湊、所有步驟與四份 GUI 報告，拒絕覆蓋既有交付，產生 `verification.json`、`PACKAGE_SHA256SUMS`、ZIP 與 `.zip.sha256`；永遠標記 `device_verified=false`。
+- `.gitattributes`：文字檔一律 LF，圖片與二進位標為 binary；`git add --renormalize` 確認沒有任何檔案內容改變。
+
 ## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證完成
 
 2026-11-03，`0.5.25-orbs` 已由 [CI 118](https://github.com/hugotang/padcheaper/actions/runs/41495269554) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟共四份 GUI（皆 success、無 failures）。B6 優先準備失敗退回輸出、橫排候選分時、轉珠頁 8 人進度摘要、說明收合與複製診斷均經同一來源測試；轉珠預覽、8 人 Auto、空盤狀態與編輯頁把手截圖已檢視。轉珠頁橫向版面沒有自動截圖，需真機確認。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。

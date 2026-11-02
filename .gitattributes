@@ -1,0 +1,9 @@
+# Repository text is stored with LF. Working copies also use LF so shell
+# scripts and generated manifests are byte-identical on Windows and macOS CI.
+* text=auto eol=lf
+*.sh text eol=lf
+
+*.png binary
+*.dylib binary
+*.ipa binary
+*.zip binary

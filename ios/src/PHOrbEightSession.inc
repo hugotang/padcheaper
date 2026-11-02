@@ -18,16 +18,9 @@
 }
 
 // Board plan: the skill sequence, its rescue cursor and the guide opener check.
-- (void)resetEightPlan {
-    _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0;
-    _eightGuidePrepared = _eightSequenceGuide = false;
-}
-// Native turn: a new plan, the six-slot attempt mask and any preparation that
-// was declined on the previous turn's board. Add new per-turn state here.
-- (void)resetEightTurn {
-    [self resetEightPlan];
-    _eightAttemptedSlots = 0; _eightPreparationDeclined = false;
-}
+- (void)resetEightPlan { _eightPlan = {}; }
+// Native turn: a new plan plus EightTurnState (attempt mask, declined reserve).
+- (void)resetEightTurn { _eightPlan = {}; _eightTurn = {}; }
 
 - (NSDictionary *)eightProgressTrace {
     const auto &r = _eightLastObserved.eightReceipt;
@@ -40,15 +33,15 @@
         @"latestTotalUses":@(_eightLastObserved.automation.skillUses),
         @"receipt":@{@"valid":@(r.valid),@"skill":@(r.skill),@"catalogID":@(r.catalogID),
             @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
-        @"floor":@(_live.wave + 1),@"sequence":_eightSequence ?: @[],
-        @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),@"recoveryCursor":@(_eightSequenceCursor),
-        @"attemptedSlots":@(_eightAttemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
-        @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightGuidePrepared),
-        @"guideSequence":@(_eightSequenceGuide),@"floorSkillMask":@(_live.wave < _eightFloorSkillMask.size() ? _eightFloorSkillMask[_live.wave] : 0),
+        @"floor":@(_live.wave + 1),@"sequence":_eightPlan.sequence ?: @[],
+        @"sequenceStep":@(_eightPlan.step),@"sequenceCount":@(_eightPlan.sequence.count),@"recoveryCursor":@(_eightPlan.cursor),
+        @"attemptedSlots":@(_eightTurn.attemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
+        @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightPlan.guidePrepared),
+        @"guideSequence":@(_eightPlan.guide),@"floorSkillMask":@(_live.wave < _eightFloorSkillMask.size() ? _eightFloorSkillMask[_live.wave] : 0),
         @"firstPuzzle":_eightFirstPuzzle ?: @{},
-        @"firstBlocked":_eightFirstBlocked ?: @{},@"lastBlocked":_eightLastBlocked ?: @{},@"preparation":_eightPreparationTrace ?: @{},
-        @"preparationUsed":@(_eightPreparationUsed),@"preparationAwaiting":@(_eightPreparationAwaiting),
-        @"preparationDeclined":@(_eightPreparationDeclined),
+        @"firstBlocked":_eightFirstBlocked ?: @{},@"lastBlocked":_eightLastBlocked ?: @{},@"preparation":_eightPrep.trace ?: @{},
+        @"preparationUsed":@(_eightPrep.used),@"preparationAwaiting":@(_eightPrep.awaiting),
+        @"preparationDeclined":@(_eightTurn.preparationDeclined),
         @"lastStop":_eightLastStop ?: @{}};
 }
 
@@ -68,10 +61,7 @@
         _eightDiscardSequence = _eightPausedResolve = false;
         [self resetEightTurn]; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
         _eightFirstPuzzle = nil;
-        _eightFirstBlocked = _eightLastBlocked = _eightPreparation = _eightPreparationTrace = nil;
-        _eightPreparing = _eightPreparationUsed = _eightPreparationAwaiting = false;
-        _eightPreparationPriority = _eightPreparationDeclined = false;
-        _eightPreparationSearchMS = 0;
+        _eightFirstBlocked = _eightLastBlocked = nil; _eightPrep = {};
         _eightResumes = 0; _eightLastStop = nil;
         _autoTurn = 1; _autoMoves = _autoSkills = 0;
         [_automationLog removeAllObjects];
@@ -79,7 +69,7 @@
         [self queueStop:@"本場上次技能啟動結果不明，不會重複施放；請手動完成本場"]; return;
     }
     const bool sameProfile = [_eightHistoryProfile isEqual:selected ?: @{}];
-    _eightPreparing = false; // A resumed preparation always needs a new board check and route.
+    _eightPrep.active = false; // A resumed preparation always needs a new board check and route.
     // Keep a pending skill's original cursor until its receipt is consumed.
     // A new profile/board can discard the remainder only after that accounting.
     if (![_engine armEightPlayerAuto:state]) {
@@ -170,7 +160,7 @@
         ++_autoTurn; _eightBoardSubmitted = _sawResolve = false;
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
         _eightHistory = _live;
-        [self resetEightTurn]; _eightPreparing = false;
+        [self resetEightTurn]; _eightPrep.active = false;
         [self waitForAutomationBoard]; return;
     }
     if (_eightSkillPending) {
@@ -178,11 +168,11 @@
             [self queueStop:@"8 人技能生效紀錄未確認，保留進度避免重複施放"]; return;
         }
         _eightSkillPending = false;
-        if (_eightSequenceStep < _eightSequence.count) ++_eightSequenceStep;
+        if (_eightPlan.step < _eightPlan.sequence.count) ++_eightPlan.step;
         // A verified effect changes the inventory used to skip earlier rescue
         // branches (for example Ney -> Kagutsuchi). Revisit those branches
         // while preserving both the ordered sequence and per-turn attempt mask.
-        _eightSequenceCursor = 0;
+        _eightPlan.cursor = 0;
         ++_autoSkills;
         if (_eightSkillBefore.wave < _eightFloorSkillMask.size())
             _eightFloorSkillMask[_eightSkillBefore.wave] |= uint8_t(1u << _eightSlot);
@@ -208,42 +198,42 @@
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
     }
     _eightHistory = _live;
-    if (_eightPreparationAwaiting) {
+    if (_eightPrep.awaiting) {
         unsigned minimum = 0;
         if (!PHOrbEnemyComboRequirement(&_live.enemyCombo,&minimum) || minimum) {
             [self queueStop:@"準備回合後吸收尚未確認消失，已停止；本場不再重複準備"]; return;
         }
-        _eightPreparationAwaiting = _eightPreparing = false;
-        _eightSequence = nil; _eightSequenceStep = 0; _eightGuidePrepared = true;
-        NSMutableDictionary *trace = [_eightPreparationTrace mutableCopy];
+        _eightPrep.awaiting = _eightPrep.active = false;
+        _eightPlan.sequence = nil; _eightPlan.step = 0; _eightPlan.guidePrepared = true;
+        NSMutableDictionary *trace = [_eightPrep.trace mutableCopy];
         trace[@"status"] = @"next-turn-confirmed"; trace[@"nextBoard"] = BoardTrace(_live.board);
-        trace[@"nextTeam"] = EightTeamTrace(_live); _eightPreparationTrace = [trace copy];
+        trace[@"nextTeam"] = EightTeamTrace(_live); _eightPrep.trace = [trace copy];
         [self logAutomation:@"準備回合已確認，吸收已消失；依現盤與實際 CD 選擇轉色輸出"];
         if (PHOrbEightGuideEnabled(_activeProfile[@"activity"])) {
-            if (_live.wave != [_eightPreparationTrace[@"wave"] unsignedIntValue] ||
-                _live.wave >= [_activeProfile[@"activity"][@"floors"] count] || ![_eightPreparation[@"sequence"] count]) {
+            if (_live.wave != [_eightPrep.trace[@"wave"] unsignedIntValue] ||
+                _live.wave >= [_activeProfile[@"activity"][@"floors"] count] || ![_eightPrep.plan[@"sequence"] count]) {
                 [self queueStop:@"準備回合後樓層或攻略已改變，請依目前盤面重新開始"]; return;
             }
             NSMutableDictionary *trial = [_activeProfile[@"activity"] mutableCopy];
             NSMutableArray *floors = [trial[@"floors"] mutableCopy];
             NSMutableDictionary *floor = [floors[_live.wave] mutableCopy];
-            floor[@"sequences"] = @[_eightPreparation[@"sequence"]]; floors[_live.wave] = floor; trial[@"floors"] = floors;
+            floor[@"sequences"] = @[_eightPrep.plan[@"sequence"]]; floors[_live.wave] = floor; trial[@"floors"] = floors;
             NSUInteger cursor = 0;
-            _eightSequence = PHOrbEightSkillSequence(trial,&_live,_eightAttemptedSlots,&cursor);
-            _eightSequenceCursor = 0;
-            _eightSequenceGuide = false;
-            if (!_eightSequence.count) {
+            _eightPlan.sequence = PHOrbEightSkillSequence(trial,&_live,_eightTurn.attemptedSlots,&cursor);
+            _eightPlan.cursor = 0;
+            _eightPlan.guide = false;
+            if (!_eightPlan.sequence.count) {
                 [self queueStop:@"準備回合後轉色技能或珠數未達條件，已停止；本場不再重複準備"]; return;
             }
         }
     }
-    if (!_eightGuidePrepared && PHOrbEightGuideEnabled(_activeProfile[@"activity"])) {
-        _eightGuidePrepared = true;
+    if (!_eightPlan.guidePrepared && PHOrbEightGuideEnabled(_activeProfile[@"activity"])) {
+        _eightPlan.guidePrepared = true;
         if (_live.wave >= _eightFloorSubmitted.size()) { [self queueStop:@"已超出攻略樓層上限"]; return; }
         if (!_eightFloorSubmitted[_live.wave]) {
             NSDictionary *activity = _activeProfile[@"activity"];
-            NSDictionary *preparation = PHOrbEightPreparationDecision(activity,&_live,_eightAttemptedSlots);
-            if (!_eightPreparationUsed && !_eightPreparationDeclined &&
+            NSDictionary *preparation = PHOrbEightPreparationDecision(activity,&_live,_eightTurn.attemptedSlots);
+            if (!_eightPrep.used && !_eightTurn.preparationDeclined &&
                 [activity[@"guide"][@"preparation"][@"preferBeforeOutput"] boolValue] &&
                 [preparation[@"available"] boolValue] && [preparation[@"preferable"] boolValue]) {
                 const unsigned budget = std::min(OptionsForQuality(_quality).milliseconds,
@@ -251,28 +241,28 @@
                 // No output search shares this board yet. Give the bounded
                 // 12-step preparation half the floor budget (at least 150 ms);
                 // a failure still leaves turn time for the output fallback.
-                _eightPreparationSearchMS = std::min(budget,std::max(150u,budget / 2));
+                _eightPrep.searchMS = std::min(budget,std::max(150u,budget / 2));
                 [self beginEightPreparation:preparation priority:YES]; return;
             }
             NSDictionary *decision = PHOrbEightGuideDecision(_activeProfile[@"activity"],&_live,
-                _eightFloorSkillMask[_live.wave],_eightAttemptedSlots);
+                _eightFloorSkillMask[_live.wave],_eightTurn.attemptedSlots);
             if (![decision[@"available"] boolValue]) {
                 [self rememberEightBlock:decision];
-                if (!_eightPreparationUsed && !_eightFloorSubmitted[_live.wave] && [preparation[@"available"] boolValue]) {
+                if (!_eightPrep.used && !_eightFloorSubmitted[_live.wave] && [preparation[@"available"] boolValue]) {
                     // Before a guide delay, still try the unchanged board and
                     // all currently ready recovery skills with normal goals.
-                    _eightSequence = nil; _eightSequenceStep = 0;
+                    _eightPlan.sequence = nil; _eightPlan.step = 0;
                     [self beginSolve]; return;
                 }
-                _eightGuidePrepared = false; [self queueStop:decision[@"message"]]; return;
+                _eightPlan.guidePrepared = false; [self queueStop:decision[@"message"]]; return;
             }
-            _eightSequence = decision[@"sequence"]; _eightSequenceStep = 0; _eightSequenceGuide = _eightSequence.count > 0;
-            if (_eightSequenceGuide) [self logAutomation:[NSString stringWithFormat:
-                @"B%u：攻略開技 %@，完成後再求路",_live.wave + 1,[_eightSequence componentsJoinedByString:@"→"]]];
+            _eightPlan.sequence = decision[@"sequence"]; _eightPlan.step = 0; _eightPlan.guide = _eightPlan.sequence.count > 0;
+            if (_eightPlan.guide) [self logAutomation:[NSString stringWithFormat:
+                @"B%u：攻略開技 %@，完成後再求路",_live.wave + 1,[_eightPlan.sequence componentsJoinedByString:@"→"]]];
         }
     }
-    if (_eightSequenceStep < _eightSequence.count) {
-        const NSUInteger slot = [_eightSequence[_eightSequenceStep] unsignedIntegerValue] - 1;
+    if (_eightPlan.step < _eightPlan.sequence.count) {
+        const NSUInteger slot = [_eightPlan.sequence[_eightPlan.step] unsignedIntegerValue] - 1;
         const auto &m = _live.automation.members[slot];
         if (_live.automation.skillUses >= 255) {
             [self queueStop:@"8 人技能總計數已達上限，無法確認新的施放，已停止"]; return;
@@ -304,10 +294,10 @@
         if (_now - _skillWindowWaitAt > SkillWindowTimeout) [self queueStop:reason ?: @"8 人技能窗口等候逾時"];
         return;
     }
-    _eightAttemptedSlots |= uint8_t(1u << _eightSlot); _skillWindowWaitAt = 0;
+    _eightTurn.attemptedSlots |= uint8_t(1u << _eightSlot); _skillWindowWaitAt = 0;
     if (result == PHOrbSkillUnavailable) {
-        _eightSequence = nil; _eightSequenceStep = 0;
-        if (_eightSequenceGuide) _eightGuidePrepared = false;
+        _eightPlan.sequence = nil; _eightPlan.step = 0;
+        if (_eightPlan.guide) _eightPlan.guidePrepared = false;
         [self logAutomation:reason ?: @"遊戲判定此技能不可用，重讀盤面後重新求路"];
         [self waitForAutomationBoard]; return;
     }
@@ -349,20 +339,20 @@
         // combo-only (zero row/link weights). Preserve that intent on upgrade.
         options->activity.comboPriority = floor[@"comboPriority"] ? [floor[@"comboPriority"] boolValue] :
             state->wave == 0 && options->activity.comboWeight > 0 && !options->activity.rowWeight && !options->activity.linkWeight;
-        if (_eightPreparing) {
-            options->steps = MIN(options->steps,12u); options->milliseconds = MIN(options->milliseconds,_eightPreparationSearchMS);
+        if (_eightPrep.active) {
+            options->steps = MIN(options->steps,12u); options->milliseconds = MIN(options->milliseconds,_eightPrep.searchMS);
             options->activity.preparation = true; options->activity.comboPriority = false;
             options->activity.comboWeight = options->activity.rowWeight = options->activity.linkWeight = 0;
-            options->activity.primaryColor = [_eightPreparation[@"primaryColor"] unsignedIntValue];
-            options->activity.primaryMinimum = [_eightPreparation[@"primaryMinimum"] unsignedIntValue];
+            options->activity.primaryColor = [_eightPrep.plan[@"primaryColor"] unsignedIntValue];
+            options->activity.primaryMinimum = [_eightPrep.plan[@"primaryMinimum"] unsignedIntValue];
             for (unsigned c = 0; c < 6; ++c) {
-                options->activity.conversion[c] = [_eightPreparation[@"conversion"][c] unsignedIntValue];
+                options->activity.conversion[c] = [_eightPrep.plan[@"conversion"][c] unsignedIntValue];
                 options->activity.attackWeights[c] = (options->activity.colors & (1u << c)) ?
                     (c == options->activity.primaryColor ? 300 : 100) : 0;
             }
             PHOrbGoalSet goals{}; goals.count = 1; goals.items[0] = {PHOrbGoalCombo,0,1,0};
             return @{@"available":@YES,@"goals":PHOrbGoalsJSON(&goals),@"enemyComboFirstWave":@YES,
-                @"leaderAddedCombos":@0,@"message":_eightPreparation[@"message"],@"warning":@"本杯攻略的一回合準備分支；不是傷害或存活預測。",@"leaders":@[]};
+                @"leaderAddedCombos":@0,@"message":_eightPrep.plan[@"message"],@"warning":@"本杯攻略的一回合準備分支；不是傷害或存活預測。",@"leaders":@[]};
         }
         return PHOrbEightPlan(a,state);
     }
@@ -385,9 +375,9 @@
 }
 
 - (void)beginEightPreparation:(NSDictionary *)preparation priority:(BOOL)priority {
-    _eightPreparation = preparation; _eightPreparing = true; _eightPreparationPriority = priority;
-    _eightSequence = nil; _eightSequenceStep = 0; _eightSequenceGuide = false;
-    _eightPreparationTrace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
+    _eightPrep.plan = preparation; _eightPrep.active = true; _eightPrep.priority = priority;
+    _eightPlan.sequence = nil; _eightPlan.step = 0; _eightPlan.guide = false;
+    _eightPrep.trace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
         @"priority":@(priority),@"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
     [self logAutomation:priority ? @"B6：先留珠消一組三珠，等下一回合雙轉色技就緒再輸出" : preparation[@"message"]];
     [self beginSolve];
@@ -396,32 +386,32 @@
 - (BOOL)recoverEightSolve {
     if (!_eightAutomatic || !_activeProfile[@"activity"] || !PHOrbSameAutomation(&_preview,&_live) ||
         !PHOrbSameEnemyCombo(&_preview.enemyCombo,&_live.enemyCombo)) return NO;
-    if (_eightPreparing) {
+    if (_eightPrep.active) {
         // Only a preferred preparation falls back; an ordinary preparation
         // already follows failed output and ready-skill searches.
-        if (!_eightPreparationPriority || _eightPreparationUsed) return NO;
-        _eightPreparing = _eightPreparationPriority = false; _eightPreparationDeclined = true;
-        _eightPreparationSearchMS = 0;
-        NSMutableDictionary *trace = [_eightPreparationTrace mutableCopy] ?: [NSMutableDictionary dictionary];
+        if (!_eightPrep.priority || _eightPrep.used) return NO;
+        _eightPrep.active = _eightPrep.priority = false; _eightTurn.preparationDeclined = true;
+        _eightPrep.searchMS = 0;
+        NSMutableDictionary *trace = [_eightPrep.trace mutableCopy] ?: [NSMutableDictionary dictionary];
         trace[@"status"] = @"priority-declined"; trace[@"search"] = _searchTrace ?: @{};
-        _eightPreparationTrace = [trace copy];
-        _eightSequence = nil; _eightSequenceStep = 0; _eightSequenceGuide = false; _eightGuidePrepared = false;
+        _eightPrep.trace = [trace copy];
+        _eightPlan.sequence = nil; _eightPlan.step = 0; _eightPlan.guide = false; _eightPlan.guidePrepared = false;
         [self clearRoute]; [self waitForAutomationBoard];
         [self logAutomation:[NSString stringWithFormat:@"B%u：限時內未找到合格的留珠準備路徑，改按攻略直接輸出",_live.wave + 1]];
         return YES;
     }
-    NSArray *sequence = PHOrbEightSkillSequence(_activeProfile[@"activity"],&_live,_eightAttemptedSlots,&_eightSequenceCursor);
+    NSArray *sequence = PHOrbEightSkillSequence(_activeProfile[@"activity"],&_live,_eightTurn.attemptedSlots,&_eightPlan.cursor);
     if (!sequence.count) {
-        if (_eightPreparationUsed || !_eightPreparationSearchMS || _live.wave >= _eightFloorSubmitted.size() || _eightFloorSubmitted[_live.wave]) return NO;
-        NSDictionary *preparation = PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots);
+        if (_eightPrep.used || !_eightPrep.searchMS || _live.wave >= _eightFloorSubmitted.size() || _eightFloorSubmitted[_live.wave]) return NO;
+        NSDictionary *preparation = PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightTurn.attemptedSlots);
         if (![preparation[@"available"] boolValue]) return NO;
         [self rememberEightBlock:@{@"message":@"現盤與當前技能未取得輸出路徑",@"search":_searchTrace ?: @{}}];
         [self beginEightPreparation:preparation priority:NO]; return YES;
     }
     // Only one search budget per observed board; a new search follows an
     // actual skill effect, with a bounded six-slot attempt mask per turn.
-    _eightSequence = sequence; _eightSequenceStep = 0;
-    _eightSequenceGuide = false;
+    _eightPlan.sequence = sequence; _eightPlan.step = 0;
+    _eightPlan.guide = false;
     [self clearRoute]; [self waitForAutomationBoard];
     [self logAutomation:[NSString stringWithFormat:@"B%u：本次未找到達標路徑，依活動策略開技後重讀",_live.wave + 1]];
     return YES;

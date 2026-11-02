@@ -104,6 +104,11 @@ done
     ios/src/PHInputModel.c ios/src/PHTimerModel.c ios/tests/timer_model_tests.c -o "$build_dir/timer-model-tests"
 "$build_dir/timer-model-tests"
 
+# Pure C 8P inventory model; the same file builds with any C11 compiler.
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -Wall -Wextra -Werror -Iios/src \
+    ios/tests/orb_eight_model_tests.c -o "$build_dir/orb-eight-model-tests"
+"$build_dir/orb-eight-model-tests"
+
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattleSession.m ios/tests/battle_session_tests.m \
     -framework Foundation -o "$build_dir/battle-session-tests"

@@ -291,6 +291,31 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
 }
 }
 
+// 8P Auto state, grouped by lifetime. Each group is reset only by assigning
+// {} (see -resetEightPlan, -resetEightTurn and the new-match branch of
+// -startEightAutomatic:), so new fields are reset without touching call sites.
+struct EightPlanState {
+    NSArray *sequence = nil;     // ordered slots (1-based) to cast before solving
+    NSUInteger cursor = 0;       // next rescue branch to evaluate on this board
+    NSUInteger step = 0;         // confirmed casts within sequence
+    bool guidePrepared = false;  // floor guide decision already made for this board
+    bool guide = false;          // sequence came from the floor guide (not rescue)
+};
+struct EightTurnState {
+    uint8_t attemptedSlots = 0;        // slots already cast this native turn
+    // A preferred reserve search failed on this turn's board: output and
+    // rescue keep the whole budget and the reserve turn is not retried.
+    bool preparationDeclined = false;
+};
+struct EightPreparationState {
+    NSDictionary *plan = nil, *trace = nil;
+    bool active = false;    // the current search is the reserve (three-orb) route
+    bool used = false;      // the single per-match reserve turn was committed
+    bool awaiting = false;  // waiting for the next native turn to confirm it
+    bool priority = false;  // pre-empted output on this board (preferBeforeOutput)
+    unsigned searchMS = 0;  // budget reserved for the reserve search
+};
+
 @implementation PHOrbSession {
     id<PHOrbEngine> _engine;
     dispatch_queue_t _worker;
@@ -367,19 +392,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     PHOrbSnapshot _eightHistory, _eightSubmission, _eightSkillBefore, _eightSkillAfter, _eightLastObserved;
     NSDictionary *_eightHistoryProfile, *_eightLastStop;
     NSUInteger _eightResumes;
-    NSUInteger _eightSlot, _eightSequenceCursor, _eightSequenceStep;
-    uint8_t _eightAttemptedSlots;
-    NSArray *_eightSequence;
-    bool _eightGuidePrepared, _eightSequenceGuide;
+    NSUInteger _eightSlot;
+    // Grouped by lifetime: assigning {} resets every field, including ones
+    // added later, so a reset site cannot silently miss new state.
+    EightPlanState _eightPlan;       // current board's skill plan
+    EightTurnState _eightTurn;       // one native turn
+    EightPreparationState _eightPrep; // one match (single reserve turn)
     std::array<uint8_t,100> _eightFloorSkillMask;
     std::array<bool,100> _eightFloorSubmitted;
-    NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightLastBlocked, *_eightPreparation, *_eightPreparationTrace;
-    bool _eightPreparing, _eightPreparationUsed, _eightPreparationAwaiting;
-    // Priority: the current preparation pre-empted output on this board.
-    // Declined: that preferred search failed; output and rescue keep the
-    // whole board budget and preparation is not retried until a new turn.
-    bool _eightPreparationPriority, _eightPreparationDeclined;
-    unsigned _eightPreparationSearchMS;
+    NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightLastBlocked;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
@@ -470,10 +491,10 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (_eightAutomatic) trace[@"eightPolicy"] = @{@"guideSkills":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),
         @"comboPriority":@(_solveOptions.activity.comboPriority),@"firstRemovalOnly":@YES,
         @"leaderAddedCombos":_goalPlan[@"leaderAddedCombos"] ?: @0,@"damageKnown":@NO,
-        @"linkRewardLimit":@(_solveOptions.activity.linkRewardLimit),@"preparation":@(_eightPreparing),
+        @"linkRewardLimit":@(_solveOptions.activity.linkRewardLimit),@"preparation":@(_eightPrep.active),
         @"attackRanking":_activeProfile[@"activity"][@"floors"] && _preview.wave < [_activeProfile[@"activity"][@"floors"] count] ?
             _activeProfile[@"activity"][@"floors"][_preview.wave][@"attack"] ?: @{} : @{},
-        @"preparationPlan":_eightPreparing ? _eightPreparation ?: @{} : @{}};
+        @"preparationPlan":_eightPrep.active ? _eightPrep.plan ?: @{} : @{}};
     trace[@"assistRecovery"] = _assistTrace;
     trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
     trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
@@ -619,8 +640,8 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),
         @"remainingSeconds":@(_live.multiplayer.remainingSeconds),
         @"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
-    if (_eightPreparing && !_eightPreparationUsed) _eightGuidePrepared = false;
-    _eightPreparing = false;
+    if (_eightPrep.active && !_eightPrep.used) _eightPlan.guidePrepared = false;
+    _eightPrep.active = false;
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
          (wasAutomatic && _autoBound && PHBattleSameIdentity(&_dungeonIdentity,&_autoOrigin.identity)))) {
@@ -1334,13 +1355,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const double budget = std::min(remaining > 0 ? remaining : multiplayer ? 0 : ExecutionLimit, ExecutionLimit);
     options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
-    if (_eightAutomatic && !_eightPreparing) {
-        _eightPreparationSearchMS = 0;
-        if (!_eightPreparationUsed && !_eightPreparationDeclined && _live.wave < _eightFloorSubmitted.size() && !_eightFloorSubmitted[_live.wave] &&
-            [PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots)[@"available"] boolValue]) {
+    if (_eightAutomatic && !_eightPrep.active) {
+        _eightPrep.searchMS = 0;
+        if (!_eightPrep.used && !_eightTurn.preparationDeclined && _live.wave < _eightFloorSubmitted.size() && !_eightFloorSubmitted[_live.wave] &&
+            [PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightTurn.attemptedSlots)[@"available"] boolValue]) {
             // Both searches on this unchanged board share its original budget.
-            _eightPreparationSearchMS = std::min(150u,options.milliseconds / 3);
-            options.milliseconds -= _eightPreparationSearchMS;
+            _eightPrep.searchMS = std::min(150u,options.milliseconds / 3);
+            options.milliseconds -= _eightPrep.searchMS;
         }
     }
     _solveOptions = options;
@@ -1406,7 +1427,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
             // A failed preferred preparation is not an output failure: output
             // was never searched on this board, so fall back instead of stopping.
-            const bool priorityPreparation = session->_eightPreparing && session->_eightPreparationPriority;
+            const bool priorityPreparation = session->_eightPrep.active && session->_eightPrep.priority;
             if (session->_eightAutomatic && result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::Cancelled && !priorityPreparation)
                 [session rememberEightBlock:@{@"message":@"本次求路未取得完整輸出路徑",@"search":session->_searchTrace}];
             if (session->_eightAutomatic && (result == PHOrbSolveStatus::InsufficientOrbs ||
@@ -1451,7 +1472,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
             else if (checkedOptions.activity.firstWaveOnly) summary = [NSString stringWithFormat:
                 @"首消 %u Combo（不含加算）· %u 步 · 約 %.1f 秒",evaluation.firstWaveCombos,
                 route.count - 1,(route.count - 1) * StepDuration(session->_preview)];
-            if (session->_eightPreparing) summary = [NSString stringWithFormat:
+            if (session->_eightPrep.active) summary = [NSString stringWithFormat:
                 @"準備回合：只消一組三珠 · %u 步；下回合核對技能後輸出",route.count - 1];
             if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
@@ -1721,13 +1742,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                     (_route.thornContacts && !evaluation.heartFours)) {
                     [self queueStop:@"放手前實際盤面未通過目標或毒／爆彈檢查；已中止連續模式並放開"];
                 } else {
-                    if (_eightAutomatic && _eightPreparing) {
+                    if (_eightAutomatic && _eightPrep.active) {
                         // Consume the one-turn allowance when release is committed,
                         // even if Stop interrupts receipt of the native release.
-                        _eightPreparationUsed = _eightPreparationAwaiting = true;
-                        NSMutableDictionary *trace = [_eightPreparationTrace mutableCopy];
+                        _eightPrep.used = _eightPrep.awaiting = true;
+                        NSMutableDictionary *trace = [_eightPrep.trace mutableCopy];
                         trace[@"status"] = @"release-committed"; trace[@"releaseEvaluation"] = EvaluationTrace(evaluation,_solveOptions.goals);
-                        _eightPreparationTrace = [trace copy];
+                        _eightPrep.trace = [trace copy];
                     }
                     _phase = @"releasing"; _releaseComplete = true; _message = @"路徑完成，正在放開…";
                 }
