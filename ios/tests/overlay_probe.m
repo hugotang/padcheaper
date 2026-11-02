@@ -680,6 +680,32 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Native preview describes the selected step and starting cell");
             PHProbeRevealBoard(orbWindow);
             PHProbeRender(self.window, orbWindow, @"orbs-preview");
+            NSData *eightData = [NSData dataWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"eight-activity" withExtension:@"json"]];
+            NSDictionary *eightLibrary = eightData ? PHOrbProfilesImportingData(PHOrbDefaultProfiles(),eightData,NULL) : nil;
+            PHProbeCheck(eightLibrary && [eightLibrary[@"selected"] isEqual:@"eight-thanks-2026"],
+                @"Bundled 8P activity imports through the actual portable profile validator");
+            NSMutableDictionary *eightState = [baseOrbFixture[@"orbState"] mutableCopy];
+            eightState[@"profiles"] = eightLibrary ?: PHOrbDefaultProfiles();
+            eightState[@"multiplayerActive"] = @YES; eightState[@"canExecute"] = @NO;
+            eightState[@"phase"] = @"idle"; eightState[@"message"] = @"8 人大感謝祭 2026 杯";
+            eightState[@"multiplayerMessage"] = @"可轉一次，或按 Auto 連續處理本場\n8 人對戰 · 本機 8／8 · 剩餘 180 秒";
+            orbFixture = @{@"orbState":eightState}; [orbController refresh];
+            UIButton *eightStart = (UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStart");
+            PHProbeCheck(eightStart.enabled && ![(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsExecute") isEnabled],
+                @"8P exposes match Auto while keeping preview execution separately gated");
+            [eightStart sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([orbAction isEqual:@"orbsStart"],@"8P Auto dispatches the explicit existing start action");
+            eightState[@"automatic"] = @YES; eightState[@"eightAutomatic"] = @YES;
+            eightState[@"busy"] = @YES; eightState[@"canStart"] = @NO; eightState[@"canStop"] = @YES;
+            eightState[@"activeProfile"] = eightLibrary[@"profiles"][0] ?: @{};
+            eightState[@"multiplayerMessage"] = @"B6：首消 4 Combo＋已核對隊長加算 2\n8 人本場 Auto · 可按停止";
+            orbFixture = @{@"orbState":eightState}; [orbController refresh];
+            PHProbeCheck(!eightStart.enabled && [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStop") isEnabled],
+                @"8P running state keeps Stop available and prevents a second start");
+            PHProbeRender(self.window,orbWindow,@"orbs-eight-auto");
+            [(UIButton *)PHProbeFind(orbWindow,@"padcheaper.orbsStop") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([orbAction isEqual:@"orbsStop"],@"8P Stop uses the existing immediate stop action");
+            orbAction = nil; orbValue = nil; orbFixture = baseOrbFixture; [orbController refresh];
             for (NSArray<NSNumber *> *dimensions in @[@[@7,@6], @[@5,@4]]) {
                 const NSUInteger width = dimensions[0].unsignedIntegerValue, height = dimensions[1].unsignedIntegerValue;
                 NSMutableArray *types = [NSMutableArray array], *enhanced = [NSMutableArray array];

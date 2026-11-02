@@ -50,7 +50,7 @@ static void EightNativeTests() {
             "revoking Auto stops automation reads and further skill authorization");
     }
     for (unsigned change = 0; change < 7; ++change) {
-        EightNativeFixture(6); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot before{}, after{};
+        EightNativeFixture(6); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot before{};
         [engine read:&before frame:Frame() reason:nil]; [engine armEightPlayerAuto:&before];
         Check([engine readAutomation:&before frame:Frame() reason:nil] && before.eight.valid,"capture 8P native state before a race");
         const uintptr_t member = Impl + PHBattleMemberOffset + PHBattleMemberStride;
