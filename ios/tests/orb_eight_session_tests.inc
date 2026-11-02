@@ -15,7 +15,8 @@ static void EightNextBoard(FakeOrbEngine *engine, bool floor) {
 }
 static void EightRunUntilRelease(PHOrbSession *session, FakeOrbEngine *engine, unsigned releases) {
     for (unsigned i = 0; i < 3000 && engine->releases < releases && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
-    if (engine->releases != releases) std::fprintf(stderr,"8P state: %s\n",[session.snapshot.description UTF8String]);
+    if (engine->releases != releases) std::fprintf(stderr,"8P state: %s\n",[[session.snapshot dictionaryWithValuesForKeys:
+        @[@"phase",@"message",@"automatic",@"autoTurn",@"autoMoves",@"autoSkills",@"eightProgress"]].description UTF8String]);
     Check(engine->releases == releases,"8P Auto reaches an acknowledged release");
 }
 static void EightSelectProfile(PHOrbSession *session, NSDictionary *profile) {
@@ -81,6 +82,8 @@ static void EightResumeTests() {
         Check([session.snapshot[@"autoTurn"] unsignedIntegerValue] == (pause == 2 || pause == 3 ? 2u : 1u),
             "manual same-floor and next-floor turns replan once without resetting Auto progress");
         [session queueStop:@"pause after release"];
+        Check([session.snapshot[@"phase"] isEqual:@"stopped"],
+            "Stop immediately after a confirmed release cannot revive an already-finished staged gesture");
         EightNextBoard(engine,false); [session queueAutomatic]; EightRunUntilRelease(session,engine,2);
         Check(engine->skillAttempts == 1 && [session.snapshot[@"autoMoves"] isEqual:@2] &&
             [session.snapshot[@"autoSkills"] isEqual:@1],"repeated Stop/Auto retains successful release and skill accounting");

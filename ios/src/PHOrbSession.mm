@@ -1795,6 +1795,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                     _executionHistory[_executionHistory.count - 1] = [record copy]; _recordingExecution = false;
                 }
                 _ownedOrb = 0;
+                // The native frame has acknowledged this release. A Stop tap
+                // before the next frame must not resurrect its staged intent.
+                _staged = _releaseStaged = false;
                 [_engine armMultiplayerOnce:NO];
                 _phase = _releaseComplete ? @"complete" : @"stopped";
                 if (_releaseComplete) {
