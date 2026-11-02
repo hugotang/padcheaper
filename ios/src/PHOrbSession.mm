@@ -615,6 +615,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),
         @"remainingSeconds":@(_live.multiplayer.remainingSeconds),
         @"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
+    if (_eightPreparing && !_eightPreparationUsed) _eightGuidePrepared = false;
     _eightPreparing = false;
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||

@@ -87,7 +87,8 @@ BOOL PHOrbEightActivityValid(id a) {
         }
         id prep = guide[@"preparation"];
         if (prep) {
-            if (!EKeys(prep,@[@"dungeon",@"subDungeon",@"floor",@"spentSlot",@"sequences",@"primaryColor",@"primaryMinimum",@"minimumSeconds"]) ||
+            if (!EOptionalKeys(prep,@[@"dungeon",@"subDungeon",@"floor",@"spentSlot",@"sequences",@"primaryColor",@"primaryMinimum",@"minimumSeconds"],@[@"preferBeforeOutput"]) ||
+                (prep[@"preferBeforeOutput"] && !EBool(prep[@"preferBeforeOutput"])) ||
                 !EInt(prep[@"dungeon"],1,UINT16_MAX) || !EInt(prep[@"subDungeon"],1,UINT16_MAX) ||
                 !EInt(prep[@"floor"],(unsigned)[a[@"floors"] count],(unsigned)[a[@"floors"] count]) ||
                 !EInt(prep[@"spentSlot"],1,6) || !EInt(prep[@"primaryColor"],0,4) || !EInt(prep[@"primaryMinimum"],3,30) ||
@@ -270,13 +271,32 @@ NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot
     NSDictionary *best = nil; unsigned bestValue = 0;
     const unsigned primary = [p[@"primaryColor"] unsignedIntValue], colors = [a[@"leader"][@"colors"] unsignedIntValue];
     const unsigned linkLength = [a[@"leader"][@"comboLength"] unsignedIntValue];
+    unsigned readyAttackOrbs = 0;
+    for (unsigned c = 0; c < 6; ++c) if (colors & (1u << c)) readyAttackOrbs += counts[c];
+    for (NSArray *sequence in a[@"floors"][s->wave][@"sequences"]) {
+        uint8_t map[6] = {0,1,2,3,4,5}; BOOL knownNow = YES;
+        for (NSNumber *value in sequence) {
+            unsigned slot = value.unsignedIntValue - 1; const PHOrbEightMember *m = &s->eight.members[slot];
+            const PHOrbSkillMember *member = &s->automation.members[slot];
+            if ((attempted & (1u << slot)) || !member->active || !m->skillKnown || member->bound || member->state ||
+                member->charge < m->cooldown || m->boardColors) { knownNow = NO; break; }
+            for (unsigned c = 0; c < 6; ++c) if (m->generate[c] || m->convert[c] >= 6) knownNow = NO;
+            if (!knownNow) break;
+            for (unsigned c = 0; c < 6; ++c) map[c] = m->convert[map[c]];
+        }
+        if (!knownNow) continue;
+        unsigned attack = 0;
+        for (unsigned c = 0; c < 6; ++c) if (colors & (1u << map[c])) attack += counts[c];
+        readyAttackOrbs = MAX(readyAttackOrbs,attack);
+    }
     for (NSArray *sequence in p[@"sequences"]) {
-        uint8_t conversion[6] = {0,1,2,3,4,5}; BOOL readyNext = YES;
+        uint8_t conversion[6] = {0,1,2,3,4,5}; BOOL readyNext = YES, readyNow = YES;
         for (NSNumber *value in sequence) {
             unsigned slot = value.unsignedIntValue - 1; const PHOrbEightMember *m = &s->eight.members[slot];
             const PHOrbSkillMember *member = &s->automation.members[slot];
             if ((attempted & (1u << slot)) || !member->active || !m->skillKnown || member->bound || member->state ||
                 member->charge + 1u < m->cooldown || m->boardColors) { readyNext = NO; break; }
+            readyNow &= member->charge >= m->cooldown;
             for (unsigned c = 0; c < 6; ++c) if (m->generate[c] || m->convert[c] >= 6) readyNext = NO;
             if (!readyNext) break;
             for (unsigned c = 0; c < 6; ++c) conversion[c] = m->convert[conversion[c]];
@@ -291,14 +311,17 @@ NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot
                 retained[primary] >= [p[@"primaryMinimum"] unsignedIntValue]) canRetain = YES;
         }
         if (!canRetain) continue;
-        unsigned value = 0; NSMutableArray *map = [NSMutableArray array], *inventory = [NSMutableArray array];
+        unsigned value = 0, attackOrbs = 0; NSMutableArray *map = [NSMutableArray array], *inventory = [NSMutableArray array];
         for (unsigned c = 0; c < 6; ++c) {
             [map addObject:@(conversion[c])]; [inventory addObject:@(converted[c])];
-            if (colors & (1u << c)) value += converted[c] * (c == primary ? 3 : 1);
+            if (colors & (1u << c)) { value += converted[c] * (c == primary ? 3 : 1); attackOrbs += converted[c]; }
         }
         if (!best || value > bestValue) {
             bestValue = value;
-            best = @{@"available":@YES,@"sequence":sequence,@"conversion":map,@"inventoryBeforeRemoval":inventory,
+            const unsigned retainedAttack = attackOrbs > 3 ? attackOrbs - 3 : 0;
+            best = @{@"available":@YES,@"readyNow":@(readyNow),@"sequence":sequence,@"conversion":map,@"inventoryBeforeRemoval":inventory,
+                @"preferable":@(!readyNow && retainedAttack > readyAttackOrbs),@"readyAttackOrbs":@(readyAttackOrbs),
+                @"retainedAttackMinimum":@(retainedAttack),
                 @"primaryColor":@(primary),@"primaryMinimum":p[@"primaryMinimum"],@"survivalKnown":@NO,
                 @"message":@"依本杯攻略消一組三珠，保留可轉攻擊色的珠；下一回合重讀技能與吸收"};
         }

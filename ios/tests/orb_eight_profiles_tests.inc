@@ -8,8 +8,15 @@ static void EightPreparationProfilesTests(void) {
     const uint8_t cells[30] = {0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
     memcpy(s.board.types,cells,sizeof(cells));
     NSDictionary *decision = PHOrbEightPreparationDecision(a,&s,0);
-    Check([decision[@"available"] boolValue] && [decision[@"sequence"] isEqual:@[@2,@3]] &&
+    Check([decision[@"available"] boolValue] && ![decision[@"readyNow"] boolValue] && [decision[@"sequence"] isEqual:@[@2,@3]] &&
         [decision[@"conversion"] isEqual:@[@0,@0,@4,@0,@4,@4]],"preparation projects the currently verified skill conversions and one-turn CD");
+    PHOrbSnapshot charged = s; charged.automation.members[2].charge = 4;
+    Check([PHOrbEightPreparationDecision(a,&charged,0)[@"readyNow"] boolValue],
+        "already-ready conversion pair does not need the preferred charge turn");
+    PHOrbSnapshot dense = s;
+    for (unsigned i = 0; i < 30; ++i) dense.board.types[i] = i < 15 ? 0 : 4;
+    Check(![PHOrbEightPreparationDecision(a,&dense,0)[@"preferable"] boolValue],
+        "an already-dense attack board does not spend a preparation turn merely to follow a recipe");
     for (unsigned bad = 0; bad < 12; ++bad) {
         PHOrbSnapshot changed = s;
         if (bad == 0) changed.identity.dungeon++;
@@ -40,6 +47,14 @@ static void EightPreparationProfilesTests(void) {
         p[key] = @1000; g[@"preparation"] = p; bad[@"guide"] = g;
         Check(!PHOrbEightActivityValid(bad),"preparation recipe rejects invalid bounds");
     }
+    for (id value in @[@1,@"true",NSNull.null]) {
+        NSMutableDictionary *bad = [a mutableCopy], *g = [a[@"guide"] mutableCopy], *p = [g[@"preparation"] mutableCopy];
+        p[@"preferBeforeOutput"] = value; g[@"preparation"] = p; bad[@"guide"] = g;
+        Check(!PHOrbEightActivityValid(bad),"preferred preparation requires an explicit JSON Boolean");
+    }
+    Check(PHOrbEightActivityValid(EightPreparationProfileFixture(NO)[@"activity"]) &&
+        ![EightPreparationProfileFixture(NO)[@"activity"][@"guide"][@"preparation"][@"preferBeforeOutput"] boolValue],
+        "older preparation JSON retains output-first behavior");
     for (unsigned bad = 0; bad < 4; ++bad) {
         NSMutableDictionary *changed = [a mutableCopy]; NSMutableArray *floors = [a[@"floors"] mutableCopy];
         NSMutableDictionary *floor = [floors[1] mutableCopy], *attack = [floor[@"attack"] mutableCopy];
@@ -122,7 +137,11 @@ static void EightGuideProfilesTests(void) {
     s.enemyCombo.turns[0] = 1; s.enemyCombo.thresholds[0] = 5;
     Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@2]],"B6 uses retained Ney before Kagutsuchi");
     s.automation.members[3].charge = 0;
-    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@2]],"B6 can skip spent Ney when current conversion has adequate inventory");
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@2,@3]],
+        "B6 prioritizes both ready conversions after spent Ney even when Kagutsuchi alone has twelve");
+    s.automation.members[2].charge = 3;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@2]],
+        "B6 direct fallback remains available when the second conversion is not ready");
     s.automation.members[3].charge = 20;
     Check([PHOrbEightGuideDecision(activity,&s,2,2)[@"sequence"] count] == 0,"confirmed Kagutsuchi cannot be followed by an out-of-order Ney");
     s.automation.members[1].charge = s.automation.members[3].charge = 0;

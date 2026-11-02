@@ -514,14 +514,14 @@
             },
             {
               "slots": [
-                2
+                2,
+                3
               ],
               "requireInventory": true
             },
             {
               "slots": [
-                2,
-                3
+                2
               ],
               "requireInventory": true
             }
@@ -534,19 +534,14 @@
           "spentSlot": 4,
           "sequences": [
             [
-              2
-            ],
-            [
-              3
-            ],
-            [
               2,
               3
             ]
           ],
           "primaryColor": 0,
           "primaryMinimum": 6,
-          "minimumSeconds": 15
+          "minimumSeconds": 15,
+          "preferBeforeOutput": true
         }
       }
     }

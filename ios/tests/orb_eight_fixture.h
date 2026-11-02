@@ -15,6 +15,15 @@ static NSDictionary *EightGuideProfileFixture(BOOL enabled) {
     guide[@"enabled"] = @(enabled); activity[@"guide"] = guide; profile[@"activity"] = activity;
     return profile;
 }
+static NSDictionary *EightPreparationProfileFixture(BOOL preferred) {
+    NSMutableDictionary *profile = [EightGuideProfileFixture(YES) mutableCopy];
+    NSMutableDictionary *activity = [profile[@"activity"] mutableCopy], *guide = [activity[@"guide"] mutableCopy];
+    NSMutableDictionary *preparation = [guide[@"preparation"] mutableCopy];
+    if (preferred) preparation[@"preferBeforeOutput"] = @YES;
+    else [preparation removeObjectForKey:@"preferBeforeOutput"];
+    guide[@"preparation"] = preparation; activity[@"guide"] = guide; profile[@"activity"] = activity;
+    return profile;
+}
 static void EightTeamFixture(PHOrbSnapshot *s, NSDictionary *profile) {
     memset(&s->automation,0,sizeof(s->automation));
     memset(&s->eight,0,sizeof(s->eight));

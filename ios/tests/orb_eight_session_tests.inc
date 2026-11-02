@@ -49,7 +49,7 @@ static void EightPreparationSessionTests() {
     for (unsigned scenario = 0; scenario < 5; ++scenario) {
         FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
         PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
-        EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+        EightSelectProfile(session,EightPreparationProfileFixture(NO)); [session queueAutomatic];
         if (scenario == 4) {
             [session queueStop:@"manual pause before planning"];
             Check([session.snapshot[@"eightProgress"][@"firstBlocked"] count] == 0,
@@ -105,6 +105,51 @@ static void EightPreparationSessionTests() {
     Check(engine->releases == 1 && !engine->skillAttempts && [evaluation[@"comboFirstWaveRequired"] boolValue] &&
         [evaluation[@"combos"] isEqual:evaluation[@"firstWaveCombos"]],"8P once uses first-removal accounting without casting activity skills");
     [session queueStop:@"fixture done"];
+}
+static void EightPreferredPreparationSessionTests() {
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    for (unsigned scenario = 0; scenario < 7; ++scenario) {
+        FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
+        // Synthetic inventory: increasing water makes the single #2 branch
+        // feasible, while #3 is one turn short. Preference must still reserve
+        // #2 for the stronger pair rather than consume it before preparation.
+        for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = cells[i] == 3 ? 1 : cells[i];
+        if (scenario == 2) engine->live.automation.members[2].charge = 4;
+        if (scenario == 3) engine->live.multiplayer.remainingSeconds = 14;
+        if (scenario == 4) engine->live.automation.members[2].charge = 2;
+        if (scenario == 5) engine->live.enemyCombo.turns[0] = 0;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+        EightSelectProfile(session,EightPreparationProfileFixture(YES)); [session queueAutomatic];
+        if (scenario == 6) {
+            for (unsigned i = 0; i < 100 && ![session.snapshot[@"eightProgress"][@"preparation"] count]; ++i) Tick(session,engine,Frame());
+            Check([session.snapshot[@"eightProgress"][@"preparation"] count] && !engine->releases,
+                "preferred preparation can be paused before any gesture");
+            [session queueStop:@"pause preparation search"];
+            [session queueAutomatic];
+        }
+        EightRunUntilRelease(session,engine,1);
+        NSDictionary *progress = session.snapshot[@"eightProgress"];
+        if (scenario == 0 || scenario == 1 || scenario == 6) {
+            Check(!engine->skillAttempts && [progress[@"preparationUsed"] boolValue] &&
+                [progress[@"preparation"][@"priority"] boolValue] &&
+                [progress[@"preparation"][@"releaseEvaluation"][@"firstWaveCombos"] isEqual:@1] &&
+                [progress[@"firstBlocked"] count] == 0,
+                "preferred one-Combo preparation precedes feasible single conversion and is not recorded as a failed output");
+            if (scenario == 1) [session queueStop:@"pause after preferred preparation"];
+            EightAfterPreparationBoard(engine); Tick(session,engine,Frame());
+            if (scenario == 1) [session queueAutomatic];
+            EightRunUntilRelease(session,engine,2);
+            Check(engine->skillOrder == std::vector<NSUInteger>({1,2}) &&
+                [session.snapshot[@"autoSkills"] isEqual:@2] &&
+                [session.snapshot[@"eightProgress"][@"preparation"][@"status"] isEqual:@"next-turn-confirmed"],
+                "native next board confirms both conversions in order, including Stop/Auto around preparation");
+        } else {
+            Check(![progress[@"preparationUsed"] boolValue] &&
+                engine->skillOrder == (scenario == 2 ? std::vector<NSUInteger>{1,2} : std::vector<NSUInteger>{1}),
+                "ready pair goes directly; short time, slower CD or expired absorption never creates a charge turn");
+        }
+        [session queueStop:@"fixture done"];
+    }
 }
 static void EightGuideSessionTests() {
     for (bool enabled : {false,true}) for (unsigned wave : {1u,2u,3u}) {
@@ -361,6 +406,7 @@ static void EightChangedInventoryRecoveryTests() {
 }
 static void EightSessionTests() {
     EightPreparationSessionTests();
+    EightPreferredPreparationSessionTests();
     EightChangedInventoryRecoveryTests();
     FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Tick(session,engine,Frame()); [session configureQuality:@"fast"]; [session queueAutomatic];

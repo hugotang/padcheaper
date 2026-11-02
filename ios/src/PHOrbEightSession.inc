@@ -230,11 +230,19 @@
         _eightGuidePrepared = true;
         if (_live.wave >= _eightFloorSubmitted.size()) { [self queueStop:@"已超出攻略樓層上限"]; return; }
         if (!_eightFloorSubmitted[_live.wave]) {
+            NSDictionary *activity = _activeProfile[@"activity"];
+            NSDictionary *preparation = PHOrbEightPreparationDecision(activity,&_live,_eightAttemptedSlots);
+            if (!_eightPreparationUsed && [activity[@"guide"][@"preparation"][@"preferBeforeOutput"] boolValue] &&
+                [preparation[@"available"] boolValue] && [preparation[@"preferable"] boolValue]) {
+                const unsigned budget = std::min(OptionsForQuality(_quality).milliseconds,
+                    [activity[@"floors"][_live.wave][@"searchMS"] unsignedIntValue]);
+                _eightPreparationSearchMS = std::min(150u,budget / 3);
+                [self beginEightPreparation:preparation priority:YES]; return;
+            }
             NSDictionary *decision = PHOrbEightGuideDecision(_activeProfile[@"activity"],&_live,
                 _eightFloorSkillMask[_live.wave],_eightAttemptedSlots);
             if (![decision[@"available"] boolValue]) {
                 [self rememberEightBlock:decision];
-                NSDictionary *preparation = PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots);
                 if (!_eightPreparationUsed && !_eightFloorSubmitted[_live.wave] && [preparation[@"available"] boolValue]) {
                     // Before a guide delay, still try the unchanged board and
                     // all currently ready recovery skills with normal goals.
@@ -361,6 +369,15 @@
     return [plan copy];
 }
 
+- (void)beginEightPreparation:(NSDictionary *)preparation priority:(BOOL)priority {
+    _eightPreparation = preparation; _eightPreparing = true;
+    _eightSequence = nil; _eightSequenceStep = 0; _eightSequenceGuide = false;
+    _eightPreparationTrace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
+        @"priority":@(priority),@"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
+    [self logAutomation:priority ? @"B6：先留珠消一組三珠，等下一回合雙轉色技就緒再輸出" : preparation[@"message"]];
+    [self beginSolve];
+}
+
 - (BOOL)recoverEightSolve {
     if (!_eightAutomatic || !_activeProfile[@"activity"] || !PHOrbSameAutomation(&_preview,&_live) ||
         !PHOrbSameEnemyCombo(&_preview.enemyCombo,&_live.enemyCombo) || _eightPreparing) return NO;
@@ -370,10 +387,7 @@
         NSDictionary *preparation = PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots);
         if (![preparation[@"available"] boolValue]) return NO;
         [self rememberEightBlock:@{@"message":@"現盤與當前技能未取得輸出路徑",@"search":_searchTrace ?: @{}}];
-        _eightPreparation = preparation; _eightPreparing = true;
-        _eightPreparationTrace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
-            @"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
-        [self logAutomation:preparation[@"message"]]; [self beginSolve]; return YES;
+        [self beginEightPreparation:preparation priority:NO]; return YES;
     }
     // Only one search budget per observed board; a new search follows an
     // actual skill effect, with a bounded six-slot attempt mask per turn.
