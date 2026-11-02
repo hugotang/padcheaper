@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.25-orbs` 修正 [B6 優先準備失敗時直接停止](docs/release-0.5.25.md)：改為退回攻略輸出；求路在路線不變下加速，轉珠頁改為卡片版面並把狀態、預覽與 8 人進度放在最上方。驗證中，結果見 [開發紀錄](docs/development.md)。
+`0.5.25-orbs` 修正 [B6 優先準備失敗時直接停止](docs/release-0.5.25.md)：改為退回攻略輸出；求路在路線不變下加速，轉珠頁改為卡片版面並把狀態、預覽與 8 人進度放在最上方。已通過 [CI 118](https://github.com/hugotang/padcheaper/actions/runs/41495269554) 完整回歸、arm64 編譯與四份 GUI，交付 `E:/ipa/PADCheaper-0.5.25-orbs` 及同名 ZIP；真機穩定性待驗證。
 
 `0.5.24-orbs` 加入 [B5 兩技、B6 條件式準備與改盤後救援](docs/release-0.5.24.md)：攻略先火奈→赤龍女，技能生效後重新考慮先前略過的轉色分支；已有解時，在原剩餘時間內尋找更有利的橫排。B6 在保留珠與 CD 條件有利時優先 1C 再雙轉色，已就緒則直接雙開；診斷增加最新卡住盤面。需重匯活動 JSON。已通過 [CI 116](https://github.com/hugotang/padcheaper/actions/runs/41471306455) 完整回歸、arm64 編譯與四份 GUI，交付 `E:/ipa/PADCheaper-0.5.24-orbs` 及同名 ZIP；真機穩定性待驗證。
 

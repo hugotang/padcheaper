@@ -30,4 +30,4 @@ Windows 求路回歸與 0.5.24 對照：每個測試盤面的路線、步數與�
 
 ## 驗證狀態
 
-見 [開發紀錄](development.md)。模擬器與原生替身不等於 PAD 真機穩定通關；轉珠頁橫向版面尚無自動截圖，需真機確認。`device_verified=false`。
+[CI 118](https://github.com/hugotang/padcheaper/actions/runs/41495269554) 通過完整回歸、iPhoneOS arm64 編譯與簽章、編隊瀏覽器及四份 GUI。dylib SHA-256 `05f4d0e623dd7aad5c2f11552cef5d29dfd7b7e1fc7346859207733fea51cf06`，來源 `0d6f41e`。細節見 [開發紀錄](development.md)。模擬器與原生替身不等於 PAD 真機穩定通關；轉珠頁橫向版面尚無自動截圖，需真機確認。`device_verified=false`。

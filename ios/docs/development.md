@@ -4,9 +4,15 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證中
+## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證完成
+
+2026-11-03，`0.5.25-orbs` 已由 [CI 118](https://github.com/hugotang/padcheaper/actions/runs/41495269554) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟共四份 GUI（皆 success、無 failures）。B6 優先準備失敗退回輸出、橫排候選分時、轉珠頁 8 人進度摘要、說明收合與複製診斷均經同一來源測試；轉珠預覽、8 人 Auto、空盤狀態與編輯頁把手截圖已檢視。轉珠頁橫向版面沒有自動截圖，需真機確認。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。
+
+二進位來源 `0d6f41eaa54f8fdbbd823b5dba0ea688c92d217b`；dylib 10,550,272 bytes，最低 iOS 15.0；SHA-256 `05f4d0e623dd7aad5c2f11552cef5d29dfd7b7e1fc7346859207733fea51cf06`。交付目錄 `E:/ipa/PADCheaper-0.5.25-orbs` 及同名 ZIP（SHA-256 `f7b675e186c2c74f7d1813468dc06d9f9d19ba720057afb9b05ce4a93ea893b4`）。二進位、metadata、manifests 及範本保留同一 CI 原件；驗證附件含 CI 117 失敗紀錄與 Windows 求路對照。
 
 2026-11-03 使用者指示「編譯測試」，版本已升為 `0.5.25-orbs`（`PHOverlay.h`、targets、workflow 說明、[0.5.25 說明](release-0.5.25.md)）。Windows mingw `-O2 -Wall -Wextra -Werror` 求路回歸通過；與 `dc53be3` 的求路器以同一測試對照，所有記錄盤面的路線步數、Combo 與評估節點數完全相同，耗時約快 4–16%（例：記錄轉轉盤 304→265 ms）。完整 macOS／iPhoneOS／GUI 待本次手動 CI。
+
+[CI 117](https://github.com/hugotang/padcheaper/actions/runs/41491116438)（`54de58c`）已通過目標驗證與全部 macOS 模型／solver／原生／Session／規劃／規則／設定回歸，包括新增的 B6 優先準備退回案例；arm64 編譯因新屬性 `copyDiagnosticsButton` 以 `copy` 開頭，觸發 ARC「回傳 owned 物件」命名規則錯誤而中止，GUI 未執行，未產出交付檔。已改名為 `diagnosticsCopyButton`（`0d6f41e`），重跑 CI 118。
 
 基於 `dc53be3`。使用者要求檢視並動手改善 B6、求路、UI 與架構。以下均未編譯、未執行測試；`0.5.24` 的 CI 116 結果不代表本批。建置前需把版本升為 `0.5.25-orbs`（`PHOverlay.h`、targets、workflow 說明），不可覆蓋 `E:/ipa/PADCheaper-0.5.24-orbs`。
 
