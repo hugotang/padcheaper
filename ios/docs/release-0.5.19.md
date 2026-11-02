@@ -8,6 +8,10 @@
 
 目前權重是選路偏好，未宣稱精確總分或擊倒保證。未自動施放對手暗闇，也未放行缺少生存證據的刻意存技回合。未知固定效果或找不到達標路徑會停止。真機技能、同步及計分仍待驗收；`device_verified=false`。
 
-驗證進度：Windows C/C++ 模型與 solver 回歸已通過；macOS 原生／Session／設定、arm64 編譯／簽章及四份 GUI 驗證正在準備。交付前以同一 CI commit 的完整結果為準。
+2026-11-02，`0.5.19-orbs` 已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。新增案例涵蓋八個席位的原生技能來源、七回合／六層、同層接續、技能確認、防重送及停止；8 人 Auto／停止畫面已檢視，419 組指紋符合原始 IPA。真機固定技能、同步及結算仍待驗收。
+
+二進位來源 `b6e563125c8031ea3b48ab92feb53d036974f894`；dylib 10,477,280 bytes，最低 iOS 15.0；SHA-256 `a295c9c6293e682a3d6a6d9d0bd5cf2728bdbe246dfd1bd9c33974f0c54e8608`。交付目錄為 `E:/ipa/PADCheaper-0.5.19-orbs` 及同名 ZIP。二進位、metadata、manifests、活動範本及研究 JSON 保留同一 CI 原件，文件驗證結果另行提交；失敗的 CI 產物未交付。`device_verified=false`。
+
+首次匯入活動後需按「儲存並選用」。日後更新相同 ID 會保護舊策略而拒絕覆蓋；可先匯出備份，再刪除舊策略、匯入新版並儲存。
 
 更新時完全關閉遊戲後替換 dylib；LiveContainer 需重新簽署。既有設定及隊伍庫保留。匯入活動設定並選用後，才會使用本杯技能策略。

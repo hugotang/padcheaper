@@ -4,25 +4,29 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-02：0.5.19-orbs，8 人本場 Auto 開發與驗證中
+## 2026-11-02：0.5.19-orbs，8 人本場 Auto 編譯驗證完成
+
+2026-11-02，`0.5.19-orbs` 已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。新增案例涵蓋八個席位的原生技能來源、七回合／六層、同層接續、技能確認、防重送及停止；8 人 Auto／停止畫面已檢視，419 組指紋符合原始 IPA。真機固定技能、同步及結算仍待驗收。
 
 完成 [8 人邏輯設計](orb-eight-player-design.md) 與 [來源紀錄](../research/eight-player-cup-20261102.json)：通用消除／計分引擎搭配外部活動設定，分層規劃 Combo、橫排、12 連消、雙隊長加算、兩格赤龍女 CD 與火奈保留。列出原生無天降、消法計次、精確計分、技能／敵方唯讀資料及傷害驗證缺口；結算截圖各顯示項相加與總分相差 6，未宣稱公式已精確核對。
 
 使用者補充 8 人與 4 人為各自操作盤面並指示「動手」後，已接入「按一次 Auto，自動處理本場技能、轉珠及換層，直到結算或停止」。核對固定參數鏈、六格技能語意及 CD；用原生 can-use/start，等待全局與該格使用次數各增加一次。每盤建立新手勢，支援同層多回合。停止、手動接管、入場／席位／時計變動會撤銷本場意圖。3／4 人維持轉一次。附可獨立匯入的活動 JSON，B6 使用首消與已核對雙隊長加算；消法分權重是啟發式，非精確總分。
 
-延續使用者既有「繼續，在你認爲合適的時候編譯測試？」授權，開始本版編譯驗證。Windows C11/C++17 `-Wall -Wextra -Werror` 模型與 solver 回歸已通過，新增首消／連消與重播案例通過。macOS 原生／Session／設定、arm64 及 GUI 仍待本版 CI 結果；下方 0.5.18 CI 不代表本版通過。尚未交付新 dylib。精確計分／傷害、缺少生存證據時刻意消一回合、實機固定技能與同步仍未驗證。
+延續使用者既有「繼續，在你認爲合適的時候編譯測試？」授權，開始本版編譯驗證。Windows C11/C++17 `-Wall -Wextra -Werror` 模型與 solver 回歸已通過，新增首消／連消與重播案例通過。macOS 原生／Session／設定、arm64 及四份 GUI 已由本版 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過；下方 0.5.18 CI 不代替本版結果。精確計分／傷害、缺少生存證據時刻意消一回合、實機固定技能與同步仍未驗證。
 
-[CI 99](https://github.com/hugotang/padcheaper/actions/runs/41385692292) 通過模型、策略匯入與 solver，原生案例有一個未使用變數造成 `-Werror` 中止，已修正。[CI 100](https://github.com/hugotang/padcheaper/actions/runs/41385804168) 進一步通過全部原生記憶體／技能／輸入案例；Session 僅有兩個舊武裝 L 測試仍假設 8 人不能啟動 Auto。已改以有效 8 人隊伍確認可連續轉珠且不讀取／使用單人 L 回復，再以獨立 session 確認轉一次；3／4 人及協力續玩仍保留禁止連續模式的斷言。待修正來源重跑完整 CI，兩輪失敗產物均不交付。
+[CI 99](https://github.com/hugotang/padcheaper/actions/runs/41385692292) 通過模型、策略匯入與 solver，原生案例有一個未使用變數造成 `-Werror` 中止，已修正。[CI 100](https://github.com/hugotang/padcheaper/actions/runs/41385804168) 進一步通過全部原生記憶體／技能／輸入案例；Session 僅有兩個舊武裝 L 測試仍假設 8 人不能啟動 Auto。已改以有效 8 人隊伍確認可連續轉珠且不讀取／使用單人 L 回復，再以獨立 session 確認轉一次；3／4 人及協力續玩仍保留禁止連續模式的斷言。修正已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過完整回歸，兩輪失敗產物均不交付。
 
 [CI 101](https://github.com/hugotang/padcheaper/actions/runs/41386423831) 已執行完整 Session 套件，包括新增的 8 人七回合／六層、原生技能確認與停止防重送案例；仍有三個舊斷言在新場切換至 8 人時要求 Auto 按鈕停用。已修正為只在 8 人顯示可開始，並額外要求未點擊時沒有 Auto 意圖、技能授權或輸入。沒有調整原生操作邊界；本輪整體失敗，未產生交付 dylib。
 
-介面覆核另修正仍寫「連續只限單人」及「無技能規則只轉珠」的舊提示。選用活動時明示樓層技能與目標來源，停用不適用的單人規則／低血補心／武裝 L 編輯；覆蓋策略先驗證相容性，再改草稿。GUI 追加實際活動提示與按鈕狀態檢查，待最終來源驗證。
+介面覆核另修正仍寫「連續只限單人」及「無技能規則只轉珠」的舊提示。選用活動時明示樓層技能與目標來源，停用不適用的單人規則／低血補心／武裝 L 編輯；覆蓋策略先驗證相容性，再改草稿。GUI 的活動提示與按鈕狀態檢查已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過。前一輪 CI 102 在追加此介面修正時被新工作流程取代並取消，不計為成功驗證。
 
-[CI 103](https://github.com/hugotang/padcheaper/actions/runs/41388189078) 在既有轉轉 T＋心四的 800 ms 達標回歸失敗。檢查發現活動用的橫排／連消特徵也在一般求路的每個候選與轉轉相位計算；已限於活動模式，保留一般模式原有 Combo／目標語意與 800 ms／48 步預算，並增加此案例的實際耗時及搜尋深度診斷。不是放寬測試或逾時條件；修正後需重跑本機與完整 CI。
+[CI 103](https://github.com/hugotang/padcheaper/actions/runs/41388189078) 在既有轉轉 T＋心四的 800 ms 達標回歸失敗。檢查發現活動用的橫排／連消特徵也在一般求路的每個候選與轉轉相位計算；已限於活動模式，保留一般模式原有 Combo／目標語意與 800 ms／48 步預算，並增加此案例的實際耗時及搜尋深度診斷。沒有放寬測試或逾時條件；修正後本機完整 solver／model 與 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 均通過。Windows 另以修正前後兩版、五份已保存轉轉盤、各三次交錯比較，共 30 次路徑經獨立全相位 oracle 核對；達標與評估數相同。原失敗盤的本機中位數為 264→246 ms，其他三份原已達標盤仍達標，六轉轉未達標盤仍保守拒絕。這是本機成本比較，不能推定 iPhone 耗時或該次 macOS 失敗的全部成因。
 
-[CI 104](https://github.com/hugotang/padcheaper/actions/runs/41388616787) 已通過全部原生／Session／模型／solver 回歸、arm64 編譯、嚴格簽章及瀏覽器；原轉轉回歸以 494 ms／47 步達成 2／2 目標。GUI probe 在連結時發現新增活動匯入測例直接呼叫獨立載入 dylib 的函式；已沿用既有 probe 的 `dlsym` 方式，核對 helper 存在後再呼叫真實驗證器。此輪未啟動模擬器畫面，不交付；修正後等待完整 CI。
+[CI 104](https://github.com/hugotang/padcheaper/actions/runs/41388616787) 已通過全部原生／Session／模型／solver 回歸、arm64 編譯、嚴格簽章及瀏覽器；原轉轉回歸以 494 ms／47 步達成 2／2 目標。GUI probe 在連結時發現新增活動匯入測例直接呼叫獨立載入 dylib 的函式；已沿用既有 probe 的 `dlsym` 方式，核對 helper 存在後再呼叫真實驗證器。此輪未啟動模擬器畫面，不交付；修正後已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過完整回歸與四份 GUI。
 
-[CI 105](https://github.com/hugotang/padcheaper/actions/runs/41389960402) 的同一轉轉案例再以 800 ms／116,417 個候選逾時，只達成 1／2 目標。暫存診斷版本以較短預算重現：350 ms 舊版把穩定形狀補搜截在第 42 步，再花剩餘時間回訪，雖然本機完整兩個 pass 約 240–290 ms 已可解。已讓這類補搜使用原有總期限，未解完且仍有時間才回訪，仍保留 800 ms／48 步、六個相位、目標及危險判斷。GUI 另補齊 Auto 回合計數，分開擷取頂部活動提示與完整盤面；此修正待完整 CI 驗證。
+[CI 105](https://github.com/hugotang/padcheaper/actions/runs/41389960402) 的同一轉轉案例再以 800 ms／116,417 個候選逾時，只達成 1／2 目標。暫存診斷版本以較短預算重現：350 ms 舊版把穩定形狀補搜截在第 42 步，再花剩餘時間回訪，雖然本機完整兩個 pass 約 240–290 ms 已可解。已讓這類補搜使用原有總期限，未解完且仍有時間才回訪，仍保留 800 ms／48 步、六個相位、目標及危險判斷。GUI 另補齊 Auto 回合計數，分開擷取頂部活動提示與完整盤面；此修正已由 [CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 通過完整回歸與四份 GUI。本機完整 solver 回歸以 260 ms／47 步完成原失敗盤；另作五份轉轉盤、各三次前後交錯比較，30 次獨立重播均通過。原已達標的四份盤保持達標，六轉轉盤仍未達標；此修正處理補搜時間不足，不宣稱單次候選計算變快。CI 106 在套用補搜修正時被新工作流程取代並取消，不算成功驗證。
+
+二進位來源 `b6e563125c8031ea3b48ab92feb53d036974f894`；dylib 10,477,280 bytes，最低 iOS 15.0；SHA-256 `a295c9c6293e682a3d6a6d9d0bd5cf2728bdbe246dfd1bd9c33974f0c54e8608`。交付目錄為 `E:/ipa/PADCheaper-0.5.19-orbs` 及同名 ZIP。二進位、metadata、manifests、活動範本及研究 JSON 保留同一 CI 原件，文件驗證結果另行提交；失敗的 CI 產物未交付。`device_verified=false`。
 
 ## 2026-11-01：0.5.18-orbs 隊伍模型、主動技能與關卡對比，編譯驗證完成
 
