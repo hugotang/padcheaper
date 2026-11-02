@@ -13,10 +13,10 @@ static void MultiplayerEntrySessionTests() {
             "a missed lobby read does not publish stale readiness");
         engine->failRead = NO; SetMultiplayer(engine, to, to - 1); ++engine->live.identity.entryHash[0];
         Tick(session, engine, Frame(), 0.12);
-        Check([session.snapshot[@"canOnce"] boolValue] && ![session.snapshot[@"canStart"] boolValue] &&
+        Check([session.snapshot[@"canOnce"] boolValue] && [session.snapshot[@"canStart"] boolValue] == (to == 8) &&
             [session.snapshot[@"multiplayerMessage"] hasPrefix:@"可轉一次"] &&
-            !engine->stages && !engine->multiplayerArmed,
-            "a fresh native match result restores 3/4/8P readiness without starting a gesture");
+            ![session.snapshot[@"automatic"] boolValue] && !engine->stages && !engine->multiplayerArmed && !engine->eightArmed,
+            "a fresh match offers once in 3/4/8P and Auto in 8P without granting either input intent");
         [session queueOnce];
         for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
         Check([session.snapshot[@"completed"] isEqual:@1] && engine->beginFrames == 1 && engine->releases == 1 &&
