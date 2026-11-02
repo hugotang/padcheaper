@@ -84,15 +84,30 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 - (UIButton *)button:(NSString *)title action:(SEL)selector identifier:(NSString *)identifier {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
     [button setTitle:title forState:UIControlStateNormal];
-    [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-    [button setTitleColor:[UIColor colorWithWhite:1 alpha:0.35] forState:UIControlStateDisabled];
+    [button setTitleColor:UIColor.systemBlueColor forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor colorWithWhite:1 alpha:0.30] forState:UIControlStateDisabled];
     button.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    button.backgroundColor = [UIColor colorWithWhite:1 alpha:0.10];
-    button.layer.cornerRadius = 10;
+    button.titleLabel.numberOfLines = 2; button.titleLabel.textAlignment = NSTextAlignmentCenter;
+    button.backgroundColor = [UIColor.systemBlueColor colorWithAlphaComponent:0.16];
+    button.layer.cornerRadius = 12; button.layer.cornerCurve = kCACornerCurveContinuous;
     button.accessibilityIdentifier = identifier;
     [button.heightAnchor constraintEqualToConstant:42].active = YES;
     [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside];
     return button;
+}
+
+// A translucent rounded section with a small heading. Rows keep their own
+// views, so identifiers and superviews used by the GUI probe are unchanged.
+- (UIStackView *)card:(NSString *)title rows:(NSArray<UIView *> *)rows {
+    UILabel *heading = PHLabel(11, UIFontWeightSemibold);
+    heading.text = title; heading.textColor = [UIColor colorWithWhite:1 alpha:0.60];
+    heading.accessibilityTraits = UIAccessibilityTraitHeader;
+    UIStackView *card = [[UIStackView alloc] initWithArrangedSubviews:[@[heading] arrayByAddingObjectsFromArray:rows]];
+    card.axis = UILayoutConstraintAxisVertical; card.spacing = 8;
+    card.layoutMargins = UIEdgeInsetsMake(10, 12, 12, 12); card.layoutMarginsRelativeArrangement = YES;
+    card.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
+    card.layer.cornerRadius = 14; card.layer.cornerCurve = kCACornerCurveContinuous;
+    return card;
 }
 
 - (UIView *)switchRow:(NSString *)title key:(NSString *)key {
@@ -105,7 +120,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     text.axis = UILayoutConstraintAxisVertical;
     text.spacing = 3;
     UISwitch *toggle = [UISwitch new];
-    toggle.onTintColor = [UIColor colorWithRed:0.12 green:0.76 blue:0.59 alpha:1];
+    toggle.onTintColor = UIColor.systemGreenColor;
     toggle.accessibilityLabel = title;
     toggle.accessibilityIdentifier = [@"padcheaper." stringByAppendingString:key];
     [toggle addTarget:self action:@selector(toggleFeature:) forControlEvents:UIControlEventValueChanged];
@@ -127,6 +142,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = UIColor.clearColor;
+    // The panel is always a dark material; resolve system colours to match.
+    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     self.view.accessibilityIdentifier = @"padcheaper.overlay";
     self.position = CGPointMake(1, 0.20);
     self.shortcutsCollapsed = YES;
@@ -160,6 +177,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         shortcut.layer.borderWidth = 1;
         shortcut.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.25].CGColor;
         shortcut.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+        [shortcut setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         for (NSLayoutConstraint *constraint in shortcut.constraints) if (constraint.firstAttribute == NSLayoutAttributeHeight)
             constraint.constant = 44;
         [self.view addSubview:shortcut];
@@ -274,25 +292,29 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     actions.distribution = UIStackViewDistributionFillEqually;
     actions.spacing = 8;
     self.feedbackLabel = PHLabel(12, UIFontWeightMedium);
-    self.feedbackLabel.textColor = [UIColor colorWithRed:0.55 green:0.90 blue:0.78 alpha:1];
+    self.feedbackLabel.textColor = UIColor.systemGreenColor;
     UILabel *note = PHLabel(11, UIFontWeightRegular);
     note.text = @"PC 按鈕代表 dylib 已載入；綠色代表功能已通過啟用條件。Skin／BGM 仍需遊戲已有資源。";
     note.textColor = [UIColor colorWithWhite:1 alpha:0.55];
     UIStackView *body = [[UIStackView alloc] initWithArrangedSubviews:@[
         self.statusLabel, self.reasonLabel,
-        [self switchRow:@"功能總開關" key:@"experimentalWrites"],
-        [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
-        [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
-        [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
-        self.battleRestore, self.battleLabel,
-        [self button:@"自動轉珠 · 連續／技能規則" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"],
-        [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
-        [self switchRow:@"未通關也使用隊伍 BGM" key:@"bgmUncleared"],
-        [self switchRow:@"隊伍徽章" key:@"badge"],
-        [self switchRow:@"背景計時修正" key:@"timerFix"],
-        self.timerDismiss, self.timerLabel, self.filterToggle, self.filterSettings,
-        self.endpointLabel, self.endpointButton, self.saveLabel, self.checksLabel, actions,
-        self.feedbackLabel, self.pathLabel, note
+        [self card:@"常用" rows:@[
+            [self switchRow:@"功能總開關" key:@"experimentalWrites"],
+            [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
+            [self button:@"自動轉珠 · 連續／技能規則" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"]]],
+        [self card:@"隊伍與入場（單人）" rows:@[
+            [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
+            [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
+            self.battleRestore, self.battleLabel, self.filterToggle, self.filterSettings]],
+        [self card:@"外觀與音樂" rows:@[
+            [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
+            [self switchRow:@"未通關也使用隊伍 BGM" key:@"bgmUncleared"],
+            [self switchRow:@"隊伍徽章" key:@"badge"]]],
+        [self card:@"計時" rows:@[
+            [self switchRow:@"背景計時修正" key:@"timerFix"], self.timerDismiss, self.timerLabel]],
+        [self card:@"診斷與 API" rows:@[
+            actions, self.feedbackLabel, self.endpointLabel, self.endpointButton,
+            self.saveLabel, self.checksLabel, self.pathLabel, note]]
     ]];
     body.axis = UILayoutConstraintAxisVertical;
     self.bodyStack = body;
@@ -614,10 +636,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     NSString *tone = state[@"tone"];
     BOOL active = [tone isEqualToString:@"active"], error = [tone isEqualToString:@"error"];
     BOOL ready = [tone isEqualToString:@"ready"];
-    UIColor *color = active ? [UIColor colorWithRed:0.22 green:0.89 blue:0.65 alpha:1] :
-                     error ? [UIColor colorWithRed:1 green:0.40 blue:0.42 alpha:1] :
-                     ready ? [UIColor colorWithRed:0.42 green:0.73 blue:1 alpha:1] :
-                             [UIColor colorWithRed:1 green:0.75 blue:0.32 alpha:1];
+    UIColor *color = active ? UIColor.systemGreenColor : error ? UIColor.systemRedColor :
+                     ready ? UIColor.systemBlueColor : UIColor.systemOrangeColor;
     NSString *shortStatus = active ? @"啟用" : error ? @"錯誤" : ready ? @"就緒" : @"載入";
     NSString *bubbleTitle = error ? shortStatus : self.shortcutsCollapsed ? @"展開" : @"設定";
     [self.bubble setTitle:[@"PC\n" stringByAppendingString:bubbleTitle] forState:UIControlStateNormal];
@@ -638,7 +658,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"開始自動" forState:UIControlStateNormal];
     NSString *stopLabel = [orbs[@"automatic"] boolValue] ? @"停止自動轉珠" : @"停止本次轉珠";
     self.orbAutoShortcut.accessibilityLabel = orbBusy ? stopLabel : @"開始自動轉珠，沿用目前策略";
-    self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor colorWithRed:0.62 green:0.12 blue:0.15 alpha:0.96] :
+    self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor.systemRedColor colorWithAlphaComponent:0.85] :
         [UIColor colorWithRed:0.08 green:0.13 blue:0.19 alpha:0.96];
     NSString *orbMessage = [orbs[@"message"] isKindOfClass:NSString.class] ? orbs[@"message"] : @"";
     NSString *lastMessage = orbMessage;
@@ -700,7 +720,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.saveLabel.text = state[@"saveSummary"];
     NSString *savePhase = state[@"saveState"][@"phase"];
     self.saveLabel.textColor = [savePhase hasSuffix:@"failed"] ?
-        [UIColor colorWithRed:1 green:0.54 blue:0.54 alpha:1] : [UIColor colorWithWhite:1 alpha:0.80];
+        UIColor.systemRedColor : [UIColor colorWithWhite:1 alpha:0.80];
     NSDictionary *battle = state[@"battleState"];
     [self.filterToggle setTitle:[NSString stringWithFormat:@"單人入口設定 · mode %@／source %@／multi %@",
         battle[@"mode"] ?: @"—", battle[@"sourceMode"] ?: @"—", battle[@"multiplayer"] ?: @"—"] forState:UIControlStateNormal];

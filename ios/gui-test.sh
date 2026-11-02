@@ -219,8 +219,8 @@ inventory = json.load(sys.stdin)
 pads = [t for t in inventory["devicetypes"] if t.get("productFamily") == "iPad"]
 if not pads:
     raise SystemExit("No iPad simulator device type available")
-# 13-inch portrait is regular width >= 900 pt, so the two-column orb page is rendered.
-preferred = [t for t in pads if t["name"].startswith(("iPad Pro 13-inch", "iPad Air 13-inch", "iPad Pro (12.9-inch)"))]
+# The user mainly plays on an 11-inch iPad (portrait, compact layout).
+preferred = [t for t in pads if t["name"].startswith(("iPad Pro 11-inch", "iPad Air 11-inch", "iPad (A16)", "iPad (10th generation)"))]
 print((preferred or pads)[-1]["identifier"])
 ')"
 device_id="$(run_limited 45 xcrun simctl create 'PADCheaper iPad probe' "$device_type" "$runtime_id")"

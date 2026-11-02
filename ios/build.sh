@@ -47,6 +47,7 @@ xcrun --sdk iphoneos lipo "$build_dir/PADCheaper.dylib" -verify_arch arm64
 
 cp ios/config.example.json "$build_dir/config.example.json"
 cp ios/README.md "$build_dir/README.md"
+cp ios/CHANGELOG.md "$build_dir/CHANGELOG.md"
 cp ios/docs/feasibility.md "$build_dir/feasibility.md"
 cp ios/docs/runtime.md "$build_dir/runtime.md"
 cp ios/docs/device-testing.md "$build_dir/device-testing.md"

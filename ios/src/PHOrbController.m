@@ -337,8 +337,6 @@
 @property(nonatomic, strong) UILabel *eightDescription, *helpNote;
 @property(nonatomic, strong) UIButton *helpButton, *diagnosticsCopyButton;
 @property(nonatomic, strong) UIStackView *actionBar;
-@property(nonatomic, strong) UIStackView *columns;
-@property(nonatomic, strong) NSLayoutConstraint *stackMaxWidth;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
@@ -551,7 +549,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     helpActions.spacing = 10; helpActions.distribution = UIStackViewDistributionFillEqually;
     // What matters during a battle (state, preview, why it stopped) comes
     // first; settings that are changed between battles follow.
-    NSArray<UIView *> *cards = @[
+    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle,
         [self section:@"本場" views:@[self.status, self.boardView, self.slider, self.position, self.availability,
             self.eightDescription, self.decisionDescription]],
         [self section:@"策略與求路" views:@[self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
@@ -561,18 +559,10 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
             self.playerDescription, assistRow, self.assistRecoveryDescription]],
         [self section:@"關卡資料" views:@[self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
             self.battleObservationDescription]],
-        [self section:@"說明與診斷" views:@[helpActions, note]]];
-    // iPad landscape (regular width): the live card sits beside the settings
-    // instead of above one long column; see -viewWillLayoutSubviews.
-    UIStackView *settings = [[UIStackView alloc] initWithArrangedSubviews:[cards subarrayWithRange:NSMakeRange(1, cards.count - 1)]];
-    settings.axis = UILayoutConstraintAxisVertical; settings.spacing = 16;
-    self.columns = [[UIStackView alloc] initWithArrangedSubviews:@[cards[0], settings]];
-    self.columns.axis = UILayoutConstraintAxisVertical; self.columns.spacing = 16;
-    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle, self.columns]];
+        [self section:@"說明與診斷" views:@[helpActions, note]]]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 16; stack.translatesAutoresizingMaskIntoConstraints = NO;
     [scroll addSubview:stack];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
-    self.stackMaxWidth = [stack.widthAnchor constraintLessThanOrEqualToConstant:440];
     [NSLayoutConstraint activateConstraints:@[
         [header.topAnchor constraintEqualToAnchor:safe.topAnchor constant:12],
         [header.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:20],
@@ -588,7 +578,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
         [stack.centerXAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.centerXAnchor],
         [stack.leadingAnchor constraintGreaterThanOrEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:20],
         [stack.trailingAnchor constraintLessThanOrEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-20],
-        self.stackMaxWidth
+        [stack.widthAnchor constraintLessThanOrEqualToConstant:440]
     ]];
     NSLayoutConstraint *width = [stack.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-40];
     width.priority = UILayoutPriorityDefaultHigh; width.active = YES;
@@ -612,17 +602,6 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     const BOOL compact = self.traitCollection.verticalSizeClass == UIUserInterfaceSizeClassCompact;
     self.actionBar.axis = compact ? UILayoutConstraintAxisHorizontal : UILayoutConstraintAxisVertical;
     self.actionBar.distribution = compact ? UIStackViewDistributionFillEqually : UIStackViewDistributionFill;
-    // Two columns only when there is room for two readable cards (iPad
-    // landscape, large split view); iPad portrait keeps one centred column.
-    const BOOL wide = self.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassRegular &&
-        CGRectGetWidth(self.view.bounds) >= 900;
-    const UILayoutConstraintAxis axis = wide ? UILayoutConstraintAxisHorizontal : UILayoutConstraintAxisVertical;
-    if (self.columns.axis != axis) {
-        self.columns.axis = axis;
-        self.columns.alignment = wide ? UIStackViewAlignmentTop : UIStackViewAlignmentFill;
-        self.columns.distribution = wide ? UIStackViewDistributionFillEqually : UIStackViewDistributionFill;
-        self.stackMaxWidth.constant = wide ? 980 : 440;
-    }
 }
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];

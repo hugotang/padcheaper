@@ -12,7 +12,9 @@
 - B6 準備判斷的轉色合成、攻擊珠計數與「消三珠後仍保留」判斷抽成純 C 的 `PHOrbEightModel.h`，`PHOrbEight.m` 改為呼叫，判斷式與原本逐條相同。新增 `ios/tests/orb_eight_model_tests.c`（順序合成、差一回合 CD、遮罩／綁定／狀態／未知技能／全盤改色／生珠／特殊珠拒絕、轉色後總數、保留量與主色門檻），已加入 `test.sh`；mingw `-Wall -Wextra -Werror` 語法檢查通過，未執行。
 - `ios/tools/windows-tests.sh`：Windows 本機建置並執行模型、8 人模型與求路回歸；`BASELINE=<commit>` 時另建舊版求路器並比對路線摘要。
 - `ios/tools/package_delivery.py`：從成功的 CI run 下載產物，檢查 dylib 雜湊、所有步驟與四份 GUI 報告，拒絕覆蓋既有交付，產生 `verification.json`、`PACKAGE_SHA256SUMS`、ZIP 與 `.zip.sha256`；永遠標記 `device_verified=false`。
-- iPad 支援（使用者 2026-11-03 表示 iPhone 與 iPad 都使用）：轉珠頁在 regular 寬度且寬度 ≥ 900 pt 時，「本場」卡片與設定卡片改為左右兩欄（最大寬 980 pt），iPad 直向 11 吋與 iPhone 維持單欄；PC 浮動面板原本已限 352×600 pt，不變。`gui-test.sh` 在 iPhone 四輪後另建 13 吋 iPad 模擬器（直向寬度可觸發兩欄）跑一次 Scene probe，截圖前綴 `ipad-`（probe 新增 `PHProbePrefix`）；GUI 步驟時限由 12 改為 20 分鐘（CI 118 的 iPhone 四輪已用 513 秒）。iPad 的 probe 斷言可能暴露 iPhone 尺寸假設，需看本次 CI 結果；iPad 橫向與分割畫面仍無自動截圖。
+- iPad：使用者 iPhone 與 iPad 都用，主要是 11 吋 iPad（直向，寬 820 pt）。曾加入寬度 900 pt 以上的轉珠頁兩欄版面，因 11 吋直向用不到且沒有截圖驗證，已撤回；iPad UI 暫不另做。`gui-test.sh` 在 iPhone 四輪後另建 11 吋 iPad 模擬器跑一次 Scene probe，截圖前綴 `ipad-`（probe 新增 `PHProbePrefix`），目的只是確認 iPad 不會壞；GUI 步驟時限由 12 改為 20 分鐘（CI 118 的 iPhone 四輪已用 513 秒）。probe 斷言可能暴露 iPhone 尺寸假設，需看本次 CI。
+- PC 浮動面板：原本 25 項排成一長列，改為「常用／隊伍與入場（單人）／外觀與音樂／計時／診斷與 API」五張卡片，功能總開關、編隊與轉珠入口放最上方。面板按鈕改為與轉珠頁一致的藍色 tinted 樣式（仍是 `UIButtonTypeSystem` 與 `setTitle:`，probe 檢查的標題與無動畫行為不變），寫死的 RGB 色相改為系統色，面板固定深色外觀。浮動 PC 按鈕與三個快捷鍵的尺寸、位置與白字不變。所有 accessibility identifier 保留；需看 CI 截圖。
+- 版本紀錄：新增 `ios/CHANGELOG.md`（25 個版本的索引，連到各版說明與開發紀錄）；README 開頭 20 段逐版說明原文移入 CHANGELOG「原 README 版本摘要」，README 只保留目前版本、功能概覽、載入方式與多人限制等長期說明。`build.sh` 一併打包 CHANGELOG（連結由既有的 `docs/` 改寫規則處理）。
 - `.gitattributes`：文字檔一律 LF，圖片與二進位標為 binary；`git add --renormalize` 確認沒有任何檔案內容改變。
 
 ## 2026-11-03：0.5.25-orbs，B6 準備退回輸出、求路加速與轉珠頁改版，編譯驗證完成

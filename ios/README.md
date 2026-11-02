@@ -1,52 +1,14 @@
 # 編譯及載入 PADCheaper
 
-`0.5.25-orbs` 修正 [B6 優先準備失敗時直接停止](docs/release-0.5.25.md)：改為退回攻略輸出；求路在路線不變下加速，轉珠頁改為卡片版面並把狀態、預覽與 8 人進度放在最上方。已通過 [CI 118](https://github.com/hugotang/padcheaper/actions/runs/41495269554) 完整回歸、arm64 編譯與四份 GUI，交付 `E:/ipa/PADCheaper-0.5.25-orbs` 及同名 ZIP；真機穩定性待驗證。
-
-`0.5.24-orbs` 加入 [B5 兩技、B6 條件式準備與改盤後救援](docs/release-0.5.24.md)：攻略先火奈→赤龍女，技能生效後重新考慮先前略過的轉色分支；已有解時，在原剩餘時間內尋找更有利的橫排。B6 在保留珠與 CD 條件有利時優先 1C 再雙轉色，已就緒則直接雙開；診斷增加最新卡住盤面。需重匯活動 JSON。已通過 [CI 116](https://github.com/hugotang/padcheaper/actions/runs/41471306455) 完整回歸、arm64 編譯與四份 GUI，交付 `E:/ipa/PADCheaper-0.5.24-orbs` 及同名 ZIP；真機穩定性待驗證。
-
-`0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；426 組指紋符合原始 IPA，真機待驗收。
-
-`0.5.19-orbs` 接入 [8 人本場 Auto](docs/release-0.5.19.md)：原生本機技能、首消目標、每盤手勢與換層，結算後停止。附上可獨立匯入的 [大感謝祭 2026 杯設定](templates/eight-player-thanks-2026/README.md)。[CI 107](https://github.com/hugotang/padcheaper/actions/runs/41390546703) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；419 組指紋符合原始 IPA，實機同步／計分尚待驗收。
-
-`0.5.18-orbs` 新增 [單人離線隊伍試算](docs/team-model.md)、全部覺醒圖示、主動技能 CD／持續期／效果覆蓋，以及 [關卡對比與可更新攻略庫](docs/team-dungeon.md)。從轉珠面板點「隊伍對比」直接載入擷取紀錄；新關卡與攻略 JSON 無需重編 dylib。32 項隊伍及 13 項關卡模型、完整原生回歸、iPhoneOS 編譯／簽章、瀏覽器及四份 GUI 已由 [CI 98](https://github.com/hugotang/padcheaper/actions/runs/41321037478) 通過；417 組指紋符合原始 IPA，真機待驗收。見 [更新說明](docs/release-0.5.18.md)。Auto 存活放行仍未接通。
-
-2026-11-01，`0.5.17-orbs` 已由 [CI 94](https://github.com/hugotang/padcheaper/actions/runs/41301161254) 通過完整模型／solver／原生／session／規劃／規則／設定／策略回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI，零失敗。本次全層 JSON 檔案／分享及既有介面截圖已檢視；417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。新增 [全層關卡 JSON 匯出](docs/dungeon-report.md) 及保守首消 Combo 對策。見 [更新說明](docs/release-0.5.17.md) 與 [開發紀錄](docs/development.md)。省 T 的光 L＋心四、三光三心耐久放行仍未接通。
+目前版本 `0.5.25-orbs`。各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，未編譯的改動見 [開發紀錄](docs/development.md)。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
-0.5.12 收齊技能窗口重查、可選斜向轉珠、雨龍首盤保留白哉、CIEL／雙劍八起步時序、明確點擊的 3／4／8 人「轉一次」及預設收合的 PC 浮動入口。完整 [更新說明](docs/release-0.5.12.md)、[多人操作](docs/orb-multiplayer-once.md) 與 [實機測試要點](docs/device-testing.md) 列出行為；[CI 84](https://github.com/hugotang/padcheaper/actions/runs/41171594592) 已通過完整回歸、arm64 編譯、簽章、瀏覽器與四份 GUI，結果見 [開發紀錄](docs/development.md)，多人同步仍待真機驗證。新時序需重新匯入對應模板，替換 dylib 不會改寫已存策略。
-
-0.5.11 增加預設關閉的「心四連時允許消一般毒」，與所選隊伍策略一起保存。全部轉轉相位有首消心四連時可消一般毒，優先目標與 Combo；猛毒仍避開，爆彈須首消全消。三份成功毒盤桌面重複對照均增加 1 Combo；[CI 79](https://github.com/hugotang/padcheaper/actions/runs/41046955701) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI 報告，真機回血與首消仍待驗收。完整 [更新說明](docs/release-0.5.11.md) 列出條件與驗證範圍。
-
-0.5.10 改善轉轉／刺珠盤的多形狀求路：允許中途繼續補心四連，最終仍須通過完整目標與存活限制。四份停止盤中，第二盤已在桌面三次找到光 T＋心四連；其他盤受低血可達範圍、光心配置或缺心限制，詳見 [分析](docs/orb-spinner-thorn-search.md) 與 [更新說明](docs/release-0.5.10.md)。[CI 77](https://github.com/hugotang/padcheaper/actions/runs/41027272995) 已通過完整回歸、arm64 編譯、簽章、瀏覽器及四份 GUI 報告；iPhone 求路及首消／HP 仍待驗收，完整記錄見 [開發紀錄](docs/development.md)。
-
-使用者已確認 0.5.9 開場 6／6 及 BGM 實際正常播放，這次仍保留兩項修正。[CI 76](https://github.com/hugotang/padcheaper/actions/runs/41017566656) 為 0.5.9 的驗證，不代替 0.5.10。問題回報来自 **Dopamine rootless 越獄 iPhone 直接注入**，同一份 dylib 保留目前已可用的 LiveContainer 與 Dopamine rootless 載入方式。
-
 同一份 dylib 保留 **Dopamine rootless 與 LiveContainer** 兩種載入方式。使用者確認兩者目前都能使用；本次改盤與 BGM 修正共用同一套原生讀取及 frame hook，載入說明分列於下方。
 
-0.5.8 修正徽章重啟選擇及失敗還原待辦，增加未通關隊伍 BGM、策略 JSON 分享／檔案匯入、同進化鏈武裝滿充能時原生本體選擇、荊棘 Combo 偏好與零接觸補搜。[CI 74](https://github.com/hugotang/padcheaper/actions/runs/41011326922) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機驗收待回報；[更新說明](docs/release-0.5.8.md)、[保存與分享](docs/persistence-music-sharing.md)、[AutoCombo 參考](docs/autocombo-review.md) 及 [通關回傳](docs/clear-dungeon-audit.md) 分別列出行為與證據限制。
-
-0.5.7 改進轉轉形狀引導，新增共用原期限的缺項補搜及深入檔有限回溯；完整開場後可保留敵方暫時變身的流程進度，暫停原形態技能並繼續核對必要自救。Windows 回歸及 456 次舊新版對照通過；[CI 72](https://github.com/hugotang/padcheaper/actions/runs/40925229351) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機驗收待回報。詳見 [0.5.7 更新](docs/release-0.5.7.md)。
-
-0.5.6 新增「隊伍＋開場流程＋技能循環＋盤面目標」config 匯入／匯出、本體／武裝及指定技能限制、至少珠數條件、放手前重新驗證與最近三次實際轉珠紀錄。詳見 [0.5.6 更新](docs/release-0.5.6.md) 和 [整包 config](docs/team-plan-config.md)；[CI 70](https://github.com/hugotang/padcheaper/actions/runs/40910345825) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機結果待回報。
-
-0.5.5 新增還原失敗重試與再次套隊修正、雨竜 9 光珠條件診斷、指定不可消珠色、荊棘傷害預算及改尺寸轉轉裁切。詳見 [0.5.5 更新](docs/release-0.5.5.md)；[CI 67](https://github.com/hugotang/padcheaper/actions/runs/40885179006) 已通過原生／session、編譯、簽章、瀏覽器及四份模擬器報告，真機結果待回報。
-
-0.5.4 修正 30 fps 渲染時間造成長路徑中斷、待命隊員殘留技能選擇，以及新路徑混入舊進度。技能拒絕保留當次實際技能／CD／階段，面板顯示規則與位置；不把停止後的充能當成施放判斷當時狀態。詳見 [更新與安裝](docs/release-0.5.4.md) 及 [問題依據](docs/orb-skill-selection.md)。原生拒絕的完整真機原因仍待新版診斷核對。
-
 PC 浮動入口預設收合，閒置點一次展開「轉一次／開始自動／收合」，再點 PC 開設定；工作時單顆 PC 可直接停止。快捷操作沿用目前設定；8 人可明確啟動本場 Auto，3／4 人每次點擊轉一次。新增不含編隊指令的關卡腳本相容檢查，演出不再一律阻擋套隊；暫時無法確認參數來源時保留剩餘還原排程，還原先停止自動轉珠。詳見 [腳本套隊與還原](docs/scripted-team-restore.md)。
-
-先前 0.5.4 的 [CI 63](https://github.com/hugotang/padcheaper/actions/runs/40867358095) 已通過原生／session 回歸、arm64 編譯、簽章、瀏覽器與四份模擬器報告。更新只替換 dylib 並重新簽署，保留原有設定及隊伍庫；原關卡與技能結算仍待真機核對。
-
-0.5.3 加入 [轉轉、雲、封條、暗闇及特殊珠適配](docs/orb-effects.md)。轉轉需全部共用相位都達標，不抓指定顏色；路線避開封條及刺珠。既有 0.5.2 遇到轉轉仍停止，夜一規則的舊版限制見 [雨竜／白哉設定](docs/uryu-byakuya-0.5.2.md)。
-
-另加入 [光 T／心四連的判定與搜尋修正](docs/orb-shape-search.md)：四連允許未消同色鄰珠，加入複合布局與多樣候選，失敗訊息列出缺項及求路耗時。IMG_0407 在 Windows／macOS 三檔均達標；[CI 59](https://github.com/hugotang/padcheaper/actions/runs/40843708271) 的原生、arm64 編譯、簽章、瀏覽器及四份模擬器／重啟報告全部通過。下載雜湊及安裝方法見 [0.5.3 更新說明](docs/release-0.5.3.md)，新增效果與真機耗時仍待裝置驗收。
-
-使用者已於 2026-10-28 回報 `0.5.0-orbs` 測試通過，記錄為單人 6×5 基準版本的真機通過回報。
-
-`0.5.2-orbs` 修正部分 iPhone 在起點等待期間重送按下、無法選珠的問題，並加入「技能就緒就放」設定及白哉輪替範例。[CI 56](https://github.com/hugotang/padcheaper/actions/runs/40816242119) 的原生、arm64 編譯、簽章、瀏覽器與四份模擬器／重啟報告均通過，二進位來源 `2c3362d7a928d64e83837dc0f92d9505d0da8a38`。更新與設定保留方式見 [0.5.2 安裝說明](docs/release-0.5.2.md)；真機 iPhone 修復及技能效果仍待回報，順序見 [device-testing.md](docs/device-testing.md)。
 
 保留手機編隊六人總覽、角色編輯面板、上一格／下一格、本體／武裝切換、整格交換／複製、撤銷及最近使用角色。滿級／滿技顯示實際數字，保留雙指縮放。
 
