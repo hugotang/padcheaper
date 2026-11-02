@@ -479,12 +479,6 @@
           [
             {
               "slots": [
-                6
-              ],
-              "requireInventory": true
-            },
-            {
-              "slots": [
                 4,
                 6
               ],
@@ -492,16 +486,22 @@
             },
             {
               "slots": [
+                4,
                 1
+              ],
+              "requireInventory": false
+            },
+            {
+              "slots": [
+                6
               ],
               "requireInventory": true
             },
             {
               "slots": [
-                4,
                 1
               ],
-              "requireInventory": false
+              "requireInventory": true
             }
           ],
           [

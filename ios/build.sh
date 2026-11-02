@@ -61,6 +61,7 @@ cp ios/docs/release-0.5.20.md "$build_dir/"
 cp ios/docs/release-0.5.21.md "$build_dir/"
 cp ios/docs/release-0.5.22.md ios/docs/eight-player-b5-followup.md "$build_dir/"
 cp ios/docs/release-0.5.23.md ios/docs/eight-player-0522-review.md "$build_dir/"
+cp ios/docs/release-0.5.24.md ios/docs/eight-player-0523-review.md "$build_dir/"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
@@ -263,6 +264,9 @@ metadata = {
     "eight_player_guide": "Saved default-off GameWith floor skill option in the activity profile; native floor openers, confirmed prefixes and completed alternatives survive same-match Stop/Auto; optional cup-specific B6 single preparation recipe uses current conversions and next-turn CD estimates, exact three-orb first removal without existing-orb cascades, native next-turn and absorption confirmation, then fresh skill validation; reimport updated JSON",
     "eight_player_preparation": "Only guide-enabled explicit dungeon/subdungeon/last-floor recipe, one-turn lower absorption and spent board skill; normal current-board and ready-skill recovery first; reserve at most 150ms from the original board budget for a maximum 12-step preparation; one committed preparation per match, preserved across Stop/Auto; no unknown drops, charge writes, enemy-survival prediction or repeated delay",
     "eight_player_attack_ranking": "Activity JSON opt-in relative color weights, row contribution, once-per-activation link bonus and Combo contribution; this cup prefers fire over dark 3:1 without requiring a fire link, with one link reward; heuristic only, no live ATK, caps, enemy damage or kill proof; generic one-shot uses conservative first-removal accounting",
+    "eight_player_changed_inventory": "Verified native skill completion restarts skipped rescue branches while preserving the ordered prefix and per-turn attempted slots; first and latest blocked board/CD evidence retained",
+    "eight_player_b5_pair": "Guide profile prioritizes Ney 4 then Sonia 6 or 1; independent standalone generation is a cooldown fallback; existing saved JSON changes only after reimport",
+    "eight_player_row_candidates": "After a feasible activity output route, up to two missing attack-color rows guide candidate search within the original deadline; final comparison and release keep the original goals and activity weights; no exact damage or kill prediction",
     "eight_player_b1_combo": "B1 compares first-removal Combo, then erased orbs, then movement cost; baseline and diverse search share original time/path budgets; first B1 release record remains available after later floors; B5 recovery adds standalone slots 1 and 2; no exact damage or kill proof",
     "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "All mode categories except multiplayer; source/multi zero defaults; editable mode/source GUI filters; legacy multi settings load but cannot override single-player restriction",

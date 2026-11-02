@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.23-orbs` 新增 [8 人 B6 留珠準備與輸出排序](docs/release-0.5.23.md)：攻略模式尾層缺珠時，可依下一回合技能先消一組三珠留珠，再核對原生 CD／吸收與轉色輸出，每場最多一次。火珠排序兼顧列強、Combo 及一次超連消；8 人「轉一次」改用首消。首次卡住的盤面／CD 獨立保留。需重新匯入新版活動 JSON；[CI 114](https://github.com/hugotang/padcheaper/actions/runs/41439306946) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；430 組指紋符合原始 IPA，真機穩定性待驗收。
+`0.5.24-orbs` 加入 [B5兩技優先與改盤後救援](docs/release-0.5.24.md)：攻略先火奈→赤龍女，技能生效後重新考慮先前略過的轉色分支；已有解時，在原剩餘時間內尋找更有利的橫排。B6留珠與CD核對保留，診斷增加最新卡住盤面。需重匯活動JSON。Windows模型／solver已通過，完整手動CI驗證中，尚未交付新版。
 
 `0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；426 組指紋符合原始 IPA，真機待驗收。
 
@@ -82,7 +82,7 @@ bash ios/build.sh
 
 ## Dopamine rootless 安裝
 
-完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.23 的 B6 留珠準備及火珠排序需 [重新匯入活動 JSON](templates/eight-player-thanks-2026/README.md)，開啟攻略開關並儲存；舊 JSON 保留原有策略。
+完整關閉 PAD，再透過目前已使用的 rootless 注入方式替換 PADCheaper.dylib，避免同時載入多份版本。保留遊戲資料與既有 config，重新啟動後確認面板版本。0.5.24 的 B5 兩技優先需 [重新匯入活動 JSON](templates/eight-player-thanks-2026/README.md)，開啟攻略開關並儲存；舊 JSON 保留原有策略。
 
 ## LiveContainer 安裝
 
@@ -90,7 +90,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，閒置點一下展開快捷列，再點 PC 開設定，按 × 關閉面板。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示 `0.5.23-orbs`，載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示 `0.5.24-orbs`，載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 
@@ -136,6 +136,6 @@ PC 面板的「單人入口設定」可修改 mode／source 的全部允許開�
 
 面板的 **重新檢查** 可重試遊戲／hook 及儲存檢查，不會重複 hook 已成功的方法。**複製診斷** 包含版本、Bundle ID、校驗原因、hook／登入狀態、API host／path、設定路徑、當前隊員圖鑑 ID、技能充能及操作次數，不包含帳號 ID、query、憑證或入場 hash。
 
-若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.23-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
+若仍沒有 PC 按鈕，先在遊戲 guest 容器查看 `Library/Application Support/PADHelper/status.json`。新版即使精確校驗失敗也會寫入狀態；`loaded` 和 `overlayVisible` 分別表示 runtime 已初始化及浮動視窗已顯示。若檔案也不存在，在 LiveContainer 日誌搜尋 `[PADCheaper] dylib 0.5.24-orbs constructor loaded` 及 `Loaded tweak`／`Failed to load tweaks`，確認實際載入的是新版、所選 Tweak Folder 和簽署狀態。
 
 完成選擇／上傳測試前請先閱讀 [原型限制](docs/runtime.md)。關閉功能或移除 dylib 後，伺服器仍保留已上傳的預設值，本地選擇需依賴本地檔；此原型不宣稱所有網路 action 都已預設化。

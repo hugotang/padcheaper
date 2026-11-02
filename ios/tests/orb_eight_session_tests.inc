@@ -315,8 +315,53 @@ static void EightResumeTests() {
             [session.snapshot[@"eightSkillPending"] boolValue],"invalid root/slot/source/catalog/count remains pending without recast");
     }
 }
+static void EightChangedInventoryRecoveryTests() {
+    for (unsigned scenario = 0; scenario < 3; ++scenario) {
+        FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = 4;
+        engine->live.automation.members[3].charge = 0; // Exercise the standalone fallback before the rescue turn.
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+        EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+        EightRunUntilRelease(session,engine,1); // The floor opener has already been consumed.
+        Check(engine->skillOrder == std::vector<NSUInteger>{5},"B5 recovery fixture confirms the guide opener first");
+        EightNextBoard(engine,false);
+        // Synthetic five-of-each board: Kagutsuchi alone gives 10 fire/10
+        // dark, so it is skipped before Ney. Neither Sonia is ready.
+        for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = uint8_t(i / 5);
+        for (auto &m : engine->live.automation.members) m.charge = 0;
+        engine->live.automation.members[1].charge = scenario == 2 ? 3 : 4;
+        engine->live.automation.members[3].charge = 6;
+        engine->eightBoardColorRun = 10; // Ney rereads as 10 fire/10 dark/10 heart.
+        EightWaitForSkill(session,engine);
+        Check(engine->skillOrder == std::vector<NSUInteger>({5,3}),"Ney is the last feasible recovery branch on the original board");
+        if (scenario == 1) {
+            [session queueStop:@"pause during Ney"];
+            for (unsigned i = 0; i < 25; ++i) Tick(session,engine,Frame());
+            [session queueAutomatic];
+        }
+        if (scenario == 2) {
+            for (unsigned i = 0; i < 500 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+            Check(![session.snapshot[@"automatic"] boolValue] && engine->releases == 1 &&
+                engine->skillOrder == std::vector<NSUInteger>({5,3}),
+                "new inventory cannot bypass Kagutsuchi's native cooldown or repeat Ney");
+            NSDictionary *progress = session.snapshot[@"eightProgress"];
+            Check(![progress[@"firstBlocked"][@"board"] isEqual:progress[@"lastBlocked"][@"board"]] &&
+                [progress[@"lastBlocked"][@"board"][@"types"] count] == 30,
+                "failed post-skill board remains available beside the original blocked-board evidence");
+        } else {
+            EightRunUntilRelease(session,engine,2);
+            Check(engine->skillOrder == std::vector<NSUInteger>({5,3,1}) &&
+                [session.snapshot[@"autoSkills"] isEqual:@3] &&
+                [session.snapshot[@"eightProgress"][@"attemptedSlots"] isEqual:@10],
+                "confirmed Ney reconsiders skipped Kagutsuchi exactly once, without requiring Stop/Auto");
+            for (unsigned i = 0; i < 20; ++i) Tick(session,engine,Frame());
+            Check(engine->releases == 2 && engine->skillAttempts == 3,"recovery waits for the next native board after release");
+        }
+        [session queueStop:@"fixture done"];
+    }
+}
 static void EightSessionTests() {
     EightPreparationSessionTests();
+    EightChangedInventoryRecoveryTests();
     FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Tick(session,engine,Frame()); [session configureQuality:@"fast"]; [session queueAutomatic];
     EightRunUntilRelease(session,engine,1);

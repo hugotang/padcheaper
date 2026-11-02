@@ -85,9 +85,52 @@ static void EightPreparationSolverTests() {
         fireLink.activityValue > darkLink.activityValue && fireLink.firstWaveCombos == darkLink.firstWaveCombos,
         "otherwise equivalent layouts prefer the stronger configured main-color contribution");
 }
+static void EightAttackRowSearchTests() {
+    auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.activity.firstWaveOnly = true; options.activity.colors = 17;
+    options.activity.comboWeight = 400; options.activity.rowWeight = 1500;
+    options.activity.linkWeight = 2500; options.activity.stepCost = 35;
+    options.activity.linkRewardLimit = 1;
+    options.activity.attackWeights[0] = 3; options.activity.attackWeights[4] = 1;
+    options.activity.attackRowPercent[0] = options.activity.attackRowPercent[4] = 540;
+    options.activity.attackLinkMultiplier = 12; options.activity.attackLinkComboBonus = 2;
+    options.goals.count = 2; options.goals.comboFirstWave = true;
+    options.goals.items[0] = {PHOrbGoalMatch,17,1,12}; options.goals.items[1] = {PHOrbGoalCombo,0,4,0};
+    std::atomic_bool cancel{false};
+    for (unsigned seed : {1u,4u,5u,13u}) {
+        auto board = Board(6,5,seed);
+        for (unsigned i = 0; i < 30; ++i) board.types[i] = i < 12 ? 0 : i < 22 ? 4 : i < 25 ? 1 : 5;
+        uint32_t random = seed;
+        for (unsigned i = 29; i; --i) {
+            random = random * 1664525u + 1013904223u;
+            std::swap(board.types[i],board.types[random % (i+1)]);
+        }
+        const auto original = board; auto baseline = options; baseline.recoveryPasses = 0;
+        PHOrbRoute oldRoute{}, route{}; PHOrbBoard replay{}; PHOrbEvaluation oldValue{}, value{};
+        Check(PHOrbSolve(board,baseline,cancel,oldRoute) == PHOrbSolveStatus::Solved &&
+            PHOrbReplay(&board,&oldRoute,oldRoute.count-1,&replay) && PHOrbEvaluateWithOptions(replay,options,oldValue),
+            "synthetic activity board has a feasible ordinary beam candidate");
+        Check(PHOrbSolve(board,options,cancel,route) == PHOrbSolveStatus::Solved &&
+            route.count <= 49 && route.searchPasses <= 3 && !std::memcmp(&original,&board,sizeof(board)) &&
+            PHOrbReplay(&board,&route,route.count-1,&replay) && PHOrbEvaluateWithOptions(replay,options,value),
+            "bounded row candidates retain the original board and gesture limits");
+        const auto actual = Oracle(replay,true);
+        const int oldScore = oldValue.activityValue - int(oldRoute.count - 1) * options.activity.stepCost;
+        const int score = value.activityValue - int(route.count - 1) * options.activity.stepCost;
+        Check(score >= oldScore && actual.first == route.combos && actual.second == route.erased &&
+            value.goalsMet && route.goalsMet && route.goalCount == 2 && route.matchedGoals == 2 &&
+            value.linkGroups[0] && value.firstWaveCombos >= 4,
+            "candidate-only row goals never replace the original link, absorption or release accounting");
+        if (seed == 4 || seed == 5) Check(score > oldScore && value.rowGroups[0] &&
+            (seed != 5 || value.rowGroups[4]),"generated cases improve missing attack rows without weakening the configured objective");
+        if (seed == 1) Check(!value.rowGroups[4],"an unhelpful optional row preserves the stronger baseline route");
+        if (seed == 13) Check(route.searchPasses == 1,"already-present attack rows do not trigger duplicate searches");
+    }
+}
 static void EightSolverTests() {
     EightPreparationSolverTests();
     EightComboPriorityTests();
+    EightAttackRowSearchTests();
     auto s = MultiplayerModelState(8,7), other = s;
     for (uint32_t phase : {28u,29u,30u,31u,67u,68u}) {
         other = s; other.phase = phase;

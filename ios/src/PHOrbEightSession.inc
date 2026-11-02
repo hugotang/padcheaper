@@ -1,11 +1,11 @@
 // One explicit match intent, fresh native gesture leases and skill receipts.
 // Ordinary solo opening, formation and recovery rules never enter this path.
 - (void)rememberEightBlock:(NSDictionary *)decision {
-    if (_eightFirstBlocked) return;
-    _eightFirstBlocked = @{@"wave":@(_live.wave),@"turn":@(_autoTurn),@"decision":decision ?: @{},
+    _eightLastBlocked = @{@"wave":@(_live.wave),@"turn":@(_autoTurn),@"decision":decision ?: @{},
         @"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live),@"multiplayer":MultiplayerTrace(_live),
         @"enemyCombo":@{@"valid":@(_live.enemyCombo.valid),@"turns":@(_live.enemyCombo.turns[0]),
             @"threshold":@(_live.enemyCombo.thresholds[0])}};
+    if (!_eightFirstBlocked) _eightFirstBlocked = _eightLastBlocked;
 }
 - (void)rememberEightSkill:(const PHOrbSnapshot *)state {
     if (state->eight.valid) _eightLastObserved = *state;
@@ -28,12 +28,12 @@
         @"latestTotalUses":@(_eightLastObserved.automation.skillUses),
         @"receipt":@{@"valid":@(r.valid),@"skill":@(r.skill),@"catalogID":@(r.catalogID),
             @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
-        @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),
+        @"sequenceStep":@(_eightSequenceStep),@"sequenceCount":@(_eightSequence.count),@"recoveryCursor":@(_eightSequenceCursor),
         @"attemptedSlots":@(_eightAttemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
         @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightGuidePrepared),
         @"guideSequence":@(_eightSequenceGuide),@"floorSkillMask":@(_live.wave < _eightFloorSkillMask.size() ? _eightFloorSkillMask[_live.wave] : 0),
         @"firstPuzzle":_eightFirstPuzzle ?: @{},
-        @"firstBlocked":_eightFirstBlocked ?: @{},@"preparation":_eightPreparationTrace ?: @{},
+        @"firstBlocked":_eightFirstBlocked ?: @{},@"lastBlocked":_eightLastBlocked ?: @{},@"preparation":_eightPreparationTrace ?: @{},
         @"preparationUsed":@(_eightPreparationUsed),@"preparationAwaiting":@(_eightPreparationAwaiting),
         @"lastStop":_eightLastStop ?: @{}};
 }
@@ -55,7 +55,7 @@
         _eightSequence = nil; _eightSequenceCursor = _eightSequenceStep = 0; _eightAttemptedSlots = 0;
         _eightGuidePrepared = _eightSequenceGuide = false; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
         _eightFirstPuzzle = nil;
-        _eightFirstBlocked = _eightPreparation = _eightPreparationTrace = nil;
+        _eightFirstBlocked = _eightLastBlocked = _eightPreparation = _eightPreparationTrace = nil;
         _eightPreparing = _eightPreparationUsed = _eightPreparationAwaiting = false;
         _eightPreparationSearchMS = 0;
         _eightResumes = 0; _eightLastStop = nil;
@@ -167,6 +167,10 @@
         }
         _eightSkillPending = false;
         if (_eightSequenceStep < _eightSequence.count) ++_eightSequenceStep;
+        // A verified effect changes the inventory used to skip earlier rescue
+        // branches (for example Ney -> Kagutsuchi). Revisit those branches
+        // while preserving both the ordered sequence and per-turn attempt mask.
+        _eightSequenceCursor = 0;
         ++_autoSkills;
         if (_eightSkillBefore.wave < _eightFloorSkillMask.size())
             _eightFloorSkillMask[_eightSkillBefore.wave] |= uint8_t(1u << _eightSlot);

@@ -97,7 +97,15 @@ static void EightGuideProfilesTests(void) {
     s.automation.members[0].charge = 20;
     Check([PHOrbEightGuideDecision(activity,&s,32,32)[@"sequence"] count] == 0,"completed alternative prevents spending the other Sonia after profile changes");
     s.wave = 4;
-    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@6]],"B5 preserves Ney if generation can supply twelve");
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@6]],
+        "B5 prioritizes Ney then Sonia even when generation alone could meet the minimum link goal");
+    s.automation.members[5].charge = 0;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@1]],
+        "B5 chooses the other ready Sonia after Ney before a weaker standalone opener");
+    s.automation.members[5].charge = 20; s.automation.members[3].charge = 0;
+    Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@6]],
+        "B5 still permits adequate standalone generation when Ney is not ready");
+    s.automation.members[3].charge = 20;
     for (unsigned i = 0; i < 30; ++i) s.board.types[i] = i % 6;
     Check([PHOrbEightGuideDecision(activity,&s,0,0)[@"sequence"] isEqual:@[@4,@6]],"B5 uses Ney then Sonia if generation alone lacks twelve");
     s.automation.members[3].charge = 0;

@@ -373,7 +373,7 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     bool _eightGuidePrepared, _eightSequenceGuide;
     std::array<uint8_t,100> _eightFloorSkillMask;
     std::array<bool,100> _eightFloorSubmitted;
-    NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightPreparation, *_eightPreparationTrace;
+    NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightLastBlocked, *_eightPreparation, *_eightPreparationTrace;
     bool _eightPreparing, _eightPreparationUsed, _eightPreparationAwaiting;
     unsigned _eightPreparationSearchMS;
 }

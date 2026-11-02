@@ -957,7 +957,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
         const auto primaryDeadline = recover ? start + (deadline - start) * 2 / 3 : deadline;
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
-                          Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false) {
+                          Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false, bool activityRows = false) {
             ++passes;
             // Recovery changes hint policy/repair weights, so it must not
             // inherit another pass's scores. Exact validation is unchanged.
@@ -995,6 +995,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         std::swap(child.thorns[current], child.thorns[cell]);
                         if (!visited.insert(Hash(child, size)).second) continue;
                         child.score = evaluationCache.score(child.cells, scoring);
+                        const Score guidedScore = child.score;
+                        if (activityRows) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
                         // A branch can finish its heart four later. Keep the
@@ -1006,6 +1008,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity)) {
                             best = child; found = true;
                         }
+                        if (activityRows) child.score = guidedScore;
                         if (heartPending) child.score.result.hazardsSafe =
                             ReleaseHazardsSafe(child.score.result, options.allowPoisonWithHeartFour, false);
                         next.push_back(child);
@@ -1086,6 +1089,27 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // recovery used stable templates. Do not add passes or time.
             if (stableShapeRecovery && saved.empty()) revisit.stableHints = false;
             search(revisit, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
+        }
+        // A feasible link/Combo route can crowd out incomplete, stronger row
+        // layouts. Keep that route and use only the remaining original time
+        // for at most two missing attack-color rows. Extra goals guide the
+        // beam; released candidates still use the original goals and ranking.
+        if (met() && context.activity.firstWaveOnly && !context.activity.comboPriority &&
+            !context.activity.preparation && context.variants == 1 && options.recoveryPasses &&
+            context.goals.count < PHOrbMaxGoals) {
+            unsigned rowPasses = 0;
+            for (unsigned color = 0; color < 6 && rowPasses < 2; ++color) {
+                if (timedOut || cancel.load(std::memory_order_relaxed) || Clock::now() >= deadline) break;
+                if (!context.activity.attackWeights[color] || !context.activity.attackRowPercent[color] ||
+                    !(context.activity.colors & (1u << color)) || comboCounts[color] < board.width ||
+                    best.score.result.rowGroups[color]) continue;
+                PHOrbGoalSet goals = context.goals;
+                goals.items[goals.count++] = {PHOrbGoalRow,uint8_t(1u << color),1,0};
+                auto activity = context.activity; activity.comboPriority = true;
+                const Context rows = MakeContext(board,goals,true,options.allowPoisonWithHeartFour,options.diagonal,activity);
+                beam = starts; ++rowPasses;
+                search(rows,0,goals.count-1,deadline,false,false,true);
+            }
         }
         // Permitting survivable thorn contacts changes beam competition even
         // if the final best path has no damage: temporary complete shapes can

@@ -35,6 +35,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL multiplayerArmed, ignoreRelease;
     BOOL eightArmed, eightSkillInFlight;
     NSUInteger eightProgressReads, eightReceiptFault;
+    unsigned eightBoardColorRun;
     NSUInteger multiplayerArms;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
@@ -298,7 +299,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
                 std::vector<uint8_t> colors;
                 for (unsigned c = 0; c < 6; ++c) if (effect.boardColors & (1u << c)) colors.push_back(c);
                 for (unsigned i = 0; i < live.board.width * live.board.height; ++i)
-                    if (!(live.board.flags[i] & PHOrbFlagLocked)) live.board.types[i] = colors[(i / 12) % colors.size()];
+                    if (!(live.board.flags[i] & PHOrbFlagLocked))
+                        live.board.types[i] = colors[(i / (eightBoardColorRun ? eightBoardColorRun : 12)) % colors.size()];
             }
         }
         if (hasteFirst) unavailableSkills[0] = NO;
