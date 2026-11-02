@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "runtime-implemented-ci-pending",
+  "status": "runtime-implemented-device-unverified",
   "date": "2026-11-02",
   "timezone": "Asia/Hong_Kong",
   "event": "大感謝祭2026カップ",
@@ -14,7 +14,7 @@
     "wait_for_other_player_turns": false,
     "stop_at_results": true,
     "automatic_rematch": false,
-    "implementation_status": "0.5.19 current-match Auto, fixed native skill effects, exact member/global use receipts, fresh per-board gestures, first-removal heuristic; macOS/arm64 tests pending, device not verified"
+    "implementation_status": "0.5.19 current-match Auto, fixed native skill effects, exact member/global use receipts, fresh per-board gestures, first-removal heuristic; automated validation is recorded in ios/docs/development.md, device not verified"
   },
   "sources": [
     {

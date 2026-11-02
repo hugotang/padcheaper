@@ -191,15 +191,27 @@ static void AssistSessionTests() {
     [session queueStop:@"end manual preview"];
     for (unsigned players : {3u,4u,8u,1u}) {
         engine = [FakeOrbEngine new];
-        if (players == 1) SetSessionContinuation(engine); else SetMultiplayer(engine,players);
+        if (players == 1) SetSessionContinuation(engine);
+        else if (players == 8) engine = EightEngineFixture();
+        else SetMultiplayer(engine,players);
         engine->failAssist = YES; session = [[PHOrbSession alloc] initWithEngine:engine];
-        Check([session configureSettings:AssistSettings(YES)], "multiplayer may save but cannot activate continuous policy");
+        Check([session configureSettings:AssistSettings(YES)], "multiplayer may save the solo L policy");
         Tick(session,engine,Frame()); [session queueAutomatic];
-        Check(![session.snapshot[@"automatic"] boolValue] && !engine->assistReads, "multiplayer never enters L automation");
+        if (players == 8) {
+            EightRunUntilRelease(session,engine,1);
+            Check([session.snapshot[@"automatic"] boolValue] && !engine->assistReads && !engine->skillAttempts &&
+                ![session.snapshot[@"goalPlan"][@"assistRecoveryActive"] boolValue],
+                "8P Auto executes its board without importing the saved solo L recovery policy");
+            [session queueStop:@"end 8P policy isolation"];
+            engine = [FakeOrbEngine new]; SetMultiplayer(engine,8); engine->failAssist = YES;
+            session = [[PHOrbSession alloc] initWithEngine:engine];
+            [session configureSettings:AssistSettings(YES)]; Tick(session,engine,Frame());
+        } else Check(![session.snapshot[@"automatic"] boolValue] && !engine->assistReads,
+            "3/4-player and co-op continuation cannot enter continuous L automation");
         [session queueOnce];
         for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
         Check(engine->releases == 1 && !engine->assistReads && !engine->skillAttempts &&
-            [session.snapshot[@"completed"] isEqual:@1], "3/4/8-player and co-op continuation retain explicit one-shot behavior");
+            [session.snapshot[@"completed"] isEqual:@1], "3/4/8-player and co-op continuation retain the independent one-shot action");
     }
     engine = [FakeOrbEngine new]; SetAssistBoard(engine); engine->live.settled = false; session = AssistSession(engine);
     for (unsigned i = 0; i < 15; ++i) Tick(session,engine,Frame());

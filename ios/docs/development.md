@@ -12,6 +12,8 @@
 
 延續使用者既有「繼續，在你認爲合適的時候編譯測試？」授權，開始本版編譯驗證。Windows C11/C++17 `-Wall -Wextra -Werror` 模型與 solver 回歸已通過，新增首消／連消與重播案例通過。macOS 原生／Session／設定、arm64 及 GUI 仍待本版 CI 結果；下方 0.5.18 CI 不代表本版通過。尚未交付新 dylib。精確計分／傷害、缺少生存證據時刻意消一回合、實機固定技能與同步仍未驗證。
 
+[CI 99](https://github.com/hugotang/padcheaper/actions/runs/41385692292) 通過模型、策略匯入與 solver，原生案例有一個未使用變數造成 `-Werror` 中止，已修正。[CI 100](https://github.com/hugotang/padcheaper/actions/runs/41385804168) 進一步通過全部原生記憶體／技能／輸入案例；Session 僅有兩個舊武裝 L 測試仍假設 8 人不能啟動 Auto。已改以有效 8 人隊伍確認可連續轉珠且不讀取／使用單人 L 回復，再以獨立 session 確認轉一次；3／4 人及協力續玩仍保留禁止連續模式的斷言。待修正來源重跑完整 CI，兩輪失敗產物均不交付。
+
 ## 2026-11-01：0.5.18-orbs 隊伍模型、主動技能與關卡對比，編譯驗證完成
 
 2026-11-01，`0.5.18-orbs` 已由 [CI 98](https://github.com/hugotang/padcheaper/actions/runs/41321037478) 通過 32 項隊伍模型、13 項關卡／攻略模型、完整模型／solver／原生／session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。「隊伍對比」跨視窗／WebKit 初始化傳遞、攻略原子儲存及程序重啟載入均通過。本版按鈕、技能、覺醒圖案及實際 17 層對比畫面已檢視；原生覺醒圖示另通過圖片解碼與截圖彩色像素檢查。417 組指紋與原始 IPA 一致。真機仍待正常使用時驗收。
