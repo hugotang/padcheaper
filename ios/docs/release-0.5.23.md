@@ -16,6 +16,8 @@
 
 ## 驗證狀態
 
-Windows C11／C++17 完整模型與 solver 回歸通過，含獨立消除重播、準備保留珠及第二組連消計分案例。原生／Session、iPhoneOS arm64、簽章、瀏覽器及模擬器驗證待本版手動 CI 完成，尚未交付新版。`device_verified=false`。
+2026-11-02，`0.5.23-orbs` 已由 [CI 114](https://github.com/hugotang/padcheaper/actions/runs/41439306946) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟共四份 GUI。B6 準備→原生下一回合→保存的轉色序列→輸出、停止接續、吸收／CD 不符停止、每場最多一次與新場重置，首消計算及首次卡住證據均經同一來源回歸。Windows 模型／solver 與獨立消除 oracle 通過；430 組指紋符合原始 IPA，畫面已檢視。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。
+
+二進位來源 `a87027f1a0a75464c342beebaddb8da2c716a30a`；dylib 10,529,584 bytes，最低 iOS 15.0；SHA-256 `c9d6a2adf9746cce7a87535fd7b9fae8d8600def6681db75b3464164020fa5dd`。交付目錄 `E:/ipa/PADCheaper-0.5.23-orbs` 及同名 ZIP。二進位、metadata、manifests、活動 JSON 均保留同一 CI 原件；驗證文件另行提交。
 
 來源、三份 log 的證據範圍及離線對照見 [0.5.22 紀錄分析](eight-player-0522-review.md)。

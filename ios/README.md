@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-`0.5.23-orbs` 新增 [8 人 B6 留珠準備與輸出排序](docs/release-0.5.23.md)：攻略模式尾層缺珠時，可依下一回合技能先消一組三珠留珠，再核對原生 CD／吸收與轉色輸出，每場最多一次。火珠排序兼顧列強、Combo 及一次超連消；8 人「轉一次」改用首消。首次卡住的盤面／CD 獨立保留。需重新匯入新版活動 JSON；本機模型／solver 已通過，原生／Session／iPhoneOS／GUI 待本版 CI，未交付。
+`0.5.23-orbs` 新增 [8 人 B6 留珠準備與輸出排序](docs/release-0.5.23.md)：攻略模式尾層缺珠時，可依下一回合技能先消一組三珠留珠，再核對原生 CD／吸收與轉色輸出，每場最多一次。火珠排序兼顧列強、Combo 及一次超連消；8 人「轉一次」改用首消。首次卡住的盤面／CD 獨立保留。需重新匯入新版活動 JSON；[CI 114](https://github.com/hugotang/padcheaper/actions/runs/41439306946) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；430 組指紋符合原始 IPA，真機穩定性待驗收。
 
 `0.5.20-orbs` 修正 [首次 Auto 與通關停止](docs/release-0.5.20.md)：展開 PC 後自動讀取就緒狀態，8 人倒數完成可直接按 Auto；單人／8 人在 Dungeon Clear 或結算立即停止。[CI 108](https://github.com/hugotang/padcheaper/actions/runs/41395842797) 已通過完整回歸、arm64 編譯／簽章、瀏覽器及四份 GUI；426 組指紋符合原始 IPA，真機待驗收。
 
