@@ -368,12 +368,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     uint8_t _eightAttemptedSlots;
     NSArray *_eightSequence;
     bool _eightGuidePrepared, _eightSequenceGuide;
-    std::array<uint8_t,100> _eightFloorSkillMask{};
-    std::array<bool,100> _eightFloorSubmitted{};
+    std::array<uint8_t,100> _eightFloorSkillMask;
+    std::array<bool,100> _eightFloorSubmitted;
     NSDictionary *_eightFirstPuzzle;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
+        _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
         _engine = engine;
         _worker = dispatch_queue_create("jp.padcheaper.orbs.solver", DISPATCH_QUEUE_SERIAL);
         _phase = @"idle"; _message = @"自己的操作階段可轉一次；單人與 8 人支援本場 Auto";
