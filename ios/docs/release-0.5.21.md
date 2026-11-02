@@ -8,4 +8,8 @@
 
 Dungeon Clear／結算即停止，下一場需重新按 Auto。使用範圍仍是一場 8 人本機技能與轉珠；3／4 人維持轉一次。詳見 [分析紀錄](../research/orb-eight-skill-resume-20261102.json) 及 [實機檢查](device-testing.md)。已匯入的本杯活動設定可繼續使用，這次不需重新匯入。
 
-驗證待完成：沿用使用者的編譯測試授權，準備執行 Windows 模型／solver、430 組原始 IPA 指紋、完整 macOS 原生／Session／設定回歸、iPhoneOS arm64 編譯與 GUI。此前 CI 不代表本版通過；`device_verified=false`。
+使用者同日回報一場 0.5.21 已通關；診斷保留本場 9 次自動轉珠、6 次技能確認，B5／B6 放手前均達成 12 連消。Auto 最後已停止，但原因是連線／席位／時計條件改變，不能據此推定發生斷線，也不能當成特定 Dungeon Clear 分支的真機證明。另一場在 B5 再次缺珠時停止，顯示原活動設定的救盤備案仍有缺口；詳見 [B5 對照分析](eight-player-b5-followup.md)。
+
+2026-11-02，`0.5.21-orbs` 已由 [CI 110](https://github.com/hugotang/padcheaper/actions/runs/41403578429) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器及 Scene／舊式視窗首次與重啟共四份 GUI。新增 B2／B5 普通技能零限次計數、場內固定技能與圖鑑差異、停止後原生完成、序列與回合接續、錯誤回報及晚到求路回呼等案例通過；真實 Session 的停止／Auto 接續畫面已檢視。430 組指紋符合原始 IPA。模擬器及原生替身不等於 PAD 真機同步驗收，`device_verified=false`。
+
+二進位來源 `962f4461957a66f5523e649e8478276dd1d20654`；dylib 10,478,576 bytes，最低 iOS 15.0；SHA-256 `40a0c449f50386fe9a5863b8f70afc495fc8f3cc35025a84b72cd88c2fb02396`。交付目錄 `E:/ipa/PADCheaper-0.5.21-orbs` 及同名 ZIP。二進位、metadata、manifests、範本及研究 JSON 保留同一 CI 原件；文件結果另行提交。研究 JSON 保留建置前狀態，最終驗證以本節及交付 verification.json 為準。Windows 模型／solver 已通過，沒有新增效能結果；部分真機回報見上文。
