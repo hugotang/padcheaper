@@ -157,7 +157,7 @@ for notes in directory.glob("*.md"):
     content = notes.read_text(encoding="utf-8")
     for old, new in (("](docs/", "]("), ("](../research/", "](research/"),
                      ("](../templates/", "](templates/"), ("](../third_party/", "](third_party/"),
-                     ("](../README.md", "](README.md"), ("](../editor/assets/", "](third_party/PADDashFormation/"),
+                     ("](../README.md", "](README.md"), ("](../CHANGELOG.md", "](CHANGELOG.md"), ("](../editor/assets/", "](third_party/PADDashFormation/"),
                      ("](../.github/workflows/ios-dylib.yml)",
                       "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
         content = content.replace(old, new)
