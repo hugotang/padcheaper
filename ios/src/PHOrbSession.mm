@@ -145,6 +145,7 @@ NSDictionary *EightTeamTrace(const PHOrbSnapshot &state) {
         [members addObject:@{@"slot":@(slot + 1),@"number":@(a.number),@"catalogID":@(m.catalogID),
             @"sourceSlot":@(m.sourceSlot),@"activeSkill":@(m.activeSkill),@"rootSkill":@(m.rootSkill),
             @"leaderSkill":@(m.leaderSkill),@"cooldown":@(m.cooldown),@"charge":@(a.charge),@"limitedUses":@(a.skillUses[0]),
+            @"active":@(a.active),@"bound":@(a.bound),@"state":@(a.state),
             @"skillKnown":@(m.skillKnown),@"leaderKnown":@(m.leaderKnown),@"convert":convert,@"generate":generate,
             @"boardColors":@(m.boardColors),@"unlock":@(m.unlock),@"noSkyfall":@(m.noSkyfall),
             @"attackColors":@(m.attackColors),@"attackLength":@(m.attackLength),@"attackPercent":@(m.attackPercent),
@@ -229,11 +230,13 @@ NSArray *RouteCells(const PHOrbRoute &route) {
     return cells;
 }
 NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &goals) {
-    NSMutableArray *hits = [NSMutableArray array];
+    NSMutableArray *hits = [NSMutableArray array], *retained = [NSMutableArray array];
     for (unsigned g = 0; g < goals.count; ++g) [hits addObject:@(value.goalHits[g])];
+    for (unsigned c = 0; c < 6; ++c) [retained addObject:@(value.retainedAfterConversion[c])];
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
         @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
         @"activityHeuristic":@(value.activityValue), @"nativeScoreKnown":@NO,
+        @"preparationReady":@(value.preparationReady),@"retainedAfterConversion":retained,
         @"rowGroups":@[@(value.rowGroups[0]),@(value.rowGroups[1]),@(value.rowGroups[2]),@(value.rowGroups[3]),@(value.rowGroups[4]),@(value.rowGroups[5])],
         @"linkGroups":@[@(value.linkGroups[0]),@(value.linkGroups[1]),@(value.linkGroups[2]),@(value.linkGroups[3]),@(value.linkGroups[4]),@(value.linkGroups[5])],
         @"hazardsSafe":@(value.hazardsSafe), @"poisonErased":@(value.poisonErased),
@@ -370,7 +373,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     bool _eightGuidePrepared, _eightSequenceGuide;
     std::array<uint8_t,100> _eightFloorSkillMask;
     std::array<bool,100> _eightFloorSubmitted;
-    NSDictionary *_eightFirstPuzzle;
+    NSDictionary *_eightFirstPuzzle, *_eightFirstBlocked, *_eightPreparation, *_eightPreparationTrace;
+    bool _eightPreparing, _eightPreparationUsed, _eightPreparationAwaiting;
+    unsigned _eightPreparationSearchMS;
 }
 - (instancetype)initWithEngine:(id<PHOrbEngine>)engine {
     if ((self = [super init])) {
@@ -460,7 +465,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     trace[@"stepLimit"] = @(_solveOptions.steps); trace[@"budgetMS"] = @(_solveOptions.milliseconds);
     if (_eightAutomatic) trace[@"eightPolicy"] = @{@"guideSkills":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),
         @"comboPriority":@(_solveOptions.activity.comboPriority),@"firstRemovalOnly":@YES,
-        @"leaderAddedCombos":_goalPlan[@"leaderAddedCombos"] ?: @0,@"damageKnown":@NO};
+        @"leaderAddedCombos":_goalPlan[@"leaderAddedCombos"] ?: @0,@"damageKnown":@NO,
+        @"linkRewardLimit":@(_solveOptions.activity.linkRewardLimit),@"preparation":@(_eightPreparing),
+        @"attackRanking":_activeProfile[@"activity"][@"floors"] && _preview.wave < [_activeProfile[@"activity"][@"floors"] count] ?
+            _activeProfile[@"activity"][@"floors"][_preview.wave][@"attack"] ?: @{} : @{},
+        @"preparationPlan":_eightPreparing ? _eightPreparation ?: @{} : @{}};
     trace[@"assistRecovery"] = _assistTrace;
     trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
     trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
@@ -606,6 +615,9 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
         @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),
         @"remainingSeconds":@(_live.multiplayer.remainingSeconds),
         @"skillPending":@(_eightSkillPending),@"skillAcknowledged":@(_eightSkillAcknowledged)};
+    if (wasEightAutomatic && !_eightFirstBlocked && PHOrbCanPreview(&_live))
+        [self rememberEightBlock:_eightLastStop];
+    _eightPreparing = false;
     if (_dungeonBound && cancelledIntent &&
         ((_hasLive && PHBattleSameIdentity(&_dungeonIdentity,&_live.identity)) ||
          (wasAutomatic && _autoBound && PHBattleSameIdentity(&_dungeonIdentity,&_autoOrigin.identity)))) {
@@ -1240,6 +1252,13 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     if (_eightAutomatic) {
         _goalPlan = [self planEightBoard:&_preview options:&options];
     } else _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _automatic);
+    if (!_eightAutomatic && _preview.multiplayer.kind == PHOrbMultiplayerEight) {
+        // A manual one-shot retains the user's goals and never spends skills.
+        // Match 8P Auto's conservative first-removal accounting.
+        options.activity.firstWaveOnly = true;
+        NSMutableDictionary *plan = [_goalPlan mutableCopy]; plan[@"enemyComboFirstWave"] = @YES;
+        _goalPlan = [plan copy];
+    }
     if (_automatic && !_eightAutomatic) {
         if (![self captureEnemyCombo:&_preview]) {
             NSMutableDictionary *plan = [_goalPlan mutableCopy];
@@ -1311,6 +1330,15 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
     const double budget = std::min(remaining > 0 ? remaining : multiplayer ? 0 : ExecutionLimit, ExecutionLimit);
     options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
+    if (_eightAutomatic && !_eightPreparing) {
+        _eightPreparationSearchMS = 0;
+        if (!_eightPreparationUsed && _live.wave < _eightFloorSubmitted.size() && !_eightFloorSubmitted[_live.wave] &&
+            [PHOrbEightPreparationDecision(_activeProfile[@"activity"],&_live,_eightAttemptedSlots)[@"available"] boolValue]) {
+            // Both searches on this unchanged board share its original budget.
+            _eightPreparationSearchMS = std::min(150u,options.milliseconds / 3);
+            options.milliseconds -= _eightPreparationSearchMS;
+        }
+    }
     _solveOptions = options;
     [self recordPlanningStatus:@"searching" reason:nil];
     _cancel = std::make_shared<std::atomic_bool>(false);
@@ -1410,6 +1438,11 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                 @"首消 %u Combo＋已核對隊長加算 %@ · %u 步 · 約 %.1f 秒",
                 evaluation.firstWaveCombos,session->_goalPlan[@"leaderAddedCombos"] ?: @0,
                 route.count - 1,(route.count - 1) * StepDuration(session->_preview)];
+            else if (checkedOptions.activity.firstWaveOnly) summary = [NSString stringWithFormat:
+                @"首消 %u Combo（不含加算）· %u 步 · 約 %.1f 秒",evaluation.firstWaveCombos,
+                route.count - 1,(route.count - 1) * StepDuration(session->_preview)];
+            if (session->_eightPreparing) summary = [NSString stringWithFormat:
+                @"準備回合：只消一組三珠 · %u 步；下回合核對技能後輸出",route.count - 1];
             if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
             if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];
@@ -1676,6 +1709,14 @@ NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, 
                     (_route.thornContacts && !evaluation.heartFours)) {
                     [self queueStop:@"放手前實際盤面未通過目標或毒／爆彈檢查；已中止連續模式並放開"];
                 } else {
+                    if (_eightAutomatic && _eightPreparing) {
+                        // Consume the one-turn allowance when release is committed,
+                        // even if Stop interrupts receipt of the native release.
+                        _eightPreparationUsed = _eightPreparationAwaiting = true;
+                        NSMutableDictionary *trace = [_eightPreparationTrace mutableCopy];
+                        trace[@"status"] = @"release-committed"; trace[@"releaseEvaluation"] = EvaluationTrace(evaluation,_solveOptions.goals);
+                        _eightPreparationTrace = [trace copy];
+                    }
                     _phase = @"releasing"; _releaseComplete = true; _message = @"路徑完成，正在放開…";
                 }
             } else { _target = _confirmed + 1; _stepAt = _sentAt = time; }

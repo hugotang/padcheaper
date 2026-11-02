@@ -215,6 +215,27 @@
             "row": 1500,
             "link": 2500,
             "step": 35
+          },
+          "linkRewardLimit": 1,
+          "attack": {
+            "weights": [
+              3,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "rowPercent": [
+              540,
+              0,
+              0,
+              0,
+              540,
+              0
+            ],
+            "linkMultiplier": 12,
+            "linkComboBonus": 2
           }
         },
         {
@@ -237,6 +258,27 @@
             "row": 1500,
             "link": 2500,
             "step": 35
+          },
+          "linkRewardLimit": 1,
+          "attack": {
+            "weights": [
+              3,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "rowPercent": [
+              540,
+              0,
+              0,
+              0,
+              540,
+              0
+            ],
+            "linkMultiplier": 12,
+            "linkComboBonus": 2
           }
         },
         {
@@ -262,6 +304,27 @@
             "row": 1500,
             "link": 2500,
             "step": 35
+          },
+          "linkRewardLimit": 1,
+          "attack": {
+            "weights": [
+              3,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "rowPercent": [
+              540,
+              0,
+              0,
+              0,
+              540,
+              0
+            ],
+            "linkMultiplier": 12,
+            "linkComboBonus": 2
           }
         },
         {
@@ -301,6 +364,27 @@
             "row": 1500,
             "link": 2500,
             "step": 35
+          },
+          "linkRewardLimit": 1,
+          "attack": {
+            "weights": [
+              3,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "rowPercent": [
+              540,
+              0,
+              0,
+              0,
+              540,
+              0
+            ],
+            "linkMultiplier": 12,
+            "linkComboBonus": 2
           }
         },
         {
@@ -334,6 +418,27 @@
             "row": 1500,
             "link": 2500,
             "step": 35
+          },
+          "linkRewardLimit": 1,
+          "attack": {
+            "weights": [
+              3,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "rowPercent": [
+              540,
+              0,
+              0,
+              0,
+              540,
+              0
+            ],
+            "linkMultiplier": 12,
+            "linkComboBonus": 2
           }
         }
       ],
@@ -421,7 +526,28 @@
               "requireInventory": true
             }
           ]
-        ]
+        ],
+        "preparation": {
+          "dungeon": 6535,
+          "subDungeon": 1,
+          "floor": 6,
+          "spentSlot": 4,
+          "sequences": [
+            [
+              2
+            ],
+            [
+              3
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "primaryColor": 0,
+          "primaryMinimum": 6,
+          "minimumSeconds": 15
+        }
       }
     }
   }

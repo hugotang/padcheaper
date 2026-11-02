@@ -7,6 +7,13 @@ struct PHOrbActivityObjective {
     bool comboPriority = false; // Maximize actual first-removal Combo before style/step cost.
     uint8_t colors = 0, linkLength = 12;
     uint16_t comboWeight = 0, rowWeight = 0, linkWeight = 0, stepCost = 0;
+    uint8_t linkRewardLimit = 0; // Zero retains the legacy per-group heuristic.
+    uint16_t attackWeights[6]{}; // Relative orb contribution, not native damage.
+    uint16_t attackRowPercent[6]{};
+    uint8_t attackLinkMultiplier = 1, attackLinkComboBonus = 0;
+    bool preparation = false; // Exactly one three-orb removal, with no existing-orb cascades.
+    uint8_t conversion[6]{0,1,2,3,4,5};
+    uint8_t primaryColor = 0, primaryMinimum = 3;
 };
 
 struct PHOrbSolveOptions {

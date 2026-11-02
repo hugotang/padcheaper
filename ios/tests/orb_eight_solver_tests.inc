@@ -25,7 +25,53 @@ static void EightComboPriorityTests() {
     Check(PHOrbSolve(board,options,cancel,shortPath) == PHOrbSolveStatus::Solved &&
         priority.combos > shortPath.combos,"large step penalty cannot buy fewer B1 Combo in priority mode");
 }
+static void EightPreparationSolverTests() {
+    auto board = Board(6,5,41);
+    // Generated fixture with 2 fire, 5 water, 6 wood, 9 light, 7 dark, 1 heart.
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    std::copy(std::begin(cells),std::end(cells),board.types);
+    PHOrbSolveOptions options;
+    options.steps = 12; options.beam = 512; options.milliseconds = 150;
+    options.goals = Goals(PHOrbGoalCombo,0,1,0); options.goals.comboFirstWave = true;
+    options.activity.firstWaveOnly = options.activity.preparation = true;
+    options.activity.colors = 17; options.activity.primaryMinimum = 6; options.activity.stepCost = 35;
+    options.activity.attackWeights[0] = 300; options.activity.attackWeights[4] = 100;
+    const uint8_t map[6]{0,0,4,0,4,4}; std::copy(std::begin(map),std::end(map),options.activity.conversion);
+    std::atomic_bool cancel{false}; PHOrbRoute route{}; PHOrbBoard replay{}; PHOrbEvaluation value{};
+    uint32_t damage = 0; uint8_t contacts = 0;
+    Check(PHOrbSolve(board,options,cancel,route) == PHOrbSolveStatus::Solved && route.count <= 13 &&
+        PHOrbReplay(&board,&route,route.count-1,&replay) &&
+        PHOrbEvaluateRoute(board,route,options,value,damage,contacts),"bounded preparation finds and independently replays a route");
+    const auto first = Oracle(replay,true), all = Oracle(replay,false);
+    Check(first.first == 1 && first.second == 3 && all == first && value.goalsMet && value.preparationReady &&
+        value.retainedAfterConversion[0] >= 6 &&
+        (value.retainedAfterConversion[0] >= 12 || value.retainedAfterConversion[4] >= 12),
+        "one real three-orb group retains enough converted orbs without hypothetical drops or cascades");
+    auto changed = options;
+    for (unsigned c = 0; c < 6; ++c) changed.activity.conversion[c] = uint8_t(c);
+    Check(PHOrbEvaluateWithOptions(replay,changed,value) && !value.goalsMet,
+        "a different next-turn conversion cannot inherit the original reserve guarantee");
+    auto invalid = board; invalid.flags[0] |= PHOrbFlagLocked;
+    Check(PHOrbSolve(invalid,options,cancel,route) == PHOrbSolveStatus::Invalid &&
+        !PHOrbEvaluateWithOptions(invalid,options,value),"locked preparation is rejected consistently in search and release");
+    for (unsigned i = 0; i < 30; ++i) invalid.types[i] = 0;
+    invalid.flags[0] = 0;
+    Check(PHOrbEvaluateWithOptions(invalid,options,value) && !value.preparationReady,
+        "one giant combo is not a resource-preserving three-orb preparation");
+
+    options.activity.preparation = false; options.activity.comboWeight = 0;
+    options.activity.attackWeights[0] = options.activity.attackWeights[4] = 0;
+    options.activity.linkWeight = 2500; options.activity.linkRewardLimit = 1;
+    const uint8_t both[30]{0,0,0,0,0,0, 0,0,0,0,0,0, 1,2,1,2,1,2, 4,4,4,4,4,4, 4,4,4,4,4,4};
+    std::copy(std::begin(both),std::end(both),board.types);
+    Check(PHOrbEvaluateWithOptions(board,options,value) && value.linkGroups[0] == 1 && value.linkGroups[4] == 1 &&
+        value.activityValue == 2500,"two attack-color links keep both geometry facts but share the configured activation reward");
+    options.activity.linkRewardLimit = 0;
+    Check(PHOrbEvaluateWithOptions(board,options,value) && value.activityValue == 5000,
+        "legacy profiles retain their explicit per-group heuristic");
+}
 static void EightSolverTests() {
+    EightPreparationSolverTests();
     EightComboPriorityTests();
     auto s = MultiplayerModelState(8,7), other = s;
     for (uint32_t phase : {28u,29u,30u,31u,67u,68u}) {

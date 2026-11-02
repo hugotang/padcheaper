@@ -2,6 +2,7 @@
 #import "PHOrbPlanning.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
+#include <string.h>
 
 static BOOL EKeys(id value, NSArray *keys) {
     return [value isKindOfClass:NSDictionary.class] && [[NSSet setWithArray:[value allKeys]] isEqual:[NSSet setWithArray:keys]];
@@ -63,21 +64,41 @@ BOOL PHOrbEightActivityValid(id a) {
         CFGetTypeID((__bridge CFTypeRef)leader[@"noSkyfall"]) != CFBooleanGetTypeID()) return NO;
     for (id f in a[@"floors"]) {
         PHOrbGoalSet goals = {0};
-        if (!EOptionalKeys(f,@[@"goals",@"sequences",@"searchMS",@"weights"],@[@"comboPriority"]) ||
+        if (!EOptionalKeys(f,@[@"goals",@"sequences",@"searchMS",@"weights"],@[@"comboPriority",@"attack",@"linkRewardLimit"]) ||
             (f[@"comboPriority"] && !EBool(f[@"comboPriority"])) || !PHOrbReadGoals(f[@"goals"],&goals) || !goals.count ||
+            (f[@"linkRewardLimit"] && !EInt(f[@"linkRewardLimit"],1,14)) ||
             !EInt(f[@"searchMS"],50,1000) || ![f[@"sequences"] isKindOfClass:NSArray.class] || [f[@"sequences"] count] > 6 ||
             !EKeys(f[@"weights"],@[@"combo",@"row",@"link",@"step"])) return NO;
         for (id value in [f[@"weights"] allValues]) if (!EInt(value,0,10000)) return NO;
         for (id sequence in f[@"sequences"]) if (!ESequence(sequence,a)) return NO;
+        id attack = f[@"attack"];
+        if (attack && (!EKeys(attack,@[@"weights",@"rowPercent",@"linkMultiplier",@"linkComboBonus"]) ||
+            !EVector(attack[@"weights"],0,1000) || !EVector(attack[@"rowPercent"],0,10000) ||
+            !EInt(attack[@"linkMultiplier"],1,100) || !EInt(attack[@"linkComboBonus"],0,20))) return NO;
     }
     id guide = a[@"guide"];
     if (guide) {
-        if (!EKeys(guide,@[@"enabled",@"floors"]) || !EBool(guide[@"enabled"]) ||
+        if (!EOptionalKeys(guide,@[@"enabled",@"floors"],@[@"preparation"]) || !EBool(guide[@"enabled"]) ||
             ![guide[@"floors"] isKindOfClass:NSArray.class] || [guide[@"floors"] count] != [a[@"floors"] count]) return NO;
         for (id branches in guide[@"floors"]) {
             if (![branches isKindOfClass:NSArray.class] || [branches count] > 6) return NO;
             for (id branch in branches) if (!EKeys(branch,@[@"slots",@"requireInventory"]) ||
                 !EBool(branch[@"requireInventory"]) || !ESequence(branch[@"slots"],a)) return NO;
+        }
+        id prep = guide[@"preparation"];
+        if (prep) {
+            if (!EKeys(prep,@[@"dungeon",@"subDungeon",@"floor",@"spentSlot",@"sequences",@"primaryColor",@"primaryMinimum",@"minimumSeconds"]) ||
+                !EInt(prep[@"dungeon"],1,UINT16_MAX) || !EInt(prep[@"subDungeon"],1,UINT16_MAX) ||
+                !EInt(prep[@"floor"],(unsigned)[a[@"floors"] count],(unsigned)[a[@"floors"] count]) ||
+                !EInt(prep[@"spentSlot"],1,6) || !EInt(prep[@"primaryColor"],0,4) || !EInt(prep[@"primaryMinimum"],3,30) ||
+                !EInt(prep[@"minimumSeconds"],15,60) || ![a[@"leader"][@"noSkyfall"] boolValue] ||
+                !([a[@"leader"][@"colors"] unsignedIntValue] & (1u << [prep[@"primaryColor"] unsignedIntValue])) ||
+                ![a[@"members"][[prep[@"spentSlot"] unsignedIntValue] - 1][@"effect"] isEqual:@"board"] ||
+                ![prep[@"sequences"] isKindOfClass:NSArray.class] || ![prep[@"sequences"] count] || [prep[@"sequences"] count] > 6) return NO;
+            for (id sequence in prep[@"sequences"]) {
+                if (!ESequence(sequence,a)) return NO;
+                for (NSNumber *value in sequence) if (![a[@"members"][value.unsignedIntValue - 1][@"effect"] isEqual:@"convert"]) return NO;
+            }
         }
     }
     return YES;
@@ -173,6 +194,7 @@ NSDictionary *PHOrbEightGuideDecision(NSDictionary *a, const PHOrbSnapshot *s, u
         if ((completed & mask) == mask)
             return @{@"available":@YES,@"sequence":@[],@"message":@"本層攻略技能已確認完成"};
     }
+    NSMutableArray *checks = [NSMutableArray array];
     for (NSDictionary *branch in branches) {
         NSMutableArray *remaining = [NSMutableArray array]; BOOL ready = YES;
         for (NSNumber *value in branch[@"slots"]) {
@@ -180,12 +202,16 @@ NSDictionary *PHOrbEightGuideDecision(NSDictionary *a, const PHOrbSnapshot *s, u
             if (completed & (1u << slot)) {
                 // Only an already-completed prefix can be resumed. Reversing
                 // Ney -> conversion would replace the converted board.
-                if (remaining.count) { ready = NO; break; }
+                if (remaining.count) { ready = NO; [checks addObject:@{@"slots":branch[@"slots"],@"blocker":@"completed-out-of-order"}]; break; }
                 continue;
             }
             const PHOrbEightMember *m = &s->eight.members[slot];
             const PHOrbSkillMember *member = &s->automation.members[slot];
             if ((attempted & (1u << slot)) || !m->skillKnown || member->bound || member->state || member->charge < m->cooldown) {
+                NSString *blocker = (attempted & (1u << slot)) ? @"already-attempted" : !m->skillKnown ? @"unknown-skill" :
+                    member->bound ? @"bound" : member->state ? @"member-busy" : @"cooldown";
+                [checks addObject:@{@"slots":branch[@"slots"],@"blocker":blocker,@"slot":@(slot + 1),
+                    @"charge":@(member->charge),@"cooldown":@(m->cooldown)}];
                 ready = NO; break;
             }
             [remaining addObject:value];
@@ -199,12 +225,85 @@ NSDictionary *PHOrbEightGuideDecision(NSDictionary *a, const PHOrbSnapshot *s, u
             NSMutableDictionary *floor = [floors[s->wave] mutableCopy]; floor[@"sequences"] = @[remaining];
             floors[s->wave] = floor; trial[@"floors"] = floors;
             NSUInteger cursor = 0;
-            if (!PHOrbEightSkillSequence(trial,s,attempted,&cursor)) continue;
+            if (!PHOrbEightSkillSequence(trial,s,attempted,&cursor)) {
+                [checks addObject:@{@"slots":branch[@"slots"],@"blocker":@"inventory"}]; continue;
+            }
         }
         return @{@"available":@YES,@"sequence":[remaining copy],@"message":@"依本層攻略先開技，再讀盤求路"};
     }
-    return @{@"available":@NO,@"message":[NSString stringWithFormat:
-        @"B%u：攻略指定技能尚未就緒或無可用分支，未略過開技；可停止後關閉攻略開技選項。",s->wave + 1]};
+    NSMutableArray *details = [NSMutableArray array];
+    for (NSDictionary *check in checks) [details addObject:[check[@"blocker"] isEqual:@"cooldown"] ?
+        [NSString stringWithFormat:@"位置 %@ 充能 %@／CD %@",check[@"slot"],check[@"charge"],check[@"cooldown"]] :
+        [check[@"blocker"] isEqual:@"inventory"] ?
+        [NSString stringWithFormat:@"%@ 轉色後珠數不足",[check[@"slots"] componentsJoinedByString:@"→"]] :
+        [NSString stringWithFormat:@"%@ 本回合不可用",[check[@"slots"] componentsJoinedByString:@"→"]]];
+    return @{@"available":@NO,@"branches":checks,@"message":[NSString stringWithFormat:
+        @"B%u：攻略指定技能無可用分支（%@）",s->wave + 1,[details componentsJoinedByString:@"；"]]};
+}
+
+NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot *s, uint8_t attempted) {
+    NSDictionary *p = a[@"guide"][@"preparation"];
+    if (!p || !PHOrbEightGuideEnabled(a) || !s || s->wave + 1 != [p[@"floor"] unsignedIntValue] ||
+        s->identity.dungeon != [p[@"dungeon"] unsignedIntValue] || s->identity.floor != [p[@"subDungeon"] unsignedIntValue]) return nil;
+    NSString *reason = nil;
+    unsigned minimum = 0;
+    const PHOrbEnemyComboState *enemy = &s->enemyCombo;
+    if (!s->eight.valid || !s->automation.valid || !s->automation.boardKnown || !PHOrbEnemyComboRequirement(enemy,&minimum) ||
+        enemy->enemyCount != 1 || enemy->aliveMask != 1 || enemy->turns[0] != 1 || enemy->thresholds[0] != 5 || minimum != 6)
+        reason = @"準備回合只適用本杯尾層的一回合 5 Combo 吸收";
+    else if (s->multiplayer.remainingSeconds < [p[@"minimumSeconds"] doubleValue]) reason = @"剩餘時間不足以準備後再輸出";
+    const unsigned spent = [p[@"spentSlot"] unsignedIntValue] - 1;
+    if (!reason && s->automation.members[spent].charge >= s->eight.members[spent].cooldown)
+        reason = @"保留的改盤技能仍可使用，先走直接輸出分支";
+    if (!reason && (s->board.spinnerMask || s->board.unmatchableColors || (s->board.minErase && s->board.minErase != 3) || s->board.minMatch > 3))
+        reason = @"目前盤面效果不支援準備回合的保留珠計算";
+    unsigned counts[6] = {0};
+    const unsigned cells = s->board.width * s->board.height;
+    if (!reason && (cells > PHOrbMaxCells || !PHOrbDimensionsSupported(s->board.width,s->board.height))) reason = @"準備盤面尺寸不符";
+    if (!reason) for (unsigned i = 0; i < cells; ++i) {
+        if (s->board.types[i] >= 6 || (s->board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn | PHOrbFlagCombo))) {
+            reason = @"特殊珠、鎖珠或傷害效果未納入準備回合"; break;
+        }
+        ++counts[s->board.types[i]];
+    }
+    if (reason) return @{@"available":@NO,@"message":reason};
+    NSDictionary *best = nil; unsigned bestValue = 0;
+    const unsigned primary = [p[@"primaryColor"] unsignedIntValue], colors = [a[@"leader"][@"colors"] unsignedIntValue];
+    const unsigned linkLength = [a[@"leader"][@"comboLength"] unsignedIntValue];
+    for (NSArray *sequence in p[@"sequences"]) {
+        uint8_t conversion[6] = {0,1,2,3,4,5}; BOOL readyNext = YES;
+        for (NSNumber *value in sequence) {
+            unsigned slot = value.unsignedIntValue - 1; const PHOrbEightMember *m = &s->eight.members[slot];
+            const PHOrbSkillMember *member = &s->automation.members[slot];
+            if ((attempted & (1u << slot)) || !member->active || !m->skillKnown || member->bound || member->state ||
+                member->charge + 1u < m->cooldown || m->boardColors) { readyNext = NO; break; }
+            for (unsigned c = 0; c < 6; ++c) if (m->generate[c] || m->convert[c] >= 6) readyNext = NO;
+            if (!readyNext) break;
+            for (unsigned c = 0; c < 6; ++c) conversion[c] = m->convert[conversion[c]];
+        }
+        if (!readyNext) continue;
+        unsigned converted[6] = {0};
+        for (unsigned c = 0; c < 6; ++c) converted[conversion[c]] += counts[c];
+        BOOL canRetain = NO;
+        for (unsigned removed = 0; removed < 6; ++removed) if (counts[removed] >= 3) {
+            unsigned retained[6]; memcpy(retained,converted,sizeof(retained)); retained[conversion[removed]] -= 3;
+            for (unsigned c = 0; c < 6; ++c) if ((colors & (1u << c)) && retained[c] >= linkLength &&
+                retained[primary] >= [p[@"primaryMinimum"] unsignedIntValue]) canRetain = YES;
+        }
+        if (!canRetain) continue;
+        unsigned value = 0; NSMutableArray *map = [NSMutableArray array], *inventory = [NSMutableArray array];
+        for (unsigned c = 0; c < 6; ++c) {
+            [map addObject:@(conversion[c])]; [inventory addObject:@(converted[c])];
+            if (colors & (1u << c)) value += converted[c] * (c == primary ? 3 : 1);
+        }
+        if (!best || value > bestValue) {
+            bestValue = value;
+            best = @{@"available":@YES,@"sequence":sequence,@"conversion":map,@"inventoryBeforeRemoval":inventory,
+                @"primaryColor":@(primary),@"primaryMinimum":p[@"primaryMinimum"],@"survivalKnown":@NO,
+                @"message":@"依本杯攻略消一組三珠，保留可轉攻擊色的珠；下一回合重讀技能與吸收"};
+        }
+    }
+    return best ?: @{@"available":@NO,@"message":@"沒有下一回合就緒、且保留珠足以轉出 12 連消的技能分支"};
 }
 
 NSArray *PHOrbEightSkillSequence(NSDictionary *a, const PHOrbSnapshot *s, uint8_t attempted, NSUInteger *cursor) {

@@ -9,6 +9,10 @@ FOUNDATION_EXPORT BOOL PHOrbEightGuideEnabled(NSDictionary *activity);
 // slots are skipped after Stop/Auto; native readiness is still authoritative.
 FOUNDATION_EXPORT NSDictionary *PHOrbEightGuideDecision(NSDictionary *activity, const PHOrbSnapshot *state,
                                                        uint8_t completedSlots, uint8_t attemptedSlots);
+// Optional, explicitly configured last-floor guide recipe. A future CD/count
+// estimate selects a reserve plan; native readiness is checked again next turn.
+FOUNDATION_EXPORT NSDictionary *PHOrbEightPreparationDecision(NSDictionary *activity, const PHOrbSnapshot *state,
+                                                             uint8_t attemptedSlots);
 // Ordered, bounded alternatives. Every effect is followed by a fresh read.
 // Returned sequence contains one-based slots; nil means no unused alternative.
 FOUNDATION_EXPORT NSArray *PHOrbEightSkillSequence(NSDictionary *activity, const PHOrbSnapshot *state,

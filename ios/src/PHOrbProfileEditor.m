@@ -150,6 +150,8 @@
         UILabel *guideHelp = [self label:guide ?
             @"開啟：先完成本層指定技能再求路，可減少攻擊珠不足造成的多回合。關閉：現盤達標就轉，失敗才選救盤技能。儲存並選用後生效。B1 一律優先高 Combo。" :
             @"本策略未含攻略開技分支；匯入新版活動 JSON 後可啟用。B1 仍優先高 Combo。"];
+        if (guide[@"preparation"]) guideHelp.text = [guideHelp.text stringByAppendingString:
+            @" 尾層缺珠時可依攻略先消一組三珠，保留可轉攻擊色的珠，下一回合開技輸出；每場最多一次。"];
         guideHelp.accessibilityIdentifier = @"padcheaper.orbsEightGuideHelp";
         [self.rows addArrangedSubview:guideHelp];
     }

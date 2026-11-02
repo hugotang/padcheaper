@@ -30,6 +30,76 @@ static void EightWaitForSkill(PHOrbSession *session, FakeOrbEngine *engine) {
     for (unsigned i = 0; i < 3000 && !engine->skillFrames && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
     Check(engine->skillFrames && [session.snapshot[@"eightSkillPending"] boolValue],"fixture reaches an in-flight native skill");
 }
+static void EightPreparationBoard(FakeOrbEngine *engine) {
+    engine->live.identity.dungeon = 6535; engine->live.identity.floor = 1; engine->live.wave = 5;
+    engine->live.enemyCombo.turns[0] = 1; engine->live.enemyCombo.thresholds[0] = 5;
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    std::copy(std::begin(cells),std::end(cells),engine->live.board.types);
+    for (auto &m : engine->live.automation.members) m.charge = 0;
+    engine->live.automation.members[1].charge = 4; engine->live.automation.members[2].charge = 3;
+}
+static void EightAfterPreparationBoard(FakeOrbEngine *engine) {
+    EightNextBoard(engine,false); engine->live.enemyCombo.turns[0] = 0;
+    // A fresh, ordinary board requiring the real pair of conversions; no
+    // future generated cells are borrowed from the planning estimate.
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    std::copy(std::begin(cells),std::end(cells),engine->live.board.types);
+}
+static void EightPreparationSessionTests() {
+    for (unsigned scenario = 0; scenario < 4; ++scenario) {
+        FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+        EightSelectProfile(session,EightGuideProfileFixture(YES)); [session queueAutomatic];
+        EightRunUntilRelease(session,engine,1);
+        NSDictionary *prepared = session.snapshot[@"eightProgress"][@"preparation"];
+        NSDictionary *blocked = session.snapshot[@"eightProgress"][@"firstBlocked"];
+        Check(!engine->skillAttempts && [prepared[@"releaseEvaluation"][@"preparationReady"] boolValue] &&
+            [prepared[@"releaseEvaluation"][@"firstWaveCombos"] isEqual:@1] &&
+            [session.snapshot[@"eightProgress"][@"preparationUsed"] boolValue] &&
+            [blocked[@"board"][@"types"] count] == 30,
+            "B6 performs one bounded reserve puzzle and retains its original board and CD decision");
+        for (unsigned i = 0; i < 20; ++i) Tick(session,engine,Frame());
+        Check(engine->releases == 1 && !engine->skillAttempts,"preparation waits for native resolution before casting or moving again");
+        if (scenario == 1) [session queueStop:@"pause after preparation"];
+        EightAfterPreparationBoard(engine);
+        if (scenario == 2) engine->live.enemyCombo.turns[0] = 1;
+        if (scenario == 3) engine->live.automation.members[2].charge = 2;
+        Tick(session,engine,Frame());
+        if (scenario == 1) [session queueAutomatic];
+        if (scenario >= 2) {
+            for (unsigned i = 0; i < 500 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+            Check(![session.snapshot[@"automatic"] boolValue] && !engine->skillAttempts && engine->releases == 1,
+                "unexpected next-turn absorption or CD stops without a second preparation");
+        } else {
+            EightRunUntilRelease(session,engine,2);
+            Check(engine->skillOrder == std::vector<NSUInteger>{1,2} && [session.snapshot[@"autoSkills"] isEqual:@2] &&
+                [session.snapshot[@"eightProgress"][@"preparation"][@"status"] isEqual:@"next-turn-confirmed"] &&
+                [session.snapshot[@"eightProgress"][@"firstBlocked"] isEqual:blocked],
+                "native next turn and actual CD lead to fresh ordered skills, including after Stop/Auto");
+        }
+        [session queueStop:@"later stop"];
+        Check([session.snapshot[@"eightProgress"][@"firstBlocked"] isEqual:blocked],"later stops cannot overwrite the original failure snapshot");
+        EightAfterPreparationBoard(engine); ++engine->live.multiplayer.clockStart;
+        Tick(session,engine,Frame()); [session queueAutomatic];
+        Check(![session.snapshot[@"eightProgress"][@"preparationUsed"] boolValue] &&
+            [session.snapshot[@"eightProgress"][@"firstBlocked"] count] == 0,"new match resets the bounded preparation and blocked evidence");
+        [session queueStop:@"fixture done"];
+    }
+    FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightGuideProfileFixture(NO)); [session queueAutomatic];
+    for (unsigned i = 0; i < 300 && [session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check(!engine->skillAttempts && !engine->releases && ![session.snapshot[@"eightProgress"][@"preparationUsed"] boolValue],
+        "guide off never adds a deliberate preparation turn");
+
+    engine = EightEngineFixture(); session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    [session configureQuality:@"fast"]; [session queueOnce];
+    for (unsigned i = 0; i < 3000 && !engine->releases && [session.snapshot[@"once"] boolValue]; ++i) Tick(session,engine,Frame());
+    NSDictionary *evaluation = [session.snapshot[@"executionHistory"] lastObject][@"releaseEvaluation"];
+    Check(engine->releases == 1 && !engine->skillAttempts && [evaluation[@"comboFirstWaveRequired"] boolValue] &&
+        [evaluation[@"combos"] isEqual:evaluation[@"firstWaveCombos"]],"8P once uses first-removal accounting without casting activity skills");
+    [session queueStop:@"fixture done"];
+}
 static void EightGuideSessionTests() {
     for (bool enabled : {false,true}) for (unsigned wave : {1u,2u,3u}) {
         FakeOrbEngine *engine = EightEngineFixture(); engine->live.wave = wave;
@@ -240,6 +310,7 @@ static void EightResumeTests() {
     }
 }
 static void EightSessionTests() {
+    EightPreparationSessionTests();
     FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Tick(session,engine,Frame()); [session configureQuality:@"fast"]; [session queueAutomatic];
     EightRunUntilRelease(session,engine,1);

@@ -1,4 +1,46 @@
 #include "orb_eight_fixture.h"
+static void EightPreparationProfilesTests(void) {
+    NSDictionary *profile = EightGuideProfileFixture(YES), *a = profile[@"activity"];
+    PHOrbSnapshot s = {0}; s.board.width = 6; s.board.height = 5;
+    EightTeamFixture(&s,profile); s.wave = 5; s.identity.dungeon = 6535; s.identity.floor = 1;
+    s.multiplayer.remainingSeconds = 60; s.enemyCombo.turns[0] = 1; s.enemyCombo.thresholds[0] = 5;
+    s.automation.members[3].charge = 0; s.automation.members[1].charge = 4; s.automation.members[2].charge = 3;
+    const uint8_t cells[30] = {0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    memcpy(s.board.types,cells,sizeof(cells));
+    NSDictionary *decision = PHOrbEightPreparationDecision(a,&s,0);
+    Check([decision[@"available"] boolValue] && [decision[@"sequence"] isEqual:@[@2,@3]] &&
+        [decision[@"conversion"] isEqual:@[@0,@0,@4,@0,@4,@4]],"preparation projects the currently verified skill conversions and one-turn CD");
+    for (unsigned bad = 0; bad < 12; ++bad) {
+        PHOrbSnapshot changed = s;
+        if (bad == 0) changed.identity.dungeon++;
+        if (bad == 1) changed.wave = 4;
+        if (bad == 2) changed.enemyCombo.turns[0] = 2;
+        if (bad == 3) changed.enemyCombo.turns[0] = 0;
+        if (bad == 4) changed.automation.members[2].charge = 2;
+        if (bad == 5) changed.automation.members[3].charge = 6;
+        if (bad == 6) changed.board.flags[0] = PHOrbFlagLocked;
+        if (bad == 7) changed.automation.members[2].bound = true;
+        if (bad == 8) changed.multiplayer.remainingSeconds = 14;
+        if (bad == 9) changed.eight.members[2].skillKnown = false;
+        if (bad == 10) changed.enemyCombo.valid = false;
+        if (bad == 11) changed.board.types[0] = PHOrbBomb;
+        Check(![PHOrbEightPreparationDecision(a,&changed,0)[@"available"] boolValue],
+            "wrong match, absorption, cooldown, native effects, timing and board hazards cannot use the preparation recipe");
+    }
+    Check(![PHOrbEightPreparationDecision(EightGuideProfileFixture(NO)[@"activity"],&s,0)[@"available"] boolValue] &&
+        ![PHOrbEightPreparationDecision(a,&s,4)[@"available"] boolValue],"disabled guide and attempted conversion cannot start preparation");
+    NSDictionary *blocked = PHOrbEightGuideDecision(a,&s,0,0);
+    Check(![blocked[@"available"] boolValue] && [blocked[@"message"] containsString:@"轉色後珠數不足"] &&
+        [blocked[@"message"] containsString:@"CD"],"guide reports inventory and cooldown blockers separately at decision time");
+    NSMutableDictionary *legacy = [a mutableCopy], *guide = [a[@"guide"] mutableCopy];
+    [guide removeObjectForKey:@"preparation"]; legacy[@"guide"] = guide;
+    Check(PHOrbEightActivityValid(legacy) && !PHOrbEightPreparationDecision(legacy,&s,0),"older activity imports do not gain a new delay recipe silently");
+    for (NSString *key in @[@"spentSlot",@"floor",@"minimumSeconds",@"primaryMinimum",@"primaryColor"]) {
+        NSMutableDictionary *bad = [a mutableCopy], *g = [a[@"guide"] mutableCopy], *p = [g[@"preparation"] mutableCopy];
+        p[key] = @1000; g[@"preparation"] = p; bad[@"guide"] = g;
+        Check(!PHOrbEightActivityValid(bad),"preparation recipe rejects invalid bounds");
+    }
+}
 static void EightGuideProfilesTests(void) {
     NSDictionary *profile = EightGuideProfileFixture(YES), *activity = profile[@"activity"];
     NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),PHOrbExportProfileData(profile,NULL),NULL);
@@ -69,6 +111,7 @@ static void EightGuideProfilesTests(void) {
     Check(![PHOrbEightGuideDecision(activity,&s,0,0)[@"available"] boolValue],"B6 never creates an unsupported wait turn for unavailable guide skills");
 }
 static void EightProfilesTests(void) {
+    EightPreparationProfilesTests();
     EightGuideProfilesTests();
     NSDictionary *profile = EightProfileFixture();
     Check(profile && PHOrbEightActivityValid(profile[@"activity"]),"portable 8P activity validates independently of ordinary team skills");

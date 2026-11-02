@@ -15,6 +15,18 @@ using Cells = std::array<uint8_t, PHOrbMaxCells>;
 using Bits = uint64_t;
 using Clock = std::chrono::steady_clock;
 constexpr uint8_t Empty = 255;
+bool ActivityValid(const PHOrbBoard &board, const PHOrbActivityObjective &a) {
+    if (a.colors > 63 || a.linkLength < 3 || a.linkLength > PHOrbMaxCells || a.linkRewardLimit > 14 ||
+        !a.attackLinkMultiplier || a.attackLinkMultiplier > 100 || a.attackLinkComboBonus > 20) return false;
+    for (unsigned c = 0; c < 6; ++c) if (a.attackWeights[c] > 1000 || a.attackRowPercent[c] > 10000) return false;
+    if (!a.preparation) return true;
+    if (!a.firstWaveOnly || !a.colors || a.primaryColor >= 6 || a.primaryMinimum < 3 || a.primaryMinimum > PHOrbMaxCells ||
+        board.spinnerMask || board.unmatchableColors || (board.minErase && board.minErase != 3) || board.minMatch > 3) return false;
+    for (unsigned c = 0; c < 6; ++c) if (a.conversion[c] >= 6) return false;
+    for (unsigned i = 0; i < board.width * board.height; ++i)
+        if (board.types[i] >= 6 || (board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn | PHOrbFlagCombo))) return false;
+    return true;
+}
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
 bool ShapeGoal(unsigned kind) { return kind >= PHOrbGoalL && kind <= PHOrbGoalFour; }
 struct Pattern { Bits cells, border; uint16_t stableColors = 63; };
@@ -454,7 +466,8 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     std::array<Bits, PHOrbTypes> colors{};
     std::array<Bits, PHOrbMaxGoals> used{};
     std::array<ShapeHints, PHOrbMaxGoals> hints{};
-    unsigned matchedColors = 0;
+    unsigned matchedColors = 0, resolvedCombos = 0;
+    unsigned attackContribution[6]{};
     for (unsigned i = 0; i < size; ++i) {
         colors[cells[i]] |= Bits(1) << i;
         if (i % width + 1 < width && cells[i] == cells[i + 1]) ++score.potential;
@@ -488,11 +501,13 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             while (frontier) { frontier = Neighbours(frontier, context) & pending & waveColors[color] & ~group; group |= frontier; }
             pending &= ~group;
             const unsigned count = Count(group);
+            ++resolvedCombos;
             if (!wave || !context.activity.firstWaveOnly) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             }
             if (!wave) ++result.firstWaveCombos;
             if (context.activity.firstWaveOnly && !wave && color < 6) {
+                attackContribution[color] += count + 1;
                 result.largestGroups[color] = uint8_t(std::max(unsigned(result.largestGroups[color]),count));
                 bool row = false;
                 const Bits rowMask = (Bits(1) << width) - 1;
@@ -588,8 +603,38 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     result.goalsMet = result.matchedGoals == context.goals.count;
     if (context.activity.firstWaveOnly) {
         result.activityValue = result.firstWaveCombos * context.activity.comboWeight;
-        for (unsigned c = 0; c < 6; ++c) if (context.activity.colors & (1u << c))
-            result.activityValue += result.rowGroups[c] * context.activity.rowWeight + result.linkGroups[c] * context.activity.linkWeight;
+        unsigned links = 0;
+        uint64_t attack = 0;
+        for (unsigned c = 0; c < 6; ++c) {
+            attack += uint64_t(attackContribution[c]) * context.activity.attackWeights[c] *
+                (100u + unsigned(context.activity.attackRowPercent[c]) * result.rowGroups[c]);
+            if (context.activity.colors & (1u << c)) {
+                result.activityValue += result.rowGroups[c] * context.activity.rowWeight;
+                links += result.linkGroups[c];
+            }
+        }
+        if (context.activity.linkRewardLimit) links = std::min(links,unsigned(context.activity.linkRewardLimit));
+        result.activityValue += links * context.activity.linkWeight;
+        // Opt-in profile assumptions, not an effective native awakening/ATK
+        // model. Member-wide link activation applies once to both attributes.
+        const unsigned combos = result.firstWaveCombos + (links ? context.activity.attackLinkComboBonus : 0);
+        attack = attack * (links ? context.activity.attackLinkMultiplier : 1u) * (3u + combos) / 400u;
+        result.activityValue += int32_t(std::min(attack,uint64_t(INT32_MAX) - uint64_t(result.activityValue)));
+        if (context.activity.preparation) {
+            for (unsigned i = 0; i < size; ++i) if (cells[i] < 6 && context.activity.conversion[cells[i]] < 6)
+                ++result.retainedAfterConversion[context.activity.conversion[cells[i]]];
+            bool link = false;
+            result.activityValue = 0;
+            for (unsigned c = 0; c < 6; ++c) {
+                if (context.activity.colors & (1u << c))
+                    link |= result.retainedAfterConversion[c] >= context.activity.linkLength;
+                result.activityValue += result.retainedAfterConversion[c] * context.activity.attackWeights[c];
+            }
+            result.preparationReady = resolvedCombos == 1 && result.firstWaveCombos == 1 && result.erased == 3 &&
+                link && context.activity.primaryColor < 6 &&
+                result.retainedAfterConversion[context.activity.primaryColor] >= context.activity.primaryMinimum;
+            result.goalsMet &= result.preparationReady;
+        }
     }
     result.hazardsSafe = ReleaseHazardsSafe(result, context.allowPoisonWithHeartFour);
     return score;
@@ -612,7 +657,9 @@ Score Evaluate(Cells cells, const Context &context) {
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
         if (context.activity.firstWaveOnly) {
             a.activityValue = std::min(a.activityValue,b.activityValue);
+            a.preparationReady &= b.preparationReady;
             for (unsigned c = 0; c < 6; ++c) {
+                a.retainedAfterConversion[c] = std::min(a.retainedAfterConversion[c],b.retainedAfterConversion[c]);
                 a.rowGroups[c] = std::min(a.rowGroups[c],b.rowGroups[c]);
                 a.linkGroups[c] = std::min(a.linkGroups[c],b.linkGroups[c]);
                 a.largestGroups[c] = std::min(a.largestGroups[c],b.largestGroups[c]);
@@ -636,6 +683,7 @@ Score Evaluate(Cells cells, const Context &context) {
     for (unsigned g = 0; g < context.goals.count; ++g)
         worst.result.matchedGoals += worst.result.goalHits[g] >= context.goals.items[g].count;
     worst.result.goalsMet = worst.result.matchedGoals == context.goals.count;
+    if (context.activity.preparation) worst.result.goalsMet &= worst.result.preparationReady;
     // If any phase clears poison, the team policy requires a heart four in
     // every phase, including those that would not clear poison themselves.
     worst.result.hazardsSafe = ReleaseHazardsSafe(worst.result, context.allowPoisonWithHeartFour);
@@ -823,7 +871,7 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
 
 bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
-    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals)) return false;
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !ActivityValid(board,options.activity)) return false;
     try {
         Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());
         result = Evaluate(cells,MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,options.activity)).result;
@@ -860,8 +908,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > 1000 ||
-        options.recoveryPasses > 1 || options.backtrackLimit > 2 || options.activity.colors > 63 ||
-        options.activity.linkLength < 3 || options.activity.linkLength > PHOrbMaxCells) return PHOrbSolveStatus::Invalid;
+        options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity)) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
