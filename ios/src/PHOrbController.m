@@ -677,7 +677,9 @@
             @"這條路徑未通過目前消毒、爆彈或荊棘條件，只供預覽；請查看上方原因。" :
         [state[@"phase"] isEqual:@"preview"] && [state[@"goalCount"] unsignedIntegerValue] && ![state[@"goalsMet"] boolValue] ?
             @"這條路徑未達成全部目標，只供預覽；提高品質或調整條件後重新讀盤。" :
-        [state[@"multiplayerActive"] boolValue] ? @"3／4／8 人請使用浮動「轉一次」；每次重新讀取本機盤面及隊長條件，完成後停止。多人技能與連續模式未開放。" :
+        [state[@"multiplayer"][@"kind"] unsignedIntValue] == PHOrbMultiplayerEight ?
+            @"8 人可按 Auto 連續處理本場；選用活動策略後會核對固定隊伍並開技，結算時停止。" :
+        [state[@"multiplayerActive"] boolValue] ? @"3／4 人請使用浮動「轉一次」；每次重新讀取本機盤面，完成後停止。" :
         [state[@"phase"] isEqual:@"preview"] && ![state[@"canExecute"] boolValue] ? @"目前無法執行，請重新讀盤並確認操作時間。" : @"";
     self.boardView.board = state[@"board"]; self.boardView.path = state[@"path"];
     NSUInteger width = [state[@"board"][@"width"] unsignedIntegerValue], height = [state[@"board"][@"height"] unsignedIntegerValue];

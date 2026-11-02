@@ -33,7 +33,7 @@ done
     ios/src/PHCodec.m ios/src/PHSaveState.m ios/src/PHDeckPersistence.m ios/src/PHUnlockRestoration.m ios/src/PHMemory.m ios/src/PHIdentity.m ios/src/PHConfiguration.m \
     ios/src/PHTarget.m ios/src/PHOverlay.m ios/src/PHRuntime.m ios/src/PHFormationController.m ios/src/PHFormationModel.m \
     ios/src/PHInputModel.c ios/src/PHBattleModel.c ios/src/PHBattlePreset.c ios/src/PHBattleSession.m ios/src/PHBadgeModel.c ios/src/PHBadges.m \
-    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbProfileEditor.m ios/src/PHOrbDungeonReport.m \
+    ios/src/PHTimerModel.c ios/src/PHOrbModel.c ios/src/PHOrbController.m ios/src/PHOrbPlanning.m ios/src/PHOrbRules.m ios/src/PHOrbRuleEditor.m ios/src/PHOrbRecoveryEditor.m ios/src/PHOrbProfiles.m ios/src/PHOrbEight.m ios/src/PHOrbProfileEditor.m ios/src/PHOrbDungeonReport.m \
     "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o" \
     "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHMusic.o" -lc++ \
     -framework Foundation -framework CoreFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework WebKit -framework UniformTypeIdentifiers \
@@ -56,6 +56,7 @@ cp ios/docs/battle-input.md "$build_dir/battle-input.md"
 cp ios/docs/team-presets.md "$build_dir/team-presets.md"
 cp ios/docs/formation.md "$build_dir/formation.md"
 cp ios/docs/team-model.md ios/docs/team-dungeon.md ios/docs/release-0.5.18.md "$build_dir/"
+cp ios/docs/release-0.5.19.md ios/docs/orb-eight-player-design.md "$build_dir/"
 cp ios/docs/three-player-entry.md "$build_dir/three-player-entry.md"
 cp ios/docs/entry-derived-state.md "$build_dir/entry-derived-state.md"
 cp ios/docs/auto-orb-feasibility.md "$build_dir/auto-orb-feasibility.md"
@@ -95,6 +96,7 @@ cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
 mkdir -p "$build_dir/templates"
 cp -R ios/templates/ishida-uryu-gamewith-574233 "$build_dir/templates/"
 cp -R ios/templates/halloween-ciel-gamewith-579537 "$build_dir/templates/"
+cp -R ios/templates/eight-player-thanks-2026 "$build_dir/templates/"
 cp ios/docs/release-0.5.5.md "$build_dir/release-0.5.5.md"
 cp ios/docs/release-0.5.4.md "$build_dir/release-0.5.4.md"
 cp ios/docs/release-0.5.3.md "$build_dir/release-0.5.3.md"
@@ -121,6 +123,7 @@ cp ios/tools/compare_team_dungeon.js "$build_dir/tools/"
 cp ios/editor/dungeon-guides.json "$build_dir/dungeon-guides.json"
 mkdir -p "$build_dir/research"
 cp ios/research/solo-team-model-20261101.json "$build_dir/research/"
+cp ios/research/eight-player-cup-20261102.json "$build_dir/research/"
 cp ios/research/team-skill-dungeon-20261101.json "$build_dir/research/"
 cp ios/research/orb-enemy-selector-20261101.json ios/research/orb-enemy-dispatch-20261101.json ios/research/orb-enemy-damage-20261101.json "$build_dir/research/"
 cp ios/research/pazusoba_probe.cpp ios/research/pazusoba_benchmark.py ios/research/pazusoba-results.json "$build_dir/research/"
@@ -246,7 +249,8 @@ metadata = {
     "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",
     "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",
     "entry_board_limit": "board dimensions and generated opening board remain from the native constructor; ordinary team refresh does not regenerate them",
-    "multiplayer_write_policy": "Nonzero multi or modes 7/10/11 block team, skill, continuous, timer and BGM mutations regardless of filters; battle policy remains latched until exit. The sole exception is explicit local once for mode 7/11/10 selector 1 and reviewed mode 7 selector 2 continuation: fresh local ownership/view/timing guards, arm, one began and token-bound release; no packet edits or network pump/bank getters; multiplayer device synchronization unverified",
+    "multiplayer_write_policy": "Team replacement, timer, BGM and packet mutations remain blocked in multiplayer. Explicit local once supports mode 7/11/10 selector 1 and reviewed mode 7 selector 2 continuation. Explicit mode 10 selector 1 Auto additionally permits native local skills and fresh per-board gesture leases within the current 8P match, ending on results, manual input, ownership/clock/entry change or a failed check. No rematching; multiplayer device synchronization unverified",
+    "eight_player_auto": "One explicit current-match intent; all six native fixed variants and supported effects checked twice; native skill can-use/start and exact member/global use receipts; next-board detection includes repeated floors; portable strict activity JSON; first-removal goals, linked group/row heuristic and confirmed leader bonuses; exact score/damage and deliberate survival-based stalls are unavailable",
     "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
     "battle_filters": "All mode categories except multiplayer; source/multi zero defaults; editable mode/source GUI filters; legacy multi settings load but cannot override single-player restriction",
     "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",

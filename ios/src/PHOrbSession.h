@@ -12,6 +12,9 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 // An explicit one-shot UI intent, never a saved setting or automatic mode.
 // Revoking it stops holds; only the same owned gesture may still be released.
 - (void)armMultiplayerOnce:(BOOL)armed;
+// Explicit Auto click authorizes one 8P match; each gesture still needs a
+// fresh arm. Nil revokes the match while preserving an owned release.
+- (BOOL)armEightPlayerAuto:(const PHOrbSnapshot *)state;
 // Runs on the native frame thread, with a fresh single-player/board/context
 // check. Unavailable means the game refused this skill, so another rule may run.
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected

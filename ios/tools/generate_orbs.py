@@ -12,6 +12,7 @@ def generate(manifest):
     if manifest['scope'] != {'multiplayer': {
                                  'input': 'explicit-local-once', 'modes': [7, 11, 10], 'selector': 1,
                                  'goal_modes': ['combo', 'manual', 'leaders'], 'continuous': False, 'skills': False,
+                                 'eight_auto': {'mode': 10, 'selector': 1, 'intent': 'explicit-current-match', 'input': 'fresh-local-gesture-per-board', 'skills': 'native-current-fixed-source', 'profile': 'portable-activity-validated-effects', 'stop': 'results-manual-input-entry-clock-or-owner-change', 'score': 'first-removal-shape-heuristic', 'rematch': False, 'device_verified': False},
                                  'leader_planning': 'read-only-local-current-parameters',
                                  'extra_helper': 'four-player-native-extra-skill-no-helper-leader',
                                  'team_mutation': False, 'timer_mutation': False, 'packet_mutation': False,
@@ -149,7 +150,8 @@ def generate(manifest):
                 'PHOrbLeaderInitializeRVA', 'PHOrbLeaderSwapRVA', 'PHOrbLeaderCatalogRVA', 'PHOrbLeaderExtraLookupRVA',
                 'PHOrbLeaderExtraBindRVA', 'PHOrbLeaderApplyRVA', 'PHOrbLeaderSkillRVA', 'PHOrbLeaderHelperApplyRVA',
                 'PHOrbLeaderDisplayRVA', 'PHOrbLeaderFixedTeamRVA', 'PHOrbLeaderCatalogAllocateRVA',
-                'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA'}
+                'PHOrbLeaderCatalogLinksRVA', 'PHOrbLeaderCatalogDownloadRVA',
+                'PHOrbEightCompetitiveSkillRVA', 'PHOrbEightSkillOwnerRVA'}
     observation_guards = {'PHOrbObservationCooldownCacheRVA', 'PHOrbObservationBodyCooldownRVA',
         'PHOrbObservationTotalCooldownRVA', 'PHOrbObservationEvolvedCooldownRVA', 'PHOrbObservationEvolvedSkillRVA',
         'PHOrbObservationLatentRVA', 'PHOrbObservationLatentDecodeRVA', 'PHOrbObservationLAwakeningRVA',

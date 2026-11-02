@@ -11,11 +11,12 @@ bool PositiveDuration(uint16_t value) {
 
 #include "PHOrbSurvival.inc"
 
-bool ReadAutomationFields(PHOrbSnapshot &state) {
+bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     auto &out = state.automation;
     const uintptr_t header = state.identity.header, impl = state.identity.impl, save = header + PHSaveRVA;
     uint32_t key1 = 0, key2 = 0, skillUses = 0, enemies = 0, catalogCount = 0, hp = 0;
     uintptr_t catalog = 0;
+    uint32_t records = 0;
     if (!PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
         !SmallProtected(impl + PHOrbSkillUsesOffset, key1, key2, 255, skillUses) ||
         !Decode(impl + PHOrbEnemyCountOffset, key1, key2, 0x766cfc6du, enemies) || enemies > 8 ||
@@ -23,6 +24,9 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         !PHReadU32(save + PHBattleCatalogCountOffset, &catalogCount) || !catalogCount || catalogCount > 65536 ||
         !PHReadPointer(save + PHBattleCatalogPointerOffset, &catalog) || !catalog ||
         catalog > UINTPTR_MAX - catalogCount * PHBattleCatalogStride) return false;
+    records = catalogCount;
+    if (eight && (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &records) || records < catalogCount ||
+        records > 0x20000 || catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride)) return false;
     out.skillUses = uint16_t(skillUses);
     out.window &= hp > 0;
     if (!hp) out.windowBlocks |= PHOrbSkillWindowHP;
@@ -35,9 +39,12 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         m.state = uint8_t(nativeState); out.busy |= nativeState != 0;
         m.active = (flags & 1u) != 0;
         if (!m.active) continue;
-        if (!PHReadU32(member + PHBattleCatalogIDOffset, &id) || !id || id >= catalogCount ||
-            !PHBattleNumberForCatalogID(id, &m.number) || !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
-            parameter != catalog + id * PHBattleCatalogStride || !PHReadU32(parameter, &record) || record != id ||
+        PHOrbLeaderReadDiagnostics diagnostic{};
+        if (!PHReadU32(member + PHBattleCatalogIDOffset, &id) || !id || id > INT32_MAX || (!eight && id >= catalogCount) ||
+            !PHBattleNumberForCatalogID(eight ? id % 1000000u : id, &m.number) ||
+            !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
+            (eight ? !LeaderParameterMatches(catalog, catalogCount, records, id, parameter, diagnostic) :
+                parameter != catalog + id * PHBattleCatalogStride) || !PHReadU32(parameter, &record) || record != id ||
             !SmallProtected(member + PHOrbSkillBindOffset, key1, key2, UINT8_MAX, bind) ||
             !SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
             !PHReadU32(member + PHBattleChargeShadowOffset, &shadow) || (shadow ^ charge) != 0x68fb65ceu ||
@@ -134,7 +141,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state) {
         if (rules & 0x40u) out.windowBlocks |= PHOrbSkillWindowDungeon;
     }
     if (PositiveDuration(bindTurns) || PositiveDuration(sealTurns)) out.playerEffects |= PHOrbPlayerSkillSeal;
-    ReadSurvival(state, dungeonRules, key1, key2, hp);
+    if (!eight) ReadSurvival(state, dungeonRules, key1, key2, hp);
+    // No single-player derived maximum HP or thorn budget is reused in 8P.
     out.enemiesKnown = true;
     // Mapping verified in 0x100562F74. These are enemy effects, distinct from
     // the player's bypass durations below. Only living ordinary enemies count.

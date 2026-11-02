@@ -175,6 +175,35 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
         (a->kind == PHOrbMultiplayerThree || a->kind == PHOrbMultiplayerThreeSolo || a->clockStart == b->clockStart);
 }
 
+bool PHOrbEightMatchReady(const PHOrbSnapshot *state) {
+    if (!state || !state->valid || !state->present || state->multiplayerDisabled ||
+        state->identity.sourceMode || state->multiplayer.kind != PHOrbMultiplayerEight ||
+        PHOrbMultiplayerMode(state->identity.entryMode, state->identity.multiplayer) != PHOrbMultiplayerEight) return false;
+    const PHOrbMultiplayerState *m = &state->multiplayer;
+    return m->known && m->teamCount == 8 && m->localSeat < 8 && m->viewTeam == m->localSeat &&
+        m->localStatus == 3 && (m->connectionState == 2 || m->connectionState == 3 ||
+            m->connectionState == 6 || m->connectionState == 7) &&
+        !(m->networkFlags & ~0x23u) && m->clockKnown && m->clockStart && !m->finished &&
+        m->countdownReady == 1 && (m->clockFlags & 0x36u) == 4u &&
+        isfinite(m->remainingSeconds) && m->remainingSeconds > 0 && m->remainingSeconds <= 86400;
+}
+
+bool PHOrbSameEightMatch(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
+    if (!a || !b || !a->valid || !b->valid || !a->present || !b->present ||
+        a->multiplayerDisabled || b->multiplayerDisabled || !PHBattleSameIdentity(&a->identity, &b->identity) ||
+        a->inputManager != b->inputManager) return false;
+    const PHOrbMultiplayerState *x = &a->multiplayer, *y = &b->multiplayer;
+    return x->known && y->known && x->kind == PHOrbMultiplayerEight && y->kind == PHOrbMultiplayerEight &&
+        x->teamCount == 8 && y->teamCount == 8 && x->localSeat < 8 && x->localSeat == y->localSeat &&
+        x->viewTeam == x->localSeat && y->viewTeam == y->localSeat &&
+        x->clockKnown && y->clockKnown && x->clockStart && x->clockStart == y->clockStart;
+}
+
+bool PHOrbSameEightTeam(const PHOrbEightState *a, const PHOrbEightState *b) {
+    // Readers clear all padding and collect twice before publishing.
+    return a && b && a->valid && b->valid && !memcmp(a, b, sizeof(*a));
+}
+
 static bool PHOrbMultiplayerRemoteExit(const PHOrbMultiplayerState *state) {
     // 0x10000DD10 records the affected seat and its disconnected/retired
     // status. A local departure or an unconfirmed seat is not a peer event.
@@ -313,6 +342,7 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!PHOrbSameTurn(a, b) || a->boardTransition || b->boardTransition || !PHOrbSameLeaders(a, b) || a->phase != b->phase ||
         a->moves != b->moves || a->obstacles != b->obstacles || a->ordinary != b->ordinary || a->unmatchableKnown != b->unmatchableKnown ||
         !PHOrbSamePlanBoard(&a->board, &b->board) || !PHOrbSamePlayerState(a, b)) return false;
+    if (a->multiplayer.kind == PHOrbMultiplayerEight && !PHOrbSameEightTeam(&a->eight, &b->eight)) return false;
     const PHOrbAutomationState *x = &a->automation, *y = &b->automation;
     if (!x->valid || !y->valid || x->window != y->window || x->busy != y->busy ||
         x->windowBlocksKnown != y->windowBlocksKnown || x->windowBlocks != y->windowBlocks ||

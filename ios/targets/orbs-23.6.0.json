@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.0-106878",
-  "prototype_version": "0.5.18-orbs",
+  "prototype_version": "0.5.19-orbs",
   "device_verified": false,
   "provenance": "IDA 9.4; pad.i64; executable SHA256 611c93f5472fceddfa27254b718c6eff1decdc6814cc927e2faa4c7c250a65ec",
   "scope": {
@@ -35,6 +35,18 @@
         "ownership": "native-local-bank-after-coop-cleanup",
         "time": "native-move-timer",
         "input": "explicit-local-once"
+      },
+      "eight_auto": {
+        "mode": 10,
+        "selector": 1,
+        "intent": "explicit-current-match",
+        "input": "fresh-local-gesture-per-board",
+        "skills": "native-current-fixed-source",
+        "profile": "portable-activity-validated-effects",
+        "stop": "results-manual-input-entry-clock-or-owner-change",
+        "score": "first-removal-shape-heuristic",
+        "rematch": false,
+        "device_verified": false
       }
     },
     "dimensions": [
@@ -3362,6 +3374,22 @@
       "length": 64,
       "bytes": "bf0600718b030054800226917c3500941f0400710b03005480422691b22200941f00156b8c02005476000036f90319cb0d00001480321791e003271e2775f297",
       "sha256": "7eb69a636e0618323f890ef06aef7b669f2e8739c0612dc4773a7eeb925f6eb9"
+    },
+    {
+      "name": "PHOrbEightCompetitiveSkillRVA",
+      "rva": "0x4dc150",
+      "bytes": "ff4302d1fc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291f30301aae00700f997310190f7222a91ff2f00b900e4004fe00200ad48184079",
+      "sha256": "76c12d7619391f3a1bd7cbf28603bd170d38c82a9bb25c827ebbe4602fd08830",
+      "va": "0x1004dc150",
+      "length": 64
+    },
+    {
+      "name": "PHOrbEightSkillOwnerRVA",
+      "rva": "0xefec",
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191083840f9c9ce9f524901a07209696938c91318375bd900b07bc3009189438a52",
+      "sha256": "29a52f59a84c97c1b745ecb3835ab7d1962014e5a76fb2352476e9d24fc13f82",
+      "va": "0x10000efec",
+      "length": 64
     }
   ],
   "thorn_budget": {

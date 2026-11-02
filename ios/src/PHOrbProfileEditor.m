@@ -1,5 +1,6 @@
 #import "PHOrbProfileEditor.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbPlanning.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface PHOrbProfileEditor () <UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate>
@@ -158,14 +159,16 @@
                 editor.selected[@"team"] = [binding mutableCopy]; [editor rebuild];
             }]];
         }
-        team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0 && !record[@"formation"];
+        team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0 && !record[@"formation"] && !record[@"activity"];
         [self.rows addArrangedSubview:team];
         [self.rows addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請在活動 JSON 一併更新。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包會核對六格本體與武裝；請在匯入 JSON 一併修改隊伍及開場。"; return; }
             NSMutableArray *members = [editor.selected[@"team"] mutableCopy]; members[5] = @0;
             editor.selected[@"team"] = members; [editor rebuild];
         }]];
         [self.rows addArrangedSubview:[self action:@"取消隊伍限制" identifier:@"padcheaper.orbsProfileAnyTeam" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請另選通用設定。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包開場需要固定隊伍；請另存通用策略。"; return; }
             editor.selected[@"team"] = [@[@0,@0,@0,@0,@0,@0] mutableCopy]; [editor rebuild];
         }]];
@@ -197,6 +200,14 @@
                 editor.notice.text = @"已複製隊伍、開場、循環與盤面目標。";
             }]];
         }
+        if (record[@"activity"]) {
+            NSMutableArray *lines = [NSMutableArray arrayWithObject:@"8 人活動 Auto：本場技能、轉珠與換層，結算後停止。"];
+            NSUInteger wave = 0;
+            for (NSDictionary *floor in record[@"activity"][@"floors"]) [lines addObject:
+                [NSString stringWithFormat:@"B%lu：%@",(unsigned long)++wave,PHOrbGoalsDescription(floor[@"goals"])]];
+            [lines addObject:@"開始時會核對六格固定版本技能；技能與吸收狀態變更後重新讀盤。"];
+            [self.rows addArrangedSubview:[self label:[lines componentsJoinedByString:@"\n"]]];
+        }
         [self.rows addArrangedSubview:[self label:[NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
             (unsigned long)[settings[@"rules"] count], (unsigned long)[settings[@"goals"] count]]]];
         [self.rows addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
@@ -212,7 +223,7 @@
     UIButton *add = [self action:@"＋ 將目前轉珠設定另存為策略" identifier:@"padcheaper.orbsProfileAdd" handler:^(PHOrbProfileEditor *editor) {
         [editor addProfile:NO];
     }]; add.enabled = [self.draft[@"profiles"] count] < PHOrbMaxProfiles; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"匯入策略或隊伍＋開場＋循環＋盤面目標 config"]];
+    [self.rows addArrangedSubview:[self label:@"匯入 8 人活動、一般策略或隊伍整包 config"]];
     [self.rows addArrangedSubview:[self action:@"從檔案匯入 JSON…" identifier:@"padcheaper.orbsProfileFileImport" handler:^(PHOrbProfileEditor *editor) {
         [editor pickFile];
     }]];

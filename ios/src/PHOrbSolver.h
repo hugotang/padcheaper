@@ -2,6 +2,12 @@
 #include "PHOrbModel.h"
 #include <atomic>
 
+struct PHOrbActivityObjective {
+    bool firstWaveOnly = false;
+    uint8_t colors = 0, linkLength = 12;
+    uint16_t comboWeight = 0, rowWeight = 0, linkWeight = 0, stepCost = 0;
+};
+
 struct PHOrbSolveOptions {
     unsigned steps = 32;
     unsigned beam = 256;
@@ -13,6 +19,7 @@ struct PHOrbSolveOptions {
     bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
     bool allowPoisonWithHeartFour = false; // Team policy: poison and mortal poison may clear with a first-wave heart four in every phase.
     bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
+    PHOrbActivityObjective activity{}; // Heuristic weights, separate from native scoring.
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
@@ -38,6 +45,7 @@ enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Canc
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept;
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
                    bool allowPoisonWithHeartFour) noexcept;
+bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept;
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept;
 // One caller-owned worker, immutable input, no native/game calls or process exit.

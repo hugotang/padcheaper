@@ -39,6 +39,8 @@ typedef struct {
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t firstWaveCombos;
+    uint8_t rowGroups[6], linkGroups[6], largestGroups[6]; // First removal only; shapes, not native score receipts.
+    int32_t activityValue; // Configured search heuristic, never a predicted match score.
     uint8_t poisonErased, unmatchedBombs, heartFours;
     bool goalsMet, hazardsSafe;
     uint8_t mortalPoisonErased; // Subset of poisonErased; maxima are independent across spinner phases.
@@ -122,6 +124,25 @@ typedef struct {
     bool windowBlocksKnown;
 } PHOrbAutomationState;
 
+// Current 8P fixed records. Their encyclopedia numbers alone never grant a
+// skill intent. Unknown effect families remain readable but cannot be cast.
+typedef struct {
+    uintptr_t parameter;
+    uint64_t skillSignature, leaderSignature;
+    uint32_t catalogID, activeSkill, rootSkill, leaderSkill;
+    uint16_t cooldown;
+    uint8_t sourceSlot, boardColors, generate[6], convert[6];
+    uint8_t attackColors, attackLength, comboColors, comboLength, addedCombos;
+    uint16_t attackPercent;
+    bool skillKnown, leaderKnown, noSkyfall, unlock;
+} PHOrbEightMember;
+typedef struct {
+    PHOrbEightMember members[6];
+    uintptr_t teamBank, catalog, skills;
+    uint32_t catalogCount, catalogRecords, skillCount;
+    bool valid;
+} PHOrbEightState;
+
 // Optional, timestamped observations for diagnostics only. Neither these
 // fields nor their absence participate in skill or gesture authorization.
 typedef enum {
@@ -202,7 +223,7 @@ typedef enum {
 } PHOrbMultiplayerKind;
 
 // Read-only native operation context. Multiplayer mode values are selectors,
-// not player counts. No skill/team automation may use this input exception.
+// not player counts. Full 8P Auto requires a separate explicit match intent.
 typedef struct {
     PHOrbMultiplayerKind kind;
     uint32_t turnSerial, teamCount, localSeat, viewTeam, localStatus;
@@ -280,6 +301,7 @@ typedef struct {
     PHOrbBattleObservation observation;
     PHOrbAssistRecoveryState assistRecovery;
     PHOrbEnemyComboState enemyCombo;
+    PHOrbEightState eight;
 } PHOrbSnapshot;
 
 typedef struct {
@@ -319,6 +341,9 @@ bool PHOrbMultiplayerWindow(const PHOrbSnapshot *state);
 bool PHOrbMultiplayerNetworkReady(const PHOrbMultiplayerState *state);
 bool PHOrbMultiplayerLocalReady(const PHOrbMultiplayerState *state);
 bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultiplayerState *b);
+bool PHOrbEightMatchReady(const PHOrbSnapshot *state);
+bool PHOrbSameEightMatch(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
+bool PHOrbSameEightTeam(const PHOrbEightState *a, const PHOrbEightState *b);
 bool PHOrbInputContextReady(const PHOrbSnapshot *state);
 const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status);
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state);

@@ -31,6 +31,7 @@ struct Context {
     unsigned borderRepairWeight = 2;
     std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
     bool diagonal = false;
+    PHOrbActivityObjective activity{};
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
@@ -90,11 +91,12 @@ void AddPattern(std::vector<Pattern> &patterns, Bits cells, unsigned w, unsigned
 }
 
 Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true,
-                    bool allowPoisonWithHeartFour = false, bool diagonal = false) {
+                    bool allowPoisonWithHeartFour = false, bool diagonal = false, PHOrbActivityObjective activity = {}) {
     const unsigned w = board.width, h = board.height;
     Context context{w, h, goals, {}};
     context.allowPoisonWithHeartFour = allowPoisonWithHeartFour;
     context.diagonal = diagonal;
+    context.activity = activity;
     context.minErase = board.minErase ? board.minErase : 3;
     context.minMatch = board.minMatch;
     context.unmatchable = board.unmatchableColors;
@@ -486,8 +488,18 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             while (frontier) { frontier = Neighbours(frontier, context) & pending & waveColors[color] & ~group; group |= frontier; }
             pending &= ~group;
             const unsigned count = Count(group);
-            ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
+            if (!wave || !context.activity.firstWaveOnly) {
+                ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
+            }
             if (!wave) ++result.firstWaveCombos;
+            if (!wave && color < 6) {
+                result.largestGroups[color] = uint8_t(std::max(unsigned(result.largestGroups[color]),count));
+                bool row = false;
+                const Bits rowMask = (Bits(1) << width) - 1;
+                for (unsigned y = 0; y < height; ++y) row |= (group & (rowMask << (y * width))) == (rowMask << (y * width));
+                result.rowGroups[color] += row;
+                result.linkGroups[color] += count >= context.activity.linkLength;
+            }
             if (color == PHOrbPoison || color == PHOrbMortalPoison) result.poisonErased += uint8_t(count);
             if (color == PHOrbMortalPoison) result.mortalPoisonErased += uint8_t(count);
             if (!wave && color == 5 && count == 4) {
@@ -500,6 +512,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             }
             for (unsigned g = 0; g < context.goals.count; ++g) {
                 const auto &goal = context.goals.items[g];
+                if (wave && context.activity.firstWaveOnly) continue;
                 if (!(goal.colors & (1u << color))) continue;
                 bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
                     goal.kind == PHOrbGoalExact ? !wave && count == goal.length :
@@ -507,6 +520,8 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                 if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
         }
+        // Activity goals credit first removal only. Retain hypothetical
+        // deterministic cascades for conservative poison/bomb safety.
         Bits erased = marked;
         while (erased) { cells[unsigned(__builtin_ctzll(erased))] = Empty; erased &= erased - 1; }
         waveColors.fill(0);
@@ -571,6 +586,11 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     if (context.guidance && context.shapeGoals > 1) JointGuidance(score, hints, context);
     FinishProgress(score, context);
     result.goalsMet = result.matchedGoals == context.goals.count;
+    if (context.activity.firstWaveOnly) {
+        result.activityValue = result.firstWaveCombos * context.activity.comboWeight;
+        for (unsigned c = 0; c < 6; ++c) if (context.activity.colors & (1u << c))
+            result.activityValue += result.rowGroups[c] * context.activity.rowWeight + result.linkGroups[c] * context.activity.linkWeight;
+    }
     result.hazardsSafe = ReleaseHazardsSafe(result, context.allowPoisonWithHeartFour);
     return score;
 }
@@ -590,6 +610,12 @@ Score Evaluate(Cells cells, const Context &context) {
         const auto &b = variant.result;
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
+        a.activityValue = std::min(a.activityValue,b.activityValue);
+        for (unsigned c = 0; c < 6; ++c) {
+            a.rowGroups[c] = std::min(a.rowGroups[c],b.rowGroups[c]);
+            a.linkGroups[c] = std::min(a.linkGroups[c],b.linkGroups[c]);
+            a.largestGroups[c] = std::min(a.largestGroups[c],b.largestGroups[c]);
+        }
         a.poisonErased = std::max(a.poisonErased, b.poisonErased);
         a.mortalPoisonErased = std::max(a.mortalPoisonErased, b.mortalPoisonErased);
         a.unmatchedBombs = std::max(a.unmatchedBombs, b.unmatchedBombs);
@@ -639,7 +665,8 @@ public:
     }
 };
 
-bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour) {
+bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour,
+            const PHOrbActivityObjective &activity) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
@@ -647,6 +674,11 @@ bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoi
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
     if (!thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
+    if (activity.firstWaveOnly) {
+        const int av = ar.activityValue - int(a.length - 1) * activity.stepCost;
+        const int bv = br.activityValue - int(b.length - 1) * activity.stepCost;
+        if (av != bv) return av > bv;
+    }
     if (ar.combos != br.combos) return ar.combos > br.combos;
     if (thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
@@ -680,7 +712,8 @@ uint64_t LayoutKey(const Node &node, const Context &context) {
     return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals);
 }
 
-bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority, bool allowPoisonWithHeartFour) {
+bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority, bool allowPoisonWithHeartFour,
+                     const PHOrbActivityObjective &activity) {
     if (focus < PHOrbMaxGoals && a.score.result.hazardsSafe == b.score.result.hazardsSafe &&
         !a.score.result.goalsMet && !b.score.result.goalsMet &&
         (allowPoisonWithHeartFour || a.score.result.poisonErased == b.score.result.poisonErased) &&
@@ -689,14 +722,14 @@ bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornCom
         const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
         if (av != bv) return av > bv;
     }
-    return Better(a, b, thornComboPriority, allowPoisonWithHeartFour);
+    return Better(a, b, thornComboPriority, allowPoisonWithHeartFour, activity);
 }
 
 void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth,
                 const Context &context, unsigned focus, bool thornComboPriority, std::vector<Node> *discarded = nullptr) {
     const size_t keep = std::min(size_t(limit), next.size());
     const auto order = [focus, thornComboPriority, &context](const Node &a, const Node &b) {
-        return BetterForSearch(a, b, focus, thornComboPriority, context.allowPoisonWithHeartFour);
+        return BetterForSearch(a, b, focus, thornComboPriority, context.allowPoisonWithHeartFour, context.activity);
     };
     if (!context.shapeGoals || keep < 4 || keep == next.size()) {
         std::partial_sort(next.begin(), next.begin() + keep, next.end(), order);
@@ -780,12 +813,22 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
     return PHOrbEvaluate(board, goals, result, false);
 }
 
+bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
+    result = {};
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals)) return false;
+    try {
+        Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());
+        result = Evaluate(cells,MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,options.activity)).result;
+        return true;
+    } catch (...) { return false; }
+}
+
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept {
     result = {}; thornDamage = 0; thornContacts = 0;
     PHOrbBoard replay{};
     if (!route.count || route.diagonal != options.diagonal || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
-        !PHOrbEvaluate(replay, options.goals, result, options.allowPoisonWithHeartFour)) return false;
+        !PHOrbEvaluateWithOptions(replay,options,result)) return false;
     Cells thorns{};
     for (unsigned i = 0; i < board.width * board.height; ++i)
         thorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
@@ -809,7 +852,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > 1000 ||
-        options.recoveryPasses > 1 || options.backtrackLimit > 2) return PHOrbSolveStatus::Invalid;
+        options.recoveryPasses > 1 || options.backtrackLimit > 2 || options.activity.colors > 63 ||
+        options.activity.linkLength < 3 || options.activity.linkLength > PHOrbMaxCells) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
@@ -823,7 +867,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
         std::array<uint32_t, 128> damageTable{};
         for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
-        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal);
+        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal, options.activity);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
         // evaluation. Check the clock between each such candidate.
@@ -898,7 +942,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         const bool heartPending = !child.score.result.heartFours && (child.thornContacts ||
                             (options.allowPoisonWithHeartFour && child.score.result.poisonErased));
                         if (heartPending) child.score.result.hazardsSafe = false;
-                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour)) {
+                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity)) {
                             best = child; found = true;
                         }
                         if (heartPending) child.score.result.hazardsSafe =

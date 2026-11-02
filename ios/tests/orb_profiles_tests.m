@@ -15,6 +15,7 @@ static NSDictionary *Library(NSArray *profiles, NSString *selected, BOOL automat
     return @{@"schema":@1, @"profiles":profiles, @"selected":selected, @"autoSelect":@(automatic)};
 }
 #include "orb_plan_tests.inc"
+#include "orb_eight_profiles_tests.inc"
 static void SharingTests(void) {
     NSString *reason = nil;
     NSDictionary *profile = Profile(@"portable");
@@ -159,6 +160,7 @@ int main(void) {
         settings[@"recovery"] = @{};
         Check(!PHOrbCanonicalSettings(settings) && !PHOrbProfilesUpdatingSettings(original,settings),
             "malformed conditional hearts cannot be dropped while saving other strategy fields");
+        EightProfilesTests();
         printf("Orb profiles tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

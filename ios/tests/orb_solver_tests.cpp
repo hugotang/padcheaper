@@ -190,6 +190,7 @@ static void ShapeTests() {
 #include "orb_poison_solver_tests.inc"
 #include "orb_diagonal_solver_tests.inc"
 #include "orb_multiplayer_model_tests.inc"
+#include "orb_eight_solver_tests.inc"
 #include "enemy_action_model_tests.inc"
 #include "enemy_selector_model_tests.inc"
 #include "enemy_dispatch_model_tests.inc"
@@ -204,6 +205,7 @@ int main() {
     EnemyThreatModelTests();
     EnemyComboSolverTests();
     MultiplayerModelTests();
+    EightSolverTests();
     DiagonalSolverTests();
     ShapeTests();
     TBoundarySolverTests();

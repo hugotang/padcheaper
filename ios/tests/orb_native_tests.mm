@@ -329,6 +329,7 @@ static void ReadIssueNativeTests() {
 #include "orb_diagonal_native_tests.inc"
 #include "orb_skill_window_native_tests.inc"
 #include "orb_multiplayer_native_tests.inc"
+#include "orb_eight_native_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -485,6 +486,7 @@ int main() {
         ReadIssueNativeTests();
         DiagonalNativeTests();
         SkillWindowNativeTests();
+        EightNativeTests();
         std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

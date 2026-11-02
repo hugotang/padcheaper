@@ -280,7 +280,7 @@ static void MultiplayerNextBoardSessionTests() {
         }
         status = session.snapshot;
         Check([status[@"canOnce"] boolValue] && [status[@"onceReadiness"][@"previewReady"] boolValue] &&
-            [status[@"multiplayerMessage"] hasPrefix:@"可轉一次"] && ![status[@"canStart"] boolValue] &&
+            [status[@"multiplayerMessage"] hasPrefix:@"可轉一次"] && [status[@"canStart"] boolValue] == (players == 8) &&
             ![status[@"canExecute"] boolValue] && !engine->multiplayerArmed && engine->stages == afterFirstStages,
             "the next local board becomes ready without a solver, auto-arm or automatic gesture");
         const NSUInteger historyCount = [status[@"onceReadinessHistory"] count];
@@ -344,7 +344,7 @@ static void MultiplayerSessionTests() {
             "search and execution traces retain local multiplayer ownership and release acknowledgement");
         engine->live.phase = 2; engine->live.moves = 0; engine->live.multiplayer.turnSerial += players;
         for (unsigned i = 0; i < 20; ++i) Tick(session, engine, Frame());
-        Check(engine->beginFrames == 1 && ![session.snapshot[@"canStart"] boolValue],
+        Check(engine->beginFrames == 1 && [session.snapshot[@"canStart"] boolValue] == (players == 8),
             "a new multiplayer turn never starts automatically");
     }
     for (unsigned players : {3u, 4u, 8u}) {
@@ -352,10 +352,11 @@ static void MultiplayerSessionTests() {
         PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
         [session configureQuality:@"fast"];
         Check(Preview(session, engine) && ![session.snapshot[@"canExecute"] boolValue] &&
-            ![session.snapshot[@"canStart"] boolValue] && [session.snapshot[@"canOnce"] boolValue],
+            [session.snapshot[@"canStart"] boolValue] == (players == 8) && [session.snapshot[@"canOnce"] boolValue],
             "multiplayer can preview but only the explicit once action may execute");
         Execute(session); [session queueAutomatic];
         for (unsigned i = 0; i < 10; ++i) Tick(session, engine, Frame());
+        if (players == 8) [session queueStop:@"8P fixture has no fixed-team evidence"];
         Check(!engine->stages && !engine->skillAttempts && !engine->multiplayerArmed,
             "preview execute and continuous requests cannot arm multiplayer input or skills");
         Check([session configureSettings:@{@"quality":@"fast", @"mode":@"leaders", @"goals":@[], @"rules":@[]}],

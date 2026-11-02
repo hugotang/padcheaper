@@ -238,7 +238,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     const bool multiplayerMetadataOnly = state.multiplayer.kind != PHOrbMultiplayerNone && !PHOrbMultiplayerWindow(&window);
     // Skills may remove unmatchable/locked/special orbs. Their window is
     // separate from ordinary drag eligibility, never a relaxation of it.
-    state.automation.window = state.multiplayer.kind == PHOrbMultiplayerNone &&
+    state.automation.window = (state.multiplayer.kind == PHOrbMultiplayerNone ||
+        (state.multiplayer.kind == PHOrbMultiplayerEight && PHOrbMultiplayerWindow(&window))) &&
         source == 0 && !audit && !dialog && !specialDrag && !moveBlocked && !intro;
     if (!state.automation.window) state.automation.windowBlocks |= PHOrbSkillWindowScene;
     // Release may enter the resolve phase and start removing orb objects in
@@ -347,6 +348,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbDungeonDump.inc"
 #include "PHOrbAssistRecovery.inc"
 #include "PHOrbEnemyCombo.inc"
+#include "PHOrbEightNative.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
     if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
@@ -404,6 +406,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     uintptr_t _multiplayerOwnedOrb, _multiplayerStartOrb;
     NSUInteger _multiplayerStartCell;
     PHOrbSnapshot _multiplayerGesture, _multiplayerArmCandidate;
+    bool _eightAuto;
+    PHOrbSnapshot _eightMatch;
 }
 - (void)forgetMultiplayerGesture {
     _multiplayerOnce = _multiplayerBegan = _multiplayerReleaseSent = false;
@@ -419,6 +423,14 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         _multiplayerGesture = _multiplayerArmCandidate;
         _multiplayerOnce = true;
     }
+}
+- (BOOL)armEightPlayerAuto:(const PHOrbSnapshot *)state {
+    if (!state) { _eightAuto = false; _multiplayerOnce = false; return YES; }
+    if (_staged || _multiplayerBegan || _multiplayerDisabled || !PHOrbEightMatchReady(state) ||
+        !PHOrbCanPreview(state) || !PHOrbSameEightMatch(state,&_multiplayerArmCandidate) ||
+        !PHOrbSameTurn(state,&_multiplayerArmCandidate) || !PHOrbSamePlanBoard(&state->board,&_multiplayerArmCandidate.board)) return NO;
+    _eightAuto = true; _eightMatch = *state;
+    return YES;
 }
 - (BOOL)read:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state || _staged) return NO;
@@ -457,6 +469,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         _multiplayerDisabled = _sawMultiplayer = false;
         _multiplayerKind = PHOrbMultiplayerNone;
         [self forgetMultiplayerGesture];
+        _eightAuto = false; _eightMatch = {};
     }
     if (exited) { _multiplayerEntryKnown = false; _multiplayerEntry = {}; }
     else if (read && entryConfirmed) { _multiplayerEntryKnown = true; _multiplayerEntry = state->identity; }
@@ -472,6 +485,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         } else if (_sawMultiplayer) _multiplayerDisabled = true;
     }
     state->multiplayerDisabled |= _multiplayerDisabled;
+    if (_eightAuto && (!read || !PHOrbSameEightMatch(&_eightMatch,state) || !PHOrbEightMatchReady(state)))
+        _eightAuto = false;
     if (!read) {
         // Preserve only the observed mode for unavailable-state UI. A read
         // failure before mode capture must not make a known multiplayer game
@@ -511,12 +526,21 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     // Unknown thorn budgets make the solver avoid contacts in this first batch.
     if (state->valid && !state->multiplayerDisabled && state->multiplayer.kind == PHOrbMultiplayerNone)
         ReadThornBudget(*state);
+    if (state->multiplayer.kind == PHOrbMultiplayerEight && !_eightAuto) state->automation.window = false;
     if (_multiplayerDisabled && reason) *reason = @"本場多人模式或連線狀態已改變；離開關卡後才可重新操作";
     return YES;
 }
 - (BOOL)readAutomation:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (![self read:state frame:frame reason:reason]) return NO;
     if (!state->present || !state->valid || state->multiplayerDisabled) return YES;
+    if (state->multiplayer.kind == PHOrbMultiplayerEight && _eightAuto && PHOrbSameEightMatch(&_eightMatch,state)) {
+        if (!ReadEightAutomation(*state)) {
+            _eightAuto = false;
+            if (reason) *reason = @"8 人固定隊伍、技能或敵方資料未通過核對，已停止";
+            return NO;
+        }
+        return YES;
+    }
     if (!PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer)) {
         if (reason) *reason = @"多人僅支援轉一次；連續轉珠、開場及技能規則仍限單人";
         return YES;
@@ -610,13 +634,22 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return PHOrbSkillRejected;
     PHOrbSnapshot live{};
     if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
+    const bool eight = _eightAuto && live.multiplayer.kind == PHOrbMultiplayerEight &&
+        PHOrbSameEightMatch(&_eightMatch,&live) && PHOrbEightMatchReady(&live) && live.eight.valid &&
+        live.eight.members[slot].skillKnown && live.eight.members[slot].sourceSlot == slot &&
+        request.source == PHOrbSkillBody && request.skill && request.skill == live.eight.members[slot].activeSkill;
+    if (live.multiplayer.kind == PHOrbMultiplayerEight && !eight) {
+        if (reason) *reason = @"8 人技能需要本場 Auto 及已核對的本機技能意圖";
+        return PHOrbSkillRejected;
+    }
     if (!live.automation.window && live.phase == 2 && live.settled && !live.dragged && PHInputIsQuiet(&live.input) &&
-        PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) &&
+        (eight || PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer)) &&
         PHOrbSameAutomationExceptWindow(expected, &live)) {
         if (reason) *reason = PHOrbSkillWindowDescription(&live.automation);
         return PHOrbSkillWindowClosed;
     }
-    if (!PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+    if ((!eight && !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer)) ||
+        (eight && !PHOrbSameEnemyCombo(&expected->enemyCombo,&live.enemyCombo)) ||
         !PHOrbSameAutomation(expected, &live) || live.phase != 2 || !live.settled || live.dragged ||
         !PHInputIsQuiet(&live.input)) {
         if (reason) *reason = @"施放前盤面、隊員或戰鬥狀態已改變，已停止";
@@ -640,6 +673,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     auto recheck = [&](NSString *message) {
         PHOrbSnapshot next{}; SkillSourceState current;
         if (![self readAutomation:&next frame:frame reason:reason] || !next.valid || next.multiplayerDisabled ||
+            (eight && (!_eightAuto || !PHOrbSameEightMatch(&_eightMatch,&next) || !PHOrbEightMatchReady(&next))) ||
+            (eight && !PHOrbSameEnemyCombo(&checked.enemyCombo,&next.enemyCombo)) ||
             !next.automation.window || next.automation.busy || next.dragged || !next.settled ||
             !PHInputIsQuiet(&next.input) || !PHOrbSameAutomation(&checked, &next) ||
             !ReadSkillSource(next, current) || !(source == current)) {
@@ -762,6 +797,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     [self nativeStartGame:live.identity.game member:address header:frame.header];
     PHOrbSnapshot accepted{};
     if (![self readAutomation:&accepted frame:frame reason:reason] || accepted.multiplayerDisabled ||
+        (eight && (!_eightAuto || !PHOrbSameEightMatch(&_eightMatch,&accepted) || !PHOrbSameEightTeam(&live.eight,&accepted.eight))) ||
         !PHBattleSameIdentity(&live.identity, &accepted.identity) || accepted.phase != 22 ||
         accepted.automation.members[slot].state != 2) {
         if (reason) *reason = @"遊戲未確認技能啟動，已停止；請檢查遊戲畫面";
@@ -845,7 +881,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     if (down && (expected->assistRecovery.valid || expected->enemyCombo.valid)) {
         PHOrbSnapshot final{};
         NSString *finalReason = nil;
-        const BOOL readFinal = !multiplayer && [self readAutomation:&final frame:frame reason:&finalReason];
+        const bool eight = multiplayer && _eightAuto && expected->eight.valid && PHOrbSameEightMatch(&_eightMatch,expected);
+        const BOOL readFinal = (!multiplayer || eight) && [self readAutomation:&final frame:frame reason:&finalReason];
         if (!readFinal || !PHOrbSameTurn(&live, &final) || final.phase != 2 || final.dragged != live.dragged ||
             final.moves != live.moves || !PHOrbSamePlanBoard(&live.board, &final.board) ||
             !final.ordinary || final.boardTransition || !PHOrbSameLeaders(&live, &final) ||
@@ -863,7 +900,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             if (reason) *reason = @"武裝無效、有效 L 或提供隊員已改變，未繼續輸入";
             return NO;
         }
-        if (expected->enemyCombo.valid && ![self readEnemyCombo:&final frame:frame reason:&finalReason]) {
+        if (expected->enemyCombo.valid && !eight && ![self readEnemyCombo:&final frame:frame reason:&finalReason]) {
             if (reason) *reason = finalReason ?: @"敵人對策：輸入前資料未確認，未繼續輸入";
             return NO;
         }

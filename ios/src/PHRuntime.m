@@ -710,7 +710,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
     NSMutableDictionary *battle = [[PHBattleTracker snapshot] mutableCopy];
-    if ([battle[@"multiplayerDisabled"] boolValue]) orbs[@"canStart"] = @NO;
+    if ([battle[@"multiplayerDisabled"] boolValue] && ![orbs[@"eightAutoAvailable"] boolValue]) orbs[@"canStart"] = @NO;
     if ([battle[@"restorePending"] boolValue] || [battle[@"pendingMask"] unsignedIntegerValue]) {
         orbs[@"canOnce"] = @NO; orbs[@"canStart"] = @NO; orbs[@"canExecute"] = @NO;
         if ([orbs[@"multiplayerActive"] boolValue] && ![orbs[@"busy"] boolValue] && ![orbs[@"inputFault"] boolValue])
@@ -902,8 +902,9 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"searchPasses"], orbs[@"backtracks"], orbs[@"exploredDepth"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb evaluation: %@ calls / %@ cache hits (candidate scoring only)",
         orbs[@"evaluationCalls"], orbs[@"evaluationCacheHits"]];
-    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb multiplayer (read-only): %@\nMultiplayer support: explicit local one-shot only; synchronization not device-verified",
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb multiplayer: %@\nMultiplayer support: explicit local once in 3/4/8P; 8P Auto is scoped to one current match with native skills and fresh per-board gestures; synchronization not device-verified",
         orbs[@"multiplayer"] ?: @{}];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\n8P fixed team: %@",orbs[@"eightTeam"] ?: @{}];
     for (NSString *key in @[@"onceReadiness", @"runtimeReadiness", @"onceReadinessHistory"]) {
         NSData *data = [NSJSONSerialization dataWithJSONObject:orbs[key] ?: @{} options:NSJSONWritingSortedKeys error:NULL];
         diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb %@: %@", key,

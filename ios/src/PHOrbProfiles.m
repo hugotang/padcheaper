@@ -2,6 +2,7 @@
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
 #import "PHFormationModel.h"
+#import "PHOrbEight.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include <math.h>
 
@@ -70,6 +71,7 @@ BOOL PHOrbProfilesValid(id library) {
     for (id record in library[@"profiles"]) {
         if (![record isKindOfClass:NSDictionary.class] ||
             !(Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings"]) ||
+              Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"activity"]) ||
               Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"formation", @"opening", @"source"])) ||
             !Identifier(record[@"id"], NO) || [ids containsObject:record[@"id"]] ||
             ![record[@"name"] isKindOfClass:NSString.class] || [record[@"name"] length] > 60 ||
@@ -84,6 +86,13 @@ BOOL PHOrbProfilesValid(id library) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
                 !PHBattleCatalogIDForNumber([number unsignedIntValue], &catalogID))) return NO;
+        }
+        if (record[@"activity"]) {
+            if (!PHOrbEightActivityValid(record[@"activity"]) || [record[@"settings"][@"rules"] count] ||
+                [record[@"settings"][@"assistRecoveryL"] boolValue] ||
+                [record[@"settings"][@"recovery"][@"hpAtMost"] unsignedIntValue]) return NO;
+            for (unsigned i = 0; i < 6; ++i)
+                if (![record[@"team"][i] isEqual:record[@"activity"][@"members"][i][@"number"]]) return NO;
         }
         if (record[@"formation"]) {
             if (!PHFormationReadTeam(record[@"formation"], NULL, NULL) ||
@@ -108,10 +117,11 @@ NSDictionary *PHOrbProfilesUpdatingSettings(NSDictionary *library, NSDictionary 
         [profiles addObject:[updated copy]];
     }
     NSMutableDictionary *result = [library mutableCopy]; result[@"profiles"] = [profiles copy];
-    return [result copy];
+    return PHOrbProfilesValid(result) ? [result copy] : nil;
 }
 
 static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
+    if (record[@"activity"]) return NO; // Explicit 8P selection has its own fixed-variant match.
     if ([record[@"dungeon"] unsignedIntValue] && [record[@"dungeon"] unsignedIntValue] != state->identity.dungeon) return NO;
     if ([record[@"floor"] unsignedIntValue] && [record[@"floor"] unsignedIntValue] != state->identity.floor) return NO;
     if (record[@"formation"]) return PHOrbProfileMatchesOpeningTeam(record, state, 0);

@@ -3,6 +3,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbDungeonReport.h"
+#import "PHOrbEight.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -32,6 +33,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL replaceLeaderOnStart, replaceLeaderOnMove;
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
+    BOOL eightArmed;
     NSUInteger multiplayerArms;
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
@@ -156,13 +158,19 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (armed && !multiplayerArmed) ++multiplayerArms;
     multiplayerArmed = armed;
 }
+- (BOOL)armEightPlayerAuto:(const PHOrbSnapshot *)state {
+    eightArmed = state && PHOrbEightMatchReady(state) && PHOrbCanPreview(state);
+    if (!state) multiplayerArmed = NO;
+    return !state || eightArmed;
+}
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (closeWindowInUse) {
         closeWindowInUse = NO; live.automation.window = false;
         live.automation.windowBlocks = PHOrbSkillWindowInput;
     }
     if (!frame.ready || !frame.enabled || slot >= 6 || staged || multiplayerLatched || live.multiplayerDisabled ||
-        !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+        (!PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) &&
+            !(eightArmed && live.multiplayer.kind == PHOrbMultiplayerEight)) ||
         live.phase != 2 || !live.settled || live.dragged || !PHInputIsQuiet(&live.input)) return PHOrbSkillRejected;
     if (!live.automation.window && PHOrbSameAutomationExceptWindow(expected, &live)) {
         if (reason) *reason = @"技能窗口關閉：原生操作尚未結束";
@@ -247,6 +255,14 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         }
         chosenSource[activeSkill] = PHOrbSkillBody;
         if (!failSkillAck) ++live.automation.skillUses;
+        if (eightArmed && !failSkillAck) {
+            ++live.automation.members[activeSkill].skillUses[0]; live.automation.members[activeSkill].charge = 0;
+            const auto &effect = live.eight.members[activeSkill];
+            for (unsigned i = 0; i < live.board.width * live.board.height; ++i) {
+                const unsigned type = live.board.types[i];
+                if (type < 6 && !(live.board.flags[i] & PHOrbFlagLocked)) live.board.types[i] = effect.convert[type];
+            }
+        }
         if (hasteFirst) unavailableSkills[0] = NO;
         if (changeBoardWithSkill) for (unsigned i = 0; i < live.board.width * live.board.height; ++i) live.board.types[i] = uint8_t(i % 5);
         if (lightAfterByakuya && activeSkill == 4)
@@ -387,6 +403,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_skill_window_session_tests.inc"
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
+#include "orb_eight_session_tests.inc"
 #include "orb_observation_session_tests.inc"
 #include "orb_enemy_action_session_tests.inc"
 #include "orb_enemy_selector_session_tests.inc"
@@ -702,6 +719,7 @@ int main() {
         PlanSessionTests();
         UryuStartupSessionTests();
         ExecutionTraceSessionTests();
+        EightSessionTests();
         std::printf("Orb session tests: %s (preview, execute once, continuous turns, skills, cancellation and acknowledgments)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

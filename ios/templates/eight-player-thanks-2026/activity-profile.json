@@ -1,0 +1,335 @@
+{
+  "format": "padcheaper-orb-profile",
+  "schema": 1,
+  "target": "jp.gungho.pad-ios-23.6.0-106878",
+  "profile": {
+    "id": "eight-thanks-2026",
+    "name": "8 人大感謝祭 2026 杯",
+    "team": [
+      1645,
+      1726,
+      4745,
+      3757,
+      325,
+      1645
+    ],
+    "dungeon": 0,
+    "floor": 0,
+    "settings": {
+      "quality": "thorough",
+      "mode": "combo",
+      "goals": [],
+      "rules": []
+    },
+    "activity": {
+      "schema": 1,
+      "mode": 8,
+      "width": 6,
+      "height": 5,
+      "source": "https://xn--0ck4aw2h.gamewith.jp/article/show/586197",
+      "members": [
+        {
+          "number": 1645,
+          "effect": "generate",
+          "cooldown": 6,
+          "convert": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "generate": [
+            6,
+            0,
+            0,
+            0,
+            6,
+            0
+          ],
+          "boardColors": 0,
+          "unlock": false
+        },
+        {
+          "number": 1726,
+          "effect": "convert",
+          "cooldown": 4,
+          "convert": [
+            0,
+            0,
+            2,
+            3,
+            4,
+            4
+          ],
+          "generate": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "boardColors": 0,
+          "unlock": false
+        },
+        {
+          "number": 4745,
+          "effect": "convert",
+          "cooldown": 4,
+          "convert": [
+            0,
+            1,
+            4,
+            0,
+            4,
+            5
+          ],
+          "generate": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "boardColors": 0,
+          "unlock": false
+        },
+        {
+          "number": 3757,
+          "effect": "board",
+          "cooldown": 6,
+          "convert": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "generate": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "boardColors": 49,
+          "unlock": false
+        },
+        {
+          "number": 325,
+          "effect": "observe",
+          "cooldown": 15,
+          "convert": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "generate": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "boardColors": 0,
+          "unlock": false
+        },
+        {
+          "number": 1645,
+          "effect": "generate",
+          "cooldown": 6,
+          "convert": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "generate": [
+            6,
+            0,
+            0,
+            0,
+            6,
+            0
+          ],
+          "boardColors": 0,
+          "unlock": false
+        }
+      ],
+      "leader": {
+        "colors": 17,
+        "attackLength": 6,
+        "attackPercent": 1000,
+        "comboLength": 12,
+        "addedCombos": 1,
+        "noSkyfall": true
+      },
+      "floors": [
+        {
+          "goals": [
+            {
+              "kind": "match",
+              "colors": 17,
+              "count": 1,
+              "length": 3
+            }
+          ],
+          "sequences": [],
+          "searchMS": 800,
+          "weights": {
+            "combo": 1600,
+            "row": 0,
+            "link": 0,
+            "step": 35
+          }
+        },
+        {
+          "goals": [
+            {
+              "kind": "row",
+              "colors": 17,
+              "count": 1,
+              "length": 0
+            }
+          ],
+          "sequences": [
+            [
+              2
+            ]
+          ],
+          "searchMS": 600,
+          "weights": {
+            "combo": 400,
+            "row": 1500,
+            "link": 2500,
+            "step": 35
+          }
+        },
+        {
+          "goals": [
+            {
+              "kind": "row",
+              "colors": 17,
+              "count": 1,
+              "length": 0
+            }
+          ],
+          "sequences": [
+            [
+              3
+            ]
+          ],
+          "searchMS": 600,
+          "weights": {
+            "combo": 400,
+            "row": 1500,
+            "link": 2500,
+            "step": 35
+          }
+        },
+        {
+          "goals": [
+            {
+              "kind": "row",
+              "colors": 17,
+              "count": 1,
+              "length": 0
+            }
+          ],
+          "sequences": [
+            [
+              1
+            ],
+            [
+              6
+            ]
+          ],
+          "searchMS": 600,
+          "weights": {
+            "combo": 400,
+            "row": 1500,
+            "link": 2500,
+            "step": 35
+          }
+        },
+        {
+          "goals": [
+            {
+              "kind": "match",
+              "colors": 17,
+              "count": 1,
+              "length": 12
+            }
+          ],
+          "sequences": [
+            [
+              6
+            ],
+            [
+              4,
+              6
+            ],
+            [
+              4,
+              1
+            ],
+            [
+              4
+            ]
+          ],
+          "searchMS": 800,
+          "weights": {
+            "combo": 400,
+            "row": 1500,
+            "link": 2500,
+            "step": 35
+          }
+        },
+        {
+          "goals": [
+            {
+              "kind": "match",
+              "colors": 17,
+              "count": 1,
+              "length": 12
+            }
+          ],
+          "sequences": [
+            [
+              4,
+              2
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "searchMS": 900,
+          "weights": {
+            "combo": 400,
+            "row": 1500,
+            "link": 2500,
+            "step": 35
+          }
+        }
+      ]
+    }
+  }
+}

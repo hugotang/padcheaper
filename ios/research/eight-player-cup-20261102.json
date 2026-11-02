@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "status": "runtime-implemented-ci-pending",
+  "date": "2026-11-02",
+  "timezone": "Asia/Hong_Kong",
+  "event": "大感謝祭2026カップ",
+  "runtime_profile": "ios/templates/eight-player-thanks-2026/activity-profile.json",
+  "device_verified": false,
+  "proposed_execution": {
+    "scope": "one-eight-player-match",
+    "start": "explicit-auto-button",
+    "continuous_local_board_input": true,
+    "native_skill_automation": "after-mode-specific-validation",
+    "wait_for_other_player_turns": false,
+    "stop_at_results": true,
+    "automatic_rematch": false,
+    "implementation_status": "0.5.19 current-match Auto, fixed native skill effects, exact member/global use receipts, fresh per-board gestures, first-removal heuristic; macOS/arm64 tests pending, device not verified"
+  },
+  "sources": [
+    {
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/586197",
+      "fetched_date": "2026-11-02",
+      "html_sha256": "5d22166e59b0daf8a230e462bb2f634d622f36aa9505d9ab22757bff18ecc807",
+      "scope": "Cup rules, fixed team, skills, floor guidance, result screenshot"
+    },
+    {
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/270374",
+      "fetched_date": "2026-11-02",
+      "html_sha256": "df141d1af6e3819de88e3be7938ee67f5774017e79e26f955896ec2a9082a7d4",
+      "scope": "General eight-player maximum-bonus amounts and minimum eligibility; not proof of native cup scoring"
+    }
+  ],
+  "article_rules": {
+    "evidence": "guide-reported",
+    "team_encyclopedia_ids": [1645, 1726, 4745, 3757, 325, 1645],
+    "fixed_native_skill_ids": null,
+    "native_dungeon_id": null,
+    "native_subdungeon_id": null,
+    "leader_per_side": {
+      "no_skyfall": true,
+      "colors": ["fire", "dark"],
+      "attack_link_minimum": 6,
+      "attack_multiplier": 10,
+      "combo_add_link_minimum": 12,
+      "combo_add": 1
+    },
+    "style_points": {
+      "fire_row": 1500,
+      "dark_row": 1500,
+      "super_link": 2500
+    },
+    "style_counting_and_stacking_verified": false,
+    "floors": [
+      {"floor": 1, "policy": "split-combos", "preemptive": "none-reported"},
+      {"floor": 2, "policy": "rows", "skill_hint_slot": 2, "preemptive": "none-reported"},
+      {"floor": 3, "policy": "rows", "skill_hint_slot": 3, "preemptive": "none-reported"},
+      {"floor": 4, "policy": "rows", "skill_hint": "sonia-a", "preemptive": "none-reported"},
+      {"floor": 5, "policy": "super-link", "skill_hint": "sonia-b-or-ney-then-sonia-b", "preemptive": "none-reported"},
+      {"floor": 6, "policy": "super-link-and-effective-combos-or-explicit-delay", "combo_absorb_maximum": 5, "combo_absorb_turns": 1}
+    ],
+    "skill_hints_are_conditional_on_current_readiness": true,
+    "two_sonias_require_independent_slot_state": true,
+    "generated_boards_require_fresh_observation": true
+  },
+  "result_sample": {
+    "url": "https://img.gamewith.jp/img/f25c030e46c6e7f3fb3eeab60313454e.png",
+    "image_sha256": "103126c7303f9656fcbb4d3829217d3977717d474dda7175de10cd275b8ac042",
+    "visually_read": true,
+    "displayed": {
+      "average_combo": 3.5,
+      "average_combo_points": 17500,
+      "remaining_seconds": 61.1,
+      "remaining_time_points": 30550,
+      "maximum_damage": 1708140509,
+      "maximum_damage_points": 30,
+      "non_puzzle_kills": 0,
+      "non_puzzle_kill_points": 0,
+      "style_points": 32000,
+      "cleared_battles": 6,
+      "cleared_battle_points": 60000,
+      "total": 140086
+    },
+    "displayed_components_sum": 140080,
+    "unexplained_display_difference": 6,
+    "candidate_rates_not_native_verified": {
+      "average_combo": 5000,
+      "remaining_second": 500,
+      "cleared_battle": 10000
+    },
+    "exact_score_formula_verified": false
+  },
+  "mode_guide_maximum_bonuses": {
+    "points_each": 10000,
+    "minimum_eligibility": {"combo": 7, "damage": 1, "style_events": 5},
+    "eligibility_is_not_an_award": true,
+    "tie_policy_verified": false,
+    "added_combo_eligibility_verified": false,
+    "cup_native_rules_verified": false
+  },
+  "pending_verification": [
+    "Native cup, fixed team, skill, leader, and rule identities",
+    "Native no-skyfall resolution versus solver gravity without refill",
+    "Row and super-link trigger counts, stacking, and effective awakenings",
+    "Combo additions for absorption, average score, and maximum-combo award separately",
+    "Exact score arithmetic, rounding, damage score, caps, and tie handling",
+    "Read-only eight-player skill readiness and enemy-effect sources",
+    "Eight-player native skill dispatch, effect acknowledgement, and duplicate-intent prevention",
+    "Continuous next-board lifecycle, same-floor turns, mode-specific flags, and match termination",
+    "Damage sufficient for each floor; guide shape advice is not a damage proof",
+    "Device timing, execution, native result agreement, and multiplayer synchronization"
+  ]
+}
