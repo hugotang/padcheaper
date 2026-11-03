@@ -4,7 +4,11 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-03：0.5.27-orbs，8 人依計分選路與 B6 得分等待回合，編譯驗證中
+## 2026-11-03：0.5.27-orbs，8 人依計分選路與 B6 得分等待回合，編譯驗證完成
+
+2026-11-03，`0.5.27-orbs` 已由 [CI 121](https://github.com/hugotang/padcheaper/actions/runs/41590554851) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸（含 8 人 C 模型、scoreTurn profile 與 Session 案例）、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及四份 iPhone GUI 加一份 iPad GUI，皆 success、無 failures。已檢視停用「轉一次」的新樣式與 8 人轉珠頁截圖。離線重播與分數估算不是實測，`device_verified=false`。
+
+二進位來源 `53f16ef5c4dc33baa447c31c29aa557fe18e9162`；dylib 10,551,120 bytes，最低 iOS 15.0；SHA-256 `5c42486ffe0e9fe6ac01f05fa3163b16859367852870dc4d269cc35690a31338`。交付目錄 `E:/ipa/PADCheaper-0.5.27-orbs` 及同名 ZIP（SHA-256 `d8db5c5a778027ba54ec1897bd88423cbe189c8ce94cec17ca0f9a91ac45bd19`），驗證附件含 CI 120 失敗紀錄、Windows 求路對照與 B6 等待盤面重播。
 
 使用者指示「編譯測試」，版本升為 `0.5.27-orbs`（`PHOverlay.h`、targets、workflow、[0.5.27 說明](release-0.5.27.md)、CHANGELOG）。`ios/tools/windows-tests.sh` 通過，求路器對照 `f870b5f` 路線完全相同。完整 macOS／iPhoneOS／GUI 待本次手動 CI。
 

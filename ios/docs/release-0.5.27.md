@@ -23,4 +23,4 @@ B2–B6：Combo 700、列 1,800、超連消 4,200、每步 35。只有 B3 保留
 
 ## 驗證狀態
 
-見 [開發紀錄](development.md)。離線重播與分數估算不是實測，`device_verified=false`。
+[CI 121](https://github.com/hugotang/padcheaper/actions/runs/41590554851) 通過完整回歸、iPhoneOS arm64 編譯與簽章、編隊瀏覽器、四份 iPhone GUI 與一份 iPad GUI。dylib SHA-256 `5c42486ffe0e9fe6ac01f05fa3163b16859367852870dc4d269cc35690a31338`，來源 `53f16ef`。細節見 [開發紀錄](development.md)。離線重播與分數估算不是實測，`device_verified=false`。
