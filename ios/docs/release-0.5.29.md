@@ -18,4 +18,4 @@
 
 ## 驗證
 
-Windows 回歸通過（含 4／8 人斷線模型案例）。session 測試、iOS 編譯與 GUI 見 CI。全部 `device_verified=false`。
+Windows 回歸通過（含 4／8 人斷線模型案例）。[CI](https://github.com/hugotang/padcheaper/actions/runs/41684465343) 通過完整回歸、iPhoneOS arm64 編譯簽章與 GUI；前一次 [CI](https://github.com/hugotang/padcheaper/actions/runs/41682470698) 因原生測試仍期望 8 人不接受同步 5 而失敗，更新期望並新增 8 人退出席位讀取案例後通過。dylib SHA-256 `f69dc43004cc72880a5bfc12cab601b814e648821336bd8d070c1613fc2b88d7`，來源 `4a862b1`，交付 `E:/ipa/PADCheaper-0.5.29-orbs`。全部 `device_verified=false`。
