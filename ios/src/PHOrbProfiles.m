@@ -63,7 +63,9 @@ NSDictionary *PHOrbProfileNamed(NSDictionary *library, NSString *identifier) {
 }
 
 BOOL PHOrbProfilesValid(id library) {
-    if (![library isKindOfClass:NSDictionary.class] || !Keys(library, @[@"schema", @"selected", @"autoSelect", @"profiles"]) ||
+    if (![library isKindOfClass:NSDictionary.class] ||
+        !KeysWithOptional(library, @[@"schema", @"selected", @"autoSelect", @"profiles"], @[@"eightAutoStart"]) ||
+        (library[@"eightAutoStart"] && !PHOrbProfileIsBoolean(library[@"eightAutoStart"])) ||
         !Integer(library[@"schema"], 1) || ![library[@"schema"] isEqual:@1] || !Identifier(library[@"selected"], YES) ||
         !PHOrbProfileIsBoolean(library[@"autoSelect"]) || ![library[@"profiles"] isKindOfClass:NSArray.class] ||
         [library[@"profiles"] count] > PHOrbMaxProfiles) return NO;
@@ -124,7 +126,8 @@ static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
     if (record[@"activity"]) return NO; // Explicit 8P selection has its own fixed-variant match.
     if ([record[@"dungeon"] unsignedIntValue] && [record[@"dungeon"] unsignedIntValue] != state->identity.dungeon) return NO;
     if ([record[@"floor"] unsignedIntValue] && [record[@"floor"] unsignedIntValue] != state->identity.floor) return NO;
-    if (record[@"formation"]) return PHOrbProfileMatchesOpeningTeam(record, state, 0);
+    if (record[@"formation"]) return PHOrbProfileMatchesOpeningTeam(record, state, 0) ||
+        PHOrbProfileManualOpeningProgress(record, state) > 0;
     for (NSUInteger i = 0; i < 6; ++i) {
         unsigned number = [record[@"team"][i] unsignedIntValue];
         if (number && (!state->automation.members[i].active || number != state->automation.members[i].number)) return NO;
@@ -213,6 +216,14 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
         }
     }
     return YES;
+}
+
+NSUInteger PHOrbProfileManualOpeningProgress(NSDictionary *profile, const PHOrbSnapshot *state) {
+    NSArray *opening = profile[@"opening"];
+    if (!profile[@"formation"] || ![opening isKindOfClass:NSArray.class]) return 0;
+    for (NSUInteger k = 1; k <= opening.count; ++k)
+        if ([opening[k - 1][@"afterMonster"] unsignedIntValue] && PHOrbProfileMatchesOpeningTeam(profile, state, k)) return k;
+    return 0;
 }
 
 BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state) {

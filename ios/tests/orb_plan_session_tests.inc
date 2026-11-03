@@ -9,7 +9,7 @@ static NSDictionary *PlanSessionProfile(void) {
     profile[@"settings"] = @{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[loop]};
     return profile;
 }
-static PHOrbSession *PlanSession(FakeOrbEngine *engine, NSDictionary *profile) {
+static PHOrbSession *PlanSession(FakeOrbEngine *engine, NSDictionary *profile, void (^prepare)(void) = nil) {
     for (unsigned i = 0; i < 6; ++i) {
         engine->live.automation.members[i].number = [profile[@"team"][i] unsignedIntValue];
         PHBattleCatalogIDForNumber([profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue],
@@ -26,6 +26,7 @@ static PHOrbSession *PlanSession(FakeOrbEngine *engine, NSDictionary *profile) {
     PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,@"profiles":@[profile]}],
         "complete plan accepted by the session");
+    if (prepare) prepare();
     Tick(session,engine,Frame()); [session queueAutomatic]; return session;
 }
 static void SetTemporaryForm(FakeOrbEngine *engine, unsigned slot) {
@@ -445,6 +446,26 @@ static void PlanSessionTests() {
     for (unsigned i = 0; i < 300 && engine->skillOrder.size() < 2; ++i) Tick(session,engine,Frame());
     Check(engine->skillOrder.size() == 2 && engine->skillOrder[1] == 0, "resume continues at the next confirmed opening step");
     [session queueStop:@"end resume fixture"];
+
+    // Enemy CD delay: the player transformed slot 1 manually before ever
+    // starting Auto. The visible 14038 form lets the opening resume at step 3
+    // even mid-battle; later unready opening skills are skipped, not retried.
+    for (bool unready : {false,true}) {
+        engine = [FakeOrbEngine new];
+        __block FakeOrbEngine *manual = engine;
+        session = PlanSession(engine,profile,^{
+            manual->live.automation.members[0].number = 14038; manual->transformAfterSkill[0] = 0;
+            manual->live.automation.skillUses = 2; manual->live.moves = 0; manual->live.wave = 1;
+            if (unready) manual->unavailableSkills[3] = YES;
+        });
+        for (unsigned i = 0; i < 3000 && [[session snapshot][@"automatic"] boolValue] &&
+            [[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] < 6; ++i) Tick(session,engine,Frame());
+        const std::vector<NSUInteger> rest = unready ? std::vector<NSUInteger>{1,2,5} : std::vector<NSUInteger>{3,1,2,5};
+        Check([[session snapshot][@"opening"][@"completed"] unsignedIntegerValue] == 6 && engine->skillOrder == rest && !engine->stages,
+            unready ? "after a manual transform an unready opening skill is skipped and the rest continue"
+                    : "a manual transform before Auto resumes the opening after the transform step mid-battle");
+        [session queueStop:@"end manual transform fixture"];
+    }
 
     for (bool stopped : {false,true}) {
         engine = [FakeOrbEngine new]; session = PlanSession(engine,profile); engine->failSkillAck = YES;

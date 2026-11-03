@@ -55,6 +55,9 @@
         [self queueStop:@"8 人請選擇活動策略或通用盤面設定，再按 Auto"]; return;
     }
     const bool sameMatch = PHOrbSameEightMatch(&_eightHistory,state);
+    // A manual Auto also consumes this match's countdown auto-start, so a
+    // later manual stop in the same match is never undone automatically.
+    _eightAutoStartMatch = *state;
     if (!sameMatch) {
         _eightHistory = *state; _eightSkillPending = _eightSkillStarted = _eightBoardSubmitted = _sawResolve = false;
         _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillBefore = _eightSkillAfter = _eightLastObserved = {};

@@ -20,6 +20,9 @@ FOUNDATION_EXPORT NSDictionary *PHOrbProfilesImportingPlan(NSDictionary *library
 FOUNDATION_EXPORT NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictionary *profile);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state);
+// First opening cursor k > 0 whose step k carries an afterMonster form that the
+// current team already shows (a manual transform), or 0 when none applies.
+FOUNDATION_EXPORT NSUInteger PHOrbProfileManualOpeningProgress(NSDictionary *profile, const PHOrbSnapshot *state);
 FOUNDATION_EXPORT NSString *PHOrbPlanDescription(NSDictionary *plan);
 // Single selected profile only; never account state, endpoint or master switches.
 FOUNDATION_EXPORT NSData *PHOrbExportProfileData(NSDictionary *profile, NSString **reason);

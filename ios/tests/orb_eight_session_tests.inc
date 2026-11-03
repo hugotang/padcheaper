@@ -45,6 +45,40 @@ static void EightAfterPreparationBoard(FakeOrbEngine *engine) {
     const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
     std::copy(std::begin(cells),std::end(cells),engine->live.board.types);
 }
+static void EightCountdownAutoStartSessionTests() {
+    // Library-level setting: start Auto once per match after the countdown,
+    // never again in that match after a manual stop, and again next match.
+    FakeOrbEngine *engine = EightEngineFixture();
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    NSDictionary *profile = EightProfileFixture();
+    Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
+        @"eightAutoStart":@YES,@"profiles":@[profile]}], "countdown auto-start setting is a valid library field");
+    engine->live.multiplayer.countdownReady = 0;
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue], "auto-start waits for the native countdown");
+    engine->live.multiplayer.countdownReady = 1;
+    for (unsigned i = 0; i < 30 && ![session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"automatic"] boolValue], "auto-start begins 8P Auto without a button press");
+    [session queueStop:@"manual stop"];
+    for (unsigned i = 0; i < 60; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue], "a manual stop is not undone within the same match");
+    ++engine->live.multiplayer.clockStart;
+    for (unsigned i = 0; i < 30 && ![session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"automatic"] boolValue], "the next match starts automatically again");
+    [session queueStop:@"stop next match"];
+    ++engine->live.multiplayer.clockStart;
+    Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
+        @"eightAutoStart":@NO,@"profiles":@[profile]}], "setting can be turned off");
+    [session queueAutomatic]; Check([session.snapshot[@"automatic"] boolValue], "manual Auto in a new match");
+    [session queueStop:@"manual stop after manual Auto"];
+    Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
+        @"eightAutoStart":@YES,@"profiles":@[profile]}], "re-enable after stopping");
+    for (unsigned i = 0; i < 60; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue], "a match started manually is not auto-restarted after a manual stop");
+    [session queueStop:@"end countdown auto-start fixture"];
+    Check(!PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"eightAutoStart":@2,@"profiles":@[]}),
+        "countdown auto-start must be a boolean");
+}
 static void EightPreparationSessionTests() {
     for (unsigned scenario = 0; scenario < 5; ++scenario) {
         FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
@@ -453,6 +487,7 @@ static void EightChangedInventoryRecoveryTests() {
     }
 }
 static void EightSessionTests() {
+    EightCountdownAutoStartSessionTests();
     EightPreparationSessionTests();
     EightPreferredPreparationSessionTests();
     EightPreferredPreparationFallbackTests();

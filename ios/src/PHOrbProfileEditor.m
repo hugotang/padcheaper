@@ -162,6 +162,13 @@
     }] forControlEvents:UIControlEventValueChanged];
     UIStackView *autoRow = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:@"按開始時自動配對隊伍／關卡"], autoSelect]];
     autoRow.spacing = 12; [self.rows addArrangedSubview:autoRow];
+    UISwitch *eightStart = [UISwitch new]; eightStart.on = [self.draft[@"eightAutoStart"] boolValue];
+    eightStart.accessibilityIdentifier = @"padcheaper.orbsEightAutoStart"; __weak UISwitch *weakEight = eightStart;
+    [eightStart addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+        weakSelf.draft[@"eightAutoStart"] = @(weakEight.on);
+    }] forControlEvents:UIControlEventValueChanged];
+    UIStackView *eightRow = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:@"8 人倒數完成後自動開始 Auto（每場一次；手動停止後本場不再自動開始）"], eightStart]];
+    eightRow.spacing = 12; [self.rows addArrangedSubview:eightRow];
     if (record) {
         UITextField *name = [UITextField new]; name.borderStyle = UITextBorderStyleRoundedRect;
         name.font = [UIFont systemFontOfSize:16]; name.text = record[@"name"]; name.placeholder = @"策略名稱（最多 60 字）";

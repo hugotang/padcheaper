@@ -288,7 +288,16 @@ static PHBattleFrame PHTimerFrameContext(void) {
 
 static PHBattleFrame PHOrbFrameContext(void) {
     PHBattleFrame frame = PHBattleFrameContext();
-    frame.ready = frame.ready && UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
+    // Orb input and native skill calls write no account state, so they need
+    // only a stable current player, not an observed login parse. Relaunching
+    // into a suspended dungeon resumes without the parse this dylib observes
+    // (device log 2026-11-04: login waiting, frame-not-ready). Team/badge/deck
+    // writes keep requiring PHAccountReady through PHBattleFrameContext.
+    uint32_t player = 0;
+    frame.ready = PHValidated && PHFrameInstalled && PHFrameMainThread &&
+        !atomic_load_explicit(&PHFrameOffMain, memory_order_relaxed) &&
+        PHCurrentPlayer(&player) && player == PHPlayer &&
+        UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
     frame.enabled = PHStorageReady && PHConfigValid && !PHStorageFault &&
         [PHConfig[@"experimentalWrites"] isEqual:@YES];
     return frame;

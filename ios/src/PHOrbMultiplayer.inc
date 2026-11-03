@@ -29,7 +29,8 @@ bool ReadMultiplayerFields(PHOrbSnapshot &state) {
         !PHReadU32(h + PHOrbMultiConnectionRVA, &m.connectionState) ||
         !PHReadU8(p + PHOrbMultiResolveOffset, &m.resolvePending)) return false;
     m.disconnectKnown = false; m.disconnectSeat = m.disconnectStatus = 0;
-    if (m.kind == PHOrbMultiplayerFour && ((m.networkFlags & 0x10000u) || m.syncState == 15)) {
+    if ((m.kind == PHOrbMultiplayerFour || m.kind == PHOrbMultiplayerEight) &&
+        ((m.networkFlags & 0x10000u) || m.syncState == 15)) {
         // The recorded seat is an index, not the co-op turn or helper selector.
         // Never dereference an unbounded descriptor or infer a remote exit
         // solely from a nonzero sync state / retained flag.

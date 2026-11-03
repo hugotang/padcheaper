@@ -342,7 +342,7 @@ struct EightPreparationState {
     NSMutableArray<NSDictionary *> *_openingLog;
     NSUInteger _openingStep;
     uint8_t _temporaryMask;
-    bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending;
+    bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending, _openingManual;
     PHOrbSnapshot _openingBefore;
     NSDictionary *_searchTrace;
     NSDictionary *_lastReadIssue;
@@ -392,6 +392,7 @@ struct EightPreparationState {
     PHOrbSnapshot _eightHistory, _eightSubmission, _eightSkillBefore, _eightSkillAfter, _eightLastObserved;
     NSDictionary *_eightHistoryProfile, *_eightLastStop;
     NSUInteger _eightResumes;
+    PHOrbSnapshot _eightAutoStartMatch; // last match auto-started after countdown
     NSUInteger _eightSlot;
     // Grouped by lifetime: assigning {} resets every field, including ones
     // added later, so a reset site cannot silently miss new state.
@@ -605,6 +606,8 @@ struct EightPreparationState {
     NSDictionary *saved = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
     if (!saved) return NO;
     [self cancelWorker]; _profileLibrary = saved; _activeProfile = @{};
+    // Countdown auto-start needs board reads even while the orb page is closed.
+    if ([saved[@"eightAutoStart"] boolValue]) _readinessMonitoring = true;
     [self clearRoute]; _readQueued = _hasStable = false;
     _phase = @"idle"; _message = @"策略已儲存；按開始時核對隊伍與關卡";
     return YES;
@@ -819,7 +822,7 @@ struct EightPreparationState {
 - (void)observeRuleHistory:(const PHOrbSnapshot *)state read:(BOOL)read {
     if (!read) { _historyPuzzleStarted = false; return; }
     if (!state->present) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingManual = false;
         _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyBound = _historyResolve = false; [_onceRules removeAllObjects];
@@ -835,7 +838,7 @@ struct EightPreparationState {
         _historyPuzzleStarted = false; return;
     }
     if (!_historyBound || !PHBattleSameIdentity(&_historyIdentity, &state->identity)) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0;
+        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingManual = false;
         _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyIdentity = state->identity; _historyBound = true; _historyResolve = false;
@@ -924,13 +927,20 @@ struct EightPreparationState {
             if (!resume && [_activeProfile[@"opening"] count] && _openingProfile && _openingStep) {
                 [self queueStop:@"本場已有不同的開場紀錄，不能以另一份流程重播開場；請使用不含開場的策略或下一場再開始"]; return NO;
             }
+            // A player who transformed manually (enemy CD delay) starts Auto
+            // after that transform; the visible form is the evidence.
+            const NSUInteger manualStep = !resume && [_activeProfile[@"opening"] count] &&
+                !PHOrbProfileMatchesOpeningTeam(_activeProfile, state, 0) ?
+                PHOrbProfileManualOpeningProgress(_activeProfile, state) : 0;
             if (!resume) {
-                if ([_activeProfile[@"opening"] count] && (state->wave || state->moves || state->phase != 2 || state->automation.skillUses)) {
+                if (!manualStep && [_activeProfile[@"opening"] count] &&
+                    (state->wave || state->moves || state->phase != 2 || state->automation.skillUses)) {
                     [self queueStop:@"開場只可在首層、尚未轉珠及施放技能時開始；中途加入請使用不含開場的策略"]; return NO;
                 }
-                _openingProfile = _activeProfile; _openingStep = 0;
+                _openingProfile = _activeProfile; _openingStep = 0; _openingManual = false;
                 _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
                 [_openingLog removeAllObjects];
+                if (manualStep) [self adoptOpeningFrom:manualStep];
             }
             if (resume && !_openingInFlight) [self adoptManualOpeningProgress:state];
             const bool openingDone = resume && _openingStep == [_openingProfile[@"opening"] count];
@@ -1022,17 +1032,20 @@ struct EightPreparationState {
     for (NSUInteger k = _openingStep + 1; k <= opening.count; ++k) {
         if (![opening[k - 1][@"afterMonster"] unsignedIntValue]) continue;
         if (!PHOrbProfileMatchesOpeningTeam(_openingProfile, state, k)) return NO;
-        const NSUInteger from = _openingStep;
-        for (NSUInteger i = from; i < k; ++i)
-            [_openingLog addObject:@{@"step":@(i + 1), @"slot":opening[i][@"slot"], @"source":opening[i][@"source"],
-                @"skill":opening[i][@"skill"], @"status":@"manual"}];
-        _openingStep = k;
-        [self logAutomation:[NSString stringWithFormat:@"偵測到手動完成開場第 %lu–%lu 步（形態已變更），從第 %lu 步接續",
-            (unsigned long)from + 1, (unsigned long)k, (unsigned long)k + 1]];
-        if (k == opening.count && [opening[k - 1][@"puzzleAfter"] boolValue]) _openingPuzzlePending = true;
-        return YES;
+        [self adoptOpeningFrom:k]; return YES;
     }
     return NO;
+}
+- (void)adoptOpeningFrom:(NSUInteger)k {
+    NSArray *opening = _openingProfile[@"opening"];
+    const NSUInteger from = _openingStep;
+    for (NSUInteger i = from; i < k; ++i)
+        [_openingLog addObject:@{@"step":@(i + 1), @"slot":opening[i][@"slot"], @"source":opening[i][@"source"],
+            @"skill":opening[i][@"skill"], @"status":@"manual"}];
+    _openingStep = k; _openingManual = true;
+    [self logAutomation:[NSString stringWithFormat:@"偵測到手動完成開場第 %lu–%lu 步（形態已變更），從第 %lu 步接續；之後未就緒的開場技能改為略過",
+        (unsigned long)from + 1, (unsigned long)k, (unsigned long)k + 1]];
+    if (k == opening.count && [opening[k - 1][@"puzzleAfter"] boolValue]) _openingPuzzlePending = true;
 }
 - (BOOL)finishOpeningIfConfirmed:(const PHOrbSnapshot *)state {
     if (!_openingInFlight || !_openingStarted || !_openingAcknowledged || !state->valid || !state->automation.valid ||
@@ -1578,6 +1591,17 @@ struct EightPreparationState {
             }
             _skillWindowWaitAt = 0;
             if (result == PHOrbSkillUnavailable) {
+                if (_openingManual) {
+                    // After a manual handoff the player may already have used
+                    // this skill, or an enemy delay holds it; skip, never retry.
+                    [_openingLog addObject:@{@"step":@(_openingStep + 1), @"slot":step[@"slot"], @"source":step[@"source"],
+                        @"skill":step[@"skill"], @"status":@"skipped"}];
+                    [self logAutomation:[NSString stringWithFormat:@"開場第 %lu 步未就緒（%@），手動接續後略過",
+                        (unsigned long)_openingStep + 1, reason ?: @"遊戲判定技能不可用"]];
+                    if (++_openingStep == [_activeProfile[@"opening"] count] && [step[@"puzzleAfter"] boolValue])
+                        _openingPuzzlePending = true;
+                    [self waitForAutomationBoard]; return;
+                }
                 [self queueStop:[NSString stringWithFormat:@"開場第 %lu 步未就緒：%@；未跳到下一步",
                     (unsigned long)_openingStep + 1, reason ?: @"遊戲判定技能不可用"]]; return;
             }
@@ -1861,6 +1885,16 @@ struct EightPreparationState {
             @"duringAutomatic":@(_automatic), @"sessionPhase":_phase,
             @"multiplayer":MultiplayerTrace(current),
             @"capturedSearchGeneration":_searchTrace[@"generation"] ?: @0};
+    }
+    // User setting (2026-11-04): start 8P Auto by itself once the countdown
+    // finishes. At most once per match (clock identity); a manual stop is not
+    // undone in the same match, and nothing ever queues or rematches.
+    if ([_profileLibrary[@"eightAutoStart"] boolValue] && read && !active && !_automatic && !_oneShot &&
+        !_inputFault && frame.ready && frame.enabled && PHOrbEightMatchReady(&current) && PHOrbCanPreview(&current) &&
+        !current.moves && !PHOrbSameEightMatch(&_eightAutoStartMatch,&current)) {
+        _eightAutoStartMatch = current;
+        [self logAutomation:@"8 人倒數完成：依設定自動開始本場 Auto"];
+        [self queueAutomatic]; return;
     }
     if (readinessOnly) return;
     if (_oneShot) {

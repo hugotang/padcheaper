@@ -15,22 +15,25 @@ static PHOrbSnapshot MultiplayerModelState(unsigned players, unsigned seat) {
     return s;
 }
 static void MultiplayerPeerExitModelTests() {
-    for (unsigned seat = 0; seat < 4; ++seat) {
-        const auto baseline = MultiplayerModelState(4, seat);
+    for (unsigned players : {4u, 8u}) for (unsigned seat = 0; seat < players; ++seat) {
+        const auto baseline = MultiplayerModelState(players, seat);
         auto recovery = baseline; recovery.multiplayer.syncState = 5;
         for (uint32_t step : {0u, 1u, 2u, 3u, 4u, UINT32_MAX}) {
             recovery.multiplayer.syncStep = step;
             Check(PHOrbCanPreview(&recovery) == (step == 2),
                 "4P peer recovery opens only after native entry has cleared selection and completed initialization");
         }
-        for (unsigned peer = 0; peer < 4; ++peer) for (uint32_t status : {3u, 5u, 6u, 7u}) {
+        for (unsigned peer = 0; peer < players; ++peer) for (uint32_t status : {3u, 5u, 6u, 7u}) {
             auto s = baseline;
             auto &m = s.multiplayer;
             m.disconnectKnown = true; m.disconnectSeat = peer; m.disconnectStatus = status;
-            m.networkFlags = 0x10003;
+            // 4P keeps the release bit 1; 8P clears it (device: 0x10001).
+            m.networkFlags = players == 4 ? 0x10003 : 0x10001;
             const bool remoteExit = peer != seat && (status == 5 || status == 6);
             Check(PHOrbCanPreview(&s) == remoteExit,
                 "retained exit bit requires a validated other seat with native disconnected or retired status");
+            if (players == 8) Check(PHOrbEightMatchReady(&s) == remoteExit,
+                "8P Auto match readiness accepts the retained exit bit only for a validated remote seat");
             m.syncState = 15;
             Check(PHOrbCanPreview(&s) == remoteExit,
                 "4P departure completion applies to the captured remote seat, not every local board");
@@ -40,7 +43,7 @@ static void MultiplayerPeerExitModelTests() {
             for (unsigned failure = 0; failure < 14; ++failure) {
                 auto blocked = s;
                 if (failure == 0) blocked.multiplayer.disconnectKnown = false;
-                if (failure == 1) blocked.multiplayer.disconnectSeat = 4;
+                if (failure == 1) blocked.multiplayer.disconnectSeat = players;
                 if (failure == 2) blocked.multiplayer.disconnectSeat = UINT32_MAX;
                 if (failure == 3) blocked.multiplayer.localStatus = 5;
                 if (failure == 4) blocked.multiplayer.connectionState = 0;
@@ -63,12 +66,19 @@ static void MultiplayerPeerExitModelTests() {
         auto &m = s.multiplayer;
         m.syncState = sync; m.syncStep = 2;
         m.disconnectKnown = true; m.disconnectSeat = 0; m.disconnectStatus = 5;
-        Check(PHOrbCanPreview(&s) == (players == 4 && (sync == 5 || sync == 15)),
-            "only reviewed 4P peer states are added; co-op, 8P, unknown and terminal states remain blocked");
+        Check(PHOrbCanPreview(&s) == (players != 3 && (sync == 5 || sync == 15)),
+            "only reviewed competitive (4P/8P) peer states are added; co-op, unknown and terminal states remain blocked");
         m.networkFlags = 0x10001; m.syncState = 0;
-        Check(PHOrbCanPreview(&s) == (players == 4),
-            "3P and 8P retain their previous exit-bit policy even with a supplied peer descriptor");
+        Check(PHOrbCanPreview(&s) == (players != 3),
+            "3P retains its previous exit-bit policy; competitive 4P/8P accept a validated remote departure");
     }
+    // Two departures in one 8P match: native keeps only the latest seat at
+    // impl+0xAD6EC and the bit-16 marker. Local readiness must survive both.
+    auto twice = MultiplayerModelState(8, 2);
+    twice.multiplayer.networkFlags = 0x10001;
+    twice.multiplayer.disconnectKnown = true; twice.multiplayer.disconnectSeat = 5; twice.multiplayer.disconnectStatus = 6;
+    Check(PHOrbCanPreview(&twice) && PHOrbEightMatchReady(&twice),
+        "8P stays playable after a second peer departure overwrites the recorded seat");
     auto modal = MultiplayerModelState(4, 1);
     modal.multiplayer.syncState = 15; modal.multiplayer.syncStep = 1;
     modal.multiplayer.disconnectKnown = true; modal.multiplayer.disconnectSeat = 0; modal.multiplayer.disconnectStatus = 5;
