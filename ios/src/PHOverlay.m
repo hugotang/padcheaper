@@ -194,6 +194,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         shortcut.tintColor = UIColor.whiteColor;
         shortcut.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
         [shortcut setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+        [shortcut setTitleColor:[UIColor colorWithWhite:1 alpha:0.6] forState:UIControlStateDisabled];
         for (NSLayoutConstraint *constraint in shortcut.constraints) if (constraint.firstAttribute == NSLayoutAttributeHeight)
             constraint.constant = 44;
         [self.view addSubview:shortcut];
@@ -694,7 +695,8 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.orbAutoShortcut.backgroundColor = orbBusy ? [UIColor.systemRedColor colorWithAlphaComponent:0.9] :
         [UIColor colorWithWhite:1 alpha:0.12];
     [self.orbAutoShortcut setTitle:orbBusy ? @"停止" : @"自動" forState:UIControlStateNormal];
-    self.orbOnceShortcut.alpha = self.orbOnceShortcut.enabled ? 1 : 0.45;
+    self.orbOnceShortcut.backgroundColor = self.orbOnceShortcut.enabled ?
+        [UIColor.systemBlueColor colorWithAlphaComponent:0.9] : [UIColor colorWithWhite:1 alpha:0.10];
     NSString *orbMessage = [orbs[@"message"] isKindOfClass:NSString.class] ? orbs[@"message"] : @"";
     NSString *lastMessage = orbMessage;
     if (!orbBusy && [orbs[@"multiplayerMessage"] length])

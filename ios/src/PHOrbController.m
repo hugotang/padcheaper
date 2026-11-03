@@ -337,6 +337,7 @@
 @property(nonatomic, strong) UILabel *eightDescription, *helpNote;
 @property(nonatomic, strong) UIButton *helpButton, *diagnosticsCopyButton;
 @property(nonatomic, strong) UIStackView *actionBar;
+@property(nonatomic, strong) UIStackView *skillCard, *dungeonCard;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic) NSUInteger generation;
 - (void)editGoalSettings;
@@ -555,9 +556,9 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
         [self section:@"策略與求路" views:@[self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
             self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow,
             self.poisonDescription, self.goalMode, self.editGoals, self.goalDescription]],
-        [self section:@"技能與回復" views:@[self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription,
+        self.skillCard = [self section:@"技能與回復" views:@[self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription,
             self.playerDescription, assistRow, self.assistRecoveryDescription]],
-        [self section:@"關卡資料" views:@[self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
+        self.dungeonCard = [self section:@"關卡資料" views:@[self.dungeonCaptureButton, dungeonActions, self.dungeonDescription, self.dungeonNotice,
             self.battleObservationDescription]],
         [self section:@"說明與診斷" views:@[helpActions, note]]]];
     stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 16; stack.translatesAutoresizingMaskIntoConstraints = NO;
@@ -687,6 +688,11 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     }
     self.decisionDescription.text = [decisions componentsJoinedByString:@"\n"];
     self.decisionDescription.hidden = !decisions.count;
+    // Solo skill rules, low-HP hearts and assist L never apply to 8P or an
+    // activity profile, and dungeon capture is solo-only: hide those cards
+    // instead of showing a page of disabled controls during a match.
+    self.skillCard.hidden = activity || eight;
+    self.dungeonCard.hidden = [state[@"multiplayerActive"] boolValue] && ![dungeon[@"available"] boolValue];
     self.eightDescription.text = eight ? PHOrbEightProgressDescription(state) : @"";
     self.eightDescription.hidden = !self.eightDescription.text.length;
     self.editRecovery.enabled = !activity && !eight && [state[@"canSetRecovery"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
