@@ -99,6 +99,13 @@ int main(void) {
     Check(!PHOrbEightCanRetainAfterThree(noTriple, identity, fireDark, 0, 3, 0), "a three-orb group must exist on the board");
     Check(!PHOrbEightCanRetainAfterThree(counts, map, fireDark, 6, 12, 6), "an invalid primary colour is rejected");
 
+    // Kagutsuchi then Baldin in the cup: water/light -> fire, wood/heart -> dark.
+    const uint8_t whole[6] = {0, 0, 4, 0, 4, 4};
+    Check(PHOrbEightConversionCoversBoard(whole, fireDark), "a pair mapping every colour to fire/dark covers the board");
+    Check(!PHOrbEightConversionCoversBoard(map, fireDark), "a pair that leaves light or heart does not cover the board");
+    const uint8_t special[6] = {0, 0, 4, 0, 4, 6};
+    Check(!PHOrbEightConversionCoversBoard(special, fireDark | (1u << 6)), "special-orb results never count as coverage");
+
     if (failures) { fprintf(stderr, "8P model tests: %u failure(s)\n", failures); return 1; }
     puts("8P model tests: passed (conversion composition, charge horizon, eligibility, retained inventory)");
     return 0;

@@ -88,8 +88,9 @@ BOOL PHOrbEightActivityValid(id a) {
         }
         id prep = guide[@"preparation"];
         if (prep) {
-            if (!EOptionalKeys(prep,@[@"dungeon",@"subDungeon",@"floor",@"spentSlot",@"sequences",@"primaryColor",@"primaryMinimum",@"minimumSeconds"],@[@"preferBeforeOutput"]) ||
+            if (!EOptionalKeys(prep,@[@"dungeon",@"subDungeon",@"floor",@"spentSlot",@"sequences",@"primaryColor",@"primaryMinimum",@"minimumSeconds"],@[@"preferBeforeOutput",@"scoreTurn"]) ||
                 (prep[@"preferBeforeOutput"] && !EBool(prep[@"preferBeforeOutput"])) ||
+                (prep[@"scoreTurn"] && !EBool(prep[@"scoreTurn"])) ||
                 !EInt(prep[@"dungeon"],1,UINT16_MAX) || !EInt(prep[@"subDungeon"],1,UINT16_MAX) ||
                 !EInt(prep[@"floor"],(unsigned)[a[@"floors"] count],(unsigned)[a[@"floors"] count]) ||
                 !EInt(prep[@"spentSlot"],1,6) || !EInt(prep[@"primaryColor"],0,4) || !EInt(prep[@"primaryMinimum"],3,30) ||
@@ -306,7 +307,13 @@ NSDictionary *PHOrbEightPreparationDecision(NSDictionary *a, const PHOrbSnapshot
         if (!best || value > bestValue) {
             bestValue = value;
             const unsigned retainedAttack = attackOrbs > 3 ? attackOrbs - 3 : 0;
-            best = @{@"available":@YES,@"readyNow":@(readyNow),@"sequence":sequence,@"conversion":map,@"inventoryBeforeRemoval":inventory,
+            // When the next-turn pair turns every orb into an attack colour,
+            // nothing on this board needs saving: the waiting turn can score
+            // rows/links/Combo instead of a three-orb single Combo.
+            // At most two attack colours: one holds >= half of an all-attack board.
+            const BOOL scoreTurn = [p[@"scoreTurn"] boolValue] && PHOrbEightConversionCoversBoard(conversion,colors) &&
+                __builtin_popcount(colors & 63u) <= 2 && (unsigned)s->board.width * s->board.height >= 2 * linkLength;
+            best = @{@"available":@YES,@"scoreTurn":@(scoreTurn),@"readyNow":@(readyNow),@"sequence":sequence,@"conversion":map,@"inventoryBeforeRemoval":inventory,
                 @"preferable":@(!readyNow && retainedAttack > readyAttackOrbs),@"readyAttackOrbs":@(readyAttackOrbs),
                 @"retainedAttackMinimum":@(retainedAttack),
                 @"primaryColor":@(primary),@"primaryMinimum":p[@"primaryMinimum"],@"survivalKnown":@NO,

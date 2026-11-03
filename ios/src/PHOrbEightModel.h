@@ -36,6 +36,14 @@ static inline bool PHOrbEightComposeConversion(const PHOrbSnapshot *s, const uin
     return true;
 }
 
+// Whether every basic colour ends in an attack colour after the conversions.
+// Then any board (including random refills) becomes all attack orbs; callers
+// that need a link also bound the number of attack colours.
+static inline bool PHOrbEightConversionCoversBoard(const uint8_t map[6], unsigned colors) {
+    for (unsigned c = 0; c < 6; ++c) if (map[c] >= 6 || !(colors & (1u << map[c]))) return false;
+    return true;
+}
+
 // Orbs counted by their converted colour.
 static inline void PHOrbEightConvertedCounts(const unsigned counts[6], const uint8_t map[6], unsigned converted[6]) {
     for (unsigned c = 0; c < 6; ++c) converted[c] = 0;

@@ -151,6 +151,27 @@ static void EightPreferredPreparationSessionTests() {
         [session queueStop:@"fixture done"];
     }
 }
+static void EightScoreTurnSessionTests() {
+    const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
+    FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
+    for (unsigned i = 0; i < 30; ++i) engine->live.board.types[i] = cells[i] == 3 ? 1 : cells[i];
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine]; Tick(session,engine,Frame());
+    EightSelectProfile(session,EightScoreTurnProfileFixture()); [session queueAutomatic];
+    EightRunUntilRelease(session,engine,1);
+    NSDictionary *progress = session.snapshot[@"eightProgress"];
+    Check(!engine->skillAttempts && [progress[@"preparationUsed"] boolValue] &&
+        [progress[@"preparation"][@"plan"][@"scoreTurn"] boolValue] &&
+        [progress[@"preparation"][@"releaseEvaluation"][@"valid"] boolValue] &&
+        [progress[@"preparation"][@"releaseEvaluation"][@"firstWaveCombos"] unsignedIntValue] >= 1 &&
+        ![progress[@"preparation"][@"releaseEvaluation"][@"preparationReady"] boolValue],
+        "a whole-board-conversion waiting turn releases a normal scoring route without casting");
+    EightAfterPreparationBoard(engine); Tick(session,engine,Frame());
+    EightRunUntilRelease(session,engine,2);
+    Check(engine->skillOrder == std::vector<NSUInteger>({1,2}) &&
+        [session.snapshot[@"eightProgress"][@"preparation"][@"status"] isEqual:@"next-turn-confirmed"],
+        "the scoring waiting turn still confirms the next native turn and casts both conversions in order");
+    [session queueStop:@"fixture done"];
+}
 static void EightPreferredPreparationFallbackTests() {
     const uint8_t cells[30]{0,1,2,3,4,3, 1,2,3,4,0,1, 2,3,4,2,3,4, 3,4,1,3,2,3, 4,5,4,2,3,1};
     FakeOrbEngine *engine = EightEngineFixture(); EightPreparationBoard(engine);
@@ -435,6 +456,7 @@ static void EightSessionTests() {
     EightPreparationSessionTests();
     EightPreferredPreparationSessionTests();
     EightPreferredPreparationFallbackTests();
+    EightScoreTurnSessionTests();
     EightChangedInventoryRecoveryTests();
     FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Tick(session,engine,Frame()); [session configureQuality:@"fast"]; [session queueAutomatic];

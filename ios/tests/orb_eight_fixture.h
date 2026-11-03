@@ -21,6 +21,16 @@ static NSDictionary *EightPreparationProfileFixture(BOOL preferred) {
     NSMutableDictionary *preparation = [guide[@"preparation"] mutableCopy];
     if (preferred) preparation[@"preferBeforeOutput"] = @YES;
     else [preparation removeObjectForKey:@"preferBeforeOutput"];
+    // These fixtures exercise the original three-orb, one-Combo route.
+    [preparation removeObjectForKey:@"scoreTurn"];
+    guide[@"preparation"] = preparation; activity[@"guide"] = guide; profile[@"activity"] = activity;
+    return profile;
+}
+static NSDictionary *EightScoreTurnProfileFixture(void) {
+    NSMutableDictionary *profile = [EightPreparationProfileFixture(YES) mutableCopy];
+    NSMutableDictionary *activity = [profile[@"activity"] mutableCopy], *guide = [activity[@"guide"] mutableCopy];
+    NSMutableDictionary *preparation = [guide[@"preparation"] mutableCopy];
+    preparation[@"scoreTurn"] = @YES;
     guide[@"preparation"] = preparation; activity[@"guide"] = guide; profile[@"activity"] = activity;
     return profile;
 }

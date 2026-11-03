@@ -1472,8 +1472,10 @@ struct EightPreparationState {
             else if (checkedOptions.activity.firstWaveOnly) summary = [NSString stringWithFormat:
                 @"首消 %u Combo（不含加算）· %u 步 · 約 %.1f 秒",evaluation.firstWaveCombos,
                 route.count - 1,(route.count - 1) * StepDuration(session->_preview)];
-            if (session->_eightPrep.active) summary = [NSString stringWithFormat:
-                @"準備回合：只消一組三珠 · %u 步；下回合核對技能後輸出",route.count - 1];
+            if (session->_eightPrep.active) summary = [session->_eightPrep.plan[@"scoreTurn"] boolValue] ?
+                [NSString stringWithFormat:@"等待回合：首消 %u Combo · %u 步；下回合核對技能後轉色輸出",
+                    evaluation.firstWaveCombos,route.count - 1] :
+                [NSString stringWithFormat:@"準備回合：只消一組三珠 · %u 步；下回合核對技能後輸出",route.count - 1];
             if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
             if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];

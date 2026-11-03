@@ -339,6 +339,19 @@
         // combo-only (zero row/link weights). Preserve that intent on upgrade.
         options->activity.comboPriority = floor[@"comboPriority"] ? [floor[@"comboPriority"] boolValue] :
             state->wave == 0 && options->activity.comboWeight > 0 && !options->activity.rowWeight && !options->activity.linkWeight;
+        if (_eightPrep.active && [_eightPrep.plan[@"scoreTurn"] boolValue]) {
+            // Waiting turn before a whole-board conversion: score rows, links
+            // and Combo with the floor's activity weights. Damage is ignored
+            // (one-turn absorption usually eats it; a kill only ends the floor
+            // early). Only one Combo is required, within the reserved budget.
+            options->milliseconds = MIN(options->milliseconds,_eightPrep.searchMS);
+            options->activity.comboPriority = false;
+            for (unsigned c = 0; c < 6; ++c) options->activity.attackWeights[c] = options->activity.attackRowPercent[c] = 0;
+            PHOrbGoalSet goals{}; goals.count = 1; goals.items[0] = {PHOrbGoalCombo,0,1,0};
+            return @{@"available":@YES,@"goals":PHOrbGoalsJSON(&goals),@"enemyComboFirstWave":@YES,
+                @"leaderAddedCombos":@0,@"message":@"等待回合：下一回合轉色會把整盤轉成攻擊色，本回合照常打列與連消",
+                @"warning":@"本杯攻略的一回合等待分支；不是傷害或存活預測。",@"leaders":@[]};
+        }
         if (_eightPrep.active) {
             options->steps = MIN(options->steps,12u); options->milliseconds = MIN(options->milliseconds,_eightPrep.searchMS);
             options->activity.preparation = true; options->activity.comboPriority = false;
@@ -379,7 +392,8 @@
     _eightPlan.sequence = nil; _eightPlan.step = 0; _eightPlan.guide = false;
     _eightPrep.trace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
         @"priority":@(priority),@"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
-    [self logAutomation:priority ? @"B6：先留珠消一組三珠，等下一回合雙轉色技就緒再輸出" : preparation[@"message"]];
+    [self logAutomation:[preparation[@"scoreTurn"] boolValue] ? @"B6：等雙轉色技就緒；本回合照常打列與連消（下回合整盤轉成攻擊色）" :
+        priority ? @"B6：先留珠消一組三珠，等下一回合雙轉色技就緒再輸出" : preparation[@"message"]];
     [self beginSolve];
 }
 

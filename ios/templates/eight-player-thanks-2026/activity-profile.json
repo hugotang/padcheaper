@@ -211,15 +211,15 @@
           ],
           "searchMS": 600,
           "weights": {
-            "combo": 400,
-            "row": 1500,
-            "link": 2500,
+            "combo": 700,
+            "row": 1800,
+            "link": 4200,
             "step": 35
           },
           "linkRewardLimit": 1,
           "attack": {
             "weights": [
-              3,
+              1,
               0,
               0,
               0,
@@ -254,9 +254,9 @@
           ],
           "searchMS": 600,
           "weights": {
-            "combo": 400,
-            "row": 1500,
-            "link": 2500,
+            "combo": 700,
+            "row": 1800,
+            "link": 4200,
             "step": 35
           },
           "linkRewardLimit": 1,
@@ -300,15 +300,15 @@
           ],
           "searchMS": 600,
           "weights": {
-            "combo": 400,
-            "row": 1500,
-            "link": 2500,
+            "combo": 700,
+            "row": 1800,
+            "link": 4200,
             "step": 35
           },
           "linkRewardLimit": 1,
           "attack": {
             "weights": [
-              3,
+              1,
               0,
               0,
               0,
@@ -360,15 +360,15 @@
           ],
           "searchMS": 800,
           "weights": {
-            "combo": 400,
-            "row": 1500,
-            "link": 2500,
+            "combo": 700,
+            "row": 1800,
+            "link": 4200,
             "step": 35
           },
           "linkRewardLimit": 1,
           "attack": {
             "weights": [
-              3,
+              1,
               0,
               0,
               0,
@@ -414,15 +414,15 @@
           ],
           "searchMS": 900,
           "weights": {
-            "combo": 400,
-            "row": 1500,
-            "link": 2500,
+            "combo": 700,
+            "row": 1800,
+            "link": 4200,
             "step": 35
           },
           "linkRewardLimit": 1,
           "attack": {
             "weights": [
-              3,
+              1,
               0,
               0,
               0,
@@ -541,7 +541,8 @@
           "primaryColor": 0,
           "primaryMinimum": 6,
           "minimumSeconds": 15,
-          "preferBeforeOutput": true
+          "preferBeforeOutput": true,
+          "scoreTurn": true
         }
       }
     }

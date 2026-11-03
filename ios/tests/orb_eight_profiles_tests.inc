@@ -13,6 +13,21 @@ static void EightPreparationProfilesTests(void) {
     PHOrbSnapshot charged = s; charged.automation.members[2].charge = 4;
     Check([PHOrbEightPreparationDecision(a,&charged,0)[@"readyNow"] boolValue],
         "already-ready conversion pair does not need the preferred charge turn");
+    Check(![decision[@"scoreTurn"] boolValue],"profiles without scoreTurn keep the three-orb waiting turn");
+    {
+        NSDictionary *scoring = EightScoreTurnProfileFixture()[@"activity"];
+        Check(PHOrbEightActivityValid(scoring) && [PHOrbEightPreparationDecision(scoring,&s,0)[@"scoreTurn"] boolValue],
+            "a pair that turns every colour into fire/dark makes the waiting turn a scoring turn");
+        PHOrbSnapshot partial = s; partial.eight.members[2].convert[3] = 3; // light stays light
+        NSDictionary *partialDecision = PHOrbEightPreparationDecision(scoring,&partial,0);
+        Check(!partialDecision || ![partialDecision[@"scoreTurn"] boolValue],
+            "a conversion that leaves a non-attack colour keeps the orb-saving three-orb route");
+        for (id value in @[@1,@"true",NSNull.null]) {
+            NSMutableDictionary *bad = [scoring mutableCopy], *g = [scoring[@"guide"] mutableCopy], *p = [g[@"preparation"] mutableCopy];
+            p[@"scoreTurn"] = value; g[@"preparation"] = p; bad[@"guide"] = g;
+            Check(!PHOrbEightActivityValid(bad),"scoreTurn requires an explicit JSON Boolean");
+        }
+    }
     PHOrbSnapshot dense = s;
     for (unsigned i = 0; i < 30; ++i) dense.board.types[i] = i < 15 ? 0 : 4;
     Check(![PHOrbEightPreparationDecision(a,&dense,0)[@"preferable"] boolValue],
