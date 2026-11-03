@@ -344,7 +344,9 @@ static void FramePacingSessionTests() {
     Check([session configureSettings:@{@"quality":@"thorough", @"mode":@"manual", @"rules":@[],
         @"goals":@[@{@"kind":@"t", @"colors":@8, @"count":@1},
                     @{@"kind":@"four", @"colors":@32, @"count":@1},
-                    @{@"kind":@"combo", @"colors":@0, @"count":@1}]}], "render-latency pacing goals");
+                    // 0.5.28 native shapes solve T/four in 40 steps; a nine-Combo
+                    // floor keeps this fixture on a >40-step verified route.
+                    @{@"kind":@"combo", @"colors":@0, @"count":@9}]}], "render-latency pacing goals");
     Check(Preview(session, engine), "long route preview for 30-fps rendering fixture");
     const NSUInteger steps = [[session snapshot][@"steps"] unsignedIntegerValue];
     Check(steps > 40 && [[session snapshot][@"goalsMet"] boolValue],
