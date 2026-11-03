@@ -6,7 +6,7 @@
 
 ## 2026-11-03：0.5.26-orbs，浮動轉珠列、PC 面板卡片與結構整理，編譯驗證完成
 
-2026-11-03，使用者回報已實機測試 `0.5.26-orbs`，「功能上沒問題」。回報未列出裝置型號、模式或樓層，記為整體功能的真機回報，不延伸為各模式或 8 人同步的逐項驗收。交付目錄保持原樣（`verification.json` 仍為建置當時的 `device_verified=false`）。
+2026-11-03，使用者回報已在 iPad Pro 11 吋（iPadOS 27）與 iPhone XS（iOS 16.6）實機測試 `0.5.26-orbs`，兩台都試過單人與 8 人，「功能上沒問題」。涵蓋新浮動膠囊列、卡片化 PC 面板與兩種裝置的實際操作；回報未列出樓層與逐項結果，不延伸為 3／4 人或各關卡的逐項驗收。交付目錄保持原樣（`verification.json` 仍為建置當時的 `device_verified=false`）。
 
 2026-11-03，`0.5.26-orbs` 已由 [CI 119](https://github.com/hugotang/padcheaper/actions/runs/41516214048) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸（含新的 8 人純 C 模型測試）、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及 Scene／舊式視窗首次與重啟四份 iPhone GUI 加一份 iPad GUI，五份皆 success、無 failures。Runner 沒有 11 吋 iPad 裝置類型，腳本改選 iPad (10th generation)，直向寬 820 pt，與 11 吋相同。已檢視 iPhone 浮動膠囊列、卡片化 PC 面板、iPad 8 人轉珠頁與 iPad 橫向膠囊列截圖；停用狀態的「轉一次」文字對比偏低，留待之後調整。模擬器與原生替身不等於 PAD 真機穩定通關，`device_verified=false`。
 
