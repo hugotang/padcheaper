@@ -34,7 +34,12 @@ static bool IsT(const std::vector<unsigned> &group, const std::vector<int> &cell
     bool shape = false;
     for (const auto &pattern : patterns) shape |= local == std::set<unsigned>(pattern, pattern + 5);
     if (!shape) return false;
-    // T retains the conservative colour-border rule in both versions.
+#ifdef PROBE_NATIVE_SHAPES
+    // 2026-11-03 candidate: PAD 23.6.0 0x1005F7954 judges T on the actual
+    // removed group only; unmarked same-colour neighbours are allowed.
+    (void)cells; return true;
+#endif
+    // Earlier versions: conservative colour-border rule.
     for (unsigned cell : group) for (unsigned next = 0; next < cells.size(); ++next) {
         const bool adjacent = (cell / w == next / w && (cell + 1 == next || next + 1 == cell)) ||
             cell + w == next || next + w == cell;

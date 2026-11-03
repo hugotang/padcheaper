@@ -28,7 +28,7 @@ static void RecordedThornSolverTests() {
     Check(PHOrbReplay(&board,&route,route.count - 1,&replay), "new recorded route replays without touching the spinner");
     for (unsigned phase = 0; phase < 6; ++phase) {
         auto variant = replay; variant.types[14] = uint8_t((board.types[14] + phase) % 6);
-        minT = std::min(minT,ConservativeTOracle(variant,3));
+        minT = std::min(minT,NativeTOracle(variant,3));
         minFour = std::min(minFour,FourOracle(variant,5));
         minCombo = std::min(minCombo,Oracle(variant).first);
     }

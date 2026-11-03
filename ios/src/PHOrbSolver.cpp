@@ -29,6 +29,13 @@ bool ActivityValid(const PHOrbBoard &board, const PHOrbActivityObjective &a) {
 }
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
 bool ShapeGoal(unsigned kind) { return kind >= PHOrbGoalL && kind <= PHOrbGoalFour; }
+// PAD 23.6.0 0x1005F7954 classifies four, T, L, cross (removed count 4/5)
+// and square (9) from the actual removed group: only the template's marked
+// same-colour cells are checked. Unmarked same-colour neighbours do not matter.
+bool RemovedGroupShape(unsigned kind) {
+    return kind == PHOrbGoalFour || kind == PHOrbGoalT || kind == PHOrbGoalL ||
+        kind == PHOrbGoalCross || kind == PHOrbGoalSquare;
+}
 struct Pattern { Bits cells, border; uint16_t stableColors = 63; };
 struct Context {
     unsigned width, height;
@@ -173,16 +180,13 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     // Guide toward one layout that can survive every shared phase. The old
     // per-phase minima could keep chasing different, incompatible layouts.
     // These masks affect hints only: exact matches still examine all phases.
-    // Locked/single-color spinners are stable; a border spinner whose cycle
-    // excludes the target color cannot spoil an exact shape's border.
+    // Only a spinner inside the template is unstable: exact shapes follow the
+    // removed group, so a border spinner matters only if it is marked with it.
     if (context.variants > 1) for (unsigned g = 0; g < goals.count; ++g) {
         const auto kind = goals.items[g].kind;
         if (!ShapeGoal(kind)) continue;
         for (auto &pattern : context.patterns[g]) {
             if (pattern.cells & context.dynamicSpinners) pattern.stableColors = 0;
-            else if (kind != PHOrbGoalFour && kind != PHOrbGoalRow && kind != PHOrbGoalColumn &&
-                     (pattern.border & context.dynamicSpinners))
-                pattern.stableColors &= ~board.spinnerColors;
         }
     }
     for (unsigned g = 0; g < goals.count; ++g)
@@ -234,70 +238,15 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
     return true; // Necessary inventory check, not a proof that a route exists.
 }
 
-bool ShapeSpaceAvailable(const Cells &cells, const Context &context) {
-    // Same-color exact shapes need disjoint cells and disjoint-color borders.
-    // Enumerating a pair is a necessary placement bound, not a route proof.
-    for (unsigned g = 0; g < context.goals.count; ++g) {
-        const auto &a = context.goals.items[g];
-        if (a.kind != PHOrbGoalL || !a.colors || (a.colors & (a.colors - 1))) continue;
-        for (unsigned h = 0; h < context.goals.count; ++h) {
-            const auto &b = context.goals.items[h];
-            if (b.kind != PHOrbGoalT || b.colors != a.colors) continue;
-            unsigned separators = context.width * context.height + 1;
-            for (const auto &x : context.patterns[g]) for (const auto &y : context.patterns[h])
-                if (!(x.cells & y.cells) && !(x.border & y.cells) && !(y.border & x.cells))
-                    separators = std::min(separators, Count(x.border | y.border));
-            for (unsigned phase = 0; phase < context.variants; ++phase) {
-                unsigned available = 0;
-                for (unsigned i = 0; i < context.width * context.height; ++i) {
-                    unsigned color = context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i];
-                    available += !(a.colors & (1u << color));
-                }
-                if (available < separators) return false;
-            }
-        }
-    }
-    // An exact T needs a different color along its entire conservative
-    // border. A distinct-color four also consumes non-T cells. Enumerate
-    // their possible placements without path, thorn or fixed-cell limits:
-    // if even that larger layout space lacks separators, no route can help.
-    // Check every shared phase independently, allowing its T/four to move.
-    const unsigned size = context.width * context.height;
-    for (unsigned g = 0; g < context.goals.count; ++g) {
-        const auto &t = context.goals.items[g];
-        if (t.kind != PHOrbGoalT || !t.colors || (t.colors & (t.colors - 1))) continue;
-        const unsigned color = unsigned(__builtin_ctz(t.colors));
-        for (unsigned h = 0; h < context.goals.count; ++h) {
-            const auto &four = context.goals.items[h];
-            if (four.kind != PHOrbGoalFour || !four.colors || (four.colors & (four.colors - 1)) ||
-                four.colors == t.colors) continue;
-            unsigned minimum = size + 1;
-            for (const auto &a : context.patterns[g]) for (const auto &b : context.patterns[h])
-                if (!(a.cells & b.cells)) minimum = std::min(minimum, Count(a.border | b.cells));
-            for (unsigned phase = 0; phase < context.variants; ++phase) {
-                unsigned separators = 0;
-                for (unsigned i = 0; i < size; ++i) {
-                    const auto type = context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i];
-                    separators += type != color;
-                }
-                if (separators < minimum) return false;
-            }
-        }
-    }
-    return true; // Passing only means this necessary bound did not rule it out.
-}
-
-bool ShapeMatches(Bits group, Bits color, const PHOrbGoal &goal, const std::vector<Pattern> &patterns) {
+bool ShapeMatches(Bits group, const PHOrbGoal &goal, const std::vector<Pattern> &patterns) {
     for (const auto &pattern : patterns) {
         if (goal.kind == PHOrbGoalRow || goal.kind == PHOrbGoalColumn) {
             if ((group & pattern.cells) == pattern.cells) return true;
             continue;
         }
-        // Native four-orb effects use the actual removed group. An unmarked
-        // neighbour cannot turn four removed orbs into five. The other exact
-        // shapes retain their existing conservative neighbour restriction.
-        if (group == pattern.cells &&
-            (goal.kind == PHOrbGoalFour || !(color & pattern.border))) return true;
+        // Native exact shapes use the actual removed group. An unmarked
+        // neighbour cannot turn the removed group into a larger one.
+        if (RemovedGroupShape(goal.kind) && group == pattern.cells) return true;
     }
     return false;
 }
@@ -364,11 +313,9 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
             // No repair can score above the cost of filling its holes alone.
             // Discard that upper bound before computing runs and distances.
             if (hints.count == HintLimit && 3072 * size / (size + 2 * missing) < hints.items.back().value) continue;
-            // For four, only a neighbouring *marked* orb would merge into
-            // the target after filling. Other exact shapes retain their
-            // existing conservative no-same-colour-neighbour contract.
-            const Bits interfering = !exact ? 0 : goal.kind == PHOrbGoalFour ?
-                MarkedRuns(color | pattern.cells, context) & pattern.border : color & pattern.border;
+            // Only a neighbouring *marked* orb would merge into an exact
+            // shape after filling; unmarked same-colour neighbours are fine.
+            const Bits interfering = exact ? MarkedRuns(color | pattern.cells, context) & pattern.border : 0;
             unsigned cost = 2 * missing + context.borderRepairWeight * Count(interfering);
             hint.value = 3072 * size / (size + cost);
             if (hints.count == HintLimit && hint.value < hints.items.back().value) continue;
@@ -531,7 +478,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
                 if (!(goal.colors & (1u << color))) continue;
                 bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
                     goal.kind == PHOrbGoalExact ? !wave && count == goal.length :
-                    !wave && ShapeGoal(goal.kind) && ShapeMatches(group, colors[color], goal, context.patterns[g]);
+                    !wave && ShapeGoal(goal.kind) && ShapeMatches(group, goal, context.patterns[g]);
                 if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
         }
@@ -968,7 +915,6 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // evaluation. Check the clock between each such candidate.
         const unsigned deadlineMask = context.variants > 1 || context.shapeGoals ? 0u : options.goals.count ? 7u : 31u;
         if (!EnoughOrbs(initial, context)) return PHOrbSolveStatus::InsufficientOrbs;
-        if (!ShapeSpaceAvailable(initial, context)) return PHOrbSolveStatus::IncompatibleGoals;
         std::vector<Node> starts, beam, next;
         starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * (options.diagonal ? 8 : 4));
         for (unsigned i = 0; i < size; ++i) {

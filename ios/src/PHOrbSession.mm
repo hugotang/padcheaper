@@ -932,6 +932,7 @@ struct EightPreparationState {
                 _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
                 [_openingLog removeAllObjects];
             }
+            if (resume && !_openingInFlight) [self adoptManualOpeningProgress:state];
             const bool openingDone = resume && _openingStep == [_openingProfile[@"opening"] count];
             if (!_openingInFlight && !(openingDone ? PHOrbProfileMatchesRunningTeam(_openingProfile, state) :
                 PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep))) {
@@ -1009,6 +1010,29 @@ struct EightPreparationState {
         _message = @"轉珠前技能窗口已關閉，重新確認後再判斷技能";
     }
     return YES;
+}
+// A delayed opening skill (enemy CD delay) stops Auto before the step. If the
+// player then casts the form-changing step manually, the recorded cursor no
+// longer matches the team. Advance only to the first later step whose own
+// afterMonster form is now visible; steps without form evidence stay pending.
+- (BOOL)adoptManualOpeningProgress:(const PHOrbSnapshot *)state {
+    NSArray *opening = _openingProfile[@"opening"];
+    if (_openingStep >= opening.count || PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep) ||
+        state->automation.skillUses <= _openingBefore.automation.skillUses) return NO;
+    for (NSUInteger k = _openingStep + 1; k <= opening.count; ++k) {
+        if (![opening[k - 1][@"afterMonster"] unsignedIntValue]) continue;
+        if (!PHOrbProfileMatchesOpeningTeam(_openingProfile, state, k)) return NO;
+        const NSUInteger from = _openingStep;
+        for (NSUInteger i = from; i < k; ++i)
+            [_openingLog addObject:@{@"step":@(i + 1), @"slot":opening[i][@"slot"], @"source":opening[i][@"source"],
+                @"skill":opening[i][@"skill"], @"status":@"manual"}];
+        _openingStep = k;
+        [self logAutomation:[NSString stringWithFormat:@"偵測到手動完成開場第 %lu–%lu 步（形態已變更），從第 %lu 步接續",
+            (unsigned long)from + 1, (unsigned long)k, (unsigned long)k + 1]];
+        if (k == opening.count && [opening[k - 1][@"puzzleAfter"] boolValue]) _openingPuzzlePending = true;
+        return YES;
+    }
+    return NO;
 }
 - (BOOL)finishOpeningIfConfirmed:(const PHOrbSnapshot *)state {
     if (!_openingInFlight || !_openingStarted || !_openingAcknowledged || !state->valid || !state->automation.valid ||

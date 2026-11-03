@@ -98,8 +98,8 @@ static void ShapeTests() {
     cross.types[19] = 0;
     Check(PHOrbEvaluate(cross, Goals(PHOrbGoalCross), result) && !result.goalsMet, "a connected sixth orb invalidates a five-orb cross");
     auto innerNeighbor = ShapeBoard(6,5,{0,6,12,13,14,7});
-    Check(PHOrbEvaluate(innerNeighbor, Goals(PHOrbGoalL), result) && !result.goalsMet,
-          "exact shape conservatively excludes even an unmatched same-color neighbor inside the L");
+    Check(PHOrbEvaluate(innerNeighbor, Goals(PHOrbGoalL), result) && result.goalsMet,
+          "an unmatched same-color neighbor inside the L is not removed and does not void it (PAD 0x1005F7954)");
     const std::vector<unsigned> squareCells{0,1,2,6,7,8,12,13,14};
     auto square = ShapeBoard(6,5,squareCells);
     Check(PHOrbEvaluate(square, Goals(PHOrbGoalSquare), result) && result.goalsMet, "isolated 3x3 square is recognized");

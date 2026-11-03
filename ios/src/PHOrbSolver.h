@@ -63,8 +63,9 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // returned candidate still applies the complete release/survival policy.
 // Spinner shape searches reuse color-layout scores in a bounded per-pass
 // cache; contact damage and final uncached release checks remain route-specific.
-// IncompatibleGoals means a necessary T/four or same-color T/L separator
-// bound fails even with arbitrary placement. Single-color exact shape goals
-// also reserve distinct orb counts. Other failures never imply infeasibility.
+// IncompatibleGoals is retained for API compatibility; exact shapes follow the
+// native removed-group rule, so no border-separator bound produces it now.
+// Single-color exact shape goals still reserve distinct orb counts
+// (InsufficientOrbs). Other failures never imply infeasibility.
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

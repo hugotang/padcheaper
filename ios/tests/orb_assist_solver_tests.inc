@@ -16,8 +16,9 @@ static void AssistSolverTests() {
     Check(PHOrbSolve(witness,options,cancel,route) == PHOrbSolveStatus::Solved && route.goalsMet,
         "a legal separated T/L layout is not rejected by the new geometric bound");
     auto dense = ShapeBoard(6,5,{}); std::fill(dense.types,dense.types + 30,0); dense.types[0] = 1;
-    Check(PHOrbSolve(dense,options,cancel,route) == PHOrbSolveStatus::IncompatibleGoals && !route.evaluated,
-        "one separator cannot split two same-color exact shapes regardless of route");
+    options.milliseconds = 30;
+    Check(PHOrbSolve(dense,options,cancel,route) != PHOrbSolveStatus::IncompatibleGoals,
+        "native removed-group shapes no longer use a border-separator bound before search");
     for (auto dimensions : {std::pair<unsigned,unsigned>{5,4},{6,5},{7,6}}) {
         const unsigned w = dimensions.first, h = dimensions.second;
         for (unsigned rotation = 0; rotation < 4; ++rotation) for (unsigned side = 0; side < 4; ++side) {

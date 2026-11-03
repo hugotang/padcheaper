@@ -435,7 +435,6 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_shortcut_session_tests.inc"
 #include "orb_thorn_session_tests.inc"
 #include "orb_poison_session_tests.inc"
-#include "orb_shape_space_session_tests.inc"
 #include "orb_lifecycle_session_tests.inc"
 #include "orb_color_condition_session_tests.inc"
 #include "orb_plan_session_tests.inc"
@@ -755,7 +754,6 @@ int main() {
         RecoverySessionTests();
         OrbEffectSessionTests();
         PoisonHeartFourSessionTests();
-        ShapeSpaceSessionTests();
         ThornSessionTests();
         LifecycleSessionTests();
         ColorConditionSessionTests();

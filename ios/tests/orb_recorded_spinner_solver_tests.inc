@@ -13,9 +13,12 @@ static void RecordedSpinnerSolverTests() {
     PHOrbRoute route{}; route.count = sizeof(previousPath);
     std::copy(std::begin(previousPath), std::end(previousPath), route.cells);
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
-    Check(PHOrbEvaluateRoute(board,route,options,evaluation,damage,contacts) && !evaluation.goalsMet &&
-        evaluation.goalHits[0] == 0 && evaluation.goalHits[1] == 1 && evaluation.hazardsSafe,
-        "recorded preview near the spinner remains non-executable under the all-phase exact-T policy");
+    // The spinner beside this T never forms a run with it in any phase, so
+    // under the native removed-group rule (PAD 0x1005F7954) the device
+    // preview was a real T/four; the old border rule rejected it.
+    Check(PHOrbEvaluateRoute(board,route,options,evaluation,damage,contacts) && evaluation.goalsMet &&
+        evaluation.goalHits[0] == 1 && evaluation.goalHits[1] == 1 && evaluation.hazardsSafe,
+        "recorded preview near the spinner is accepted once the unmarked spinner neighbour is ignored");
     const auto original = board;
     std::atomic_bool cancel{false};
     const auto status = PHOrbSolve(board,options,cancel,route);
@@ -32,7 +35,7 @@ static void RecordedSpinnerSolverTests() {
         unsigned minT = 42, minFour = 42, minCombo = 42;
         for (unsigned phase = 0; phase < 6; ++phase) {
             auto variant = replay; variant.types[15] = uint8_t((types[15] + phase) % 6);
-            minT = std::min(minT,ConservativeTOracle(variant,3));
+            minT = std::min(minT,NativeTOracle(variant,3));
             minFour = std::min(minFour,FourOracle(variant,5));
             minCombo = std::min(minCombo,Oracle(variant).first);
         }
@@ -86,7 +89,7 @@ static void RecordedSpinnerSolverTests() {
         for (unsigned phase = 0; phase < 6; ++phase) {
             auto variant = replay;
             for (unsigned i : {2u,3u,4u,20u,21u,22u}) variant.types[i] = uint8_t((denseTypes[i] + phase) % 6);
-            minT = std::min(minT,ConservativeTOracle(variant,3));
+            minT = std::min(minT,NativeTOracle(variant,3));
             minFour = std::min(minFour,FourOracle(variant,5));
             minCombo = std::min(minCombo,Oracle(variant).first);
         }

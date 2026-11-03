@@ -1,4 +1,4 @@
-static unsigned ConservativeTOracle(const PHOrbBoard &board, unsigned color) {
+static unsigned NativeTOracle(const PHOrbBoard &board, unsigned color) {
     unsigned hits = 0;
     const unsigned w = board.width, h = board.height;
     for (unsigned rotation = 0; rotation < 4; ++rotation)
@@ -9,13 +9,11 @@ static unsigned ConservativeTOracle(const PHOrbBoard &board, unsigned color) {
                 for (unsigned r = 0; r < rotation; ++r) { unsigned old = px; px = 2 - py; py = old; }
                 cells.insert((y + py) * w + x + px);
             }
+            // PAD 23.6.0 0x1005F7954: five same-color T cells whose actual
+            // first-wave removed group is exactly five. Unmarked neighbours
+            // do not matter.
             bool valid = true;
-            for (unsigned i : cells) {
-                valid &= board.types[i] == color;
-                for (unsigned j = 0; j < w * h; ++j)
-                    if (((i / w == j / w && (i + 1 == j || j + 1 == i)) || i + w == j || j + w == i) &&
-                        !cells.count(j) && board.types[j] == color) valid = false;
-            }
+            for (unsigned i : cells) valid &= board.types[i] == color;
             hits += valid && FirstWaveGroupSize(board,*cells.begin()) == 5;
         }
     return hits;
@@ -45,7 +43,7 @@ static void SearchRecoveryTests() {
         for (unsigned phase = 0; phase < 6; ++phase) {
             auto variant = replay;
             for (unsigned i : {11u,21u}) variant.types[i] = uint8_t((board.types[i] + phase) % 6);
-            minT = std::min(minT,ConservativeTOracle(variant,3));
+            minT = std::min(minT,NativeTOracle(variant,3));
             minFour = std::min(minFour,FourOracle(variant,5));
             minCombo = std::min(minCombo,Oracle(variant).first);
         }
@@ -70,7 +68,9 @@ static void SearchRecoveryTests() {
         Check(PHOrbSolve(near,options,cancel,route) == PHOrbSolveStatus::Solved && route.count == 2,
             "stable-color, locked and target-excluding spinner cycles retain valid shape guidance");
     }
-    for (unsigned seed : {36u,55u}) {
+    // Seed 36 became a primary-beam solve once exact shapes followed the
+    // native removed group (2026-11-03); seed 82 now witnesses one revisit.
+    for (unsigned seed : {82u,55u}) {
         const auto ordinary = Board(6,5,seed);
         PHOrbSolveOptions primary{24,32,1000}; primary.goals = goals; primary.recoveryPasses = 0;
         PHOrbRoute first{}, second{}, third{};
@@ -79,6 +79,9 @@ static void SearchRecoveryTests() {
         const auto secondStatus = PHOrbSolve(ordinary,recovery,cancel,second);
         recovery.backtrackLimit = 2;
         const auto thirdStatus = PHOrbSolve(ordinary,recovery,cancel,third);
+        std::printf("Recovery seed %u: primary status=%u goals=%u, recovery status=%u passes=%u, backtrack status=%u passes=%u backtracks=%u\n",
+            seed,unsigned(firstStatus),first.matchedGoals,unsigned(secondStatus),second.searchPasses,
+            unsigned(thirdStatus),third.searchPasses,third.backtracks);
         Check(firstStatus == PHOrbSolveStatus::GoalsUnmet && !first.deadlineReached,
             "bounded primary beam reproduces a missed solution");
         if (seed == 55) Check(secondStatus == PHOrbSolveStatus::Solved && second.searchPasses == 2,
@@ -87,7 +90,7 @@ static void SearchRecoveryTests() {
             third.backtracks > 0 && third.searchPasses > 2,
             "bounded revisit of discarded frontiers rescues a board missed by both whole-board searches");
         Check(third.goalsMet && PHOrbReplay(&ordinary,&third,third.count - 1,&replay) &&
-            ConservativeTOracle(replay,3) >= 1 && FourOracle(replay,5) >= 1 && Oracle(replay).first == third.combos,
+            NativeTOracle(replay,3) >= 1 && FourOracle(replay,5) >= 1 && Oracle(replay).first == third.combos,
             "recovery and backtracking witnesses satisfy independent first-wave and gravity oracles");
     }
     auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough); options.goals = goals; options.milliseconds = 1;
