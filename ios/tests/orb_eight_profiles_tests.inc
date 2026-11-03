@@ -13,7 +13,9 @@ static void EightPreparationProfilesTests(void) {
     PHOrbSnapshot charged = s; charged.automation.members[2].charge = 4;
     Check([PHOrbEightPreparationDecision(a,&charged,0)[@"readyNow"] boolValue],
         "already-ready conversion pair does not need the preferred charge turn");
-    Check(![decision[@"scoreTurn"] boolValue],"profiles without scoreTurn keep the three-orb waiting turn");
+    Check([decision[@"scoreTurn"] boolValue] &&
+        ![PHOrbEightPreparationDecision(EightPreparationProfileFixture(NO)[@"activity"],&s,0)[@"scoreTurn"] boolValue],
+        "the bundled cup profile scores the waiting turn; profiles without scoreTurn keep the three-orb route");
     {
         NSDictionary *scoring = EightScoreTurnProfileFixture()[@"activity"];
         Check(PHOrbEightActivityValid(scoring) && [PHOrbEightPreparationDecision(scoring,&s,0)[@"scoreTurn"] boolValue],
