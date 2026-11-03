@@ -23,14 +23,25 @@ static void MultiplayerPeerNativeTests() {
                 "peer exit readiness does not itself arm a native gesture");
         }
     }
+    // 8P: native clears release bit 1 (device 0x10001); the departed seat is
+    // read like 4P and the retained marker no longer blocks the local board.
+    for (unsigned peer : {0u, 5u}) {
+        Reset(); SetNativeMultiplayer(8, 2); SetNativePeerExit(peer, 6, 0);
+        Put<uint32_t>(Impl + PHOrbMultiNetworkFlagsOffset, 0x10001);
+        id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
+            state.multiplayer.disconnectKnown && state.multiplayer.disconnectSeat == peer && !writes,
+            "8P native read records the departed seat and keeps the local board playable");
+    }
     for (unsigned players : {3u, 4u, 8u}) {
         Reset(); SetNativeMultiplayer(players, 1);
         Put<uint32_t>(Impl + PHOrbMultiSyncStateOffset, 5);
         Put<uint32_t>(Impl + PHOrbMultiSyncStepOffset, 2);
         id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
-        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) == (players == 4) &&
-            bool(state.board.tokens[0]) == (players == 4) && !writes,
-            "initialized peer recovery reads the board only in 4P; 3P and 8P keep their earlier behavior");
+        // 0x100012EB4 returns nonblocking for sync 5 in both competitive modes.
+        Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) == (players != 3) &&
+            bool(state.board.tokens[0]) == (players != 3) && !writes,
+            "initialized peer recovery reads the board in competitive 4P/8P; 3P co-op keeps its blocking behavior");
     }
     {
         NativeLeaderFixture(4, 2); SetNativeExtraHelper(); SetNativePeerExit(0);
