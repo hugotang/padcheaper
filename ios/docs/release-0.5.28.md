@@ -18,3 +18,5 @@ Windows 回歸通過；邊界測試涵蓋四種形狀 × 三種尺寸 × 四方�
 | 心 ≥4 連消 0.5.27 → 0.5.28 | 25 → 30 | 29 → 32 | 34 → 35 |
 
 IMG_0407 兩種目標 × 三檔及 24 步版全部達標。測試期望的變更：0.5.13 裝置預覽（轉轉在 T 旁但任何相位都不併入）現在判為有效；seed 36 已由主搜尋解出，回訪見證改用 seed 82；荊棘零接觸補搜樣本由 7 Combo／48 步變為 6 Combo／43 步（仍達標、零接觸），門檻改為 ≥6。L／十字／3×3 只有桌面及 CI 證據，實機僅能以目前隊伍驗證 T。
+
+[CI 123](https://github.com/hugotang/padcheaper/actions/runs/41649623995) 通過完整回歸、iPhoneOS arm64 編譯與簽章及 GUI 檢查；前一次 [CI 122](https://github.com/hugotang/padcheaper/actions/runs/41646602472) 因節奏測試的 >40 步前提失效（T＋心四連路線縮為 40 步）失敗，改用最低 9 Combo 維持長路線後通過。dylib SHA-256 `3ffc805f8af9659a09a59c07bb13f0834369774dc53002b9000c417d56c6d749`，來源 `7c6a707`，交付 `E:/ipa/PADCheaper-0.5.28-orbs`。開場手動變身接續沒有專門測試，`device_verified=false`。
