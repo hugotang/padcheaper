@@ -6,6 +6,8 @@
 
 ## 2026-11-03：0.5.27-orbs，8 人依計分選路與 B6 得分等待回合，編譯驗證完成
 
+2026-11-03，使用者回報 0.5.27 兩場 8 人結算（皆無三項獎分）：①6 回合，B6 單開 #2 即過、未進等待回合，平均 Combo 5.3、剩餘 71.8 秒、消法 21,500，143,954；②7 回合，B6 觸發得分等待回合，該回合 5 Combo（9 步，0.5.26 同類回合為 1 Combo），下回合依序 #2→#3 輸出，平均 Combo 4.9、剩餘 67.0 秒、消法 23,500，141,540。與 0.5.26 的 7 回合場（平均 4.6、消法 23,000、140,012）相比，等待回合有效；樣本仍少，待更多結算再比較。
+
 2026-11-03，`0.5.27-orbs` 已由 [CI 121](https://github.com/hugotang/padcheaper/actions/runs/41590554851) 通過完整模型／solver／原生／Session／規劃／規則／設定回歸（含 8 人 C 模型、scoreTurn profile 與 Session 案例）、iPhoneOS arm64 編譯與嚴格簽章、編隊瀏覽器，以及四份 iPhone GUI 加一份 iPad GUI，皆 success、無 failures。已檢視停用「轉一次」的新樣式與 8 人轉珠頁截圖。離線重播與分數估算不是實測，`device_verified=false`。
 
 二進位來源 `53f16ef5c4dc33baa447c31c29aa557fe18e9162`；dylib 10,551,120 bytes，最低 iOS 15.0；SHA-256 `5c42486ffe0e9fe6ac01f05fa3163b16859367852870dc4d269cc35690a31338`。交付目錄 `E:/ipa/PADCheaper-0.5.27-orbs` 及同名 ZIP（SHA-256 `d8db5c5a778027ba54ec1897bd88423cbe189c8ce94cec17ca0f9a91ac45bd19`），驗證附件含 CI 120 失敗紀錄、Windows 求路對照與 B6 等待盤面重播。
