@@ -26,4 +26,4 @@
 
 ## 驗證狀態
 
-見 [開發紀錄](development.md)。模擬器與原生替身不等於 PAD 真機穩定通關；浮動列的手感與遮擋需在 iPhone 與 11 吋 iPad 實機確認。`device_verified=false`。
+[CI 119](https://github.com/hugotang/padcheaper/actions/runs/41516214048) 通過完整回歸、iPhoneOS arm64 編譯與簽章、編隊瀏覽器、四份 iPhone GUI 與一份 iPad GUI。dylib SHA-256 `5b3e95a825ad5bec090238e1164c53540c367ea0050ec02fdaf29e428235a1dc`，來源 `f870b5f`。細節見 [開發紀錄](development.md)。模擬器與原生替身不等於 PAD 真機穩定通關；浮動列的手感與遮擋需在 iPhone 與 11 吋 iPad 實機確認。`device_verified=false`。
