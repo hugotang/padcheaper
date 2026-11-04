@@ -43,14 +43,31 @@ static void PinnedSpinnerSessionTests() {
         Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
             [[session.snapshot[@"searchTrace"][@"candidateAttempts"] lastObject][@"spinnerPinnedTicks"] isEqual:@0],
             "all-phase failure falls back to a pinned current spinner phase");
+        // The solver spends spare steps on Combo, so compare with its own route.
+        const NSUInteger steps = [session.snapshot[@"steps"] unsignedIntegerValue];
         if (moved) engine->live.board.types[2] = 1; // spinner now shows another colour
         Execute(session);
         for (unsigned i = 0; i < 1000 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame(),moved ? 0.2 : 0.02);
-        if (!moved) Check([[session snapshot][@"phase"] isEqual:@"complete"] && engine->releases == 1 && engine->live.moves == 1,
+        if (!moved) Check([[session snapshot][@"phase"] isEqual:@"complete"] && steps > 0 && engine->releases == 1 && engine->live.moves == steps,
             "a pinned route grabs while its phase shows and passes the frozen-colour release check");
         else Check(![[session snapshot][@"busy"] boolValue] && !engine->stages && !engine->live.moves,
             "a pinned route waits for its colour and times out without staging any input");
     }
+    // Spinners freeze at the grab. If the phase changed between the last pre-grab
+    // read and the accepted grab, the orb is released with zero swaps.
+    FakeOrbEngine *engine = PinnedSpinnerEngine(); engine->requireHoldForStart = YES;
+    PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
+        @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}], "pinned grab mismatch fixture");
+    Check(Preview(session,engine), "pinned grab mismatch preview");
+    Execute(session);
+    for (unsigned i = 0; i < 200 && !engine->stages; ++i) Tick(session,engine,Frame());
+    Check(engine->stages && !engine->live.dragged, "the deferred grab has been sent but not yet accepted");
+    engine->live.board.types[2] = 1;
+    for (unsigned i = 0; i < 200 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([[session snapshot][@"phase"] isEqual:@"stopped"] && !engine->live.moves && engine->releases == 1 && !engine->live.dragged &&
+        [[session snapshot][@"message"] containsString:@"未移動"],
+        "a phase mismatch at the accepted grab releases without any swap and explains why");
 }
 static void OrbEffectSessionTests() {
     PinnedSpinnerSessionTests();
