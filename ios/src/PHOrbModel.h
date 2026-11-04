@@ -300,8 +300,8 @@ typedef struct {
     uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
     uint32_t spinnerRawCount, spinnerRawPeriod, spinnerRawColors;
     // 0x1005AB350: shared countdown (frames until the next colour step).
-    // It only runs while impl+600477 is 1, which the orb pick-up handler
-    // 0x1005AFA74 clears: spinners freeze from the grab until release.
+    // It keeps running during a drag: 0x10060D1F0 sets the impl+600477 gate
+    // in phase 2, and 0x1005AFA74 clears it for a member skill tap, not a grab.
     uint16_t spinnerCountdown; bool spinnerCountdownKnown;
     uint8_t spinnerRawRows[6], spinnerStoredCells;
     PHOrbSpinnerReadStatus spinnerReadStatus;

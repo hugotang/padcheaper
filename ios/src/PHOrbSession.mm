@@ -39,10 +39,11 @@ bool PersistentSkillWindow(const PHOrbAutomationState &state) {
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
     return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSamePlanBoard(&a.board, &b.board);
 }
-// Spinner phase pinning (2026-11-04, user option B): only after the ordinary
-// all-phase search fails on a solo board. Spinners freeze at the grab
-// (0x1005AFA74 clears impl+600477), so a route for one phase is safe once
-// the grab happens while that phase is showing and is verified afterwards.
+// DISABLED: pinning assumed spinners freeze at the grab. They do not: device
+// execution histories show colour steps during the drag, and 0x1005AFA74
+// clears impl+600477 for a member skill tap. A pinned route could fail its
+// release check after moving and waste the turn. See development.md.
+constexpr bool SpinnerPinEnabled = false;
 struct SpinnerPin { bool active = false; unsigned ticks = 0; uint64_t mask = 0; uint8_t types[PHOrbMaxCells] = {}; };
 PHOrbBoard PinnedSpinnerBoard(const PHOrbBoard &board, unsigned ticks) {
     PHOrbBoard pinned = board;
@@ -1439,7 +1440,7 @@ struct EightPreparationState {
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
-    const bool pinEligible = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
+    const bool pinEligible = SpinnerPinEnabled && PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
         !_eightAutomatic && PHOrbSpinnerVariants(&board) > 1 && _preview.spinnerCountdownKnown &&
         _preview.spinnerPeriodFrames && _preview.fps >= 15 && _preview.fps <= 120;
     const bool soloRetry = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&

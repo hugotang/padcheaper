@@ -34,7 +34,7 @@ static FakeOrbEngine *PinnedSpinnerEngine() {
     engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 600;
     return engine;
 }
-static void PinnedSpinnerSessionTests() {
+[[maybe_unused]] static void PinnedSpinnerSessionTests() {
     for (bool moved : {false, true}) {
         FakeOrbEngine *engine = PinnedSpinnerEngine();
         PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
@@ -70,7 +70,7 @@ static void PinnedSpinnerSessionTests() {
         "a phase mismatch at the accepted grab releases without any swap and explains why");
 }
 static void OrbEffectSessionTests() {
-    PinnedSpinnerSessionTests();
+    // PinnedSpinnerSessionTests() stays out while SpinnerPinEnabled is false.
     for (auto dimensions : {std::pair<unsigned,unsigned>{6,5}, {7,6}, {5,4}}) {
         FakeOrbEngine *engine = [[FakeOrbEngine alloc] initWithWidth:dimensions.first height:dimensions.second];
         SetEffectBoard(engine);
