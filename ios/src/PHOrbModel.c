@@ -52,6 +52,15 @@ uint8_t PHOrbSpinnerType(const PHOrbBoard *board, unsigned cell, unsigned phase)
 uint64_t PHOrbBlockedCells(const PHOrbBoard *board) {
     if (!board || !PHOrbDimensionsSupported(board->width, board->height)) return UINT64_MAX;
     uint64_t blocked = board->spinnerMask | board->tapeMask;
+    // 0x1005AB350 recolours by cell but skips 0x800 locked orbs (0x1005ABF34).
+    // When every orb is locked, nothing entering a spinner cell can change.
+    // With any unlocked orb the cell stays closed: that orb could be recoloured.
+    if (board->spinnerMask) {
+        bool allLocked = true;
+        for (unsigned i = 0; i < (unsigned)board->width * board->height && allLocked; ++i)
+            allLocked = (board->flags[i] & PHOrbFlagLocked) != 0;
+        if (allLocked) blocked = board->tapeMask;
+    }
     return blocked;
 }
 

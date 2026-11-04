@@ -124,6 +124,31 @@ static void OrbEffectSolverTests() {
         Check(!PHOrbReplay(&board, &bad, 1, &replay), "replay rejects entering a rotating cell");
     }
 
+    // All orbs locked: the corridor 14 -> 8 -> 2 crosses the spinner at 8 and
+    // completes red 0,1,2. One unlocked orb closes the spinner cell again.
+    for (bool allLocked : {true, false}) {
+        auto corridor = ShapeBoard(6, 5, {0, 1, 14});
+        corridor.spinnerMask = UINT64_C(1) << 8; corridor.spinnerColors = 63;
+        TapeExcept(corridor, {14, 8, 2}); corridor.fixedStart = 15;
+        for (unsigned i = 0; i < 30; ++i) corridor.flags[i] |= PHOrbFlagLocked;
+        if (!allLocked) corridor.flags[20] &= ~uint32_t(PHOrbFlagLocked);
+        Check(bool(PHOrbBlockedCells(&corridor) & (UINT64_C(1) << 8)) == !allLocked &&
+            bool(PHOrbBlockedCells(&corridor) & (UINT64_C(1) << 20)),
+            "a spinner cell opens only when every orb is locked; tape stays blocked");
+        PHOrbRoute through{}; through.count = 3;
+        through.cells[0] = 14; through.cells[1] = 8; through.cells[2] = 2;
+        PHOrbBoard crossed{};
+        Check(PHOrbReplay(&corridor, &through, 2, &crossed) == allLocked,
+            "replay crosses a spinner cell only on a fully locked board");
+        if (allLocked) Check(crossed.types[2] == 0 && crossed.types[8] == corridor.types[2] &&
+            PHOrbEvaluate(crossed, Goals(PHOrbGoalMatch, 1, 1, 3), result) && result.goalsMet,
+            "the orb crossing a locked spinner cell keeps its colour and completes the match");
+        PHOrbSolveOptions crossing{2, 32, 1000}; crossing.goals = Goals(PHOrbGoalMatch, 1, 1, 3);
+        std::atomic_bool stop{false}; PHOrbRoute found{};
+        const auto status = PHOrbSolve(corridor, crossing, stop, found);
+        Check(allLocked ? (status == PHOrbSolveStatus::Solved && found.goalsMet && found.count == 3) :
+            !found.goalsMet, "search uses the locked spinner corridor only when the whole board is locked");
+    }
     auto spinner = ShapeBoard(6, 5, {0, 1, 2, 7, 13}); // Red T, spinner on its border.
     spinner.spinnerMask = UINT64_C(1) << 3; spinner.spinnerColors = 63;
     Check(PHOrbEvaluate(spinner, Goals(PHOrbGoalT), result) && !result.goalsMet,
