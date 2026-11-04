@@ -575,11 +575,22 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
         route->count > PHOrbMaxSteps + 1 || through >= route->count || route->cells[0] >= board->width * board->height) return false;
     if (!PHOrbCanStartAt(board, route->cells[0])) return false;
     const uint64_t blocked = PHOrbBlockedCells(board);
+    if (route->fishing && (route->fishCell >= board->width * board->height ||
+        !(blocked & board->spinnerMask & (UINT64_C(1) << route->fishCell)) ||
+        (board->flags[route->fishCell] & PHOrbFlagLocked) || route->fishColor >= PHOrbBasicTypes ||
+        !(board->spinnerColors & (1u << route->fishColor)))) return false;
+    bool fished = false;
     *result = *board;
     for (unsigned i = 1; i <= through; ++i) {
         unsigned a = route->cells[i - 1], b = route->cells[i];
         if (!PHOrbMoveAdjacent(a, b, board->width, board->height, route->diagonal)) return false;
-        if (blocked & (UINT64_C(1) << b)) return false;
+        if (blocked & (UINT64_C(1) << b)) {
+            // One entry only. Orbs entering the cell must be in its colour
+            // table, or the native read rejects the board until they cycle in.
+            if (!route->fishing || b != route->fishCell || fished ||
+                !(board->spinnerColors & (1u << result->types[a]))) return false;
+            fished = true; result->types[b] = route->fishColor;
+        } else if (route->fishing && a == route->fishCell && !(board->spinnerColors & (1u << result->types[b]))) return false;
 #define PH_ORB_SWAP(field, type) do { type temp = result->field[a]; result->field[a] = result->field[b]; result->field[b] = temp; } while (0)
         PH_ORB_SWAP(types, uint8_t);
         PH_ORB_SWAP(flags, uint32_t);

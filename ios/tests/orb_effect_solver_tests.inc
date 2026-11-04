@@ -124,6 +124,48 @@ static void OrbEffectSolverTests() {
         Check(!PHOrbReplay(&board, &bad, 1, &replay), "replay rejects entering a rotating cell");
     }
 
+    // Fishing: the orb held at 2 enters the spinner at 8; red leaves to 2.
+    {
+        auto fish = ShapeBoard(6, 5, {0, 1});
+        fish.types[8] = 1; fish.spinnerMask = UINT64_C(1) << 8; fish.spinnerColors = 63;
+        const auto goal = Goals(PHOrbGoalMatch, 1, 1, 3);
+        PHOrbSolveOptions plain{4, 64, 1000}; plain.goals = goal;
+        std::atomic_bool stop{false}; PHOrbRoute route{};
+        Check(PHOrbSolve(fish, plain, stop, route) != PHOrbSolveStatus::Solved, "without fishing the two reds cannot match");
+        auto fishing = plain; fishing.fishCell = 8; fishing.fishColor = 0;
+        Check(PHOrbSolve(fish, fishing, stop, route) == PHOrbSolveStatus::Solved && route.goalsMet && route.fishing &&
+            route.fishCell == 8 && route.fishColor == 0, "fishing red out of the spinner meets the goal");
+        PHOrbBoard replay{};
+        Check(PHOrbReplay(&fish, &route, route.count - 1, &replay) && PHOrbEvaluate(replay, goal, result) && result.goalsMet,
+            "the fished colour stays on the board in every spinner phase");
+        unsigned entries = 0;
+        for (unsigned i = 1; i < route.count; ++i) entries += route.cells[i] == 8;
+        Check(entries == 1, "a route enters the spinner cell only once");
+        PHOrbRoute manual{}; manual.count = 2; manual.cells[0] = 2; manual.cells[1] = 8;
+        Check(!PHOrbReplay(&fish, &manual, 1, &replay), "a route not marked as fishing cannot enter the spinner");
+        manual.fishing = true; manual.fishCell = 8; manual.fishColor = 0;
+        Check(PHOrbReplay(&fish, &manual, 1, &replay) && replay.types[2] == 0 && replay.types[8] == fish.types[2],
+            "entering swaps the held orb with the shown colour");
+        manual.count = 4; manual.cells[2] = 9; manual.cells[3] = 8;
+        Check(!PHOrbReplay(&fish, &manual, 3, &replay), "a second entry would take an unknown colour and is rejected");
+        manual.count = 2; manual.fishColor = 0; auto table = fish; table.spinnerColors = 6;
+        Check(!PHOrbReplay(&table, &manual, 1, &replay), "a colour outside the spinner table cannot be fished");
+        auto badTable = fishing; PHOrbRoute none{};
+        Check(PHOrbSolve(table, badTable, stop, none) == PHOrbSolveStatus::Invalid, "search refuses a colour outside the table");
+        auto heldOutside = fish; heldOutside.spinnerColors = 1 | 2; heldOutside.types[2] = 3; manual.fishColor = 0;
+        Check(!PHOrbReplay(&heldOutside, &manual, 1, &replay), "an orb outside the table cannot enter the spinner cell");
+        auto two = fish; two.spinnerMask |= UINT64_C(1) << 20;
+        Check(PHOrbSolve(two, fishing, stop, none) == PHOrbSolveStatus::Invalid, "fishing needs exactly one unlocked spinner");
+        auto outside = fishing; outside.fishCell = 200;
+        Check(PHOrbSolve(fish, outside, stop, none) == PHOrbSolveStatus::Invalid, "an out-of-range fishing cell is rejected");
+        // Red at 8 rises to 2 in one step; the spinner at 29 is never needed.
+        auto ordinary = ShapeBoard(6, 5, {0, 1, 8});
+        ordinary.spinnerMask = UINT64_C(1) << 29; ordinary.spinnerColors = 63;
+        auto farFish = plain; farFish.steps = 1; farFish.fishCell = 29; farFish.fishColor = 0;
+        Check(PHOrbSolve(ordinary, farFish, stop, none) == PHOrbSolveStatus::Solved && none.goalsMet && !none.fishing &&
+            !none.fishCell && !none.fishColor && PHOrbReplay(&ordinary, &none, none.count - 1, &replay),
+            "a search allowed to fish still returns an ordinary route that never enters");
+    }
     // All orbs locked: the corridor 14 -> 8 -> 2 crosses the spinner at 8 and
     // completes red 0,1,2. One unlocked orb closes the spinner cell again.
     for (bool allLocked : {true, false}) {

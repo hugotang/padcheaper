@@ -405,6 +405,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     Manager _manager;
     uintptr_t _header, _realManager, _verifiedHeader;
     bool _staged, _multiplayerDisabled, _sawMultiplayer, _multiplayerOnce;
+    uint64_t _allowedSpinnerCell;
     bool _multiplayerBegan, _multiplayerReleaseSent;
     bool _multiplayerEntryKnown;
     PHBattleIdentity _multiplayerEntry;
@@ -419,6 +420,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     _multiplayerOnce = _multiplayerBegan = _multiplayerReleaseSent = false;
     _multiplayerOwnedOrb = _multiplayerStartOrb = 0;
     _multiplayerStartCell = 0; _multiplayerGesture = {};
+}
+// The session opens one spinner cell for a solo fishing route; -1 closes it.
+// stageCell: still requires the cell to be a spinner on the live board.
+- (void)allowSpinnerEntry:(NSInteger)cell {
+    _allowedSpinnerCell = cell >= 0 && cell < NSInteger(PHOrbMaxCells) ? UINT64_C(1) << cell : 0;
 }
 - (void)armMultiplayerOnce:(BOOL)armed {
     if (!armed) { _multiplayerOnce = false; return; }
@@ -862,9 +868,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             return NO;
         }
     }
+    // Fishing is solo only: multiplayer input never enters a spinner cell.
+    const uint64_t spinnerEntry = multiplayer ? 0 : _allowedSpinnerCell & live.board.spinnerMask;
     if (!PHOrbSameTurn(expected, &live) || live.boardTransition || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
-        (down && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << cell))) ||
+        (down && (PHOrbBlockedCells(&live.board) & ~spinnerEntry & (UINT64_C(1) << cell))) ||
         (down && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(cell))) ||
         (down && !PHOrbSameLeaders(expected, &live)) ||
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||

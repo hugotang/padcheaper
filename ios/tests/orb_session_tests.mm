@@ -40,6 +40,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
+    uint64_t allowedSpinnerCell; // Mirrors the native fishing gate.
     BOOL requireNineLight, omitResolvingBoard, multiplayerReleaseMetadata;
     BOOL resizeWithSkill, hangResize;
     PHOrbSkillSource chosenSource[6];
@@ -167,6 +168,9 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     state->enemyCombo = live.enemyCombo;
     return state->enemyCombo.valid;
 }
+- (void)allowSpinnerEntry:(NSInteger)target {
+    allowedSpinnerCell = target >= 0 && target < NSInteger(PHOrbMaxCells) ? UINT64_C(1) << target : 0;
+}
 - (void)armMultiplayerOnce:(BOOL)armed {
     if (armed && !multiplayerArmed) ++multiplayerArms;
     multiplayerArmed = armed;
@@ -227,7 +231,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         !PHOrbSameTurn(&live, expected) || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
-        (hold && (PHOrbBlockedCells(&live.board) & (UINT64_C(1) << target))) ||
+        (hold && (PHOrbBlockedCells(&live.board) & ~(PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ?
+            allowedSpinnerCell & live.board.spinnerMask : 0) & (UINT64_C(1) << target))) ||
         (hold && !PHOrbCanEnterThorn(&live,unsigned(target))) ||
         (hold && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(target)))) return NO;
     ++stages; cell = target; down = hold; beginning = begin; staged = YES;

@@ -14,4 +14,4 @@
 
 ## 驗證
 
-Windows 回歸通過；session、iOS 編譯與 GUI 見 CI。`device_verified=false`。
+Windows 回歸通過。[CI](https://github.com/hugotang/padcheaper/actions/runs/41835281386) 通過完整回歸、iPhoneOS arm64 編譯簽章、編隊瀏覽器及 iPhone／iPad GUI；此前兩輪測試通過但撞到 job 30 分鐘上限，上限改為 40 分鐘。dylib SHA-256 `26765572200c41b631e5231a3bcdc95005cf9ecc6d97c31c41927d0620d52157`，來源 `b36df73`，交付 `E:/ipa/PADCheaper-0.5.31-orbs`。`device_verified=false`。

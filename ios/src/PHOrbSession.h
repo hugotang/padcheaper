@@ -28,6 +28,8 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
 @optional
+// Lets the gesture enter this one spinner cell for a fishing route; -1 closes it.
+- (void)allowSpinnerEntry:(NSInteger)cell;
 // Observe an already-started 8P match while paused. This does not arm skills
 // or input; it can retain a native receipt that completes after Stop.
 - (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected

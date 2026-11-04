@@ -334,6 +334,12 @@ typedef struct {
     uint8_t mortalPoisonErased;
     bool diagonal; // Captured gesture policy; match connectivity remains four-way.
     uint32_t evaluationCalls, evaluationCacheHits;
+    // Fishing: the held orb enters this one spinner cell once, while it shows
+    // fishColor. The displaced orb leaves with that colour (0x100608738 swaps
+    // blocks; 0x1005AB350 recolours only state-0 orbs in the cell, and a held
+    // orb is state 4). The session waits for the colour before this step.
+    bool fishing;
+    uint8_t fishCell, fishColor;
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);

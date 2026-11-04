@@ -52,6 +52,7 @@ struct Context {
     bool diagonal = false;
     PHOrbActivityObjective activity{};
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
+    int fishColor = -1; // The fished orb adds one of this colour outside the spinner.
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
     // orb supply only; they are not a claim about a continuous drag route.
@@ -72,6 +73,7 @@ struct Node {
     uint32_t thornDamage = 0;
     uint8_t thornContacts = 0;
     uint8_t length = 1;
+    bool fished = false;
     Score score;
 };
 
@@ -110,7 +112,8 @@ void AddPattern(std::vector<Pattern> &patterns, Bits cells, unsigned w, unsigned
 }
 
 Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true,
-                    bool allowPoisonWithHeartFour = false, bool diagonal = false, PHOrbActivityObjective activity = {}) {
+                    bool allowPoisonWithHeartFour = false, bool diagonal = false, PHOrbActivityObjective activity = {},
+                    int fishCell = -1, unsigned fishColor = 0) {
     const unsigned w = board.width, h = board.height;
     Context context{w, h, goals, {}};
     context.allowPoisonWithHeartFour = allowPoisonWithHeartFour;
@@ -122,6 +125,7 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     context.variants = PHOrbSpinnerVariants(&board);
     context.guidance = guidance;
     context.blocked = PHOrbBlockedCells(&board);
+    if (fishCell >= 0) { context.blocked &= ~(Bits(1) << fishCell); context.fishColor = int(fishColor); }
     context.boardMask = (Bits(1) << (w * h)) - 1;
     for (unsigned i = 0; i < w * h; ++i) {
         const Bits bit = Bits(1) << i;
@@ -223,6 +227,7 @@ bool EnoughOrbs(const Cells &cells, const Context &context) {
         unsigned inventory[PHOrbTypes]{};
         for (unsigned i = 0; i < context.width * context.height; ++i)
             ++inventory[context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i]];
+        if (context.fishColor >= 0) ++inventory[context.fishColor]; // Necessary bound, not a route proof.
         for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
             if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color]) return false;
         for (unsigned g = 0; g < context.goals.count; ++g) {
@@ -591,7 +596,8 @@ Score Evaluate(Cells cells, const Context &context) {
     if (context.variants == 1) return EvaluateStatic(cells, context);
     Score worst;
     // The native spinner updater advances every settled, unlocked spinner by
-    // one color on the same countdown. Routes never disturb these cells.
+    // one color on the same countdown. Routes never disturb these cells, except
+    // a fishing route's only spinner, whose phases still cover its whole table.
     // Preserve their relative phases, including multiple/custom-color cells.
     for (unsigned phase = 0; phase < context.variants; ++phase) {
         for (unsigned i = 0; i < context.width * context.height; ++i)
@@ -896,12 +902,25 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
         options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity)) return PHOrbSolveStatus::Invalid;
+    if (options.fishCell >= 0) {
+        // The only unlocked spinner, a basic-colour table, and a colour in it.
+        // Range-check before any shift by the cell index.
+        const unsigned cellCount = unsigned(board.width) * board.height, fish = unsigned(options.fishCell);
+        bool dynamicOnly = fish < cellCount && (board.spinnerMask & (Bits(1) << fish)) &&
+            !(board.flags[fish] & PHOrbFlagLocked) && !(board.spinnerColors & ~63u) &&
+            options.fishColor < PHOrbBasicTypes && (board.spinnerColors & (1u << options.fishColor));
+        for (unsigned i = 0; i < cellCount && dynamicOnly; ++i)
+            dynamicOnly = !(board.spinnerMask & (Bits(1) << i)) || i == fish || (board.flags[i] & PHOrbFlagLocked);
+        if (!dynamicOnly) return PHOrbSolveStatus::Invalid;
+    }
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
         const unsigned size = board.width * board.height;
         Cells initial{};
         std::copy(board.types, board.types + size, initial.begin());
+        const Bits fishBit = options.fishCell >= 0 ? Bits(1) << options.fishCell : 0;
+        if (fishBit) initial[options.fishCell] = uint8_t(options.fishColor);
         Cells initialThorns{};
         for (unsigned i = 0; i < size; ++i) initialThorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
         const auto &t = options.thorns;
@@ -909,7 +928,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
         std::array<uint32_t, 128> damageTable{};
         for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
-        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal, options.activity);
+        const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal, options.activity,
+            options.fishCell, options.fishColor);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
         // evaluation. Check the clock between each such candidate.
@@ -989,9 +1009,14 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             if (now >= passDeadline && (!met() || activityRows)) { passEnded = true; break; }
                         }
                         if (cell < 0 || !PHOrbMoveAdjacent(current, unsigned(cell), board.width, board.height, options.diagonal) ||
-                            (blocked & (Bits(1) << cell)) ||
                             (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
+                        const bool entersFish = fishBit && (fishBit & (Bits(1) << cell)) && !parent.fished &&
+                            (board.spinnerColors & (1u << parent.cells[current]));
+                        if ((blocked & (Bits(1) << cell)) && !entersFish) continue;
+                        if (fishBit && (fishBit & (Bits(1) << current)) &&
+                            !(board.spinnerColors & (1u << parent.cells[cell]))) continue;
                         Node child = parent;
+                        child.fished |= entersFish;
                         if (child.thorns[cell]) {
                             const uint32_t damage = damageTable[child.thorns[cell]];
                             if (noContacts || !budgetKnown || uint64_t(child.thornDamage) + damage > thornBudget) continue;
@@ -1151,6 +1176,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (!found) return PHOrbSolveStatus::NoRoute;
         route.count = best.length;
         route.diagonal = options.diagonal;
+        route.fishing = best.fished;
+        route.fishCell = best.fished ? uint8_t(options.fishCell) : 0;
+        route.fishColor = best.fished ? uint8_t(options.fishColor) : 0;
         std::copy(best.path.begin(), best.path.begin() + best.length, route.cells);
         route.combos = best.score.result.combos; route.erased = best.score.result.erased;
         route.goalCount = options.goals.count; route.matchedGoals = best.score.result.matchedGoals;
@@ -1167,7 +1195,11 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         route.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(finished - start).count());
         route.searchPasses = uint8_t(passes); route.backtracks = uint8_t(backtracks); route.exploredDepth = uint8_t(exploredDepth);
         PHOrbBoard replay{};
-        if (!PHOrbReplay(&board, &route, route.count - 1, &replay) || std::memcmp(replay.types, best.cells.data(), size)) {
+        const bool replayed = PHOrbReplay(&board, &route, route.count - 1, &replay);
+        // A route that never entered keeps the board colour in the spinner.
+        // The search's copy holds fishColor there; evaluation reads phases.
+        if (replayed && fishBit && !best.fished) replay.types[options.fishCell] = uint8_t(options.fishColor);
+        if (!replayed || std::memcmp(replay.types, best.cells.data(), size)) {
             route = {}; return PHOrbSolveStatus::Failed;
         }
         if (!route.hazardsSafe) return PHOrbSolveStatus::Unsafe;

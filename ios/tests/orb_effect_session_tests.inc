@@ -20,57 +20,73 @@ static void SetEffectBoard(FakeOrbEngine *engine, bool spinners = true) {
     }
 }
 
-// Option B spinner pinning: the all-phase search cannot meet a red run that
-// needs the spinner red, so a solo board pins the phase and grabs only while
-// that colour shows; a different colour waits and never stages input.
-static FakeOrbEngine *PinnedSpinnerEngine() {
+// Fishing: reds at 0 and 1 need a third red that only the spinner at 8 can give.
+// The gesture holds next to the cell until red shows with frames left.
+static FakeOrbEngine *FishEngine(uint16_t colors = 63) {
     FakeOrbEngine *engine = [FakeOrbEngine new];
     auto &board = engine->live.board; const unsigned w = board.width, n = w * board.height;
     for (unsigned i = 0; i < n; ++i) { board.types[i] = uint8_t(1 + (i % w + 2 * (i / w)) % 4); board.flags[i] = 0; }
-    board.types[0] = 0; board.types[w + 1] = 0; board.types[2] = 0; // swap w+1 with 1 -> red 0,1,2
-    board.spinnerMask = UINT64_C(1) << 2; board.spinnerColors = 63;
-    // A long period keeps the predicted phase at 0 even on a slow test host.
-    engine->live.spinnerTurns = 4; engine->live.spinnerPeriodFrames = 600;
-    engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 600;
+    board.types[0] = board.types[1] = 0; board.types[w + 2] = 1;
+    board.spinnerMask = UINT64_C(1) << (w + 2); board.spinnerColors = colors;
+    engine->live.spinnerTurns = 4; engine->live.spinnerPeriodFrames = 30; engine->live.fps = 60;
+    engine->live.remainingFrames = 1200; engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 30;
     return engine;
 }
-[[maybe_unused]] static void PinnedSpinnerSessionTests() {
-    for (bool moved : {false, true}) {
-        FakeOrbEngine *engine = PinnedSpinnerEngine();
-        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
-        Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
-            @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}], "pinned spinner goal fixture");
-        Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
-            [[session.snapshot[@"searchTrace"][@"candidateAttempts"] lastObject][@"spinnerPinnedTicks"] isEqual:@0],
-            "all-phase failure falls back to a pinned current spinner phase");
-        // The solver spends spare steps on Combo, so compare with its own route.
-        const NSUInteger steps = [session.snapshot[@"steps"] unsignedIntegerValue];
-        if (moved) engine->live.board.types[2] = 1; // spinner now shows another colour
-        Execute(session);
-        for (unsigned i = 0; i < 1000 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame(),moved ? 0.2 : 0.02);
-        if (!moved) Check([[session snapshot][@"phase"] isEqual:@"complete"] && steps > 0 && engine->releases == 1 && engine->live.moves == steps,
-            "a pinned route grabs while its phase shows and passes the frozen-colour release check");
-        else Check(![[session snapshot][@"busy"] boolValue] && !engine->stages && !engine->live.moves,
-            "a pinned route waits for its colour and times out without staging any input");
-    }
-    // Spinners freeze at the grab. If the phase changed between the last pre-grab
-    // read and the accepted grab, the orb is released with zero swaps.
-    FakeOrbEngine *engine = PinnedSpinnerEngine(); engine->requireHoldForStart = YES;
+static PHOrbSession *FishSession(FakeOrbEngine *engine) {
     PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
-        @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}], "pinned grab mismatch fixture");
-    Check(Preview(session,engine), "pinned grab mismatch preview");
-    Execute(session);
-    for (unsigned i = 0; i < 200 && !engine->stages; ++i) Tick(session,engine,Frame());
-    Check(engine->stages && !engine->live.dragged, "the deferred grab has been sent but not yet accepted");
-    engine->live.board.types[2] = 1;
-    for (unsigned i = 0; i < 200 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
-    Check([[session snapshot][@"phase"] isEqual:@"stopped"] && !engine->live.moves && engine->releases == 1 && !engine->live.dragged &&
-        [[session snapshot][@"message"] containsString:@"未移動"],
-        "a phase mismatch at the accepted grab releases without any swap and explains why");
+        @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}], "fishing goal fixture");
+    return session;
+}
+static void FishSessionTests() {
+    for (unsigned scenario = 0; scenario < 2; ++scenario) {
+        FakeOrbEngine *engine = FishEngine(); PHOrbSession *session = FishSession(engine);
+        const unsigned fish = engine->live.board.width + 2;
+        Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
+            [session.snapshot[@"searchTrace"][@"fishing"] boolValue] && [session.snapshot[@"searchTrace"][@"fishColor"] isEqual:@0],
+            "a colour only the spinner can supply yields a fishing route");
+        NSArray<NSNumber *> *path = session.snapshot[@"path"];
+        const NSUInteger entry = [path indexOfObject:@(fish)], steps = path.count ? path.count - 1 : 0;
+        NSUInteger entries = 0;
+        for (NSNumber *step in path) entries += step.unsignedIntegerValue == fish;
+        Check(entry != NSNotFound && entry >= 1 && entries == 1, "the fishing route enters the spinner cell once, from a neighbour");
+        if (entry == NSNotFound || !entry) continue;
+        Execute(session);
+        Check(engine->allowedSpinnerCell == (UINT64_C(1) << fish), "execution opens only the route's spinner cell to input");
+        // Reach the neighbour, then hold. The limit is 4 s plus one 3 s cycle
+        // (6 colours x 30 frames at 60 fps); a 24-step route needs about 2 s.
+        for (unsigned i = 0; i < 300 && !(engine->live.dragged && engine->live.moves + 1 >= entry); ++i)
+            Tick(session,engine,Frame());
+        for (unsigned i = 0; i < 25; ++i) Tick(session,engine,Frame());
+        Check(engine->live.dragged && engine->live.moves + 1 == entry && [[session snapshot][@"busy"] boolValue],
+            "the gesture holds beside the cell while another colour shows");
+        if (scenario == 1) {
+            for (unsigned i = 0; i < 400 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame(),0.05);
+            Check(![[session snapshot][@"busy"] boolValue] && engine->live.moves + 1 == entry && !engine->live.dragged &&
+                [[session snapshot][@"message"] containsString:@"7.0 秒上限"] && !engine->allowedSpinnerCell,
+                "a colour that never shows stops at the extended limit without entering and closes the cell");
+            continue;
+        }
+        // The session needs at least 6 frames left in the colour (FishMinCountdown).
+        engine->live.board.types[fish] = 0; engine->live.spinnerCountdown = 5;
+        for (unsigned i = 0; i < 25; ++i) Tick(session,engine,Frame());
+        Check(engine->live.moves + 1 == entry, "too few frames left in the colour keeps holding");
+        engine->live.spinnerCountdown = 6;
+        for (unsigned i = 0; i < 400 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+        Check([[session snapshot][@"phase"] isEqual:@"complete"] && engine->live.moves == steps && engine->releases == 1 &&
+            !engine->allowedSpinnerCell, "the route takes the colour out, finishes, passes the release check and closes the cell");
+    }
+    // A table without the needed colour cannot be fished.
+    FakeOrbEngine *engine = FishEngine(6); PHOrbSession *session = FishSession(engine);
+    Tick(session,engine,Frame()); [session queueRead];
+    for (unsigned i = 0; i < 2000 && ![session.snapshot[@"phase"] isEqual:@"stopped"]; ++i) Tick(session,engine,Frame());
+    NSArray *attempts = session.snapshot[@"searchTrace"][@"candidateAttempts"];
+    Check([session.snapshot[@"phase"] isEqual:@"stopped"] && ![session.snapshot[@"canExecute"] boolValue] && !engine->stages &&
+        attempts.count && ![[attempts valueForKey:@"fishColor"] containsObject:@0],
+        "a spinner table without the wanted colour never attempts to fish it");
 }
 static void OrbEffectSessionTests() {
-    // PinnedSpinnerSessionTests() stays out while SpinnerPinEnabled is false.
+    FishSessionTests();
     for (auto dimensions : {std::pair<unsigned,unsigned>{6,5}, {7,6}, {5,4}}) {
         FakeOrbEngine *engine = [[FakeOrbEngine alloc] initWithWidth:dimensions.first height:dimensions.second];
         SetEffectBoard(engine);

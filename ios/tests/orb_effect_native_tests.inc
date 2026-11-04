@@ -75,6 +75,27 @@ static void OrbEffectNativeTests() {
         Check([engine finishInput:&reason] && [engine read:&previous frame:Frame() reason:&reason] &&
             PHOrbSamePlanBoard(&state.board, &previous.board), "native accepted start may clear dimming without changing the plan");
     }
+    // Fishing: a held orb may enter only the spinner cell the session opened.
+    Reset(); engine = PHCreateOrbEngine(); SpinnerFixture(6, 5, {0});
+    Check([engine read:&state frame:Frame() reason:&reason] && PHOrbCanPreview(&state) &&
+        [engine stageCell:1 down:YES beginning:YES expected:&state frame:Frame() reason:&reason],
+        "fishing fixture starts beside the spinner");
+    NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, state.board.tokens[1]);
+    Check([engine finishInput:&reason] && [engine read:&state frame:Frame() reason:&reason] &&
+        state.dragged == state.board.tokens[1], "fishing fixture holds the orb beside the spinner");
+    unsigned fishWrites = writes;
+    [engine allowSpinnerEntry:6];
+    Check(![engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:&reason] && writes == fishWrites,
+        "opening a cell that is not a spinner leaves the spinner closed");
+    [engine allowSpinnerEntry:0];
+    Check([engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:&reason],
+        "the opened spinner cell accepts the held orb");
+    NativeInputFrame(); Check([engine finishInput:&reason], "the fishing step restores the input lease");
+    [engine allowSpinnerEntry:-1]; fishWrites = writes;
+    Check(![engine stageCell:0 down:YES beginning:NO expected:&state frame:Frame() reason:&reason] && writes == fishWrites,
+        "closing the spinner cell refuses the step again");
+    Check([engine stageCell:1 down:NO beginning:NO expected:&state frame:Frame() reason:&reason] && [engine finishInput:&reason],
+        "the held orb can still be released after the cell closes");
     Reset(); engine = PHCreateOrbEngine();
     Put<uint32_t>(OrbCell(0) + 4, PHOrbFlagBlindTouch | PHOrbFlagEffectFresh);
     Put<uint32_t>(OrbCell(1) + 4, PHOrbFlagBlind | PHOrbFlagBlindFresh); Put<uint8_t>(OrbCell(1) + 1, 0x85);

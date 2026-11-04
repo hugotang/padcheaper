@@ -28,6 +28,10 @@ struct PHOrbSolveOptions {
     bool allowPoisonWithHeartFour = false; // Team policy: poison and mortal poison may clear with a first-wave heart four in every phase.
     bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
     PHOrbActivityObjective activity{}; // Heuristic weights, separate from native scoring.
+    // May route through the board's only unlocked spinner once, taking out
+    // fishColor. fishCell < 0 keeps every spinner cell closed.
+    int fishCell = -1;
+    unsigned fishColor = 0;
 };
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
