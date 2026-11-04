@@ -894,7 +894,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
-        !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > 1000 ||
+        !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
         options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity)) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {

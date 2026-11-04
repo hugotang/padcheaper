@@ -67,5 +67,8 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // native removed-group rule, so no border-separator bound produces it now.
 // Single-color exact shape goals still reserve distinct orb counts
 // (InsufficientOrbs). Other failures never imply infeasibility.
+// Ordinary quality budgets stay at or below 800 ms. Solo boards may retry a
+// failed search with a longer budget: the solo move timer starts at the grab.
+constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

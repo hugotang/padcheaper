@@ -299,6 +299,10 @@ typedef struct {
     uint32_t obstacles;
     uint16_t spinnerTurns, spinnerPeriodFrames, unmatchableTurns, tapeRowTurns, tapeColumnTurns, cloudTurns;
     uint32_t spinnerRawCount, spinnerRawPeriod, spinnerRawColors;
+    // 0x1005AB350: shared countdown (frames until the next colour step).
+    // It only runs while impl+600477 is 1, which the orb pick-up handler
+    // 0x1005AFA74 clears: spinners freeze from the grab until release.
+    uint16_t spinnerCountdown; bool spinnerCountdownKnown;
     uint8_t spinnerRawRows[6], spinnerStoredCells;
     PHOrbSpinnerReadStatus spinnerReadStatus;
     uint8_t fps, minErase, freeMovement;

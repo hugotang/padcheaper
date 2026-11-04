@@ -20,7 +20,40 @@ static void SetEffectBoard(FakeOrbEngine *engine, bool spinners = true) {
     }
 }
 
+// Option B spinner pinning: the all-phase search cannot meet a red run that
+// needs the spinner red, so a solo board pins the phase and grabs only while
+// that colour shows; a different colour waits and never stages input.
+static FakeOrbEngine *PinnedSpinnerEngine() {
+    FakeOrbEngine *engine = [FakeOrbEngine new];
+    auto &board = engine->live.board; const unsigned w = board.width, n = w * board.height;
+    for (unsigned i = 0; i < n; ++i) { board.types[i] = uint8_t(1 + (i % w + 2 * (i / w)) % 4); board.flags[i] = 0; }
+    board.types[0] = 0; board.types[w + 1] = 0; board.types[2] = 0; // swap w+1 with 1 -> red 0,1,2
+    board.spinnerMask = UINT64_C(1) << 2; board.spinnerColors = 63;
+    // A long period keeps the predicted phase at 0 even on a slow test host.
+    engine->live.spinnerTurns = 4; engine->live.spinnerPeriodFrames = 600;
+    engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 600;
+    return engine;
+}
+static void PinnedSpinnerSessionTests() {
+    for (bool moved : {false, true}) {
+        FakeOrbEngine *engine = PinnedSpinnerEngine();
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
+            @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}], "pinned spinner goal fixture");
+        Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
+            [[session.snapshot[@"searchTrace"][@"candidateAttempts"] lastObject][@"spinnerPinnedTicks"] isEqual:@0],
+            "all-phase failure falls back to a pinned current spinner phase");
+        if (moved) engine->live.board.types[2] = 1; // spinner now shows another colour
+        Execute(session);
+        for (unsigned i = 0; i < 1000 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame(),moved ? 0.2 : 0.02);
+        if (!moved) Check([[session snapshot][@"phase"] isEqual:@"complete"] && engine->releases == 1 && engine->live.moves == 1,
+            "a pinned route grabs while its phase shows and passes the frozen-colour release check");
+        else Check(![[session snapshot][@"busy"] boolValue] && !engine->stages && !engine->live.moves,
+            "a pinned route waits for its colour and times out without staging any input");
+    }
+}
 static void OrbEffectSessionTests() {
+    PinnedSpinnerSessionTests();
     for (auto dimensions : {std::pair<unsigned,unsigned>{6,5}, {7,6}, {5,4}}) {
         FakeOrbEngine *engine = [[FakeOrbEngine alloc] initWithWidth:dimensions.first height:dimensions.second];
         SetEffectBoard(engine);

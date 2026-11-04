@@ -74,6 +74,12 @@ bool ReadSpinner(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t k
     state.board.spinnerMask = mask;
     state.board.spinnerColors = mask ? uint16_t(colors ? colors : 63) : 0;
     state.spinnerPeriodFrames = uint16_t(period);
+    // The countdown record follows the period record (0x1005AB350 copies the
+    // 16-byte period record into it on every step); same encoding and salt.
+    uint32_t countdown = 0;
+    state.spinnerCountdownKnown = Decode(impl + PHOrbSpinnerPeriodOffset + 16, key1, key2, 0x6a875a8bu, countdown) &&
+        countdown <= period;
+    state.spinnerCountdown = state.spinnerCountdownKnown ? uint16_t(countdown) : 0;
     state.spinnerReadStatus = PHOrbSpinnerSupported(&state.board) ? PHOrbSpinnerReady : PHOrbSpinnerBadPhase;
     return state.spinnerReadStatus == PHOrbSpinnerReady;
 }

@@ -39,6 +39,37 @@ bool PersistentSkillWindow(const PHOrbAutomationState &state) {
 bool SamePosition(const PHOrbSnapshot &a, const PHOrbSnapshot &b) {
     return PHOrbSameTurn(&a, &b) && PHOrbSameLeaders(&a, &b) && a.moves == b.moves && PHOrbSamePlanBoard(&a.board, &b.board);
 }
+// Spinner phase pinning (2026-11-04, user option B): only after the ordinary
+// all-phase search fails on a solo board. Spinners freeze at the grab
+// (0x1005AFA74 clears impl+600477), so a route for one phase is safe once
+// the grab happens while that phase is showing and is verified afterwards.
+struct SpinnerPin { bool active = false; unsigned ticks = 0; uint64_t mask = 0; uint8_t types[PHOrbMaxCells] = {}; };
+PHOrbBoard PinnedSpinnerBoard(const PHOrbBoard &board, unsigned ticks) {
+    PHOrbBoard pinned = board;
+    for (unsigned i = 0; i < board.width * board.height; ++i) if (board.spinnerMask & (UINT64_C(1) << i)) {
+        pinned.types[i] = PHOrbSpinnerType(&board, i, ticks);
+        pinned.flags[i] |= PHOrbFlagLocked; // stable colour; cell stays blocked for paths
+    }
+    return pinned;
+}
+bool SpinnerPinShowing(const SpinnerPin &pin, const PHOrbBoard &board) {
+    if (!pin.active || board.spinnerMask != pin.mask) return false;
+    for (unsigned i = 0; i < board.width * board.height; ++i)
+        if ((pin.mask & (UINT64_C(1) << i)) && board.types[i] != pin.types[i]) return false;
+    return true;
+}
+PHOrbBoard PinTargetBoard(const PHOrbBoard &board, const SpinnerPin &pin) {
+    PHOrbBoard pinned = board;
+    for (unsigned i = 0; i < board.width * board.height; ++i) if (pin.mask & (UINT64_C(1) << i)) {
+        pinned.types[i] = pin.types[i]; pinned.flags[i] |= PHOrbFlagLocked;
+    }
+    return pinned;
+}
+// Colour steps after `frames` frames from a read with countdown `c`.
+unsigned SpinnerTicksAfter(unsigned frames, unsigned countdown, unsigned period) {
+    if (!period || frames < countdown) return 0;
+    return 1 + (frames - countdown) / period;
+}
 double TimeAvailable(const PHOrbSnapshot &state) {
     const double move = state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ?
         double(state.remainingFrames) / state.fps : 0;
@@ -393,6 +424,7 @@ struct EightPreparationState {
     NSDictionary *_eightHistoryProfile, *_eightLastStop;
     NSUInteger _eightResumes;
     PHOrbSnapshot _eightAutoStartMatch; // last match auto-started after countdown
+    SpinnerPin _spinnerPin;
     NSUInteger _eightSlot;
     // Grouped by lifetime: assigning {} resets every field, including ones
     // added later, so a reset site cannot silently miss new state.
@@ -467,7 +499,7 @@ struct EightPreparationState {
     _cancel.reset();
 }
 - (void)clearRoute {
-    _route = {}; _confirmed = _target = 0;
+    _route = {}; _confirmed = _target = 0; _spinnerPin = {};
     _startSent = _awaitingStart = false;
     _executionElapsed = 0;
     _recordingExecution = false;
@@ -1277,7 +1309,8 @@ struct EightPreparationState {
     if (!PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) return NO;
     options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
-    return PHOrbEvaluateRoute(state->board, _route, options, evaluation, damage, contacts) &&
+    return PHOrbEvaluateRoute(_spinnerPin.active ? PinTargetBoard(state->board, _spinnerPin) : state->board,
+        _route, options, evaluation, damage, contacts) &&
         evaluation.goalsMet && evaluation.hazardsSafe && contacts == _route.thornContacts;
 }
 - (void)beginSolve {
@@ -1406,6 +1439,12 @@ struct EightPreparationState {
     _cancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
+    const bool pinEligible = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
+        !_eightAutomatic && PHOrbSpinnerVariants(&board) > 1 && _preview.spinnerCountdownKnown &&
+        _preview.spinnerPeriodFrames && _preview.fps >= 15 && _preview.fps <= 120;
+    const bool soloRetry = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
+        !_eightAutomatic && !_preview.multiplayerDisabled && options.milliseconds < PHOrbSoloRetryMilliseconds;
+    const unsigned pinCountdown = _preview.spinnerCountdown, pinPeriod = _preview.spinnerPeriodFrames, pinFPS = _preview.fps;
     NSArray<NSDictionary *> *const assistCandidates = _goalPlan[@"assistRecoveryCandidates"] ?: @[];
     const NSUInteger generation = _generation;
     __weak PHOrbSession *weakSelf = self;
@@ -1434,6 +1473,43 @@ struct EightPreparationState {
             route = candidate; result = status; selectedOptions = trial;
             if (assistCandidates.count) selectedAssist = assistCandidates[choice];
             if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) break;
+        }
+        // Solo retry: the move timer starts only at the grab, so a failed
+        // search may continue with a longer budget (device log 2026-11-04:
+        // iPad evaluated ~60% of the desktop candidates in 800 ms).
+        if (soloRetry && !assistCandidates.count && !cancel->load(std::memory_order_relaxed) &&
+            result != PHOrbSolveStatus::InsufficientOrbs &&
+            !(result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) {
+            PHOrbSolveOptions trial = selectedOptions; trial.milliseconds = PHOrbSoloRetryMilliseconds;
+            PHOrbRoute candidate{};
+            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
+            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
+                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS), @"soloRetry":@YES}];
+            if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
+                route = candidate; result = status;
+            } else if (candidate.matchedGoals > route.matchedGoals) { route = candidate; result = status; }
+        }
+        // Option B fallback: pin one future spinner phase on a solo board.
+        SpinnerPin pin; PHOrbBoard checkedBoard = board;
+        if (pinEligible && !cancel->load(std::memory_order_relaxed) &&
+            !(result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) {
+            const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            // Frames from the board read to the expected grab: search so far,
+            // this search, and arming. Waiting for the exact phase covers error.
+            const unsigned frames = unsigned((double(spent) + options.milliseconds + 250.0) * pinFPS / 1000.0);
+            unsigned ticks = SpinnerTicksAfter(frames, pinCountdown, pinPeriod);
+            PHOrbSolveOptions trial = selectedOptions;
+            const PHOrbBoard pinned = PinnedSpinnerBoard(board, ticks);
+            PHOrbRoute candidate{};
+            const auto status = PHOrbSolve(pinned, trial, *cancel, candidate);
+            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
+                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS),
+                @"spinnerPinnedTicks":@(ticks)}];
+            if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
+                route = candidate; result = status; checkedBoard = pinned;
+                pin.active = true; pin.ticks = ticks; pin.mask = board.spinnerMask;
+                std::copy(std::begin(pinned.types), std::end(pinned.types), pin.types);
+            }
         }
         selectedOptions.milliseconds = options.milliseconds; // Public budget is the shared job, not its last slice.
         const PHOrbSolveOptions checkedOptions = selectedOptions;
@@ -1485,8 +1561,8 @@ struct EightPreparationState {
             PHOrbBoard replay{};
             PHOrbEvaluation evaluation{};
             uint32_t thornDamage = 0; uint8_t thornContacts = 0;
-            if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
-                !PHOrbEvaluateRoute(board, route, checkedOptions, evaluation, thornDamage, thornContacts) ||
+            if (!PHOrbReplay(&checkedBoard, &route, route.count - 1, &replay) ||
+                !PHOrbEvaluateRoute(checkedBoard, route, checkedOptions, evaluation, thornDamage, thornContacts) ||
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
@@ -1500,6 +1576,7 @@ struct EightPreparationState {
             trace[@"predictedBoard"] = BoardTrace(replay);
             trace[@"evaluation"] = EvaluationTrace(evaluation, checkedOptions.goals); session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = @"preview"; session->_previewAt = session->_now;
+            session->_spinnerPin = pin;
             NSString *summary = [NSString stringWithFormat:@"預計 %u Combo（不含天降／加算）· %u 步 · 約 %.1f 秒",
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
             if (session->_eightAutomatic) summary = [NSString stringWithFormat:
@@ -1513,7 +1590,9 @@ struct EightPreparationState {
                 [NSString stringWithFormat:@"等待回合：首消 %u Combo · %u 步；下回合核對技能後轉色輸出",
                     evaluation.firstWaveCombos,route.count - 1] :
                 [NSString stringWithFormat:@"準備回合：只消一組三珠 · %u 步；下回合核對技能後輸出",route.count - 1];
-            if (board.spinnerMask) summary = [summary stringByAppendingFormat:
+            if (pin.active) summary = [summary stringByAppendingFormat:
+                @"\n全部色序未找到路徑；改為鎖定 %u 步後的轉轉顏色，等該顏色出現才抓珠，抓珠後轉轉停止並再次核對。", pin.ticks];
+            else if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
             if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];
             if (route.thornContacts) summary = [summary stringByAppendingFormat:
@@ -1758,7 +1837,20 @@ struct EightPreparationState {
             [self queueStop:@"執行前荊棘傷害預算已不符合，已停止"]; return;
         }
         if (time - _requestedAt < ArmDelay) return;
-        if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
+        // A pinned spinner route may wait up to one full colour cycle for its
+        // phase. Grab only with frames left in that phase (needs the countdown).
+        double armLimit = 2;
+        if (_spinnerPin.active) {
+            const double fps = current.fps >= 15 && current.fps <= 120 ? current.fps : 30;
+            armLimit += double(PHOrbSpinnerVariants(&_preview.board) + 1) * _preview.spinnerPeriodFrames / fps;
+            if (!current.spinnerCountdownKnown) { [self queueStop:@"轉轉倒數無法讀取，已停止，未抓珠"]; return; }
+            if (!SpinnerPinShowing(_spinnerPin, current.board) || current.spinnerCountdown < 4) {
+                if (time - _requestedAt > armLimit) [self queueStop:@"等待轉轉目標顏色逾時，未抓珠"];
+                else _message = @"等待轉轉轉到求路使用的顏色…";
+                return;
+            }
+        }
+        if (time - _requestedAt > armLimit || !HasRouteTime(current, _route)) {
             [self queueStop:@"開始逾時或操作時間不足"]; return;
         }
         _phase = @"running"; _startedAt = _stepAt = _sentAt = time;
@@ -1785,7 +1877,10 @@ struct EightPreparationState {
                 // Re-evaluate the actual board at the release boundary. Do
                 // not reuse a solver score or credit the dragged orb twice.
                 PHOrbEvaluation evaluation{};
-                const bool valid = PHOrbEvaluateWithOptions(current.board, _solveOptions, evaluation);
+                // Pinned routes: spinners are frozen since the verified grab,
+                // so the actual colours are evaluated as fixed orbs.
+                const bool valid = PHOrbEvaluateWithOptions(_spinnerPin.active ?
+                    PinnedSpinnerBoard(current.board, 0) : current.board, _solveOptions, evaluation);
                 [self recordExecution:@"release-check" state:&current evaluation:valid ?
                     EvaluationTrace(evaluation, _solveOptions.goals) : @{@"valid":@NO}];
                 if (!valid || !evaluation.goalsMet || !evaluation.hazardsSafe ||
@@ -1998,6 +2093,11 @@ struct EightPreparationState {
             if (current.dragged == _preview.board.tokens[_route.cells[0]] && SamePosition(current, _preview) &&
                 (!multiplayer || PHInputIsQuiet(&current.input))) {
                 _ownedOrb = current.dragged; _awaitingStart = false; _expected = current; _stepAt = _frameAt;
+                if (_spinnerPin.active && !SpinnerPinShowing(_spinnerPin, current.board)) {
+                    // Spinners froze at this grab in a different phase. Release
+                    // with zero swaps; picking up and dropping costs no turn.
+                    [self queueStop:@"抓珠時轉轉顏色與求路不同，未移動即放開；請重新讀盤"]; return;
+                }
                 [self beginExecutionRecord:&current];
                 _message = @"正在執行；點浮動「停止」即可中斷";
             } else if (current.dragged || time - _startedAt > 0.20) {
