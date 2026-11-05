@@ -4,13 +4,16 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-06：0.5.35-orbs 編譯測試進行中
+## 2026-11-06：0.5.35-orbs 編譯測試及交付完成
 
 - 使用者明確要求「編譯測試」，本輪合併 Assist 無效單人換隊及三批可維護性變更。release.json 升至 0.5.35-orbs，新增 [版本說明](release-0.5.35.md)；0.5.34 交付檔保持不變。
 - Windows 求路器／8 人模型與 release metadata 的 6 個測試已通過。本機首次啟動因 MSYS2 工具不在 PATH 而未進入編譯，補入工具路徑後成功，不涉及產品源碼修正。
 - 目標／版本／編輯器／隊長資料生成、leader catalog、編隊／隊伍／關卡 JavaScript 回歸，以及 input／battle／preset／badge／timer 的 C 模型測試通過。輸出保存於 build/verify-0.5.35，交付時附上。
-- 完整 macOS 原生／Session／設定回歸、iPhoneOS arm64 編譯簽章、編隊瀏覽器及四輪 iPhone GUI 待本輪手動 CI。下方各批「尚未執行」描述是當時的歷史狀態，最終本版結果以本節與 verification.json 為準。
-- 尚未交付；真機驗證仍未完成。CI 維持 workflow_dispatch，不啟用 push／PR 自動建置。
+- [CI 42063773816／141](https://github.com/hugotang/padcheaper/actions/runs/42063773816) 一次全部通過，用時 25 分 52 秒；來源 `bb7062b70d4c9d7762a0702d17afc41f73545de7`。涵蓋完整 macOS 原生／Session／模型／設定回歸、iPhoneOS arm64 編譯及嚴格簽章、編隊瀏覽器、四輪 iPhone Scene／legacy 初次與重開。下方各批「尚未執行」描述是當時的歷史狀態，最終本版結果以本節與 verification.json 為準。
+- 原版 PAD 23.6.0／106878 的 35 組 Battle 與 404 組 Orb 指紋全部吻合，包含新增 Assist 禁用位置；目標檔雜湊與逐項结果已保存。四份 GUI 報告皆 `phase=done`、`success=1`、零失敗，四份 status 的 dylibVersion 皆為 0.5.35-orbs；另檢視策略開關、Auto 盤面、窄螢幕與鍵盤狀態截圖。
+- 已交付 `E:/ipa/PADCheaper-0.5.35-orbs` 與同名 ZIP（62,392,536 bytes）。dylib 10,658,432 bytes，SHA-256 `eb19f8c8bff91d5a4bef599678c42b19b1d704c2e1789c6e4501bfb9a757617c`；ZIP SHA-256 `ccc3505c3c5f0eb5fe475421bedf801489f21417e894d583be6200b84c3b6613`。交付工具與独立核對確認來源／版本／build-info／SHA256SUMS 一致，326 份內容校驗全部通過，ZIP 327 個項目與交付目錄逐檔相同且 CRC 完整。
+- 包內附完整 CI log、四份 iPhone GUI 報告／截圖、本地回歸、生成器及原版指紋核對。包內 development／release 文件保留建置時快照，最終結果以包內 verification.json 為準；本次後續提交只補完成紀錄，不變更二進位來源或已交付包。
+- `device_verified=false`。Assist 無效實際入場、變身／技能、停止後放手與多人同步仍待真機驗證。CI 維持 workflow_dispatch，不啟用 push／PR 自動建置。
 
 ## 2026-11-06：可維護性第三批——診斷輸出與版本資料，待編譯測試
 
