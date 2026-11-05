@@ -12,11 +12,21 @@ static void FailureMessageSessionTests() {
         Check([session configureSettings:@{@"mode":@"manual",@"quality":@"fast",@"goals":@[goal],@"rules":@[]}],
             "failure diagnostic settings accepted");
         Tick(session,engine,Frame()); [session queueRead];
-        Check(UntilPhase(session,engine,@"stopped") && !engine->stages && ![session.snapshot[@"canExecute"] boolValue] &&
+        // UntilPhase is an Auto helper: it returns immediately when automatic
+        // is false. Manual read/solve must instead wait for its own terminal phase.
+        for (unsigned i = 0; i < 2000 && ![session.snapshot[@"phase"] isEqual:@"stopped"] &&
+            ![session.snapshot[@"phase"] isEqual:@"fault"] && ![session.snapshot[@"phase"] isEqual:@"blocked"]; ++i)
+            Tick(session,engine,Frame());
+        const bool ok = [session.snapshot[@"phase"] isEqual:@"stopped"] && !engine->stages && ![session.snapshot[@"canExecute"] boolValue] &&
             [session.snapshot[@"message"] containsString:scenario == 0 ? @"不可消：火" :
                 scenario == 1 ? @"最少消珠規則衝突" : @"至少一種色序未通過"] &&
-            [session.snapshot[@"message"] isEqual:session.snapshot[@"searchTrace"][@"reason"]],
+            [session.snapshot[@"message"] isEqual:session.snapshot[@"searchTrace"][@"reason"]];
+        if (!ok) std::fprintf(stderr,"Diagnostic scenario %u: phase=%s message=%s reason=%s\n",scenario,
+            [session.snapshot[@"phase"] UTF8String], [session.snapshot[@"message"] UTF8String],
+            [session.snapshot[@"searchTrace"][@"reason"] UTF8String] ?: "(none)");
+        Check(ok,
             "unmatchable, minimum-match and spinner-phase failures retain their specific reason without starting a gesture");
+        [session queueStop:@"end manual diagnostic fixture"];
     }
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetEffectBoard(engine,false);
     auto &board = engine->live.board;
