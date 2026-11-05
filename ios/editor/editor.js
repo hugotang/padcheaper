@@ -8,7 +8,11 @@
   let selected = {slot:0,kind:'body'}, battle = {}, recent = [], savedJSON = '', pending = null;
   let latentChoice = 11;
   let sequence = 0, saveTimer, toastTimer, lastSaveError = '', savePromise = Promise.resolve({ok:true}), resolveSave;
-  const teamView = PHTeamView.create(model,()=>team,portrait);
+  const teamView = PHTeamView.create(model,()=>team,portrait,()=>{
+    showWorkspace('calculator');
+    $('calc-preset').focus({preventScroll:true});
+    $('calc-preset').scrollIntoView({block:'center'});
+  });
   const bridge = (action,value) => {
     const handler = window.webkit?.messageHandlers?.formation;
     if (!handler) return false;

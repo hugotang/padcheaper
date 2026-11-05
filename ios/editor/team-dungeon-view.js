@@ -3,7 +3,7 @@
   'use strict';
   const $=id=>document.getElementById(id),n=x=>x===null||x===undefined?'未知':x.toLocaleString('en-US');
   function node(tag,cls,text){const e=document.createElement(tag);e.className=cls;if(text!==undefined)e.textContent=text;return e;}
-  function create(model,getTeam,getContext){
+  function create(model,getTeam,getContext,showCalculator){
     let loaded=null,lastKey='',report=null,guideLibrary=PHTeamDungeon.parseGuides(),savedGuides=JSON.stringify(guideLibrary),pendingGuide=null,guideSequence=0;
     function guideMessage(text,error=false){$('calc-guide-status').textContent=text;$('calc-guide-status').className=error?'calc-error':'quiet';}
     function setGuides(value){
@@ -70,7 +70,7 @@
           $('calc-dungeon-results').append(node('p','quiet','此處分別計算隊長盾、日常 HP 與救援技能組合。上方手動填入的倍率及已勾選技能不額外疊加；敵人造成的減益需解除後才適用。'));
         }
         const conditions=node('p','calc-warning','目前消珠：'+(context.matches.length?context.matches.map(g=>PHTeamModel.attrNames[g.attr]+' '+g.n+' 顆'+(g.shape&&g.shape!=='match'?' '+({t:'T',l:'L',four:'四連',cross:'十字',square:'九宮格',row:'橫列',column:'直列'}[g.shape]||g.shape):'' )).join('、'):'尚未選擇，未計消珠觸發的隊長盾')+'。');
-        const change=node('button','','調整消珠／HP／技能條件');change.type='button';change.onclick=()=>$('calc-preset').scrollIntoView({block:'center'});
+        const change=node('button','','調整消珠／HP／技能條件');change.type='button';change.onclick=showCalculator;
         $('calc-dungeon-results').prepend(conditions,change);
         for(const floor of report.floors){
           const panel=node('details','dungeon-floor'),title=node('summary','');

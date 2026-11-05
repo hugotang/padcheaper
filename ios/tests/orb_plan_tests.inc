@@ -51,8 +51,12 @@ static void UryuFirstPuzzlePlanTests(void) {
             PHOrbTriggerSkillRuleWithTiming(rules[2],&state,1,3,2,NULL) == PHOrbRuleYes,
             "normal supply starts on observed turn two and continues despite displayed-run restarts");
         state.board.spinnerMask = UINT64_C(1) << 8; state.board.spinnerColors = 63;
-        Check(PHOrbTriggerSkillRuleWithTiming(rules[3],&state,1,1,0,NULL) == PHOrbRuleUnknown,
-            "a spinner-dependent ninth light is not treated as guaranteed first-puzzle supply");
+        Check(![rules[3][@"required"] boolValue] &&
+            PHOrbTriggerSkillRuleWithTiming(rules[3],&state,1,1,0,NULL) == PHOrbRuleNo,
+            "spinner-dependent optional light supply skips the skill and permits first-puzzle solving");
+        NSMutableDictionary *requiredSupply = [rules[3] mutableCopy]; requiredSupply[@"required"] = @YES;
+        Check(PHOrbTriggerSkillRuleWithTiming(requiredSupply,&state,1,1,0,NULL) == PHOrbRuleUnknown,
+            "required light supply still stops when the ninth light depends on a spinner");
     }
 }
 static void ConsumingAssistPlanTests(void) {

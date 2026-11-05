@@ -14,7 +14,7 @@
     else e.style.setProperty('--icon-id',id);
     e.setAttribute('aria-hidden','true');return e;
   }
-  function create(formation,getTeam,portrait) {
+  function create(formation,getTeam,portrait,showCalculator) {
     const model=PHTeamModel.createModel(PH_CATALOG,PH_TEAM_CATALOG,formation);
     const skillModel=PHTeamSkills.createModel(PH_TEAM_CATALOG);
     let phase='final',lastKey='',lastResult=null,finalForms={},formationKey='',custom=[],infoTimer,activeChoices=[],skillRosterKey='',skillDefinitions=[],boardBeforeSkill=null;
@@ -37,7 +37,7 @@
         'light-t-heart4':[g(3,5,'t'),g(5,4,'four')],'light-heart-l':[g(3,3),g(5,5,'l')],custom}[$('calc-preset').value];
       return c;
     }
-    const dungeonView=PHTeamDungeonView.create(model,getTeam,settings);
+    const dungeonView=PHTeamDungeonView.create(model,getTeam,settings,showCalculator);
     function renderGroups() {
       $('calc-groups').replaceChildren();
       custom.forEach((g,index)=>{
