@@ -9,4 +9,8 @@
 
 ## 驗證
 
-2026-11-05 使用者要求編譯測試，正在執行本地回歸及手動 CI；結果見 [開發紀錄](development.md)。只有通過同一來源的完整回歸、arm64 編譯簽章、編隊瀏覽器與四輪 iPhone GUI 後才交付。`device_verified=false`；撈珠取色、部位技能、實際 Combo 加算與多人同步仍待實機回報。
+Windows 回歸及 [CI 42031360877／140](https://github.com/hugotang/padcheaper/actions/runs/42031360877) 全部通過：完整原生／session／模型回歸、arm64 編譯簽章、編隊瀏覽器與四輪 iPhone Scene／legacy 初次及重開 GUI。來源 `f1c64cb74f9241899afee67dbcdc87ce01977e01`，用時 22 分 03 秒。修正過程與先前失敗記錄見 [開發紀錄](development.md)。
+
+交付 `E:/ipa/PADCheaper-0.5.34-orbs` 與同名 ZIP。dylib SHA-256 `4b6564e3ce6f7a79d88ea218e53cebb089bf4c17ae6a28a92e4b741229e4f61e`；ZIP SHA-256 `7b675cc1f70f7af90bb3e02e4b0c23a011e00fc38cafef059586e2500a0d0467`。包內 `verification.json` 與四份 GUI 報告保留最終結果。
+
+`device_verified=false`；撈珠取色、部位技能、實際 Combo 加算與多人同步仍待實機回報。完整關閉 PAD 後替換 dylib，保留原有設定與隊伍庫；LiveContainer 沿用原有重新簽署流程。
