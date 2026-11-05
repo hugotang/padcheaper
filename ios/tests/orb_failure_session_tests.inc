@@ -30,7 +30,9 @@ static void FailureMessageSessionTests() {
     }
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetEffectBoard(engine,false);
     auto &board = engine->live.board;
-    board.spinnerMask = UINT64_C(1) << 29; board.spinnerColors = 63;
+    // One spinner overlaps tape, while the route crosses the other. A blocked
+    // taped spinner does not mean that locked spinners remain impassable.
+    board.spinnerMask = (UINT64_C(1) << 29) | 1; board.spinnerColors = 63;
     for (unsigned i = 0; i < 30; ++i) board.flags[i] |= PHOrbFlagLocked;
     PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
     Check(Preview(session,engine) && [session.snapshot[@"path"] isEqual:@[@28,@29]] &&

@@ -1594,7 +1594,8 @@ struct EightPreparationState {
             if (route.fishing) summary = [summary stringByAppendingFormat:
                 @"\n路徑會從轉轉格撈出%@珠：走到旁邊後等該色出現才進入，最多多等 %.1f 秒。",
                 @[@"火",@"水",@"木",@"光",@"闇",@"心"][route.fishColor], FishWaitSeconds(session->_preview)];
-            else if (board.spinnerMask && !(PHOrbBlockedCells(&board) & board.spinnerMask))
+            else if (board.spinnerMask && std::all_of(board.flags, board.flags + board.width * board.height,
+                [](uint32_t flags) { return (flags & PHOrbFlagLocked) != 0; }))
                 summary = [summary stringByAppendingString:@"\n全盤珠子已鎖定，路徑可穿過轉轉格；封條仍不可穿越。"];
             else if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
