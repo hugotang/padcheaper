@@ -2008,17 +2008,20 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     NSDictionary *team = PHProbeJSON(@"formation.json");
     PHProbeCheck([team[@"slots"] count] == 6 && [team[@"slots"][0][@"body"][@"id"] isEqual:@14238] &&
         [team[@"slots"][5][@"assist"][@"skill"] isEqual:@1], @"formation save reaches the native validator and persists all six drafts");
-    NSString *script = @"const icons=[...document.querySelectorAll('#calc-awakenings .awakening-icon')];"
+    NSString *script = @"document.getElementById('tab-calculator').click();"
+        "const icons=[...document.querySelectorAll('#calc-awakenings .awakening-icon')];"
         "const urls=[...new Set(icons.map(e=>getComputedStyle(e).backgroundImage))];"
         "const images=await Promise.all(urls.map(async css=>{const image=new Image();"
         "image.src=css.slice(4,-1).replaceAll(String.fromCharCode(34),'');await image.decode();"
         "return {width:image.naturalWidth,height:image.naturalHeight};}));"
         "document.getElementById('calc-awakening-title').scrollIntoView({block:'start'});"
         "await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));"
-        "return {icons:icons.length,images,sized:icons.every(e=>e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20)};";
+        "return {visible:!document.getElementById('panel-calculator').hidden,icons:icons.length,images,"
+        "sized:icons.every(e=>e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20)};";
     [self.formationWeb callAsyncJavaScript:script arguments:@{} inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError *failure) {
-        PHProbeCheck(!failure && [result[@"icons"] integerValue] > 0 && [result[@"sized"] boolValue] &&
-            [result[@"images"] count] == 1 && [result[@"images"][0][@"width"] isEqual:@96] &&
+        PHProbeCheck(!failure && [result[@"visible"] boolValue] && [result[@"icons"] integerValue] > 0 && [result[@"sized"] boolValue],
+            [NSString stringWithFormat:@"Calculator tab must be visible with sized awakening icons before capture: %@ %@", result, failure]);
+        PHProbeCheck(!failure && [result[@"images"] count] == 1 && [result[@"images"][0][@"width"] isEqual:@96] &&
             [result[@"images"][0][@"height"] isEqual:@4928],
             @"Embedded awakening sprite must decode at its original dimensions before visual capture");
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -2046,7 +2049,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         if (moved) [files moveItemAtPath:backup toPath:path error:NULL];
         [self exerciseLibrary]; return;
     }
-    NSString *script = @"document.getElementById('team-title').value='尚未落盤的隊伍';"
+    NSString *script = @"document.getElementById('tab-formation').click();"
+        "document.getElementById('team-title').value='尚未落盤的隊伍';"
         "document.getElementById('close').click();const receipt=await PHFormationUI.whenSaved();"
         "return {ok:receipt.ok,save:PHFormationUI.getSaveState(),title:PHFormationUI.getTeam().title,"
         "label:document.getElementById('save-status').textContent};";
