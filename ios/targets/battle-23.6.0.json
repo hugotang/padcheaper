@@ -65,6 +65,9 @@
     "PHBattleCatalogIDOffset": "0x50c",
     "PHBattleBaseIDOffset": "0x5b0",
     "PHBattleAssistIDOffset": "0x5b2",
+    "PHBattleEffectiveAssistOffset": "0x59e",
+    "PHBattleAssistStateOffset": "0x1d8",
+    "PHBattleDungeonMemberFlagsOffset": "0x21",
     "PHBattleScriptRVA": "0x2ab85e8",
     "PHBattleParameterOffset": "0x4048",
     "PHBattleScriptRunnerOffset": "0x4200",
@@ -370,6 +373,14 @@
       "length": 64,
       "bytes": "bf0319f80820a052a88318b8bfe318383f140039083840f909e481526901a072006969f8327df29797ad0090f7c21e91400c003460e20291a13eff97f50300aa",
       "sha256": "3cc4d24ea26734569d16e1ff5ce370066e25cd0300e1fa2563cd274e7769a607"
+    },
+    {
+      "name": "PHBattleAssistDisableGuardRVA",
+      "va": "0x1005a1c94",
+      "rva": "0x5a1c94",
+      "length": 64,
+      "bytes": "08e481526801a072276968f8c70000b4e8844039880018360820a052a88318b8bfe31838b9e37329ba0359f8a8e301d1e80300f960821391e6a30091e10315aa",
+      "sha256": "9ec632c6fc7b61bc4d91eac00b87d0d047824c1f54abd3a14a2eff4724dbfe0e"
     }
   ],
   "input": {
@@ -460,6 +471,12 @@
       4,
       5
     ],
-    "other_fields": "compared-exactly"
+    "other_fields": "compared-exactly",
+    "dungeon_assist_disabled": {
+      "flag": "dungeon+33 bit 3 (0x08)",
+      "source_id": "member+1458 remains the profile assist ID and is compared exactly",
+      "effective_descriptor": "member+1438 must be 00 00 00 01 00 00 00 after normalizing unused bytes",
+      "rule_check": "same dungeon pointer and flags before and after the profile transaction"
+    }
   }
 }

@@ -4,6 +4,50 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：0.5.35-orbs 編譯測試進行中
+
+- 使用者明確要求「編譯測試」，本輪合併 Assist 無效單人換隊及三批可維護性變更。release.json 升至 0.5.35-orbs，新增 [版本說明](release-0.5.35.md)；0.5.34 交付檔保持不變。
+- Windows 求路器／8 人模型與 release metadata 的 6 個測試已通過。本機首次啟動因 MSYS2 工具不在 PATH 而未進入編譯，補入工具路徑後成功，不涉及產品源碼修正。
+- 目標／版本／編輯器／隊長資料生成、leader catalog、編隊／隊伍／關卡 JavaScript 回歸，以及 input／battle／preset／badge／timer 的 C 模型測試通過。輸出保存於 build/verify-0.5.35，交付時附上。
+- 完整 macOS 原生／Session／設定回歸、iPhoneOS arm64 編譯簽章、編隊瀏覽器及四輪 iPhone GUI 待本輪手動 CI。下方各批「尚未執行」描述是當時的歷史狀態，最終本版結果以本節與 verification.json 為準。
+- 尚未交付；真機驗證仍未完成。CI 維持 workflow_dispatch，不啟用 push／PR 自動建置。
+
+## 2026-11-06：可維護性第三批——診斷輸出與版本資料，待編譯測試
+
+- 使用者要求「繼續」。新增 [診斷輸出與版本資料](diagnostics-release.md)：`PHOrbDiagnosticPresentation.inc` 集中無 engine 呼叫的 trace／說明 helpers；`PHOrbSessionDiagnostics.inc` 集中 snapshot、搜尋／執行歷史與 8 人進度輸出。三處讀取失敗／改盤等待改用共用 `ReadIssueTrace`，保留原因、capture-time 狀態、原有 JSON 欄位及選擇性 multiplayer detail；歷史上限與 UI gate 判斷未改。
+- 新增 `ios/release.json` 與 `release_metadata.py`，版本顯示、build-info 與 CI 摘要共用資料。既有 82 個功能欄位全部保留，另補三批可維護性描述；修正已過時的圖形邊界、浮動 UI、8 人倒數／遠端退出及 B6 得分等待回合／B3 排序權重文字。CI 不再重複輸出歷代能力描述或以固定文案宣稱測試通過。
+- build／test／GUI 入口生成同一版本標頭，GUI probe 補 generated include 路徑。build-info 記錄實際傳入編譯器的最低 iOS；artifact 保存 release.json 副本。交付工具核對副本與 build-info，並同時核對 build-info／SHA256SUMS／實際 dylib 雜湊；舊包相容與已交付目錄不可覆寫限制保留。版本號仍為 0.5.34-orbs，沒有以本輪源碼變更冒充已交付版本。
+- 新增 `release_metadata_tests.py` 及 `orb_diagnostics_session_tests.inc`，接入既有手動 macOS 測試入口。涵蓋版本／特徵保留欄位、最低 iOS 覆寫、artifact 快照一致性、讀取失敗／改盤診斷、JSON 序列化及 snapshot 不增加原生讀取或操作。**案例僅已寫入，尚未執行。**
+- 靜態檢查：74 個既有方法／helper 中 72 個搬移前後 token 相同，另外兩個只把三處 `_lastReadIssue` 組裝改成共用入口；原有三組欄位集合核對保留。Python AST、release JSON 重複鍵／引用、workflow YAML、shell `-n` 與 7 份 C 系列原始碼的括號／include 檢查完成；版本 header 已生成。Objective-C++ 型別、實際建置／metadata finalization／交付仍待驗證。
+- **未編譯、未跑測試、未 dispatch CI、未升版或打包。** 前兩批共用隊員狀態、Assist 無效換隊、Auto 生命週期與本批一起列入下次「編譯測試」；CI 仍只接受 workflow_dispatch，GUI 仍為四輪 iPhone，`E:/ipa` 交付檔未變更。
+
+## 2026-11-05：可維護性第二批——Auto 狀態與生命週期，待編譯測試
+
+- 使用者要求「下一步」，接續第一批共用隊員狀態整理。新增 [Auto 執行狀態與生命週期](auto-session-state.md)：`PHOrbSessionState.h` 定義 19 個明確 phase，對外仍輸出原有文字；`PHOrbAutoRunState` 用單一模式取代 `_automatic`／`_eightAutomatic`，集中身分、計數、等待時間與消除證據。
+- 新增 `PHOrbAutoLifecycle.inc`，集中啟停、前背景中斷、等待盤面與倒數啟動；`PHOrbAutomationSession.inc` 收納單人策略綁定、規則／開場／回合推進及原生幀技能派發。Session 主檔保留求路、預覽、輸入所有權、放手及快照；`.inc` 仍屬同一 implementation，未引入額外執行緒或非同步切換。
+- 明確區分單人重新開始、新 8 人場次與同場接續：Stop 保留已確認證據，只撤銷執行模式與 engine 資格。8 人倒數使用紀錄獨立於 run，設定重載與 Stop 不重置；原生 arm 拒絕亦不會觸發同場自動重試。取消後的放手仍可執行，重複前背景通知保留原停止原因。單人／多人限制與逐次來源、操作窗口校驗維持。
+- 新增純模型 `orb_session_state_model_tests.inc` 及 `orb_auto_lifecycle_session_tests.inc`，接入既有測試入口；涵蓋狀態保留／清除、phase 字串相容、倒數條件、原生 arm 失敗、設定切換後不重試、下一場與持珠中停止。**案例僅已寫入，尚未執行。**
+- 共用狀態 header 及含新案例的 C++ solver 測試原始碼通過 `-fsyntax-only -Wall -Wextra -Werror`。搬移前後 65 個既有方法中，57 個在還原型別／欄位更名後的程式 token 相同；8 個啟停／調度方法逐項覆核，另核對抽出的原生幀技能派發與原本分支一致（包含提前返回）。10 份相關原始碼通過括號／include 檢查，舊狀態變數與文字比較已移除，文件連結及 Git 差異檢查通過。這些不替代 Foundation／Objective-C++ 編譯；第一批隊員狀態與 Assist 無效換隊修正仍一併待驗證。
+- **未執行測試套件、iPhoneOS／macOS 編譯、GUI、CI 或打包，未升版或修改已交付包。** 下次「編譯測試」須驗證完整 Session／原生／模型回歸與 iPhone GUI。診斷序列化及版本說明整理留待下一批。
+
+## 2026-11-05：可維護性第一批——共用隊員狀態與關卡限制，待編譯測試
+
+- 使用者同意開始整理可維護性。本批先完成最優先的來源／當前形態／有效武裝分離，詳見 [共用隊員狀態](member-state.md)。新增純 C 的 `PHBattleMemberIdentity` 與 `PHBattleDungeonMemberRules`，並以同一唯讀 decoder 支援 Battle 整塊快照及 Orb 逐欄位讀取；不新增常駐鏡像狀態。
+- 換隊、技能、入場 SB、戰況診斷、覺醒／武裝 L 回復與 Combo 觀察改用共用規則；移除只在 `PHOrbSkillChoice.inc` 內可見的 `SkillSourceState`／`ReadSkillSource`。武裝欄位與禁止覺醒／武裝／潛覺的旗標具名化，生成器檢查 PAD 23.6.0 的版面，Battle／Orb 關卡指標以 static_assert 核對一致。
+- 保留現有 public snapshot／保存 JSON／UI。當前角色仍決定可用技能，底層身分只用於暫時變身下的策略連續性；保留並擴充暫時變身的再次讀取核對。空規則物件與讀取失敗分開；換隊／SB 仍要求非空關卡，技能仍保留原本可接受空規則物件的行為。多人操作政策、原生資格、指紋、失敗還原皆維持。
+- 新增 `battle_member_model_tests.inc`、`battle_member_reader_tests.inc`、`orb_member_state_native_tests.inc`，已接入既有入口。涵蓋一般／持續／暫時變身、固定角色大 ID、空有效武裝、禁用／未知規則、padding、損壞 protected 欄位、短快照、讀取失敗不發布部分結果、零寫入及本體／武裝技能選擇。
+- 已完成 C 模型與純模型測試原始碼、C++ solver 的 `-fsyntax-only -Wall -Wextra -Werror`，未輸出二進位或執行案例。已重新產生忽略追蹤的 battle header，並檢查 Python AST、target JSON、指紋宣告與跨模組關卡指標。**尚未執行測試套件、macOS／iPhoneOS 編譯、GUI、CI、打包或真機驗證**；舊版通過紀錄不涵蓋本批。Auto 狀態機拆分與版本說明集中化留待獨立批次。
+- 共用 C++ reader 另以只有記憶體函式宣告的 Windows 語法適配檔實例化兩種讀取入口，通過 `-fsyntax-only`；此檢查不涵蓋 Foundation／Objective-C。已檢查 23 份變更／新增 C 系列原始碼的括號與本地 include、架構文件相對連結及 Git 差異空白。
+
+## 2026-11-05：Assist 無效關卡的單人換隊修正，待編譯測試
+
+- 使用者回報單人 Assist 無效關卡不能自動換隊。源碼與 PAD 23.6.0 原生重建流程確認：`dungeon+33 & 0x08` 會清空有效武裝描述（member+1438），但來源武裝 ID（member+1458）仍保留。0.5.34 將有效描述與保存配裝直接比較，帶武裝的隊伍會在「套用後的培養或武裝欄位不符」處失敗並還原。現有 log 未包含這次失敗入場，故這是已確認的程式缺陷，尚未有本關的實機重現紀錄。
+- `PHBattleProvider.inc` 套用前後讀取並核對相同的關卡指標與限制旗標；確認關卡禁用武裝時，要求有效描述為原生的空武裝格式。來源 ID、保存配裝、provider 所有權與本體培養仍逐項核對，不修改關卡旗標，也不讓武裝技能、覺醒或 SB 生效。入場自動套隊與手動配裝共用此修正；還原流程仍核對原始隊員快照。
+- 補上原生 `0x1005a1c94` 的 64-byte 指紋及生成器必要項。已對照 IDA 中 `0x1005a1ca4` 的限制讀取與清空分支，並核對指紋位元組；詳見 [入場數值與套用時機](entry-derived-state.md)。
+- 新增原生 fixture 案例：六格自動／手動套隊、來源武裝保留而有效武裝清空、SB 排除被禁用武裝、每場只套一次、完整還原、第四格失敗後整隊還原、有效描述損壞、普通關卡意外失去武裝、關卡限制無法讀取時零寫入。fixture 的 SB 計數改讀有效武裝 ID，符合原生規則。
+- 靜態檢查完成：生成器 Python AST、target JSON 重複鍵／格式、35 個指紋名稱集合與長度／SHA-256／RVA 一致性、新案例 include／入口及 Git 差異空白。CI 仍只有手動 dispatch。
+- **未執行測試套件、iPhoneOS 編譯、GUI、CI 或打包。** 本批案例僅已寫入，待下次明確要求「編譯測試」後驗證；0.5.34 的成功 CI 不涵蓋此修正。已交付版本未變更，真機仍需核對 Assist 無效關卡的實際入場、SB／技能與退出還原。
+
 ## 2026-11-05：0.5.34-orbs 已交付，完整編譯測試通過
 
 - 使用者明確要求「編譯測試」，集中驗證下列 UI、角色／潛覺圖示、Auto 可選缺珠、Combo 加算及敵人部位技能修正。版本升為 0.5.34，與已交付 0.5.33 區分。

@@ -350,6 +350,7 @@ static void ReadIssueNativeTests() {
 }
 
 #include "orb_skill_native_tests.inc"
+#include "orb_member_state_native_tests.inc"
 #include "orb_assist_native_tests.inc"
 #include "orb_enemy_combo_native_tests.inc"
 #include "orb_enemy_parts_native_tests.inc"
@@ -507,6 +508,7 @@ int main() {
         Reset(); codeValid = false; engine = PHCreateOrbEngine();
         Check(![engine read:&state frame:Frame() reason:&reason] && writes == 0, "wrong target rejects native access");
         SkillNativeTests();
+        SharedMemberStateNativeTests();
         AssistNativeTests();
         EnemyComboNativeTests();
         EnemyPartsNativeTests();

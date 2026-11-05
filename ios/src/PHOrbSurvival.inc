@@ -92,11 +92,11 @@ void ReadSurvival(PHOrbSnapshot &state, uintptr_t dungeon, uint32_t key1, uint32
         (shadow ^ hp) == 0x8085a6beu && ReadMaximumHP(state, dungeon, key1, key2, maximum) && hp <= maximum;
     out.maximumHP = out.hpKnown ? maximum : 0;
     uint16_t awakening = 0;
-    uint8_t flags = 0;
-    out.statusKnown = dungeon && dungeon <= UINTPTR_MAX - 34 &&
-        PHReadU8(dungeon + 33, &flags) && PHReadU16(state.identity.impl + PHBattleAwakeningStateOffset, &awakening);
+    PHBattleDungeonMemberRules rules{};
+    out.statusKnown = dungeon && PHReadDungeonMemberRules(dungeon, rules) &&
+        PHReadU16(state.identity.impl + PHBattleAwakeningStateOffset, &awakening);
     if (out.statusKnown) {
-        out.awakeningRestricted = (flags & 4u) != 0;
+        out.awakeningRestricted = PHBattleDungeonDisables(&rules, PHBattleDungeonAwakeningsDisabled);
         if (PositiveDuration(awakening)) out.playerEffects |= PHOrbPlayerAwokenBind;
     }
 }

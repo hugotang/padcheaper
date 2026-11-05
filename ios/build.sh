@@ -5,6 +5,7 @@ repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_dir"
 build_dir="${BUILD_DIR:-$repo_dir/build/ios}"
 mkdir -p "$build_dir" ios/generated
+python3 ios/tools/release_metadata.py header
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
@@ -13,7 +14,7 @@ python3 ios/tools/generate_leaders.py
 
 sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 clang_path="$(xcrun --sdk iphoneos --find clang)"
-min_version="${IPHONEOS_DEPLOYMENT_TARGET:-15.0}"
+min_version="${IPHONEOS_DEPLOYMENT_TARGET:-$(python3 ios/tools/release_metadata.py minimum-ios)}"
 
 for native in PHBattleNative PHTimer PHMusic PHOrbNative PHOrbSession; do
 "$clang_path" -arch arm64 -isysroot "$sdk_path" \
@@ -94,6 +95,7 @@ cp -R ios/templates/halloween-ciel-gamewith-579537 "$build_dir/templates/"
 cp -R ios/templates/eight-player-thanks-2026 "$build_dir/templates/"
 cp ios/docs/uryu-byakuya-0.5.2.md "$build_dir/uryu-byakuya-0.5.2.md"
 cp ios/docs/development.md "$build_dir/development.md"
+cp ios/docs/member-state.md ios/docs/auto-session-state.md ios/docs/diagnostics-release.md "$build_dir/"
 cp ios/docs/enemy-aware-automation.md "$build_dir/enemy-aware-automation.md"
 cp ios/docs/battle-observation.md "$build_dir/battle-observation.md"
 cp ios/docs/enemy-action-observation.md "$build_dir/enemy-action-observation.md"
@@ -144,130 +146,4 @@ cp ios/targets/pad-23.6.0.json "$build_dir/target.json"
 cp LICENSE "$build_dir/LICENSE"
 rm "$build_dir/PHBattleNative.o" "$build_dir/PHTimer.o" "$build_dir/PHMusic.o" "$build_dir/PHOrbNative.o" "$build_dir/PHOrbSession.o" "$build_dir/PHOrbSolver.o"
 
-python3 - "$build_dir" <<'PY'
-import hashlib
-import json
-import re
-from pathlib import Path
-import subprocess
-import sys
-
-directory = Path(sys.argv[1])
-binary = directory / "PADCheaper.dylib"
-for notes in directory.glob("*.md"):
-    content = notes.read_text(encoding="utf-8")
-    for old, new in (("](docs/", "]("), ("](../research/", "](research/"),
-                     ("](../templates/", "](templates/"), ("](../third_party/", "](third_party/"),
-                     ("](../README.md", "](README.md"), ("](../CHANGELOG.md", "](CHANGELOG.md"), ("](../editor/assets/", "](third_party/PADDashFormation/"),
-                     ("](../.github/workflows/ios-dylib.yml)",
-                      "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
-        content = content.replace(old, new)
-    for source, target in (("pad-23.6.0.json", "target.json"),
-                           ("battle-23.6.0.json", "battle-target.json"),
-                           ("orbs-23.6.0.json", "orb-target.json")):
-        content = content.replace("](../targets/" + source + ")", "](" + target + ")")
-    notes.write_text(content, encoding="utf-8")
-for template_notes in (directory / "templates").glob("*/*.md"):
-    template_notes.write_text(template_notes.read_text(encoding="utf-8").replace(
-        "](../../docs/", "](../../"), encoding="utf-8")
-sha = hashlib.sha256(binary.read_bytes()).hexdigest()
-version = re.search(r'#define PH_RUNTIME_VERSION @"([^"]+)"',
-                    Path("ios/src/PHOverlay.h").read_text()).group(1)
-metadata = {
-    "schema": 1,
-    "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-    "architecture": "arm64",
-    "dylib_version": version,
-    "gui": "formation/calculator/dungeon tabs retain drafts and scenarios; selected body/assist portraits with numbered fallback and embedded latent icon picker; compact expandable rule/profile editors and independent global 8P countdown preference; acknowledged atomic library saves; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",
-    "solo_team_model": "offline selected formation and unique final transforms; native-derived HP/RCV stat formulas, known conditional leader shields and no-skyfall heart-heal estimate; explicit unknowns and branch choices; no badge or live-state import; no survival automation authorization",
-    "team_active_skills": "explicit body/assist skill scenarios with CD, duration, delayed/staged effects and per-category replacement; Unohana HP/RCV x3 and 7x6 for one turn; Haschwalth 35% shield for five turns; Byakuya HP x1.5 for one turn; increased maximum HP does not heal",
-    "team_dungeon_comparison": "one-tap in-memory captured report to selected formation, or JSON file/paste; all captured floors, observed/inferred ATK provenance, conditional multi-enemy and rage scenarios, partial/unknown effects, explicit HP and recovery assumptions; importable and separately persisted guide JSON, bundled dated GameWith Lv5 notes; no live enemy forecast or Auto survival authorization",
-    "formation_awakenings": "embedded body/super-sync/assist/latent sprites, all-team counts and per-member sources; equivalent SB and common status resistance; PADDashFormation pinned asset sources and GPL-3.0 notice included",
-    "formation_save": "canonical write must succeed before publishing the automatic entry selection; failed or unacknowledged saves keep the editor open and retain drafts",
-    "automatic_orbs": "single-player 6x5/7x6/5x4 continuous or once; 3/4/8-player explicit local once with Combo/manual/current native leader goals; local turn/view/source and current parameter checks, explicit 4P extra-skill helper handling; every route requires goals, native timing and swap/release acknowledgement; pending device verification",
-    "battle_observation": "optional read-only stable single-player current enemy HP/effects, assist-void/L-provider eligibility and table-based skill charge thresholds; separate optional fingerprints; no native getter calls, enemy action forecast, shield/healing calculation or survival-based automation; pending device verification",
-    "enemy_action_observation": "optional current solo catalog/AI/raw action definitions with bounded double reads, partial control descriptions and compound order; separate fingerprints; cached IDs are not forecasts; unknown branches, damage, shield/healing, spawn generations and survival remain unsupported; pending device verification",
-    "enemy_selector_analysis": "optional conditional ordinary row-zero traversal with current AI state and all HP percentages; flags/counters, legacy second-pass inheritance and conservative candidate branches; bounded states/candidates/shared steps/weighted pool, unknown frontiers retained, attached attack before status; separate fingerprints; actual next entry, projected AI, damage and survival remain unknown; pending device verification",
-    "enemy_dispatch_analysis": "optional conditional dispatch entry, countdown tick and post-selection accounting checkpoints; preserves cache/compound/override branches and unknown preparation suffixes; independent fingerprints and bounded double reads; post-player state and actual next entry remain unknown; pending device verification",
-    "enemy_damage_analysis": "optional conditional resolved-damage, survival, cleanup, snapshot and phase checkpoints; preserves native signed/unsigned and floating-point boundaries; three non-exhaustive probes assume unchanged captured fields, callback suffixes stay unknown; independent fingerprints and bounded double reads; no team damage, next-hit survival or automation authorization; pending device verification",
-    "enemy_combo_countermeasure": "ordinary solo continuous mode captures live absorption, Combo debits and effective positive skill adjustment after skills; proven current leader/helper/badge bonuses reduce only the enemy lower-threshold requirement, with first-removal trigger constraints and at least one real match; retains user and assist goals; upper absorption stops; source/effect changes revoke the route before or during input; no unknown bonus, combo-orb, cascade, skyfall or survival credit; pending device verification",
-    "enemy_parts": "solo skills and Combo planning accept independently verified signed mode, protected part HP and living ordinary owner; unknown parts still block and live-part effects are conservatively retained; action and source evidence is rechecked before skills and input; 8P part policy unchanged; pending device verification",
-    "dungeon_report": "read-only capture of all loaded entry floors from a stable solo player window, exact current spawn binding, per-floor catalog variants and action definitions with explicit missing data, bounded retained observations and same-entry stop trace; real JSON file and system share sheet with cancellation cleanup; no random-alternative or future-AI proof; pending device verification",
-    "enemy_threat_events": "ordered conditional attack, gravity, enrage and status events from captured definitions; repeated compound children and attached-hit order retained; native rounding and one-time addition modeled; pre-shield bounds assume captured attack state, gravity requires post-player HP; not an actual next-turn forecast or survival authorization; pending device verification",
-    "assist_recovery_l": "opt-in ordinary solo continuous policy; fresh read-only L providers and duration, all base goals retained, up to 12 allocations sharing one search deadline, recheck before input and confirm next stable duration zero; no native queue-capacity guarantee, partial recovery or survival defer; pending device verification",
-    "multiplayer_next_board": "4P accepts the native retained submitted bit only with all other local-window checks; 3P/8P retain their existing flag masks; next gesture requires another explicit tap; device confirmation pending",
-    "multiplayer_peer_exit": "4P accepts initialized peer recovery sync 5/step 2 and a validated remote-seat departure at sync 15 or retained flag 0x10000; local status/connection/clock/board checks still required; recovery entry cancels old input; 3P/8P unchanged; device verification pending",
-    "multiplayer_entry": "orb mode latch is scoped to a confirmed account/image and entry hash; a new match retires old mode and gesture intent even when the menu was not observed; only the reviewed mode 7 selector 1 to 2 continuation may change ownership within an entry; reverse/unknown transitions and racing reads remain blocked; device verification pending",
-    "multiplayer_solo_continuation": "mode 7 selector 2 uses retained local bank ownership, completed native cleanup and the native move timer for explicit local once; recovery bit 0x40, modal, invalid owner/timer and resolution remain blocked; transition revokes old input; no continuous or skill automation; device verification pending",
-    "orb_memory_ranges": "read/write non-executable battle core ends at impl+0xbe000; each used modal pointer beyond the core is separately protected, without requiring unused allocation-tail pages",
-    "fixed_multiplayer_leaders": "native parameter chains use total allocated catalog records for fixed variants; 4P extra helper contributes only its validated active skill; fixed leader board rules use dedicated skill facts; manual goals can be edited when leader data is unavailable",
-    "orb_readiness_diagnostics": "current session and runtime button gates plus up to 16 distinct multiplayer states observed by UI snapshots, retained after exit; metadata-only release keeps the last complete observed board",
-    "orb_initial_readiness": "expanding PC shortcuts or opening the orb panel starts read-only native-frame readiness observation at most four times per second before any explicit solve; first 8P Auto becomes available after countdown and all local-window checks; no action intent or battle-report collection from UI observation",
-    "orb_clear_stop": "verified native clear/result phases 28-31 and 67/68 stop solo and 8P Auto without waiting for scene exit, finished flag or timer expiry; terminal metadata does not depend on retired actors; ordinary floor/skill transitions and 8P phase 69 continue; new matches require an explicit start; device verification pending",
-    "team_plan_config": "versioned formation + ordered confirmed opening + rotation + board goals; confirmed consumeAssist and final puzzleAfter; accepted-use group intervals and startAfter persist within the same battle/strategy across stop/restart; atomic single-file config commit; source/skill constraints never force a native choice",
-    "team_plan_templates": "Uryu preserves Byakuya on a sufficient first board with immediate shortage rescue; CIEL recommended plus independent single/double Kenpachi plans; single Kenpachi uses Unohana #14061 after a seven-step opening with mandatory three-skill supply and absorption rescue only; no universal seamless-skill or healing guarantee",
-    "diagonal_orbs": "optional default-off adjacent eight-direction search, replay and native acknowledgement; matching stays horizontal/vertical; atomically saved with selected profile/team plan; device verification pending",
-    "skill_window_recheck": "transient native closure waits up to three seconds and rechecks before activation and first touch; no once/group/opening receipt consumed while waiting; persistent restrictions and identity/input changes still stop",
-    "profile_file_sharing": "selected ordinary profile or complete team plan as bounded JSON file; native share sheet and document picker; preview before atomic save; duplicate IDs refused; no account/API/master switches",
-    "deck_persistence": "save_decks ID 58 native commit; exact queued raw record correlation recovers serializer-defaulted badges and respects confirmed explicit zero; account-bound per-field deferred restore with readback and cancellation",
-    "unlock_restoration": "disabled cosmetic ownership and descriptor restoration retains failed work until readback; changed table, ID or native descriptor value revokes old lease",
-    "uncleared_team_music": "optional default-off single-player named registered tracks; native ASCII case-insensitive prefix and first-match order; named-track diagnostics; read-only clear predicate; native temporary music override, boss selection and event/script priority",
-    "opening_board_resize": "validated native resize interpolation preserves in-flight skill receipts; no geometry, planning, next skill or input during resizing; stable full board required to continue; original identity/input/multiplayer guards and bounded timeout retained",
-    "skill_body_choice": "native same-evolution-family base/assist choice only; body still passes native cooldown, board and status conditions; source/stage/family rechecks; no forced readiness or charge writes",
-    "thorn_combo_priority": "optional default-off, atomically saved with profile and team plan; goals/hazards then combos before thorn damage when enabled; exact first-wave heart four and verified surviving HP still mandatory",
-    "normal_poison_with_heart_four": "optional default-off per strategy and full team plan; poison and mortal poison matches accepted only with an exact straight first-wave heart four in every shared spinner phase; goals and Combo precede accepted poison count; all bombs must clear first wave; user-confirmed team recovery, no healing or poison damage calculation",
-    "thorn_zero_contact_search": "contact candidates can trigger a bounded zero-contact pass within the original deadline; independent replay fixture records comparison, not device timing",
-    "clear_dungeon_audit": "read-only request/statistics analysis documented; no clear payload rewrite, audit clearing or local revival",
-    "temporary_team_form": "validated native temporary identity preserves completed opening; original/generic actor skills pause, explicit current-monster rules may run; required rescue remains enforced; actual current leaders determine leader-mode goals",
-    "orb_release_trace": "fresh actual-board evaluation before release with captured poison policy; bounded last-three accepted routes and search trace; independent mortal poison maxima and evaluated hazard failure context; no device first-wave confirmation",
-    "automatic_skills": "up to 12 ordered conjunctive rules: member/current monster, run-relative turn interval, floor, orb shortage, and verified enemy absorb/void conditions; native current-skill confirmation with readiness gates; at most one skill per position per orb turn; no automatic dungeon entry or result-screen input",
-    "skill_readiness_diagnostics": "refusals retain attempt-time accumulated charge, actual native base/assist IDs and cooldowns, protected stages and derived stage caches; idle polls call no getters; cooldown sufficiency never overrides native refusal; skill-stage/level/assist/use-count races invalidate the attempt",
-    "skill_selection_reset": "only an idle member passing native readiness may reset a retained selection to the native default sentinel; exact ID and fresh snapshot checked, no charge writes",
-    "floating_orb_shortcuts": "default collapsed 56px PC bubble; idle tap expands once/auto/collapse, second PC opens settings; busy PC immediately stops even folded; refresh/panel close retain folding; draggable shortcuts wrap with 44px minimum targets; current multiplayer readiness shares the button gate and retained stop cause stays in diagnostics/accessibility",
-    "scripted_team_provider": "inspect native bounded bytecode from initial and all event roots; share empty records only when no party opcode exists; preserve native script and events; refuse malformed/unknown/running contexts",
-    "team_restore_continuity": "ignore only native assist padding and unused skill bytes without an assist; retain per-slot restore failure reasons and retry unfinished leases; successful restores permit another team; uncertain writes block their original battle until an observed exit or validated different battle",
-    "orb_frame_pacing": "65 ms target submission spacing includes native render time; every swap must still be acknowledged; unchanged four-second execution deadline and native time budget, with specific stop cause and elapsed time",
-    "automatic_orb_input": "one began per route followed by held frames in the same private input bank; accepts tall iPhone layouts that defer selection; initial cancellation cause survives unowned/scene cleanup; start sent/accepted diagnostics; device repair pending",
-    "automatic_skill_ready_shortcut": "rule editor sets every=1 while preserving all conditions, rotation group and floor reservation; checks before each orb turn only in continuous mode",
-    "orb_strategies": "up to 64 saved profiles bind start-time team/dungeon; explicit-start matching rejects ambiguity; six rotating exclusive skill groups, battle-once rules and slot-wide floor reservations; saved profile and working settings commit atomically",
-    "orb_survival": "read-only effective HP thresholds and temporary awakening/member bind or skill-seal conditions; required rules/groups need confirmed completion before a route while allowing other skills to remedy or haste; uncertain attempts never count as success; captured HP/player-state changes cancel the route; per-rule reasons shown; device verification pending",
-    "orb_recovery": "optional continuous-only post-skill HP threshold adds one to three heart groups, at least three connected or exactly four in a straight line; conjoins base goals without overriding required skills; unknown HP, insufficient hearts or unmet goals stop; atomic profile persistence; no recovery-amount or damage estimate; device verification pending",
-    "orb_obstacles": "cloud/blind/super-blind use actual types; tape/fixed start constrain every step; weak/locked/nail/combo metadata preserved; native unmatchable and removal rules applied; jammer ordinary combos, poison/mortal matches forbidden by default; optional poison/mortal policy requires first-wave heart four in all phases; all bombs must clear first wave; thorn target contacts require current HP above pending plus route damage upper bound and first-wave heart four, without crediting healing/resistance; unknown effects still block",
-    "skill_orb_conditions": "native refusal may explain direct composite type-255 color counts; only actual attempt context retained; no bypass of native readiness; color-specific unmatchable rule uses ANY selected basic color, other predicates remain AND",
-    "orb_spinners": "validate all six stored row masks before clipping after resize; offscreen cells do not block; custom types 0-9; normal paths avoid unlocked spinners and evaluate all shared phases; all-locked boards may cross them; solo no-thorn fallback can enter one basic-color spinner once to fish a goal color with verified countdown and a full-cycle time budget; optional phase-dependent shortage rules skip the skill and continue solving, required rules stop; raw read diagnostics retained; pending device verification",
-    "orb_shape_search": "bitset runs/groups/gravity preserve exact four and conservative shape borders; spinner multi-shape primary search focuses costly exact shapes even without thorns; intermediate thorn repairs can complete heart fours later; final HP/damage/heart/hazard gates unchanged; phase-stable hints, missing-goal recovery, two discarded-frontier revisits and zero-contact pass share original time/path budgets; device verification pending",
-    "orb_evaluation_cache": "spinner shape candidates reuse up to 4096 per-pass pure color-layout scores with full-cell equality; route contact/heart gates are applied after copying the score, and session release validation is uncached; evaluationCalls/cacheHits measure candidate scoring only; performance comparison pending",
-    "orb_shape_space": "a necessary single-color T/distinct-color four separator bound can report incompatible goals before beam search; it allows arbitrary placements independently in each spinner phase and does not treat other timeouts as infeasibility; goals with no phase-stable layout use per-phase hints immediately; regression and device verification pending",
-    "orb_planning_diagnostics": "schema 2 captures the current board before plan validation; planning-blocked and assist-unavailable retain base goals, reason and guaranteed per-color inventory without a stale path/evaluation; solverStarted separates pre-search rejection from searched failure; read failures carry their own current snapshot; trace relation distinguishes battle, turn, unreadable board and position; previous execution records are retained",
-    "automatic_orb_leaders": "read-only current leader/helper IDs and offline structured minimum board conditions; unknown rules block automatic planning; HP, skill-use conditions and damage are not fully evaluated; separate solo enemy-Combo policy credits only proven effective descriptors with current awakening/attack-attribute providers",
-    "automatic_orbs_user_report": "user reported 0.5.0-orbs ordinary single-player 6x5 testing passed on 2026-10-28; this does not validate newer geometry or quality settings",
-    "battle_replacement": "Single player only; up to six native parameter leases; body/weapon/training/awakenings; individual/all restore; device verification pending",
-    "automatic_entry": "Single player only; selected saved team at fresh wave-zero opening; native Skill Boost and effective HP initialization; resumes and later waves excluded",
-    "entry_recovery": "Multiplayer rebind removed; every mutation and rollback requires live single-player selectors; old intent is discarded without native writes",
-    "entry_board_limit": "board dimensions and generated opening board remain from the native constructor; ordinary team refresh does not regenerate them",
-    "multiplayer_write_policy": "Team replacement, timer, BGM and packet mutations remain blocked in multiplayer. Explicit local once supports mode 7/11/10 selector 1 and reviewed mode 7 selector 2 continuation. Explicit mode 10 selector 1 Auto additionally permits native local skills and fresh per-board gesture leases within the current 8P match, ending on results, manual input, ownership/clock/entry change or a failed check. No rematching; multiplayer device synchronization unverified",
-    "eight_player_auto": "One explicit current-match intent; all six in-match fixed variants, supported effects and cooldowns checked twice, independent of ordinary catalog skills; native can-use/start and exact root/catalog/visible-slot/body receipt plus one global use; limited-use counters are not ordinary skill history; next-board detection includes repeated floors; portable strict activity JSON and first-removal goals; exact score/damage and survival-based stalls unavailable",
-    "eight_player_resume": "Same-match Stop/Auto preserves confirmed skill and release counts, sequence cursor and stop cause; pending native completion is observed read-only after Stop; resume freshly reads and replans the current board; manual turn/floor or profile changes discard stale sequence remainder; ambiguous receipts never authorize recast; new match requires click",
-    "eight_player_guide": "Saved default-off GameWith floor skill option in the activity profile; native floor openers, confirmed prefixes and completed alternatives survive same-match Stop/Auto; optional cup-specific B6 single preparation recipe uses current conversions and next-turn CD estimates, exact three-orb first removal without existing-orb cascades, native next-turn and absorption confirmation, then fresh skill validation; reimport updated JSON",
-    "eight_player_preparation": "Explicit cup-only once-per-match three-orb preparation with no existing cascades; optional preferBeforeOutput only when the conversion pair is ready next turn and retained attack supply strictly exceeds current/ready conversions, with one-turn absorption and at least 15s; ready pair goes directly; actual next-turn CD and expired absorption precede saved skills; legacy JSON remains output-first; no charge writes or survival prediction",
-    "eight_player_attack_ranking": "Activity JSON opt-in relative color weights, row contribution, once-per-activation link bonus and Combo contribution; this cup prefers fire over dark 3:1 without requiring a fire link, with one link reward; heuristic only, no live ATK, caps, enemy damage or kill proof; generic one-shot uses conservative first-removal accounting",
-    "eight_player_changed_inventory": "Verified native skill completion restarts skipped rescue branches while preserving the ordered prefix and per-turn attempted slots; first and latest blocked board/CD evidence retained",
-    "eight_player_b5_pair": "Guide profile prioritizes Ney 4 then Sonia 6 or 1; independent standalone generation is a cooldown fallback; existing saved JSON changes only after reimport",
-    "eight_player_row_candidates": "After a feasible activity output route, up to two missing attack-color rows guide candidate search within the original deadline; final comparison and release keep the original goals and activity weights; no exact damage or kill prediction",
-    "eight_player_b1_combo": "B1 compares first-removal Combo, then erased orbs, then movement cost; baseline and diverse search share original time/path budgets; first B1 release record remains available after later floors; B5 recovery adds standalone slots 1 and 2; no exact damage or kill proof",
-    "single_player_entry_report": "user confirmed automatic team application and Skill Boost working in 0.4.1-entry on 2026-10-28",
-    "battle_filters": "All mode categories except multiplayer; source/multi zero defaults; editable mode/source GUI filters; legacy multi settings load but cannot override single-player restriction",
-    "input_gate": "native raw/frame touch records and orb drag; phase/input/read failures reported separately; 0.3.2-battle",
-    "badge_unlock": "user-reported unlock working in 0.3.0-battle; save/restart and account boundary checks pending",
-    "timer_controls": "automatic flags only; explicit timed exit popup dismissal; device verification pending",
-    "platform": "iPhoneOS",
-    "minimum_ios": "15.0",
-    "signing": "ad-hoc; use the existing Dopamine rootless injection setup, or re-sign in LiveContainer",
-    "mode": "diagnostic by default; experimental writes opt in",
-    "device_verified": False,
-    "sha256": sha,
-}
-(directory / "build-info.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-(directory / "SHA256SUMS").write_text(f"{sha}  PADCheaper.dylib\n", encoding="utf-8")
-print(f"Built arm64 iPhoneOS dylib: {binary}")
-PY
+python3 ios/tools/release_metadata.py finalize "$build_dir" --minimum-ios "$min_version"

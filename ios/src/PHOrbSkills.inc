@@ -34,14 +34,17 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     for (unsigned i = 0; i < 6; ++i) {
         const uintptr_t member = impl + PHBattleMemberOffset + i * PHBattleMemberStride;
         auto &m = out.members[i];
-        uint8_t flags = 0; uint32_t nativeState = 0, id = 0, record = 0, bind = 0, charge = 0, shadow = 0, overrideID = 0, assistState = 0;
+        uint8_t flags = 0; uint32_t nativeState = 0, record = 0, bind = 0, charge = 0, shadow = 0, overrideID = 0, assistState = 0;
         uintptr_t parameter = 0;
         if (!PHReadU8(member, &flags) || !PHReadU32(member + PHOrbSkillMemberStateOffset, &nativeState) || nativeState > 7) return false;
         m.state = uint8_t(nativeState); out.busy |= nativeState != 0;
         m.active = (flags & 1u) != 0;
         if (!m.active) continue;
         PHOrbLeaderReadDiagnostics diagnostic{};
-        if (!PHReadU32(member + PHBattleCatalogIDOffset, &id) || !id || id > INT32_MAX || (!eight && id >= catalogCount) ||
+        PHBattleMemberIdentity identity{};
+        if (!PHReadBattleMemberIdentity(member, key1, key2, identity)) return false;
+        const uint32_t id = identity.currentCatalogID;
+        if (!id || id > INT32_MAX || (!eight && id >= catalogCount) ||
             !PHBattleNumberForCatalogID(eight ? id % 1000000u : id, &m.number) ||
             !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
             (eight ? !LeaderParameterMatches(catalog, catalogCount, records, id, parameter, diagnostic) :
@@ -50,43 +53,36 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
             !SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
             !PHReadU32(member + PHBattleChargeShadowOffset, &shadow) || (shadow ^ charge) != 0x68fb65ceu ||
             !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID) ||
-            !SmallProtected(member + 472, key1, key2, UINT16_MAX, assistState)) return false;
+            !SmallProtected(member + PHBattleAssistStateOffset, key1, key2, UINT16_MAX, assistState)) return false;
         m.bound = int8_t(uint8_t(bind)) > 0; m.charge = uint16_t(charge);
         m.assistState = uint16_t(assistState);
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
-        // Keep authoritative stages/use counts and the derived stage cache
-        // separately: can-use refreshes the cache only after basic readiness.
-        if (!PHReadU16(member + 1438, &m.assistCatalogID) ||
-            !PHReadU16(member + PHBattleBaseIDOffset, &m.sourceCatalogIDs[0]) ||
-            !PHReadU16(member + PHBattleAssistIDOffset, &m.sourceCatalogIDs[1])) return false;
-        uint32_t temporaryID = 0, temporaryTurns = 0, form = 0;
-        if (!SmallProtected(member + PHBattleTempIDOffset, key1, key2, UINT16_MAX, temporaryID) ||
-            !SmallProtected(member + PHBattleTempTurnsOffset, key1, key2, UINT16_MAX, temporaryTurns) ||
-            !SmallProtected(member + PHBattleFormOffset, key1, key2, UINT16_MAX, form)) return false;
-        m.temporaryID = uint16_t(temporaryID); m.temporaryTurns = uint16_t(temporaryTurns);
+        m.assistCatalogID = identity.effectiveAssistID;
+        m.sourceCatalogIDs[0] = identity.sourceBodyID; m.sourceCatalogIDs[1] = identity.sourceAssistID;
+        m.temporaryID = identity.temporaryFormID; m.temporaryTurns = identity.temporaryTurns;
         m.identityNumber = m.number; m.identityAssist = m.assistCatalogID;
-        if (temporaryTurns) {
-            uint16_t base = 0, assist = 0;
-            // 0x1005A12F0 stores the source at +1456/+1458, applies the
-            // persistent +280 form, then overrides it with +248 whenever
-            // +264 is nonzero. Temporary forms clear the active assist.
-            if (!temporaryID || id != temporaryID ||
-                !PHReadU16(member + PHBattleBaseIDOffset, &base) ||
-                !PHReadU16(member + PHBattleAssistIDOffset, &assist)) return false;
-            const uint32_t underlying = form ? form : base;
-            uint16_t ignored = 0;
-            if (!underlying || underlying >= catalogCount ||
+        if (identity.temporaryTurns) {
+            // Keep the old source re-read at the temporary-form boundary.
+            // Compare the complete shared identity so none of its fields can
+            // come from a different form transition than the catalog check.
+            PHBattleMemberIdentity current{};
+            uint32_t underlying = 0; uint16_t assist = 0, ignored = 0;
+            if (!PHReadBattleMemberIdentity(member, key1, key2, current) || !PHBattleSameMemberIdentity(&identity, &current) ||
+                !PHBattlePlanningIdentity(&identity, &underlying, &assist) || underlying >= catalogCount ||
                 !PHBattleNumberForCatalogID(underlying, &m.identityNumber) ||
                 (assist && (assist >= catalogCount || !PHBattleNumberForCatalogID(assist, &ignored)))) return false;
             m.identityAssist = assist;
         }
         m.temporaryKnown = true;
+        // Keep authoritative stages/use counts and the derived stage cache
+        // separately: can-use refreshes the cache only after basic readiness.
         for (unsigned skill = 0; skill < 2; ++skill) {
             uint32_t stage = 0, uses = 0;
             if (!SmallProtected(member + 344 + 16 * skill, key1, key2, UINT8_MAX, stage) ||
                 !SmallProtected(member + 488 + 16 * skill, key1, key2, UINT16_MAX, uses) ||
                 !PHReadU8(member + 1290 + skill, &m.cachedSkillStage[skill]) ||
-                !PHReadU16(member + (skill ? 1442 : 1298), &m.skillLevel[skill])) return false;
+                !PHReadU16(member + (skill ? PHBattleEffectiveAssistOffset + PHBattleAssistSkillLevelByte : 1298),
+                           &m.skillLevel[skill])) return false;
             m.skillStage[skill] = uint8_t(stage); m.skillUses[skill] = uint16_t(uses);
         }
         float motion = 0, target = 0;

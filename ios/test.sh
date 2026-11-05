@@ -7,11 +7,13 @@ build_dir="${BUILD_DIR:-$repo_dir/build/ios-tests}"
 mkdir -p "$build_dir"
 sdk_path="$(xcrun --sdk macosx --show-sdk-path)"
 clang_path="$(xcrun --sdk macosx --find clang)"
+python3 ios/tools/release_metadata.py header
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
 python3 ios/tools/generate_editor.py
 python3 ios/tools/generate_leaders.py
+python3 ios/tests/release_metadata_tests.py
 python3 ios/tests/leader_catalog_tests.py
 node ios/tests/formation_tests.js
 node ios/tests/team_model_tests.js

@@ -5,6 +5,7 @@
 #include "PHInputModel.h"
 #include "PHBattlePreset.h"
 #include "PHBattlePolicy.h"
+#include "PHBattleMemberState.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +28,8 @@ typedef struct {
     bool active, readable;
     int8_t sourceSlot, scriptSlot;
     uint8_t sourceTeam;
+    // Compatibility view of PHBattleMemberIdentity. baseID/assistID are the
+    // source loadout; assist[] is the effective descriptor, never the source.
     uint16_t baseID, assistID, formID, temporaryID, temporaryTurns, charge;
     uint32_t catalogID;
     uint8_t flags, radius;
@@ -37,7 +40,7 @@ typedef struct {
     // Legacy diagnostic field; multiplayer profiles are no longer retained.
     uint64_t rebindToken;
     uint16_t level, skillLevel;
-    uint8_t extra[20], assist[8];
+    uint8_t extra[20], assist[PHBattleAssistDescriptorSize];
 } PHBattleMember;
 
 typedef struct {

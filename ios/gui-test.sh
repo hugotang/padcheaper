@@ -8,6 +8,7 @@ app_dir="$build_dir/OverlayProbe.app"
 mkdir -p "$app_dir/Frameworks"
 cp ios/templates/ishida-uryu-gamewith-574233/team-plan.json "$app_dir/team-plan.json"
 cp ios/templates/eight-player-thanks-2026/activity-profile.json "$app_dir/eight-activity.json"
+python3 ios/tools/release_metadata.py header
 python3 ios/tools/generate_target.py
 python3 ios/tools/generate_battle.py
 python3 ios/tools/generate_orbs.py
@@ -55,7 +56,7 @@ done
     -o "$app_dir/Frameworks/PADCheaperTest.dylib"
 "$clang_path" -arch "$architecture" -isysroot "$sdk_path" -mios-simulator-version-min=16.0 \
     -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter \
-    -Iios/src ios/tests/overlay_probe.m -framework Foundation -framework UIKit -framework CoreGraphics -framework WebKit -o "$app_dir/OverlayProbe"
+    -Iios/src -Iios/generated ios/tests/overlay_probe.m -framework Foundation -framework UIKit -framework CoreGraphics -framework WebKit -o "$app_dir/OverlayProbe"
 
 python3 - "$app_dir" <<'PY'
 from pathlib import Path

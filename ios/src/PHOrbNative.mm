@@ -6,6 +6,7 @@
 #include <mach/mach_time.h>
 #include "PHTargetGenerated.h"
 #include "PHOrbGenerated.h"
+#include "PHBattleMemberReader.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,6 +21,7 @@
 #include "PHEnemyThreat.h"
 
 namespace {
+static_assert(PHOrbSkillDungeonRulesOffset == PHBattleDungeonPointerOffset, "shared dungeon rule pointer");
 constexpr size_t PoolStride = 172, PoolCount = 256;
 using Manager = std::array<uint8_t, PHOrbInputBytes>;
 struct NativeSkillReadiness { int32_t baseSkill, assistSkill, baseCooldown, totalCooldown; };
@@ -644,7 +646,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     // These getters may update a native cooldown cache. Call only during a
     // guarded skill attempt (diagnosis or source/ID constraint), never polling.
     uint16_t assist = 0;
-    if (!out || !PHReadU16(member + 1438, &assist)) return NO;
+    if (!out || !PHReadU16(member + PHBattleEffectiveAssistOffset, &assist)) return NO;
     out->baseSkill = reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHOrbBaseSkillRVA)(member + 1248);
     out->assistSkill = int16_t(assist) > 0 ? reinterpret_cast<int32_t (*)(uintptr_t)>(header + PHOrbAssistSkillRVA)(member + 1248) : 0;
     out->baseCooldown = reinterpret_cast<int32_t (*)(uintptr_t, int)>(header + PHOrbBaseCooldownRVA)(member, 0);
@@ -702,17 +704,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         return PHOrbSkillUnavailable;
     }
     const uintptr_t address = live.identity.impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
-    SkillSourceState source;
-    if (!ReadSkillSource(live, source)) return PHOrbSkillRejected;
+    PHBattleDungeonMemberRules source{};
+    if (!PHReadBattleDungeonMemberRules(live.identity.impl, source)) return PHOrbSkillRejected;
     PHOrbSnapshot checked = live;
     auto recheck = [&](NSString *message) {
-        PHOrbSnapshot next{}; SkillSourceState current;
+        PHOrbSnapshot next{}; PHBattleDungeonMemberRules current{};
         if (![self readAutomation:&next frame:frame reason:reason] || !next.valid || next.multiplayerDisabled ||
             (eight && (!_eightAuto || !PHOrbSameEightMatch(&_eightMatch,&next) || !PHOrbEightMatchReady(&next))) ||
             (eight && !PHOrbSameEnemyCombo(&checked.enemyCombo,&next.enemyCombo)) ||
             !next.automation.window || next.automation.busy || next.dragged || !next.settled ||
             !PHInputIsQuiet(&next.input) || !PHOrbSameAutomation(&checked, &next) ||
-            !ReadSkillSource(next, current) || !(source == current)) {
+            !PHReadBattleDungeonMemberRules(next.identity.impl, current) || !PHBattleSameDungeonMemberRules(&source, &current)) {
             if (reason) *reason = message;
             return false;
         }
@@ -734,7 +736,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             return PHOrbSkillRejected;
         }
     }
-    bool chosenAssist = known && !(source.flags & 8u) && int16_t(member.assistCatalogID) > 0 &&
+    bool chosenAssist = known && PHBattleEffectiveAssistAvailable(&source, member.assistCatalogID) &&
         readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown;
     bool chooseBody = false;
     SkillChoiceState choice;
@@ -821,9 +823,9 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (!recheck(@"準備技能選擇後狀態已改變，未啟動技能")) return PHOrbSkillRejected;
     }
     uint8_t finalSource = 0;
-    SkillSourceState finalRules;
+    PHBattleDungeonMemberRules finalRules{};
     SkillChoiceState finalChoice;
-    if (!ReadSkillSource(checked, finalRules) || !(source == finalRules) ||
+    if (!PHReadBattleDungeonMemberRules(checked.identity.impl, finalRules) || !PHBattleSameDungeonMemberRules(&source, &finalRules) ||
         !PHReadU8(live.identity.impl + PHOrbSkillSelectedSourceOffset, &finalSource) || finalSource != selectedSource ||
         (chooseBody && (!ReadSkillChoice(checked, unsigned(slot), finalChoice) || !(choice == finalChoice)))) {
         if (reason) *reason = @"啟動前本體／武裝選擇已改變，未啟動技能";

@@ -14,8 +14,8 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
     std::memset(&out, 0, sizeof(out));
     const uintptr_t impl = state.identity.impl, save = state.identity.header + PHSaveRVA;
     uint16_t duration = 0; uint32_t queueCount = 0, dispatchMode = 0; uintptr_t queue = 0;
-    ObservationTables tables{}; SkillSourceState rules{};
-    if (!PHReadU16(impl + PHOrbObservationAssistVoidOffset, &duration) || !ReadSkillSource(state, rules) ||
+    ObservationTables tables{}; PHBattleDungeonMemberRules rules{};
+    if (!PHReadU16(impl + PHOrbObservationAssistVoidOffset, &duration) || !PHReadBattleDungeonMemberRules(state.identity.impl, rules) ||
         !PHReadU32(impl + PHOrbAssistRecoveryDispatchOffset, &dispatchMode) || dispatchMode == 525190 ||
         !PHReadU32(impl + PHOrbAssistRecoveryQueueCountOffset, &queueCount) || queueCount != 0 ||
         !PHReadPointer(impl + PHOrbAssistRecoveryQueueOffset, &queue) || queue ||
@@ -40,12 +40,12 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
         if (!PHReadU8(address, &active)) return false;
         uint16_t &block = out.blockers[slot];
         if (active != 1) { block = PHOrbLInactive; continue; }
-        if (!member.temporaryTurns && member.sourceCatalogIDs[1] && (member.assistState & 255u) == 172)
+        if (!member.temporaryTurns && member.sourceCatalogIDs[1] && PHBattleAssistIsRetained(member.assistState))
             out.retainedAssists |= 1u << slot;
         if (member.bound) block |= PHOrbLBound;
         if (state.automation.playerEffects & PHOrbPlayerAwokenBind) block |= PHOrbLAwokenBind;
-        if (rules.flags & 4u) block |= PHOrbLAwakeningsDisabled;
-        if (rules.flags & 0x20u) block |= PHOrbLLatentsDisabled;
+        if (PHBattleDungeonDisables(&rules, PHBattleDungeonAwakeningsDisabled)) block |= PHOrbLAwakeningsDisabled;
+        if (PHBattleDungeonDisables(&rules, PHBattleDungeonLatentsDisabled)) block |= PHOrbLLatentsDisabled;
         uintptr_t parameter = 0, actual = 0, profile = 0; uint32_t id = 0;
         const bool cardKnown = PHReadU32(address + PHBattleCatalogIDOffset, &id) && ObservationCard(tables, id, parameter) &&
             PHReadPointer(address + PHBattleCardParamOffset, &actual) && actual == parameter;
@@ -53,7 +53,7 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
             block |= PHOrbLUnknownLatents;
         else if (!out.latents[slot]) block |= PHOrbLNoLatent;
         unsigned count = 0; uint8_t variant = 0;
-        const bool variantKnown = !member.assistCatalogID || (PHReadU8(address + 1444, &variant) && !variant);
+        const bool variantKnown = !member.assistCatalogID || (PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &variant) && !variant);
         if (!cardKnown || !variantKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
             block |= PHOrbLUnknownAwakenings;
         else if (dynamicL) block |= PHOrbLDynamicAwakenings;

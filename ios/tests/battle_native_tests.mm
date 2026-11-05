@@ -31,6 +31,8 @@ struct Fixture {
     bool changeOtherViewOnFailedRebuild = false;
     bool auditOnRefresh = false;
     bool unstableAssistPadding = false;
+    bool forceAssistDisabled = false;
+    int corruptAppliedAssistByte = -1;
     int corruptRestoredAssistByte = -1;
     unsigned advances = 0, memberAdvances = 0, failAdvanceTick = 0, closeWindowAtTick = 0;
     uint16_t chargeCaps[6] = {6,6,6,6,6,6};
@@ -291,6 +293,17 @@ struct Fixture {
                 f.corruptRestoredAssistByte = -1;
             }
         }
+        if ((get<uint8_t>((uintptr_t)f.dungeon.data() + 33) & 8u) || f.forceAssistDisabled) {
+            // Native 0x1005A1CA4 clears only the effective descriptor.
+            // Its source ID and unused skill-level word remain intact.
+            put<uint32_t>(m + 0x59e, 0x01000000u);
+            put<uint8_t>(m + 0x59e + 6, 0);
+        }
+        if (script > 0 && f.corruptAppliedAssistByte >= 0) {
+            const uintptr_t field = m + 0x59e + f.corruptAppliedAssistByte;
+            put<uint8_t>(field, uint8_t(get<uint8_t>(field) ^ 1u));
+            f.corruptAppliedAssistByte = -1;
+        }
         uint32_t catalogID = form ? form : base;
         put<uint16_t>(m + PHBattleBaseIDOffset, base); put<uint16_t>(m + PHBattleAssistIDOffset, assist);
         put<uint32_t>(m + PHBattleCatalogIDOffset, catalogID);
@@ -402,7 +415,7 @@ struct Fixture {
                 }
             };
             countCard(get<uint16_t>(m + PHBattleBaseIDOffset),get<uint8_t>(m + 0x4f3));
-            countCard(get<uint16_t>(m + PHBattleAssistIDOffset),get<uint8_t>(m + 0x5a0) & 0x7fu);
+            countCard(get<uint16_t>(m + 0x59e),get<uint8_t>(m + 0x5a0) & 0x7fu);
             if (get<uint32_t>(m + 0x500) == id) { ++count; *mask |= (uint8_t)(1u << i); }
         }
         return count;
@@ -512,12 +525,16 @@ static PHBattleLoadout Loadout(unsigned slot = 0) {
 #include "battle_multiplayer_tests.inc"
 #include "battle_script_native_tests.inc"
 #include "battle_restore_native_tests.inc"
+#include "battle_assist_disabled_tests.inc"
+#include "battle_member_reader_tests.inc"
 
 int main() {
     @autoreleasepool {
         TestMultiplayerDisabled();
         TestScriptedProvider();
         TestRestoreAssistPadding();
+        TestAssistDisabledProfiles();
+        TestBattleMemberReader();
         {
             Fixture f; id<PHBattleEngine> engine = PHCreateBattleEngine();
             PHBattleMember originals[6], applied[6];

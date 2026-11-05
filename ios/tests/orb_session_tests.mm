@@ -34,6 +34,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL wrongDiagonalTarget, closeWindowInUse;
     BOOL multiplayerArmed, ignoreRelease;
     BOOL eightArmed, eightSkillInFlight;
+    BOOL rejectEightArm;
+    NSUInteger eightArmAttempts;
     NSUInteger eightProgressReads, eightReceiptFault;
     unsigned eightBoardColorRun;
     NSUInteger multiplayerArms;
@@ -176,7 +178,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     multiplayerArmed = armed;
 }
 - (BOOL)armEightPlayerAuto:(const PHOrbSnapshot *)state {
-    eightArmed = state && PHOrbEightMatchReady(state) && PHOrbCanPreview(state);
+    if (state) ++eightArmAttempts;
+    eightArmed = state && !rejectEightArm && PHOrbEightMatchReady(state) && PHOrbCanPreview(state);
     if (!state) multiplayerArmed = NO;
     return !state || eightArmed;
 }
@@ -449,8 +452,10 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_diagonal_session_tests.inc"
 #include "orb_multiplayer_session_tests.inc"
 #include "orb_eight_session_tests.inc"
+#include "orb_auto_lifecycle_session_tests.inc"
 #include "orb_readiness_stop_session_tests.inc"
 #include "orb_observation_session_tests.inc"
+#include "orb_diagnostics_session_tests.inc"
 #include "orb_enemy_action_session_tests.inc"
 #include "orb_enemy_selector_session_tests.inc"
 #include "orb_enemy_dispatch_session_tests.inc"
@@ -764,6 +769,8 @@ int main() {
         PoisonHeartFourSessionTests();
         ThornSessionTests();
         LifecycleSessionTests();
+        DiagnosticAssemblySessionTests();
+        AutoLifecycleSessionTests();
         ColorConditionSessionTests();
         PlanSessionTests();
         UryuStartupSessionTests();

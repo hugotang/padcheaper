@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from release_metadata import read_json, verify_release_snapshot
 
 GUI_REPORTS = ['overlay-probe.json', 'overlay-restart-probe.json', 'legacy-probe.json', 'legacy-restart-probe.json']
 
@@ -69,12 +70,16 @@ def main():
         info = json.load(open(os.path.join(artifact, 'build-info.json'), encoding='utf-8'))
         if info['commit'] != run['headSha']:
             sys.exit(f'build-info commit {info["commit"]} differs from run head {run["headSha"]}')
+        release_path = os.path.join(artifact, 'release.json')
+        if 'release_summary' in info or os.path.exists(release_path):
+            verify_release_snapshot(info, read_json(release_path))
         expected = {}
         for line in open(os.path.join(artifact, 'SHA256SUMS'), encoding='utf-8'):
             digest, name = line.split(maxsplit=1)
             expected[name.strip().lstrip('*')] = digest
-        if expected.get('PADCheaper.dylib') != sha256(os.path.join(artifact, 'PADCheaper.dylib')):
-            sys.exit('PADCheaper.dylib does not match SHA256SUMS')
+        actual_sha = sha256(os.path.join(artifact, 'PADCheaper.dylib'))
+        if expected.get('PADCheaper.dylib') != actual_sha or info.get('sha256') != actual_sha:
+            sys.exit('PADCheaper.dylib does not match SHA256SUMS and build-info')
         reports = {}
         for name in GUI_REPORTS:
             report = json.load(open(os.path.join(gui, name), encoding='utf-8'))

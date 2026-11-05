@@ -70,9 +70,9 @@
         [enemies addObject:[compact copy]];
     }
     NSDictionary *key = @{@"wave":@(state->wave), @"board":BoardTrace(state->board), @"observation":observation,
-        @"enemies":enemies, @"tableSHA256":_dungeonTableSHA ?: @"", @"autoTurn":@(_autoTurn),
+        @"enemies":enemies, @"tableSHA256":_dungeonTableSHA ?: @"", @"autoTurn":@(_auto.turn),
         @"enemyActionStatus":_enemyActionObservation[@"status"] ?: @"unavailable",
-        @"sessionPhase":_phase, @"message":_message ?: @""};
+        @"sessionPhase":SessionPhaseText(_phase), @"message":_message ?: @""};
     if ([_dungeonSampleKey isEqual:key]) return;
     _dungeonSampleKey = key;
     _dungeonDropped += droppedDefinitions;

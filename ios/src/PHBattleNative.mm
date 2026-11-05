@@ -4,6 +4,7 @@
 #import "PHTarget.h"
 #include "PHTargetGenerated.h"
 #include "PHBattleGenerated.h"
+#include "PHBattleMemberReader.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -132,28 +133,24 @@ static BOOL ReadMember(uintptr_t address, const PHBattleState *state, uint32_t k
     if (!PHReadMemory(address, bytes, sizeof(bytes))) return NO;
     member->active = (bytes[0] & 1u) != 0;
     if (!member->active) { member->readable = true; return YES; }
-    std::memcpy(&member->baseID, bytes + PHBattleBaseIDOffset, sizeof(member->baseID));
-    std::memcpy(&member->assistID, bytes + PHBattleAssistIDOffset, sizeof(member->assistID));
-    std::memcpy(&member->catalogID, bytes + PHBattleCatalogIDOffset, sizeof(member->catalogID));
+    PHBattleMemberIdentity identity{};
+    if (!PHReadBattleMemberIdentityBytes(bytes, sizeof(bytes), key1, key2, identity)) {
+        *chargeValid = NO; return NO;
+    }
+    member->baseID = identity.sourceBodyID; member->assistID = identity.sourceAssistID;
+    member->catalogID = identity.currentCatalogID; member->formID = identity.persistentFormID;
+    member->temporaryID = identity.temporaryFormID; member->temporaryTurns = identity.temporaryTurns;
     std::memcpy(&member->previousID, bytes + 64, sizeof(member->previousID));
     member->flags = bytes[56]; member->radius = bytes[63];
     std::memcpy(&member->level, bytes + 0x510, sizeof(member->level));
     std::memcpy(&member->skillLevel, bytes + 0x512, sizeof(member->skillLevel));
     std::memcpy(member->extra, bytes + 0x4f0, sizeof(member->extra));
-    std::memcpy(member->assist, bytes + 0x59e, sizeof(member->assist));
-    // Native 0x100531AEC fills ID, awakenings/+297, level, skill and byte 6.
-    // Byte 7 is stack padding copied by 0x10048127C, not an assist property.
-    member->assist[7] = 0;
-    // The no-assist initializer also leaves the skill-level word untouched.
-    // It has no meaning when the descriptor's assist ID is zero.
-    if (!member->assist[0] && !member->assist[1]) member->assist[4] = member->assist[5] = 0;
+    std::memcpy(member->assist, bytes + PHBattleEffectiveAssistOffset, sizeof(member->assist));
+    PHBattleNormalizeAssistDescriptor(member->assist);
     uintptr_t parameter = 0;
     std::memcpy(&parameter, bytes + PHBattleCardParamOffset, sizeof(parameter));
     member->readable = DecodeByte(bytes, PHBattleSourceSlotOffset, key1, key2, &member->sourceSlot) &&
         DecodeByte(bytes, PHBattleScriptSlotOffset, key1, key2, &member->scriptSlot) &&
-        Decode16(bytes, PHBattleFormOffset, key1, key2, &member->formID) &&
-        Decode16(bytes, PHBattleTempIDOffset, key1, key2, &member->temporaryID) &&
-        Decode16(bytes, PHBattleTempTurnsOffset, key1, key2, &member->temporaryTurns) &&
         Decode16(bytes, PHBattleChargeOffset, key1, key2, &member->charge) &&
         member->scriptSlot <= PHBattleParameterSlots && CatalogValid(member->baseID, state) &&
         CatalogValid(member->catalogID, state) && (!member->assistID || CatalogValid(member->assistID, state)) &&

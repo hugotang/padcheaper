@@ -34,14 +34,13 @@ static uint16_t InitialTeamBoost(const PHBattleState &state, BOOL *specialEntry)
     // the SB latent and the active badge. Native counters include weapons,
     // supers/sync awakenings and the dungeon's restrictions.
     int64_t total = awakenings(21) + 2LL * awakenings(56) + 2LL * awakenings(145) - awakenings(105);
-    uintptr_t dungeon = 0;
-    uint8_t dungeonFlags = 0;
+    PHBattleDungeonMemberRules dungeonRules{};
     uint16_t awakeningState = 0;
-    if (!PHReadPointer(state.identity.impl + PHBattleDungeonPointerOffset, &dungeon) || !dungeon ||
-        !PHReadU8(dungeon + 33, &dungeonFlags) ||
+    if (!PHReadBattleDungeonMemberRules(state.identity.impl, dungeonRules) || !dungeonRules.address ||
         !PHReadU16(state.identity.impl + PHBattleAwakeningStateOffset, &awakeningState))
         throw std::runtime_error("Entry awakening rules unreadable");
-    if ((dungeonFlags & 4u) || static_cast<int16_t>(awakeningState << 6) > 0) total = 0;
+    if (PHBattleDungeonDisables(&dungeonRules, PHBattleDungeonAwakeningsDisabled) ||
+        static_cast<int16_t>(awakeningState << 6) > 0) total = 0;
     RequireSinglePlayer(&state);
     int32_t latents = native.teamLatent(state.identity.game, 47, &mask);
     RequireSinglePlayer(&state);

@@ -1,7 +1,7 @@
 // One explicit match intent, fresh native gesture leases and skill receipts.
 // Ordinary solo opening, formation and recovery rules never enter this path.
 - (void)rememberEightBlock:(NSDictionary *)decision {
-    _eightLastBlocked = @{@"wave":@(_live.wave),@"turn":@(_autoTurn),@"decision":decision ?: @{},
+    _eightLastBlocked = @{@"wave":@(_live.wave),@"turn":@(_auto.turn),@"decision":decision ?: @{},
         @"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live),@"multiplayer":MultiplayerTrace(_live),
         @"enemyCombo":@{@"valid":@(_live.enemyCombo.valid),@"turns":@(_live.enemyCombo.turns[0]),
             @"threshold":@(_live.enemyCombo.thresholds[0])}};
@@ -22,29 +22,6 @@
 // Native turn: a new plan plus EightTurnState (attempt mask, declined reserve).
 - (void)resetEightTurn { _eightPlan = {}; _eightTurn = {}; }
 
-- (NSDictionary *)eightProgressTrace {
-    const auto &r = _eightLastObserved.eightReceipt;
-    return @{@"sameMatch":@(PHOrbSameEightMatch(&_eightHistory,&_live)),@"resumes":@(_eightResumes),
-        @"skillPending":@(_eightSkillPending),@"skillStarted":@(_eightSkillStarted),
-        @"skillAcknowledged":@(_eightSkillAcknowledged),@"skillSettled":@(_eightSkillSettled),
-        @"pendingSlot":@(_eightSkillPending ? _eightSlot + 1 : 0),
-        @"beforeTotalUses":@(_eightSkillBefore.automation.skillUses),
-        @"confirmedTotalUses":@(_eightSkillAfter.automation.skillUses),
-        @"latestTotalUses":@(_eightLastObserved.automation.skillUses),
-        @"receipt":@{@"valid":@(r.valid),@"skill":@(r.skill),@"catalogID":@(r.catalogID),
-            @"slot":@(r.valid ? r.slot + 1 : 0),@"source":@(r.source)},
-        @"floor":@(_live.wave + 1),@"sequence":_eightPlan.sequence ?: @[],
-        @"sequenceStep":@(_eightPlan.step),@"sequenceCount":@(_eightPlan.sequence.count),@"recoveryCursor":@(_eightPlan.cursor),
-        @"attemptedSlots":@(_eightTurn.attemptedSlots),@"boardSubmitted":@(_eightBoardSubmitted),
-        @"guideEnabled":@(PHOrbEightGuideEnabled(_activeProfile[@"activity"])),@"guidePrepared":@(_eightPlan.guidePrepared),
-        @"guideSequence":@(_eightPlan.guide),@"floorSkillMask":@(_live.wave < _eightFloorSkillMask.size() ? _eightFloorSkillMask[_live.wave] : 0),
-        @"firstPuzzle":_eightFirstPuzzle ?: @{},
-        @"firstBlocked":_eightFirstBlocked ?: @{},@"lastBlocked":_eightLastBlocked ?: @{},@"preparation":_eightPrep.trace ?: @{},
-        @"preparationUsed":@(_eightPrep.used),@"preparationAwaiting":@(_eightPrep.awaiting),
-        @"preparationDeclined":@(_eightTurn.preparationDeclined),
-        @"lastStop":_eightLastStop ?: @{}};
-}
-
 - (void)startEightAutomatic:(const PHOrbSnapshot *)state {
     if (!PHOrbEightMatchReady(state) || !PHOrbCanPreview(state) || state->moves ||
         TimeAvailable(*state) <= ArmDelay + TimeMargin + StepDuration(*state)) {
@@ -57,16 +34,16 @@
     const bool sameMatch = PHOrbSameEightMatch(&_eightHistory,state);
     // A manual Auto also consumes this match's countdown auto-start, so a
     // later manual stop in the same match is never undone automatically.
-    _eightAutoStartMatch = *state;
+    _eightAutoStart.consume(*state);
     if (!sameMatch) {
-        _eightHistory = *state; _eightSkillPending = _eightSkillStarted = _eightBoardSubmitted = _sawResolve = false;
+        _eightHistory = *state; _eightSkillPending = _eightSkillStarted = _eightBoardSubmitted = false;
         _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillBefore = _eightSkillAfter = _eightLastObserved = {};
         _eightDiscardSequence = _eightPausedResolve = false;
         [self resetEightTurn]; _eightFloorSkillMask = {}; _eightFloorSubmitted = {};
         _eightFirstPuzzle = nil;
         _eightFirstBlocked = _eightLastBlocked = nil; _eightPrep = {};
         _eightResumes = 0; _eightLastStop = nil;
-        _autoTurn = 1; _autoMoves = _autoSkills = 0;
+        _auto.resetProgress();
         [_automationLog removeAllObjects];
     } else if (_eightSkillPending && !_eightSkillStarted) {
         [self queueStop:@"本場上次技能啟動結果不明，不會重複施放；請手動完成本場"]; return;
@@ -82,22 +59,22 @@
     _eightHistoryProfile = selected ?: @{};
     if (sameMatch) ++_eightResumes;
     [self cancelWorker]; [self clearRoute];
-    _automatic = _eightAutomatic = _autoBound = _monitoring = true;
+    _auto.beginEight(*state, _now); _monitoring = true;
     _eightTeamBound = _hasStable = _readQueued = false;
-    _autoOrigin = *state; _autoStartAt = _autoPhaseAt = _now;
     _activeProfile = selected ?: @{};
     _skillWindowWaitAt = 0; _goalPlan = @{}; _assistTrace = @{}; _assistAwaitingResult = false;
     if (selected) [self loadSettings:PHOrbCanonicalSettings(selected[@"settings"])];
     _watchPlayerState = false;
-    _phase = _eightSkillPending ? @"eightSkillWaiting" : _eightBoardSubmitted ? @"turnWaiting" : @"autoWaiting";
+    _phase = _eightSkillPending ? PHOrbSessionPhase::EightSkillWaiting :
+        _eightBoardSubmitted ? PHOrbSessionPhase::TurnWaiting : PHOrbSessionPhase::AutoWaiting;
     _message = sameMatch ? @"8 人同場接續中；保留已確認進度並重讀目前盤面" : @"8 人本場 Auto 準備中；點停止可立即中斷";
     [self logAutomation:sameMatch ? @"8 人同場接續：保留回合、開技與停止紀錄，重新讀盤" :
         selected ? [NSString stringWithFormat:@"8 人活動：%@",selected[@"name"]] : @"8 人通用盤面 Auto；使用目前盤面目標"];
 }
 
 - (BOOL)observeEightAutomation:(PHOrbSnapshot *)state read:(BOOL)read reason:(NSString *)reason {
-    if (!_frame.ready || !_frame.enabled || _now < _autoPhaseAt || !read || !state->present || !state->valid ||
-        !PHOrbSameEightMatch(&_autoOrigin,state)) {
+    if (!_frame.ready || !_frame.enabled || _now < _auto.phaseAt || !read || !state->present || !state->valid ||
+        !PHOrbSameEightMatch(&_auto.origin,state)) {
         [self queueStop:reason ?: @"已離開本場或 8 人資料無法確認，Auto 停止"]; return NO;
     }
     if (state->multiplayer.finished || (state->multiplayer.clockKnown && state->multiplayer.remainingSeconds <= 0) || state->wave >= 999) {
@@ -107,7 +84,7 @@
     if (!PHInputIsQuiet(&state->input) || (state->dragged && ![self executing])) {
         [self queueStop:@"偵測到手動操作，已停止 8 人 Auto"]; return NO;
     }
-    if (_eightBoardSubmitted && (ResolvingOrbs(state->phase) || state->multiplayer.resolvePending)) _sawResolve = true;
+    if (_eightBoardSubmitted && (ResolvingOrbs(state->phase) || state->multiplayer.resolvePending)) _auto.sawResolve = true;
     if (state->eight.valid) {
         _eightLastObserved = *state; // Retain complete evidence for diagnostics after a stop.
         if (!_eightTeamBound) {
@@ -117,14 +94,14 @@
             if (_eightHistory.eight.valid && !PHOrbSameEightTeam(&_eightHistory.eight,&state->eight)) {
                 [self queueStop:@"本場固定隊伍的原生版本已改變，Auto 停止"]; return NO;
             }
-            _autoOrigin.eight = state->eight; _eightHistory.eight = state->eight; _eightTeamBound = true;
-        } else if (!PHOrbSameEightTeam(&_autoOrigin.eight,&state->eight)) {
+            _auto.origin.eight = state->eight; _eightHistory.eight = state->eight; _eightTeamBound = true;
+        } else if (!PHOrbSameEightTeam(&_auto.origin.eight,&state->eight)) {
             [self queueStop:@"8 人固定隊伍或技能版本已改變，Auto 停止"]; return NO;
         }
     }
     [self rememberEightSkill:state];
-    const bool beforeTouch = [_phase isEqual:@"solving"] || [_phase isEqual:@"preview"] ||
-        ([_phase isEqual:@"arming"] && !_startSent);
+    const bool beforeTouch = (_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview) ||
+        ((_phase == PHOrbSessionPhase::Arming) && !_startSent);
     if (beforeTouch && (!PHOrbCanPreview(state) || !PHOrbSameAutomation(&_preview,state) ||
         !PHOrbSameEnemyCombo(&_preview.enemyCombo,&state->enemyCombo))) {
         [self queueStop:@"8 人求路期間盤面、技能或敵方狀態已改變，已停止"]; return NO;
@@ -134,16 +111,16 @@
 
 - (BOOL)eightNewBoard:(const PHOrbSnapshot *)state {
     return _eightBoardSubmitted && PHOrbCanPreview(state) && state->moves == 0 &&
-        (_sawResolve || state->wave != _eightSubmission.wave ||
+        (_auto.sawResolve || state->wave != _eightSubmission.wave ||
             state->multiplayer.turnSerial != _eightSubmission.multiplayer.turnSerial) &&
         (_eightSubmission.moves > 0 || !PHOrbSamePlanBoard(&_eightSubmission.board,&state->board) ||
             state->wave != _eightSubmission.wave || state->multiplayer.turnSerial != _eightSubmission.multiplayer.turnSerial);
 }
 
 - (void)advanceEightAutomation {
-    if (!_automatic || !_eightAutomatic || [self executing] || [_phase isEqual:@"solving"] ||
-        [_phase isEqual:@"preview"] || [_phase isEqual:@"eightSkillArming"] || _now - _autoStartAt < ArmDelay) return;
-    if (_now - _autoPhaseAt > ([_phase isEqual:@"eightSkillWaiting"] ? SkillTimeout : TurnTimeout)) {
+    if (!_auto.active() || !_auto.eight() || [self executing] || (_phase == PHOrbSessionPhase::Solving) ||
+        (_phase == PHOrbSessionPhase::Preview) || (_phase == PHOrbSessionPhase::EightSkillArming) || _now - _auto.startedAt < ArmDelay) return;
+    if (_now - _auto.phaseAt > ((_phase == PHOrbSessionPhase::EightSkillWaiting) ? SkillTimeout : TurnTimeout)) {
         [self queueStop:@"8 人等待原生技能或下一盤逾時，已停止"]; return;
     }
     if (!_eightTeamBound || !_live.eight.valid || !_live.automation.valid || !PHOrbCanPreview(&_live) || _live.automation.busy) {
@@ -160,7 +137,7 @@
         if (!PHOrbEightActivityMatches(_activeProfile,&_live,&reason)) { [self queueStop:reason]; return; }
     }
     if (_eightBoardSubmitted) {
-        ++_autoTurn; _eightBoardSubmitted = _sawResolve = false;
+        ++_auto.turn; _eightBoardSubmitted = _auto.sawResolve = false;
         _eightResuming = _eightDiscardSequence = _eightPausedResolve = false;
         _eightHistory = _live;
         [self resetEightTurn]; _eightPrep.active = false;
@@ -176,7 +153,7 @@
         // branches (for example Ney -> Kagutsuchi). Revisit those branches
         // while preserving both the ordered sequence and per-turn attempt mask.
         _eightPlan.cursor = 0;
-        ++_autoSkills;
+        ++_auto.skills;
         if (_eightSkillBefore.wave < _eightFloorSkillMask.size())
             _eightFloorSkillMask[_eightSkillBefore.wave] |= uint8_t(1u << _eightSlot);
         [self logAutomation:[NSString stringWithFormat:@"B%u：位置 %lu 技能已確認完成",_eightSkillBefore.wave + 1,(unsigned long)_eightSlot + 1]];
@@ -193,7 +170,7 @@
             _eightHistory.automation.skillUses != _live.automation.skillUses) {
             [self resetEightPlan];
             if (newTurn) {
-                ++_autoTurn; [self resetEightTurn];
+                ++_auto.turn; [self resetEightTurn];
                 if (_eightHistory.wave < _eightFloorSubmitted.size()) _eightFloorSubmitted[_eightHistory.wave] = true;
             }
             [self logAutomation:@"接續時盤面、回合或策略已改變，依目前盤面重新規劃"];
@@ -278,7 +255,7 @@
         if (!_live.eight.members[slot].skillKnown || m.bound || m.state || m.charge < _live.eight.members[slot].cooldown) {
             [self queueStop:@"8 人技能序列的下一格未就緒，未跳過此步"]; return;
         }
-        _eightSlot = slot; _eightSkillBefore = _live; _phase = @"eightSkillArming";
+        _eightSlot = slot; _eightSkillBefore = _live; _phase = PHOrbSessionPhase::EightSkillArming;
         _message = [NSString stringWithFormat:@"B%u：準備使用位置 %lu 技能",_live.wave + 1,(unsigned long)slot + 1]; return;
     }
     [self beginSolve];
@@ -307,7 +284,7 @@
     _eightSkillPending = true; _eightSkillStarted = result == PHOrbSkillStarted;
     _eightSkillAcknowledged = _eightSkillSettled = false; _eightSkillAfter = {};
     if (!_eightSkillStarted) { [self queueStop:reason ?: @"8 人技能啟動未確認，本場不會重試此意圖"]; return; }
-    _phase = @"eightSkillWaiting"; _hasStable = false; _autoPhaseAt = _now;
+    _phase = PHOrbSessionPhase::EightSkillWaiting; _hasStable = false; _auto.phaseAt = _now;
     _message = [NSString stringWithFormat:@"B%u：位置 %lu 技能已啟動，等待生效",state->wave + 1,(unsigned long)_eightSlot + 1];
 }
 
@@ -393,7 +370,7 @@
 - (void)beginEightPreparation:(NSDictionary *)preparation priority:(BOOL)priority {
     _eightPrep.plan = preparation; _eightPrep.active = true; _eightPrep.priority = priority;
     _eightPlan.sequence = nil; _eightPlan.step = 0; _eightPlan.guide = false;
-    _eightPrep.trace = @{@"status":@"planning",@"turn":@(_autoTurn),@"wave":@(_live.wave),
+    _eightPrep.trace = @{@"status":@"planning",@"turn":@(_auto.turn),@"wave":@(_live.wave),
         @"priority":@(priority),@"plan":preparation,@"board":BoardTrace(_live.board),@"team":EightTeamTrace(_live)};
     [self logAutomation:[preparation[@"scoreTurn"] boolValue] ? @"B6：等雙轉色技就緒；本回合照常打列與連消（下回合整盤轉成攻擊色）" :
         priority ? @"B6：先留珠消一組三珠，等下一回合雙轉色技就緒再輸出" : preparation[@"message"]];
@@ -401,7 +378,7 @@
 }
 
 - (BOOL)recoverEightSolve {
-    if (!_eightAutomatic || !_activeProfile[@"activity"] || !PHOrbSameAutomation(&_preview,&_live) ||
+    if (!_auto.eight() || !_activeProfile[@"activity"] || !PHOrbSameAutomation(&_preview,&_live) ||
         !PHOrbSameEnemyCombo(&_preview.enemyCombo,&_live.enemyCombo)) return NO;
     if (_eightPrep.active) {
         // Only a preferred preparation falls back; an ordinary preparation

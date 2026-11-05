@@ -128,7 +128,8 @@ bool ObservationAwakenings(uintptr_t member, uintptr_t parameter, uintptr_t prof
     }
     if (int16_t(skill.assistCatalogID) > 0) {
         uintptr_t assist = 0; uint8_t available = 0;
-        if (!ObservationCard(tables, skill.assistCatalogID, assist) || !PHReadU8(member + 1440, &available) ||
+        if (!ObservationCard(tables, skill.assistCatalogID, assist) ||
+            !PHReadU8(member + PHBattleEffectiveAssistOffset + PHBattleAssistAwakeningsByte, &available) ||
             !PHReadMemory(assist + 748, awakenings, sizeof(awakenings))) return false;
         bool equip = false;
         for (unsigned i = 0; i < std::min(unsigned(available & 127u), 10u) && int16_t(awakenings[i]) > 0; ++i)
@@ -153,8 +154,8 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
     const auto &automation = state.automation;
     const uintptr_t impl = state.identity.impl;
     out.hp = automation.hp; out.maximumHP = automation.maximumHP; out.hpKnown = automation.hpKnown;
-    SkillSourceState source{};
-    out.rulesKnown = ReadSkillSource(state, source);
+    PHBattleDungeonMemberRules source{};
+    out.rulesKnown = PHReadBattleDungeonMemberRules(state.identity.impl, source);
     if (out.rulesKnown) out.dungeonFlags = source.flags;
     uint16_t duration = 0;
     out.assistVoidKnown = PHReadU16(impl + PHOrbObservationAssistVoidOffset, &duration);
@@ -180,7 +181,7 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
         member.active = skill.active; member.bound = skill.bound; member.number = skill.number;
         member.sourceAssist = skill.sourceCatalogIDs[1]; member.activeAssist = skill.assistCatalogID;
         member.charge = skill.charge; member.temporaryForm = skill.temporaryTurns != 0;
-        member.assistRetained = (skill.assistState & 255u) == 172;
+        member.assistRetained = PHBattleAssistIsRetained(skill.assistState);
         for (unsigned i = 0; i < 2; ++i) { member.stage[i] = skill.skillStage[i]; member.cachedStage[i] = skill.cachedSkillStage[i]; }
         uint8_t active = 0;
         const bool activeKnown = PHReadU8(address, &active);
@@ -195,11 +196,11 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
         if (!skill.assistCatalogID) { member.skillKnown[1] = member.cooldownKnown[1] = true; }
         else {
             uint8_t variant = 0, level = 0; uintptr_t assist = 0;
-            const bool formKnown = PHReadU8(address + 1444, &variant);
+            const bool formKnown = PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &variant);
             member.assistVariantUnsupported = !formKnown || variant != 0;
             // Variant catalog lookup is not ordinary base-index addressing.
             if (tablesKnown && !member.assistVariantUnsupported && int16_t(skill.assistCatalogID) > 0 &&
-                ObservationCard(tables, skill.assistCatalogID, assist) && PHReadU8(address + 1442, &level))
+                ObservationCard(tables, skill.assistCatalogID, assist) && PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistSkillLevelByte, &level))
                 member.skillKnown[1] = ObservationSkill(tables, assist, skill.skillStage[1], level,
                     member.rootSkillIDs[1], member.skillIDs[1], member.catalogCooldown[1], member.cooldownKnown[1]);
         }
@@ -212,7 +213,7 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
                 member.bodyCooldown = uint16_t(body); member.totalCooldown = uint16_t(total);
                 member.chargeToBody = uint16_t(body > member.charge ? body - member.charge : 0);
                 member.chargeToAssist = uint16_t(total > member.charge ? total - member.charge : 0);
-                member.chargeWindow = skill.assistCatalogID && !(source.flags & 8u) && total && member.charge >= total ?
+                member.chargeWindow = PHBattleEffectiveAssistAvailable(&source, skill.assistCatalogID) && total && member.charge >= total ?
                     PHOrbChargeAssist : !body ? PHOrbChargeNoSkill : member.charge < body ? PHOrbChargeBelowBody : PHOrbChargeBody;
             }
         }
@@ -228,8 +229,8 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
         if (!out.rulesKnown || !automation.statusKnown) member.lBlockers |= PHOrbLUnknownRules;
         if (skill.bound) member.lBlockers |= PHOrbLBound;
         if (automation.statusKnown && (automation.playerEffects & PHOrbPlayerAwokenBind)) member.lBlockers |= PHOrbLAwokenBind;
-        if (out.rulesKnown && (source.flags & 4u)) member.lBlockers |= PHOrbLAwakeningsDisabled;
-        if (out.rulesKnown && (source.flags & 0x20u)) member.lBlockers |= PHOrbLLatentsDisabled;
+        if (out.rulesKnown && PHBattleDungeonDisables(&source, PHBattleDungeonAwakeningsDisabled)) member.lBlockers |= PHOrbLAwakeningsDisabled;
+        if (out.rulesKnown && PHBattleDungeonDisables(&source, PHBattleDungeonLatentsDisabled)) member.lBlockers |= PHOrbLLatentsDisabled;
         if (!member.latentKnown) member.lBlockers |= PHOrbLUnknownLatents;
         else if (!member.assistRecoveryLatents) member.lBlockers |= PHOrbLNoLatent;
         if (!member.lAwakeningsKnown) member.lBlockers |= dynamicL ? PHOrbLDynamicAwakenings : PHOrbLUnknownAwakenings;

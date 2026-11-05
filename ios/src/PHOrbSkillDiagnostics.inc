@@ -14,12 +14,12 @@ static NSString *SkillOrbCondition(const PHOrbSnapshot &state, unsigned slot,
     if (slot >= 6 || !state.automation.boardKnown || !state.settled || state.dragged ||
         !PHOrbDimensionsSupported(state.board.width, state.board.height)) return nil;
     const auto &member = state.automation.members[slot];
-    SkillSourceState source;
-    if (!ReadSkillSource(state, source)) return nil;
+    PHBattleDungeonMemberRules source{};
+    if (!PHReadBattleDungeonMemberRules(state.identity.impl, source)) return nil;
     // Diagnose the source actually checked by can-use, including a permitted
     // body choice while its same-family assist is already charged.
-    const bool assist = selector == 1 || (selector == -1 && !(source.flags & 8u) &&
-        int16_t(member.assistCatalogID) > 0 && readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown);
+    const bool assist = selector == 1 || (selector == -1 && PHBattleEffectiveAssistAvailable(&source, member.assistCatalogID) &&
+        readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown);
     const int32_t selected = assist ? readiness.assistSkill : readiness.baseSkill;
     const uintptr_t save = state.identity.header + PHSaveRVA;
     uintptr_t table = 0;

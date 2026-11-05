@@ -349,10 +349,11 @@ static BOOL ReleaseProfile(BattleProvider *provider, ProviderLease *lease, const
     return ProfileOwned(provider, *lease, state->identity.header) && ReturnRecord(provider, lease, state);
 }
 
-static BOOL ProfileMatchesMember(const PHBattleProfile &profile, const PHBattleMember &member) {
+static BOOL ProfileMatchesMember(const PHBattleProfile &profile, const PHBattleMember &member,
+                                 const PHBattleDungeonMemberRules &rules) {
     return member.level == Profile16(profile, 6) && member.skillLevel == Profile16(profile, 8) &&
         !std::memcmp(member.extra, profile.bytes + 24, sizeof(member.extra)) &&
-        !std::memcmp(member.assist, profile.bytes + 14, 7);
+        PHBattleEffectiveAssistMatches(member.assist, profile.bytes + 14, &rules);
 }
 
 static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *nextToken,
@@ -381,7 +382,12 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
     ProviderLease *lease = nullptr;
     PHBattleProfile profile = {};
     int parameter = -1;
+    PHBattleDungeonMemberRules dungeonRules{};
     if (loadout) {
+        if (!PHReadBattleDungeonMemberRules(before.identity.impl, dungeonRules) || !dungeonRules.address) {
+            if (reason) *reason = @"關卡武裝限制尚未確認，未套用隊伍";
+            return PHBattleMutationRejected;
+        }
         if (old.scriptSlot > 0 || old.providerToken || old.rebindToken || !PrepareProfile(loadout, &before, &profile, reason) ||
             !ProviderAvailable(provider, &before, reason)) return PHBattleMutationRejected;
         for (ProviderLease &candidate : provider->leases) if (!candidate.active) { lease = &candidate; break; }
@@ -441,12 +447,18 @@ static PHBattleMutationResult MutateProfile(BattleProvider *provider, uint64_t *
             uint32_t audit = UINT32_MAX;
             success = success && ReadLive(&after, frame, &failure) &&
                 PHReadU32(frame.header + PHSaveRVA + PHBattleAuditOffset, &audit) && !(audit & ~before.auditFlags);
-            if (success && !(loadout ? ProfileMatchesMember(profile, after.members[slot]) :
+            if (success && loadout) {
+                PHBattleDungeonMemberRules liveRules{};
+                success = PHReadBattleDungeonMemberRules(after.identity.impl, liveRules) &&
+                    PHBattleSameDungeonMemberRules(&dungeonRules, &liveRules);
+                if (!success) failure = @"套用期間關卡武裝限制已改變或無法確認";
+            }
+            if (success && !(loadout ? ProfileMatchesMember(profile, after.members[slot], dungeonRules) :
                  after.members[slot].level == original->level && after.members[slot].skillLevel == original->skillLevel &&
                  !std::memcmp(after.members[slot].extra, original->extra, sizeof(original->extra)) &&
                  !std::memcmp(after.members[slot].assist, original->assist, 7))) {
                 const PHBattleMember &m = after.members[slot];
-                failure = loadout ? @"套用後的培養或武裝欄位不符" : [NSString stringWithFormat:
+                failure = loadout ? @"套用後的培養或有效武裝欄位不符" : [NSString stringWithFormat:
                     @"還原培養不符：Lv %u→%u、技能等級 %u→%u、加值／覺醒／潛覺 %@、武裝 %@",
                     original->level, m.level, original->skillLevel, m.skillLevel,
                     std::memcmp(m.extra, original->extra, sizeof(m.extra)) ? @"不同" : @"相同",

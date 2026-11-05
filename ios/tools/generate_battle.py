@@ -25,6 +25,14 @@ def generate(manifest):
         raise ValueError("Input layout differs from the reviewed native handlers")
     lines = ["// Generated from ios/targets/battle-23.6.0.json. Do not edit.", "#pragma once",
              "#include <stdint.h>", "#include <stddef.h>"]
+    member_layout = {
+        "PHBattleBaseIDOffset": 0x5b0, "PHBattleAssistIDOffset": 0x5b2,
+        "PHBattleEffectiveAssistOffset": 0x59e, "PHBattleAssistStateOffset": 0x1d8,
+        "PHBattleDungeonMemberFlagsOffset": 0x21,
+        "PHBattleFormOffset": 0x118, "PHBattleTempIDOffset": 0xf8, "PHBattleTempTurnsOffset": 0x108,
+    }
+    if any(int(manifest["fields"].get(name, "0"), 0) != offset for name, offset in member_layout.items()):
+        raise ValueError("Member source/effective layout differs from PAD 23.6.0")
     for name, value in manifest["fields"].items():
         if not re.fullmatch(r"PHBattle[A-Za-z0-9]+", name):
             raise ValueError("Invalid field name")
@@ -42,7 +50,8 @@ def generate(manifest):
                 "PHBattleSwitchTeamRVA", "PHBattleMaximumHPRVA", "PHBattleAdjustHPRVA",
                 "PHBattleScriptCompileGuardRVA", "PHBattleScriptDispatchGuardRVA",
                 "PHBattleScriptPartyGuardRVA", "PHBattleAllocatorLayoutGuardRVA",
-                "PHBattleAssistBuildGuardRVA", "PHBattleAssistCopyGuardRVA", "PHBattleAssistInitGuardRVA"}
+                "PHBattleAssistBuildGuardRVA", "PHBattleAssistCopyGuardRVA", "PHBattleAssistInitGuardRVA",
+                "PHBattleAssistDisableGuardRVA"}
     guards = manifest["guards"]
     if len(guards) != len(required) or {g["name"] for g in guards} != required:
         raise ValueError("Incomplete or duplicate battle call guards")

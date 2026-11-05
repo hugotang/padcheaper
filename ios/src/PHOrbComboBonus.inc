@@ -14,10 +14,10 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     std::memset(&out,0,sizeof(out));
     if (state.multiplayer.kind != PHOrbMultiplayerNone || !CheckComboBonusCode(state.identity.header)) return false;
     const uintptr_t impl = state.identity.impl;
-    ObservationTables tables{}; SkillSourceState dungeon{};
+    ObservationTables tables{}; PHBattleDungeonMemberRules dungeon{};
     uint8_t leaderFlags = 0;
-    if (!ReadObservationTables(state.identity.header,tables) || !ReadSkillSource(state,dungeon) || !dungeon.rules ||
-        !PHReadU8(dungeon.rules + 32,&leaderFlags) || !state.automation.statusKnown) return false;
+    if (!ReadObservationTables(state.identity.header,tables) || !PHReadBattleDungeonMemberRules(state.identity.impl,dungeon) || !dungeon.address ||
+        !PHReadU8(dungeon.address + 32,&leaderFlags) || !state.automation.statusKnown) return false;
     uint64_t signature = UINT64_C(14695981039346656037);
     auto mix = [&](const void *p, size_t n) {
         const uint8_t *b = static_cast<const uint8_t *>(p);
@@ -89,7 +89,8 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     }
     // Prove providers from current effective awakenings and attributes. An
     // unknown provider contributes nothing; it cannot make a shape activate.
-    const bool awakenings = !(dungeon.flags & 4u) && !(state.automation.playerEffects & PHOrbPlayerAwokenBind);
+    const bool awakenings = !PHBattleDungeonDisables(&dungeon, PHBattleDungeonAwakeningsDisabled) &&
+        !(state.automation.playerEffects & PHOrbPlayerAwokenBind);
     const unsigned ids[] = {27,48,60,78,126,149,150,151,152,153};
     unsigned needed = 0;
     for (unsigned i = 0; i < out.count; ++i) {
@@ -120,7 +121,7 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
             !ObservationAttributes(address,parameter,colors)) continue;
         out.attackColors |= colors;
         if (!awakenings || !PHReadPointer(address + PHOrbObservationProfileOffset,&profile) ||
-            (m.assistCatalogID && (!PHReadU8(address + 1444,&variant) || variant))) continue;
+            (m.assistCatalogID && (!PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte,&variant) || variant))) continue;
         for (unsigned k = 0; k < 10; ++k) {
             if (!(needed & (1u << k))) continue;
             unsigned count = 0;

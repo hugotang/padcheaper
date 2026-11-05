@@ -209,7 +209,7 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
             // voided equipment from consumption or a changed source weapon.
             if (![profile[@"settings"][@"assistRecoveryL"] boolValue] || !evidence->valid || !evidence->turns ||
                 (evidence->dungeonFlags & 8u) || !(evidence->retainedAssists & (1u << i)) ||
-                member->assistCatalogID || member->sourceCatalogIDs[1] != assist || (member->assistState & 255u) != 172 ||
+                member->assistCatalogID || member->sourceCatalogIDs[1] != assist || !PHBattleAssistIsRetained(member->assistState) ||
                 evidence->sourceAssists[i] != assist || evidence->activeAssists[i] ||
                 evidence->assistStates[i] != member->assistState || evidence->numbers[i] != member->number ||
                 evidence->temporaryIDs[i] != member->temporaryID || evidence->temporaryTurns[i]) return NO;

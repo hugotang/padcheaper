@@ -10,7 +10,7 @@
         @"latentCount":@(state->latents[slot]), @"blockers":@(state->blockers[slot])}];
     return @{@"status":status, @"known":@(state->valid), @"beforeTurns":@(state->turns), @"fresh":@(state->fresh),
         @"perColor":amounts, @"providers":providers, @"members":members, @"unknownMembers":@(state->unknownMembers),
-        @"turn":@(_autoTurn), @"actualConfirmed":@NO, @"survivalKnown":@NO, @"healingKnown":@NO,
+        @"turn":@(_auto.turn), @"actualConfirmed":@NO, @"survivalKnown":@NO, @"healingKnown":@NO,
         @"nativeQueueCapacityConfirmed":@NO};
 }
 - (BOOL)bindingNeedsAssistRecovery {
@@ -30,8 +30,8 @@
         trace[@"status"] = @"unavailable"; trace[@"known"] = @NO; trace[@"actualConfirmed"] = @NO;
         trace[@"reason"] = reason ?: @"缺少可核對的原生資料";
         const bool boardRead = HasBoardObservation(*state);
-        trace[@"failedRead"] = @{@"turn":@(_autoTurn), @"observedTurn":@(_observedTurn),
-            @"wave":@(state->wave), @"phase":@(state->phase), @"sessionPhase":_phase, @"boardRead":@(boardRead),
+        trace[@"failedRead"] = @{@"turn":@(_auto.turn), @"observedTurn":@(_observedTurn),
+            @"wave":@(state->wave), @"phase":@(state->phase), @"sessionPhase":SessionPhaseText(_phase), @"boardRead":@(boardRead),
             @"board":boardRead ? BoardTrace(state->board) : @{}};
         _assistTrace = [trace copy];
         [self queueStop:reason ?: @"武裝回復 L：缺少可核對的原生資料，已停止"]; return NO;

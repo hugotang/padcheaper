@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-#define PH_RUNTIME_VERSION @"0.5.34-orbs"
+#include "PHReleaseGenerated.h"
 
 typedef NSDictionary *(^PHOverlaySnapshot)(void);
 typedef void (^PHOverlayAction)(NSString *action, id value);

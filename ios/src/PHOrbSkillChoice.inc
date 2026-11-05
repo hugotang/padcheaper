@@ -1,15 +1,7 @@
 // Guarded skill-attempt context. The native dialog checks the source cards'
 // evolution family, not the displayed transformed number or a name match.
-struct SkillSourceState {
-    uintptr_t rules = 0;
-    uint8_t flags = 0;
-    bool operator==(const SkillSourceState &other) const { return rules == other.rules && flags == other.flags; }
-};
-bool ReadSkillSource(const PHOrbSnapshot &state, SkillSourceState &out) {
-    out = {};
-    return PHReadPointer(state.identity.impl + PHOrbSkillDungeonRulesOffset, &out.rules) &&
-        (!out.rules || (out.rules <= UINTPTR_MAX - 34 && PHReadU8(out.rules + 33, &out.flags)));
-}
+// Dungeon restrictions live in PHBattleDungeonMemberRules and are read by
+// PHReadBattleDungeonMemberRules, shared with profile application and SB.
 struct SkillChoiceState {
     uintptr_t catalog = 0;
     uint32_t count = 0, family[2]{};
