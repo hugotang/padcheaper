@@ -16,4 +16,8 @@
 
 ## 驗證
 
-Windows 回歸通過。Objective-C、arm64 編譯及 iPhone GUI 待本版 CI；`device_verified=false`。撈珠實際取色、倒數與等待時序仍待實機確認。
+Windows 回歸及 [CI 41987386467](https://github.com/hugotang/padcheaper/actions/runs/41987386467) 全部通過：完整回歸、Objective-C session/native、arm64 編譯簽章、編隊瀏覽器與四輪 iPhone GUI。來源 `c9e3671`，本輪用時 19 分 18 秒。先前失敗／取消的 CI 記錄見 [開發紀錄](development.md)。
+
+交付 `E:/ipa/PADCheaper-0.5.33-orbs` 與同名 ZIP。dylib SHA-256 `902b5b6bccf12640a02471ce95b42c7f5f2b456605b265c6c2d9537211d78818`；ZIP SHA-256 `070c2a3323f4bfb06c6679cc5a67d0443821c9114751b1180145372a2d2cae5a`。
+
+`device_verified=false`。撈珠實際取色、倒數與等待時序仍待實機確認；本版沒有 iPad GUI 自動驗證。
