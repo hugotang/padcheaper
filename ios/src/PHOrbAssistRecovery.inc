@@ -54,7 +54,7 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
         else if (!out.latents[slot]) block |= PHOrbLNoLatent;
         unsigned count = 0; uint8_t variant = 0;
         const bool variantKnown = !member.assistCatalogID || (PHReadU8(address + 1444, &variant) && !variant);
-        if (!cardKnown || !variantKnown || !ObservationLAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
+        if (!cardKnown || !variantKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
             block |= PHOrbLUnknownAwakenings;
         else if (dynamicL) block |= PHOrbLDynamicAwakenings;
         else if (!count) block |= PHOrbLNoAwakening;
