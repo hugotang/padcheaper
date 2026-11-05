@@ -38,6 +38,15 @@ enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
 PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept;
 
 enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Cancelled, Invalid, NoRoute, Failed, IncompatibleGoals };
+// Explains the same necessary inventory check used by ordinary search. None
+// does not prove a route exists; spinner failures describe one shared phase,
+// not all ways of fishing or playing the board.
+enum class PHOrbInventoryKind { None, Invalid, ShapeOrbs, MatchRule, GoalCapacity };
+struct PHOrbInventoryIssue {
+    PHOrbInventoryKind kind = PHOrbInventoryKind::None;
+    unsigned goal = 0, color = 0, required = 0, available = 0, phase = 0, variants = 0;
+};
+PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGoalSet &goals) noexcept;
 // Re-evaluate a released board. Shape goals require the first removal wave;
 // combos/colors/connected-match counts may include deterministic cascades.
 // Four means exactly four marked, connected orbs in a line; unmarked same-

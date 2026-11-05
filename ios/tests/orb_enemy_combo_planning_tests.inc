@@ -44,7 +44,8 @@ static void EnemyComboPlanningTests(void) {
         [plan[@"goals"] isEqual:full], "goal overflow does not delete an existing requirement");
     state.enemyCombo.upperTurns[0] = 1;
     plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
-    Check(![plan[@"available"] boolValue], "upper-Combo absorption cannot be solved by raising a minimum goal");
+    Check(![plan[@"available"] boolValue] && [plan[@"enemyCounterBlocker"] isEqual:@"upper-combo-unsupported"],
+        "known upper-Combo absorption is unsupported, not an unreadable lower threshold");
     state.enemyCombo.upperTurns[0] = 0;
     state.enemyCombo.valid = false;
     plan = PHOrbPlanWithEnemyCombo(base, &state, YES);

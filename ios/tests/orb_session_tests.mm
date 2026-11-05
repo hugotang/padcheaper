@@ -436,6 +436,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_survival_session_tests.inc"
 #include "orb_recovery_session_tests.inc"
 #include "orb_effect_session_tests.inc"
+#include "orb_failure_session_tests.inc"
 
 #include "orb_shortcut_session_tests.inc"
 #include "orb_thorn_session_tests.inc"
@@ -722,7 +723,8 @@ int main() {
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
         Check(Preview(session, engine), "ignored native move setup"); Execute(session); UntilDragging(session, engine); engine->ignoreMove = YES;
         for (unsigned i = 0; i < 100 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session, engine, Frame());
-        Check(engine->releases == 1 && engine->live.moves == 0 && [[session snapshot][@"completed"] unsignedIntegerValue] == 0,
+        Check(engine->releases == 1 && engine->live.moves == 0 && [[session snapshot][@"completed"] unsignedIntegerValue] == 0 &&
+            [session.snapshot[@"message"] containsString:@"確認換珠超過 0.20 秒"],
               "unacknowledged movement times out instead of skipping steps");
 
         engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
@@ -758,6 +760,7 @@ int main() {
         SurvivalSessionTests();
         RecoverySessionTests();
         OrbEffectSessionTests();
+        FailureMessageSessionTests();
         PoisonHeartFourSessionTests();
         ThornSessionTests();
         LifecycleSessionTests();

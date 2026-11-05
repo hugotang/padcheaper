@@ -222,22 +222,28 @@ unsigned Needed(const PHOrbGoal &goal, unsigned w, unsigned h) {
     }
 }
 
-bool EnoughOrbs(const Cells &cells, const Context &context) {
+bool EnoughOrbs(const Cells &cells, const Context &context, PHOrbInventoryIssue *issue = nullptr) {
     for (unsigned phase = 0; phase < context.variants; ++phase) {
+        const auto fail = [&](PHOrbInventoryKind kind, unsigned goal, unsigned color, unsigned required, unsigned available) {
+            if (issue) *issue = {kind, goal, color, required, available, phase, context.variants};
+            return false;
+        };
         unsigned inventory[PHOrbTypes]{};
         for (unsigned i = 0; i < context.width * context.height; ++i)
             ++inventory[context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i]];
         if (context.fishColor >= 0) ++inventory[context.fishColor]; // Necessary bound, not a route proof.
         for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
-            if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color]) return false;
+            if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color])
+                return fail(PHOrbInventoryKind::ShapeOrbs, 0, color, PHOrbRequiredShapeOrbs(&context.goals, color), inventory[color]);
         for (unsigned g = 0; g < context.goals.count; ++g) {
             const auto &goal = context.goals.items[g];
-            if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch)) return false;
+            if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch))
+                return fail(PHOrbInventoryKind::MatchRule, g, 0, std::max(context.minErase, context.minMatch), goal.length);
             unsigned possible = 0, needed = std::max({Needed(goal, context.width, context.height), context.minErase, context.minMatch});
             for (unsigned c = 0; c < PHOrbTypes; ++c)
                 if (!(context.unmatchable & (1u << c)) && (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
                     possible += goal.kind == PHOrbGoalColors ? unsigned(inventory[c] >= needed) : inventory[c] / needed;
-            if (possible < goal.count) return false;
+            if (possible < goal.count) return fail(PHOrbInventoryKind::GoalCapacity, g, 0, goal.count, possible);
         }
     }
     return true; // Necessary inventory check, not a proof that a route exists.
@@ -844,6 +850,17 @@ PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
         case PHOrbSearchQuality::Balanced: return {};
     }
     return {};
+}
+
+PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGoalSet &goals) noexcept {
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&goals)) return {PHOrbInventoryKind::Invalid};
+    try {
+        Cells cells{};
+        std::copy(board.types, board.types + board.width * board.height, cells.begin());
+        PHOrbInventoryIssue issue;
+        EnoughOrbs(cells, MakeContext(board, goals, false), &issue);
+        return issue;
+    } catch (...) { return {PHOrbInventoryKind::Invalid}; }
 }
 
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,

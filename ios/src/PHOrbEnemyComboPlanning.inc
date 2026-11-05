@@ -13,6 +13,13 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
         state->identity.sourceMode != 0 || !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) ||
         !PHOrbEnemyComboRequirement(&state->enemyCombo, &minimum) || !PHOrbReadGoals(plan[@"goals"], &goals)) {
         blocker = @"state-unavailable"; message = @"敵人對策：Combo 吸收或解吸收狀態未確認，已停止";
+        if (state && state->enemyCombo.valid && state->enemyCombo.enemyCount <= 8)
+            for (unsigned i = 0; i < state->enemyCombo.enemyCount; ++i)
+                if ((state->enemyCombo.aliveMask & (1u << i)) && (int16_t)state->enemyCombo.upperTurns[i] > 0) {
+                    blocker = @"upper-combo-unsupported";
+                    message = @"敵人有「Combo 以上吸收」；目前無法核對加算與天降後的 Combo 上限，已停止";
+                    break;
+                }
     } else if (!minimum) {
         result[@"enemyCounterMessage"] = @"目前沒有需要突破的 Combo 吸收，保留原目標";
         return [result copy];
@@ -20,7 +27,7 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
         result[@"enemyComboActive"] = @YES; result[@"enemyComboRequired"] = @(minimum); result[@"enemyComboFirstWave"] = @YES;
         if (minimum > 14) {
             blocker = @"combo-limit";
-            message = [NSString stringWithFormat:@"敵人需要至少 %u Combo，超出目前可驗證的 14 Combo；請先用解吸收技能", minimum];
+            message = [NSString stringWithFormat:@"敵人 Combo 吸收對策要求首消至少 %u Combo，超出目前支援的 14 Combo；未計隊長／技能加算，請先使用對應技能或手動處理", minimum];
         } else {
             unsigned index = goals.count;
             for (unsigned i = 0; i < goals.count; ++i) if (goals.items[i].kind == PHOrbGoalCombo) { index = i; break; }

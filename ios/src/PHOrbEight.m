@@ -156,8 +156,11 @@ NSDictionary *PHOrbEightPlan(NSDictionary *a, const PHOrbSnapshot *s) {
     unsigned actual = required > bonus ? required - bonus : 1;
     unsigned combo = goals.count;
     for (unsigned g = 0; g < goals.count; ++g) if (goals.items[g].kind == PHOrbGoalCombo) { combo = g; break; }
-    if (actual > 14 || (combo == PHOrbMaxGoals && actual > 1))
-        return @{@"available":@NO,@"message":@"本層所需 Combo 超出盤面／目標上限"};
+    if (actual > 14)
+        return @{@"available":@NO,@"message":[NSString stringWithFormat:
+            @"本層 Combo 吸收對策需 %u Combo；扣除已核對隊長加算 %u 後仍需首消 %u Combo，超出目前支援的 14 Combo", required, bonus, actual]};
+    if (combo == PHOrbMaxGoals && actual > 1)
+        return @{@"available":@NO,@"message":@"本層已有 6 項目標，無法再加入 Combo 吸收條件；未刪除原目標，已停止"};
     if (combo < goals.count) goals.items[combo].count = MAX(goals.items[combo].count,actual);
     else if (actual > 1) goals.items[goals.count++] = (PHOrbGoal){PHOrbGoalCombo,0,(uint8_t)actual,0};
     goals.comboFirstWave = true;

@@ -1,6 +1,6 @@
 # 編譯及載入 PADCheaper
 
-目前版本 `0.5.32-orbs`。各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，未編譯的改動見 [開發紀錄](docs/development.md)。
+目前版本 `0.5.33-orbs`。各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，未編譯的改動見 [開發紀錄](docs/development.md)。
 
 目標：jp.gungho.pad 23.6.0，CFBundleVersion 106878，arm64。其他版本會停止安裝 hooks。
 

@@ -1,4 +1,23 @@
 static void EnemyComboSessionTests() {
+    // Recorded 0.5.32 failure: enough light/hearts, but an added first-clear
+    // Combo goal exceeds board capacity. The stop and exported reason agree.
+    for (unsigned width : {5u,6u}) {
+        const unsigned height = width - 1, required = width == 6 ? 13 : 7;
+        FakeOrbEngine *fixture = [[FakeOrbEngine alloc] initWithWidth:width height:height];
+        const uint8_t types[] = {5,2,3,0,3,1,4,0,3,5,3,5,5,5,3,0,3,5,3,4,3,2,3,5,5,4,4,1,4,5};
+        std::copy(types,types + width * height,fixture->live.board.types);
+        fixture->live.enemyCombo.turns[0] = 3; fixture->live.enemyCombo.thresholds[0] = uint16_t(required - 1);
+        fixture->live.automation.enemyEffects = PHOrbEnemyComboAbsorb;
+        NSArray *goals = @[@{@"kind":@"t",@"colors":@8,@"count":@1}, @{@"kind":@"four",@"colors":@32,@"count":@1}];
+        PHOrbSession *test = AssistSession(fixture,AssistSettings(NO,goals));
+        Check(UntilPhase(test,fixture,@"stopped") && !fixture->stages && !fixture->releases &&
+            [test.snapshot[@"searchTrace"][@"status"] isEqual:@"insufficient-orbs"] &&
+            [test.snapshot[@"message"] containsString:[NSString stringWithFormat:@"首消至少 %u Combo",required]] &&
+            [test.snapshot[@"message"] containsString:width == 6 ? @"最多 10 Combo" : @"最多 6 Combo"] &&
+            [test.snapshot[@"message"] containsString:@"敵人 Combo 吸收"] &&
+            [test.snapshot[@"message"] isEqual:test.snapshot[@"searchTrace"][@"reason"]],
+            "enemy Combo board-capacity failure names the added constraint and never submits input");
+    }
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetAssistBoard(engine, 0);
     engine->live.enemyCombo.turns[0] = 3; engine->live.enemyCombo.thresholds[0] = 1;
     engine->live.automation.enemyEffects = PHOrbEnemyComboAbsorb;

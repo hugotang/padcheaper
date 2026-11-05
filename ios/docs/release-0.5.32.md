@@ -20,4 +20,4 @@ IDA：觸控移動 `0x100608968` 與交換 `0x100608738` 不檢查轉轉格；�
 
 ## 驗證
 
-Windows 回歸通過；session、原生、iOS 編譯與 GUI 見 CI。`device_verified=false`。
+[CI 41879129915](https://github.com/hugotang/padcheaper/actions/runs/41879129915) 的回歸、session、原生、arm64 編譯簽章、編隊瀏覽器與四輪 iPhone GUI 通過，但 iPad 浮動控制項命中測試失敗，整輪失敗，未正式打包。後續由 0.5.33 接續。`device_verified=false`。

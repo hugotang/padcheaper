@@ -931,9 +931,10 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb board transition: %@ / observed frames %@ / progress %@ / target %@\nOrb last read issue: %@",
         orbs[@"boardTransition"], orbs[@"boardTransitionFrames"], orbs[@"resizeProgress"], orbs[@"resizeTarget"], orbs[@"lastReadIssue"]];
     diagnostics = [diagnostics stringByAppendingFormat:
-        @"\nOrb effects: %@\nOrb hazard policy (candidate only): met %@ / poison erased %@ / mortal poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
+        @"\nOrb effects: %@\nOrb hazard policy (candidate only): met %@ / poison erased %@ / mortal poison erased %@ / unmatched bombs %@\nSpinners: mask %@ / colors %@ / phases %@ / turns %@ / period %@ frames / countdown known %@ / countdown %@ frames\nBoard restrictions: blocked %@ / tape %@ / cloud %@ / fixed start (one-based) %@ / unmatchable %@ / min run %@ / min group %@",
         orbs[@"obstacles"], orbs[@"hazardsSafe"], orbs[@"poisonErased"], orbs[@"mortalPoisonErased"], orbs[@"unmatchedBombs"],
         orbs[@"spinnerMask"], orbs[@"spinnerColors"], orbs[@"spinnerVariants"], orbs[@"spinnerTurns"], orbs[@"spinnerPeriodFrames"],
+        orbs[@"spinnerCountdownKnown"], orbs[@"spinnerCountdown"],
         orbs[@"blockedMask"], orbs[@"tapeMask"], orbs[@"cloudMask"], orbs[@"fixedStart"], orbs[@"unmatchableColors"],
         orbs[@"minErase"], orbs[@"minMatch"]];
     diagnostics = [diagnostics stringByAppendingFormat:

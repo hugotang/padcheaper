@@ -53,6 +53,7 @@ static void FishSessionTests() {
         if (entry == NSNotFound || !entry) continue;
         Execute(session);
         Check(engine->allowedSpinnerCell == (UINT64_C(1) << fish), "execution opens only the route's spinner cell to input");
+        Check([session.snapshot[@"executionLimitMS"] isEqual:@7000], "fishing diagnostics include the reserved colour cycle in the execution limit");
         // Reach the neighbour, then hold. The limit is 4 s plus one 3 s cycle
         // (6 colours x 30 frames at 60 fps); a 24-step route needs about 2 s.
         for (unsigned i = 0; i < 300 && !(engine->live.dragged && engine->live.moves + 1 >= entry); ++i)

@@ -273,6 +273,7 @@ NSString *PoisonFailureContext(const PHOrbEvaluation &evaluation, const PHOrbSol
         @"候選路徑會消除毒／猛毒共 %u 顆；目前策略設定為避毒。\n", evaluation.poisonErased];
     return !evaluation.heartFours ? @"候選路徑會消毒／猛毒，但未在全部轉轉相位達成首消心四連；未開放執行。\n" : @"";
 }
+#include "PHOrbFailurePresentation.inc"
 NSDictionary *SkillDecisionContext(const PHOrbSnapshot &state, NSUInteger slot, bool attempted = false) {
     const auto &member = state.automation.members[slot];
     unsigned counts[PHOrbTypes]{};
@@ -1105,15 +1106,14 @@ struct EightPreparationState {
             [self queueStop:@"開場技能使用次數未確認；已停止，不能重播此步"]; return;
         }
     } else if ([_phase isEqual:@"skillWaiting"]) {
-        if (_now - _autoPhaseAt > SkillTimeout) { [self queueStop:@"技能等候逾時或需要手動選擇，已停止"]; return; }
+        if (_now - _autoPhaseAt > SkillTimeout) { [self queueStop:@"等待技能完成逾時，已停止；請查看遊戲是否仍有動畫或選擇畫面"]; return; }
         if (_live.boardTransition || _live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
         if (!_skillAcknowledged) {
             [self queueStop:@"技能使用次數未確認，已停止以免重複施放"]; return;
         }
     } else if ([_phase isEqual:@"autoWaiting"]) {
         if (_now - _autoPhaseAt > 12) {
-            [self queueStop:(PHOrbBoardObstacles(&_live) & PHOrbObstacleSpinner) ?
-                @"轉轉盤面持續變色，未取得可確認的技能快照；請先手動處理後再開始" : @"尚未進入穩定的單人操作階段，已停止"]; return;
+            [self queueStop:@"等待 12 秒仍未取得穩定的單人操作與技能狀態，已停止；請查看遊戲畫面"]; return;
         }
         if (_live.boardTransition || _live.phase != 2 || _live.automation.busy || !_live.settled) { _hasStable = false; return; }
     } else return;
@@ -1539,7 +1539,10 @@ struct EightPreparationState {
             trace[@"evaluationCalls"] = @(route.evaluationCalls); trace[@"evaluationCacheHits"] = @(route.evaluationCacheHits);
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"exploredDepth"] = @(route.exploredDepth);
-            trace[@"status"] = SolveStatusName(result); session->_searchTrace = [trace copy];
+            trace[@"status"] = SolveStatusName(result);
+            if (result != PHOrbSolveStatus::Solved) trace[@"reason"] = SolveFailureMessage(result, board,
+                checkedOptions, session->_goalPlan, assistCandidates.count != 0);
+            session->_searchTrace = [trace copy];
             // A failed preferred preparation is not an output failure: output
             // was never searched on this board, so fall back instead of stopping.
             const bool priorityPreparation = session->_eightPrep.active && session->_eightPrep.priority;
@@ -1551,12 +1554,7 @@ struct EightPreparationState {
                 [session recoverEightSolve]) return;
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = @"stopped";
-                session->_message = assistCandidates.count ? @"本次限時搜尋未找到兼顧原目標及武裝回復 L 的路徑；未證明盤面無解，已停止。" :
-                    result == PHOrbSolveStatus::InsufficientOrbs ?
-                    @"目前珠數不足以達成目標；可先使用技能改盤，或調整目標後重新讀盤。" :
-                    result == PHOrbSolveStatus::IncompatibleGoals ?
-                    @"目前珠數或空間無法同時排出所需的獨立形狀；可改盤或調整目標。" :
-                    @"本次未取得有效路徑，請重新讀盤";
+                session->_message = SolveFailureMessage(result, board, checkedOptions, session->_goalPlan, assistCandidates.count != 0);
                 if (session->_automatic || session->_oneShot) [session queueStop:session->_message];
                 return;
             }
@@ -1596,6 +1594,8 @@ struct EightPreparationState {
             if (route.fishing) summary = [summary stringByAppendingFormat:
                 @"\n路徑會從轉轉格撈出%@珠：走到旁邊後等該色出現才進入，最多多等 %.1f 秒。",
                 @[@"火",@"水",@"木",@"光",@"闇",@"心"][route.fishColor], FishWaitSeconds(session->_preview)];
+            else if (board.spinnerMask && !(PHOrbBlockedCells(&board) & board.spinnerMask))
+                summary = [summary stringByAppendingString:@"\n全盤珠子已鎖定，路徑可穿過轉轉格；封條仍不可穿越。"];
             else if (board.spinnerMask) summary = [summary stringByAppendingFormat:
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
             if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];
@@ -1625,6 +1625,9 @@ struct EightPreparationState {
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
             if (!route.hazardsSafe)
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
+            if (!route.goalsMet || !route.hazardsSafe) {
+                trace[@"reason"] = session->_message; session->_searchTrace = [trace copy];
+            }
             if ((session->_automatic || session->_oneShot) && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
         });
       }
@@ -1842,7 +1845,8 @@ struct EightPreparationState {
         }
         if (time - _requestedAt < ArmDelay) return;
         if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
-            [self queueStop:@"開始逾時或操作時間不足"]; return;
+            [self queueStop:time - _requestedAt > 2 ? @"開始轉珠等候超過 2 秒，已停止" :
+                @"剩餘操作時間不足以完成路徑及必要等待，未開始轉珠"]; return;
         }
         _phase = @"running"; _startedAt = _stepAt = _sentAt = time;
         _expected = current;
@@ -1874,7 +1878,11 @@ struct EightPreparationState {
                     EvaluationTrace(evaluation, _solveOptions.goals) : @{@"valid":@NO}];
                 if (!valid || !evaluation.goalsMet || !evaluation.hazardsSafe ||
                     (_route.thornContacts && !evaluation.heartFours)) {
-                    [self queueStop:@"放手前實際盤面未通過目標或毒／爆彈檢查；已中止連續模式並放開"];
+                    NSString *failure = !valid ? @"放手前無法核對實際盤面" :
+                        !evaluation.goalsMet ? @"放手前實際盤面未達成全部目標" :
+                        !evaluation.hazardsSafe ? @"放手前實際盤面未通過毒／爆彈處理條件" :
+                        @"放手前荊棘路徑缺少首消心四連";
+                    [self queueStop:[failure stringByAppendingString:@"；已停止並放開"]];
                 } else {
                     if (_eightAutomatic && _eightPrep.active) {
                         // Consume the one-turn allowance when release is committed,
@@ -2124,7 +2132,8 @@ struct EightPreparationState {
         } else if (SamePosition(current, _expected) && time - _sentAt <= 0.20 && current.dragged == _ownedOrb) {
             // Keep the same target; never skip an unacknowledged swap.
         } else {
-            [self queueStop:@"原生交換結果與路徑不符，已停止"];
+            [self queueStop:SamePosition(current, _expected) && current.dragged == _ownedOrb ?
+                @"等待遊戲確認換珠超過 0.20 秒，已停止並放開" : @"原生交換結果與路徑不符，已停止"];
         }
         return;
     }
@@ -2305,7 +2314,8 @@ struct EightPreparationState {
         @"ruleTiming":@{@"observedTurn":@(_observedTurn), @"profileID":_historyTimingProfile[@"id"] ?: @"",
             @"ruleLastUseTurns":ruleUses, @"groupLastUseTurns":groupUses},
         @"ruleDecisionDetails":decisionDetails, @"decisionPhase":@(_decisionState.phase),
-        @"executionElapsedMS":@(unsigned(_executionElapsed * 1000)), @"executionLimitMS":@(unsigned(ExecutionLimit * 1000)),
+        @"executionElapsedMS":@(unsigned(_executionElapsed * 1000)),
+        @"executionLimitMS":@(unsigned((ExecutionLimit + (_route.fishing ? FishWaitSeconds(_preview) : 0)) * 1000)),
         @"decisionSkillWindow":@(_decisionState.automation.window), @"decisionSkillBusy":@(_decisionState.automation.busy),
         @"decisionSkillWindowReason":PHOrbSkillWindowDescription(&_decisionState.automation),
         @"decisionContextCurrent":@(decisionCurrent),

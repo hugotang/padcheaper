@@ -342,7 +342,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     else if (!PHOrbBoardValid(&state.board)) { if (reason) *reason = @"盤面含未支援的珠型、旗標或轉轉模式"; }
     else if (!state.settled && !state.dragged) { if (reason) *reason = @"等待盤面動畫停止"; }
     else if (!PHInputIsQuiet(&state.input)) { if (reason) *reason = @"請先放開手指"; }
-    else if (reason) *reason = state.board.spinnerMask ? @"轉轉：避開變色格並檢查全部可能色序後求路" : @"可以讀盤及求路";
+    else if (reason) *reason = state.board.spinnerMask ? @"盤面與轉轉資料已讀取，可依目前操作條件求路" : @"可以讀盤及求路";
     return true;
 }
 
