@@ -6,6 +6,7 @@
   const histories = new Map();
   let library = model.createLibrary(), team = model.selectedTeam(library), savedLibrary = null;
   let selected = {slot:0,kind:'body'}, battle = {}, recent = [], savedJSON = '', pending = null;
+  let latentChoice = 11;
   let sequence = 0, saveTimer, toastTimer, lastSaveError = '', savePromise = Promise.resolve({ok:true}), resolveSave;
   const teamView = PHTeamView.create(model,()=>team,portrait);
   const bridge = (action,value) => {
@@ -15,6 +16,16 @@
   };
   const member = () => team.slots[selected.slot][selected.kind];
   const history = () => histories.get(library.selected) || [];
+  function showWorkspace(name,focus=false) {
+    if(!['formation','calculator','dungeon'].includes(name))return;
+    for(const key of ['formation','calculator','dungeon']) {
+      const active=key===name,tab=$('tab-'+key);
+      tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;
+      $('panel-'+key).hidden=!active;
+    }
+    $('calc-icon-info').hidden=true;
+    if(focus)$('tab-'+name).focus({preventScroll:true});
+  }
   function message(id,value) { $(id).textContent=value; $(id).hidden=!value; }
   function error(value) { message('error',value); message('editor-error',value); }
   function toast(value) {
@@ -25,10 +36,18 @@
   function text(className,value) { const e=document.createElement('div');e.className=className;e.textContent=value;return e; }
   function portrait(id) {
     const p=document.createElement('div');p.className='portrait'+(!id?' empty':'');p.setAttribute('aria-hidden','true');
+    p.dataset.cardId=String(id);
     if(id) {
       const page=Math.ceil(id/100),index=(id-1)%100;
-      p.style.backgroundImage='url(https://mapaler.github.io/PADDashFormation/images/cards_ja/CARDS_'+String(page).padStart(3,'0')+'.PNG)';
-      p.style.backgroundPosition=(index%10*100/9)+'% '+(Math.floor(index/10)*100/9)+'%';
+      // The 1024px atlas contains 100px portraits at a 102px pitch, not ten
+      // equal tiles. Clip one portrait so neighboring artwork cannot bleed in.
+      p.style.setProperty('--portrait-column',index%10);p.style.setProperty('--portrait-row',Math.floor(index/10));
+      const fallback=text('portrait-fallback','#'+id),image=document.createElement('img');
+      image.alt='';image.decoding='async';image.referrerPolicy='no-referrer';
+      image.onload=()=>{p.classList.add('loaded');p.classList.remove('unavailable');};
+      image.onerror=()=>{p.classList.remove('loaded');p.classList.add('unavailable');p.title='角色圖示暫時無法載入';};
+      image.src='https://mapaler.github.io/PADDashFormation/images/cards_ja/CARDS_'+String(page).padStart(3,'0')+'.PNG';
+      p.append(fallback,image);
     }
     return p;
   }
@@ -64,6 +83,7 @@
   }
   function resetFields() {
     $('team-title').value=team.title;$('search').value='';$('results').hidden=true;
+    $('latent-picker').open=false;
   }
   function matching(index) {
     const live=battle.members?.[index];
@@ -102,6 +122,7 @@
     $('slots-label').textContent=(selected.slot+1)+' / 6';
     $('previous-slot').disabled=selected.slot===0;$('next-slot').disabled=selected.slot===5;
     ['body','assist'].forEach(kind=>{const active=selected.kind===kind;$('kind-'+kind).className=active?'active':'';$('kind-'+kind).setAttribute('aria-pressed',String(active));});
+    $('selected-portrait').replaceChildren(portrait(v.id));
     $('selected-name').textContent=c?'#'+c.id+' '+c.name:'尚未選擇'+(assist?'武裝':'本體');
     $('selected-hint').textContent=c?'最高 Lv.'+c.maxLevel+' · 技能最高 '+c.maxSkill+' 級 · '+c.awakenings.length+' 個普通覺醒':'搜尋圖鑑編號或名稱來選擇角色。';
     for(const [id,value,max] of [['level',v.level||c?.maxLevel||1,c?.maxLevel||120],['skill',v.skill||c?.maxSkill||1,c?.maxSkill||999]]) {
@@ -119,11 +140,27 @@
       for(const [value,label] of choices) {const b=document.createElement('button');if(value>0)b.append(teamView.icon(value));b.append(document.createTextNode(label));b.className=value===v.superAwakening?'active':'';b.dataset.super=value;b.onclick=()=>update({superAwakening:value});$('super-options').append(b);}
       const used=v.latents.reduce((n,id)=>n+model.latentCost(id),0);
       $('latent-title').textContent='潛在覺醒 · '+used+' / '+(c?.latentSlots||6)+' 格（點擊移除）';
-      $('latent-list').replaceChildren();v.latents.forEach((id,index)=>{const b=document.createElement('button');b.append(teamView.icon(id,true),document.createTextNode(model.latentName(id)+' ×'));b.onclick=()=>update({latents:v.latents.filter((_,i)=>i!==index)});$('latent-list').append(b);});
+      $('latent-list').replaceChildren();v.latents.forEach((id,index)=>{const b=document.createElement('button');b.type='button';
+        b.append(teamView.icon(id,true),document.createTextNode(model.latentName(id)+' ×'));
+        b.setAttribute('aria-label','移除第 '+(index+1)+' 個潛覺：'+model.latentName(id));
+        b.onclick=()=>update({latents:v.latents.filter((_,i)=>i!==index)});$('latent-list').append(b);});
+      renderLatentChoice();
     }
     const destination=Number($('slot-destination').value);
     options($('slot-destination'),team.slots.map((_,i)=>[i,'位置 '+(i+1)]).filter(([i])=>i!==selected.slot),destination!==selected.slot&&destination>=0?destination:(selected.slot+1)%6);
     $('clear-card').textContent=assist?'移除此武裝':'移除此本體';renderRecent();
+  }
+  function renderLatentChoice() {
+    const value=member(),card=model.cards.get(value.id),used=value.latents.reduce((n,id)=>n+model.latentCost(id),0);
+    const remaining=Math.max(0,(card?.latentSlots||6)-used);
+    $('latent-choice').replaceChildren(teamView.icon(latentChoice,true),text('latent-label',model.latentName(latentChoice)+' · '+model.latentCost(latentChoice)+' 格'));
+    $('latent-add').disabled=!card||model.latentCost(latentChoice)>remaining;
+    $('latent-space').textContent=card?'剩餘 '+remaining+' 格':'先選擇本體角色';
+    for(const button of $('latent-options').children) {
+      const id=Number(button.dataset.latent);
+      button.classList.toggle('active',id===latentChoice);button.setAttribute('aria-pressed',String(id===latentChoice));
+      button.disabled=!card||model.latentCost(id)>remaining;
+    }
   }
   function renderState() {
     const unsaved=dirty(),configured=battle.automaticConfigured??battle.automaticEnabled;
@@ -180,7 +217,7 @@
       $('editor-content').scrollTop=0;$('editor-done').focus({preventScroll:true});});
   }
   function closeEditor() {
-    guarded(()=>{readFields();render();$('editor-dialog').hidden=true;$('main').inert=false;$('main').removeAttribute('aria-hidden');document.body.classList.remove('editing');
+    guarded(()=>{readFields();render();$('latent-picker').open=false;$('editor-dialog').hidden=true;$('main').inert=false;$('main').removeAttribute('aria-hidden');document.body.classList.remove('editing');
       document.querySelector('#'+selected.kind+'-grid [data-slot="'+selected.slot+'"]').focus({preventScroll:true});});
   }
   function navigate(slot,kind=selected.kind) {
@@ -249,7 +286,7 @@
     showDungeonComparison(value) {
       closeEditor();
       teamView.dungeon.importText(value);
-      $('calc-dungeon-details').open=true;
+      showWorkspace('dungeon');
       requestAnimationFrame(()=>$('calc-dungeon-details').scrollIntoView({block:'start'}));
     },
     getLibrary() {return model.updateLibraryTeam(library,team);},
@@ -257,8 +294,23 @@
     whenSaved() {return savePromise;},
     notify:toast
   };
+  const workspaceNames=['formation','calculator','dungeon'];
+  for(const name of workspaceNames) {
+    $('tab-'+name).onclick=()=>showWorkspace(name);
+    $('tab-'+name).onkeydown=event=>{
+      const index=workspaceNames.indexOf(name);
+      const next=event.key==='ArrowRight'?(index+1)%3:event.key==='ArrowLeft'?(index+2)%3:
+        event.key==='Home'?0:event.key==='End'?2:-1;
+      if(next<0)return;event.preventDefault();showWorkspace(workspaceNames[next],true);
+    };
+  }
   for(let i=0;i<6;i++)$('positions').append(text('position',i===0?'1 隊長':i===5?'6 助人':String(i+1)));
-  options($('latent-choice'),Object.keys(model.latentNames).map(Number).map(id=>[id,model.latentName(id)+' · '+model.latentCost(id)+' 格']),11);
+  for(const id of Object.keys(model.latentNames).map(Number)) {
+    const button=document.createElement('button');button.type='button';button.dataset.latent=String(id);
+    button.append(teamView.icon(id,true),text('latent-label',model.latentName(id)),text('latent-cost',model.latentCost(id)+' 格'));
+    button.onclick=()=>{latentChoice=id;renderLatentChoice();$('latent-picker').open=false;$('latent-picker-toggle').focus({preventScroll:true});};
+    $('latent-options').append(button);
+  }
   $('team-choice').onchange=()=>guarded(()=>{const id=$('team-choice').value;if(pending){renderLibrary();return;}
     try{useLibrary(model.selectLibraryTeam(model.updateLibraryTeam(library,readFields()),id),'已儲存並切換隊伍');}finally{renderLibrary();}});
   $('team-new').onclick=()=>guarded(()=>{if(pending)return;const draft=model.empty();draft.title='隊伍 '+(library.teams.length+1);useLibrary(model.addLibraryTeam(model.updateLibraryTeam(library,readFields()),draft,uniqueTeamID()),'已新增並儲存空白隊伍');});
@@ -275,7 +327,7 @@
     $(id).onchange=()=>guarded(()=>{readFields();render();});$(id).addEventListener('input',renderState);
   });
   $('plus-preset').onchange=()=>{const n=Number($('plus-preset').value);if(n>=0)update({plus:[n,n,n]});};
-  $('latent-add').onclick=()=>update({latents:[...member().latents,Number($('latent-choice').value)]});
+  $('latent-add').onclick=()=>update({latents:[...member().latents,latentChoice]});
   $('previous-slot').onclick=()=>navigate(selected.slot-1);$('next-slot').onclick=()=>navigate(selected.slot+1);
   $('kind-body').onclick=()=>navigate(selected.slot,'body');$('kind-assist').onclick=()=>navigate(selected.slot,'assist');
   $('editor-done').onclick=closeEditor;$('undo').onclick=$('editor-undo').onclick=undo;
@@ -290,7 +342,10 @@
   $('restore-one').onclick=()=>bridge('restore',selected.slot);$('restore-all').onclick=()=>bridge('restore',6);
   document.addEventListener('keydown',event=>{
     if($('editor-dialog').hidden)return;
-    if(event.key==='Escape'){event.preventDefault();closeEditor();}
+    if(event.key==='Escape'){event.preventDefault();
+      if($('latent-picker').open){$('latent-picker').open=false;$('latent-picker-toggle').focus({preventScroll:true});}
+      else closeEditor();
+    }
     if(event.key==='Tab') {
       const focusable=[...$('editor-dialog').querySelectorAll('button,input,select,summary')].filter(e=>!e.disabled&&e.getClientRects().length);
       const first=focusable[0],last=focusable[focusable.length-1];

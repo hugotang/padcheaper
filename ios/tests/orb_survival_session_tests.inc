@@ -97,6 +97,26 @@ static void SurvivalSessionTests() {
     Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.size() == 1 && !engine->live.automation.playerEffects,
         "temporary awakening bind can request a confirmed cleanse followed by a new snapshot");
     [session queueStop:@"end temporary bind fixture"];
+    for (bool living : {false, true}) {
+        NSMutableDictionary *third = [cleanse mutableCopy]; third[@"slot"] = @3; third[@"monster"] = @14060;
+        engine = [FakeOrbEngine new]; engine->clearPlayerStatusWithSkill = YES;
+        engine->live.automation.members[2].number = 14060; engine->live.automation.members[2].charge = 11;
+        engine->live.automation.playerEffects = PHOrbPlayerAwokenBind;
+        engine->live.automation.partsMask = 6; engine->live.automation.activeEnemies = living ? 2 : 1;
+        engine->live.enemyCombo.enemyCount = 3; engine->live.enemyCombo.aliveMask = living ? 3 : 1;
+        for (unsigned slot : {1u,2u}) {
+            PHOrbEnemyPartState part{}; part.known = true; part.index = uint8_t(slot - 1);
+            part.mode = living && slot == 1 ? 1 : -1;
+            part.hp = part.mode > 0 ? 200 : UINT64_MAX;
+            engine->live.automation.parts[slot] = engine->live.enemyCombo.parts[slot] = part;
+            engine->live.enemyCombo.hp[slot] = part.hp; engine->live.enemyCombo.flags[slot] = 0x100;
+        }
+        session = AutomaticSession(engine,@[third]);
+        Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder == std::vector<NSUInteger>{2} &&
+            !engine->live.automation.playerEffects && engine->releases == 1 && engine->enemyComboReads,
+            "position-three required awoken cleanse is confirmed then Auto completes its puzzle on a boss-with-parts floor");
+        [session queueStop:@"end position-three parts cleanse fixture"];
+    }
     cleanse[@"status"] = @"member_bind";
     engine = [FakeOrbEngine new]; engine->live.automation.playerEffects = PHOrbPlayerMemberBind;
     engine->live.automation.members[2].bound = true; engine->clearPlayerStatusWithSkill = YES;

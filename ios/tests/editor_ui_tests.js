@@ -52,6 +52,9 @@ const {pathToFileURL}=require('node:url');
  assert.match(await page.locator('#battle-summary').innerText(),/其他配方/);
  await page.selectOption('#team-choice','legacy');await page.evaluate(()=>PHFormationUI.whenSaved());
  await page.locator('#body-grid .card').first().click();await page.locator('#editor-dialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#selected-portrait .portrait').getAttribute('data-card-id'),'14238');
+ await page.waitForFunction(()=>document.querySelector('#selected-portrait .portrait').classList.contains('unavailable'));
+ assert.equal(await page.locator('#selected-portrait .portrait-fallback').innerText(),'#14238','blocked artwork leaves a readable identity');
  assert.equal(await page.evaluate(()=>getComputedStyle(document.getElementById('main')).visibility),'hidden','background overview is hidden while editing');
  const pan=await page.evaluate(()=>{
   const vv=window.visualViewport,resize=new Event('resize'),scroll=new Event('scroll');
@@ -81,7 +84,40 @@ const {pathToFileURL}=require('node:url');
  await page.locator('#next-slot').click();assert.equal(await page.locator('#slots-label').innerText(),'2 / 6');
  await page.locator('#previous-slot').click();
  await page.locator('#kind-assist').click();assert.equal(await page.locator('#super-section').isVisible(),false);
+ assert.equal(await page.locator('#selected-portrait .portrait').getAttribute('data-card-id'),'14132');
+ assert.equal(await page.locator('#latent-section').isVisible(),false);
  await page.locator('#kind-body').click();
+ const beforeLatents=await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply}));
+ await page.locator('#latent-picker-toggle').click();
+ assert.equal(await page.locator('#latent-options .latent-icon').count(),51,'every named latent has a visual choice');
+ for(const width of [320,390,430]) {
+  await page.setViewportSize({width,height:844});
+  assert.deepEqual(await page.locator('#latent-options button,#latent-picker-toggle').evaluateAll(elements=>elements.filter(e=>{
+   const r=e.getBoundingClientRect();return r.left<0||r.right>innerWidth||e.scrollWidth>e.clientWidth;
+  }).map(e=>e.textContent)),[],'latent icons and long names fit width '+width);
+ }
+ await page.setViewportSize({width:390,height:844});
+ await page.locator('#latent-options [data-latent="48"]').click();
+ assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeLatents,
+  'choosing an icon does not add, save or apply it');
+ assert.equal(await page.locator('#latent-choice .latent-icon').evaluate(e=>e.style.getPropertyValue('--icon-id')),'48');
+ await page.locator('#latent-add').click();
+ assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam().slots[0].body.latents),[48]);
+ assert.equal(await page.locator('#latent-list .latent-icon').count(),1);
+ assert.equal(await page.locator('#latent-add').isDisabled(),true,'another six-slot latent cannot overfill the card');
+ await page.locator('#latent-picker-toggle').click();
+ assert.equal(await page.locator('#latent-options [data-latent="48"]').isDisabled(),true);
+ await page.locator('#latent-options [data-latent="11"]').click();await page.locator('#latent-add').click();
+ assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam().slots[0].body.latents),[48,11]);
+ const latentAtlas=await page.locator('#latent-list .latent-icon').first().evaluate(async e=>{
+  const style=getComputedStyle(e),image=new Image();image.src=style.backgroundImage.slice(4,-1).replaceAll('"','');await image.decode();
+  return {width:image.naturalWidth,height:image.naturalHeight,size:e.getBoundingClientRect().width};
+ });
+ assert.deepEqual(latentAtlas,{width:108,height:1664,size:24},'latent artwork decodes offline at the expected sprite dimensions');
+ await page.locator('#latent-list button').first().click();
+ assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam().slots[0].body.latents),[11],'remove only the tapped latent');
+ for(let i=0;i<3;i++)await page.locator('#editor-undo').click();
+ assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam()),beforeLatents.team,'latent edits retain the ordinary undo path');
  const original=await page.evaluate(()=>PHFormationUI.getTeam());
  await page.locator('.slot-tools summary').click();await page.selectOption('#slot-destination','1');await page.locator('#swap-slot').click();
  let swapped=await page.evaluate(()=>PHFormationUI.getTeam());assert.deepEqual(swapped.slots[1],original.slots[0]);assert.deepEqual(swapped.slots[0],original.slots[1]);
@@ -91,6 +127,22 @@ const {pathToFileURL}=require('node:url');
  await page.locator('#editor-undo').click();assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam()),original);
  await page.locator('#search').fill('14234');await page.locator('#results .result').first().click();
  assert.equal(await page.locator('#recent button').count(),1);assert.equal(await page.locator('#level').inputValue(),'120');
+ await page.waitForFunction(()=>document.querySelector('#selected-portrait .portrait').classList.contains('unavailable'));
+ const portraitLayout=await page.locator('#selected-portrait .portrait').evaluate(async e=>{
+  // A local image fixture exercises successful loading without depending on
+  // GitHub availability. Production still uses its existing image-only origin.
+  const image=e.querySelector('img');
+  const loaded=new Promise((resolve,reject)=>{image.addEventListener('load',resolve,{once:true});image.addEventListener('error',reject,{once:true});});
+  image.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect x="306" y="306" width="100" height="100" fill="red"/></svg>');
+  await loaded;await image.decode();
+  const parent=e.getBoundingClientRect(),r=image.getBoundingClientRect();
+  return {id:e.dataset.cardId,loaded:e.classList.contains('loaded'),fallback:getComputedStyle(e.querySelector('.portrait-fallback')).display,
+   size:r.width/parent.width,x:(parent.left-r.left)/parent.width,y:(parent.top-r.top)/parent.height,clipped:getComputedStyle(e).overflow};
+ });
+ assert.equal(portraitLayout.id,'14234');assert.equal(portraitLayout.loaded,true);assert.equal(portraitLayout.fallback,'none');
+ assert.equal(portraitLayout.clipped,'hidden');
+ assert.ok(Math.abs(portraitLayout.size-10.24)<.01&&Math.abs(portraitLayout.x-3.06)<.01&&Math.abs(portraitLayout.y-3.06)<.01,
+  'portrait clips a 100px cell at its 102px atlas pitch');
  await page.screenshot({path:path.resolve('build/editor-browser/editor-390.png'),fullPage:true});
  await page.locator('#editor-undo').click();await page.locator('#editor-done').click();
  assert.deepEqual(await page.evaluate(()=>PHFormationUI.getTeam()),original);
@@ -112,6 +164,16 @@ const {pathToFileURL}=require('node:url');
  // The calculator runs outside a dungeon, even with all network requests blocked.
  const uryu=JSON.parse(fs.readFileSync('ios/templates/ishida-uryu-gamewith-574233/formation.json','utf8'));
  await page.evaluate(team=>PHFormationUI.receive({team,battle:{present:false,canApply:false,canRestore:false}}),uryu);
+ const beforeTabs=await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply}));
+ assert.equal(await page.locator('#panel-formation').isVisible(),true);
+ assert.equal(await page.locator('#panel-calculator').isVisible(),false);
+ await page.locator('#tab-formation').focus();await page.keyboard.press('ArrowRight');
+ assert.equal(await page.locator('#tab-calculator').getAttribute('aria-selected'),'true');
+ assert.equal(await page.locator('#panel-calculator').isVisible(),true);
+ await page.keyboard.press('End');assert.equal(await page.locator('#panel-dungeon').isVisible(),true);
+ await page.keyboard.press('Home');assert.equal(await page.locator('#panel-formation').isVisible(),true);
+ assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeTabs,'tabs do not edit, persist or apply the team');
+ await page.locator('#tab-calculator').click();
  assert.equal(await page.locator('#calc-hp').innerText(),'409,219');
  assert.match(await page.locator('#calc-comparison').innerText(),/397,834.*409,219/);
  assert.equal(await page.evaluate(()=>PHFormationUI.getTeamCalculation().members[0].id),14038);
@@ -167,7 +229,7 @@ const {pathToFileURL}=require('node:url');
   return {schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.0-106878',dungeon:12,floor:3,totalFloors:1,allDefinitionsCaptured:true,
    floorDefinitions:[{wave:0,rawCaptureComplete:true,catalogs,definitions:defs}],observations:[{wave:0,enemies:[{slot:1,catalogID:1001,level:10,baseAttack:2521250,identityKnown:true,memoryKnown:true}]}]};
  });
- await page.locator('#calc-dungeon-details > summary').click();
+ await page.locator('#tab-dungeon').click();
  await page.locator('#calc-dungeon-file').setInputFiles({name:'dungeon-fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(dungeonFixture))});
  await page.waitForFunction(()=>PHFormationUI.getDungeonComparison()?.floors.length===1);
  assert.match(await page.locator('#calc-dungeon-status').innerText(),/ATK ×25/);
@@ -181,7 +243,8 @@ const {pathToFileURL}=require('node:url');
  assert.equal(await page.locator('#calc-dungeon-results').innerText(),'');
  assert.match(await page.locator('#calc-dungeon-error').innerText(),/相容版本/);
  await page.evaluate(value=>PHFormationUI.showDungeonComparison(value),dungeonFixture);
- assert.equal(await page.locator('#calc-dungeon-details').getAttribute('open'),'');
+ assert.equal(await page.locator('#panel-dungeon').isVisible(),true);
+ assert.equal(await page.locator('#tab-dungeon').getAttribute('aria-selected'),'true');
  assert.equal(await page.evaluate(()=>PHFormationUI.getDungeonComparison().floors.length),1);
  assert.equal(await page.locator('#calc-dungeon-error').innerText(),'');
  assert.equal(await page.locator('#calc-dungeon-guide').innerText(),'');
@@ -205,7 +268,7 @@ const {pathToFileURL}=require('node:url');
  await page.evaluate(()=>PHFormationUI.importDungeonGuides('{"schema":99}'));
  assert.match(await page.locator('#calc-guide-status').innerText(),/原攻略庫保留/);
  await page.locator('#calc-guide-management > summary').click();
- await page.locator('#calc-dungeon-clear').click();await page.locator('#calc-dungeon-details > summary').click();
+ await page.locator('#calc-dungeon-clear').click();await page.locator('#tab-calculator').click();
  assert.deepEqual(await page.evaluate(()=>({team:PHFormationUI.getTeam(),requests:__requests.length,apply:__apply})),beforeScenario,'dungeon imports never persist or apply a formation');
  await page.locator('#calc-member-details summary').click();
  for(const [width,height] of [[320,700],[390,844],[430,932],[768,1024],[844,390]]) {
@@ -223,12 +286,14 @@ const {pathToFileURL}=require('node:url');
  await page.selectOption('#calc-groups select[aria-label="第 1 組珠型"]','match:30');
  assert.match(await page.locator('#calc-error').innerText(),/超過盤面/);assert.equal(await page.locator('#calc-hp').innerText(),'—');
  await page.locator('#calc-clear-groups').click();assert.equal(await page.locator('#calc-hp').innerText(),'409,219');
+ await page.locator('#tab-formation').click();
  await page.locator('#body-grid .card').first().click();
  assert.equal(await page.locator('#selected-awakenings .awakening-icon').count(),4);
  await page.locator('#selected-awakenings button').first().click();assert.match(await page.locator('#selected-icon-info').innerText(),/封鎖耐性/);
  await page.selectOption('#awakenings','1');assert.equal(await page.locator('#selected-awakenings .inactive').count(),3);
  await page.locator('#editor-undo').click();await page.locator('#editor-done').click();
  await page.evaluate(()=>{const f=PHFormation.createModel(PH_CATALOG);PHFormationUI.receive({team:f.selectCard(f.empty(),0,'body',8614),battle:{present:false}});});
+ await page.locator('#tab-calculator').click();
  assert.match(await page.locator('#calc-forms').innerText(),/指定型態/);assert.equal(await page.locator('#calc-hp').innerText(),'未完整');
  assert.equal(await page.locator('#calc-members .awakening-icon').count(),0);assert.match(await page.locator('#calc-awakening-title').innerText(),/未完整/);
  assert.match(await page.locator('#calc-warning').innerText(),/僅計算已設定位置/);

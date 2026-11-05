@@ -1,5 +1,6 @@
 #import "PHOrbRecoveryEditor.h"
 #import "PHOrbPlanning.h"
+#import "PHOrbEditorUI.h"
 
 @interface PHOrbRecoveryEditor ()
 @property(nonatomic, strong) NSMutableDictionary *draft;
@@ -26,8 +27,7 @@
 }
 - (UIButton *)button:(NSString *)title selector:(SEL)selector identifier:(NSString *)identifier {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    UIButtonConfiguration *config = [UIButtonConfiguration tintedButtonConfiguration]; config.title = title;
-    button.configuration = config; button.accessibilityIdentifier = identifier;
+    PHOrbStyleButton(button, title, NO); button.accessibilityIdentifier = identifier;
     [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside]; return button;
 }
@@ -38,6 +38,7 @@
     UILabel *title = [self label:@"低血時的心珠目標"]; title.font = [UIFont boldSystemFontOfSize:22];
     UIButton *cancel = [self button:@"取消" selector:@selector(cancel) identifier:@"padcheaper.orbsRecoveryCancel"];
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]]; header.spacing = 12;
+    PHOrbStyleHeader(header, title, cancel);
     header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
     UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO;
     scroll.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive; [self.view addSubview:scroll];
@@ -72,6 +73,7 @@
     self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;
     self.notice.accessibilityIdentifier = @"padcheaper.orbsRecoveryNotice";
     UIButton *save = [self button:@"儲存心珠設定" selector:@selector(save) identifier:@"padcheaper.orbsRecoverySave"];
+    PHOrbStyleButton(save, save.configuration.title, YES);
     UIStackView *footer = [[UIStackView alloc] initWithArrangedSubviews:@[self.notice, save]];
     footer.axis = UILayoutConstraintAxisVertical; footer.spacing = 8; footer.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:footer];
     UILayoutGuide *safe = self.view.safeAreaLayoutGuide;

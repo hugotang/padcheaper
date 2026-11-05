@@ -67,6 +67,7 @@ static NSString *PHOrbGoalNotice;
 static NSString *PHOrbRuleNotice;
 static NSString *PHOrbRecoveryNotice;
 static NSString *PHOrbProfileNotice;
+static NSString *PHOrbAutoStartNotice;
 static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
@@ -715,6 +716,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     orbs[@"profiles"] = PHConfigurationOrbProfiles(PHConfig);
     orbs[@"canSetProfiles"] = orbs[@"canSetQuality"];
     orbs[@"profileMessage"] = PHOrbProfileNotice ?: @"";
+    orbs[@"autoStartMessage"] = PHOrbAutoStartNotice ?: @"";
     NSUInteger timerClears = [timer[@"pauseClearCount"] unsignedIntegerValue];
     NSString *timerSummary = [NSString stringWithFormat:@"%@\n%@\n修正暫停 %@ 次 · 手動撤窗 %@ 次",
         timer[@"gate"], timer[@"message"], timer[@"pauseClearCount"], timer[@"dismissCount"]];
@@ -1172,11 +1174,23 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = PHFeedback;
         if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = PHFeedback;
         if ([action isEqual:@"orbsProfiles"]) PHOrbProfileNotice = PHFeedback;
+        if ([action isEqual:@"orbsEightAutoStart"]) PHOrbAutoStartNotice = PHFeedback;
         return;
     }
     PHReloadConfig();
     NSMutableDictionary *next = [PHConfig mutableCopy];
-    if ([action isEqual:@"orbsProfiles"]) {
+    if ([action isEqual:@"orbsEightAutoStart"]) {
+        NSDictionary *orbState = [PHOrbTracker snapshot];
+        if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) {
+            PHOrbAutoStartNotice = @"請先停止轉珠，再修改自動開始設定。"; return;
+        }
+        // Change the global flag only: selecting a profile can also select a
+        // formation and replace working settings, neither belongs to this toggle.
+        NSMutableDictionary *library = [PHConfigurationOrbProfiles(next) mutableCopy];
+        library[@"eightAutoStart"] = value ?: NSNull.null;
+        if (!PHOrbProfilesValid(library)) { PHOrbAutoStartNotice = @"自動開始設定無效。"; return; }
+        next[@"orbProfiles"] = library;
+    } else if ([action isEqual:@"orbsProfiles"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) {
             PHOrbProfileNotice = @"請先停止連續模式及轉珠，再儲存策略。"; return;
@@ -1283,7 +1297,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if (next[@"formations"]) PHPublishFormationLibrary(next[@"formations"]);
         [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
-        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbRecoveryNotice = nil; PHOrbProfileNotice = nil;
+        PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbRecoveryNotice = nil; PHOrbProfileNotice = nil; PHOrbAutoStartNotice = nil;
         PHOrbThornNotice = nil;
         PHOrbPoisonNotice = nil;
         PHOrbDiagonalNotice = nil;
@@ -1302,6 +1316,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = @"目標未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = @"規則未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
         if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = @"心珠設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
+        if ([action isEqual:@"orbsEightAutoStart"]) PHOrbAutoStartNotice = @"自動開始未能儲存，仍保留原設定；請重新檢查儲存空間。";
         if ([action isEqual:@"orbsProfiles"]) PHOrbProfileNotice = @"策略未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
     }
     PHLastStatus = 0;

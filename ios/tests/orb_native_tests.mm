@@ -31,6 +31,9 @@ static unsigned enemyDamageMutation;
 static bool rejectEnemyDamageRead;
 static bool changeAssistDuringCoordinateRead;
 static bool changeComboDuringCoordinateRead, changeComboDuringRead, rejectComboRead;
+static unsigned changeComboBonusDuringRead;
+static unsigned changePartAfterReads;
+static bool changePartDuringCoordinateRead;
 static bool changeDungeonDuringRead, rejectDungeonRead;
 static bool changeEightReceiptDuringRead, rejectEightReceiptRead;
 static std::vector<uint8_t> guest(0x3000000), implBytes(0xc4000), realInput(PHOrbInputBytes), newInput(PHOrbInputBytes);
@@ -54,6 +57,14 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
     return Range(address, length);
 }
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
+    // Change an earlier part after its complete read, while the later slot is
+    // collected. The next capture must not agree with the first snapshot.
+    if (changePartAfterReads && address == Impl + PHOrbEnemyOffset + 2 * PHOrbEnemyStride + 2704 &&
+        !--changePartAfterReads) ++*reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyOffset + PHOrbEnemyStride + 36);
+    if (changePartDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changePartDuringCoordinateRead = false;
+        ++*reinterpret_cast<uint8_t *>(Impl + PHOrbEnemyOffset + PHOrbEnemyStride + 36);
+    }
     if (rejectEightReceiptRead && address == Impl + PHOrbEightReceiptSkillOffset) return NO;
     if (rejectDungeonRead && address == Header + PHOrbDungeonDumpWavesAddress) return NO;
     if (rejectComboRead && address == Impl + PHOrbEnemyOffset + PHOrbEnemyComboThresholdOffset) return NO;
@@ -61,6 +72,14 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (rejectEnemyDamageRead && address == Impl + PHOrbEnemyDamageImmediateOffset) return NO;
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (changeComboBonusDuringRead && address == Impl + PHOrbComboBonusBadgeOffset && length == 28) {
+        const unsigned mutation = changeComboBonusDuringRead; changeComboBonusDuringRead = 0;
+        if (mutation == 1) Store<uint16_t>(reinterpret_cast<uint8_t *>(address + 22),3);
+        if (mutation == 2) {
+            const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleMemberOffset + PHBattleCardParamOffset));
+            Store<uint16_t>(reinterpret_cast<uint8_t *>(parameter + 748),0);
+        }
+    }
     if (changeEightReceiptDuringRead && address == Impl + PHOrbEightReceiptSkillOffset) {
         changeEightReceiptDuringRead = false;
         *reinterpret_cast<uint32_t *>(address) ^= 1u;
@@ -233,6 +252,8 @@ static PHBattleFrame Frame() { PHBattleFrame frame{}; frame.header = Header; fra
 static void Reset(unsigned width = 6, unsigned height = 5) {
     std::fill(guest.begin(), guest.end(), 0); std::fill(implBytes.begin(), implBytes.end(), 0); std::fill(realInput.begin(), realInput.end(), 0);
     writes = failWrite = guardChecks = 0; codeValid = true;
+    changeComboBonusDuringRead = 0;
+    changePartAfterReads = 0; changePartDuringCoordinateRead = false;
     ignoreSelectionWrite = switchMultiInSelectionWrite = changeSourceInSelectionWrite = false;
     replaceHashDuringResizeRead = false;
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
@@ -270,6 +291,8 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     for (const auto &guard : PHOrbObservationTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbAssistRecoveryTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbEnemyComboTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
+    for (const auto &guard : PHOrbEnemyPartsTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
+    for (const auto &guard : PHOrbComboBonusTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbEnemyThreatTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbDungeonDumpTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     const unsigned spacing = width == 7 ? 90 : width == 5 ? 126 : 105;
@@ -329,6 +352,7 @@ static void ReadIssueNativeTests() {
 #include "orb_skill_native_tests.inc"
 #include "orb_assist_native_tests.inc"
 #include "orb_enemy_combo_native_tests.inc"
+#include "orb_enemy_parts_native_tests.inc"
 #include "orb_enemy_threat_native_tests.inc"
 #include "orb_dungeon_native_tests.inc"
 #include "orb_effect_native_tests.inc"
@@ -485,6 +509,7 @@ int main() {
         SkillNativeTests();
         AssistNativeTests();
         EnemyComboNativeTests();
+        EnemyPartsNativeTests();
         EnemyThreatNativeTests();
         DungeonNativeTests();
         SurvivalNativeTests();
@@ -494,6 +519,7 @@ int main() {
         DiagonalNativeTests();
         SkillWindowNativeTests();
         EightNativeTests();
+        ComboBonusNativeTests();
         std::printf("Orb native tests: %s (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

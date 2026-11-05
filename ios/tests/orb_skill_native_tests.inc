@@ -3,6 +3,7 @@ static bool skillAvailable, switchMultiInCanUse, changeSelectionInCanUse, change
 static bool switchMultiInReadiness, readinessKnown, checkOrbCountInCanUse;
 static bool choiceAvailable, bodyAvailable, switchMultiInChoice, changeFamilyInChoice;
 static bool changeSourceCardsInChoice, changeBodySkillInReadiness, invalidSourceInBody, changeAssistRulesInBody;
+static bool changePartInCanUse;
 static NativeSkillReadiness readinessFixture;
 static uint32_t selectionAtCanUse, selectionAtStart, effectiveStartedSkill;
 static uint32_t effectsStartedSkill;
@@ -31,6 +32,7 @@ static void SetSurvivalOptions(const char *options) {
     if (switchMultiInCanUse) Put<uint32_t>(Header + PHBattleMultiplayerRVA, 1);
     if (changeSelectionInCanUse) Put<uint32_t>(member + PHOrbSkillOverrideOffset, selectionAtCanUse + 1);
     if (changeStageInCanUse) Protected(member + 344, 1, 0x6a875a8b);
+    if (changePartInCanUse) Protected(Impl + PHOrbEnemyOffset + PHOrbEnemyStride + 2704, 1, 0x6a875a8b);
     const unsigned charge = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHBattleChargeOffset + 12));
     const bool chargedAssist = Load<int16_t>(reinterpret_cast<uint8_t *>(member + 1438)) > 0 &&
         !(Load<uint8_t>(reinterpret_cast<uint8_t *>(SurvivalDungeon + 33)) & 8) &&
@@ -99,6 +101,7 @@ static void SkillFixture() {
     checkOrbCountInCanUse = false;
     switchMultiInChoice = changeFamilyInChoice = changeSourceCardsInChoice = changeBodySkillInReadiness = false;
     invalidSourceInBody = changeAssistRulesInBody = false;
+    changePartInCanUse = false;
     readinessFixture = {CurrentFixtureSkill, 0, 4, 4};
     selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = effectsStartedSkill = 0; sourceAtStart = 255;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);

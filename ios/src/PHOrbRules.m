@@ -282,11 +282,14 @@ PHOrbRuleMatch PHOrbTriggerSkillRuleWithTiming(NSDictionary *rule, const PHOrbSn
         [matched addObject:PHOrbPlayerConditionTitle(status)];
     }
     NSInteger color = [rule[@"color"] integerValue];
+    BOOL spinnerDependent = NO;
     if (color >= 0) {
         if (!state->automation.boardKnown || !state->settled ||
             !PHOrbDimensionsSupported(state->board.width, state->board.height))
             return Explained(PHOrbRuleUnknown, @"盤面珠數無法確認", reason);
         unsigned minimum = 0, maximum = 0;
+        if (!PHOrbSpinnerVariants(&state->board))
+            return Explained(PHOrbRuleUnknown, @"轉轉珠色週期無法確認", reason);
         PHOrbColorCountRange(&state->board, (unsigned)color, &minimum, &maximum);
         if ([rule[@"atLeast"] unsignedIntValue]) {
             if (minimum < [rule[@"atLeast"] unsignedIntValue])
@@ -294,9 +297,9 @@ PHOrbRuleMatch PHOrbTriggerSkillRuleWithTiming(NSDictionary *rule, const PHOrbSn
             [matched addObject:[NSString stringWithFormat:@"指定珠色至少 %u 顆 ≥ %@ 顆", minimum, rule[@"atLeast"]]];
         } else {
             if (minimum >= [rule[@"below"] unsignedIntValue]) return Explained(PHOrbRuleNo, @"指定珠色數量已足夠", reason);
-            if (maximum >= [rule[@"below"] unsignedIntValue])
-                return Explained(PHOrbRuleUnknown, @"缺珠門檻會隨轉轉變色，請先手動處理或調整規則", reason);
-            [matched addObject:[NSString stringWithFormat:@"指定珠色最多 %u 顆 < %@ 顆", maximum, rule[@"below"]]];
+            spinnerDependent = maximum >= [rule[@"below"] unsignedIntValue];
+            if (!spinnerDependent)
+                [matched addObject:[NSString stringWithFormat:@"指定珠色最多 %u 顆 < %@ 顆", maximum, rule[@"below"]]];
         }
     }
     NSUInteger enemy = [PHOrbEnemyConditions() indexOfObject:rule[@"enemy"]];
@@ -320,6 +323,12 @@ PHOrbRuleMatch PHOrbTriggerSkillRuleWithTiming(NSDictionary *rule, const PHOrbSn
         if (!(PHOrbBoardObstacles(state) & flag)) return Explained(PHOrbRuleNo, @"沒有指定的盤面妨礙", reason);
         [matched addObject:[obstacle isEqual:@"unmatchable"] ? PHOrbUnmatchableConditionTitle(colors) : PHOrbObstacleConditionTitle(obstacle)];
     }
+    // Finish the conjunction first: an optional rotating threshold must not
+    // hide genuinely missing enemy/obstacle evidence or cast on a sampled hue.
+    if (spinnerDependent)
+        return Explained([rule[@"required"] boolValue] ? PHOrbRuleUnknown : PHOrbRuleNo,
+            [rule[@"required"] boolValue] ? @"必要缺珠條件會隨轉轉變色，請先手動處理或調整規則" :
+            @"缺珠條件隨轉轉變色，略過可選技能並繼續求路／撈珠", reason);
     return Explained(PHOrbRuleYes, matched.count ? [matched componentsJoinedByString:@"、"] : @"角色、回合與樓層條件符合", reason);
 }
 

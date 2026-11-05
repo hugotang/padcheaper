@@ -29,6 +29,7 @@ typedef struct { uint8_t kind, colors, count, length; } PHOrbGoal;
 typedef struct {
     uint8_t count; PHOrbGoal items[PHOrbMaxGoals];
     bool comboFirstWave; // Internal enemy policy; never serialized as a saved goal.
+    bool bonusFirstWave; // First-removal bonus triggers; columns must have no removed side branches.
 } PHOrbGoalSet;
 
 typedef struct {
@@ -114,13 +115,23 @@ enum {
         PHOrbSkillWindowTutorial | PHOrbSkillWindowDungeon | PHOrbSkillWindowEnemyParts
 };
 
+// Native parts have their own signed mode and protected HP, not ordinary HP.
+// Negative mode means absent; hp is UINT64_MAX in that case (native sentinel).
+typedef struct {
+    uint64_t hp;
+    int8_t mode, owner;
+    uint8_t index;
+    bool known;
+} PHOrbEnemyPartState;
+
 // Populated only by the explicit automation reader. Ordinary previews do not
 // call skill getters (some native getters lazily mutate cooldown caches).
 typedef struct {
     PHOrbSkillMember members[6];
+    PHOrbEnemyPartState parts[8];
     uint32_t hp, maximumHP;
     uint16_t skillUses;
-    uint8_t enemyEffects, playerBypass, activeEnemies, playerEffects;
+    uint8_t enemyEffects, playerBypass, activeEnemies, playerEffects, partsMask;
     bool valid, window, busy, enemiesKnown, boardKnown, hpKnown, statusKnown, awakeningRestricted;
     uint32_t windowBlocks; // Read-only reasons for the existing native window gates.
     bool windowBlocksKnown;
@@ -185,6 +196,7 @@ typedef struct {
 } PHOrbMemberObservation;
 typedef struct {
     uint64_t hp;
+    PHOrbEnemyPartState part;
     uint16_t effectTurns[4], effectMasks[4];
     uint8_t effects;
     bool present, parts, hpKnown, actionBusy, effectsKnown;
@@ -214,13 +226,30 @@ typedef struct {
 
 // Current enemy countermeasures, captured again for this action. This is not
 // an enemy AI forecast. Raw durations retain flags for exact race checks.
+enum { PHOrbMaxComboEffects = 24 };
+typedef enum { PHOrbComboLink, PHOrbComboColors, PHOrbComboGroups,
+    PHOrbComboHeartCross, PHOrbComboL, PHOrbComboAwakenings, PHOrbComboColumns,
+    PHOrbComboAwakening, PHOrbComboAllLinks } PHOrbComboEffectKind;
+typedef struct {
+    uint32_t condition;
+    uint16_t combos;
+    uint8_t kind, source, minimum, colors[5]; // source: leader/helper/badge = 0/1/2.
+} PHOrbComboEffect;
+typedef struct {
+    PHOrbComboEffect effects[PHOrbMaxComboEffects];
+    uint64_t sourceSignature;
+    uint8_t count, attackColors, awakeningColors[5], columnColors;
+    bool valid;
+} PHOrbComboBonusState;
 typedef struct {
     uint64_t hp[8];
+    PHOrbEnemyPartState parts[8];
     uint16_t flags[8], turns[8], thresholds[8], upperTurns[8], bypassTurns, bypassDelay;
     uint16_t adjustmentTurns, subtractTurns, subtract;
     int8_t adjustment;
     uint8_t enemyCount, aliveMask;
     bool valid;
+    PHOrbComboBonusState bonus;
 } PHOrbEnemyComboState;
 
 typedef enum {
@@ -384,6 +413,9 @@ bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssis
 bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboState *b);
 // Zero means no additional Combo goal. False means evidence is unavailable.
 bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *minimum);
+// Guaranteed by existing goals only; never discounts the user's own Combo goal.
+unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *state, const PHOrbGoalSet *goals,
+                                     unsigned width, unsigned height, unsigned perSource[3]);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);

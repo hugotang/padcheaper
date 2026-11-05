@@ -109,22 +109,22 @@ bool ObservationAttributes(uintptr_t member, uintptr_t parameter, uint8_t &color
     return colors != 0;
 }
 
-bool ObservationLAwakenings(uintptr_t member, uintptr_t parameter, uintptr_t profile,
+bool ObservationAwakenings(uintptr_t member, uintptr_t parameter, uintptr_t profile,
     const ObservationTables &tables, const PHOrbSkillMember &skill, uint32_t key1, uint32_t key2,
-    unsigned &count) {
+    unsigned &count, unsigned (*weight)(unsigned) = ObservationLWeight) {
     uint8_t unlocked = 0;
     uint16_t awakenings[10]{};
     if (!PHReadU8(member + 1286, &unlocked) || int8_t(unlocked) < 0 ||
         !PHReadMemory(parameter + 748, awakenings, sizeof(awakenings))) return false;
     count = 0;
-    for (unsigned i = 0; i < std::min(unsigned(unlocked), 10u); ++i) count += ObservationLWeight(awakenings[i]);
+    for (unsigned i = 0; i < std::min(unsigned(unlocked), 10u); ++i) count += weight(awakenings[i]);
     if (profile) {
         uint32_t superAwakening = 0; uint16_t level = 0, superCount = 0, sync = 0;
         if (profile > UINTPTR_MAX - 20 || !PHReadU32(profile + 16, &superAwakening) ||
             !PHReadU16(member + 1296, &level) || !PHReadU16(parameter + 782, &superCount) ||
             !PHReadU16(parameter + 788, &sync)) return false;
         if (superAwakening >= 116 && superAwakening <= 120) superAwakening -= 94;
-        if (level >= 100 || (!superCount && sync && superAwakening == sync)) count += ObservationLWeight(superAwakening);
+        if (level >= 100 || (!superCount && sync && superAwakening == sync)) count += weight(superAwakening);
     }
     if (int16_t(skill.assistCatalogID) > 0) {
         uintptr_t assist = 0; uint8_t available = 0;
@@ -134,14 +134,14 @@ bool ObservationLAwakenings(uintptr_t member, uintptr_t parameter, uintptr_t pro
         for (unsigned i = 0; i < std::min(unsigned(available & 127u), 10u) && int16_t(awakenings[i]) > 0; ++i)
             equip |= awakenings[i] == 49;
         if (equip) for (unsigned i = 0; i < std::min(unsigned(available & 127u), 10u); ++i)
-            count += ObservationLWeight(awakenings[i]);
+            count += weight(awakenings[i]);
     }
     for (unsigned i = 0; i < 9; ++i) {
         uint32_t added = 0;
         if (!Decode(member + PHOrbObservationAddedAwakeningsOffset + 16 * i, key1, key2, 0x6a875a8bu, added)) return false;
         const int16_t awakening = int16_t(added);
         if (added != uint16_t(awakening) && added != uint32_t(int32_t(awakening))) return false;
-        if (awakening > 0) count += ObservationLWeight(unsigned(awakening));
+        if (awakening > 0) count += weight(unsigned(awakening));
     }
     return count <= UINT8_MAX;
 }
@@ -222,7 +222,7 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
         member.latentKnown = PHReadPointer(address + PHOrbObservationProfileOffset, &profile) && ObservationLatents(profile, member.assistRecoveryLatents);
         unsigned lCount = 0;
         member.lAwakeningsKnown = parameterKnown && member.latentKnown &&
-            ObservationLAwakenings(address, parameter, profile, tables, skill, key1, key2, lCount) && dynamicKnown && !dynamicL;
+            ObservationAwakenings(address, parameter, profile, tables, skill, key1, key2, lCount) && dynamicKnown && !dynamicL;
         if (member.lAwakeningsKnown) member.lAwakenings = uint8_t(lCount);
         member.lAttributesKnown = parameterKnown && ObservationAttributes(address, parameter, member.lColors);
         if (!out.rulesKnown || !automation.statusKnown) member.lBlockers |= PHOrbLUnknownRules;
@@ -245,17 +245,30 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
     if (Decode(impl + PHOrbEnemyCountOffset, key1, key2, 0x766cfc6du, enemies) && enemies <= 8) {
         out.enemyCount = uint8_t(enemies); out.enemiesKnown = true;
         constexpr uintptr_t offsets[]{2400, 2192, 2256, 2224};
+        bool partsCodeChecked = false;
         for (unsigned i = 0; i < enemies; ++i) {
             auto &enemy = out.enemies[i]; const uintptr_t address = impl + PHOrbEnemyOffset + i * PHOrbEnemyStride;
             uint16_t flags = 0; uint32_t low = 0, high = 0; uint8_t action = 0;
             enemy.present = true;
             if (!PHReadU16(address + 532, &flags)) { out.enemiesKnown = false; continue; }
             enemy.parts = (flags & 0x100u) != 0;
-            if (enemy.parts || !Decode(address + 64, key1, key2, 0x766cfc6du, low) ||
-                !Decode(address + 80, key1, key2, 0x766cfc6du, high) || (high & 0x80000000u)) {
-                out.enemiesKnown = false; continue;
+            if (enemy.parts) {
+                if ((!partsCodeChecked && !CheckEnemyPartsCode(state.identity.header)) ||
+                    !ReadEnemyPart(impl, enemies, i, key1, key2, enemy.part)) {
+                    out.enemiesKnown = false; continue;
+                }
+                partsCodeChecked = true;
+                // Expose the raw native value separately, including its -1
+                // absent sentinel. The display HP is zero for inactive parts.
+                enemy.hp = enemy.part.hp <= INT64_MAX ? enemy.part.hp : 0;
+            } else {
+                if (!Decode(address + 64, key1, key2, 0x766cfc6du, low) ||
+                    !Decode(address + 80, key1, key2, 0x766cfc6du, high) || (high & 0x80000000u)) {
+                    out.enemiesKnown = false; continue;
+                }
+                enemy.hp = (uint64_t(high) << 32) | low;
             }
-            enemy.hpKnown = true; enemy.hp = (uint64_t(high) << 32) | low;
+            enemy.hpKnown = true;
             if (!enemy.hp) continue;
             ++out.activeEnemies;
             enemy.effectsKnown = PHReadU8(address + 23, &action);

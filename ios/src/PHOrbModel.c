@@ -386,7 +386,8 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
         x->windowBlocksKnown != y->windowBlocksKnown || x->windowBlocks != y->windowBlocks ||
         x->skillUses != y->skillUses || x->enemiesKnown != y->enemiesKnown || x->boardKnown != y->boardKnown ||
         x->enemyEffects != y->enemyEffects || x->playerBypass != y->playerBypass ||
-        x->activeEnemies != y->activeEnemies) return false;
+        x->activeEnemies != y->activeEnemies || x->partsMask != y->partsMask ||
+        memcmp(x->parts, y->parts, sizeof(x->parts))) return false;
     for (unsigned i = 0; i < 6; ++i) {
         const PHOrbSkillMember *m = &x->members[i], *n = &y->members[i];
         if (m->active != n->active || m->number != n->number || m->charge != n->charge ||
@@ -525,10 +526,14 @@ bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboSta
         a->bypassTurns == b->bypassTurns && a->bypassDelay == b->bypassDelay &&
         a->adjustmentTurns == b->adjustmentTurns && a->adjustment == b->adjustment &&
         a->subtractTurns == b->subtractTurns && a->subtract == b->subtract &&
+        !memcmp(a->parts, b->parts, sizeof(a->parts)) &&
+        !memcmp(&a->bonus,&b->bonus,sizeof(a->bonus)) &&
         !memcmp(a->upperTurns,b->upperTurns,sizeof(a->upperTurns)) &&
         !memcmp(a->hp, b->hp, sizeof(a->hp)) && !memcmp(a->flags, b->flags, sizeof(a->flags)) &&
         !memcmp(a->turns, b->turns, sizeof(a->turns)) && !memcmp(a->thresholds, b->thresholds, sizeof(a->thresholds));
 }
+
+#include "PHOrbComboBonusModel.inc"
 
 bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *minimum) {
     if (minimum) *minimum = 0;
@@ -537,8 +542,15 @@ bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *min
     const bool bypass = (int16_t)(uint16_t)(state->bypassTurns << 6) > 0 &&
         (int16_t)(uint16_t)(state->bypassDelay << 6) <= 0;
     for (unsigned slot = 0; slot < state->enemyCount; ++slot) {
-        if (state->flags[slot] & 0x100u) return false; // Parts cannot be silently skipped.
         const bool alive = state->hp[slot] && state->hp[slot] <= INT64_MAX;
+        const PHOrbEnemyPartState *part = &state->parts[slot];
+        if (state->flags[slot] & 0x100u) {
+            if (!part->known || part->hp != state->hp[slot] ||
+                (part->mode < 0 && part->hp != UINT64_MAX)) return false;
+            if (alive && (part->owner < 0 || (unsigned)part->owner >= state->enemyCount ||
+                (state->flags[(unsigned)part->owner] & 0x100u) ||
+                !state->hp[(unsigned)part->owner] || state->hp[(unsigned)part->owner] > INT64_MAX)) return false;
+        } else if (part->known) return false;
         if (alive != ((state->aliveMask & (1u << slot)) != 0)) return false;
         if (alive && (int16_t)state->upperTurns[slot] > 0) return false; // Requires a maximum and bounded bonuses/skyfall.
         if (!alive || bypass || (int16_t)state->turns[slot] <= 0 || (int16_t)state->thresholds[slot] < 1) continue;
@@ -546,8 +558,8 @@ bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *min
         if (needed > *minimum) *minimum = needed;
     }
     if (*minimum) {
-        // Positive bonuses are not credited. Subtraction remains a debit even
-        // if an unmodelled leader/awakening bonus might offset it in the game.
+        // Raw target before credits. General solo planning deducts confirmed
+        // bonuses afterwards; 8P keeps its independently validated policy.
         if ((int16_t)(uint16_t)(state->adjustmentTurns << 6) > 0 && state->adjustment < 0)
             *minimum += (unsigned)-(int)state->adjustment;
         if ((int16_t)(uint16_t)(state->subtractTurns << 6) > 0) *minimum += state->subtract;

@@ -424,7 +424,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     std::array<Bits, PHOrbTypes> colors{};
     std::array<Bits, PHOrbMaxGoals> used{};
     std::array<ShapeHints, PHOrbMaxGoals> hints{};
-    unsigned matchedColors = 0, resolvedCombos = 0;
+    unsigned matchedColors = 0, firstColors = 0, resolvedCombos = 0;
     unsigned attackContribution[6]{};
     for (unsigned i = 0; i < size; ++i) {
         colors[cells[i]] |= Bits(1) << i;
@@ -463,7 +463,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             if (!wave || !context.activity.firstWaveOnly) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             }
-            if (!wave) ++result.firstWaveCombos;
+            if (!wave) { ++result.firstWaveCombos; firstColors |= 1u << color; }
             if (context.activity.firstWaveOnly && !wave && color < 6) {
                 attackContribution[color] += count + 1;
                 result.largestGroups[color] = uint8_t(std::max(unsigned(result.largestGroups[color]),count));
@@ -485,11 +485,14 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             }
             for (unsigned g = 0; g < context.goals.count; ++g) {
                 const auto &goal = context.goals.items[g];
-                if (wave && context.activity.firstWaveOnly) continue;
+                if (wave && (context.activity.firstWaveOnly || context.goals.bonusFirstWave)) continue;
                 if (!(goal.colors & (1u << color))) continue;
                 bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
                     goal.kind == PHOrbGoalExact ? !wave && count == goal.length :
                     !wave && ShapeGoal(goal.kind) && ShapeMatches(group, goal, context.patterns[g]);
+                // Native column-awakening activation requires a single-column
+                // removed group. The ordinary goal also permits side branches.
+                if (context.goals.bonusFirstWave && goal.kind == PHOrbGoalColumn && count != height) hit = false;
                 if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
         }
@@ -512,7 +515,8 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     for (unsigned g = 0; g < context.goals.count; ++g) {
         const auto &goal = context.goals.items[g];
         if (goal.kind == PHOrbGoalCombo) result.goalHits[g] = context.goals.comboFirstWave ? result.firstWaveCombos : result.combos;
-        if (goal.kind == PHOrbGoalColors) result.goalHits[g] = uint8_t(Count(matchedColors & goal.colors));
+        if (goal.kind == PHOrbGoalColors) result.goalHits[g] = uint8_t(Count(
+            (context.goals.bonusFirstWave ? firstColors : matchedColors) & goal.colors));
         if (result.goalHits[g] >= goal.count) { ++result.matchedGoals; score.goalProgress[g] = 4096; }
         // Public replay validation needs actual hits only. Avoid template
         // repair/distance work on the session's main-thread verification.

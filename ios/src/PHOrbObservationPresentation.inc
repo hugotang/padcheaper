@@ -105,6 +105,12 @@ NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current
     for (unsigned slot = 0; slot < observation.enemyCount && slot < 8; ++slot) {
         const auto &enemy = observation.enemies[slot];
         [enemies addObject:@{@"slot":@(slot + 1), @"parts":@(enemy.parts), @"hpKnown":@(enemy.hpKnown),
+            @"partKnown":@(enemy.part.known),
+            @"partMode":ObservationValue(enemy.part.known, @(enemy.part.mode)),
+            @"partRawHP":ObservationValue(enemy.part.known, @(int64_t(enemy.part.hp))),
+            @"partOwnerSlot":ObservationValue(enemy.part.known, @(int(enemy.part.owner) + 1)),
+            @"partIndex":ObservationValue(enemy.part.known, @(enemy.part.index)),
+            @"partAlive":ObservationValue(enemy.part.known, @(enemy.part.hp && enemy.part.hp <= INT64_MAX)),
             @"hp":ObservationValue(enemy.hpKnown, @(enemy.hp)), @"effectsKnown":@(enemy.effectsKnown),
             @"actionBusy":ObservationValue(enemy.effectsKnown, @(enemy.actionBusy)),
             @"effects":ObservationValue(enemy.effectsKnown, @(enemy.effects)),

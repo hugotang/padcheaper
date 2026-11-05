@@ -993,6 +993,12 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             ruleFailure[@"battleObservationDescription"] = @""; [orbController refresh];
             PHProbeCheck(observationLabel.hidden && !observationLabel.text.length,
                 @"Absent or multiplayer diagnostics remove prior L/charge text");
+            UISwitch *globalStart = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsEightAutoStart");
+            BOOL originalStart = globalStart.on;
+            globalStart.on = !originalStart; [globalStart sendActionsForControlEvents:UIControlEventValueChanged];
+            PHProbeCheck([orbAction isEqual:@"orbsEightAutoStart"] && globalStart.on == originalStart &&
+                !((UILabel *)PHProbeFind(orbWindow, @"padcheaper.orbsAutoStartNotice")).hidden,
+                @"Unacknowledged global setting returns the switch to the saved value and explains the failure");
             [(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsRuleEdit") sendActionsForControlEvents:UIControlEventTouchUpInside];
         }),
         PHProbeStep(@"rule-editor-keyboard-ready", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsRuleEditor", YES); }, ^{
@@ -1019,6 +1025,9 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             }
             UITextField *ruleEvery = (UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleevery0");
             ruleEvery.text = @"2"; [ruleEvery sendActionsForControlEvents:UIControlEventEditingChanged];
+            UIButton *advancedRule = (UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleAdvanced0");
+            PHProbeCheck([advancedRule.accessibilityValue isEqual:@"已收起"], @"New rule keeps advanced identifiers and rotation folded");
+            [advancedRule sendActionsForControlEvents:UIControlEventTouchUpInside];
             UIButton *timingMode = (UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleintervalMode0");
             PHProbeCheck(timingMode.menu.children.count == 2, @"Timing mode offers run and retained accepted-use intervals");
             if (ruleDraft.count) ruleDraft[0][@"intervalMode"] = @"accepted";
@@ -1069,6 +1078,23 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             UIScrollView *ruleScroll = (UIScrollView *)((UIStackView *)[ruleEditor valueForKey:@"rows"]).superview;
             [ruleScroll setContentOffset:CGPointZero animated:NO]; [ruleEditor.view layoutIfNeeded];
             PHProbeRender(self.window, orbWindow, @"orbs-skill-rules");
+            NSArray *beforeFold = [NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:ruleDraft options:0 error:NULL] options:0 error:NULL];
+            [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleExpand0") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(!PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulefloor0") && [ruleDraft isEqual:beforeFold] &&
+                [((UILabel *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleSummary0")).text containsString:@"覺醒"] &&
+                [((UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleExpand0")).configuration.title containsString:@"必要"],
+                @"Folding a rule keeps its full draft and required summary without the long edit form");
+            PHProbeRender(self.window, orbWindow, @"orbs-skill-rules-collapsed");
+            [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleExpand0") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([((UITextField *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulefloor0")).text isEqual:@"3"] &&
+                [ruleDraft isEqual:beforeFold], @"Reopening a rule restores numeric conditions without a save");
+            [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleAdd") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            NSMutableDictionary *newRule = ruleDraft.lastObject;
+            [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleOrder0-1") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck(ruleDraft.firstObject == newRule && [ruleEditor valueForKey:@"expandedRule"] == newRule &&
+                PHProbeFind(ruleEditor.view, @"padcheaper.orbsRulefloor0"), @"Reordering keeps the same draft rule expanded at its new index");
+            [(UIButton *)PHProbeFind(ruleEditor.view, @"padcheaper.orbsRuleOrder2-0") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            PHProbeCheck([ruleDraft isEqual:beforeFold], @"Deleting the added rule leaves the original conditions intact");
             rescuePayload = orbValue;
             [orbController setValue:[^(NSString *action, id value) {
                 orbAction = action; orbValue = value;
@@ -1217,6 +1243,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
         }),
         PHProbeStep(@"profile-editor-keyboard-ready", ^BOOL { return PHProbePresented(orbController, @"padcheaper.orbsProfileEditor", YES); }, ^{
             UIViewController *profileEditor = orbController.presentedViewController; [profileEditor loadViewIfNeeded];
+            PHProbeCheck(!PHProbeFind(profileEditor.view, @"padcheaper.orbsEightAutoStart"), @"Global countdown setting is no longer mixed into the selected strategy");
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSection-paste") sendActionsForControlEvents:UIControlEventTouchUpInside];
             UITextView *planInput = (UITextView *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanJSON");
             PHProbeCheck(planInput && PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanImport"), @"Complete-plan JSON input and validation action are available");
             planInput.text = @"{\"schema\":99}";
@@ -1226,6 +1254,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             NSString *path = [NSBundle.mainBundle pathForResource:@"team-plan" ofType:@"json"];
             planInput.text = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:NULL];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanImport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+            [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSection-management") sendActionsForControlEvents:UIControlEventTouchUpInside];
             NSDictionary *planDraft = [profileEditor valueForKey:@"draft"];
             PHProbeCheck([planDraft[@"profiles"] count] == 1 && [planDraft[@"profiles"][0][@"opening"] count] == 6 &&
                 PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanExport"), @"Valid Uryu import previews all six opening steps and enables export");
@@ -1944,8 +1973,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             return;
         }
         NSString *script = @"(()=>{const m=PHFormation.createModel(PH_CATALOG);let t=m.empty();"
-            "const d=PHFormationUI.getDungeonComparison(),direct=!!d&&d.floors.length===2&&document.getElementById('calc-dungeon-details').open;"
-            "document.getElementById('calc-dungeon-clear').click();document.getElementById('calc-dungeon-details').open=false;"
+            "const d=PHFormationUI.getDungeonComparison(),direct=!!d&&d.floors.length===2&&!document.getElementById('panel-dungeon').hidden;"
+            "document.getElementById('calc-dungeon-clear').click();document.getElementById('tab-formation').click();"
             "PHFormationUI.importDungeonGuides({schema:1,kind:'PADCheaper-dungeon-guides',guides:[{dungeon:12,subDungeon:3,totalFloors:2,"
             "title:'GUI 自訂攻略',checkedAt:'2026-11-01',floors:[{number:2,text:'第二層留技'}]}]});document.getElementById('calc-guide-save').click();"
             "t.title='隊伍 A';"

@@ -1,4 +1,38 @@
 static void EnemyComboSessionTests() {
+    {
+        FakeOrbEngine *fixture = [FakeOrbEngine new]; SetAssistBoard(fixture,0);
+        for (unsigned i = 0; i < 30; ++i) if (fixture->live.board.types[i] == 3) fixture->live.board.types[i] = 2;
+        for (unsigned i : {0u,1u,2u,7u,13u}) fixture->live.board.types[i] = 3;
+        fixture->live.enemyCombo.turns[0] = 3; fixture->live.enemyCombo.thresholds[0] = 9;
+        fixture->live.automation.enemyEffects = PHOrbEnemyComboAbsorb;
+        auto &bonus = fixture->live.enemyCombo.bonus;
+        bonus.valid = true; bonus.count = 3; bonus.attackColors = bonus.awakeningColors[4] = 8;
+        bonus.effects[0] = PHOrbComboEffect{16,2,PHOrbComboAwakenings,0,1,{}};
+        bonus.effects[1] = PHOrbComboEffect{1,4,PHOrbComboGroups,1,2,{3,5,255,255,255}};
+        bonus.effects[2] = PHOrbComboEffect{16,2,PHOrbComboAwakenings,2,1,{}};
+        NSArray *goals = @[@{@"kind":@"t",@"colors":@8,@"count":@1},
+            @{@"kind":@"four",@"colors":@32,@"count":@1}];
+        PHOrbSession *test = AssistSession(fixture,AssistSettings(NO,goals));
+        Check(UntilPhase(test,fixture,@"turnWaiting") && fixture->releases == 1 &&
+            [test.snapshot[@"goalPlan"][@"enemyComboBeforeBonus"] isEqual:@10] &&
+            [test.snapshot[@"goalPlan"][@"enemyComboRequired"] isEqual:@2] &&
+            [test.snapshot[@"searchTrace"][@"enemyCountermeasure"][@"bonusSources"] isEqual:@[@2,@4,@2,@0]] &&
+            [[test.snapshot[@"executionHistory"] lastObject][@"releaseEvaluation"][@"bonusTriggersFirstWaveRequired"] boolValue],
+            "Auto completes light T and heart four with two actual plus eight guaranteed bonus Combos");
+        [test queueStop:@"bonus execution fixture complete"]; Tick(test,fixture,Frame());
+    }
+    // A changed effective bonus is action evidence, including during a drag.
+    for (bool held : {false,true}) {
+        FakeOrbEngine *fixture = [FakeOrbEngine new]; SetAssistBoard(fixture,0);
+        fixture->live.enemyCombo.bonus.valid = true; fixture->live.enemyCombo.bonus.sourceSignature = 1;
+        PHOrbSession *test = AssistSession(fixture,AssistSettings(NO));
+        Check(UntilPhase(test,fixture,held ? @"running" : @"arming"),"bonus race reaches the execution boundary");
+        if (held) for (unsigned i = 0; i < 4 && !fixture->live.dragged; ++i) Tick(test,fixture,Frame());
+        const NSUInteger before = fixture->stages;
+        ++fixture->live.enemyCombo.bonus.sourceSignature;
+        Check(UntilPhase(test,fixture,@"stopped") && fixture->stages == before + (held ? 1 : 0) &&
+            fixture->releases == (held ? 1u : 0u),"bonus-source changes stop stale input and allow only owned release cleanup");
+    }
     // Recorded 0.5.32 failure: enough light/hearts, but an added first-clear
     // Combo goal exceeds board capacity. The stop and exported reason agree.
     for (unsigned width : {5u,6u}) {

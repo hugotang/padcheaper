@@ -93,7 +93,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     button.backgroundColor = [UIColor.systemBlueColor colorWithAlphaComponent:0.16];
     button.layer.cornerRadius = 12; button.layer.cornerCurve = kCACornerCurveContinuous;
     button.accessibilityIdentifier = identifier;
-    [button.heightAnchor constraintEqualToConstant:42].active = YES;
+    [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside];
     return button;
 }
@@ -125,6 +125,9 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     toggle.onTintColor = UIColor.systemGreenColor;
     toggle.accessibilityLabel = title;
     toggle.accessibilityIdentifier = [@"padcheaper." stringByAppendingString:key];
+    [text setContentCompressionResistancePriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
+    [toggle setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+    [toggle setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
     [toggle addTarget:self action:@selector(toggleFeature:) forControlEvents:UIControlEventValueChanged];
     self.switches[key] = toggle;
     UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[text, toggle]];
@@ -241,16 +244,17 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     UILabel *version = PHLabel(11, UIFontWeightRegular);
     version.text = PH_RUNTIME_VERSION;
     version.textColor = [UIColor colorWithWhite:1 alpha:0.60];
-    UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[title, version]];
-    heading.axis = UILayoutConstraintAxisVertical;
-    heading.spacing = 3;
+    UIStackView *heading = [[UIStackView alloc] initWithArrangedSubviews:@[title]];
+    heading.axis = UILayoutConstraintAxisHorizontal;
+    heading.alignment = UIStackViewAlignmentFirstBaseline;
+    heading.spacing = 8;
     UIButton *close = [UIButton buttonWithType:UIButtonTypeSystem];
     [close setImage:[UIImage systemImageNamed:@"xmark"] forState:UIControlStateNormal];
     close.tintColor = UIColor.whiteColor;
     close.accessibilityLabel = @"收起 PADCheaper";
     close.accessibilityIdentifier = @"padcheaper.close";
-    [close.widthAnchor constraintEqualToConstant:36].active = YES;
-    [close.heightAnchor constraintEqualToConstant:36].active = YES;
+    [close.widthAnchor constraintEqualToConstant:44].active = YES;
+    [close.heightAnchor constraintEqualToConstant:44].active = YES;
     [close addTarget:self action:@selector(closePanel) forControlEvents:UIControlEventTouchUpInside];
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[heading, close]];
     header.axis = UILayoutConstraintAxisHorizontal;
@@ -288,7 +292,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.timerLabel = PHLabel(11, UIFontWeightRegular);
     self.timerLabel.textColor = [UIColor colorWithWhite:1 alpha:0.75];
     self.timerLabel.accessibilityIdentifier = @"padcheaper.timerStatus";
-    self.filterToggle = [self button:@"單人入口設定 · mode／source" action:@selector(toggleFilters)
+    self.filterToggle = [self button:@"單人入場條件" action:@selector(toggleFilters)
         identifier:@"padcheaper.filtersOpen"];
     UILabel *soloOnly = PHLabel(12, UIFontWeightRegular);
     soloOnly.text = @"套隊、補回、還原及數值寫入僅限單人。3／4／8 人可用浮動「轉一次」；8 人另支援本場 Auto。";
@@ -317,11 +321,11 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     note.text = @"浮動「轉珠」按鈕代表 dylib 已載入，外圈顏色是狀態（綠色：功能已通過啟用條件）。點它展開轉一次／自動／設定；執行中點它停止。Skin／BGM 仍需遊戲已有資源。";
     note.textColor = [UIColor colorWithWhite:1 alpha:0.55];
     UIStackView *body = [[UIStackView alloc] initWithArrangedSubviews:@[
-        self.statusLabel, self.reasonLabel,
+        self.statusLabel,
         [self card:@"常用" rows:@[
             [self switchRow:@"功能總開關" key:@"experimentalWrites"],
-            [self button:@"編輯六人隊伍 · 本體／武裝" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
-            [self button:@"自動轉珠 · 連續／技能規則" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"]]],
+            [self button:@"隊伍編成" action:@selector(openFormation) identifier:@"padcheaper.formationOpen"],
+            [self button:@"自動轉珠與技能" action:@selector(openOrbs) identifier:@"padcheaper.orbsOpen"]]],
         [self card:@"隊伍與入場（單人）" rows:@[
             [self switchRow:@"戰鬥隊員替換" key:@"battleSwap"],
             [self switchRow:@"入場自動套用隊伍" key:@"autoApplyTeam"],
@@ -332,7 +336,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
             [self switchRow:@"隊伍徽章" key:@"badge"]]],
         [self card:@"計時" rows:@[
             [self switchRow:@"背景計時修正" key:@"timerFix"], self.timerDismiss, self.timerLabel]],
-        [self card:@"診斷與 API" rows:@[
+        [self card:@"診斷與 API" rows:@[version, self.reasonLabel,
             actions, self.feedbackLabel, self.endpointLabel, self.endpointButton,
             self.saveLabel, self.checksLabel, self.pathLabel, note]]
     ]];
@@ -759,8 +763,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
     self.saveLabel.textColor = [savePhase hasSuffix:@"failed"] ?
         UIColor.systemRedColor : [UIColor colorWithWhite:1 alpha:0.80];
     NSDictionary *battle = state[@"battleState"];
-    [self.filterToggle setTitle:[NSString stringWithFormat:@"單人入口設定 · mode %@／source %@／multi %@",
-        battle[@"mode"] ?: @"—", battle[@"sourceMode"] ?: @"—", battle[@"multiplayer"] ?: @"—"] forState:UIControlStateNormal];
+    [self.filterToggle setTitle:@"單人入場條件" forState:UIControlStateNormal];
     [self.formationController updateBattle:battle];
     self.battleLabel.text = [NSString stringWithFormat:@"%@\n%@", battle[@"message"] ?: @"等待戰鬥檢查",
         battle[@"gate"] ?: @""];

@@ -2,6 +2,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbEight.h"
 #import "PHOrbPlanning.h"
+#import "PHOrbEditorUI.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 @interface PHOrbProfileEditor () <UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate>
@@ -11,6 +12,7 @@
 @property(nonatomic, strong) NSDictionary *context;
 @property(nonatomic, copy) NSString *(^saveProfiles)(NSDictionary *, NSDictionary *);
 @property(nonatomic, strong) UIStackView *rows;
+@property(nonatomic, strong) NSMutableSet<NSString *> *openSections;
 @property(nonatomic, strong) UILabel *notice;
 @property(nonatomic, strong) UITextView *planText;
 @property(nonatomic, copy) NSString *planDraftText;
@@ -32,7 +34,7 @@
         NSData *data = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
         _draft = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL];
         _workingSettings = PHOrbCanonicalSettings(settings); _formations = formations; _context = context;
-        _saveProfiles = [save copy];
+        _saveProfiles = [save copy]; _openSections = [NSMutableSet set];
     }
     return self;
 }
@@ -43,10 +45,28 @@
     UILabel *label = [UILabel new]; label.text = text; label.numberOfLines = 0;
     label.textColor = UIColor.labelColor; label.font = [UIFont systemFontOfSize:15]; return label;
 }
+- (UIStackView *)switchRow:(NSString *)title toggle:(UISwitch *)toggle {
+    toggle.accessibilityLabel = title;
+    return PHOrbSwitchRow([self label:title], toggle);
+}
+- (UIStackView *)section:(NSString *)title content:(UIStackView *)content key:(NSString *)key {
+    UIStackView *section = PHOrbEditorSection(title, content, key != nil,
+        key ? [@"padcheaper.orbsProfileSection-" stringByAppendingString:key] : nil);
+    if (key) {
+        UIButton *toggle = (UIButton *)section.arrangedSubviews.firstObject;
+        if ([self.openSections containsObject:key]) [toggle sendActionsForControlEvents:UIControlEventTouchUpInside];
+        __weak PHOrbProfileEditor *weakSelf = self;
+        [toggle addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
+            PHOrbProfileEditor *editor = weakSelf;
+            if ([editor.openSections containsObject:key]) [editor.openSections removeObject:key];
+            else [editor.openSections addObject:key];
+        }] forControlEvents:UIControlEventTouchUpInside];
+    }
+    return section;
+}
 - (UIButton *)button:(NSString *)title {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    UIButtonConfiguration *config = [UIButtonConfiguration tintedButtonConfiguration]; config.title = title;
-    button.configuration = config; [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    PHOrbStyleButton(button, title, NO); [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     return button;
 }
 - (void)viewDidLoad {
@@ -57,6 +77,7 @@
     UIButton *cancel = [self button:@"取消"]; [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
     cancel.accessibilityIdentifier = @"padcheaper.orbsProfileCancel";
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]]; header.spacing = 12;
+    PHOrbStyleHeader(header, title, cancel);
     header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
     UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO;
     scroll.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive; [self.view addSubview:scroll];
@@ -65,6 +86,7 @@
     self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;
     self.notice.accessibilityIdentifier = @"padcheaper.orbsProfileNotice";
     UIButton *save = [self button:@"儲存並選用"]; save.accessibilityIdentifier = @"padcheaper.orbsProfileSave";
+    PHOrbStyleButton(save, @"儲存並選用", YES);
     [save addTarget:self action:@selector(save) forControlEvents:UIControlEventTouchUpInside];
     UIStackView *footer = [[UIStackView alloc] initWithArrangedSubviews:@[self.notice, save]];
     footer.axis = UILayoutConstraintAxisVertical; footer.spacing = 8; footer.translatesAutoresizingMaskIntoConstraints = NO;
@@ -115,7 +137,12 @@
     [self.view endEditing:YES]; self.notice.text = @"";
     for (UIView *view in self.rows.arrangedSubviews) { [self.rows removeArrangedSubview:view]; [view removeFromSuperview]; }
     NSMutableDictionary *record = self.selected;
+    UIStackView *selection = [UIStackView new];
+    UIStackView *basic = [UIStackView new];
     UIButton *choose = [self button:record ? record[@"name"] : @"通用設定（不綁策略）"];
+    UIButtonConfiguration *choiceStyle = choose.configuration;
+    choiceStyle.image = [UIImage systemImageNamed:@"chevron.down"]; choiceStyle.imagePlacement = NSDirectionalRectEdgeTrailing;
+    choiceStyle.imagePadding = 8; choose.configuration = choiceStyle;
     choose.accessibilityIdentifier = @"padcheaper.orbsProfileSelect"; choose.showsMenuAsPrimaryAction = YES;
     __weak PHOrbProfileEditor *weakSelf = self;
     NSMutableArray *choices = [NSMutableArray array];
@@ -130,13 +157,12 @@
         action.state = [identifier isEqual:self.draft[@"selected"]] ? UIMenuElementStateOn : UIMenuElementStateOff;
         [choices addObject:action];
     }
-    choose.menu = [UIMenu menuWithTitle:@"選擇要編輯及使用的策略" children:choices]; [self.rows addArrangedSubview:choose];
+    choose.menu = [UIMenu menuWithTitle:@"選擇要編輯及使用的策略" children:choices]; [selection addArrangedSubview:choose];
     if (record[@"activity"]) {
         NSDictionary *guide = record[@"activity"][@"guide"];
         UISwitch *guideSwitch = [UISwitch new]; guideSwitch.on = PHOrbEightGuideEnabled(record[@"activity"]);
         guideSwitch.enabled = guide != nil;
         guideSwitch.accessibilityIdentifier = @"padcheaper.orbsEightGuideSkills";
-        guideSwitch.accessibilityLabel = @"按 GameWith 樓層攻略開技";
         __weak UISwitch *weakGuideSwitch = guideSwitch;
         [guideSwitch addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
             NSMutableDictionary *activity = [record[@"activity"] mutableCopy];
@@ -144,31 +170,26 @@
             if (!changed) return;
             changed[@"enabled"] = @(weakGuideSwitch.on); activity[@"guide"] = changed; record[@"activity"] = activity;
         }] forControlEvents:UIControlEventValueChanged];
-        UIStackView *guideRow = [[UIStackView alloc] initWithArrangedSubviews:
-            @[[self label:@"按 GameWith 樓層攻略開技"],guideSwitch]];
-        guideRow.spacing = 12; guideRow.alignment = UIStackViewAlignmentCenter; [self.rows addArrangedSubview:guideRow];
+        [basic addArrangedSubview:[self switchRow:@"按 GameWith 樓層攻略開技" toggle:guideSwitch]];
         UILabel *guideHelp = [self label:guide ?
             @"開啟：先完成本層指定技能再求路，可減少攻擊珠不足造成的多回合。關閉：現盤達標就轉，失敗才選救盤技能。儲存並選用後生效。B1 一律優先高 Combo。" :
             @"本策略未含攻略開技分支；匯入新版活動 JSON 後可啟用。B1 仍優先高 Combo。"];
         if (guide[@"preparation"]) guideHelp.text = [guideHelp.text stringByAppendingString:
             @" 尾層缺珠時可依攻略先消一組三珠，保留可轉攻擊色的珠，下一回合開技輸出；每場最多一次。"];
+        guideHelp.font = [UIFont systemFontOfSize:13]; guideHelp.textColor = UIColor.secondaryLabelColor;
         guideHelp.accessibilityIdentifier = @"padcheaper.orbsEightGuideHelp";
-        [self.rows addArrangedSubview:guideHelp];
+        [basic addArrangedSubview:guideHelp];
     }
     UISwitch *autoSelect = [UISwitch new]; autoSelect.on = [self.draft[@"autoSelect"] boolValue];
     autoSelect.accessibilityIdentifier = @"padcheaper.orbsProfileAutoSelect"; __weak UISwitch *weakSwitch = autoSelect;
     [autoSelect addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
         weakSelf.draft[@"autoSelect"] = @(weakSwitch.on);
     }] forControlEvents:UIControlEventValueChanged];
-    UIStackView *autoRow = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:@"按開始時自動配對隊伍／關卡"], autoSelect]];
-    autoRow.spacing = 12; [self.rows addArrangedSubview:autoRow];
-    UISwitch *eightStart = [UISwitch new]; eightStart.on = [self.draft[@"eightAutoStart"] boolValue];
-    eightStart.accessibilityIdentifier = @"padcheaper.orbsEightAutoStart"; __weak UISwitch *weakEight = eightStart;
-    [eightStart addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
-        weakSelf.draft[@"eightAutoStart"] = @(weakEight.on);
-    }] forControlEvents:UIControlEventValueChanged];
-    UIStackView *eightRow = [[UIStackView alloc] initWithArrangedSubviews:@[[self label:@"8 人倒數完成後自動開始 Auto（每場一次；手動停止後本場不再自動開始）"], eightStart]];
-    eightRow.spacing = 12; [self.rows addArrangedSubview:eightRow];
+    [selection addArrangedSubview:[self switchRow:@"開始時自動配對" toggle:autoSelect]];
+    UILabel *matchingHelp = [self label:@"全域選用方式：按開始時配對隊伍與關卡，不會自行進入關卡。儲存後生效。"];
+    matchingHelp.font = [UIFont systemFontOfSize:13]; matchingHelp.textColor = UIColor.secondaryLabelColor;
+    [selection addArrangedSubview:matchingHelp];
+    [self.rows addArrangedSubview:[self section:@"策略選用" content:selection key:nil]];
     if (record) {
         UITextField *name = [UITextField new]; name.borderStyle = UITextBorderStyleRoundedRect;
         name.font = [UIFont systemFontOfSize:16]; name.text = record[@"name"]; name.placeholder = @"策略名稱（最多 60 字）";
@@ -176,56 +197,61 @@
         __weak UITextField *weakName = name;
         [name addAction:[UIAction actionWithHandler:^(__kindof UIAction *sender) {
             record[@"name"] = weakName.text ?: @"";
-        }] forControlEvents:UIControlEventEditingChanged]; [self.rows addArrangedSubview:name];
+        }] forControlEvents:UIControlEventEditingChanged]; [basic insertArrangedSubview:name atIndex:0];
+        [self.rows addArrangedSubview:[self section:@"目前策略" content:basic key:nil]];
+        UIStackView *binding = [UIStackView new];
+        UIStackView *details = [UIStackView new];
+        UIStackView *management = [UIStackView new];
         NSMutableArray *numbers = [NSMutableArray array]; BOOL any = NO;
         for (NSNumber *number in record[@"team"]) { [numbers addObject:number.unsignedIntValue ? number.stringValue : @"不限"]; any |= number.unsignedIntValue != 0; }
-        [self.rows addArrangedSubview:[self label:any ? [NSString stringWithFormat:@"開始時角色：%@", [numbers componentsJoinedByString:@"／"]] : @"隊伍限制：不限"]];
+        [binding addArrangedSubview:[self label:any ? [NSString stringWithFormat:@"開始時角色：%@", [numbers componentsJoinedByString:@"／"]] : @"隊伍限制：不限"]];
         UIButton *team = [self button:@"從隊伍庫綁定角色"]; team.showsMenuAsPrimaryAction = YES;
         NSMutableArray *teams = [NSMutableArray array];
         for (NSDictionary *formation in self.formations[@"teams"]) {
             NSDictionary *saved = formation[@"team"]; NSMutableArray *members = [NSMutableArray array];
             for (NSDictionary *slot in saved[@"slots"]) [members addObject:slot[@"body"][@"id"] ?: @0];
             if (members.count != 6) continue;
-            NSArray *binding = [members copy];
+            NSArray *teamBinding = [members copy];
             [teams addObject:[UIAction actionWithTitle:saved[@"title"] ?: @"未命名隊伍" image:nil identifier:nil handler:^(__kindof UIAction *sender) {
                 PHOrbProfileEditor *editor = weakSelf; if (!editor.selected) return;
-                editor.selected[@"team"] = [binding mutableCopy]; [editor rebuild];
+                editor.selected[@"team"] = [teamBinding mutableCopy]; [editor rebuild];
             }]];
         }
         team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0 && !record[@"formation"] && !record[@"activity"];
-        [self.rows addArrangedSubview:team];
-        [self.rows addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
+        [binding addArrangedSubview:team];
+        [binding addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
             if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請在活動 JSON 一併更新。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包會核對六格本體與武裝；請在匯入 JSON 一併修改隊伍及開場。"; return; }
             NSMutableArray *members = [editor.selected[@"team"] mutableCopy]; members[5] = @0;
             editor.selected[@"team"] = members; [editor rebuild];
         }]];
-        [self.rows addArrangedSubview:[self action:@"取消隊伍限制" identifier:@"padcheaper.orbsProfileAnyTeam" handler:^(PHOrbProfileEditor *editor) {
+        [binding addArrangedSubview:[self action:@"取消隊伍限制" identifier:@"padcheaper.orbsProfileAnyTeam" handler:^(PHOrbProfileEditor *editor) {
             if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請另選通用設定。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包開場需要固定隊伍；請另存通用策略。"; return; }
             editor.selected[@"team"] = [@[@0,@0,@0,@0,@0,@0] mutableCopy]; [editor rebuild];
         }]];
-        [self.rows addArrangedSubview:[self label:[record[@"dungeon"] unsignedIntValue] ?
+        [binding addArrangedSubview:[self label:[record[@"dungeon"] unsignedIntValue] ?
             [NSString stringWithFormat:@"關卡限制：地下城 %@／子關卡 %@", record[@"dungeon"], record[@"floor"]] : @"關卡限制：不限"]];
         UIButton *capture = [self action:@"帶入最近讀盤的關卡" identifier:@"padcheaper.orbsProfileCapture" handler:^(PHOrbProfileEditor *editor) {
             editor.selected[@"dungeon"] = editor.context[@"dungeon"]; editor.selected[@"floor"] = editor.context[@"floor"];
             [editor rebuild];
         }];
         capture.enabled = [self.context[@"known"] boolValue] && [self.context[@"dungeon"] unsignedIntValue] && [self.context[@"floor"] unsignedIntValue];
-        [self.rows addArrangedSubview:capture];
-        [self.rows addArrangedSubview:[self action:@"取消關卡限制" identifier:@"padcheaper.orbsProfileAnyDungeon" handler:^(PHOrbProfileEditor *editor) {
+        [binding addArrangedSubview:capture];
+        [binding addArrangedSubview:[self action:@"取消關卡限制" identifier:@"padcheaper.orbsProfileAnyDungeon" handler:^(PHOrbProfileEditor *editor) {
             editor.selected[@"dungeon"] = @0; editor.selected[@"floor"] = @0; [editor rebuild];
         }]];
+        [self.rows addArrangedSubview:[self section:@"適用隊伍與關卡" content:binding key:nil]];
         NSDictionary *settings = record[@"settings"];
         UIButton *share = [self button:@"分享策略檔案…"];
         share.accessibilityIdentifier = @"padcheaper.orbsProfileShare";
         [share addTarget:self action:@selector(share:) forControlEvents:UIControlEventTouchUpInside];
-        [self.rows addArrangedSubview:share];
+        [management addArrangedSubview:share];
         if (record[@"formation"]) {
             UILabel *summary = [self label:PHOrbPlanDescription(PHOrbPlanFromProfile(record))];
             summary.accessibilityIdentifier = @"padcheaper.orbsPlanSummary";
-            [self.rows addArrangedSubview:summary];
-            [self.rows addArrangedSubview:[self action:@"複製整包 config" identifier:@"padcheaper.orbsPlanExport" handler:^(PHOrbProfileEditor *editor) {
+            [details addArrangedSubview:summary];
+            [management addArrangedSubview:[self action:@"複製整包 config" identifier:@"padcheaper.orbsPlanExport" handler:^(PHOrbProfileEditor *editor) {
                 NSDictionary *plan = PHOrbPlanFromProfile(editor.selected);
                 NSData *data = plan ? [NSJSONSerialization dataWithJSONObject:plan options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL] : nil;
                 if (!data) { editor.notice.text = @"目前設定無效，無法匯出。"; return; }
@@ -239,33 +265,36 @@
             for (NSDictionary *floor in record[@"activity"][@"floors"]) [lines addObject:
                 [NSString stringWithFormat:@"B%lu：%@",(unsigned long)++wave,PHOrbGoalsDescription(floor[@"goals"])]];
             [lines addObject:@"開始時會核對六格固定版本技能；技能與吸收狀態變更後重新讀盤。"];
-            [self.rows addArrangedSubview:[self label:[lines componentsJoinedByString:@"\n"]]];
+            [details addArrangedSubview:[self label:[lines componentsJoinedByString:@"\n"]]];
         }
-        [self.rows addArrangedSubview:[self label:record[@"activity"] ?
+        [details addArrangedSubview:[self label:record[@"activity"] ?
             @"活動技能及樓層目標請更新活動 JSON；轉珠頁可調整求路品質。" :
             [NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
             (unsigned long)[settings[@"rules"] count], (unsigned long)[settings[@"goals"] count]]]];
-        [self.rows addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
+        [management addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
             NSMutableDictionary *updated = [editor.selected mutableCopy]; updated[@"settings"] = editor.workingSettings;
             if (!PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[updated]})) {
                 editor.notice.text = @"目前設定與這份策略不相容；8 人活動不使用單人技能、低血補心或武裝 L 規則。"; return;
             }
             editor.selected[@"settings"] = editor.workingSettings; [editor rebuild];
         }]];
-        [self.rows addArrangedSubview:[self action:@"複製這份策略" identifier:@"padcheaper.orbsProfileCopy" handler:^(PHOrbProfileEditor *editor) {
+        [management addArrangedSubview:[self action:@"複製這份策略" identifier:@"padcheaper.orbsProfileCopy" handler:^(PHOrbProfileEditor *editor) {
             [editor addProfile:YES];
         }]];
         UIButton *remove = [self action:@"刪除這份策略" identifier:@"padcheaper.orbsProfileDelete" handler:^(PHOrbProfileEditor *editor) {
             [editor.draft[@"profiles"] removeObject:editor.selected]; editor.draft[@"selected"] = @""; [editor rebuild];
-        }]; remove.tintColor = UIColor.systemRedColor; [self.rows addArrangedSubview:remove];
+        }]; remove.tintColor = UIColor.systemRedColor; [management addArrangedSubview:remove];
+        [self.rows addArrangedSubview:[self section:@"策略內容" content:details key:@"details"]];
+        [self.rows addArrangedSubview:[self section:@"分享與管理" content:management key:@"management"]];
     }
     UIButton *add = [self action:@"＋ 將目前轉珠設定另存為策略" identifier:@"padcheaper.orbsProfileAdd" handler:^(PHOrbProfileEditor *editor) {
         [editor addProfile:NO];
     }]; add.enabled = [self.draft[@"profiles"] count] < PHOrbMaxProfiles; [self.rows addArrangedSubview:add];
-    [self.rows addArrangedSubview:[self label:@"匯入 8 人活動、一般策略或隊伍整包 config"]];
-    [self.rows addArrangedSubview:[self action:@"從檔案匯入 JSON…" identifier:@"padcheaper.orbsProfileFileImport" handler:^(PHOrbProfileEditor *editor) {
+    UIStackView *imports = [UIStackView new];
+    [imports addArrangedSubview:[self action:@"從檔案匯入…" identifier:@"padcheaper.orbsProfileFileImport" handler:^(PHOrbProfileEditor *editor) {
         [editor pickFile];
     }]];
+    UIStackView *paste = [UIStackView new];
     self.planText = [UITextView new]; self.planText.text = self.planDraftText ?: @"";
     self.planText.font = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightRegular];
     self.planText.backgroundColor = UIColor.secondarySystemBackgroundColor; self.planText.layer.cornerRadius = 8;
@@ -273,17 +302,21 @@
     self.planText.accessibilityIdentifier = @"padcheaper.orbsPlanJSON";
     self.planText.accessibilityLabel = @"貼入整包 JSON";
     [self.planText.heightAnchor constraintEqualToConstant:180].active = YES;
-    [self.rows addArrangedSubview:self.planText];
-    [self.rows addArrangedSubview:[self action:@"貼上 config" identifier:@"padcheaper.orbsPlanPaste" handler:^(PHOrbProfileEditor *editor) {
+    [paste addArrangedSubview:self.planText];
+    [paste addArrangedSubview:[self action:@"貼上 config" identifier:@"padcheaper.orbsPlanPaste" handler:^(PHOrbProfileEditor *editor) {
         NSString *text = UIPasteboard.generalPasteboard.string;
         if (text.length > 131072) { editor.notice.text = @"單份 config 上限 128 KiB。"; return; }
         editor.planText.text = text ?: @"";
     }]];
-    [self.rows addArrangedSubview:[self action:@"驗證並預覽匯入" identifier:@"padcheaper.orbsPlanImport" handler:^(PHOrbProfileEditor *editor) {
+    [paste addArrangedSubview:[self action:@"驗證並預覽匯入" identifier:@"padcheaper.orbsPlanImport" handler:^(PHOrbProfileEditor *editor) {
         NSData *data = [editor.planText.text dataUsingEncoding:NSUTF8StringEncoding];
         [editor previewData:data];
     }]];
-    [self.rows addArrangedSubview:[self label:@"最多 64 份，儲存成功才生效。一般策略包含技能規則、盤面目標與求路品質，開始時核對本體圖鑑編號。\n\n整包 config 另含配裝與開場；執行時核對六格本體、武裝及開場變身進度，不以等級與覺醒作配對條件。切層後保持本次策略。\n\n自動配對優先選更具體的關卡，再比較限定的角色數；同等候選或沒有符合者會停止。這個開關不會自行開始遊戲或進入關卡。\n\n關卡限制取自最近成功讀盤，與技能規則中的第幾層不同。"]];
+    [imports addArrangedSubview:[self section:@"貼上 JSON 匯入" content:paste key:@"paste"]];
+    [self.rows addArrangedSubview:[self section:@"匯入策略" content:imports key:nil]];
+    UIStackView *help = [UIStackView new];
+    [help addArrangedSubview:[self label:@"最多 64 份，儲存成功才生效。一般策略包含技能規則、盤面目標與求路品質，開始時核對本體圖鑑編號。\n\n整包 config 另含配裝與開場；執行時核對六格本體、武裝及開場變身進度，不以等級與覺醒作配對條件。切層後保持本次策略。\n\n自動配對優先選更具體的關卡，再比較限定的角色數；同等候選或沒有符合者會停止。這個開關不會自行開始遊戲或進入關卡。\n\n關卡限制取自最近成功讀盤，與技能規則中的第幾層不同。"]];
+    [self.rows addArrangedSubview:[self section:@"策略配對與匯入說明" content:help key:@"help"]];
 }
 - (void)previewData:(NSData *)data {
     if (!data.length || data.length > 131072) { self.notice.text = @"請提供完整 JSON，單份上限 128 KiB。"; return; }
@@ -292,7 +325,7 @@
     if (!library) { self.notice.text = reason; return; }
     NSData *saved = [NSJSONSerialization dataWithJSONObject:library options:0 error:NULL];
     self.draft = [NSJSONSerialization JSONObjectWithData:saved options:NSJSONReadingMutableContainers error:NULL];
-    self.planText.text = @""; [self rebuild];
+    self.planText.text = @""; [self.openSections addObject:@"details"]; [self rebuild];
     self.notice.text = @"已驗證並加入草稿。檢查上方內容，按「儲存並選用」才會套用設定。";
     [self.view layoutIfNeeded];
     UIScrollView *scroll = (UIScrollView *)self.rows.superview;

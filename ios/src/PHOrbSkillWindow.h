@@ -20,7 +20,7 @@ static inline NSString *PHOrbSkillWindowDescription(const PHOrbAutomationState *
     PH_WINDOW_REASON(PHOrbSkillWindowTimedAnimation, @"計時演出尚未完成");
     PH_WINDOW_REASON(PHOrbSkillWindowTutorial, @"教學限制施放位置");
     PH_WINDOW_REASON(PHOrbSkillWindowDungeon, @"關卡禁止使用技能");
-    PH_WINDOW_REASON(PHOrbSkillWindowEnemyParts, @"敵人部位資料尚未支援");
+    PH_WINDOW_REASON(PHOrbSkillWindowEnemyParts, @"敵人部位狀態或所屬敵人未確認");
     PH_WINDOW_REASON(PHOrbSkillWindowEnemyAction, @"敵人行動尚未完成");
     PH_WINDOW_REASON(PHOrbSkillWindowNoEnemy, @"沒有可確認的存活敵人");
     PH_WINDOW_REASON(PHOrbSkillWindowResize, @"等待改盤動畫完成");

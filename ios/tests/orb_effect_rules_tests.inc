@@ -40,7 +40,12 @@ static void OrbEffectRulesTests(void) {
     rule[@"below"] = @6;
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleYes, "shortage true in every spinner phase can trigger");
     rule[@"below"] = @5;
-    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "a threshold crossing is unknown even when this sampled color is sufficient");
+    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleNo, "an optional threshold crossing defers the skill and lets Auto solve");
+    rule[@"required"] = @YES;
+    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "a required threshold crossing still blocks the puzzle");
+    rule[@"required"] = @NO; rule[@"enemy"] = @"combo_absorb";
+    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "optional rotating shortage cannot hide missing enemy evidence");
+    rule[@"enemy"] = @"none";
     rule[@"below"] = @4;
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleNo, "a guaranteed sufficient minimum skips the skill");
     state.board.spinnerMask |= UINT64_C(1) << 28; state.board.types[28] = 0;
@@ -49,7 +54,7 @@ static void OrbEffectRulesTests(void) {
     rule[@"below"] = @5;
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleNo, "shared-phase counting does not invent independent color losses");
     state.board.flags[29] = PHOrbFlagLocked; rule[@"below"] = @6;
-    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "locked spinners contribute a fixed color while unlocked cells still rotate");
+    Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleNo, "locked spinners contribute a fixed color while an optional rotating shortage is deferred");
     state.board.spinnerColors = 0x400;
     Check(PHOrbTriggerSkillRule(rule, &state, 1, NULL) == PHOrbRuleUnknown, "unsupported cycles cannot supply a guessed inventory");
     state.board.spinnerMask = state.board.spinnerColors = 0;

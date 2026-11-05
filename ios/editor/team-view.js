@@ -9,7 +9,10 @@
   const percent=n=>n===null?'未完整':(n*100).toFixed(3).replace(/\.?0+$/,'')+'%';
   function icon(id,latent=false,inactive=false) {
     const e=element('span',(latent?'latent-icon':'awakening-icon')+(inactive?' inactive':''));
-    e.style.setProperty('--icon-id',id);e.setAttribute('aria-hidden','true');return e;
+    // ID 52 is reserved by the model but has no artwork in the bundled atlas.
+    if(latent&&(!Number.isInteger(id)||id<1||id>51)){e.classList.add('unknown');e.textContent='?';}
+    else e.style.setProperty('--icon-id',id);
+    e.setAttribute('aria-hidden','true');return e;
   }
   function create(formation,getTeam,portrait) {
     const model=PHTeamModel.createModel(PH_CATALOG,PH_TEAM_CATALOG,formation);

@@ -10,6 +10,7 @@ bool PositiveDuration(uint16_t value) {
 }
 
 #include "PHOrbSurvival.inc"
+#include "PHOrbEnemyParts.inc"
 
 bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     auto &out = state.automation;
@@ -145,26 +146,39 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     // No single-player derived maximum HP or thorn budget is reused in 8P.
     out.enemiesKnown = true;
     // Mapping verified in 0x100562F74. These are enemy effects, distinct from
-    // the player's bypass durations below. Only living ordinary enemies count.
+    // the player's bypass durations below. Parts use separate HP. Including
+    // their effects is conservative: native 0x100562F74 can bypass these for
+    // positive part mode, depending on the attack; we never assume that bypass.
     constexpr uintptr_t durationOffsets[]{2400, 2192, 2256, 2224};
     constexpr uintptr_t bypassOffsets[]{739196, 739156, 739668, 739176};
+    bool partsCodeChecked = false;
     for (unsigned i = 0; i < enemies; ++i) {
         uintptr_t enemy = impl + PHOrbEnemyOffset + i * PHOrbEnemyStride;
         uint16_t flags = 0; uint32_t low = 0, high = 0; uint8_t action = 0;
         if (!PHReadU16(enemy + 532, &flags)) return false;
         if (flags & 0x100u) {
-            out.enemiesKnown = false; out.window = false;
-            out.windowBlocks |= PHOrbSkillWindowEnemyParts;
-            continue;
-        } // Enemy parts not yet modeled.
-        if (!Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
-            !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
-        if (int64_t((uint64_t(high) << 32) | low) <= 0) continue;
+            out.partsMask |= uint8_t(1u << i);
+            if (eight || (!partsCodeChecked && !CheckEnemyPartsCode(header)) ||
+                !ReadEnemyPart(impl, enemies, i, key1, key2, out.parts[i])) {
+                out.enemiesKnown = false; out.window = false;
+                out.windowBlocks |= PHOrbSkillWindowEnemyParts;
+                continue;
+            }
+            partsCodeChecked = true;
+            if (!out.parts[i].hp || out.parts[i].hp > INT64_MAX) continue;
+        } else {
+            if (!Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
+                !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
+            if (int64_t((uint64_t(high) << 32) | low) <= 0) continue;
+        }
         ++out.activeEnemies;
-        if (!PHReadU8(enemy + 23, &action)) return false;
-        out.window &= int8_t(action) < 0;
-        if (int8_t(action) >= 0) out.windowBlocks |= PHOrbSkillWindowEnemyAction;
-        out.busy |= int8_t(action) >= 0;
+        // 0x1005B0268 checks action only for living ordinary enemies.
+        if (!(flags & 0x100u)) {
+            if (!PHReadU8(enemy + 23, &action)) return false;
+            out.window &= int8_t(action) < 0;
+            if (int8_t(action) >= 0) out.windowBlocks |= PHOrbSkillWindowEnemyAction;
+            out.busy |= int8_t(action) >= 0;
+        }
         for (unsigned effect = 0; effect < 4; ++effect) {
             uint32_t duration = 0, mask = 0;
             if (!SmallProtected(enemy + durationOffsets[effect], key1, key2, UINT16_MAX, duration)) return false;

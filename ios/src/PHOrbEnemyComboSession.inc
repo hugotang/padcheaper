@@ -18,7 +18,7 @@
     if (!_preview.enemyCombo.valid) return YES;
     if (![self captureEnemyCombo:state]) return NO;
     if (!PHOrbSameEnemyCombo(&_preview.enemyCombo, &state->enemyCombo)) {
-        [self queueStop:@"敵人 Combo 吸收或解吸收狀態已改變，請重新開始"]; return NO;
+        [self queueStop:@"Combo 吸收、解吸收或加減 Combo 來源已改變，請重新開始"]; return NO;
     }
     return YES;
 }

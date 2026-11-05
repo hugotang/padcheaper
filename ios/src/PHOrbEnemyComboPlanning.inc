@@ -4,6 +4,8 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
     NSMutableDictionary *result = [plan mutableCopy];
     result[@"enemyComboActive"] = @NO; result[@"enemyComboRequired"] = @0; result[@"enemyComboFirstWave"] = @NO;
     result[@"enemyCounterMessage"] = @""; result[@"enemyCounterBlocker"] = @"";
+    result[@"enemyComboBonus"] = @0; result[@"enemyComboBonusSources"] = @[@0,@0,@0,@0];
+    result[@"enemyComboBeforeBonus"] = @0; result[@"enemyComboBonusFirstWave"] = @NO; result[@"enemyComboBonusKnown"] = @NO;
     if (!automatic || ![plan[@"available"] boolValue]) return [result copy];
     PHOrbGoalSet goals = {0}; unsigned minimum = 0;
     NSString *blocker = nil, *message = nil;
@@ -24,10 +26,23 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
         result[@"enemyCounterMessage"] = @"目前沒有需要突破的 Combo 吸收，保留原目標";
         return [result copy];
     } else {
+        const unsigned beforeBonus = minimum;
+        unsigned sources[3] = {0};
+        const unsigned leaderBadge = PHOrbGuaranteedComboBonuses(&state->enemyCombo.bonus,&goals,
+            state->board.width,state->board.height,sources);
+        const unsigned active = (int16_t)(uint16_t)(state->enemyCombo.adjustmentTurns << 6) > 0 &&
+            state->enemyCombo.adjustment > 0 ? (unsigned)state->enemyCombo.adjustment : 0;
+        const unsigned bonus = leaderBadge + active;
+        minimum = minimum > bonus ? minimum - bonus : 1;
+        result[@"enemyComboBeforeBonus"] = @(beforeBonus);
+        result[@"enemyComboBonus"] = @(bonus);
+        result[@"enemyComboBonusSources"] = @[@(sources[0]),@(sources[1]),@(sources[2]),@(active)];
+        result[@"enemyComboBonusFirstWave"] = @(leaderBadge > 0);
+        result[@"enemyComboBonusKnown"] = @(state->enemyCombo.bonus.valid);
         result[@"enemyComboActive"] = @YES; result[@"enemyComboRequired"] = @(minimum); result[@"enemyComboFirstWave"] = @YES;
         if (minimum > 14) {
             blocker = @"combo-limit";
-            message = [NSString stringWithFormat:@"敵人 Combo 吸收對策要求首消至少 %u Combo，超出目前支援的 14 Combo；未計隊長／技能加算，請先使用對應技能或手動處理", minimum];
+            message = [NSString stringWithFormat:@"敵人 Combo 吸收對策已扣除可確認的 %u 加 Combo，仍要求首消至少 %u Combo，超出目前支援的 14 Combo；請先使用對應技能或手動處理", bonus, minimum];
         } else {
             unsigned index = goals.count;
             for (unsigned i = 0; i < goals.count; ++i) if (goals.items[i].kind == PHOrbGoalCombo) { index = i; break; }
@@ -39,7 +54,8 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
                 result[@"goals"] = PHOrbGoalsJSON(&goals);
                 result[@"message"] = PHOrbGoalsDescription(result[@"goals"]);
                 result[@"enemyCounterMessage"] = [NSString stringWithFormat:
-                    @"敵人 Combo 吸收對策：首消至少 %u Combo（已預留減 Combo）；未計隊長加算或後續落珠", minimum];
+                    @"敵人 Combo 吸收對策：首消至少 %u Combo；已預留減 Combo，計入隊長 +%u／助人 +%u／徽章 +%u／技能 +%u。加算條件須首消達成；未計天降或未確認效果。",
+                    minimum,sources[0],sources[1],sources[2],active];
             }
         }
     }

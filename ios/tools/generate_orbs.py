@@ -29,6 +29,10 @@ def generate(manifest):
                              'full_leader_activation': False, 'skill_rules': 'ordered-conjunctive-single-player',
                              'max_skill_rules': 12, 'skill_entry': 'native-confirmed-current-skill',
                              'skill_source_choice': 'native-same-family-body',
+                             'enemy_parts': {'mode': 'single-player', 'hp': 'protected-signed-mode-and-separate-hp',
+                                 'live_owner': 'validated-living-ordinary-enemy', 'effects': 'conservative-live-part-union',
+                                 'skill_action': 'ordinary-enemies-only', 'unknown': 'stop',
+                                 'guards': 'separate-on-parts-only', 'device_verified': False},
                              'enemy_conditions': ['damage_absorb', 'attribute_absorb', 'damage_void', 'combo_absorb'],
                              'skill_groups': 'round-robin-one-per-orb-turn', 'once_rules': 'current-battle-memory',
                              'reserved_skills': True, 'strategy_profiles': 64, 'profile_selection': 'explicit-start-only',
@@ -105,7 +109,7 @@ def generate(manifest):
                                  'capture': 'fresh-double-read-before-plan-and-input',
                                  'requirement': 'maximum-live-threshold-plus-one-or-active-bypass',
                                  'combine': 'retain-base-heart-and-assist-goals',
-                                 'combo_credit': 'first-removal-only-minus-current-debits', 'max_combos': 14,
+                                 'combo_credit': 'first-removal-plus-confirmed-leader-badge-active-minus-current-debits', 'max_combos': 14,
                                  'upper_absorption': 'stop-until-maximum-combo-proof',
                                  'unknown': 'stop', 'survival_authorization': False,
                                  'guards': 'separate-policy-only', 'device_verified': False},
@@ -335,6 +339,11 @@ def generate(manifest):
         'PHOrbEnemyDamageOverrideAccumulationGateRVA', 'PHOrbEnemyDamageOverrideAccumulationWriteRVA',
         'PHOrbEnemyDamageUnsignedShortRVA', 'PHOrbEnemyDamageSignedByteRVA', 'PHOrbEnemyDamageActionEnabledRVA', 'PHOrbEnemyDamageSpecialMarkerRVA',
     }
+    enemy_parts_guards = {'PHOrbEnemyParts' + name + 'RVA' for name in (
+        'Ordinary', 'Alive', 'HP', 'SignedByte', 'SkillAction', 'SkillCount', 'Effects')}
+    combo_bonus_guards = {'PHOrbComboBonus' + name + 'RVA' for name in (
+        'Reset', 'Apply', 'Leader', 'Badge', 'Resolve', 'Awakening', 'Column', 'Repeat', 'Match', 'Color', 'Provider', 'AttackColors',
+        'GroupCredit', 'TCredit', 'TProvider', 'AwakeningCredit', 'EquipmentProvider', 'ActivationCounter')}
     enemy_combo_guards = {'PHOrbEnemyCombo' + name + 'RVA' for name in (
         'Threshold', 'Bypass', 'Adjustment', 'AdjustmentSubtract', 'AdjustmentSkip', 'AdjustmentRecord', 'ActualCount', 'UpperThreshold')}
     enemy_threat_guards = {'PHOrbEnemyThreat' + name + 'RVA' for name in (
@@ -344,7 +353,7 @@ def generate(manifest):
         'Unmatchable', 'UnmatchableRandom', 'DelayParams', 'DelayTargets', 'DelayApply')}
     dungeon_dump_guards = {'PHOrbDungeonDump' + name + 'RVA' for name in (
         'Count', 'LoadCount', 'LoadStride', 'ParseEntry', 'SpawnWave', 'SpawnEntry', 'SpawnCatalog', 'SpawnLevel', 'SpawnBinding')}
-    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | enemy_threat_guards | dungeon_dump_guards
+    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -389,6 +398,10 @@ def generate(manifest):
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyCombo')} != enemy_combo_fields:
         raise ValueError('Unreviewed enemy Combo layout')
+    combo_bonus_fields = {'PHOrbComboBonusLeaderOffset': 744756, 'PHOrbComboBonusBadgeOffset': 745460, 'PHOrbComboBonusColorsOffset': 746144, 'PHOrbComboBonusAllLinksOffset': 746216}
+    if {name: int(value, 0) for name, value in manifest['fields'].items()
+            if name.startswith('PHOrbComboBonus')} != combo_bonus_fields:
+        raise ValueError('Unreviewed Combo bonus layout')
     dungeon_dump_fields = {'PHOrbDungeonDumpCountAddress': 0x2a9d1dc, 'PHOrbDungeonDumpWavesAddress': 0x2a9d1e0,
         'PHOrbDungeonDumpSpawnPointerOffset': 1672, 'PHOrbDungeonDumpSpawnWaveOffset': 516}
     if {name: int(value, 0) for name, value in manifest['fields'].items()
@@ -441,10 +454,15 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | enemy_threat_guards | dungeon_dump_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbEnemyPartsTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in enemy_parts_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines += ['};', 'static const size_t PHOrbEnemyPartsTextGuardCount = sizeof(PHOrbEnemyPartsTextGuards) / sizeof(PHOrbEnemyPartsTextGuards[0]);']
     lines.append('static const PHOrbTextGuard PHOrbObservationTextGuards[] = {')
     for guard in manifest['guards']:
         if guard['name'] in observation_guards:
@@ -475,6 +493,11 @@ def generate(manifest):
         if guard['name'] in enemy_damage_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbEnemyDamageTextGuardCount = sizeof(PHOrbEnemyDamageTextGuards) / sizeof(PHOrbEnemyDamageTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbComboBonusTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in combo_bonus_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines.append('};')
     lines.append('static const PHOrbTextGuard PHOrbEnemyComboTextGuards[] = {')
     for guard in manifest['guards']:
         if guard['name'] in enemy_combo_guards:

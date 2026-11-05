@@ -245,6 +245,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
     for (unsigned c = 0; c < 6; ++c) [retained addObject:@(value.retainedAfterConversion[c])];
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
         @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
+        @"bonusTriggersFirstWaveRequired":@(goals.bonusFirstWave),
         @"activityHeuristic":@(value.activityValue), @"nativeScoreKnown":@NO,
         @"preparationReady":@(value.preparationReady),@"retainedAfterConversion":retained,
         @"rowGroups":@[@(value.rowGroups[0]),@(value.rowGroups[1]),@(value.rowGroups[2]),@(value.rowGroups[3]),@(value.rowGroups[4]),@(value.rowGroups[5])],
@@ -502,6 +503,11 @@ struct EightPreparationState {
     trace[@"baseGoals"] = _goalPlan[@"enemyCounterBaseGoals"] ?: _goalPlan[@"assistRecoveryBaseGoals"] ?: trace[@"goals"];
     trace[@"enemyCountermeasure"] = @{@"comboActive":_goalPlan[@"enemyComboActive"] ?: @NO,
         @"minimumCombo":_goalPlan[@"enemyComboRequired"] ?: @0,
+        @"bonusCombo":_goalPlan[@"enemyComboBonus"] ?: @0,
+        @"bonusSources":_goalPlan[@"enemyComboBonusSources"] ?: @[],
+        @"bonusStateKnown":_goalPlan[@"enemyComboBonusKnown"] ?: @NO,
+        @"beforeBonus":_goalPlan[@"enemyComboBeforeBonus"] ?: @0,
+        @"bonusTriggersFirstRemovalOnly":_goalPlan[@"enemyComboBonusFirstWave"] ?: @NO,
         @"firstRemovalOnly":_goalPlan[@"enemyComboFirstWave"] ?: @NO,
         @"message":_goalPlan[@"enemyCounterMessage"] ?: @"", @"blocker":_goalPlan[@"enemyCounterBlocker"] ?: @"",
         @"stateKnown":@(_preview.enemyCombo.valid), @"survivalKnown":@NO};
@@ -1294,6 +1300,7 @@ struct EightPreparationState {
     PHOrbSolveOptions options = _solveOptions; options.thorns = state->thorns;
     if (!PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) return NO;
     options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
+    options.goals.bonusFirstWave = [_goalPlan[@"enemyComboBonusFirstWave"] boolValue];
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
     return PHOrbEvaluateRoute(state->board, _route, options, evaluation, damage, contacts) &&
         evaluation.goalsMet && evaluation.hazardsSafe && contacts == _route.thornContacts;
@@ -1386,6 +1393,7 @@ struct EightPreparationState {
     }
     const double available = TimeAvailable(_live);
     options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
+    options.goals.bonusFirstWave = [_goalPlan[@"enemyComboBonusFirstWave"] boolValue];
     const bool multiplayer = !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer);
     double remaining = available;
     if (multiplayer) {
@@ -1474,6 +1482,7 @@ struct EightPreparationState {
             PHOrbSolveOptions trial = options;
             if (assistCandidates.count && !PHOrbReadGoals(assistCandidates[choice][@"goals"], &trial.goals)) continue;
             trial.goals.comboFirstWave = options.goals.comboFirstWave;
+            trial.goals.bonusFirstWave = options.goals.bonusFirstWave;
             if (assistCandidates.count) trial.milliseconds = unsigned(options.milliseconds - spent) / unsigned(choices - choice);
             if (!trial.milliseconds) break;
             PHOrbRoute candidate{};

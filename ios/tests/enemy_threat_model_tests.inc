@@ -142,6 +142,34 @@ static void combo() {
     }
     state.flags[2] = 0x100;
     Check(!PHOrbEnemyComboRequirement(&state,&minimum), "unknown parts are rejected even with zero captured HP");
+    state.parts[2].known = true; state.parts[2].mode = -1; state.parts[2].hp = state.hp[2] = UINT64_MAX;
+    Check(PHOrbEnemyComboRequirement(&state,&minimum) && !minimum,
+        "verified absent parts do not block the living boss or inherit stale absorption");
+    state.parts[2].hp = 0;
+    Check(!PHOrbEnemyComboRequirement(&state,&minimum), "part evidence must agree with captured native HP");
+    state.hp[2] = 0;
+    Check(!PHOrbEnemyComboRequirement(&state,&minimum), "negative mode requires the native absent HP sentinel");
+    state.parts[2].mode = 0;
+    Check(PHOrbEnemyComboRequirement(&state,&minimum), "known zero part HP is inactive even at mode zero");
+    state.parts[2].hp = state.hp[2] = 100; state.aliveMask = 7;
+    Check(!PHOrbEnemyComboRequirement(&state,&minimum), "living part upper absorption is not silently skipped");
+    state.upperTurns[2] = 0; state.bypassTurns = 0; state.adjustmentTurns = state.subtractTurns = 0;
+    Check(PHOrbEnemyComboRequirement(&state,&minimum) && minimum == 100,
+        "a living owned part participates in the maximum absorption threshold");
+    for (int owner : {-1, 2, 3}) {
+        state.parts[2].owner = int8_t(owner);
+        Check(!PHOrbEnemyComboRequirement(&state,&minimum), "part ownership must resolve to a living ordinary enemy");
+    }
+    state.parts[2].owner = 0;
+    for (unsigned field = 0; field < 4; ++field) {
+        changed = state;
+        if (field == 0) ++changed.parts[2].mode;
+        if (field == 1) ++changed.parts[2].owner;
+        if (field == 2) ++changed.parts[2].index;
+        if (field == 3) ++changed.parts[2].hp;
+        Check(!PHOrbSameEnemyCombo(&state,&changed), "part mode, owner, index and HP changes revoke route evidence");
+    }
+    state.parts[2] = {}; state.hp[2] = 0;
     state.flags[2] = 0; state.aliveMask = 7;
     Check(!PHOrbEnemyComboRequirement(&state,&minimum), "inconsistent alive masks cannot authorize a route");
 }

@@ -1,3 +1,4 @@
+#import "PHOrbEditorUI.h"
 #import "PHOrbController.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbRules.h"
@@ -34,8 +35,7 @@
 }
 - (UIButton *)button:(NSString *)title {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    UIButtonConfiguration *config = [UIButtonConfiguration tintedButtonConfiguration];
-    config.title = title; button.configuration = config;
+    PHOrbStyleButton(button, title, NO);
     [button.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     return button;
 }
@@ -49,13 +49,14 @@
     cancel.accessibilityIdentifier = @"padcheaper.orbsGoalCancel";
     [cancel addTarget:self action:@selector(cancel) forControlEvents:UIControlEventTouchUpInside];
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, cancel]];
+    PHOrbStyleHeader(header, title, cancel);
     header.spacing = 12; header.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:header];
     UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:scroll];
     self.rows = [UIStackView new]; self.rows.axis = UILayoutConstraintAxisVertical; self.rows.spacing = 16;
     self.rows.translatesAutoresizingMaskIntoConstraints = NO; [scroll addSubview:self.rows];
     UIButton *save = [self button:@"儲存目標"];
-    save.configuration = [UIButtonConfiguration filledButtonConfiguration]; [save setTitle:@"儲存目標" forState:UIControlStateNormal];
     save.accessibilityIdentifier = @"padcheaper.orbsGoalSave";
+    PHOrbStyleButton(save, @"儲存目標", YES);
     [save addTarget:self action:@selector(save) forControlEvents:UIControlEventTouchUpInside];
     self.notice = [self label:@""]; self.notice.textColor = UIColor.systemRedColor;
     self.notice.accessibilityIdentifier = @"padcheaper.orbsGoalNotice";
@@ -334,6 +335,8 @@
 @property(nonatomic, strong) UILabel *recoveryDescription;
 @property(nonatomic, strong) UIButton *editProfiles;
 @property(nonatomic, strong) UILabel *profileDescription;
+@property(nonatomic, strong) UISwitch *eightAutoStart;
+@property(nonatomic, strong) UILabel *autoStartNotice;
 @property(nonatomic, strong) UILabel *eightDescription, *helpNote;
 @property(nonatomic, strong) UIButton *helpButton, *diagnosticsCopyButton;
 @property(nonatomic, strong) UIStackView *actionBar;
@@ -420,8 +423,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.position = [self label:14 weight:UIFontWeightMedium];
     self.readButton = [self button:@"讀盤並求路" selector:@selector(readBoard) identifier:@"padcheaper.orbsRead"];
     self.executeButton = [self button:@"執行一次" selector:@selector(execute) identifier:@"padcheaper.orbsExecute"];
-    self.executeButton.configuration = [UIButtonConfiguration filledButtonConfiguration];
-    [self.executeButton setTitle:@"執行一次" forState:UIControlStateNormal];
+    PHOrbStyleButton(self.executeButton, @"執行一次", NO);
     self.stopButton = [self button:@"停止" selector:@selector(stop) identifier:@"padcheaper.orbsStop"];
     self.stopButton.tintColor = UIColor.systemRedColor;
     [self.stopButton.widthAnchor constraintEqualToConstant:96].active = YES;
@@ -448,6 +450,15 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.editProfiles = [self button:@"隊伍／關卡策略" selector:@selector(editProfileSettings) identifier:@"padcheaper.orbsProfileEdit"];
     self.profileDescription = [self label:13 weight:UIFontWeightRegular];
     self.profileDescription.accessibilityIdentifier = @"padcheaper.orbsProfileDescription";
+    self.eightAutoStart = [UISwitch new]; self.eightAutoStart.accessibilityIdentifier = @"padcheaper.orbsEightAutoStart";
+    self.eightAutoStart.accessibilityLabel = @"8 人倒數後自動開始";
+    [self.eightAutoStart addTarget:self action:@selector(changeEightAutoStart) forControlEvents:UIControlEventValueChanged];
+    UILabel *autoStartTitle = [self label:15 weight:UIFontWeightMedium]; autoStartTitle.text = @"8 人倒數後自動開始";
+    UIStackView *autoStartRow = PHOrbSwitchRow(autoStartTitle, self.eightAutoStart);
+    UILabel *autoStartHelp = [self label:13 weight:UIFontWeightRegular]; autoStartHelp.textColor = UIColor.secondaryLabelColor;
+    autoStartHelp.text = @"全域設定，切換後儲存。每場只啟動一次；手動停止後，本場不再自動開始。只接續目前這場，不會入場或再戰。";
+    self.autoStartNotice = [self label:13 weight:UIFontWeightRegular]; self.autoStartNotice.textColor = UIColor.systemRedColor;
+    self.autoStartNotice.accessibilityIdentifier = @"padcheaper.orbsAutoStartNotice";
     UILabel *qualityTitle = [self label:15 weight:UIFontWeightMedium]; qualityTitle.text = @"求路品質";
     self.qualityControl = [[UISegmentedControl alloc] initWithItems:@[@"快速", @"均衡", @"深入"]];
     self.qualityControl.accessibilityIdentifier = @"padcheaper.orbsQuality";
@@ -456,14 +467,12 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     [self.qualityControl addTarget:self action:@selector(changeQuality) forControlEvents:UIControlEventValueChanged];
     self.qualityDescription = [self label:13 weight:UIFontWeightRegular];
     self.qualityDescription.accessibilityIdentifier = @"padcheaper.orbsQualityDescription";
-    UILabel *diagonalTitle = [self label:15 weight:UIFontWeightMedium]; diagonalTitle.text = @"允許斜向轉珠（Diagonal）";
+    UILabel *diagonalTitle = [self label:15 weight:UIFontWeightMedium]; diagonalTitle.text = @"允許斜向轉珠";
     self.diagonal = [UISwitch new];
     self.diagonal.accessibilityIdentifier = @"padcheaper.orbsDiagonal";
     self.diagonal.accessibilityLabel = diagonalTitle.text;
     [self.diagonal addTarget:self action:@selector(changeDiagonal) forControlEvents:UIControlEventValueChanged];
-    UIStackView *diagonalRow = [[UIStackView alloc] initWithArrangedSubviews:@[diagonalTitle, self.diagonal]];
-    diagonalRow.axis = UILayoutConstraintAxisHorizontal; diagonalRow.alignment = UIStackViewAlignmentCenter; diagonalRow.spacing = 12;
-    [diagonalRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    UIStackView *diagonalRow = PHOrbSwitchRow(diagonalTitle, self.diagonal);
     self.diagonalDescription = [self label:13 weight:UIFontWeightRegular];
     self.diagonalDescription.accessibilityIdentifier = @"padcheaper.orbsDiagonalDescription";
     UILabel *thornTitle = [self label:15 weight:UIFontWeightMedium]; thornTitle.text = @"荊棘盤優先 Combo";
@@ -471,9 +480,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.thornPriority.accessibilityIdentifier = @"padcheaper.orbsThornPriority";
     self.thornPriority.accessibilityLabel = thornTitle.text;
     [self.thornPriority addTarget:self action:@selector(changeThornPriority) forControlEvents:UIControlEventValueChanged];
-    UIStackView *thornRow = [[UIStackView alloc] initWithArrangedSubviews:@[thornTitle, self.thornPriority]];
-    thornRow.axis = UILayoutConstraintAxisHorizontal; thornRow.alignment = UIStackViewAlignmentCenter; thornRow.spacing = 12;
-    [thornRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    UIStackView *thornRow = PHOrbSwitchRow(thornTitle, self.thornPriority);
     self.thornDescription = [self label:13 weight:UIFontWeightRegular];
     self.thornDescription.accessibilityIdentifier = @"padcheaper.orbsThornDescription";
     UILabel *poisonTitle = [self label:15 weight:UIFontWeightMedium]; poisonTitle.text = @"心四連時允許消毒／猛毒";
@@ -481,9 +488,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.poisonWithHeartFour.accessibilityIdentifier = @"padcheaper.orbsPoisonWithHeartFour";
     self.poisonWithHeartFour.accessibilityLabel = poisonTitle.text;
     [self.poisonWithHeartFour addTarget:self action:@selector(changePoisonPolicy) forControlEvents:UIControlEventValueChanged];
-    UIStackView *poisonRow = [[UIStackView alloc] initWithArrangedSubviews:@[poisonTitle, self.poisonWithHeartFour]];
-    poisonRow.axis = UILayoutConstraintAxisHorizontal; poisonRow.alignment = UIStackViewAlignmentCenter; poisonRow.spacing = 12;
-    [poisonRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    UIStackView *poisonRow = PHOrbSwitchRow(poisonTitle, self.poisonWithHeartFour);
     self.poisonDescription = [self label:13 weight:UIFontWeightRegular];
     self.poisonDescription.accessibilityIdentifier = @"padcheaper.orbsPoisonDescription";
     UILabel *assistTitle = [self label:15 weight:UIFontWeightMedium]; assistTitle.text = @"武裝無效時補 L";
@@ -491,9 +496,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.assistRecoveryL.accessibilityIdentifier = @"padcheaper.orbsAssistRecoveryL";
     self.assistRecoveryL.accessibilityLabel = assistTitle.text;
     [self.assistRecoveryL addTarget:self action:@selector(changeAssistRecovery) forControlEvents:UIControlEventValueChanged];
-    UIStackView *assistRow = [[UIStackView alloc] initWithArrangedSubviews:@[assistTitle, self.assistRecoveryL]];
-    assistRow.axis = UILayoutConstraintAxisHorizontal; assistRow.alignment = UIStackViewAlignmentCenter; assistRow.spacing = 12;
-    [assistRow.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    UIStackView *assistRow = PHOrbSwitchRow(assistTitle, self.assistRecoveryL);
     self.assistRecoveryDescription = [self label:13 weight:UIFontWeightRegular];
     self.assistRecoveryDescription.accessibilityIdentifier = @"padcheaper.orbsAssistRecoveryDescription";
     self.goalMode = [[UISegmentedControl alloc] initWithItems:@[@"高 Combo", @"指定形狀", @"隊長盤面"]];
@@ -509,9 +512,12 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     note.accessibilityIdentifier = @"padcheaper.orbsHelpNote"; note.hidden = YES; self.helpNote = note;
     self.helpButton = [self button:@"顯示使用說明" selector:@selector(toggleHelp) identifier:@"padcheaper.orbsHelp"];
     self.diagnosticsCopyButton = [self button:@"複製診斷" selector:@selector(copyDiagnostics) identifier:@"padcheaper.orbsCopyDiagnostics"];
+    for (UIButton *secondary in @[self.editProfiles, self.editRules, self.editRecovery, self.editGoals,
+            self.dungeonExportButton, self.dungeonCompareButton, self.helpButton, self.diagnosticsCopyButton])
+        PHOrbStyleButton(secondary, secondary.configuration.title, NO);
+    PHOrbStyleButton(self.startButton, @"開始連續轉珠", YES);
     // SF Symbols (all iOS 13+) make the actions distinguishable at a glance.
-    // Titles are set explicitly: the filled execute configuration replaced
-    // the one built by -button:selector:identifier:.
+    // Keep titles and symbols together when the button style changes.
     NSDictionary<NSString *, NSArray *> *symbols = @{
         @"viewfinder":@[self.readButton,@"讀盤並求路"], @"play.fill":@[self.executeButton,@"執行一次"],
         @"stop.fill":@[self.stopButton,@"停止"], @"repeat":@[self.startButton,@"開始連續轉珠"],
@@ -531,6 +537,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.eightDescription.accessibilityIdentifier = @"padcheaper.orbsEightProgress"; self.eightDescription.hidden = YES;
     note.text = @"單人 Auto 依技能規則處理；8 人 Auto 依選用的活動策略核對固定隊伍、開技及樓層目標，通用設定只轉珠。每次技能生效後重新讀盤。只處理目前這場，結算、離場或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n一般預計 Combo 不含天降、隊長及 Combo 珠加算；8 人活動另列已核對的隊長加算。弱化珠照常判定消除，不估算傷害、回復量或精確總分。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援浮動「轉一次」，需在自己的操作窗口按下，完成後停止。8 人另可按 Auto 接續本場；3／4 人保持轉一次。多人避開有傷害的荊棘；單人技能規則、開場、低血補心與武裝 L 回復不套用至 8 人活動。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
+    PHOrbStyleButton(close, @"返回遊戲", NO);
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
     UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[title, close]];
     header.axis = UILayoutConstraintAxisHorizontal; header.spacing = 12; header.translatesAutoresizingMaskIntoConstraints = NO;
@@ -553,7 +560,9 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[subtitle,
         [self section:@"本場" views:@[self.status, self.boardView, self.slider, self.position, self.availability,
             self.eightDescription, self.decisionDescription]],
-        [self section:@"策略與求路" views:@[self.editProfiles, self.profileDescription, qualityTitle, self.qualityControl,
+        [self section:@"策略選用" views:@[self.editProfiles, self.profileDescription]],
+        [self section:@"8 人自動開始 · 全域" views:@[autoStartRow, autoStartHelp, self.autoStartNotice]],
+        [self section:@"盤面與求路" views:@[qualityTitle, self.qualityControl,
             self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow,
             self.poisonDescription, self.goalMode, self.editGoals, self.goalDescription]],
         self.skillCard = [self section:@"技能與回復" views:@[self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription,
@@ -627,6 +636,10 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.startButton.enabled = [state[@"canStart"] boolValue];
     self.editProfiles.enabled = [state[@"canSetProfiles"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSDictionary *profiles = state[@"profiles"] ?: PHOrbDefaultProfiles();
+    self.eightAutoStart.enabled = self.editProfiles.enabled;
+    self.eightAutoStart.on = [profiles[@"eightAutoStart"] boolValue];
+    self.autoStartNotice.text = state[@"autoStartMessage"] ?: @"";
+    self.autoStartNotice.hidden = !self.autoStartNotice.text.length;
     NSDictionary *profile = [state[@"automatic"] boolValue] ? state[@"activeProfile"] : PHOrbProfileNamed(profiles, profiles[@"selected"]);
     BOOL activity = profile[@"activity"] != nil;
     BOOL eight = [state[@"eightAutomatic"] boolValue] || [state[@"multiplayer"][@"kind"] unsignedIntValue] == PHOrbMultiplayerEight;
@@ -643,7 +656,12 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     NSMutableArray *ruleLines = [NSMutableArray array];
     if (activity) [ruleLines addObject:@"技能依活動設定的樓層序列處理；每次生效後重讀盤面。"];
     else if (eight) [ruleLines addObject:@"8 人通用設定只轉珠；匯入並選用活動策略後才自動開技。"];
-    else for (NSDictionary *rule in state[@"rules"]) [ruleLines addObject:PHOrbSkillRuleDescription(rule)];
+    else if ([state[@"rules"] count]) {
+        NSUInteger enabled = 0;
+        for (NSDictionary *rule in state[@"rules"]) if ([rule[@"enabled"] boolValue]) ++enabled;
+        [ruleLines addObject:[NSString stringWithFormat:@"%lu 條規則，已啟用 %lu 條 · 點入查看順序與條件",
+            (unsigned long)[state[@"rules"] count], (unsigned long)enabled]];
+    }
     if (!ruleLines.count) [ruleLines addObject:@"尚無技能規則；開始後只會連續轉珠。"];
     if ([state[@"automatic"] boolValue]) [ruleLines addObject:[NSString stringWithFormat:@"連續第 %@ 回合 · 已轉珠 %@ 次 · 已確認技能 %@ 次",
         state[@"autoTurn"], state[@"autoMoves"], state[@"autoSkills"]]];
@@ -988,6 +1006,15 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     // Editors save explicitly; a stray swipe must not discard the draft (Cancel stays available).
     editor.sheetPresentationController.prefersGrabberVisible = YES; editor.modalInPresentation = YES;
     [self presentViewController:editor animated:YES completion:nil];
+}
+- (void)changeEightAutoStart {
+    if (!self.eightAutoStart.enabled) { [self refresh]; return; }
+    BOOL wanted = self.eightAutoStart.on;
+    self.action(@"orbsEightAutoStart", @(wanted)); [self refresh];
+    if (self.eightAutoStart.on != wanted && !self.autoStartNotice.text.length) {
+        self.autoStartNotice.text = @"自動開始尚未確認儲存，請稍後重試。";
+        self.autoStartNotice.hidden = NO;
+    }
 }
 - (void)editProfileSettings {
     if (!self.editProfiles.enabled || self.presentedViewController) return;

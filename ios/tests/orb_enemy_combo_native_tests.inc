@@ -42,7 +42,7 @@ static void EnemyComboNativeTests() {
     Protected(Impl + PHOrbEnemyComboAdjustmentOffset,2,0x6a875a8b);
     state = CaptureEnemyCombo(engine);
     Check(PHOrbEnemyComboRequirement(&state.enemyCombo,&minimum) && minimum == 9,
-        "positive native Combo credits are conservatively excluded");
+        "raw requirement leaves positive credits for solo planning and preserves the 8P policy");
     Protected(Impl + PHOrbEnemyComboAdjustmentOffset,256,0x6a875a8b);
     Check(![engine readEnemyCombo:&state frame:Frame() reason:nil] && !state.enemyCombo.valid,
         "malformed protected adjustment cannot narrow silently into valid credit");
@@ -98,5 +98,90 @@ static void EnemyComboNativeTests() {
     NativeInputFrame(); Put<uintptr_t>(Impl + PHBattleDragPointerOffset, 0);
     Check([engine finishInput:nil] && realInput == originalInput && GlobalInput() == Input,
         "enemy policy cleanup preserves the entire real input bank");
+    Reset();
+}
+
+static void ComboBonusNativeTests() {
+    const uintptr_t leader = Impl + PHOrbComboBonusLeaderOffset;
+    const uintptr_t helper = leader + 352, badge = Impl + PHOrbComboBonusBadgeOffset;
+    auto fixture = [&]() {
+        ObservationFixture();
+        for (unsigned slot : {0u,5u}) {
+            const uintptr_t member = Impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
+            const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(member + PHBattleCardParamOffset));
+            Put<uint32_t>(parameter + PHOrbLeaderSkillOffset,slot ? 64920 : 64791);
+            Protected(member + PHBattleSourceSlotOffset,slot,0x6a875a8b);
+        }
+        const uintptr_t member = Impl + PHBattleMemberOffset;
+        const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(member + PHBattleCardParamOffset));
+        Put<uint16_t>(parameter + 748,126);
+        Put<uint32_t>(leader + 268,16); Put<uint16_t>(leader + 290,2);
+        const uint8_t groups[] = {3,5,255,255,255,2,0,4,32};
+        std::memcpy(reinterpret_cast<void *>(helper + 156),groups,sizeof(groups));
+        Put<uint32_t>(badge,16); Put<uint16_t>(badge + 22,2);
+    };
+    PHOrbGoalSet goals{}; goals.count = 2;
+    goals.items[0] = PHOrbGoal{PHOrbGoalT,8,1,0}; goals.items[1] = PHOrbGoal{PHOrbGoalFour,32,1,0};
+    fixture(); auto engine = [FixtureSkillEngine new];
+    const auto oldGuest = guest, oldImpl = implBytes, oldCatalog = catalogBytes;
+    auto state = CaptureEnemyCombo(engine); unsigned sources[3]{};
+    Check(state.enemyCombo.bonus.valid && PHOrbGuaranteedComboBonuses(&state.enemyCombo.bonus,&goals,6,5,sources) == 8 &&
+        sources[0] == 2 && sources[1] == 4 && sources[2] == 2,
+        "effective leader/helper/badge descriptors supply the Uryu T plus light/heart bonuses");
+    Check(guest == oldGuest && implBytes == oldImpl && catalogBytes == oldCatalog && !writes && !canUseCalls && !readinessCalls,
+        "Combo bonus capture does not mutate guest memory or call native getters");
+    // Last-turn activation flags reset at grab; this must not look like a new skill.
+    Put<uint16_t>(leader + 288,25865); Put<uint8_t>(helper + 162,198); Put<uint16_t>(badge + 20,25865);
+    auto next = CaptureEnemyCombo(engine);
+    Check(PHOrbSameEnemyCombo(&state.enemyCombo,&next.enemyCombo),"consumption markers are not bonus-source identity");
+    Put<uint16_t>(badge + 22,3); next = CaptureEnemyCombo(engine);
+    Check(!PHOrbSameEnemyCombo(&state.enemyCombo,&next.enemyCombo),"changed effective badge amount revokes the previous proof");
+    for (unsigned provider = 0; provider < 5; ++provider) {
+        fixture(); engine = [FixtureSkillEngine new];
+        const uintptr_t member = Impl + PHBattleMemberOffset;
+        const uintptr_t parameter = Load<uintptr_t>(reinterpret_cast<uint8_t *>(member + PHBattleCardParamOffset));
+        const uintptr_t profile = Load<uintptr_t>(reinterpret_cast<uint8_t *>(member + PHOrbObservationProfileOffset));
+        Put<uint16_t>(parameter + 748,0);
+        if (provider < 2 || provider == 4) Put<uint32_t>(profile + 16,126);
+        if (provider == 1) { Put<uint16_t>(member + 1296,1); Put<uint16_t>(parameter + 788,126); }
+        if (provider == 2) {
+            const uintptr_t equip = reinterpret_cast<uintptr_t>(catalogBytes.data()) + 300 * PHBattleCatalogStride;
+            Put<uint16_t>(equip + 748,49); Put<uint16_t>(equip + 750,126); Put<uint8_t>(member + 1440,2);
+        }
+        if (provider == 3) Protected(member + PHOrbObservationAddedAwakeningsOffset,126,0x6a875a8b);
+        if (provider == 4) Put<uint16_t>(member + 1296,99);
+        state = CaptureEnemyCombo(engine);
+        Check(PHOrbGuaranteedComboBonuses(&state.enemyCombo.bonus,&goals,6,5,sources) == (provider == 4 ? 4u : 8u),
+            "super, sync, equipment and added T awakenings require their current native eligibility");
+    }
+    for (unsigned scenario = 0; scenario < 6; ++scenario) {
+        fixture(); engine = [FixtureSkillEngine new];
+        if (scenario == 0) Protected(Impl + PHBattleMemberOffset + PHOrbSkillBindOffset,1,0x6a875a8b);
+        if (scenario == 1) Put<uint16_t>(Impl + PHBattleAwakeningStateOffset,1);
+        if (scenario == 2) Put<uint8_t>(SurvivalDungeon + 33,4);
+        if (scenario == 3) Put<uint8_t>(SurvivalDungeon + 32,0x80);
+        if (scenario == 4) Put<uint8_t>(Header + PHOrbComboBonusTextGuards[0].rva,
+            uint8_t(PHOrbComboBonusTextGuards[0].bytes[0] ^ 1u));
+        if (scenario == 5) Put<uint32_t>(leader + 268,1u << 13); // Unsupported awakening 45.
+        state = CaptureEnemyCombo(engine);
+        const unsigned bonus = PHOrbGuaranteedComboBonuses(&state.enemyCombo.bonus,&goals,6,5,sources);
+        Check(bonus == (scenario < 3 ? 4u : scenario == 3 ? 2u : scenario == 4 ? 0u : 6u),
+            "bind, awakening suppression, leader disable and unknown policy never supply unproved bonuses");
+    }
+    fixture(); engine = [FixtureSkillEngine new]; state = CaptureEnemyCombo(engine);
+    Put<uint16_t>(badge + 22,3);
+    Check(![engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:nil] && !writes,
+        "changing a credited badge before input cannot start a stale route");
+    for (unsigned mutation : {1u,2u}) {
+        fixture(); engine = [FixtureSkillEngine new]; state = CaptureEnemyCombo(engine);
+        changeComboBonusDuringRead = mutation;
+        if (mutation == 1)
+            Check(![engine readEnemyCombo:&state frame:Frame() reason:nil] && !state.enemyCombo.valid && !writes,
+                "a badge descriptor changing between the two reads cannot supply action evidence");
+        else
+            Check(![engine stageCell:0 down:YES beginning:YES expected:&state frame:Frame() reason:nil] && !writes,
+                "loss of a T provider during the input recheck cannot use the old credited route");
+        Check(!changeComboBonusDuringRead,"native bonus mutation was observed");
+    }
     Reset();
 }

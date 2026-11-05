@@ -170,6 +170,40 @@ static void PHProbePlanStorage(UIWindow *overlay) {
             ![assistRestoredState[@"orbState"][@"assistRecoveryMessage"] length],
             @"Assist policy can be saved in both Boolean directions after storage recovery");
     } else if (assistMoved) [files moveItemAtPath:assistBackup toPath:path error:NULL];
+    NSDictionary *beforeAuto = PHProbeJSON(@"config.json");
+    NSNumber *oldAuto = configProfiles(beforeAuto)[@"eightAutoStart"] ?: @NO;
+    NSNumber *newAuto = oldAuto.boolValue ? @NO : @YES;
+    NSString *autoBackup = [path stringByAppendingFormat:@".auto-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL autoMoved = [files moveItemAtPath:path toPath:autoBackup error:NULL];
+    BOOL autoBlocked = autoMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(autoBlocked, @"Countdown preference fixture blocks the canonical file");
+    if (autoBlocked) {
+        action(@"orbsEightAutoStart", newAuto);
+        NSDictionary *failedAuto = snapshot();
+        PHProbeCheck([failedAuto[@"config"] isEqual:beforeAuto] &&
+            [failedAuto[@"orbState"][@"profiles"] isEqual:configProfiles(beforeAuto)] &&
+            [failedAuto[@"orbState"][@"autoStartMessage"] length] > 0,
+            @"Failed countdown save retains the old flag and every strategy/formation setting");
+        BOOL repairedAuto = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:autoBackup toPath:path error:NULL];
+        PHProbeCheck(repairedAuto, @"Countdown fixture restores the canonical file");
+        if (!repairedAuto) return;
+        action(@"retry", nil); action(@"orbsEightAutoStart", newAuto);
+        NSMutableDictionary *expectedAuto = [beforeAuto mutableCopy];
+        NSMutableDictionary *expectedProfiles = [configProfiles(beforeAuto) mutableCopy];
+        expectedProfiles[@"eightAutoStart"] = newAuto; expectedAuto[@"orbProfiles"] = expectedProfiles;
+        NSDictionary *savedAuto = snapshot();
+        PHProbeCheck([PHProbeJSON(@"config.json") isEqual:expectedAuto] &&
+            [savedAuto[@"orbState"][@"profiles"] isEqual:expectedProfiles] &&
+            [savedAuto[@"formationLibrary"] isEqual:beforeAuto[@"formations"]] &&
+            ![savedAuto[@"orbState"][@"autoStartMessage"] length],
+            @"Global countdown preference writes only its flag, leaving the selected plan and formation unchanged");
+        action(@"orbsEightAutoStart", @1);
+        PHProbeCheck([PHProbeJSON(@"config.json") isEqual:expectedAuto] &&
+            [snapshot()[@"orbState"][@"autoStartMessage"] length], @"Numeric one cannot masquerade as a JSON Boolean");
+        action(@"orbsEightAutoStart", oldAuto);
+        expectedProfiles[@"eightAutoStart"] = oldAuto;
+        PHProbeCheck([PHProbeJSON(@"config.json") isEqual:expectedAuto], @"Countdown preference saves in both directions");
+    } else if (autoMoved) [files moveItemAtPath:autoBackup toPath:path error:NULL];
     BOOL restored = [original writeToFile:path options:NSDataWritingAtomic error:NULL];
     NSDictionary *reloaded = snapshot();
     PHProbeCheck(restored && [reloaded[@"config"] isEqual:baseline] &&

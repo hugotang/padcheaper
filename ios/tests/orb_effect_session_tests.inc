@@ -39,6 +39,27 @@ static PHOrbSession *FishSession(FakeOrbEngine *engine) {
     return session;
 }
 static void FishSessionTests() {
+    // Same cause as uryu_t_lottery_test: optional shortage straddles the
+    // spinner cycle. Auto must reach the existing fishing path without casting.
+    for (bool required : {false,true}) {
+        FakeOrbEngine *engine = FishEngine(); PHOrbSession *session = FishSession(engine);
+        NSMutableDictionary *rule = [PHOrbDefaultSkillRule() mutableCopy];
+        rule[@"color"] = @0; rule[@"below"] = @3; rule[@"required"] = @(required);
+        Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[rule],
+            @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3}]}],"Auto fishing shortage fixture");
+        Tick(session,engine,Frame()); [session queueAutomatic];
+        if (required) {
+            Check(UntilPhase(session,engine,@"stopped") && !engine->stages && engine->skillOrder.empty(),
+                "required spinner ambiguity does not cast or start an orb gesture");
+        } else {
+            Check(UntilPhase(session,engine,@"arming") && [session.snapshot[@"searchTrace"][@"fishing"] boolValue] &&
+                engine->skillOrder.empty(),"optional spinner ambiguity reaches Auto fishing without casting");
+            engine->live.board.types[engine->live.board.width + 2] = 0;
+            Check(UntilPhase(session,engine,@"turnWaiting") && engine->releases == 1 && engine->skillOrder.empty(),
+                "Auto takes the missing orb and completes a verified release");
+        }
+        [session queueStop:@"Auto fishing fixture complete"]; Tick(session,engine,Frame());
+    }
     for (unsigned scenario = 0; scenario < 2; ++scenario) {
         FakeOrbEngine *engine = FishEngine(); PHOrbSession *session = FishSession(engine);
         const unsigned fish = engine->live.board.width + 2;

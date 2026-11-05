@@ -9,7 +9,8 @@ bool CheckEnemyComboCode(uintptr_t header) {
 }
 
 bool CollectEnemyCombo(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2, PHOrbEnemyComboState &out) {
-    out = {};
+    // Bonus evidence is compared byte-for-byte, including its padding.
+    std::memset(&out,0,sizeof(out));
     const uintptr_t impl = state.identity.impl;
     uint32_t count = 0, adjustment = 0, subtract = 0;
     if (!Decode(impl + PHOrbEnemyCountOffset, key1, key2, 0x766cfc6du, count) || !count || count > 8 ||
@@ -27,14 +28,23 @@ bool CollectEnemyCombo(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
         out.subtract = uint16_t(subtract);
     }
     out.enemyCount = uint8_t(count);
-    unsigned alive = 0; bool absorption = false;
+    unsigned alive = 0; bool absorption = false, partsCodeChecked = false;
     for (unsigned slot = 0; slot < count; ++slot) {
         const uintptr_t enemy = impl + PHOrbEnemyOffset + slot * PHOrbEnemyStride;
         uint32_t low = 0, high = 0, turns = 0, threshold = 0, upper = 0; uint8_t action = 0;
-        if (!PHReadU16(enemy + 532, &out.flags[slot]) || (out.flags[slot] & 0x100u) ||
-            !Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
-            !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
-        out.hp[slot] = (uint64_t(high) << 32) | low;
+        if (!PHReadU16(enemy + 532, &out.flags[slot])) return false;
+        if (out.flags[slot] & 0x100u) {
+            if ((!partsCodeChecked && !CheckEnemyPartsCode(state.identity.header)) ||
+                !ReadEnemyPart(impl, count, slot, key1, key2, out.parts[slot]) ||
+                !(state.automation.partsMask & (1u << slot)) ||
+                std::memcmp(&out.parts[slot], &state.automation.parts[slot], sizeof(out.parts[slot]))) return false;
+            partsCodeChecked = true; out.hp[slot] = out.parts[slot].hp;
+        } else {
+            if ((state.automation.partsMask & (1u << slot)) ||
+                !Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
+                !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
+            out.hp[slot] = (uint64_t(high) << 32) | low;
+        }
         if (!out.hp[slot] || out.hp[slot] > INT64_MAX) continue;
         ++alive; out.aliveMask |= uint8_t(1u << slot);
         if (!PHReadU8(enemy + 23, &action) || int8_t(action) >= 0 ||
@@ -50,6 +60,9 @@ bool CollectEnemyCombo(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
         absorption != ((state.automation.enemyEffects & PHOrbEnemyComboAbsorb) != 0) ||
         ((state.automation.playerBypass & PHOrbEnemyComboAbsorb) != 0) !=
             (PositiveDuration(out.bypassTurns) && !PositiveDuration(out.bypassDelay))) return false;
+    PHOrbComboBonusState bonus{};
+    if (state.multiplayer.kind == PHOrbMultiplayerNone && CollectComboBonus(state,key1,key2,bonus))
+        std::memcpy(&out.bonus,&bonus,sizeof(bonus));
     out.valid = true;
     return true;
 }

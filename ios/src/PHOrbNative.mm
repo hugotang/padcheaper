@@ -353,6 +353,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbEnemyActions.inc"
 #include "PHOrbDungeonDump.inc"
 #include "PHOrbAssistRecovery.inc"
+#include "PHOrbComboBonus.inc"
 #include "PHOrbEnemyCombo.inc"
 #include "PHOrbEightNative.inc"
 
@@ -941,7 +942,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             return NO;
         }
         if (expected->enemyCombo.valid && !PHOrbSameEnemyCombo(&expected->enemyCombo, &final.enemyCombo)) {
-            if (reason) *reason = @"敵人 Combo 吸收或解吸收已改變，未繼續輸入";
+            if (reason) *reason = @"Combo 吸收、解吸收或加減 Combo 來源已改變，未繼續輸入";
             return NO;
         }
         live = final;

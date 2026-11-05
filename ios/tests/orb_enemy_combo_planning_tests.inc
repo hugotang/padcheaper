@@ -23,8 +23,35 @@ static void EnemyComboPlanningTests(void) {
     Check([plan[@"available"] boolValue] && [plan[@"goals"] containsObject:Goal(@"combo",0,11,0)],
         "planning reserves three Combo debits on top of the strongest enemy threshold");
     state.enemyCombo.adjustmentTurns = state.enemyCombo.subtractTurns = 0;
+    // Uryu T +2 and Byakuya light/heart +4, plus a T-triggered badge +2.
+    state.enemyCombo.bonus.valid = true; state.enemyCombo.bonus.attackColors = 8;
+    state.enemyCombo.bonus.awakeningColors[4] = 8; state.enemyCombo.bonus.count = 3;
+    state.enemyCombo.bonus.effects[0] = (PHOrbComboEffect){16,2,PHOrbComboAwakenings,0,1,{0}};
+    state.enemyCombo.bonus.effects[1] = (PHOrbComboEffect){1,4,PHOrbComboGroups,1,2,{3,5,255,255,255}};
+    state.enemyCombo.bonus.effects[2] = (PHOrbComboEffect){16,2,PHOrbComboAwakenings,2,1,{0}};
+    state.enemyCombo.thresholds[1] = 12;
+    plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
+    Check([plan[@"available"] boolValue] && [plan[@"enemyComboRequired"] isEqual:@5] &&
+        [plan[@"enemyComboBonusSources"] isEqual:@[@2,@4,@2,@0]] && [plan[@"enemyComboBonusFirstWave"] boolValue],
+        "13 needed Combos becomes five actual first removals with eight proven leader/helper/badge credits");
+    state.enemyCombo.adjustmentTurns = 1; state.enemyCombo.adjustment = 3;
+    state.enemyCombo.subtractTurns = 1; state.enemyCombo.subtract = 2;
+    plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
+    Check([plan[@"enemyComboRequired"] isEqual:@4] && [plan[@"enemyComboBonusSources"] isEqual:@[@2,@4,@2,@3]],
+        "active positive adjustment offsets the separate debit without removing shape conditions");
+    state.enemyCombo.bonus.awakeningColors[4] = 0;
+    plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
+    Check([plan[@"enemyComboRequired"] isEqual:@8],"missing T providers removes both T-triggered credits");
+    state.enemyCombo.bonus = (PHOrbComboBonusState){0};
+    state.enemyCombo.thresholds[1] = 7;
+    state.enemyCombo.adjustmentTurns = state.enemyCombo.subtractTurns = 0;
     plan = PHOrbPlanWithEnemyCombo(RecoveryBase(@[Goal(@"combo",0,10,0)]), &state, YES);
     Check([plan[@"goals"] isEqual:@[Goal(@"combo",0,10,0)]], "a stronger saved Combo goal is preserved");
+    state.enemyCombo.adjustmentTurns = 1; state.enemyCombo.adjustment = 20;
+    plan = PHOrbPlanWithEnemyCombo(RecoveryBase(@[Goal(@"combo",0,10,0)]),&state,YES);
+    Check([plan[@"goals"] isEqual:@[Goal(@"combo",0,10,0)]] && [plan[@"enemyComboRequired"] isEqual:@1],
+        "credits never lower a user's saved Combo goal or allow a zero-match turn");
+    state.enemyCombo.adjustmentTurns = 0;
     state.enemyCombo.bypassTurns = 0x401;
     plan = PHOrbPlanWithEnemyCombo(base, &state, YES);
     Check([plan[@"available"] boolValue] && ![plan[@"enemyComboActive"] boolValue] && ![plan[@"enemyComboFirstWave"] boolValue] && [plan[@"goals"] isEqual:base[@"goals"]],
