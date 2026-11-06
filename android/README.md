@@ -8,7 +8,7 @@ Java 13 個案例、Python 27 個案例、Windows 共用求路器回歸及模擬
 
 第四、五批的 [固定程式區段擷取](docs/runtime-code-capture.md) 與 [離線來源核對、原版差異與 IDA 匯入規格](docs/runtime-code-analysis.md) 已納入本次集中編譯測試。位元組差異只提供研究候選，不代表 Android 盤面已定位。
 
-0.1.1-probe 本輪驗證完成、待封裝；既有 [0.1.0-probe 交付](docs/release-0.1.0-probe.md) 保持不變，其 APK 不包含本版程式擷取功能。指定模擬器保留三份已匯出的程式檔，目前容量已滿；再次擷取前需先確認本機證據並清理裝置舊檔。
+0.1.1-probe 驗證與交付完成，成品位於 `E:/ipa/PADCheaper-Android-0.1.1-probe` 及同名 ZIP，詳見 [交付收據](research/verification-0.1.1-probe.json)。既有 [0.1.0-probe 交付](docs/release-0.1.0-probe.md) 保持不變，其 APK 不包含本版程式擷取功能。指定模擬器保留三份已匯出的程式檔，目前容量已滿；再次擷取前需先確認本機證據並清理裝置舊檔。
 
 ## 裝置與目標
 

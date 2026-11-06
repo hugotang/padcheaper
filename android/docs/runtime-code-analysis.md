@@ -1,6 +1,6 @@
 # Android 程式擷取的離線核對與 IDA 匯入
 
-2026-11-06，`0.1.1-probe` 已完成新建置、自動測試及真遊戲固定程式區段擷取，分析工具亦已成功核對該組證據並產生差異資料。IDA raw 匯入的 AArch64／64-bit／little-endian、完整 byte hash 與精確範圍核對通過；盤面 reader 仍未接通。詳見 [版本驗證紀錄](release-0.1.1-probe.md)。
+2026-11-06，`0.1.1-probe` 已完成新建置、自動測試、真遊戲固定程式區段擷取及交付，分析工具亦已成功核對該組證據並產生差異資料。IDA raw 匯入的 AArch64／64-bit／little-endian、完整 byte hash 與精確範圍核對通過；盤面 reader 仍未接通。詳見 [版本驗證紀錄](release-0.1.1-probe.md) 與 [交付收據](../research/verification-0.1.1-probe.json)。
 
 ## 輸入與來源核對
 

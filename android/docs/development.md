@@ -1,6 +1,6 @@
 # Android 開發與待驗證
 
-## 2026-11-06：0.1.1-probe 編譯測試完成，待封裝
+## 2026-11-06：0.1.1-probe 編譯測試及交付完成
 
 - 使用者明確要求「編譯測試」，本輪合併第四批固定程式區段擷取與第五批離線分析。版本升至 0.1.1-probe／versionCode 2，詳見 [版本驗證紀錄](release-0.1.1-probe.md)。以下兩批的未建置描述保留為當時歷史；本節區分已通過與仍待完成項目。
 - Gradle 8.13／AGP 8.12.0／SDK 36／NDK 27 的雙 ABI debug APK 建置成功；Java 13 個案例、Python 27 個案例、模擬器 x86_64 library inventory／runtime code capture 兩個原生執行檔，以及 Windows GCC 15.2.0／Release `-O2` 共用求路器回歸 1/1 全部通過。原生與核心執行檔斷言開啟，APK v2 簽章通過，證據在 `build/android/verification-0.1.1/`。
@@ -10,7 +10,8 @@
 - IDA raw 匯入核對通過，AArch64／64-bit／little-endian、完整 byte hash 與精確 `[0,0x107e730)` 一致。初始自動 CODE／22,526 函式未作為證據，已移除並停用自動分析，保存為唯一唯讀 DATA／全部 unknown／零函式，範圍外未映射、無 RW／BSS。初始／最終狀態見 `build/android/verification-0.1.1/ida-import.json`，資料庫已保存並關閉。
 - 裝機開始前取消核對通過，原檔案清單／報告 hash 不變；返回前景同 PID 3896 的世代增至 2，完整重開後新 PID 5534／start tick 298109／世代 1，接入擷取正常。重開後第二、三份 runtime 擷取完整且 hash 與第一份相同，三份均已匯出；第四次介面顯示容量已滿、失敗報告成功保存／匯出、三份 binary／hash 不變且無新暫存檔，程序仍正常。
 - 嚴格一秒時效、重開後尚未擷取與容量拒絕三份電腦端結果均不接受 binary。裝置三份檔案共 51,885,456 bytes 仍保留、容量已滿，未清理。開始前取消、前背景切換及容量拒絕不替代擷取途中背景中斷、程序內 Activity 重建及實際保存 I/O 故障的裝機驗證；後三項仍待執行。
-- **本輪驗證完成、0.1.1-probe 待封裝**；已交付的 0.1.0-probe／iOS 資料保持不變。`deviceVerified`／`runtimeLayoutVerified`／`boardReadEnabled`／`actionsEnabled`／`unpackedCodeVerified` 全部仍 false，Android 盤面與遊戲操作未接通。
+- **本輪驗證與 0.1.1-probe 交付完成**；來源提交 `8b36733a135e869fbcaa565033eb93a2c402a066` 的 117 份產品輸入與 APK 指紋一致，成品位於 `E:/ipa/PADCheaper-Android-0.1.1-probe` 及同名 ZIP。70 份檔案校驗及 71 項 ZIP 的 CRC／逐檔 hash 全部吻合；ZIP 673,978 bytes，SHA-256 `7843b72567a859f0a1b1b4bdc0eff6be345534f1c3a8008b2de01f25f7baef82`，詳見 [交付收據](../research/verification-0.1.1-probe.json)。包內文件保持封裝前快照，本段為交付後補記，不修改成品或 0.1.0-probe／iOS 既有交付。
+- `deviceVerified`／`runtimeLayoutVerified`／`boardReadEnabled`／`actionsEnabled`／`unpackedCodeVerified` 全部仍 false，Android 盤面與遊戲操作未接通。
 
 ## 2026-11-06：第五批，擷取後的離線核對與分析，待編譯測試
 
