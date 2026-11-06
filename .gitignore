@@ -13,3 +13,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 ios/generated/
+android/.gradle/
+android/.cxx/
+android/**/.cxx/
+android/local.properties
+*.apk
+*.so

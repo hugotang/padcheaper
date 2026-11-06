@@ -1,0 +1,79 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+plugins { id 'com.android.application' }
+
+def target = new JsonSlurper().parse(file('../targets/pad-23.6.0.json'))
+layout.buildDirectory = file('../../build/android/app')
+apply from: rootProject.file('gradle/source-identity.gradle')
+
+android {
+    namespace 'io.github.hugotang.padcheaper'
+    compileSdk 36
+    ndkVersion '27.0.12077973'
+    defaultConfig {
+        applicationId 'io.github.hugotang.padcheaper'
+        minSdk 32
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-probe'
+        buildConfigField 'String', 'SOURCE_FINGERPRINT', JsonOutput.toJson(probeSourceFingerprint)
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                targets 'padcheaper_runtime', 'padcheaper_core'
+            }
+        }
+        buildConfigField 'String', 'GAME_PACKAGE', JsonOutput.toJson(target.package_name)
+        buildConfigField 'String', 'GAME_VERSION', JsonOutput.toJson(target.version_name)
+        buildConfigField 'long', 'GAME_VERSION_CODE', target.version_code.toString() + 'L'
+        buildConfigField 'String', 'GAME_APK_SHA256', JsonOutput.toJson(target.base_apk_sha256)
+        buildConfigField 'String', 'GAME_LIBRARY_SHA256', JsonOutput.toJson(target.library.sha256)
+        buildConfigField 'String', 'GAME_CLASS', JsonOutput.toJson(target.frame.class_name)
+        buildConfigField 'String', 'GAME_FRAME', JsonOutput.toJson(target.frame.method)
+        buildConfigField 'String', 'GAME_RENDERER_CLASS', JsonOutput.toJson(target.frame.renderer_class)
+        buildConfigField 'String', 'GAME_RENDERER_FRAME', JsonOutput.toJson(target.frame.renderer_method)
+        buildConfigField 'String', 'GAME_VULKAN_LOOP_CLASS', JsonOutput.toJson(target.frame.vulkan_loop_class)
+        buildConfigField 'String', 'GAME_VULKAN_LOOP', JsonOutput.toJson(target.frame.vulkan_loop_method)
+    }
+    buildFeatures { buildConfig true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    externalNativeBuild {
+        cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' }
+    }
+    buildTypes { release { minifyEnabled false } }
+}
+
+def identityDirectory = layout.buildDirectory.dir('generated/probe-identity')
+def generateProbeIdentity = tasks.register('generateProbeIdentity') {
+    inputs.files(probeSourceFiles)
+    inputs.property('sourceFingerprint', probeSourceFingerprint)
+    outputs.dir(identityDirectory)
+    doLast {
+        if (calculateProbeFingerprint() != probeSourceFingerprint)
+            throw new GradleException('Product sources changed during configuration; restart the build.')
+        def output = identityDirectory.get().file('padcheaper-build.json').asFile
+        output.parentFile.mkdirs()
+        output.setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            schema: 1, packageName: android.defaultConfig.applicationId,
+            moduleVersion: android.defaultConfig.versionName, sourceFingerprint: probeSourceFingerprint,
+            gamePackage: target.package_name, gameVersion: target.version_name,
+            gameVersionCode: target.version_code, gameApkSha256: target.base_apk_sha256,
+            gameLibrarySha256: target.library.sha256
+        ])) + '\n', 'UTF-8')
+    }
+}
+android.sourceSets.main.assets.srcDir(identityDirectory)
+tasks.named('preBuild') { dependsOn(generateProbeIdentity) }
+
+dependencies {
+    // Provided by the injected framework. Never package a second API copy.
+    // API 102's AAR advertises minCompileSdk=37. AGP 8.12 checks runtime AARs;
+    // this stays compileOnly, with consumed signatures checked against SDK 36.
+    compileOnly 'io.github.libxposed:api:102.0.0'
+    testImplementation 'junit:junit:4.13.2'
+}

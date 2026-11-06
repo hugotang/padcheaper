@@ -4,6 +4,21 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：Android 0.1.0-probe 接入編譯測試完成
+
+- 延續使用者明確的 Android「編譯測試」與中斷聊天；雙 ABI APK、Java 12 個案例、Python 7 個案例、Windows 共用求路器回歸及模擬器 x86_64 原生解析器均通過。最後產品來源、APK、首次擷取／返回前景／完整重開三份紀錄一致，詳見 [Android 版本驗證紀錄](../../android/docs/release-0.1.0-probe.md)。
+- 裝機修正有限 header 讀取令程序退出的問題，改以 `process_vm_readv` 讀取已核對範圍的 20 bytes；擷取工具補上同名子程序樹辨識。這些修正已包含在最後通過的 APK 及測試中。本次接續只整理文件、身分證據及交付，沒有未測的新產品來源。
+- LSPosed 日服 PAD 入口、x86_64 payload、約 30 fps callback 與前背景／完整重開已驗證。Android 盤面 layout、讀盤及操作仍未接通，arm64 真機、兩種渲染方式分別驗證及完整生命週期／隔離回歸仍待進行；所有功能／完整裝置驗證旗標維持 false。首次 GCC `-O3` 警告仍列限制，通過配置為 `-O2`。
+- iOS 產品來源、手動 CI 與 0.5.35 既有交付檔不變。以下 Android 三批未建置描述保留為歷史狀態。
+
+## 2026-11-06：Android root 接入第一批，當時待編譯測試
+
+- 使用者要求開始 Android 版，指定 emulator-5568／KernelSU。已核對現有 Zygisk Next／LSPosed API 102 及 x86_64 → Houdini arm64 遊戲環境；採 LSPosed Java 入口加獨立 JNI／C++ 診斷。詳見 [Android 開發紀錄](../../android/docs/development.md)。
+- 新增 Android 原型與 core CMake 入口，直接引用現有求路器來源。iOS 產品源碼、工作流程與 0.5.35 交付物不變。本輪沒有新建置／測試／安裝，Android live board／技能／輸入尚未接通，舊 iOS CI 不作為 Android 驗證。
+- Android 主程式與測試案例已完成 Java 靜態型別分析、兩種 ABI 的 C++ syntax-only、JSON／XML／連結／wrapper 雜湊及差異檢查，未產生產品二進位或執行案例。Activity 重建、衍生程序、原生載入與 API 102／SDK 36 的完整建置相容性仍待集中驗證。
+- 使用者「繼續」的第二批已核對 OpenGL／Vulkan 共用的 Java frame caller，新增精確 caller 的內聯處理、過期影格／新世代診斷、成功及失敗紀錄 schema 2，以及實際 payload ELF 架構核對。Java 主程式／案例型別與研究證據格式檢查完成；仍未編譯、跑測試或安裝，與第一批合併待驗證，沒有變更 iOS 來源或交付物。
+- 第三批新增建置來源識別、schema 3 的程序／boot／載入 payload 身分，以及核對指定 APK／目前程序的只讀擷取工具。Java 型別、Python AST、Groovy 語法與文件／設定檢查完成；新增案例未執行，Gradle task／APK assets 未建置，三批一起待集中「編譯測試」。
+
 ## 2026-11-06：0.5.35-orbs 編譯測試及交付完成
 
 - 使用者明確要求「編譯測試」，本輪合併 Assist 無效單人換隊及三批可維護性變更。release.json 升至 0.5.35-orbs，新增 [版本說明](release-0.5.35.md)；0.5.34 交付檔保持不變。

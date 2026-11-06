@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "package_name": "jp.gungho.pad",
+  "version_name": "23.6.0",
+  "version_code": 230600,
+  "base_apk_sha256": "4c86b832ac41d29325402cb3ad4cedcde40abf585319c75a89c60b15200ef70b",
+  "library": {
+    "name": "libpad.so",
+    "abi": "arm64-v8a",
+    "size": 30735496,
+    "sha256": "fec9fbc55d3a9b7945817420475a8c03fa608ecc4605535e373ca2d0fc738a8a"
+  },
+  "frame": {
+    "class_name": "jp.gungho.pad.AppDelegate",
+    "method": "OnDrawFrame",
+    "descriptor": "()V",
+    "native_callee": "onDrawFrame",
+    "dex": "classes3.dex",
+    "dex_sha256": "e67791cbe50294066728291b7b0ce2d91d433fe772fd023608e12cf4101bdf4e",
+    "renderer_class": "h12",
+    "renderer_method": "onDrawFrame",
+    "renderer_descriptor": "(Ljavax/microedition/khronos/opengles/GL10;)V",
+    "vulkan_loop_class": "l22",
+    "vulkan_loop_method": "a",
+    "vulkan_loop_descriptor": "()V",
+    "evidence": "All four DEX files inspected. h12 implements GLSurfaceView.Renderer and k22; h12.onDrawFrame(GL10) invokes kk0.OnDrawFrame once at code-unit offset 0xb4. Vulkan l22.a() calls h12.onDrawFrame at 0x148. AppDelegate.OnDrawFrame invokes native onDrawFrame once. These callers are deoptimized after hook installation; runtime coverage remains unverified."
+  },
+  "runtime_layout_verified": false,
+  "board_read_enabled": false,
+  "battle_mutations_enabled": false
+}

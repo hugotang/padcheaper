@@ -1,5 +1,7 @@
 # PADCheaper — iOS LiveContainer dylib
 
+目前 iOS 版本與交付見 [iOS 說明](ios/README.md)；[Android root 接入原型](android/README.md) 採 LSPosed + JNI／C++，0.1.0-probe 已完成編譯與指定模擬器的接入驗證，讀盤及操作仍未接通。下方 0.4.x 段落是早期 iOS 原型記錄。
+
 PADHelper 的 iOS 原型，目標為日服《パズル＆ドラゴンズ》23.6.0、iOS build **106878**、arm64，供 LiveContainer 無 JIT 載入。
 
 **0.4.7-ui 改善手機編隊及儲存狀態。** 六人總覽搭配獨立角色編輯面板，提供本體／武裝切換、上一格／下一格、整格交換／複製、撤銷及最近使用角色。隊伍庫最多 64 隊，支援 PADDashFormation 匯入／匯出。

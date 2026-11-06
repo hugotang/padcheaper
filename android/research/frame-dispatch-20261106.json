@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-06",
+  "kind": "static DEX call-path evidence only",
+  "dex_hashes": {
+    "classes.dex": "0af8d5f9e5097c3fe237f2a4a3d97e4a6007a18f238545f9d110d4c35298f8b8",
+    "classes2.dex": "c35e4c8fc80d8a3d522e87c28e98509cf1de90cf850f0760fd968b076e319f94",
+    "classes3.dex": "e67791cbe50294066728291b7b0ce2d91d433fe772fd023608e12cf4101bdf4e",
+    "classes4.dex": "b8677f51ffc3500ec6944326e0954b9754215da00896e23d4cf7ff55ae511c7b"
+  },
+  "methods": [
+    {
+      "method": "h12.onDrawFrame(GL10)V",
+      "dex_code_item_offset": "0x156ff8",
+      "instruction_units": 240,
+      "instruction_sha256": "094bdd1d859b2c79906340704313ee08622298b67fc5a04a52e83b51f6fef4a8"
+    },
+    {
+      "method": "l22.a()V",
+      "dex_code_item_offset": "0x157730",
+      "instruction_units": 385,
+      "instruction_sha256": "446eebd994a79ba0e775652b360cfcf250f3d750444366064e96fed2753cf172"
+    },
+    {
+      "method": "jp.gungho.pad.AppDelegate.OnDrawFrame()V",
+      "dex_code_item_offset": "0x35c6b4",
+      "instruction_units": 4,
+      "instruction_sha256": "add9d21554b9edd5e86ac41a9b623902f4e4bf658d99b016291c2bdfb7edd744"
+    }
+  ],
+  "call_paths": {
+    "opengl": "GLSurfaceView.Renderer -> h12.onDrawFrame(GL10) -> kk0.OnDrawFrame -> AppDelegate.OnDrawFrame -> native onDrawFrame",
+    "vulkan": "m22.setVulkanRenderer -> l22.run -> l22.a -> h12.onDrawFrame(GL10) -> kk0.OnDrawFrame -> AppDelegate.OnDrawFrame -> native onDrawFrame"
+  },
+  "deoptimized_callers": [
+    "h12.onDrawFrame(GL10)",
+    "l22.a()"
+  ],
+  "runtime_verified": false,
+  "board_layout_verified": false,
+  "actions_enabled": false
+}

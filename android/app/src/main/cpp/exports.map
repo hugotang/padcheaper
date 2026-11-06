@@ -1,0 +1,4 @@
+{
+  global: Java_io_github_hugotang_padcheaper_NativeBridge_inspectLibrary;
+  local: *;
+};

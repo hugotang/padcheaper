@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-06",
+  "scope": "read-only environment and static source/APK inspection; no module build or install",
+  "device": {
+    "serial": "emulator-5568",
+    "android": "15",
+    "api": 35,
+    "reported_model": "SM-S9280",
+    "abi_list": [
+      "x86_64",
+      "arm64-v8a",
+      "x86"
+    ],
+    "native_bridge_property": "libnb.so",
+    "observed_translator": "libhoudini.so",
+    "art_abi": "x86_64",
+    "game_primary_abi": "arm64-v8a",
+    "root": "KernelSU",
+    "zygisk": "Zygisk Next 1.4.2 (789-119aaa0-release)",
+    "lsposed": "v2.1.0 (7769)",
+    "framework_dex_api": 102,
+    "framework_dex_sha256": "bacfb9414e16e0bde51ec8f49f5aeb36496e1d2bbdc2c404e57d0fc0266e054f"
+  },
+  "game": {
+    "package": "jp.gungho.pad",
+    "version_name": "23.6.0",
+    "version_code": 230600,
+    "base_apk_sha256": "4c86b832ac41d29325402cb3ad4cedcde40abf585319c75a89c60b15200ef70b",
+    "arm64_split_apk_sha256": "78c538d06f19ee4fb8ab1faf4ccd20fd0b757d6a662d3b32aa47272c42eea6ee",
+    "libpad_sha256": "fec9fbc55d3a9b7945817420475a8c03fa608ecc4605535e373ca2d0fc738a8a",
+    "libpad_size": 30735496,
+    "java_frame": "jp.gungho.pad.AppDelegate.OnDrawFrame()V",
+    "wrapper_invokes": "jp.gungho.pad.AppDelegate.onDrawFrame()V",
+    "static_wrapper_calls": 1,
+    "runtime_frame_verified": false,
+    "runtime_layout_verified": false,
+    "runtime_dump_obtained": false
+  },
+  "sources": {
+    "padhelper": "0a77821df2d8b86184fc7946948c5282e0e62193",
+    "zygisk_api": "8ce26128f81baaed0b969aaf7f52f886b61af4ab",
+    "lsposed_upstream": "df74d83eb03a44cc6ad268841ac2ada28d077c77",
+    "libxposed_api": "79b75b49255a257d38f67bce2e928649dc2fc6c9",
+    "vector_v2_2": "88f8e1faa8b4e7ce20aefabe9c295cd746ea038e",
+    "libxposed_102_aar_sha256": "423484a6e1807e7a423c4b88fcd8176d104318259d91791877fed88fe91479d0",
+    "gradle_8_13_wrapper_sha256": "81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f",
+    "agp_8_12_sources_sha256": "55d4e82406b9061f885ec6784c9bca72a809ce2269def5b4c4c371f3ae257eef"
+  },
+  "decision": "LSPosed API 102 Java entry, process-native JNI payload, shared C/C++ solver; retain installed KernelSU/Zygisk/LSPosed",
+  "product_built": false,
+  "test_suites_run": false,
+  "module_installed": false,
+  "device_verified": false,
+  "compile_dependency": {
+    "coordinate": "io.github.libxposed:api:102.0.0",
+    "scope": "compileOnly",
+    "aar_min_compile_sdk": 37,
+    "project_compile_sdk": 36,
+    "agp_version": "8.12.0",
+    "agp_aar_metadata_classpath": "RUNTIME_CLASSPATH",
+    "consumed_java_signatures_type_checked": true,
+    "gradle_resolution_verified": false
+  },
+  "static_checks": {
+    "java_main_and_test_analysis": "passed; parse and analyze only, no product class generation",
+    "android_native_syntax": [
+      "x86_64-linux-android32",
+      "aarch64-linux-android32"
+    ],
+    "cmake_configured": false,
+    "test_cases_executed": false
+  }
+}

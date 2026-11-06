@@ -1,0 +1,31 @@
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+
+// Only product/build inputs, with repository-relative names and normalized LF text.
+// Logs, local APKs, generated files and machine-specific SDK paths are never included.
+def repository = rootProject.projectDir.parentFile
+def sources = []
+['android/app/src/main', 'android/targets'].each { path ->
+    sources.addAll(fileTree(new File(repository, path)).files)
+}
+sources.addAll(fileTree(new File(repository, 'ios/src')) {
+    include '**/*.c', '**/*.cpp', '**/*.h', '**/*.inc'
+}.files)
+['android/app/build.gradle', 'android/build.gradle', 'android/settings.gradle',
+ 'android/gradle.properties', 'android/gradle/source-identity.gradle',
+ 'android/gradle/wrapper/gradle-wrapper.properties', 'core/CMakeLists.txt'].each { path ->
+    sources.add(new File(repository, path))
+}
+ext.probeSourceFiles = sources.sort { repository.toPath().relativize(it.toPath()).toString().replace('\\', '/') }
+ext.calculateProbeFingerprint = {
+    def digest = MessageDigest.getInstance('SHA-256')
+    probeSourceFiles.each { source ->
+        def name = repository.toPath().relativize(source.toPath()).toString().replace('\\', '/')
+        digest.update(name.getBytes(StandardCharsets.UTF_8))
+        digest.update((byte) 0)
+        digest.update(source.getText('UTF-8').replace('\r\n', '\n').getBytes(StandardCharsets.UTF_8))
+        digest.update((byte) 0)
+    }
+    digest.digest().encodeHex().toString()
+}
+ext.probeSourceFingerprint = calculateProbeFingerprint()
