@@ -4,6 +4,12 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：Android 第五批離線核對與分析，待編譯測試
+
+- 使用者要求「繼續」，補上程式擷取後的離線來源／時效／hash 核對、位元組差異與原版 section metadata，以及不補齊未擷取區域的 raw IDA 匯入規格。Collector 保存最終實際裝置時鐘供離線重驗，詳見 [分析說明](../../android/docs/runtime-code-analysis.md)。
+- 本批僅電腦端 Python 工具、案例與文件，iOS／Android 產品來源不變。沒有執行工具、案例、建置或裝置操作，第四批的產品來源仍未編譯；盤面與操作尚未接通，既有交付不變。
+- 新增九組分析與兩組 collector 最終時鐘案例，尚未執行。七份 Python AST、JSON／28 個文件連結、原版 ELF metadata 及差異檢查完成；這些靜態結果不代表實際擷取或 IDA 匯入成功。
+
 ## 2026-11-06：Android 第四批程式區段擷取，待編譯測試
 
 - 使用者要求「繼續」，新增固定不可寫程式區段的明確手動擷取、雙次內容／映射核對、前景／程序／時限及成對匯出，為 IDA 定位 Android 只讀盤面準備證據。詳見 [Android 開發紀錄](../../android/docs/development.md) 與 [擷取說明](../../android/docs/runtime-code-capture.md)。

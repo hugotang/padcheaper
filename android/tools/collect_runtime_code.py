@@ -165,8 +165,15 @@ def collect_runtime_code(adb, expected, max_age_ms=MAX_AGE_MS):
         if adb.installed_module_hash(user) != installed_hash:
             raise ValueError("module-changed-during-collection")
         # The capture may expire while the binary transfers. Assess again using
-        # the final device elapsed clock before accepting any output bytes.
-        for issue in assess_runtime_code(report, expected, after, adb.elapsed_ms(), max_age_ms):
+        # the final device elapsed clock before accepting any output bytes. Save
+        # this exact reading and policy so archived evidence can be revalidated
+        # at collection time without inventing a device clock from wall time.
+        final_elapsed_ms = adb.elapsed_ms()
+        if type(final_elapsed_ms) is not int or final_elapsed_ms < 0:
+            raise ValueError("final-device-elapsed-invalid")
+        result["finalDeviceElapsedMillis"] = final_elapsed_ms
+        result["maxAgeMillisUsed"] = max_age_ms
+        for issue in assess_runtime_code(report, expected, after, final_elapsed_ms, max_age_ms):
             if issue not in result["issues"]:
                 result["issues"].append(issue)
         result["status"] = "needs-attention" if result["issues"] else "runtime-code-collected"

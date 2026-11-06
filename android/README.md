@@ -8,6 +8,8 @@ Java 12 個案例、Python 7 個案例、Windows 共用求路器回歸及模擬�
 
 後續第四批來源已新增 [固定程式區段擷取](docs/runtime-code-capture.md)，用於取得定位 Android 盤面的執行期證據；**尚未編譯測試或安裝**。已交付 0.1.0-probe 的通過結果與 APK 不包含這批功能。
 
+第五批補上 [離線來源核對、原版差異與 IDA 匯入規格](docs/runtime-code-analysis.md)，待取得有效擷取後使用；新工具與案例同樣尚未執行，不代表 Android 盤面已定位。
+
 ## 裝置與目標
 
 - 使用者指定 `emulator-5568`，Android 15／API 35、KernelSU；已觀察 Zygisk Next 1.4.2 與 LSPosed 2.1.0 (7769)，其 framework.dex 含 libxposed API 102。

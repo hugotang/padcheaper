@@ -101,13 +101,19 @@ class RuntimeCodeTests(unittest.TestCase):
                 return case.code
 
             def elapsed_ms(self):
+                if self.binary_read and mutation == "clock-unavailable":
+                    raise OSError("final-device-clock-unavailable")
+                if self.binary_read and mutation == "clock-invalid":
+                    return True
+                if self.binary_read and mutation == "clock-later":
+                    return 2500
                 return 302000 if self.binary_read and mutation == "expired" else 2000
 
         return FakeAdb()
 
-    def collect(self, adb):
+    def collect(self, adb, max_age_ms=runtime.MAX_AGE_MS):
         with patch.object(runtime, "HEADER_SHA256", self.header_hash):
-            return runtime.collect_runtime_code(adb, self.expected)
+            return runtime.collect_runtime_code(adb, self.expected, max_age_ms)
 
     def test_only_fixed_range_stable_foreground_evidence_is_accepted(self):
         self.assertEqual([], self.issues())
@@ -180,6 +186,37 @@ class RuntimeCodeTests(unittest.TestCase):
         for field in ("unpackedCodeVerified", "runtimeLayoutVerified", "deviceVerified", "boardReadEnabled", "actionsEnabled"):
             self.assertIs(False, result[field])
 
+    def test_archived_clock_is_actual_final_device_reading_and_policy(self):
+        result, data = self.collect(self.fake_adb("clock-later"), 2000)
+        self.assertEqual("runtime-code-collected", result["status"])
+        self.assertIsNotNone(data)
+        self.assertEqual(2500, result["finalDeviceElapsedMillis"])
+        self.assertEqual(2000, result["maxAgeMillisUsed"])
+        self.assertNotEqual(result["report"]["captureFinishedElapsedMillis"], result["finalDeviceElapsedMillis"])
+        self.assertEqual([], runtime.assess_runtime_code(result["report"], self.expected, result["process"],
+                                                        result["finalDeviceElapsedMillis"], result["maxAgeMillisUsed"]))
+        # A final reading which crosses the limit must be recorded as a failure,
+        # not replaced by the earlier successful clock observation.
+        expired, data = self.collect(self.fake_adb("expired"))
+        self.assertEqual(302000, expired["finalDeviceElapsedMillis"])
+        self.assertEqual(runtime.MAX_AGE_MS, expired["maxAgeMillisUsed"])
+        self.assertIn("report-expired-or-invalid-time", expired["issues"])
+        self.assertIsNone(data)
+
+    def test_missing_final_clock_or_failed_identity_recheck_cannot_publish_clock_evidence(self):
+        for mutation, issue in (("clock-unavailable", "final-device-clock-unavailable"),
+                                ("clock-invalid", "final-device-elapsed-invalid"),
+                                ("process", "process-changed-during-collection"),
+                                ("module", "module-changed-during-collection"),
+                                ("report", "report-changed-during-collection")):
+            with self.subTest(mutation=mutation):
+                result, data = self.collect(self.fake_adb(mutation))
+                self.assertNotEqual("runtime-code-collected", result["status"])
+                self.assertIn(issue, result["issues"])
+                self.assertNotIn("finalDeviceElapsedMillis", result)
+                self.assertNotIn("maxAgeMillisUsed", result)
+                self.assertIsNone(data)
+
     def test_identity_changes_after_binary_read_discard_accepted_bytes(self):
         for mutation, issue in (("process", "process-changed-during-collection"),
                                 ("module", "module-changed-during-collection"),
@@ -223,7 +260,10 @@ class RuntimeCodeTests(unittest.TestCase):
             with patch.object(Path, "rename", inspect_rename):
                 published = runtime.publish_result(output, result, data)
             self.assertEqual(self.code, (published / self.report["codeFile"]).read_bytes())
-            self.assertEqual("runtime-code-collected", json.loads((published / "report.json").read_text())["status"])
+            archived = json.loads((published / "report.json").read_text())
+            self.assertEqual("runtime-code-collected", archived["status"])
+            self.assertEqual(result["finalDeviceElapsedMillis"], archived["finalDeviceElapsedMillis"])
+            self.assertEqual(result["maxAgeMillisUsed"], archived["maxAgeMillisUsed"])
             with self.assertRaises(FileExistsError):
                 runtime.publish_result(output, result, data)
             failed = runtime.reserve_output(Path(temporary) / "failed")

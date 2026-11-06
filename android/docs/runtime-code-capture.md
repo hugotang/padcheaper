@@ -22,6 +22,8 @@ python android/tools/collect_runtime_code.py --adb C:/Users/tangk/AppData/Local/
 
 工具只讀模組產生的報告與 binary，依目前程序 UID 選擇 Android user，核對原版目標、已安裝 APK、來源／payload、PID／start tick／boot、影格、時效、長度與 hash。binary 傳輸後再次比對報告、程序、APK 與時間；不安裝、不重啟、不點按或讀任意記憶體位址。
 
+第五批補上保存最後實際讀到的裝置時間與當次有效期限制，供後續 [離線核對與 IDA 匯入](runtime-code-analysis.md) 重驗當時證據。離線工具只分析已接受的完整結果，不把電腦當前時間當成擷取時的裝置 elapsed time；這批工具來源也仍未執行驗證。
+
 ## 固定讀取範圍
 
 此目標原版 ELF64／ARM64 有八個 program headers。只讀第一個 PT_LOAD（index 1），file offset／vaddr 均為 0，filesz／memsz 均為 `0x107e730`，即 **17,295,152 bytes（約 16.5 MiB）**。它包含 ELF metadata、唯讀資料與程式碼，不是完整 libpad 檔案；後續可寫 PT_LOAD、BSS、heap、遊戲存檔及帳號資料均不在範圍內。
