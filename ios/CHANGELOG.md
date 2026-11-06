@@ -2,9 +2,9 @@
 
 每版的完整說明在 `docs/release-*.md`；建置、測試與交付證據（包括失敗的 CI）記錄在 [開發紀錄](docs/development.md)。交付檔位於 `E:/ipa/PADCheaper-<版本>` 與同名 ZIP，已交付的版本不覆寫。所有版本的 `device_verified` 均為 false，除非開發紀錄另有使用者真機回報。
 
-## 尚未發佈
+## 最新交付
 
-0.5.37 合併單次撈珠選色、珠量檢查、逾時重試與失敗診斷，另加入尚未接入手機的雙次取色離線模型。使用者已要求編譯測試，最新進度與限制見 [開發紀錄](docs/development.md)。
+[0.5.37-orbs](docs/release-0.5.37.md) 已通過 [CI 144](https://github.com/hugotang/padcheaper/actions/runs/42230267439) 完整回歸、arm64 編譯／簽章、網頁與四份 iPhone GUI，交付 E:/ipa/PADCheaper-0.5.37-orbs 及同名 ZIP。合併單次撈珠選色、珠量檢查、逾時重試與失敗診斷；雙次取色仍是離線模型，原盤首消九 Combo 尚未解出，真機未驗證。見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.37.json)。
 
 ## 版本索引
 

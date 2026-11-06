@@ -1,0 +1,969 @@
+{
+  "schema": 1,
+  "version": "0.5.37-orbs",
+  "date": "2026-11-06",
+  "source_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+  "game_target": "jp.gungho.pad-ios-23.6.1-107553",
+  "status": "built-tested-delivered",
+  "device_verified": false,
+  "ci": {
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/42230267439",
+    "number": 144,
+    "conclusion": "success",
+    "job_elapsed_seconds": 1348,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Show iOS SDK toolchain",
+        "conclusion": "success"
+      },
+      {
+        "name": "Validate target and run protocol tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Compile arm64 iPhoneOS dylib",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify editor save and mobile interactions",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload editor browser diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect Mach-O and signature",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload dylib and installation notes",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify floating GUI in iOS Simulator",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload GUI probe diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build summary",
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "failed_attempts": [
+    {
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/42229693521",
+      "number": 143,
+      "source_commit": "b99486caad3f6f09ba1b3d8466d162a8ab8fe9d2",
+      "conclusion": "failure",
+      "cause": "A new Objective-C++ Session fixture was missing a closing bracket.",
+      "fix_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+      "scope": "Test syntax only; product code unchanged; complete CI rerun."
+    }
+  ],
+  "binary": {
+    "dylib_bytes": 10699408,
+    "dylib_sha256": "94f25a5d7ef179bb0f738a6d0dac1c3f1f95b4f3fcbc1d3fddc0a95b8911a9af",
+    "dylib_uuid": "8538888f-2202-32e3-b337-5068ed4cf93c"
+  },
+  "target_verification": {
+    "guards": 456,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "executable_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "artifact_manifests_match_git": true,
+    "runtime_verified": false
+  },
+  "local": {
+    "source_commit": "b99486caad3f6f09ba1b3d8466d162a8ab8fe9d2",
+    "test_inputs_match_commit": true,
+    "input_count": 257,
+    "windows_solver_model": "passed",
+    "private_shape_guidance": "passed",
+    "eight_player_model": "passed",
+    "compiler": "GCC 15.2.0; C++17; -O2; -Wall -Wextra -Werror; assertions enabled",
+    "command": "BUILD_DIR=/e/padcheaper/build/verify-0.5.37/win bash ios/tools/windows-tests.sh",
+    "solver_log_sha256": "74bce1e360e7c231c7cb047cd32e33e3113bbc6702a44a2c41de41b98729cb85",
+    "timed_probe_exit_code": 0,
+    "timed_probe_log_sha256": "19d52bf1a0e15e704bc2f5cc7024166b9a08fac1dbf1dd97d51b3b44af06e356",
+    "recorded_nine_combo_solved": false,
+    "recorded_best_first_wave_combo": 6,
+    "timed_model_live_execution": false,
+    "device_verified": false
+  },
+  "fishing": {
+    "source_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42230267439",
+    "fixture": "anonymous final_board 6x5; light T, heart four, first-wave Combo >=9; spinner index6/colors63; diagonal; steps48/beam512",
+    "windows": {
+      "inventory": [
+        {
+          "max_exchanges": 0,
+          "valid": 1,
+          "minimum": 3,
+          "feasible": 0,
+          "retained": 0
+        },
+        {
+          "max_exchanges": 1,
+          "valid": 1,
+          "minimum": 3,
+          "feasible": 0,
+          "retained": 0
+        },
+        {
+          "max_exchanges": 2,
+          "valid": 1,
+          "minimum": 2,
+          "feasible": 12,
+          "retained": 8
+        }
+      ],
+      "searches": [
+        {
+          "budget_ms": 800,
+          "status": "conditional-goals-unmet",
+          "elapsed_ms": 621,
+          "evaluated": 572503,
+          "plans": 8,
+          "depth": 48,
+          "slice_timeouts": 0,
+          "search_budget_exhausted": 0,
+          "deadline": 0,
+          "path": [
+            8,
+            15,
+            20,
+            27,
+            21,
+            14,
+            19,
+            18,
+            12,
+            6,
+            13,
+            20,
+            19,
+            12,
+            6,
+            13,
+            20,
+            19,
+            26,
+            27,
+            28,
+            23,
+            17,
+            11,
+            4,
+            5
+          ],
+          "steps": 25,
+          "exchanges": [
+            {
+              "exchange": 0,
+              "entry": 9,
+              "exit": 10,
+              "take": 1,
+              "leave": 5
+            },
+            {
+              "exchange": 1,
+              "entry": 14,
+              "exit": 15,
+              "take": 4,
+              "leave": 2
+            }
+          ],
+          "phases": [
+            {
+              "capture": 0,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 1,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 2,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 3,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                1,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 4,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 5,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            }
+          ],
+          "replay_valid": true
+        },
+        {
+          "budget_ms": 2000,
+          "status": "conditional-goals-unmet",
+          "elapsed_ms": 645,
+          "evaluated": 572503,
+          "plans": 8,
+          "depth": 48,
+          "slice_timeouts": 0,
+          "search_budget_exhausted": 0,
+          "deadline": 0,
+          "path": [
+            8,
+            15,
+            20,
+            27,
+            21,
+            14,
+            19,
+            18,
+            12,
+            6,
+            13,
+            20,
+            19,
+            12,
+            6,
+            13,
+            20,
+            19,
+            26,
+            27,
+            28,
+            23,
+            17,
+            11,
+            4,
+            5
+          ],
+          "steps": 25,
+          "exchanges": [
+            {
+              "exchange": 0,
+              "entry": 9,
+              "exit": 10,
+              "take": 1,
+              "leave": 5
+            },
+            {
+              "exchange": 1,
+              "entry": 14,
+              "exit": 15,
+              "take": 4,
+              "leave": 2
+            }
+          ],
+          "phases": [
+            {
+              "capture": 0,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 1,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 2,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 3,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                1,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 4,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 5,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            }
+          ],
+          "replay_valid": true
+        }
+      ],
+      "log": "timed-fishing-probe.log",
+      "sha256": "19d52bf1a0e15e704bc2f5cc7024166b9a08fac1dbf1dd97d51b3b44af06e356"
+    },
+    "macos": {
+      "inventory": [
+        {
+          "max_exchanges": 0,
+          "valid": 1,
+          "minimum": 3,
+          "feasible": 0,
+          "retained": 0
+        },
+        {
+          "max_exchanges": 1,
+          "valid": 1,
+          "minimum": 3,
+          "feasible": 0,
+          "retained": 0
+        },
+        {
+          "max_exchanges": 2,
+          "valid": 1,
+          "minimum": 2,
+          "feasible": 12,
+          "retained": 8
+        }
+      ],
+      "searches": [
+        {
+          "budget_ms": 800,
+          "status": "conditional-goals-unmet",
+          "elapsed_ms": 775,
+          "evaluated": 418545,
+          "plans": 8,
+          "depth": 39,
+          "slice_timeouts": 8,
+          "search_budget_exhausted": 1,
+          "deadline": 0,
+          "path": [
+            8,
+            15,
+            20,
+            27,
+            21,
+            14,
+            19,
+            18,
+            12,
+            6,
+            13,
+            20,
+            19,
+            12,
+            6,
+            13,
+            20,
+            19,
+            26,
+            27,
+            28,
+            23,
+            17,
+            11,
+            4,
+            5
+          ],
+          "steps": 25,
+          "exchanges": [
+            {
+              "exchange": 0,
+              "entry": 9,
+              "exit": 10,
+              "take": 1,
+              "leave": 5
+            },
+            {
+              "exchange": 1,
+              "entry": 14,
+              "exit": 15,
+              "take": 4,
+              "leave": 2
+            }
+          ],
+          "phases": [
+            {
+              "capture": 0,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 1,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 2,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 3,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                1,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 4,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 5,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            }
+          ],
+          "replay_valid": true
+        },
+        {
+          "budget_ms": 2000,
+          "status": "conditional-goals-unmet",
+          "elapsed_ms": 1070,
+          "evaluated": 572503,
+          "plans": 8,
+          "depth": 48,
+          "slice_timeouts": 0,
+          "search_budget_exhausted": 0,
+          "deadline": 0,
+          "path": [
+            8,
+            15,
+            20,
+            27,
+            21,
+            14,
+            19,
+            18,
+            12,
+            6,
+            13,
+            20,
+            19,
+            12,
+            6,
+            13,
+            20,
+            19,
+            26,
+            27,
+            28,
+            23,
+            17,
+            11,
+            4,
+            5
+          ],
+          "steps": 25,
+          "exchanges": [
+            {
+              "exchange": 0,
+              "entry": 9,
+              "exit": 10,
+              "take": 1,
+              "leave": 5
+            },
+            {
+              "exchange": 1,
+              "entry": 14,
+              "exit": 15,
+              "take": 4,
+              "leave": 2
+            }
+          ],
+          "phases": [
+            {
+              "capture": 0,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 1,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 2,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 3,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                1,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 4,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            },
+            {
+              "capture": 5,
+              "goals_met": 0,
+              "safe": 1,
+              "first_combos": 6,
+              "goal_hits": [
+                0,
+                1,
+                6
+              ]
+            }
+          ],
+          "replay_valid": true
+        }
+      ],
+      "log": "macos-timed-fishing-probe.log",
+      "sha256": "3741195d0ef597b10fcc70e08112edd0494e37669c83a69f4a77fd44d16fe671"
+    },
+    "recorded_nine_combo_solved": false,
+    "best_first_wave_combo": 6,
+    "independent_replay": {
+      "windows": "fishing-oracle-verification.json",
+      "macos": "macos-fishing-oracle-verification.json",
+      "all_six_capture_colors_checked": true
+    },
+    "single_take_7x6": {
+      "fixture": "anonymous uryu_t_board_fail_1; light T + heart four; six-color spinner index6; diagonal; steps48/beam512",
+      "platform": "Windows GCC 15.2.0, C++17, O2",
+      "attempts": [
+        {
+          "attempt": 1,
+          "take": 3,
+          "retry": 0,
+          "budget": 800,
+          "status": 1,
+          "goals": "1/2",
+          "T": 0,
+          "four": 1,
+          "combos": 7,
+          "steps": 17,
+          "elapsed": 800,
+          "deadline": 1,
+          "evaluated": 75459,
+          "oracle_valid": 1
+        },
+        {
+          "attempt": 2,
+          "take": 3,
+          "retry": 1,
+          "budget": 2000,
+          "status": 0,
+          "goals": "2/2",
+          "T": 1,
+          "four": 1,
+          "combos": 10,
+          "steps": 48,
+          "elapsed": 1993,
+          "deadline": 0,
+          "evaluated": 239526,
+          "oracle_valid": 1
+        }
+      ],
+      "independent_six_phase_oracle_and_public_replay": "passed",
+      "log_sha256": "5524cd3f9ca9d2d2dd215333072805fd15a61bf6ee0c0283ab3cdfd24253e674",
+      "limitation": "One desktop measurement; Combo includes cascades, not a nine first-wave Combo witness or iPhone latency."
+    },
+    "search_is_exhaustive": false,
+    "live_timed_fishing_integrated": false,
+    "device_verified": false
+  },
+  "android_shared_core": {
+    "source_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+    "NDK": "27.0.12077973",
+    "API": 26,
+    "compiler": "Clang 18.0.1",
+    "configuration": "Release; warnings as errors; PH_BUILD_CORE_TESTS=OFF",
+    "libraries": {
+      "arm64-v8a": {
+        "sha256": "f15d7faca94db5744767ce646dd188f7d2ebe847140d72f6ccbf5971fadbe4b5",
+        "bytes": 2573866,
+        "build_log": "android-core-arm64-build.log"
+      },
+      "x86_64": {
+        "sha256": "d28ebcfd0200996cc9cc00148a0d418efe758479e6b2bef9e8f8bbd114295b98",
+        "bytes": 2541800,
+        "build_log": "android-core-x86_64-build.log"
+      }
+    },
+    "abi_compilation": "passed",
+    "abi_tests_executed": false,
+    "APK_built": false,
+    "device_verified": false
+  },
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "gui_status_versions": "all four 0.5.37-orbs",
+  "visual_review": {
+    "source_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42230267439",
+    "reviewed_screenshots": [
+      {
+        "artifact": "browser",
+        "path": "editor-browser/overview-320.png",
+        "observed": "Narrow layout, six slots, state and save controls are legible; synthetic portraits use placeholders.",
+        "sha256": "199f5e0218a67138e8b7961e64ef0a3eee5d830719ebcc3b24aa8764db30a032"
+      },
+      {
+        "artifact": "browser",
+        "path": "editor-browser/editor-keyboard-390.png",
+        "observed": "Focused editor input and navigation visible within the reduced viewport.",
+        "sha256": "64fb914f6901415d2ad022ac3641725c4a307039e9511d0456f252b87a94cd01"
+      },
+      {
+        "artifact": "browser",
+        "path": "editor-browser/team-dungeon-390.png",
+        "observed": "Dungeon comparison remains within the narrow viewport, with controls and long result text laid out clearly.",
+        "sha256": "e6d8eed95e7a0e99729b6eb13b35685257b01237743232ad82fa7c4d9ea3bea1"
+      },
+      {
+        "artifact": "gui",
+        "path": "overlay-portrait.png",
+        "observed": "Floating main panel, labels and controls are visible without overlap. Guard failure is the synthetic load-probe scenario.",
+        "sha256": "e1517549f095b24d4b1c6548a9f099c1bdaf7582b709ae079dca2cad50dcb5aa"
+      },
+      {
+        "artifact": "gui",
+        "path": "legacy-orbs-team-plan-import.png",
+        "observed": "Legacy strategy import sheet retains readable controls and the expected injected save-failure message above the save action.",
+        "sha256": "0690e8ebabb3e601e7df57e5e7775a4c9faa9affbbc7b39cd72b94ca75cd0590"
+      },
+      {
+        "artifact": "gui",
+        "path": "overlay-orbs-eight-auto-board.png",
+        "observed": "Board, route, progress, explanatory text and stop/read-board controls are visible. This is a fixture, not a live match.",
+        "sha256": "67b2f978ba375ae4a1b8ab9eb8058134af8995c78d78096e0f215a62e25b5206"
+      }
+    ],
+    "observed": "Inspected six screenshots: narrow browser layout, focused input, dungeon comparison, native overlay, legacy strategy import and 8P board preview. Synthetic guard and save failures are expected fixture states; all four GUI reports passed.",
+    "device_verified": false
+  },
+  "browser_models": {
+    "test-result.json": {
+      "checks": 32,
+      "revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+      "recordedCurrentHP": 397834,
+      "finalHP": 409219,
+      "deviceVerified": false,
+      "survivalAuthorized": false
+    },
+    "dungeon-test-result.json": {
+      "checks": 14,
+      "privateDumpRequired": false,
+      "deviceVerified": false,
+      "enemyForecastKnown": false,
+      "survivalAuthorized": false
+    }
+  },
+  "delivery": {
+    "delivery": "E:\\ipa\\PADCheaper-0.5.37-orbs",
+    "source_commit": "8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4",
+    "verified_files": 367,
+    "zip_entries": 368,
+    "zip_size": 62596242,
+    "zip_sha256": "e0a975fa3e9d41e1cee0a89b42f2218157a58f56a8e7ce77a0099ab8cd4bfad8",
+    "dylib_size": 10699408,
+    "dylib_sha256": "94f25a5d7ef179bb0f738a6d0dac1c3f1f95b4f3fcbc1d3fddc0a95b8911a9af",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42230267439",
+    "device_verified": false,
+    "original_artifact_files_unchanged": true,
+    "extra_evidence_files_verified": 26,
+    "gui_and_browser_files_match_reviewed_artifacts": true
+  },
+  "evidence": [
+    {
+      "file": "win/solver.log",
+      "sha256": "74bce1e360e7c231c7cb047cd32e33e3113bbc6702a44a2c41de41b98729cb85"
+    },
+    {
+      "file": "local-summary.json",
+      "sha256": "f31648137d6909463ba324942b6efa8aaac40dad70f6cc5d5138bcd603cf89b2"
+    },
+    {
+      "file": "tested-source-inputs.json",
+      "sha256": "3b00dd56f21e7032c140260b35505f297f915fab408ad3d626675d7cd49fa9ee"
+    },
+    {
+      "file": "native.log",
+      "sha256": "b638bc276b772c28ea05126b8351e2dbc9e35aa702c4b2f774c2d6e03ff6b244"
+    },
+    {
+      "file": "native-result.json",
+      "sha256": "628ff6c85ca7611d10f622fc093fdaafb4a8d99ea519ca3b8bdcbf0897178adc"
+    },
+    {
+      "file": "assets.log",
+      "sha256": "c089ffaba52b17f4cdeadeccabda02db0835ad6de1e9eb073ccecd20acb3826a"
+    },
+    {
+      "file": "assets-result.json",
+      "sha256": "9144ff9fce801beb40e31ddd16c846095b10cc4b19fdf5019392c21414261fda"
+    },
+    {
+      "file": "timed-fishing-probe.log",
+      "sha256": "19d52bf1a0e15e704bc2f5cc7024166b9a08fac1dbf1dd97d51b3b44af06e356"
+    },
+    {
+      "file": "single-fishing-probe.log",
+      "sha256": "5524cd3f9ca9d2d2dd215333072805fd15a61bf6ee0c0283ab3cdfd24253e674"
+    },
+    {
+      "file": "fishing-oracle-verification.json",
+      "sha256": "b2e828ab8ec9e3636c429aa7e7c5977f0d313262d84a90db67eeed481e052968"
+    },
+    {
+      "file": "fishing-measurements.json",
+      "sha256": "793283edea222b3a75864bf0252634bd02df8b5c486b8bccaa2938a3cc26eca3"
+    },
+    {
+      "file": "macos-timed-fishing-probe.log",
+      "sha256": "3741195d0ef597b10fcc70e08112edd0494e37669c83a69f4a77fd44d16fe671"
+    },
+    {
+      "file": "macos-fishing-oracle-verification.json",
+      "sha256": "c473969e501d91fddfd47c45fae07929e2a1620a92b97ac03d5d60f1f00a7cb4"
+    },
+    {
+      "file": "single_fishing_probe.cpp",
+      "sha256": "c5f0bc9b00a9c614c9edb2699a6f6e86bba251c0338bc8747d63551644bc8ce0"
+    },
+    {
+      "file": "verify_fishing_measurements.py",
+      "sha256": "e0fa43347f8c95f6fab1f6058fad451ee662f566bc2c7dfde534b1652b10581c"
+    },
+    {
+      "file": "target-verification.json",
+      "sha256": "8399ec685467288bbd82e67b814e51d24a243ca8e62c370b2075e301e3091739"
+    },
+    {
+      "file": "ci-143-failure.log",
+      "sha256": "67040ec011cc3318c7e8f6b3e941cd2ec768c922b343d8684b6df9de9519db19"
+    },
+    {
+      "file": "ci-artifact-verification.json",
+      "sha256": "1fcfc754f9e44301c420eb206f398e029706ebe4cc627aa0425392be00ce1556"
+    },
+    {
+      "file": "visual-review.json",
+      "sha256": "1e431967b20094fa0ad798a31e6fb5b268c548ad9d66b5c276c3e1b442e5af44"
+    },
+    {
+      "file": "delivery-verification.json",
+      "sha256": "234df9904aa7e1695ae976fcc6766bdf157819ad3aa633d8b9fade5e1dd3f034"
+    },
+    {
+      "file": "android-core-result.json",
+      "sha256": "b6da10187300b41dfc3ce3c53e09f4b8dbdf405d600996a286d73f11abf1f606"
+    },
+    {
+      "file": "android-core-arm64-configure.log",
+      "sha256": "e7306fa2699f1aede975ed4f8ecce72c6f1964462d56a034dbfa19d1a3808bed"
+    },
+    {
+      "file": "android-core-arm64-build.log",
+      "sha256": "55a6b45033ef4162b76548641cdb7056928ae020cd1bb6d98c36a6e4811c2fd1"
+    },
+    {
+      "file": "android-core-x86_64-configure.log",
+      "sha256": "8b5cf6daf4bcf3d326bf33b11a4a1975aab65385d5ef3e9a15302bb1cd1b7033"
+    },
+    {
+      "file": "android-core-x86_64-build.log",
+      "sha256": "55a6b45033ef4162b76548641cdb7056928ae020cd1bb6d98c36a6e4811c2fd1"
+    },
+    {
+      "file": "run-144/ci-run.json",
+      "sha256": "ea872b4203fb13c828fefe421ca38478228985ff5210470f8257ca7a2688899a"
+    },
+    {
+      "file": "run-144/ci-run.log",
+      "sha256": "1d87ffcde1c0114933e4cda80472cca138449358bd77464b856bfb5be62f9ad6"
+    }
+  ],
+  "evidence_location": "build/verify-0.5.37; main logs and verification are also in the immutable delivery",
+  "limitations": [
+    "No live PAD/iPhone login, battle mutation, skills or multiplayer synchronization was tested.",
+    "GUI probes use fixtures; four passing launches do not establish game-server acceptance.",
+    "Packaged documents retain the build-time snapshot. Completion evidence is included separately; source completion notes were added afterward without changing the delivery.",
+    "The recorded final_board still fails the first-wave nine-Combo requirement. The bounded search does not prove impossibility.",
+    "Double-take fishing and match-capture color selection remain offline only; no live timing gate or Session/native integration exists.",
+    "Windows/macOS search timing cannot be interpreted as iPhone latency; the 7x6 success is one desktop measurement.",
+    "Android arm64-v8a/x86_64 shared-core compilation passed; no Android APK, ABI runtime tests or device operations were performed."
+  ]
+}

@@ -5,10 +5,14 @@
 - 增加雙次取色、指定消除判定色與等待時間估算的**離線模型**，最多兩次交換／八個方案；重播核對每次實際犧牲色與移動。尚未接入 Session／原生操作，手機仍只取一次。原生放手後可能等動畫才匹配，不能把模型中的成功色直接當作安全放手時點。
 - 日服 PAD 23.6.1／107553、arm64，最低 iOS 15；既有策略及資料相容不變。換隊仍限單人，3／4 人保持手動一次，8 人僅目前一場，不自動入場或再戰。
 
-## 本次驗證進度
+## 本次驗證
 
-本機完整 solver／模型與內部形狀引導回歸通過，包括新雙次取色、重播、條件形狀及時間案例。匿名原盤在 800／2000 ms 下均未解出首消九 Combo：各檢查 572,503 個候選、八個方案、48 層，完成光 T＋心四連及首消六 Combo，621／645 ms、沒有逾時。這證明目前搜尋仍有缺口，不代表盤面無解；加長時限未改變結果。詳見 [分析與模型](solver-fishing-2026-11-06.md)。
+[CI 144](https://github.com/hugotang/padcheaper/actions/runs/42230267439) 已通過完整 solver／Session／原生回歸、iPhoneOS arm64 編譯與簽章、網頁面板及四份 iPhone 模擬器首次／重啟報告。本機完整 solver／模型、內部形狀引導及新增雙次取色／重播／條件形狀／時限案例通過；456 組指紋與 PAD 23.6.1 原始 IPA 一致。第一輪 CI 143 的 Session 測試括號錯誤已修正並完整重跑，失敗紀錄保留。
 
-iOS 完整編譯／Session／原生／模擬器 GUI 與交付核對尚在進行，最終以 [開發紀錄](development.md) 及交付包內 verification.json 為準。`device_verified=false`；真機等色、交換、停止後放手及多人同步仍待確認。
+先前 7×6 撈光失敗盤在 2000 ms 重試下找到 48 步光 T＋心四連，盤內連鎖合計 10 Combo。這是電腦端一次量測，非真機耗時保證。
 
-驗證成功後使用新目錄 `E:/ipa/PADCheaper-0.5.37-orbs` 及同名 ZIP，保留既有交付。完整關閉 PAD 後替換 dylib，保留原有設定／策略／隊伍庫；LiveContainer 沿用既有重新簽署流程。
+final_board 在 Windows 與 macOS 的 800／2000 ms 搜尋中仍未解出首消九 Combo；最佳只達光 T＋心四連及首消六 Combo。Windows 各檢查 572,503 候選，621／645 ms、無逾時；macOS 為 775／1070 ms、418,545／572,503 候選。獨立六色重播通過，但有限搜尋未找到路線不代表盤面無解。詳見 [分析與實測](solver-fishing-2026-11-06.md)。
+
+新交付為 E:/ipa/PADCheaper-0.5.37-orbs 及同名 ZIP，逐檔雜湊和 ZIP 內容已核對；來源 8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4，dylib SHA-256：94f25a5d7ef179bb0f738a6d0dac1c3f1f95b4f3fcbc1d3fddc0a95b8911a9af。完整證據見 [驗證收據](../research/verification-0.5.37.json) 及交付 verification/。包內開發文件保留建置當時快照，完成狀態在 verification/completion.md。
+
+device_verified=false；真機等色、交換、停止後放手及多人同步仍待確認。雙次取色與判定色控制沒有接入手機；Android 只完成兩種 ABI 的共用核心編譯，未重建 APK。完整關閉 PAD 後替換 dylib，保留原有設定／策略／隊伍庫；LiveContainer 沿用既有重新簽署流程。

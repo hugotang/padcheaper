@@ -1,9 +1,10 @@
 # Android 開發與待驗證
 
-## 2026-11-06：共用撈珠來源本機回歸完成，iOS 編譯測試進行中
+## 2026-11-06：共用撈珠來源回歸與 Android 兩種 ABI 編譯完成
 
-- 使用者要求編譯測試，本機完整 solver／model／內部形狀引導回歸通過，包含單次選色及雙次離線案例。原盤 800／2000 ms 都未逾時但只取得首消六 Combo，仍未達九；詳細結果見 [iOS 開發紀錄](../../ios/docs/development.md)。
-- 本次 iOS 建置不等於 Android APK／ABI 驗證。Android 沒有接入雙次取色、live 盤面或新輸入；目前 0.1.1-probe 交付保持不變，後續需另核對共用來源建置與介面。
+- 使用者要求編譯測試，本機完整 solver／model／內部形狀引導回歸通過，包含單次選色及雙次離線案例；iOS [CI 144](https://github.com/hugotang/padcheaper/actions/runs/42230267439) 與 0.5.37 交付也完成。原盤在 Windows／macOS 800／2000 ms 都仍未達首消九 Combo，最佳六 Combo；先前 7×6 盤的 2000 ms 單次撈光重試找到光 T＋心四連。詳見 [iOS 完成紀錄](../../ios/docs/development.md) 及 [驗證收據](../../ios/research/verification-0.5.37.json)。
+- 相同共用來源 8fe243dd6f4aa93e00a74d536eeb8d08240ca6b4 已以 NDK 27.0.12077973／API 26／Clang 18.0.1、Release 建置 arm64-v8a 與 x86_64 的 libpadcheaper_core.a，兩者通過；PH_BUILD_CORE_TESTS=OFF，沒有執行 Android ABI runtime 測試。NDK CMake 舊版相容性提示未影響來源編譯，沒有關閉 warnings-as-errors。
+- 本輪沒有重建／安裝 Android APK、操作裝置或加入 JNI／預覽／live 輸入。Android 的雙次取色與 iOS 判定色時序都尚未接入；0.1.1-probe 既有交付不變。以下待驗證段落保留當時開發狀態，Android 特有盤面 reader／preview／JNI 與真機仍需後續驗證。
 
 ## 2026-11-06：共用 solver 雙次取色離線來源，待驗證
 
