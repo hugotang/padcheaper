@@ -105,6 +105,7 @@ static void AssistSessionTests() {
         ![session.snapshot[@"assistRecoveryTrace"][@"actualConfirmed"] boolValue],
         "fresh effective L plan retains heart-four, executes once and awaits actual confirmation despite missing diagnostics");
     NSDictionary *trace = session.snapshot[@"searchTrace"];
+    CheckSearchAttemptTrace(trace);
     Check([trace[@"candidateAttempts"] count] > 0 &&
         [trace[@"goals"] isEqual:session.snapshot[@"goalPlan"][@"goals"]],
         "chosen candidate goals reach replay, release checks and execution diagnostics");
@@ -231,10 +232,13 @@ static void AssistSessionTests() {
     Check(UntilPhase(session,engine,@"turnWaiting"), "a later reachable color allocation can complete the route");
     trace = session.snapshot[@"searchTrace"];
     NSDictionary *choice = session.snapshot[@"goalPlan"][@"assistRecoveryChoice"];
+    CheckSearchAttemptTrace(trace);
     Check([trace[@"candidateAttempts"] count] == 2 && [choice[@"counts"][3] unsignedIntValue] == 1 &&
         [choice[@"counts"][4] unsignedIntValue] == 0 && [trace[@"goals"] isEqual:choice[@"goals"]] &&
         [session.snapshot[@"goalHits"][0] unsignedIntValue] == 1,
         "the second color candidate supplies the final goals, replay checks and actual release evaluation");
+    Check([trace[@"selectedAttemptIndex"] isEqual:@1] && ![trace[@"soloRetrySkipped"] length],
+        "assist selection stays in its shared budget and does not enter the solo retry policy");
     const NSUInteger sharedBudget = [trace[@"budgetMS"] unsignedIntegerValue];
     for (NSDictionary *attempt in trace[@"candidateAttempts"])
         Check([attempt[@"budgetMS"] unsignedIntegerValue] <= sharedBudget,

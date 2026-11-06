@@ -4,6 +4,15 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：五色求路補搜與逐次統計，待編譯測試
+
+- 使用者要求回到 solver，分析 `log/five_color_fail_log_1.txt` 並優化。0.5.35 的 6×5／斜移／48 步／beam 512、`colors=31,count=5` 候選只有四個攻擊色、缺暗；113 ms／800 ms 後又用 77 ms／2000 ms 重試，總 191 ms，但所選候選 `deadline=false`、一個 pass、零 backtrack。只保留匿名盤面與統計摘要，詳見 [五色求路分析](solver-colors-2026-11-06.md)。
+- 原純多色目標未使用 recovery／多樣性保留，二缺一的 NearColor 不區分補珠距離。來源新增無轉轉、非撈珠、非活動盤面的普通 colors（可加 Combo）專用距離引導、缺色／布局多樣性與最多一次 recovery／兩份淘汰 frontier；明確要求 `!board.spinnerMask && fishCell < 0`，所有轉轉都排除。普通無荊棘最多四輪，有荊棘時既有 no-contact 可能是第五輪，不新增其他 pass。主搜尋保留原排序、完整 beam／deadline，只使用剩餘時間補搜，不把顏色當 shape；距離表預處理、逐候選時鐘檢查及淘汰候選尾部排序仍有成本，不能宣稱效能不變。最終五色交集、安全、取消、48 步／512／800 ms 原額度不放寬。
+- Session 只對有保留候選且明確逾時的 `GoalsUnmet`／`Unsafe` 單人失敗延長重試；未逾時的完整搜尋不再重做。診斷分開記錄每個 attempt、選中 attempt、總統計與實際預算／wall elapsed，缺少候選統計時標示不完整。原 NearColor／主搜尋首消提示保持原樣，只有新增 ColorGuidance 的已達顏色依首消限定選用 firstColors。
+- 已新增匿名原盤面、攻擊色重新編號、左右鏡像與獨立 oracle、語意／限制及 Session 統計案例，**尚未執行，不能宣稱已找到五色路徑**。下次需完整跨平台 solver／iOS Session 回歸、三變體驗收、耗時與既有模式回歸及真機核對。
+- GCC C++17 `-Wall -Wextra -Werror -fsyntax-only` 對 Solver.cpp、完整 orb_solver_tests.cpp 與新 policy header 均 exit 0；僅語法檢查，未產生二進位或執行測試。Objective-C++ Session 仍待下次明確「編譯測試」於 macOS 驗證。
+- **本輪尚未建置產品、跑測試套件、派發 CI 或打包**。共用 solver 新來源尚未建置；先前 iOS 0.5.35／Android 0.1.1 通過結果不驗證本批，`E:/ipa` 既有交付不變，CI 仍只有手動觸發。
+
 ## 2026-11-06：Android 0.1.1-probe 編譯測試及交付完成
 
 - 使用者明確要求「編譯測試」，合併 Android 第四批固定程式區段擷取與第五批離線分析。雙 ABI APK、Java 13 個案例、Python 27 個案例、模擬器 x86_64 兩個原生測試執行檔及 Windows GCC 15.2.0／`-O2` 共用求路器回歸全部通過；版本 0.1.1-probe／versionCode 2，詳見 [Android 驗證紀錄](../../android/docs/release-0.1.1-probe.md)。

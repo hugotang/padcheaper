@@ -5,6 +5,7 @@
 #import "PHOrbEight.h"
 #import "PHOrbSkillWindow.h"
 #include "PHOrbSolver.h"
+#include "PHOrbSearchAttempt.h"
 #include "PHOrbSessionState.h"
 #include <algorithm>
 #include <cmath>
@@ -73,6 +74,19 @@ PHOrbSolveOptions OptionsForQuality(NSString *quality) {
         [quality isEqual:@"thorough"] ? PHOrbSearchQuality::Thorough : PHOrbSearchQuality::Balanced);
 }
 #include "PHOrbDiagnosticPresentation.inc"
+
+NSMutableDictionary *SearchAttemptTrace(const PHOrbSolveOptions &options, PHOrbSolveStatus status,
+                                       const PHOrbRoute &route, uint64_t wallElapsedMS) {
+    const bool statisticsAvailable = route.count >= 2 && (status == PHOrbSolveStatus::Solved ||
+        status == PHOrbSolveStatus::GoalsUnmet || status == PHOrbSolveStatus::Unsafe);
+    return [@{@"goals":PHOrbGoalsJSON(&options.goals), @"status":SolveStatusName(status),
+        @"budgetMS":@(options.milliseconds), @"elapsedMS":@(route.elapsedMS), @"wallElapsedMS":@(wallElapsedMS),
+        @"statisticsAvailable":@(statisticsAvailable), @"deadlineKnown":@(statisticsAvailable),
+        @"deadline":@(route.deadlineReached), @"evaluated":@(route.evaluated),
+        @"evaluationCalls":@(route.evaluationCalls), @"evaluationCacheHits":@(route.evaluationCacheHits),
+        @"searchPasses":@(route.searchPasses), @"backtracks":@(route.backtracks),
+        @"exploredDepth":@(route.exploredDepth), @"stepLimit":@(options.steps), @"beam":@(options.beam)} mutableCopy];
+}
 
 }
 
@@ -535,7 +549,6 @@ struct EightPreparationState {
     const PHOrbBoard board = _preview.board;
     const bool solo = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
         !_auto.eight() && !_preview.multiplayerDisabled;
-    const bool soloRetry = solo && options.milliseconds < PHOrbSoloRetryMilliseconds;
     NSArray<NSDictionary *> *const assistCandidates = _goalPlan[@"assistRecoveryCandidates"] ?: @[];
     // Fishing is a solo fallback for one unlocked spinner. Its colour must be in
     // the spinner's own table: some spinners cycle only some colours.
@@ -574,8 +587,19 @@ struct EightPreparationState {
         PHOrbSolveOptions selectedOptions = options;
         PHOrbSolveStatus result = PHOrbSolveStatus::NoRoute;
         NSDictionary *selectedAssist = @{};
-        NSMutableArray *attempts = [NSMutableArray array];
+        NSMutableArray<NSMutableDictionary *> *attempts = [NSMutableArray array];
+        NSInteger selectedAttemptIndex = -1;
+        NSString *soloRetrySkipped = @"";
         const auto start = std::chrono::steady_clock::now();
+        const auto solveAttempt = [&](const PHOrbSolveOptions &trial, PHOrbRoute &candidate, NSDictionary *details) {
+            const auto attemptStart = std::chrono::steady_clock::now();
+            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
+            const auto wallElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - attemptStart).count();
+            NSMutableDictionary *attempt = SearchAttemptTrace(trial, status, candidate, uint64_t(wallElapsed));
+            [attempt addEntriesFromDictionary:details]; [attempts addObject:attempt];
+            return status;
+        };
         const NSUInteger choices = std::max(NSUInteger(1), assistCandidates.count);
         for (NSUInteger choice = 0; choice < choices; ++choice) {
             const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
@@ -587,27 +611,28 @@ struct EightPreparationState {
             if (assistCandidates.count) trial.milliseconds = unsigned(options.milliseconds - spent) / unsigned(choices - choice);
             if (!trial.milliseconds) break;
             PHOrbRoute candidate{};
-            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
-            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
-                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS)}];
+            const auto status = solveAttempt(trial, candidate, @{});
             route = candidate; result = status; selectedOptions = trial;
+            selectedAttemptIndex = NSInteger(attempts.count) - 1;
             if (assistCandidates.count) selectedAssist = assistCandidates[choice];
             if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) break;
         }
-        // Solo retry: the move timer starts only at the grab, so a failed
-        // search may continue with a longer budget (device log 2026-11-04:
-        // iPad evaluated ~60% of the desktop candidates in 800 ms).
-        if (soloRetry && !assistCandidates.count && !cancel->load(std::memory_order_relaxed) &&
-            result != PHOrbSolveStatus::InsufficientOrbs &&
-            !(result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) {
+        // A longer solo budget helps only if the failed candidate was cut off.
+        // A completed deterministic search would otherwise repeat the same
+        // candidates. NoRoute/Failed have no retained deadline statistics.
+        const auto retryDecision = PHOrbDecideSoloRetry(solo, assistCandidates.count != 0,
+            cancel->load(std::memory_order_relaxed), options.milliseconds, result, route);
+        if (retryDecision == PHOrbSoloRetryDecision::SearchCompleted)
+            soloRetrySkipped = @"search-completed-without-deadline";
+        if (retryDecision == PHOrbSoloRetryDecision::Retry) {
             PHOrbSolveOptions trial = selectedOptions; trial.milliseconds = PHOrbSoloRetryMilliseconds;
             PHOrbRoute candidate{};
-            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
-            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
-                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS), @"soloRetry":@YES}];
+            const auto status = solveAttempt(trial, candidate, @{@"soloRetry":@YES});
             if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
-                route = candidate; result = status;
-            } else if (candidate.matchedGoals > route.matchedGoals) { route = candidate; result = status; }
+                route = candidate; result = status; selectedAttemptIndex = NSInteger(attempts.count) - 1;
+            } else if (candidate.matchedGoals > route.matchedGoals) {
+                route = candidate; result = status; selectedAttemptIndex = NSInteger(attempts.count) - 1;
+            }
         }
         // Last resort before stopping: take the needed colour out of the spinner.
         for (unsigned color : fishColors) {
@@ -617,14 +642,31 @@ struct EightPreparationState {
             trial.fishCell = fishCell; trial.fishColor = color; trial.steps = fishSteps;
             trial.milliseconds = options.milliseconds;
             PHOrbRoute candidate{};
-            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
-            [attempts addObject:@{@"goals":PHOrbGoalsJSON(&trial.goals), @"status":SolveStatusName(status),
-                @"budgetMS":@(trial.milliseconds), @"elapsedMS":@(candidate.elapsedMS),
-                @"fishColor":@(color), @"fishing":@(candidate.fishing)}];
-            if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) { route = candidate; result = status; }
+            const auto status = solveAttempt(trial, candidate, @{@"fishColor":@(color)});
+            NSMutableDictionary *fishingAttempt = attempts.lastObject;
+            fishingAttempt[@"fishing"] = @(candidate.fishing);
+            if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
+                route = candidate; result = status; selectedAttemptIndex = NSInteger(attempts.count) - 1;
+            }
         }
-        selectedOptions.milliseconds = options.milliseconds; // Public budget is the shared job, not its last slice.
+        // Retain the original configured/shared budget for existing callers.
+        // The selected attempt separately records its actual slice/retry budget.
+        selectedOptions.milliseconds = options.milliseconds;
         const PHOrbSolveOptions checkedOptions = selectedOptions;
+        NSDictionary *selectedAttempt = selectedAttemptIndex >= 0 ? attempts[NSUInteger(selectedAttemptIndex)] : @{};
+        uint64_t totalEvaluated = 0, totalEvaluationCalls = 0, totalEvaluationCacheHits = 0;
+        unsigned totalSearchPasses = 0, totalBacktracks = 0, maximumExploredDepth = 0;
+        bool anyAttemptDeadlineReached = false, totalStatisticsComplete = true;
+        for (NSDictionary *attempt in attempts) {
+            totalEvaluated += [attempt[@"evaluated"] unsignedLongLongValue];
+            totalEvaluationCalls += [attempt[@"evaluationCalls"] unsignedLongLongValue];
+            totalEvaluationCacheHits += [attempt[@"evaluationCacheHits"] unsignedLongLongValue];
+            totalSearchPasses += [attempt[@"searchPasses"] unsignedIntValue];
+            totalBacktracks += [attempt[@"backtracks"] unsignedIntValue];
+            maximumExploredDepth = std::max(maximumExploredDepth, [attempt[@"exploredDepth"] unsignedIntValue]);
+            anyAttemptDeadlineReached |= [attempt[@"deadline"] boolValue];
+            totalStatisticsComplete &= [attempt[@"statisticsAvailable"] boolValue];
+        }
         const auto searchElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
         dispatch_async(dispatch_get_main_queue(), ^{
             PHOrbSession *session = weakSelf;
@@ -632,6 +674,24 @@ struct EightPreparationState {
                 cancel->load(std::memory_order_relaxed)) return;
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
             trace[@"candidateAttempts"] = [attempts copy];
+            trace[@"selectedAttemptIndex"] = @(selectedAttemptIndex);
+            trace[@"selectedStatus"] = selectedAttempt[@"status"] ?: @"none";
+            trace[@"soloRetrySkipped"] = soloRetrySkipped;
+            trace[@"statisticsScope"] = @"selected-attempt";
+            trace[@"initialBudgetMS"] = @(options.milliseconds);
+            trace[@"selectedBudgetMS"] = selectedAttempt[@"budgetMS"] ?: @0;
+            trace[@"selectedWallElapsedMS"] = selectedAttempt[@"wallElapsedMS"] ?: @0;
+            trace[@"statisticsAvailable"] = selectedAttempt[@"statisticsAvailable"] ?: @NO;
+            trace[@"deadlineKnown"] = selectedAttempt[@"deadlineKnown"] ?: @NO;
+            trace[@"stepLimit"] = selectedAttempt[@"stepLimit"] ?: @(checkedOptions.steps);
+            trace[@"beam"] = selectedAttempt[@"beam"] ?: @(checkedOptions.beam);
+            trace[@"totalEvaluated"] = @(totalEvaluated);
+            trace[@"totalEvaluationCalls"] = @(totalEvaluationCalls);
+            trace[@"totalEvaluationCacheHits"] = @(totalEvaluationCacheHits);
+            trace[@"totalSearchPasses"] = @(totalSearchPasses); trace[@"totalBacktracks"] = @(totalBacktracks);
+            trace[@"maximumExploredDepth"] = @(maximumExploredDepth);
+            trace[@"anyAttemptDeadlineReached"] = @(anyAttemptDeadlineReached);
+            trace[@"totalStatisticsComplete"] = @(totalStatisticsComplete && attempts.count != 0);
             trace[@"goals"] = PHOrbGoalsJSON(&checkedOptions.goals);
             trace[@"goalCount"] = @(checkedOptions.goals.count);
             trace[@"totalElapsedMS"] = @(searchElapsed);
@@ -715,9 +775,10 @@ struct EightPreparationState {
                 route.thornContacts, route.thornDamage, route.heartFours];
             if (options.allowPoisonWithHeartFour && route.poisonErased && route.heartFours)
                 summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消毒／猛毒，合計最多 %u 顆。", route.poisonErased];
-            summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms／預算 %u ms · %@ · 步數上限 %u",
-                unsigned(searchElapsed), options.milliseconds, (route.deadlineReached || searchElapsed >= options.milliseconds) ?
-                    @"已到候選或總時間上限" : @"未到時間上限", checkedOptions.steps];
+            summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms（全部候選）\n選中候選 %u ms／預算 %u ms · %@ · 步數上限 %u",
+                unsigned(searchElapsed), route.elapsedMS, [selectedAttempt[@"budgetMS"] unsignedIntValue],
+                route.deadlineReached ? @"候選已到時間上限" : @"候選未到時間上限",
+                [selectedAttempt[@"stepLimit"] unsignedIntValue]];
             if (!route.goalsMet) {
                 NSArray<NSDictionary *> *goals = PHOrbGoalsJSON(&checkedOptions.goals);
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];

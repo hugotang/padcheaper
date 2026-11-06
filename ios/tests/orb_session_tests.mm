@@ -4,6 +4,7 @@
 #import "PHOrbPlanning.h"
 #import "PHOrbDungeonReport.h"
 #import "PHOrbEight.h"
+#include "PHOrbSearchAttempt.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -433,6 +434,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
     Check(engine->live.dragged != 0, "native accepted start fixture");
 }
 
+#include "orb_search_attempt_session_tests.inc"
 #include "orb_automation_session_tests.inc"
 #include "orb_strategy_session_tests.inc"
 #include "orb_timing_session_tests.inc"
@@ -621,6 +623,16 @@ int main() {
               ![[session snapshot][@"canExecute"] boolValue] && [[session snapshot][@"goalCount"] unsignedIntegerValue] == 2,
               "conflicting shapes yield a labelled non-executable partial preview");
         NSDictionary *partial = [session snapshot];
+        NSDictionary *partialTrace = partial[@"searchTrace"];
+        CheckSearchAttemptTrace(partialTrace);
+        NSArray<NSDictionary *> *partialAttempts = partialTrace[@"candidateAttempts"];
+        // The separate policy checks are independent of machine speed. Even
+        // if a suspended test host hits the deadline, only that fact permits
+        // an additional attempt on this two-cell route.
+        if (partialAttempts.count && ![partialAttempts[0][@"deadline"] boolValue])
+            Check(partialAttempts.count == 1 && [partialTrace[@"selectedAttemptIndex"] isEqual:@0] &&
+                [partialTrace[@"soloRetrySkipped"] isEqual:@"search-completed-without-deadline"],
+                "a completed partial preview skips the duplicate solo retry and records why");
         NSString *partialMessage = partial[@"message"];
         NSArray *partialGoals = partial[@"goalPlan"][@"goals"], *partialHits = partial[@"goalHits"];
         Check(partialGoals.count == partialHits.count, "partial preview retains every goal result");
@@ -759,6 +771,7 @@ int main() {
         [session queueStop:@"cancel worker"];
         for (unsigned i = 0; i < 400; ++i) Tick(session, engine, Frame());
         Check([[session snapshot][@"phase"] isEqual:@"stopped"] && engine->stages == 0, "late solver completion cannot revive canceled intent");
+        SearchAttemptPolicyTests();
         AutomationSessionTests();
         StrategySessionTests();
         SkillTimingSessionTests();

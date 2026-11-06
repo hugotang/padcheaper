@@ -1,5 +1,11 @@
 # Android 開發與待驗證
 
+## 2026-11-06：共用五色 solver 新來源，尚未建置
+
+- 使用者回到 solver 並要求優化 iOS 五色失敗 log。共用 `ios/src/PHOrbSolver.cpp` 新增無轉轉、非撈珠、非活動盤面的普通多色目標補搜、距離提示及缺色／布局多樣性，明確要求 `!board.spinnerMask && fishCell < 0`，所有轉轉都排除。iOS Session 另調整逾時重試與逐次統計；詳見 [五色求路來源紀錄](../../ios/docs/solver-colors-2026-11-06.md)。主搜尋排序／NearColor 不變，新增 ColorGuidance 才依首消限定選取已達色罩。一次 recovery／兩份 frontier 使普通無荊棘最多四輪，既有荊棘 no-contact 搜尋可能為第五輪；距離表、時鐘與尾部排序有成本，沒有宣稱性能不變。
+- 本輪只有來源修改、案例、審查與語法檢查，**尚未建置產品、執行測試套件、派發 CI 或打包**。GCC C++17 `-Wall -Wextra -Werror -fsyntax-only` 對共用 Solver.cpp、完整 solver 測試來源及新重試 policy header 均 exit 0，沒有產生產品二進位或執行案例；Objective-C++ Session 尚待 macOS 編譯驗證。新增匿名三變體與獨立 oracle 是待跑驗收，不能當作已找到五色；下次明確「編譯測試」須重新執行跨平台共用 solver／效能與 iOS Session 回歸。
+- Android core 直接引用該共用來源，因此下一次 APK／核心建置的來源指紋與待驗證範圍會改變；Android 即時盤面仍未接入 solver。已交付 0.1.1-probe 的 APK、驗證紀錄與 `E:/ipa` 交付檔保持不變，其通過結果不涵蓋這批新來源。
+
 ## 2026-11-06：0.1.1-probe 編譯測試及交付完成
 
 - 使用者明確要求「編譯測試」，本輪合併第四批固定程式區段擷取與第五批離線分析。版本升至 0.1.1-probe／versionCode 2，詳見 [版本驗證紀錄](release-0.1.1-probe.md)。以下兩批的未建置描述保留為當時歷史；本節區分已通過與仍待完成項目。

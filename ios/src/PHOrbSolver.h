@@ -81,7 +81,11 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // Single-color exact shape goals still reserve distinct orb counts
 // (InsufficientOrbs). Other failures never imply infeasibility.
 // Ordinary quality budgets stay at or below 800 ms. Solo boards may retry a
-// failed search with a longer budget: the solo move timer starts at the grab.
+// timed-out failed search with a longer budget: the solo move timer starts at
+// the grab. Completed deterministic passes are not retried just for more time.
+// Ordinary spinner-free multi-colour goals keep the baseline beam, then use
+// remaining time for distance-guided recovery and bounded discarded frontiers.
+// The hints neither require optional colours nor satisfy exact release goals.
 constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

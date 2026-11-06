@@ -66,6 +66,13 @@ static void FishSessionTests() {
         Check(Preview(session,engine) && [session.snapshot[@"canExecute"] boolValue] &&
             [session.snapshot[@"searchTrace"][@"fishing"] boolValue] && [session.snapshot[@"searchTrace"][@"fishColor"] isEqual:@0],
             "a colour only the spinner can supply yields a fishing route");
+        NSDictionary *fishTrace = session.snapshot[@"searchTrace"];
+        CheckSearchAttemptTrace(fishTrace);
+        NSArray<NSDictionary *> *fishAttempts = fishTrace[@"candidateAttempts"];
+        const NSUInteger selectedFish = [fishTrace[@"selectedAttemptIndex"] unsignedIntegerValue];
+        Check(selectedFish < fishAttempts.count && [fishAttempts[selectedFish][@"fishing"] boolValue] &&
+            [fishAttempts[selectedFish][@"fishColor"] isEqual:@0],
+            "selected-attempt diagnostics follow the fishing fallback without changing its eligibility");
         NSArray<NSNumber *> *path = session.snapshot[@"path"];
         const NSUInteger entry = [path indexOfObject:@(fish)], steps = path.count ? path.count - 1 : 0;
         NSUInteger entries = 0;
@@ -103,6 +110,7 @@ static void FishSessionTests() {
     Tick(session,engine,Frame()); [session queueRead];
     for (unsigned i = 0; i < 2000 && ![session.snapshot[@"phase"] isEqual:@"stopped"]; ++i) Tick(session,engine,Frame());
     NSArray *attempts = session.snapshot[@"searchTrace"][@"candidateAttempts"];
+    CheckSearchAttemptTrace(session.snapshot[@"searchTrace"]);
     Check([session.snapshot[@"phase"] isEqual:@"stopped"] && ![session.snapshot[@"canExecute"] boolValue] && !engine->stages &&
         attempts.count && ![[attempts valueForKey:@"fishColor"] containsObject:@0],
         "a spinner table without the wanted colour never attempts to fish it");
