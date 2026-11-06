@@ -1,5 +1,10 @@
 # Android 開發與待驗證
 
+## 2026-11-06：共用 solver 本機形狀模擬完成
+
+- 使用者授權本機編譯模擬，不打包、不啟動 CI。`084f2c7` Windows 共用 C/C++ model／solver 回歸通過，五色原盤與兩變體達到 5／5。828 個已知解形狀盤在 48／512／800 全過；窄 beam 有 7 個未逾時漏解，加時間無效，詳見 [形狀本機模擬](../../ios/docs/solver-shapes-2026-11-06.md)。結果是構造資料覆蓋，不能當實戰成功率。
+- 本輪只新增研究工具、匿名盤面及分析證據，沒有改產品求路器。沒有重建 Android APK／ABI 核心，也未操作裝置；Windows 結果不驗證 Android ABI、即時接入或 iOS Session。既有 0.1.1-probe 與 `E:/ipa` 交付不變。下面「尚未建置」是上批歷史，共用 C/C++ 本機驗證以上述為準，其餘待驗證保留。
+
 ## 2026-11-06：共用五色 solver 新來源，尚未建置
 
 - 使用者回到 solver 並要求優化 iOS 五色失敗 log。共用 `ios/src/PHOrbSolver.cpp` 新增無轉轉、非撈珠、非活動盤面的普通多色目標補搜、距離提示及缺色／布局多樣性，明確要求 `!board.spinnerMask && fishCell < 0`，所有轉轉都排除。iOS Session 另調整逾時重試與逐次統計；詳見 [五色求路來源紀錄](../../ios/docs/solver-colors-2026-11-06.md)。主搜尋排序／NearColor 不變，新增 ColorGuidance 才依首消限定選取已達色罩。一次 recovery／兩份 frontier 使普通無荊棘最多四輪，既有荊棘 no-contact 搜尋可能為第五輪；距離表、時鐘與尾部排序有成本，沒有宣稱性能不變。
