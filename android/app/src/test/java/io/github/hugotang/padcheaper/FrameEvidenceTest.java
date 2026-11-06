@@ -6,6 +6,24 @@ import static org.junit.Assert.*;
 public class FrameEvidenceTest {
     private final Object activity = new Object();
 
+    @Test public void codeCaptureRequiresTheOriginalFreshForegroundAndThread() {
+        FrameEvidence value = new FrameEvidence(); value.resume(activity);
+        long generation = value.beginFrame(activity);
+        assertFalse(value.snapshot().acceptsCapture(generation, 7, 100));
+        value.afterFrame(generation, 7, 100);
+        assertFalse(value.snapshot().acceptsCapture(generation, 7, 100));
+        value.afterFrame(generation, 7, 200);
+        assertTrue(value.snapshot().acceptsCapture(generation, 7, 200));
+        assertFalse(value.snapshot().acceptsCapture(generation, 8, 200));
+        assertFalse(value.snapshot().acceptsCapture(generation, 7, 2_000_000_201L));
+        value.pause(activity); value.resume(activity);
+        value.afterFrame(value.beginFrame(activity), 7, 300);
+        value.afterFrame(value.beginFrame(activity), 7, 400);
+        assertFalse(value.snapshot().acceptsCapture(generation, 7, 400));
+        value.afterFrame(value.beginFrame(activity), 8, 500);
+        assertFalse(value.snapshot().acceptsCapture(value.beginFrame(activity), 7, 500));
+    }
+
     @Test public void backgroundFramesCannotBecomeForegroundEvidence() {
         FrameEvidence value = new FrameEvidence();
         value.afterFrame(value.beginFrame(activity), 7, 100);

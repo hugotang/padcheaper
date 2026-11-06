@@ -4,6 +4,12 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：Android 第四批程式區段擷取，待編譯測試
+
+- 使用者要求「繼續」，新增固定不可寫程式區段的明確手動擷取、雙次內容／映射核對、前景／程序／時限及成對匯出，為 IDA 定位 Android 只讀盤面準備證據。詳見 [Android 開發紀錄](../../android/docs/development.md) 與 [擷取說明](../../android/docs/runtime-code-capture.md)。
+- 本批尚未編譯、跑測試、安裝或取得 runtime code；新增案例不代表已通過。只讀查詢時 PAD 主程序未執行，沒有啟動或停止遊戲。盤面 layout／操作旗標仍為 false；既有 0.1.0-probe 驗證與交付不涵蓋本批，iOS 產品來源與手動 CI 不變。
+- 已完成 Java parse／type analysis、兩種 ABI 的 C++ syntax-only、Python AST、JSON／文件連結、原版 512-byte metadata 與差異檢查。這些是靜態檢查，尚未產生或交付新 APK。
+
 ## 2026-11-06：Android 0.1.0-probe 接入編譯測試完成
 
 - 延續使用者明確的 Android「編譯測試」與中斷聊天；雙 ABI APK、Java 12 個案例、Python 7 個案例、Windows 共用求路器回歸及模擬器 x86_64 原生解析器均通過。最後產品來源、APK、首次擷取／返回前景／完整重開三份紀錄一致，詳見 [Android 版本驗證紀錄](../../android/docs/release-0.1.0-probe.md)。

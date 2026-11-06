@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "date": "2026-11-06",
+  "scope": "source-only fixed code capture preparation; no runtime capture or board layout verified",
+  "sourceBaseline": "38d6f54",
+  "game": {
+    "package": "jp.gungho.pad",
+    "versionName": "23.6.0",
+    "versionCode": 230600,
+    "librarySha256": "fec9fbc55d3a9b7945817420475a8c03fa608ecc4605535e373ca2d0fc738a8a",
+    "libraryBytes": 30735496,
+    "headerBytes": 512,
+    "headerSha256": "4d1fef531ae14a6d2c12b368b02ced94cab841d365a17554ceb94c09e430f55e",
+    "programHeaderOffset": 64,
+    "programHeaderBytes": 56,
+    "programHeaderCount": 8
+  },
+  "fixedCapture": {
+    "programHeaderIndex": 1,
+    "type": "PT_LOAD",
+    "elfFlags": "PF_R|PF_X",
+    "fileOffset": 0,
+    "virtualAddress": 0,
+    "fileBytes": 17295152,
+    "memoryBytes": 17295152,
+    "alignment": 16384,
+    "mappingRequirements": ["readable", "non-writable", "same-path-device-inode", "continuous", "matching-file-offset"],
+    "nativeSecondsLimit": 10,
+    "requestSecondsLimit": 30,
+    "chunkBytes": 65536,
+    "passes": 2,
+    "notFullElfFile": true,
+    "unpackedCodeVerified": false
+  },
+  "idaStaticInspection": {
+    "input": "exact original libpad.so database",
+    "recognizedFunctions": 25986,
+    "matchedBoardAnchorNames": [],
+    "textStart": "0x552960",
+    "textEnd": "0x104aedc",
+    "textFirst1024Sha256": "85c028150a6f7f7005626984307cf2ffb129345efdb384a70523b8eb242762db",
+    "referenceOnlySpotChecksWithoutRecognizedFunction": ["0x6d08d8", "0x96d6c4"],
+    "meaning": "Static function discovery and absent names do not verify decoded runtime code or board offsets."
+  },
+  "reference": {
+    "repository": "E:/PADhelper",
+    "commit": "0a77821df2d8b86184fc7946948c5282e0e62193",
+    "file": "app/src/main/cpp/native_probe.c",
+    "semanticAnchorsOnly": ["getBoardWidth", "setBurBlockFlag", "_checkFlood", "calcBlocks", "getNearestBlock"],
+    "offsetsAccepted": false,
+    "issues": ["base finder requires executable mapping absent on observed Houdini target", "sBLOCK+0x12 interpretation must be verified from Android readers and writers", "reference direct dereferences do not validate full field ranges"]
+  },
+  "deviceObservation": {"serial": "emulator-5568", "mainProcessRunningAtQuery": false, "gameStartedOrStopped": false},
+  "staticChecks": {
+    "java": "parse and type analysis; no product class generated",
+    "native": ["NDK arm64 syntax-only", "NDK x86_64 syntax-only"],
+    "python": "AST parsing only; nine new offline cases not executed",
+    "configuration": "JSON duplicate keys, 24 documentation links, whitespace, exact original 512-byte ELF metadata"
+  },
+  "productBuilt": false,
+  "testSuitesRun": false,
+  "moduleInstalled": false,
+  "runtimeCodeObtained": false,
+  "runtimeLayoutVerified": false,
+  "boardReadEnabled": false,
+  "actionsEnabled": false,
+  "deviceVerified": false
+}

@@ -84,8 +84,22 @@ final class ProbeController {
             "\n本次前景曾切換繪製執行緒：" + state.threadChanged + "\n\n" + lastMessage +
             "\n\n目前只提供接入診斷，讀盤、轉珠、技能與換隊尚未開放。";
         dialog = new AlertDialog.Builder(current).setTitle("PADCheaper 接入診斷").setMessage(message)
-            .setPositiveButton(checking.get() ? "擷取中" : "擷取接入狀態", (dialog, which) -> capture(current))
+            .setPositiveButton(checking.get() ? "擷取中" : "擷取接入狀態", (dialog, which) -> capture(current, false))
+            .setNeutralButton("擷取程式資料", (dialog, which) -> confirmCodeCapture(current))
             .setNegativeButton("關閉", null).create();
+        dialog.show();
+    }
+
+    private void confirmCodeCapture(Activity current) {
+        if (!ownProcess() || activity.get() != current || current.isFinishing() || current.isDestroyed() ||
+            !frames.snapshot().foreground || checking.get()) return;
+        dismissDialog();
+        dialog = new AlertDialog.Builder(current).setTitle("擷取盤面接入研究資料")
+            .setMessage("擷取目前版本固定的程式區段，約 16.5 MiB，用於定位盤面讀取。\n\n" +
+                "請保持遊戲在前景；資料會保存在遊戲私有目錄，之後由電腦端工具匯出。" +
+                "這個動作只收集程式資料，尚不能讀盤或轉珠。")
+            .setPositiveButton("開始擷取", (dialog, which) -> capture(current, true))
+            .setNegativeButton("取消", null).create();
         dialog.show();
     }
 
@@ -101,16 +115,17 @@ final class ProbeController {
         }
     }
 
-    private void capture(Activity current) {
+    private void capture(Activity current, boolean runtimeCode) {
         if (!ownProcess() || activity.get() != current || !frames.snapshot().foreground ||
             !checking.compareAndSet(false, true)) return;
         Context context = current.getApplicationContext();
+        FrameEvidence.Snapshot requestedState = frames.snapshot();
         WeakReference<Activity> requestedBy = new WeakReference<>(current);
         // Explicit, finite user request. Hashing and disk I/O never run on a game frame.
         Thread worker = new Thread(() -> {
             try {
                 if (!ownProcess()) return;
-                lastMessage = capture.run(context, frames);
+                lastMessage = capture.run(context, frames, runtimeCode, requestedState.generation, requestedState.threadID);
             } catch (Throwable error) {
                 lastMessage = "擷取未完成：" + error.getClass().getSimpleName() + " · " + error.getMessage();
                 Log.e("PADCheaper", "read-only probe failed", error);

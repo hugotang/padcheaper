@@ -1,5 +1,14 @@
 # Android 開發與待驗證
 
+## 2026-11-06：第四批，盤面研究的固定程式區段擷取，待編譯測試
+
+- 使用者要求「繼續」。先核對原版 ELF 與 IDA 資料庫；參考專案的盤面名稱／偏移沒有本版執行期證據，基址算法也不適用已觀察的 Houdini r--p 映射。新增 [程式區段擷取](runtime-code-capture.md) 與研究摘要，未移植未核對的 board offset。
+- 診斷頁新增明確手動「擷取程式資料」，獨立 schema 1 報告及 UUID binary。限定原版第一個不可寫 PT_LOAD 的 17,295,152 bytes，精確 header／program headers、映射來源／完整範圍、双次讀取一致性與十秒 native 上限；Java 核對原前景／thread／程序與三十秒請求上限，暫存容量最多三份。
+- 分階段保存，sync 並回讀精確 JSON 後才保留成功 binary；發布判斷與報告使用同一 terminal frame snapshot，失敗不保留本次可用影像。原 20-byte 接入診斷保持独立，沒有自動擷取、權限變更、遊戲狀態寫入或 ARM 函式呼叫。
+- 新增只讀電腦端工具，核對目前程序、已安裝 APK、來源／payload、報告與 binary 的 header／hash；传輸後重核對，成對發布到新的本機目錄，失敗不接受 binary。新增 C++／Java／Python 案例待執行。
+- 整合後 Java 主程式／案例的 parse＋type analysis 通過，未產生產品 class；NDK arm64／x86_64 對新 native helper、JNI 與案例的 syntax-only 通過。Python AST、JSON 重複鍵、24 個文件連結、精確 512-byte 原版 metadata 與差異空白檢查完成。新增 Python 9 個案例及 Java／C++ 案例均未執行；native 十秒限制是每個有限區塊間檢查 deadline，不宣稱可強行中斷阻塞的系統呼叫。
+- 本輪只讀查詢時 PAD 主程序未執行；沒有啟動／停止遊戲、取得 runtime dump、安裝或修改 LSPosed。**本批尚未編譯／跑測試／裝機；0.1.0-probe 的通過紀錄不驗證本批來源，E:/ipa 交付檔保持不變。** Android 讀盤、求路接入、技能及操作仍未完成。
+
 ## 2026-11-06：0.1.0-probe 集中編譯測試完成
 
 - 延續使用者明確「編譯測試」的工作。上個聊天在整理交付時中斷；本次重新核對產品來源、最後 APK 與三份成功擷取紀錄完全一致，沒有變更已測產品來源或重跑已通過的套件。以下三批「尚未執行」是當時的歷史，最終結果以本節及 [版本驗證紀錄](release-0.1.0-probe.md) 為準。

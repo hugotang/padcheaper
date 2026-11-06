@@ -6,6 +6,8 @@
 
 Java 12 個案例、Python 7 個案例、Windows 共用求路器回歸及模擬器 x86_64 原生解析器測試通過。這些結果只驗證接入原型；OpenGL／Vulkan 分別實測、程序內 Activity 重建、arm64 真機、載入失敗介面與多人隔離仍待驗證。最終 APK 身分、證據及限制見 [0.1.0-probe 驗證紀錄](docs/release-0.1.0-probe.md)。
 
+後續第四批來源已新增 [固定程式區段擷取](docs/runtime-code-capture.md)，用於取得定位 Android 盤面的執行期證據；**尚未編譯測試或安裝**。已交付 0.1.0-probe 的通過結果與 APK 不包含這批功能。
+
 ## 裝置與目標
 
 - 使用者指定 `emulator-5568`，Android 15／API 35、KernelSU；已觀察 Zygisk Next 1.4.2 與 LSPosed 2.1.0 (7769)，其 framework.dex 含 libxposed API 102。
@@ -35,6 +37,8 @@ Gradle wrapper 使用官方 8.13 檔案並固定 distribution checksum，來源�
 ## 診斷與共用核心
 
 原生診斷只讀 `/proc/self/maps`，再以 `process_vm_readv` 讀取經映射範圍核對的 ELF header 20 bytes，不讀帳號資料／heap，不呼叫 ARM 遊戲函式，也不改變權限來補救讀取失敗。早期開啟 `/proc/self/mem` 令測試遊戲程序退出，已改用上述有限範圍讀取並完成重測。Houdini 下 ARM 段可能只有 r--p；有無可執行頁只記錄事實。
+
+第四批的新「擷取程式資料」是另一個明確手動操作，限定已核對 ELF 第一個不可寫 PT_LOAD，約 16.5 MiB；需前景／程序身分與映射／雙次內容一致，僅產生程式研究檔，仍不讀盤面。此新路徑待下次集中編譯與裝機驗證。
 
 `libraryArtifactMatched` 指磁碟上的 libpad 與此次版本一致；`arm64-image-observed` 只代表映射 ELF machine 可讀。兩者均不證明執行期解碼、盤面、模式或函式可呼叫。相應旗標固定 false。
 

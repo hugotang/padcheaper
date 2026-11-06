@@ -1,4 +1,5 @@
 #include "LibraryInventory.h"
+#include "RuntimeCodeCapture.h"
 #include <jni.h>
 #include <string>
 
@@ -12,5 +13,19 @@ Java_io_github_hugotang_padcheaper_NativeBridge_inspectLibrary(JNIEnv *env, jcla
         return env->NewStringUTF(json.c_str());
     } catch (...) {
         return env->NewStringUTF("{\"status\":\"native-inspection-failed\"}");
+    }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_io_github_hugotang_padcheaper_NativeBridge_captureRuntimeCode(JNIEnv *env, jclass, jint outputFd) {
+    const auto result = padcheaper::CaptureRuntimeCode(outputFd);
+    try {
+        const std::string json = "{\"status\":\"" + std::string(result.status) + "\",\"capturedBytes\":" +
+            std::to_string(result.capturedBytes) + ",\"fileOffset\":0,\"virtualAddress\":0,\"elfMachine\":183" +
+            ",\"stableRead\":" + (result.stableRead ? "true" : "false") +
+            ",\"mappingsStable\":" + (result.mappingsStable ? "true" : "false") + "}";
+        return env->NewStringUTF(json.c_str());
+    } catch (...) {
+        return env->NewStringUTF("{\"status\":\"code-result-unavailable\"}");
     }
 }

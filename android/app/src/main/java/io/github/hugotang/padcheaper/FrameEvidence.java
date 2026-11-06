@@ -74,5 +74,10 @@ final class FrameEvidence {
             return generationCount < 2 || threadChanged || duration <= 0 ? 0 :
                 (generationCount - 1) * 1_000_000_000.0 / duration;
         }
+
+        boolean acceptsCapture(long requestedGeneration, long requestedThread, long now) {
+            return generation == requestedGeneration && threadID == requestedThread && threadID > 0 &&
+                generationCount >= 2 && "observed".equals(status(now));
+        }
     }
 }

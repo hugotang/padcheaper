@@ -1,4 +1,6 @@
 {
-  global: Java_io_github_hugotang_padcheaper_NativeBridge_inspectLibrary;
+  global:
+    Java_io_github_hugotang_padcheaper_NativeBridge_inspectLibrary;
+    Java_io_github_hugotang_padcheaper_NativeBridge_captureRuntimeCode;
   local: *;
 };

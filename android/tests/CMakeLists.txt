@@ -7,3 +7,9 @@ add_executable(library_inventory_tests library_inventory_tests.cpp "${READER}/Li
 target_include_directories(library_inventory_tests PRIVATE "${READER}")
 target_compile_options(library_inventory_tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
 add_test(NAME library_inventory_tests COMMAND library_inventory_tests)
+
+add_executable(runtime_code_capture_tests runtime_code_capture_tests.cpp
+    "${READER}/RuntimeCodeCapture.cpp" "${READER}/LibraryInventory.cpp")
+target_include_directories(runtime_code_capture_tests PRIVATE "${READER}")
+target_compile_options(runtime_code_capture_tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME runtime_code_capture_tests COMMAND runtime_code_capture_tests)
