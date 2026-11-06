@@ -1,0 +1,648 @@
+{
+  "schema": 1,
+  "date": "2026-11-06",
+  "sourceBaseline": "7f66fc8",
+  "status": "partial-static-board-layout-evidence",
+  "target": {
+    "package": "jp.gungho.pad",
+    "versionName": "23.6.0",
+    "versionCode": 230600,
+    "gameABI": "arm64-v8a",
+    "observedPayloadABI": "x86_64",
+    "originalLibrarySha256": "fec9fbc55d3a9b7945817420475a8c03fa608ecc4605535e373ca2d0fc738a8a",
+    "captureSha256": "43d41b01f7252f269bb3f9728688c12a6c0889a3bb51b71d09f0a81a09248109"
+  },
+  "scope": "Offline IDA inspection of the previously captured immutable segment. No new device reads, native calls or runtime board obtained.",
+  "input": {
+    "captureBytes": 17295152,
+    "loadVA": 0,
+    "endExclusive": "0x107e730",
+    "metadataSource": "hash-checked original ELF sections; function names, values and bytes read from runtime capture",
+    "capturedDynamicSymbolEntries": 29095,
+    "definedFunctionSymbolsWhollyCaptured": 23946,
+    "functionCountIsNotValidation": true
+  },
+  "database": {
+    "analysisCopy": "build/android/ida-board-20261106/runtime-board.i64",
+    "preservedImport": "build/android/ida-0.1.1/capture-01/runtime-code.bin.i64",
+    "processor": "AArch64",
+    "addressBits": 64,
+    "byteOrder": "little",
+    "manualFunctions": 17,
+    "autoAnalysisAfterExplicitDisable": false,
+    "reopenCaveat": "open_database re-enabled auto analysis on this copy despite the prior saved disabled state; zero functions and exact bytes/range were rechecked before explicit disable and targeted marking. Always recheck on reopen.",
+    "uncapturedRangesMapped": false,
+    "bytesPatched": false,
+    "macroInstructionNote": "IDA may combine consecutive MOV/MOVK words into an 8-byte pseudo instruction. Marking advances by instruction size; duplicate tail displays are not separate instructions.",
+    "decompilerNote": "Pseudocode is secondary. Unresolved PLT/GOT may produce incorrect signatures and a local-variable allocation warning in __initBlocks. Layout evidence uses the cited instructions."
+  },
+  "anchors": [
+    {
+      "purpose": "board-width",
+      "symbol": "_ZNK9sGAMEWORK13getBoardWidthEv",
+      "symbolIndex": 24717,
+      "address": "0x6af034",
+      "bytes": 16,
+      "functionSha256": "1837d76890da91ef66de3ef85d88864b8e94e687d186bc6e3bfb499d76e4162d",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 4,
+      "sites": [
+        {
+          "address": "0x6af034",
+          "instruction": "ADRP            X8, #0x10E3000"
+        },
+        {
+          "address": "0x6af038",
+          "instruction": "LDR             X8, [X8,#0x4C8]"
+        },
+        {
+          "address": "0x6af03c",
+          "instruction": "LDRSB           W0, [X8,#0x70]"
+        },
+        {
+          "address": "0x6af040",
+          "instruction": "RET"
+        }
+      ]
+    },
+    {
+      "purpose": "board-height",
+      "symbol": "_ZNK9sGAMEWORK14getBoardHeightEv",
+      "symbolIndex": 24153,
+      "address": "0x6af044",
+      "bytes": 16,
+      "functionSha256": "a833dfab8c594d92879056f15b2034d8d443a030ac252bf2f3de6f4747b551e5",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 4,
+      "sites": [
+        {
+          "address": "0x6af044",
+          "instruction": "ADRP            X8, #0x10E3000"
+        },
+        {
+          "address": "0x6af048",
+          "instruction": "LDR             X8, [X8,#0x4C8]"
+        },
+        {
+          "address": "0x6af04c",
+          "instruction": "LDRSB           W0, [X8,#0x71]"
+        },
+        {
+          "address": "0x6af050",
+          "instruction": "RET"
+        }
+      ]
+    },
+    {
+      "purpose": "table-reader",
+      "symbol": "_ZNK9cGAMEMAIN14_getBlockIndexEPK6sBLOCK",
+      "symbolIndex": 3812,
+      "address": "0x928a8c",
+      "bytes": 108,
+      "functionSha256": "5a49d5fb36dae9d974e9f6ed5e726fe96e6497d1cf563bd3f160251ba7294b30",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 27,
+      "sites": [
+        {
+          "address": "0x928a8c",
+          "instruction": "LDRSB           X8, [X0,#0x71]"
+        },
+        {
+          "address": "0x928a98",
+          "instruction": "LDR             X12, [X0,#0x88]"
+        },
+        {
+          "address": "0x928a9c",
+          "instruction": "LDRSB           X11, [X0,#0x70]"
+        },
+        {
+          "address": "0x928aa8",
+          "instruction": "ADD             X12, X12, #0xA3,LSL#12"
+        },
+        {
+          "address": "0x928aac",
+          "instruction": "ADD             X12, X12, #0x558"
+        },
+        {
+          "address": "0x928ab8",
+          "instruction": "ADD             X9, X9, #0x10"
+        },
+        {
+          "address": "0x928ad4",
+          "instruction": "LDR             X14, [X12,X0,LSL#3]"
+        }
+      ]
+    },
+    {
+      "purpose": "raw-type-reader",
+      "symbol": "_ZNK9cGAMEMAIN15_countBlockTypeEi",
+      "symbolIndex": 849,
+      "address": "0x6c30dc",
+      "bytes": 404,
+      "functionSha256": "e679c99e708dd3baa244f528a98c865290efbd225f2390a9997944e16115443f",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 100,
+      "sites": [
+        {
+          "address": "0x6c31c0",
+          "instruction": "LDRSB           W3, [X3]"
+        },
+        {
+          "address": "0x6c31c4",
+          "instruction": "LDRSB           W4, [X4]"
+        },
+        {
+          "address": "0x6c31c8",
+          "instruction": "CMP             W3, W19"
+        },
+        {
+          "address": "0x6c322c",
+          "instruction": "LDRSB           W2, [X2]"
+        },
+        {
+          "address": "0x6c3230",
+          "instruction": "CMP             W2, W19"
+        }
+      ]
+    },
+    {
+      "purpose": "flag-writer",
+      "symbol": "_ZN9sGAMEWORK15setBurBlockFlagEii",
+      "symbolIndex": 17744,
+      "address": "0x6af054",
+      "bytes": 88,
+      "functionSha256": "fa7e8eba7b2a03898ed64018695d3d86ad0141353623c43b9df9d50ec0115641",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 20,
+      "sites": [
+        {
+          "address": "0x6af054",
+          "instruction": "ADD             W8, W1, W2,LSL#4"
+        },
+        {
+          "address": "0x6af058",
+          "instruction": "MOV             W9, #0xA3558"
+        },
+        {
+          "address": "0x6af060",
+          "instruction": "ADD             X8, X0, W8,SXTW#3"
+        },
+        {
+          "address": "0x6af064",
+          "instruction": "LDR             X8, [X8,X9]"
+        },
+        {
+          "address": "0x6af068",
+          "instruction": "LDRB            W9, [X8]"
+        },
+        {
+          "address": "0x6af06c",
+          "instruction": "LDR             W10, [X8,#4]"
+        },
+        {
+          "address": "0x6af074",
+          "instruction": "ORR             W9, W10, #0x80000"
+        },
+        {
+          "address": "0x6af07c",
+          "instruction": "STR             W9, [X8,#4]"
+        }
+      ]
+    },
+    {
+      "purpose": "state-reader",
+      "symbol": "_ZN9cGAMEMAIN11_checkFloodEiiiRi",
+      "symbolIndex": 25328,
+      "address": "0x928af8",
+      "bytes": 428,
+      "functionSha256": "0f81844c12a9075419e940f9e0fe468f0f13a4cc5e5252bf2edde2c8eab37a98",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 104,
+      "sites": [
+        {
+          "address": "0x928b0c",
+          "instruction": "LDR             X8, [X0,#0x88]"
+        },
+        {
+          "address": "0x928b18",
+          "instruction": "ADD             X8, X8, #0xA3,LSL#12"
+        },
+        {
+          "address": "0x928b20",
+          "instruction": "ADD             X8, X8, #0x558"
+        },
+        {
+          "address": "0x928b24",
+          "instruction": "LDR             X10, [X8,W9,SXTW#3]"
+        },
+        {
+          "address": "0x928b28",
+          "instruction": "LDRH            W9, [X10,#0x12]"
+        },
+        {
+          "address": "0x928b2c",
+          "instruction": "CMP             W9, #6"
+        },
+        {
+          "address": "0x928b4c",
+          "instruction": "STRH            W11, [X10,#0x14]"
+        }
+      ]
+    },
+    {
+      "purpose": "swap-state-writer",
+      "symbol": "_ZN9cGAMEMAIN14_swapBlockMainEP6sBLOCKS1_",
+      "symbolIndex": 25530,
+      "address": "0x93cda8",
+      "bytes": 952,
+      "functionSha256": "21c1002845cf2249d01aeff6e7f217507f9163cb87652f3624d216c85f91d7bf",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 236,
+      "sites": [
+        {
+          "address": "0x93cde4",
+          "instruction": "LDRH            W8, [X2,#0x1C]"
+        },
+        {
+          "address": "0x93cde8",
+          "instruction": "LDRH            W9, [X1,#0x1C]"
+        },
+        {
+          "address": "0x93cdf4",
+          "instruction": "STRH            W8, [X2,#0x20]"
+        },
+        {
+          "address": "0x93cdf8",
+          "instruction": "STRH            W9, [X2,#0x1C]"
+        },
+        {
+          "address": "0x93ce24",
+          "instruction": "MOV             W9, #3"
+        },
+        {
+          "address": "0x93ce30",
+          "instruction": "STRH            W9, [X2,#0x12]"
+        },
+        {
+          "address": "0x93cf40",
+          "instruction": "ASR             X10, X17, #0x20 ; ' '"
+        },
+        {
+          "address": "0x93cf44",
+          "instruction": "ADD             X9, X9, W11,SXTW#3"
+        },
+        {
+          "address": "0x93cf48",
+          "instruction": "MOV             W11, #0xA3558"
+        },
+        {
+          "address": "0x93cf50",
+          "instruction": "STR             X19, [X9,X11]"
+        },
+        {
+          "address": "0x93cf54",
+          "instruction": "LDR             X9, [X20,#0x88]"
+        },
+        {
+          "address": "0x93cf58",
+          "instruction": "ADD             X9, X9, X10,LSL#3"
+        },
+        {
+          "address": "0x93cf64",
+          "instruction": "STR             X21, [X9,X11]"
+        }
+      ]
+    },
+    {
+      "purpose": "animation-state-clear",
+      "symbol": "_ZN9cGAMEMAIN11_calcBlocksEv",
+      "symbolIndex": 18284,
+      "address": "0x6be21c",
+      "bytes": 4144,
+      "functionSha256": "849f1235d88c7acb604196d4d1c16c5c0d2a71977bd12776b070b5817897dc0b",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 998,
+      "sites": [
+        {
+          "address": "0x6be2b0",
+          "instruction": "STRB            W9, [X19,#0x70]"
+        },
+        {
+          "address": "0x6be2c4",
+          "instruction": "STRB            W8, [X19,#0x71]"
+        },
+        {
+          "address": "0x6bead8",
+          "instruction": "LDRH            W8, [X21,#0x12]"
+        },
+        {
+          "address": "0x6beadc",
+          "instruction": "AND             W8, W8, #0xFFFE"
+        },
+        {
+          "address": "0x6beae0",
+          "instruction": "CMP             W8, #4"
+        },
+        {
+          "address": "0x6beae4",
+          "instruction": "B.EQ            loc_6BEAF8"
+        },
+        {
+          "address": "0x6beae8",
+          "instruction": "LDP             S1, S0, [X21,#0x24]"
+        },
+        {
+          "address": "0x6beaec",
+          "instruction": "FCMP            S0, S1"
+        },
+        {
+          "address": "0x6beaf0",
+          "instruction": "B.NE            loc_6BEAF8"
+        },
+        {
+          "address": "0x6beaf4",
+          "instruction": "STRH            WZR, [X21,#0x12]"
+        }
+      ]
+    },
+    {
+      "purpose": "pool-table-initializer",
+      "symbol": "_ZN9cGAMEMAIN12__initBlocksEv",
+      "symbolIndex": 19388,
+      "address": "0x923f58",
+      "bytes": 2928,
+      "functionSha256": "29769b2770c67a303dae90b72a3058b09a17471b0a3cf9eaec53ca72b9286fe7",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 725,
+      "sites": [
+        {
+          "address": "0x9241f4",
+          "instruction": "MOV             W24, #0x8958"
+        },
+        {
+          "address": "0x9241f8",
+          "instruction": "MOV             W10, #0x3558"
+        },
+        {
+          "address": "0x924200",
+          "instruction": "MOVK            W24, #9,LSL#16"
+        },
+        {
+          "address": "0x924204",
+          "instruction": "MOVK            W10, #0xA,LSL#16"
+        },
+        {
+          "address": "0x924234",
+          "instruction": "LDR             X21, [X23,#0x88]"
+        },
+        {
+          "address": "0x924244",
+          "instruction": "ADD             X0, X8, #0xAC0"
+        },
+        {
+          "address": "0x924248",
+          "instruction": "STR             X0, [X9,X28,LSL#3]"
+        },
+        {
+          "address": "0x9242e0",
+          "instruction": "ADDS            X19, X19, #0xAC"
+        },
+        {
+          "address": "0x9242fc",
+          "instruction": "ADD             X10, X10, #0x80"
+        },
+        {
+          "address": "0x924300",
+          "instruction": "ADD             X20, X20, #0xAC0"
+        },
+        {
+          "address": "0x924318",
+          "instruction": "CMP             X9, #0x10"
+        },
+        {
+          "address": "0x9243f4",
+          "instruction": "MOV             W10, #0xAC"
+        },
+        {
+          "address": "0x924400",
+          "instruction": "MADD            X10, X8, X10, X9"
+        },
+        {
+          "address": "0x924404",
+          "instruction": "ADD             X8, X9, X8,LSL#3"
+        },
+        {
+          "address": "0x924408",
+          "instruction": "MOV             W9, #0x98958"
+        },
+        {
+          "address": "0x924410",
+          "instruction": "ADD             X20, X10, X9"
+        },
+        {
+          "address": "0x924414",
+          "instruction": "STR             X20, [X8,X21]"
+        }
+      ]
+    },
+    {
+      "purpose": "coordinate-reader",
+      "symbol": "_ZN9cGAMEMAIN16_getNearestBlockEii",
+      "symbolIndex": 5185,
+      "address": "0x9284a8",
+      "bytes": 1152,
+      "functionSha256": "b24d88ddaffc08242d82e7bdac4eba2255d3d1f36c883b76263d7abf3672f6c5",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 286,
+      "sites": [
+        {
+          "address": "0x928524",
+          "instruction": "LDRSH           W17, [X16,#0x1C]"
+        },
+        {
+          "address": "0x928528",
+          "instruction": "LDRSH           W0, [X16,#0x1E]"
+        },
+        {
+          "address": "0x92852c",
+          "instruction": "SUBS            W17, W17, W1"
+        },
+        {
+          "address": "0x928534",
+          "instruction": "SUBS            W0, W0, W2"
+        },
+        {
+          "address": "0x92853c",
+          "instruction": "ADD             W17, W0, W17"
+        },
+        {
+          "address": "0x928558",
+          "instruction": "LDR             X16, [X15]"
+        },
+        {
+          "address": "0x92855c",
+          "instruction": "LDRH            W17, [X16,#0x12]"
+        },
+        {
+          "address": "0x928560",
+          "instruction": "CMP             W17, #1"
+        },
+        {
+          "address": "0x92856c",
+          "instruction": "LDRB            W17, [X16,#4]"
+        },
+        {
+          "address": "0x928570",
+          "instruction": "TBZ             W17, #1, loc_928524"
+        }
+      ]
+    },
+    {
+      "purpose": "lock-reader",
+      "symbol": "_ZNK9cGAMEMAIN18_countLockedBlocksEv",
+      "symbolIndex": 3404,
+      "address": "0x6c601c",
+      "bytes": 140,
+      "functionSha256": "1a63cdfc5bf9456c1543f28024a73da6d98ee789437e5984056b43df9fdd0c5a",
+      "gnuHashChainMatches": true,
+      "instructionHeads": 35,
+      "sites": [
+        {
+          "address": "0x6c6034",
+          "instruction": "LDR             X11, [X8,#0x88]"
+        },
+        {
+          "address": "0x6c606c",
+          "instruction": "LDR             W14, [X14,#4]"
+        },
+        {
+          "address": "0x6c6070",
+          "instruction": "UBFX            W14, W14, #0xB, #1"
+        },
+        {
+          "address": "0x6c6084",
+          "instruction": "LDR             X14, [X13]"
+        },
+        {
+          "address": "0x6c6088",
+          "instruction": "LDRSH           W15, [X14,#0x14]"
+        },
+        {
+          "address": "0x6c608c",
+          "instruction": "CMN             W15, #1"
+        },
+        {
+          "address": "0x6c6094",
+          "instruction": "LDRB            W15, [X14,#0x10]"
+        },
+        {
+          "address": "0x6c6098",
+          "instruction": "TBZ             W15, #1, loc_6C606C"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "singletonReferenceRVA": "0x10e34c8",
+    "singletonReferenceIsCaptured": false,
+    "singletonContentsKnown": false,
+    "gameWidthOffset": "0x70",
+    "gameHeightOffset": "0x71",
+    "dimensionLoad": "signed 8-bit",
+    "implementationPointerOffset": "0x88",
+    "guestPointerBytes": 8,
+    "blockPoolOffset": "0x98958",
+    "blockStride": "0xac",
+    "blockPoolCount": 256,
+    "blockTableOffset": "0xa3558",
+    "tableIndex": "(nativeRow * 16 + nativeColumn) * 8",
+    "rowOrderOnScreenVerified": false,
+    "poolOrderIsBoardOrder": false,
+    "rawTypeOffset": "0x0",
+    "rawTypeBytes": 1,
+    "rawTypeColorMapVerified": false,
+    "flagsOffset": "0x4",
+    "flagsBytes": 4,
+    "allFlagMeaningsVerified": false,
+    "motionStateOffset": "0x12",
+    "motionStateBytes": 2,
+    "motionStateIsColor": false,
+    "floodMarkerOffset": "0x14",
+    "floodMarkerBytes": 2,
+    "centerXOffset": "0x1c",
+    "centerYOffset": "0x1e",
+    "coordinateLoad": "signed 16-bit",
+    "coordinateToScreenVerified": false
+  },
+  "implementation": {
+    "offlineDecoder": "android/app/src/main/cpp/BoardLayout.cpp",
+    "normalizedPreview": "android/app/src/main/cpp/BoardPreview.cpp",
+    "nativeRawToNormalizedBridge": false,
+    "jniOrLiveEntryPoint": false,
+    "supportedOfflineDimensions": [
+      [
+        5,
+        4
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        7,
+        6
+      ]
+    ]
+  },
+  "pending": [
+    "Current singleton value and object lifetime",
+    "Guest address access under Houdini with full copied ranges and stable frame/phase",
+    "Native row orientation and six-color mapping versus actual screen",
+    "Protected match rules, start restrictions, spinners, tape/cloud and every relevant orb flag",
+    "JNI worker and preview UI with invalidation",
+    "Build and run new offline decoder/preview tests on requested ABIs",
+    "Per-cell real device comparison before enabling board reads"
+  ],
+  "productBuilt": false,
+  "testSuitesRun": false,
+  "deviceReadPerformed": false,
+  "runtimeLayoutVerified": false,
+  "deviceVerified": false,
+  "boardReadEnabled": false,
+  "actionsEnabled": false,
+  "unpackedCodeVerified": false,
+  "staticChecks": {
+    "sourceReview": "root plus independent agent; no blocking defect found",
+    "syntaxOnly": {
+      "sources": [
+        "BoardLayout.cpp",
+        "BoardPreview.cpp",
+        "board_layout_tests.cpp",
+        "board_preview_tests.cpp"
+      ],
+      "standard": "C++17",
+      "warningPolicy": "-Wall -Wextra -Werror",
+      "hostGCC": "passed",
+      "ndk27Arm64Api26": "passed",
+      "ndk27X86_64Api26": "passed",
+      "initialNdkIssue": "range-loop copies in test fixtures triggered -Wrange-loop-construct; changed three loops to const references, then all targets passed",
+      "compiledObjectsProduced": false,
+      "testCasesExecuted": false
+    },
+    "jsonAndDocumentation": {
+      "duplicateKeys": "passed",
+      "localLinksChecked": 150,
+      "localLinks": "passed"
+    },
+    "sourceSha256": {
+      "android/app/src/main/cpp/BoardLayout.h": "e99f5cdddb825d34a8f43f08cefe3fc7607681ee69609cdef24eb3aaebda8a4e",
+      "android/app/src/main/cpp/BoardLayout.cpp": "aab65f25ae505a588e48ee913826dd281b0637e36a865ea8ab6a07c2b081938a",
+      "android/app/src/main/cpp/BoardPreview.h": "bc00601d052a3e21033e2a11d6fb716f5420865162b327470735419cfdc9e024",
+      "android/app/src/main/cpp/BoardPreview.cpp": "c70860bc5f43da99b35d56a305f7d9942d65798e67bea9d133a1023a47313cd0",
+      "android/tests/board_layout_tests.cpp": "c41467eda8dd9b87081227e17a334d0605e30cfdc32563869ed69e1a4a09ac73",
+      "android/tests/board_preview_tests.cpp": "af743d4d2b0a21e20992ae9360d7ed882f45e181bafeecef62f23faba771b656",
+      "android/tests/CMakeLists.txt": "0e3513e32bdccb06147ef2256a60d707b49f42c911d587e90e9d4791ef65a803",
+      "android/app/src/main/cpp/CMakeLists.txt": "654376981df777024ee4aa41a7429461826bedeecf94384b881569791dd4b699"
+    }
+  }
+}

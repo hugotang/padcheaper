@@ -1,5 +1,12 @@
 # Android 開發與待驗證
 
+## 2026-11-06：盤面局部布局與離線預覽來源，待編譯測試
+
+- 使用者繼續分批開發，本輪以 `7f66fc8` 為基礎研究已保存的 ARM64 程式擷取，沒有重新連接／擷取裝置。讀取 29,095 筆 dynamic symbol table entry（含空項），23,946 筆為範圍內已定義函式符號；研究摘要保存 11 個直接支持布局的讀寫入口及指令位置，只對選定入口核對 GNU hash chain。符號數不代表完整解碼或盤面驗證，詳見 [盤面布局研究](board-layout-2026-11-06.md)。
+- 已找到 game 尺寸 `+0x70/+0x71`、impl `+0x88`、`impl+0xa3558` 指標表（原生行距 16）、`impl+0x98958` 的 256×`0xac` 物件池，以及 raw 色碼 `block+0`、部分 flags／位置讀取。`block+0x12` 經交換寫 3、動畫後清零及 flood 比較 6 證實為動作／狀態，不能當色碼。全域／GOT `0x10e34c8` 不在既有擷取內，尚未取得 live game pointer。
+- 新增離線原生片段解讀與 [普通六色純資料預覽](board-preview.md) 來源。raw native 欄位不自動轉成 solver 顏色或 Ordinary；預覽拒收 Unknown／不支援效果及規則，沒有 JNI／UI／live reader 橋接。兩層 C++ 來源及兩份新案例的 Windows GCC、NDK 27／API 26 arm64／x86_64 syntax-only 通過；修正測例 range-loop 複製警告後重檢，沒有關閉警告、產生 object 或執行案例。
+- **本批尚未建置 APK／測試二進位、跑測試套件、操作裝置、派發 CI 或打包。** live 全域解析、phase／受保護資料、特殊機制、逐格畫面、Android ABI 與 JNI／UI 仍待驗證；所有 verified／enabled 旗標仍 false。上批 solver 本機通過與 0.1.1-probe 交付不涵蓋本批，`E:/ipa` 不變。
+
 ## 2026-11-06：共用形狀補搜優化，本機驗證完成
 
 - 使用者繼續授權本機優化與編譯模擬，不打包、不啟動 CI。共用 `PHOrbSolver.cpp` 在無轉轉、非撈珠、非活動的形狀 recovery／saved frontier 改用不同引導，保留主搜尋尺度比較、既有 pass／beam／時間／步數額度與安全判定。詳見 [形狀補搜修正與驗證](../../ios/docs/solver-shape-recovery-2026-11-06.md)。重新評分有額外成本，不能宣稱所有情況性能不變。
