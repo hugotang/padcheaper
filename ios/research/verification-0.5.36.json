@@ -1,0 +1,268 @@
+{
+  "schema": 1,
+  "version": "0.5.36-orbs",
+  "date": "2026-11-06",
+  "source_commit": "063f51a22c9c3e61a70681ac4e227f4ab5b333d1",
+  "game_target": "jp.gungho.pad-ios-23.6.1-107553",
+  "status": "built-tested-delivered",
+  "device_verified": false,
+  "ci": {
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/42188317616",
+    "number": 142,
+    "conclusion": "success",
+    "job_elapsed_seconds": 1444,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Show iOS SDK toolchain",
+        "conclusion": "success"
+      },
+      {
+        "name": "Validate target and run protocol tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Compile arm64 iPhoneOS dylib",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify editor save and mobile interactions",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload editor browser diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect Mach-O and signature",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload dylib and installation notes",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify floating GUI in iOS Simulator",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload GUI probe diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build summary",
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "binary": {
+    "dylib_bytes": 10660128,
+    "dylib_sha256": "7ac97cf060d17e70f32a2d72c1f08fa7e04442c3e3502a9fa2b3eaeabb32a83a",
+    "dylib_uuid": "eca5a561-2169-3375-a4f5-2404023daafc"
+  },
+  "target_verification": {
+    "guards": 456,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "executable_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "artifact_manifests_match_git": true,
+    "runtime_verified": false
+  },
+  "local": {
+    "commit": "063f51a22c9c3e61a70681ac4e227f4ab5b333d1",
+    "native_result": "native-result.json",
+    "assets_result": "assets-result.json",
+    "target_result": "target-verification.json",
+    "guard_count": 456,
+    "five_color_cases": [
+      {
+        "variant": "0",
+        "status": "0",
+        "hits": "5/5",
+        "steps": "40",
+        "elapsed_ms": "171",
+        "deadline": "0",
+        "passes": "2",
+        "backtracks": "0"
+      },
+      {
+        "variant": "1",
+        "status": "0",
+        "hits": "5/5",
+        "steps": "38",
+        "elapsed_ms": "172",
+        "deadline": "0",
+        "passes": "2",
+        "backtracks": "0"
+      },
+      {
+        "variant": "2",
+        "status": "0",
+        "hits": "5/5",
+        "steps": "43",
+        "elapsed_ms": "197",
+        "deadline": "0",
+        "passes": "2",
+        "backtracks": "0"
+      }
+    ],
+    "device_verified": false
+  },
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "gui_status_versions": "all four 0.5.36-orbs",
+  "visual_review": {
+    "source_commit": "063f51a22c9c3e61a70681ac4e227f4ab5b333d1",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42188317616",
+    "reviewed_screenshots": [
+      {
+        "artifact": "browser",
+        "path": "editor-browser/overview-320.png",
+        "sha256": "199f5e0218a67138e8b7961e64ef0a3eee5d830719ebcc3b24aa8764db30a032"
+      },
+      {
+        "artifact": "browser",
+        "path": "editor-browser/editor-keyboard-390.png",
+        "sha256": "64fb914f6901415d2ad022ac3641725c4a307039e9511d0456f252b87a94cd01"
+      },
+      {
+        "artifact": "browser",
+        "path": "editor-browser/team-dungeon-390.png",
+        "sha256": "e6d8eed95e7a0e99729b6eb13b35685257b01237743232ad82fa7c4d9ea3bea1"
+      },
+      {
+        "artifact": "gui",
+        "path": "overlay-portrait.png",
+        "sha256": "e1517549f095b24d4b1c6548a9f099c1bdaf7582b709ae079dca2cad50dcb5aa"
+      },
+      {
+        "artifact": "gui",
+        "path": "legacy-orbs-team-plan-import.png",
+        "sha256": "0690e8ebabb3e601e7df57e5e7775a4c9faa9affbbc7b39cd72b94ca75cd0590"
+      },
+      {
+        "artifact": "gui",
+        "path": "overlay-orbs-eight-auto-board.png",
+        "sha256": "48823e4a8db4a4ee115a3f55ab108ddeec4d6955bf0fe1d33940309f9f1ddea7"
+      }
+    ],
+    "observed": "Inspected narrow formation layout, focused editor input, dungeon comparison, runtime overlay, legacy plan import and 8P board preview. Synthetic guard/save failure scenarios are expected test states; four GUI reports passed.",
+    "device_verified": false
+  },
+  "browser_models": {
+    "test-result.json": {
+      "checks": 32,
+      "revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+      "recordedCurrentHP": 397834,
+      "finalHP": 409219,
+      "deviceVerified": false,
+      "survivalAuthorized": false
+    },
+    "dungeon-test-result.json": {
+      "checks": 14,
+      "privateDumpRequired": false,
+      "deviceVerified": false,
+      "enemyForecastKnown": false,
+      "survivalAuthorized": false
+    }
+  },
+  "delivery": {
+    "delivery": "E:\\ipa\\PADCheaper-0.5.36-orbs",
+    "source_commit": "063f51a22c9c3e61a70681ac4e227f4ab5b333d1",
+    "verified_files": 345,
+    "zip_entries": 346,
+    "zip_size": 62892338,
+    "zip_sha256": "4606ea102191c622b547e171e7d3329961db3269059829c504e658ddd06dd6f8",
+    "dylib_size": 10660128,
+    "dylib_sha256": "7ac97cf060d17e70f32a2d72c1f08fa7e04442c3e3502a9fa2b3eaeabb32a83a",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42188317616",
+    "device_verified": false
+  },
+  "evidence": [
+    {
+      "file": "native.log",
+      "sha256": "19d7672623bb482ed185d90aa352d7d5a0383cb50a253cf86f48cd3d2c06e494"
+    },
+    {
+      "file": "native-result.json",
+      "sha256": "66ac1051f0954e4a526448cca2edaf002520295ae23078f8cb4a0624e631414e"
+    },
+    {
+      "file": "assets.log",
+      "sha256": "8cf2a51ea9581a13f9a9214f129f736a0a3aa8d35512d258971470f113aead6e"
+    },
+    {
+      "file": "assets-result.json",
+      "sha256": "691c0794a4a69def80873e8ad091a093705ccd179a5f5e903bea6b12eabfaf06"
+    },
+    {
+      "file": "local-summary.json",
+      "sha256": "3313220d0bf2f92d7ce4f2f01d809877226d94fb02b48d834c2e762a72580997"
+    },
+    {
+      "file": "target-verification.json",
+      "sha256": "05f8846f605a91cb8878b8ba6efdb81f433ab19bf9a6c7a0405b994df19477b5"
+    },
+    {
+      "file": "ci-artifact-verification.json",
+      "sha256": "491cc7225d0a6f216ed0512a3e0eca15fe921de6ebe7042a8744e50b6cd21d4d"
+    },
+    {
+      "file": "visual-review.json",
+      "sha256": "1b9ada1183e5ba74214a62d061cea7cff691e3a2caa53e2f4d143d4785a5ef96"
+    },
+    {
+      "file": "delivery-verification.json",
+      "sha256": "a53ec31ca4c83f3f464ea3f63d840f6e9c88704303369dbe189cf4dcc6828189"
+    },
+    {
+      "file": "run-142/ci-run.json",
+      "sha256": "2b5933f070748225018f47867e12ebd3337709378caee2dfdb33830fe80c5b42"
+    },
+    {
+      "file": "run-142/ci-run.log",
+      "sha256": "a936fb7c71d1debf1c043b0ae4f23f735de0c6ad896c6cbd80e6737dc9eda64b"
+    }
+  ],
+  "evidence_location": "build/verify-0.5.36; main logs and verification are also in the immutable delivery",
+  "limitations": [
+    "No live PAD/iPhone login, battle mutation, skills or multiplayer synchronization was tested.",
+    "GUI probes use fixtures; four passing launches do not establish game-server acceptance.",
+    "Packaged documentation retains the build-time snapshot. Completion notes were added afterward without rebuilding or changing the delivery.",
+    "Windows/macOS five-color timing cannot be interpreted as device latency."
+  ]
+}

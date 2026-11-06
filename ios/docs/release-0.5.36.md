@@ -7,7 +7,9 @@
 
 ## 驗證與使用
 
-本輪已獲使用者明確授權編譯測試。執行本機可用的回歸及手動 macOS CI，涵蓋完整原生／Session／solver／設定／編隊、iPhoneOS arm64 編譯與簽章、瀏覽器及四輪 iPhone 模擬器 GUI；實際結果見 [開發紀錄](development.md) 及交付包的 verification.json。本文初稿不代表測試已通過。
+本機 solver／shape guidance／六組 C 模型、版本／隊長資料與編隊／隊伍／關卡回歸全部通過。[CI 42188317616／142](https://github.com/hugotang/padcheaper/actions/runs/42188317616) 一次全部通過，涵蓋完整 macOS 原生／Session／solver／設定／策略及編隊、iPhoneOS arm64 編譯與嚴格簽章、瀏覽器及四輪 iPhone 模擬器 GUI。來源 `063f51a22c9c3e61a70681ac4e227f4ab5b333d1`，job 用時 24 分 04 秒；456 組指紋與原始 IPA 一致。
+
+已交付新目錄及 ZIP；345 份內容雜湊、ZIP 346 個項目的 CRC 與逐檔核對全部通過。dylib SHA-256 `7ac97cf060d17e70f32a2d72c1f08fa7e04442c3e3502a9fa2b3eaeabb32a83a`，ZIP SHA-256 `4606ea102191c622b547e171e7d3329961db3269059829c504e658ddd06dd6f8`。詳見 [開發紀錄](development.md)、[交付驗證紀錄](../research/verification-0.5.36.json) 及包內 verification.json；包內說明保留建置前快照，此處為完成後補記。
 
 最低 iOS 15。換隊仍限單人，3／4 人仍只支援既有手動轉一次，8 人僅限目前一場；不自動入場、配對或再戰。`device_verified=false`：新版啟動／登入、讀盤、技能、停止後放手、單人換隊及多人同步仍須真機確認。
 
