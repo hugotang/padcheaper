@@ -7,7 +7,11 @@
 
 ## 本次驗證
 
-2026-11-07，本機 GCC 15.2.0／C++17／O2 共用 solver、形狀引導、六組 C 模型、版本／隊長資料、編隊／隊伍／關卡及瀏覽器回歸通過。兩色與六色人工盤的搜尋器都找到十步五次交換，完整重播及全色評估保留光 T、光 L、心四；時間預留仍來自人工設定。Objective-C／UIKit、iOS 建置和四份 iPhone GUI 正準備由手動 CI 驗證，此時未交付。結果會補入 [開發紀錄](development.md)。
+[CI 146](https://github.com/hugotang/padcheaper/actions/runs/42260667556) 已通過完整 macOS solver／形狀／Session／原生／設定與策略回歸、iPhoneOS arm64 編譯及嚴格簽章、瀏覽器和四份 iPhone 首次／重啟 GUI。新增潛覺／策略保存、失敗證據保留及六次離線模型的案例均已執行。
+
+本機 GCC 15.2.0／C++17／O2 solver、形狀引導、六組 C 模型、版本／隊長資料、編隊／隊伍／關卡及瀏覽器回歸通過。兩色與六色人工盤都找到十步五次木換光，各評估 152 個候選，耗時少於 1 ms；獨立完整重播、珠子身分與首消分組檢查保留光 T、光 L、心四。221／521 frames 的時間預留仍來自人工設定。Android 兩種 ABI 只完成共用核心編譯，未重建 APK 或做裝置測試。
+
+456 組指紋與 PAD 23.6.1 原始 IPA 一致。交付 `E:/ipa/PADCheaper-0.5.38-orbs` 及同名 ZIP，逐檔雜湊及 ZIP 內容核對通過；來源 `5e3921d55bdc4700e608f9dd0eb96565c5779f0b`，dylib SHA-256：`2a96eb96079ad8cb6edc6e7bac2d692b5a06b940c2f93a60b4c562ae01f80b7a`。詳見 [開發紀錄](development.md)、[驗證收據](../research/verification-0.5.38.json) 和交付 verification/。包內文件保留建置時快照，完成狀態及文件勘誤在 verification/completion.md。
 
 原本遺失的武裝回復失敗盤無法還原；人工五光盤的成功或失敗不能當作原盤結果。真機每次等待、交換確認、停止放手與多人同步仍待驗證，`device_verified=false`。
 

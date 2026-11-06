@@ -1,0 +1,432 @@
+{
+  "schema": 1,
+  "version": "0.5.38-orbs",
+  "date": "2026-11-07",
+  "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+  "status": "built-tested-delivered",
+  "game_target": "jp.gungho.pad-ios-23.6.1-107553",
+  "device_verified": false,
+  "ci": {
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/42260667556",
+    "number": 146,
+    "conclusion": "success",
+    "job_elapsed_seconds": 1211.0,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Show iOS SDK toolchain",
+        "conclusion": "success"
+      },
+      {
+        "name": "Validate target and run protocol tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Compile arm64 iPhoneOS dylib",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify editor save and mobile interactions",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload editor browser diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect Mach-O and signature",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload dylib and installation notes",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify floating GUI in iOS Simulator",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload GUI probe diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build summary",
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "failed_attempts": [],
+  "queue_attempts": [
+    {
+      "number": 145,
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/42259044661",
+      "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+      "runner": "macos-26",
+      "conclusion": "cancelled",
+      "cause": "No runner was assigned after approximately ten minutes in queued state; cancelled before any build/test step.",
+      "replacement": "https://github.com/hugotang/padcheaper/actions/runs/42260667556",
+      "replacement_runner": "macos-15"
+    }
+  ],
+  "toolchain": {
+    "runner": "macos-15-arm64",
+    "os": "macOS 15.8.2",
+    "xcode": "16.4",
+    "xcode_build": "16F6",
+    "iphoneos_sdk": "18.5",
+    "simulator": "iPhone 15 / iOS 18.5",
+    "compiler_diagnostic_warnings": 0,
+    "compiler_diagnostic_errors": 0
+  },
+  "source_snapshot_document_link_errata": [
+    {
+      "document": "formation-profile-persistence-2026-11-06.md",
+      "original_link": "../editor/editor.js#L117",
+      "corrected_source_link": "https://github.com/hugotang/padcheaper/blob/2cb8702fb272b5033b8fd3c8f2c4f69074f677a5/ios/editor/editor.js#L117",
+      "resolution": "Corrected in repository documentation and explicitly linked from verification/completion.md; CI snapshot retained unchanged."
+    }
+  ],
+  "binary": {
+    "dylib_bytes": 10757024,
+    "dylib_sha256": "2a96eb96079ad8cb6edc6e7bac2d692b5a06b940c2f93a60b4c562ae01f80b7a",
+    "dylib_uuid": "fc9385e9-c678-3f0e-850e-d4e2bc52834c"
+  },
+  "target_verification": {
+    "guards": 456,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "executable_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "runtime_verified": false
+  },
+  "local": {
+    "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+    "phases": {
+      "native": {
+        "record": "native1/result.json",
+        "log_sha256": "138b4c9f263c9bb83ab51295129d32822e88421c4a0995af366e67c18cc250d1",
+        "head_at_start": "2cb8702fb272b5033b8fd3c8f2c4f69074f677a5",
+        "matched_tracked_inputs": 312,
+        "passed": true
+      },
+      "assets": {
+        "record": "assets1/result.json",
+        "log_sha256": "6217027bed85d1a2897a18eb8595eacedb263cf98150d17d5bde13bd2b8511cb",
+        "head_at_start": "2cb8702fb272b5033b8fd3c8f2c4f69074f677a5",
+        "matched_tracked_inputs": 312,
+        "passed": true
+      },
+      "browser": {
+        "record": "browser1/result.json",
+        "log_sha256": "b82b0837e6a2ae6b6f0dea9c76b53f6c1d0b72449525700b01205f5f67c0fa0c",
+        "head_at_start": "2cb8702fb272b5033b8fd3c8f2c4f69074f677a5",
+        "matched_tracked_inputs": 312,
+        "passed": true
+      },
+      "android": {
+        "record": "android1/result.json",
+        "log_sha256": "04dc4c2c15d6e3415d594a3cc6f02c7a53c491628cfeed14574775435d018b71",
+        "head_at_start": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+        "matched_tracked_inputs": 312,
+        "passed": true
+      }
+    },
+    "device_verified": false,
+    "inputs_verified": 312,
+    "solver_log_sha256": "46c495f4ce47c81195ace1370a48a098046ab2f9da65460631fa098f6a4e8432"
+  },
+  "assist_fishing": {
+    "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+    "fixture": "synthetic five light takes, not the missing user failure board",
+    "budget_ms": 800,
+    "timing": "caller assumptions: remaining570/move2/settle8/input3/period15 frames",
+    "duration_resolution": "elapsed_ms is integer-truncated; 0 means below one millisecond, not zero cost",
+    "searches": [
+      {
+        "colors": 12,
+        "status": 0,
+        "elapsed_ms": 0,
+        "evaluated": 152,
+        "plans_searched": 1,
+        "inventory_states": 6,
+        "plans_retained": 1,
+        "deadline": false,
+        "exchange_count": 5,
+        "required_frames": 221,
+        "goals_met": true,
+        "path": [
+          7,
+          14,
+          13,
+          14,
+          19,
+          14,
+          20,
+          14,
+          21,
+          14,
+          15
+        ],
+        "exchanges": [
+          {
+            "entry": 1,
+            "exit": 2,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 3,
+            "exit": 4,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 5,
+            "exit": 6,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 7,
+            "exit": 8,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 9,
+            "exit": 10,
+            "take": 3,
+            "leave": 2
+          }
+        ],
+        "verified_colors": [
+          2,
+          3
+        ],
+        "exact_first_groups": [
+          [
+            3,
+            4,
+            5,
+            10,
+            16
+          ],
+          [
+            7,
+            13,
+            19,
+            20,
+            21
+          ],
+          [
+            24,
+            25,
+            26,
+            27
+          ]
+        ],
+        "tokens_verified": true,
+        "independent_oracle_passed": true
+      },
+      {
+        "colors": 63,
+        "status": 0,
+        "elapsed_ms": 0,
+        "evaluated": 152,
+        "plans_searched": 1,
+        "inventory_states": 91,
+        "plans_retained": 12,
+        "deadline": false,
+        "exchange_count": 5,
+        "required_frames": 521,
+        "goals_met": true,
+        "path": [
+          7,
+          14,
+          13,
+          14,
+          19,
+          14,
+          20,
+          14,
+          21,
+          14,
+          15
+        ],
+        "exchanges": [
+          {
+            "entry": 1,
+            "exit": 2,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 3,
+            "exit": 4,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 5,
+            "exit": 6,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 7,
+            "exit": 8,
+            "take": 3,
+            "leave": 2
+          },
+          {
+            "entry": 9,
+            "exit": 10,
+            "take": 3,
+            "leave": 2
+          }
+        ],
+        "verified_colors": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "exact_first_groups": [
+          [
+            3,
+            4,
+            5,
+            10,
+            16
+          ],
+          [
+            7,
+            13,
+            19,
+            20,
+            21
+          ],
+          [
+            24,
+            25,
+            26,
+            27
+          ]
+        ],
+        "tokens_verified": true,
+        "independent_oracle_passed": true
+      }
+    ],
+    "probe_sha256": "d0752da80e19197b40f43b3bb8fbbbf07f3a081ed16891d19e581c1a35448277",
+    "driver_setup_repair": "Initial standalone driver compilation lacked <iterator>; fixed before execution; product/tests unchanged.",
+    "device_verified": false,
+    "native_execution_integrated": false
+  },
+  "visual": {
+    "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+    "reviewed_screenshots": [
+      {
+        "artifact": "PADCheaper-Editor-browser-146",
+        "file": "editor-browser/overview-320.png",
+        "sha256": "255f97f098b3a8046b0420f6d6aaec5a0737963b83d1db26506dfe74a524f4f1",
+        "outcome": "Narrow formation overview: header, team picker and three tabs fit; six body/assist columns and save controls remain visible. Numbered portrait placeholders are expected in this offline browser fixture."
+      },
+      {
+        "artifact": "PADCheaper-Editor-browser-146",
+        "file": "editor-browser/editor-keyboard-390.png",
+        "sha256": "fc00a27fff09d86f0ee74d9ebdd26df641beeba957d3c37ef256fc758143c438",
+        "outcome": "Reduced viewport with focused search: return/team and body/assist controls stay readable; this is a browser viewport check, not a native software-keyboard claim."
+      },
+      {
+        "artifact": "PADCheaper-Editor-browser-146",
+        "file": "editor-browser/save-failure-390.png",
+        "sha256": "d3b71e153d62ed0fc6a70ce80633a9d68b2fbe938b3d4c0ad8c728a82b09c8e1",
+        "outcome": "Simulated write failure clearly preserves the draft and distinguishes the saved entry configuration from newer unsaved edits; save remains available."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "overlay-orbs-team-plan-import.png",
+        "sha256": "42426183713aeb5297c0a7c3decd87c76be07b21ef48cdd8a23c477e4fdfd3c4",
+        "outcome": "Scene full-plan sheet: selected strategy, new team binding explanation and persistent save control fit; injected storage failure remains visibly reported. The unbound placeholder is disabled because this fixture supplies no compatible saved team."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "overlay-orbs-team-plan-summary.png",
+        "sha256": "591d96bddeb4985c320dc3a71c115a40e95e55ca5db46098a5c0ffa8da45a876",
+        "outcome": "Scene scrolled full-plan summary: six member identities, ordered opening and cyclic rules remain readable; injected capacity failure stays above the fixed save action."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "overlay-formation-restart.png",
+        "sha256": "a0f7a27e8636262c9384fc3870a0ef84b6ceb0c0128dedee30da0e10b7d1d5da",
+        "outcome": "Scene restart: selected team B and saved-state marker return, body/assist cards remain arranged in six columns and save control remains visible."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "legacy-orbs-team-plan-import.png",
+        "sha256": "42426183713aeb5297c0a7c3decd87c76be07b21ef48cdd8a23c477e4fdfd3c4",
+        "outcome": "Legacy full-plan sheet presents the same binding explanation and injected failure status; cancel and save controls fit."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "legacy-formation-restart.png",
+        "sha256": "a0f7a27e8636262c9384fc3870a0ef84b6ceb0c0128dedee30da0e10b7d1d5da",
+        "outcome": "Legacy restart: selected team B, saved-state marker and six-member formation persist visibly."
+      },
+      {
+        "artifact": "PADCheaper-GUI-probe-146",
+        "file": "overlay-formation-focused.png",
+        "sha256": "e9d6774bc2e55548d6f2c9dfbad2ebb205b25974cdfb1c2973fc36e4b139ca02",
+        "outcome": "Focused search field and return/body/assist controls remain readable. The WKWebView snapshot clips the sheet to its reduced viewport and shows an underlying portrait row outside it; this capture pattern also appears in 0.5.37 and is not evidence of a new rendering regression or of a rendered software keyboard."
+      }
+    ],
+    "device_verified": false,
+    "complete": true,
+    "comparison_only": [
+      {
+        "version": "0.5.37-orbs",
+        "file": "verification/gui/overlay-formation-focused.png",
+        "reason": "Checked the pre-existing focused WKWebView snapshot clipping before deciding this was not a new UI regression."
+      }
+    ],
+    "method": "Direct inspection of saved CI screenshots; automation results separately verified from all four GUI reports."
+  },
+  "delivery": {
+    "delivery": "E:\\ipa\\PADCheaper-0.5.38-orbs",
+    "source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+    "verified_files": 365,
+    "zip_entries": 366,
+    "zip_size": 47578658,
+    "zip_sha256": "cba18b0480eef702f7b109a549ed66bb92e595bd29ecc360873e125dbcca9636",
+    "dylib_size": 10757024,
+    "dylib_sha256": "2a96eb96079ad8cb6edc6e7bac2d692b5a06b940c2f93a60b4c562ae01f80b7a",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42260667556",
+    "device_verified": false,
+    "original_artifact_files_unchanged": true,
+    "extra_evidence_files_verified": 21,
+    "gui_and_browser_files_match_reviewed_artifacts": true
+  },
+  "scope": {
+    "formation_profile_persistence": "configuration and UI/runtime probes passed on this CI",
+    "last_failed_search": "Session retention probes passed; memory only, no restart restoration",
+    "multi_take_native_execution": false,
+    "survival_fallback": false,
+    "android": "shared-core arm64-v8a/x86_64 compile only; no new APK or device test",
+    "live_device_validation": "pending"
+  }
+}
