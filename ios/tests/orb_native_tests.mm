@@ -467,13 +467,13 @@ int main() {
         Put<uint32_t>(state.board.tokens[0] + 4, 0x40000800);
         [engine read:&changed frame:Frame() reason:&reason];
         Check(!PHOrbCanPreview(&changed), "lock acceptance does not authorize other simultaneous orb effects");
-        Put<uint32_t>(state.board.tokens[0] + 4, 0); Put<uint16_t>(Impl + 739268, 0x401);
+        Put<uint32_t>(state.board.tokens[0] + 4, 0); Put<uint16_t>(Impl + PHOrbUnmatchableDurationOffset, 0x401);
         [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed) &&
             (PHOrbBoardObstacles(&changed) & PHOrbObstacleUnmatchable), "unmatchable duration with an invalid protected mask remains blocked and identifiable");
-        Put<uint16_t>(Impl + 739268, 0); Put<uint16_t>(Impl + 739360, 0x401);
+        Put<uint16_t>(Impl + PHOrbUnmatchableDurationOffset, 0); Put<uint16_t>(Impl + PHOrbSpinnerDurationOffset, 0x401);
         [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed) &&
             (PHOrbBoardObstacles(&changed) & PHOrbObstacleSpinner), "spinner duration without a validated layout cannot authorize a route");
-        Put<uint16_t>(Impl + 739360, 0); Put<uint16_t>(state.board.tokens[0] + 18, 3);
+        Put<uint16_t>(Impl + PHOrbSpinnerDurationOffset, 0); Put<uint16_t>(state.board.tokens[0] + 18, 3);
         [engine read:&changed frame:Frame() reason:&reason]; Check(!PHOrbCanPreview(&changed), "swap animation is not a settled board");
         Put<uint16_t>(state.board.tokens[0] + 18, 0);
         Put<uintptr_t>(Impl + PHOrbTableOffset + 65 * 8, state.board.tokens[0]);

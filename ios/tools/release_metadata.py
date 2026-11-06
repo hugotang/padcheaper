@@ -130,8 +130,9 @@ def rewrite_artifact_links(directory, commit=None):
         if commit:
             # Implementation links refer to the source actually compiled; source
             # files are not duplicated into the flattened user documentation.
-            content = content.replace("](../src/",
-                f"](https://github.com/hugotang/padcheaper/blob/{commit}/ios/src/")
+            for source_dir in ("src", "tests"):
+                content = content.replace(f"](../{source_dir}/",
+                    f"](https://github.com/hugotang/padcheaper/blob/{commit}/ios/{source_dir}/")
         notes.write_text(content, encoding="utf-8", newline="\n")
     for notes in (directory / "templates").glob("*/*.md"):
         notes.write_text(notes.read_text(encoding="utf-8").replace("](../../docs/", "](../../"),

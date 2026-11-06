@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target_id": "jp.gungho.pad-ios-23.6.1-107553",
-  "prototype_version": "0.5.34-orbs",
+  "prototype_version": "0.5.36-orbs",
   "device_verified": false,
   "provenance": "IDA comparison of workspace-extracted 23.6.0/106878 and 23.6.1/107553; new executable SHA256 3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6; see migration evidence.",
   "scope": {

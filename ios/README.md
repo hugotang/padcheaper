@@ -2,7 +2,7 @@
 
 來源版本與功能描述以 [release.json](release.json) 為準；各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，待驗證的改動見 [開發紀錄](docs/development.md)。
 
-目前來源目標：jp.gungho.pad **23.6.1／107553**，arm64。位址、結構偏移與指紋已更新，詳見 [23.6.1 地址遷移](docs/address-update-23.6.1.md)。**本批尚未編譯測試或打包**；下方歷史交付與真機回報不代表 23.6.1 已驗證。其他遊戲版本會停止安裝 hooks。
+目前來源 **0.5.36-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。位址、結構偏移與指紋已更新，並合併五色／形狀補搜及舊資料相容，詳見 [0.5.36 更新](docs/release-0.5.36.md) 與 [23.6.1 地址遷移](docs/address-update-23.6.1.md)。本輪編譯測試進度見開發紀錄；下方歷史交付與真機回報不代表 23.6.1 已驗證。其他遊戲版本會停止安裝 hooks。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
@@ -54,7 +54,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，閒置點一下展開快捷列，再點 PC 開設定，按 × 關閉面板。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示 `0.5.24-orbs`，載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示新交付包的版本號（本批為 `0.5.36-orbs`），載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 

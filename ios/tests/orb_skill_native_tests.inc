@@ -635,7 +635,9 @@ static void SkillNativeTests() {
 
     for (unsigned effect = 0; effect < 4; ++effect) {
         SkillFixture(); engine = [FixtureSkillEngine new];
-        uintptr_t durations[]{2400,2192,2256,2224}, bypass[]{739196,739156,739668,739176};
+        uintptr_t durations[]{2400,2192,2256,2224};
+        uintptr_t bypass[]{PHOrbDamageAbsorbBypassOffset,PHOrbAttributeAbsorbBypassOffset,
+                           PHOrbDamageVoidBypassOffset,PHOrbEnemyComboBypassOffset};
         uintptr_t enemy = Impl + PHOrbEnemyOffset;
         Protected(enemy + durations[effect], 2, 0x6a875a8b);
         Protected(enemy + 2176, 31, 0x6a875a8b); Protected(enemy + 2240, 31, 0x6a875a8b);
