@@ -1,9 +1,11 @@
 // Bounded iOS beam-search adaptation of the approach in pazusoba/core.
 // See ios/third_party/pazusoba/LICENSE and NOTICE.md for provenance.
 #include "PHOrbSolver.h"
+#include "PHOrbTimedFishing.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <iterator>
@@ -60,7 +62,8 @@ struct Context {
     bool diagonal = false;
     PHOrbActivityObjective activity{};
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
-    int fishColor = -1; // The fished orb adds one of this colour outside the spinner.
+    int fishColor = -1;
+    uint16_t fishColors = 0; // A displaced fixed orb must belong to this table.
     std::array<Bits, 2> runStarts{};
     // Shortest legal-cell distances, shared by all candidates. These guide
     // orb supply only; they are not a claim about a continuous drag route.
@@ -136,7 +139,10 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     context.variants = PHOrbSpinnerVariants(&board);
     context.guidance = guidance;
     context.blocked = PHOrbBlockedCells(&board);
-    if (fishCell >= 0) { context.blocked &= ~(Bits(1) << fishCell); context.fishColor = int(fishColor); }
+    if (fishCell >= 0) {
+        context.blocked &= ~(Bits(1) << fishCell); context.fishColor = int(fishColor);
+        context.fishColors = board.spinnerColors;
+    }
     context.boardMask = (Bits(1) << (w * h)) - 1;
     for (unsigned i = 0; i < w * h; ++i) {
         const Bits bit = Bits(1) << i;
@@ -244,31 +250,99 @@ unsigned Needed(const PHOrbGoal &goal, unsigned w, unsigned h) {
     }
 }
 
-bool EnoughOrbs(const Cells &cells, const Context &context, PHOrbInventoryIssue *issue = nullptr) {
+using Inventory = std::array<unsigned, PHOrbTypes>;
+
+unsigned ComboCapacity(const Inventory &inventory, const Context &context) {
+    unsigned result = 0, minimum = std::max(context.minErase, context.minMatch);
+    for (unsigned c = 0; c < PHOrbTypes; ++c)
+        if (!(context.unmatchable & (1u << c))) result += inventory[c] / minimum;
+    return result;
+}
+
+PHOrbInventoryIssue CheckInventory(const Inventory &inventory, const Context &context, unsigned phase) {
+    const auto fail = [&](PHOrbInventoryKind kind, unsigned goal, unsigned color, unsigned required, unsigned available) {
+        return PHOrbInventoryIssue{kind, goal, color, required, available, phase, context.variants};
+    };
+    for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
+        if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color])
+            return fail(PHOrbInventoryKind::ShapeOrbs, 0, color, PHOrbRequiredShapeOrbs(&context.goals, color), inventory[color]);
+    for (unsigned g = 0; g < context.goals.count; ++g) {
+        const auto &goal = context.goals.items[g];
+        if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch))
+            return fail(PHOrbInventoryKind::MatchRule, g, 0, std::max(context.minErase, context.minMatch), goal.length);
+        unsigned possible = 0, needed = std::max({Needed(goal, context.width, context.height), context.minErase, context.minMatch});
+        for (unsigned c = 0; c < PHOrbTypes; ++c)
+            if (!(context.unmatchable & (1u << c)) && (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
+                possible += goal.kind == PHOrbGoalColors ? unsigned(inventory[c] >= needed) : inventory[c] / needed;
+        if (possible < goal.count) return fail(PHOrbInventoryKind::GoalCapacity, g, 0, goal.count, possible);
+    }
+    return {};
+}
+
+struct InventoryAnalysis { PHOrbInventoryIssue issue{}; unsigned comboUpper = 0; };
+
+InventoryAnalysis InspectInventory(const Cells &cells, const Context &context) {
+    std::array<Inventory, PHOrbTypes> phases{};
+    Inventory fixed{};
+    for (unsigned i = 0; i < context.width * context.height; ++i)
+        if (!(context.dynamicSpinners & (Bits(1) << i))) ++fixed[cells[i]];
     for (unsigned phase = 0; phase < context.variants; ++phase) {
-        const auto fail = [&](PHOrbInventoryKind kind, unsigned goal, unsigned color, unsigned required, unsigned available) {
-            if (issue) *issue = {kind, goal, color, required, available, phase, context.variants};
-            return false;
-        };
-        unsigned inventory[PHOrbTypes]{};
+        phases[phase] = fixed;
         for (unsigned i = 0; i < context.width * context.height; ++i)
-            ++inventory[context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i]];
-        if (context.fishColor >= 0) ++inventory[context.fishColor]; // Necessary bound, not a route proof.
-        for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
-            if (PHOrbRequiredShapeOrbs(&context.goals, color) > inventory[color])
-                return fail(PHOrbInventoryKind::ShapeOrbs, 0, color, PHOrbRequiredShapeOrbs(&context.goals, color), inventory[color]);
+            if (context.dynamicSpinners & (Bits(1) << i)) ++phases[phase][context.spinnerStates[phase][i]];
+    }
+    InventoryAnalysis result;
+    bool possible = false, first = true, sameFailure = true;
+    const auto inspect = [&](int displaced) {
+        PHOrbInventoryIssue failure;
+        unsigned upper = context.width * context.height;
+        for (unsigned phase = 0; phase < context.variants; ++phase) {
+            auto inventory = phases[phase];
+            if (displaced >= 0) { --inventory[unsigned(displaced)]; ++inventory[unsigned(context.fishColor)]; }
+            upper = std::min(upper, ComboCapacity(inventory, context));
+            // Retain the ordinary check's first failing shared phase.
+            if (failure.kind == PHOrbInventoryKind::None) failure = CheckInventory(inventory, context, phase);
+        }
+        result.comboUpper = std::max(result.comboUpper, upper);
+        possible |= failure.kind == PHOrbInventoryKind::None;
+        if (first) { result.issue = failure; first = false; }
+        else {
+            const auto &prior = result.issue;
+            sameFailure &= prior.kind == failure.kind && prior.goal == failure.goal &&
+                prior.color == failure.color && prior.required == failure.required;
+            if (sameFailure && failure.available > prior.available) result.issue = failure;
+        }
+    };
+    inspect(-1); // Fishing is optional: an ordinary route must remain allowed.
+    if (context.fishColor >= 0) for (unsigned lost = 0; lost < PHOrbBasicTypes; ++lost)
+        if (fixed[lost] && (context.fishColors & (1u << lost))) inspect(int(lost));
+    if (possible) result.issue = {};
+    else if (context.fishColor >= 0) {
+        if (!sameFailure) result.issue = {PHOrbInventoryKind::FishingExchange, 0, 0, 0, 0, 0, context.variants};
         for (unsigned g = 0; g < context.goals.count; ++g) {
             const auto &goal = context.goals.items[g];
-            if (goal.kind == PHOrbGoalExact && (goal.length < context.minErase || goal.length < context.minMatch))
-                return fail(PHOrbInventoryKind::MatchRule, g, 0, std::max(context.minErase, context.minMatch), goal.length);
-            unsigned possible = 0, needed = std::max({Needed(goal, context.width, context.height), context.minErase, context.minMatch});
-            for (unsigned c = 0; c < PHOrbTypes; ++c)
-                if (!(context.unmatchable & (1u << c)) && (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
-                    possible += goal.kind == PHOrbGoalColors ? unsigned(inventory[c] >= needed) : inventory[c] / needed;
-            if (possible < goal.count) return fail(PHOrbInventoryKind::GoalCapacity, g, 0, goal.count, possible);
+            if (goal.kind == PHOrbGoalCombo && goal.count > result.comboUpper) {
+                result.issue = {PHOrbInventoryKind::GoalCapacity, g, 0, goal.count, result.comboUpper, 0, context.variants};
+                break;
+            }
         }
     }
-    return true; // Necessary inventory check, not a proof that a route exists.
+    return result; // Necessary inventory bounds, never a route/shape proof.
+}
+
+bool EnoughOrbs(const Cells &cells, const Context &context) {
+    return InspectInventory(cells, context).issue.kind == PHOrbInventoryKind::None;
+}
+
+bool FishingOptionsValid(const PHOrbBoard &board, int cell, unsigned color) {
+    if (cell < 0) return true;
+    // Range-check before shifting. Locked spinners remain fixed inventory.
+    const unsigned size = unsigned(board.width) * board.height, fish = unsigned(cell);
+    if (fish >= size || !(board.spinnerMask & (Bits(1) << fish)) || (board.flags[fish] & PHOrbFlagLocked) ||
+        (board.spinnerColors & ~63u) || color >= PHOrbBasicTypes || !(board.spinnerColors & (1u << color))) return false;
+    for (unsigned i = 0; i < size; ++i)
+        if ((board.spinnerMask & (Bits(1) << i)) && i != fish && !(board.flags[i] & PHOrbFlagLocked)) return false;
+    return true;
 }
 
 bool ShapeMatches(Bits group, const PHOrbGoal &goal, const std::vector<Pattern> &patterns) {
@@ -850,7 +924,9 @@ uint64_t Hash(const Node &node, unsigned size) {
     hash ^= node.thornDamage; hash *= 1099511628211ULL;
     hash ^= node.path[node.length - 1]; hash *= 1099511628211ULL;
     // The forbidden immediate reverse depends on the preceding position.
-    hash ^= node.length > 1 ? node.path[node.length - 2] : 255;
+    // An otherwise identical layout has different successors after the one
+    // allowed spinner entry. Preserve ordinary keys when fished is false.
+    hash ^= (node.length > 1 ? node.path[node.length - 2] : 255) | (unsigned(node.fished) << 8);
     return hash * 1099511628211ULL;
 }
 
@@ -867,7 +943,8 @@ uint64_t LayoutKey(const Node &node, const Context &context) {
         key ^= node.score.matchedColors & context.wantedColors; key *= 1099511628211ULL;
         if (context.colorGuidance) { key ^= node.score.weakestColor; key *= 1099511628211ULL; }
     }
-    return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals);
+    return key ^ node.score.missing ^ (unsigned(node.score.focus) << PHOrbMaxGoals) ^
+        (uint64_t(node.fished) << (2 * PHOrbMaxGoals));
 }
 
 bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornComboPriority, bool allowPoisonWithHeartFour,
@@ -978,14 +1055,56 @@ PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
 }
 
 PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGoalSet &goals) noexcept {
-    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&goals)) return {PHOrbInventoryKind::Invalid};
+    PHOrbSolveOptions options; options.goals = goals;
+    return PHOrbInspectInventory(board, options);
+}
+
+PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept {
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) ||
+        !FishingOptionsValid(board, options.fishCell, options.fishColor)) return {PHOrbInventoryKind::Invalid};
     try {
         Cells cells{};
         std::copy(board.types, board.types + board.width * board.height, cells.begin());
-        PHOrbInventoryIssue issue;
-        EnoughOrbs(cells, MakeContext(board, goals, false), &issue);
-        return issue;
+        return InspectInventory(cells, MakeContext(board, options.goals, false, false, false, {},
+            options.fishCell, options.fishColor)).issue;
     } catch (...) { return {PHOrbInventoryKind::Invalid}; }
+}
+
+PHOrbFishingPlan PHOrbPlanFishing(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept {
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || options.fishCell < 0) return {};
+    const unsigned table = board.spinnerColors & 63u;
+    if (!table || !FishingOptionsValid(board, options.fishCell, unsigned(__builtin_ctz(table)))) return {};
+    try {
+        PHOrbFishingPlan plan; plan.valid = true;
+        unsigned wanted = 0; bool comboGoal = false;
+        for (unsigned g = 0; g < options.goals.count; ++g) {
+            wanted |= options.goals.items[g].colors;
+            comboGoal |= options.goals.items[g].kind == PHOrbGoalCombo;
+        }
+        if (comboGoal) wanted |= table;
+        Cells cells{}; Inventory fixed{};
+        std::copy(board.types, board.types + board.width * board.height, cells.begin());
+        for (unsigned i = 0; i < board.width * board.height; ++i)
+            if (i != unsigned(options.fishCell)) ++fixed[cells[i]];
+        auto context = MakeContext(board, options.goals, false, false, false, {}, options.fishCell);
+        for (unsigned color = 0; color < PHOrbBasicTypes; ++color) if ((wanted & table) & (1u << color)) {
+            context.fishColor = int(color);
+            const auto analysis = InspectInventory(cells, context);
+            plan.candidates[plan.count++] = {color, analysis.comboUpper, analysis.issue};
+        }
+        const auto gap = [&](unsigned color) { return int(PHOrbRequiredShapeOrbs(&options.goals, color)) - int(fixed[color]); };
+        std::stable_sort(plan.candidates, plan.candidates + plan.count, [&](const auto &a, const auto &b) {
+            const bool aPass = a.inventory.kind == PHOrbInventoryKind::None, bPass = b.inventory.kind == PHOrbInventoryKind::None;
+            if (aPass != bPass) return aPass;
+            const int aShortage = std::max(0, gap(a.color)), bShortage = std::max(0, gap(b.color));
+            if (aShortage != bShortage) return aShortage > bShortage;
+            if (comboGoal && a.comboUpper != b.comboUpper) return a.comboUpper > b.comboUpper;
+            return gap(a.color) > gap(b.color);
+        });
+        while (plan.selectedCount < std::min(2u, plan.count) &&
+            plan.candidates[plan.selectedCount].inventory.kind == PHOrbInventoryKind::None) ++plan.selectedCount;
+        return plan;
+    } catch (...) { return {}; }
 }
 
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
@@ -1044,17 +1163,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
         options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity)) return PHOrbSolveStatus::Invalid;
-    if (options.fishCell >= 0) {
-        // The only unlocked spinner, a basic-colour table, and a colour in it.
-        // Range-check before any shift by the cell index.
-        const unsigned cellCount = unsigned(board.width) * board.height, fish = unsigned(options.fishCell);
-        bool dynamicOnly = fish < cellCount && (board.spinnerMask & (Bits(1) << fish)) &&
-            !(board.flags[fish] & PHOrbFlagLocked) && !(board.spinnerColors & ~63u) &&
-            options.fishColor < PHOrbBasicTypes && (board.spinnerColors & (1u << options.fishColor));
-        for (unsigned i = 0; i < cellCount && dynamicOnly; ++i)
-            dynamicOnly = !(board.spinnerMask & (Bits(1) << i)) || i == fish || (board.flags[i] & PHOrbFlagLocked);
-        if (!dynamicOnly) return PHOrbSolveStatus::Invalid;
-    }
+    if (!FishingOptionsValid(board, options.fishCell, options.fishColor)) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
@@ -1395,3 +1504,5 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         return route.goalsMet ? PHOrbSolveStatus::Solved : PHOrbSolveStatus::GoalsUnmet;
     } catch (...) { route = {}; return PHOrbSolveStatus::Failed; }
 }
+
+#include "PHOrbTimedFishing.inc"

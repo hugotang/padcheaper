@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "dylib_version": "0.5.36-orbs",
+  "dylib_version": "0.5.37-orbs",
   "minimum_ios": "15.0",
   "architecture": "arm64",
   "platform": "iPhoneOS",
@@ -8,6 +8,8 @@
   "mode": "diagnostic by default; experimental writes opt in",
   "summary_features": {
     "遊戲版本": "game_target",
+    "單次撈珠與診斷": "single_take_fishing",
+    "雙次取色離線模型": "timed_fishing_offline",
     "五色與形狀補搜": "ordinary_search_recovery",
     "介面與編隊": "gui",
     "轉珠與模式範圍": "automatic_orbs",
@@ -19,6 +21,8 @@
   },
   "features": {
     "game_target": "PAD JP iOS 23.6.1/107553 arm64; exact bundle/version/build/UUID and 456 applicable fingerprints; object-relative layouts individually mapped; device verification pending",
+    "single_take_fishing": "solo fallback inspects every table color for Combo, accounts for the sacrificed fixed orb under every phase and selects at most two feasible colors; search keys distinguish used entries; retained timed-out failures may retry once per color at 2000 ms; actual attempts, selected failures and inventory exclusions remain distinct; single entry and replay/goals/hazard/timing gates retained",
+    "timed_fishing_offline": "separate offline route type with at most two exchanges and eight inventory plans; conditional match-capture color evaluation, complete exchange replay and assumption-based frame reservation; no Session/native execution integration; recorded nine-Combo board remains unresolved and live capture timing unverified",
     "ordinary_search_recovery": "ordinary non-spinner, non-fishing, non-activity multi-color search adds distance guidance and bounded diverse recovery; ordinary shape recovery uses alternate guidance within existing pass/beam/path/deadline limits; only timed-out retained solo failures may extend once; per-attempt and selected/total statistics remain distinct",
     "legacy_data_compatibility": "schema-1 profiles, plans and decoded account deck records accept exact 23.6.0/106878 and current targets; existing player/epoch/bank/count/deck/resource/readback checks retained; new exports use current target; running game identity remains exact",
     "gui": "formation/calculator/dungeon tabs retain drafts and scenarios; selected body/assist portraits with numbered fallback and embedded latent icon picker; compact expandable rule/profile editors and independent global 8P countdown preference; acknowledged atomic library saves; full-slot swap/copy, undo, recent cards; 16px inputs and pinch zoom; PADDashFormation import/export",

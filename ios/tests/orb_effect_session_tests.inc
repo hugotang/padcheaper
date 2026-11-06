@@ -39,6 +39,133 @@ static PHOrbSession *FishSession(FakeOrbEngine *engine) {
     return session;
 }
 static void FishSessionTests() {
+    {
+        FakeOrbEngine *engine = FishEngine(); auto &board = engine->live.board;
+        const uint8_t types[] = {1,3,3,5,5,3, 3,3,5,0,3,5, 4,5,0,3,3,3,
+                                 5,3,0,5,3,5, 4,1,5,2,5,5};
+        std::copy(std::begin(types), std::end(types), board.types);
+        board.spinnerMask = UINT64_C(1) << 6;
+        engine->live.fps = 30; engine->live.spinnerPeriodFrames = engine->live.spinnerCountdown = 15;
+        engine->live.remainingFrames = 570;
+        engine->live.enemyCombo.turns[0] = 3; engine->live.enemyCombo.thresholds[0] = 14;
+        engine->live.automation.enemyEffects = PHOrbEnemyComboAbsorb;
+        auto &bonus = engine->live.enemyCombo.bonus;
+        bonus.valid = true; bonus.count = 2; bonus.attackColors = bonus.awakeningColors[4] = 8;
+        bonus.effects[0] = PHOrbComboEffect{16,2,PHOrbComboAwakenings,0,1,{}};
+        bonus.effects[1] = PHOrbComboEffect{1,4,PHOrbComboGroups,1,2,{3,5,255,255,255}};
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"thorough",@"mode":@"manual",@"diagonal":@YES,@"rules":@[],
+            @"goals":@[@{@"kind":@"t",@"colors":@8,@"count":@1},
+                @{@"kind":@"four",@"colors":@32,@"count":@1}]}], "recorded final-board goals accepted");
+        Tick(session,engine,Frame()); [session queueAutomatic];
+        Check(UntilPhase(session,engine,@"stopped"), "recorded final board stops at the inventory bound");
+        NSDictionary *state = session.snapshot, *trace = state[@"searchTrace"], *plan = trace[@"fishingPlan"];
+        NSArray<NSDictionary *> *choices = plan[@"colors"];
+        CheckSearchAttemptTrace(trace);
+        Check([trace[@"status"] isEqual:@"insufficient-orbs"] && [trace[@"candidateAttempts"] count] == 1 &&
+            [trace[@"selectedAttemptIndex"] isEqual:@0] && [trace[@"totalEvaluated"] isEqual:@0] &&
+            [trace[@"totalSearchPasses"] isEqual:@0] && choices.count == 6 && [plan[@"selectedCount"] isEqual:@0] &&
+            [plan[@"scope"] isEqual:@"one-exchange-all-phases"] &&
+            [state[@"goalPlan"][@"enemyComboBeforeBonus"] isEqual:@15] &&
+            [state[@"goalPlan"][@"enemyComboRequired"] isEqual:@9],
+            "all six colors are preflighted without fake attempts or weakening the first-wave nine-Combo goal");
+        const unsigned upper[] = {7,8,7,7,8,8}; unsigned seen = 0;
+        for (NSDictionary *choice in choices) {
+            const unsigned color = [choice[@"color"] unsignedIntValue];
+            Check(color < 6, "preflight color stays in the basic spinner table");
+            if (color >= 6) continue;
+            seen |= 1u << color;
+            Check([choice[@"reason"] isEqual:@"inventory"] && ![choice[@"selected"] boolValue] &&
+                [choice[@"comboUpper"] unsignedIntValue] == upper[color] && [choice[@"required"] isEqual:@9],
+                "each rejected fishing color retains its own inventory explanation");
+        }
+        Check(seen == 63 && [state[@"message"] containsString:@"珠數上限 8 Combo"] &&
+            [state[@"message"] containsString:@"只撈一顆"] &&
+            [state[@"message"] isEqual:trace[@"reason"] && ![state[@"canExecute"] boolValue] &&
+            !engine->stages && !engine->releases && !engine->allowedSpinnerCell,
+            "the visible stop distinguishes single-exchange capacity from search time and submits no input");
+    }
+    // A Combo-only goal has no color mask. With only 28 -> 29 reachable,
+    // taking fire at 29 completes 26,27,28 in every release phase.
+    {
+        FakeOrbEngine *engine = FishEngine(); auto &board = engine->live.board;
+        for (unsigned i = 0; i < 30; ++i) {
+            board.types[i] = uint8_t(1 + (i % 6 + 2 * (i / 6)) % 4);
+            board.flags[i] = i < 28 ? PHOrbFlagTape : 0;
+        }
+        board.types[26] = board.types[27] = 0; board.types[29] = 1;
+        board.fixedStart = 29; board.tapeMask = (UINT64_C(1) << 28) - 1;
+        board.spinnerMask = UINT64_C(1) << 29;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
+            @"goals":@[@{@"kind":@"combo",@"colors":@0,@"count":@1}]}], "pure Combo fishing goal accepted");
+        Check(Preview(session,engine), "Combo-only fallback reaches a completed preview");
+        NSDictionary *state = session.snapshot, *trace = state[@"searchTrace"];
+        CheckSearchAttemptTrace(trace);
+        Check([trace[@"fishing"] boolValue] && [trace[@"fishColor"] isEqual:@0] &&
+            [trace[@"path"] isEqual:@[@28,@29]] && [state[@"canExecute"] boolValue] &&
+            [trace[@"fishingPlan"][@"colors"] count] == 6 && !engine->stages,
+            "pure Combo considers a third fire orb without needing a shape color mask or executing the preview");
+        [session queueStop:@"end Combo fishing fixture"]; Tick(session,engine,Frame());
+    }
+    // Only 28 -> 29 is reachable. The spinner can supply a third red, but it
+    // stays in column 4, away from the two reds in columns 0 and 1. Water has
+    // an existing three. This guarantees a partial fishing result without
+    // relying on a machine-specific timeout or a difficult search puzzle.
+    for (unsigned mode = 0; mode < 3; ++mode) {
+        FakeOrbEngine *engine = FishEngine(); auto &board = engine->live.board;
+        for (unsigned i = 0; i < 30; ++i) {
+            board.types[i] = uint8_t(2 + (i % 6 + 2 * (i / 6)) % 4);
+            board.flags[i] = i < 28 ? PHOrbFlagTape : 0;
+        }
+        board.types[0] = board.types[1] = 0;
+        board.types[12] = board.types[13] = board.types[14] = 1;
+        board.fixedStart = 29; board.tapeMask = (UINT64_C(1) << 28) - 1;
+        board.spinnerMask = UINT64_C(1) << 29;
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"fast",@"mode":@"manual",@"rules":@[],
+            @"goals":@[@{@"kind":@"match",@"colors":@1,@"count":@1,@"length":@3},
+                @{@"kind":@"match",@"colors":@2,@"count":@1,@"length":@3}]}],
+            "constrained partial fishing fixture accepts its two goals");
+        Tick(session,engine,Frame());
+        if (mode == 0) [session queueRead];
+        else if (mode == 1) [session queueOnce];
+        else [session queueAutomatic];
+        NSString *expectedPhase = mode == 0 ? @"preview" : @"stopped";
+        for (unsigned i = 0; i < 2000 && ![session.snapshot[@"phase"] isEqual:expectedPhase] &&
+            ![session.snapshot[@"phase"] isEqual:@"fault"] && ![session.snapshot[@"phase"] isEqual:@"blocked"]; ++i)
+            Tick(session,engine,Frame());
+        NSDictionary *state = session.snapshot, *trace = state[@"searchTrace"];
+        NSArray<NSDictionary *> *attempts = trace[@"candidateAttempts"];
+        const NSUInteger selected = [trace[@"selectedAttemptIndex"] unsignedIntegerValue];
+        CheckSearchAttemptTrace(trace);
+        NSArray<NSDictionary *> *colors = trace[@"fishingPlan"][@"colors"];
+        Check([state[@"phase"] isEqual:expectedPhase] && attempts.count == 2 && selected == 1 &&
+            [trace[@"selectedStatus"] isEqual:@"goals-unmet"] && [trace[@"status"] isEqual:@"goals-unmet"] &&
+            [attempts.firstObject[@"status"] isEqual:@"insufficient-orbs"] &&
+            colors.count == 2 && [colors.lastObject[@"color"] isEqual:@1] &&
+            [colors.lastObject[@"reason"] isEqual:@"inventory"] && ![colors.lastObject[@"selected"] boolValue],
+            "an evaluated fishing failure replaces the original shortage while an impossible later color is preflight-only");
+        if (selected < attempts.count) {
+            NSDictionary *fish = attempts[selected];
+            Check([fish[@"fishingRequested"] boolValue] && [fish[@"fishing"] boolValue] &&
+                [fish[@"fishCell"] isEqual:@29] && [fish[@"fishColor"] isEqual:@0] &&
+                [fish[@"path"] isEqual:@[@28,@29]] && [fish[@"goalHits"] isEqual:@[@0,@1]] &&
+                [fish[@"matchedGoals"] isEqual:@1] && [fish[@"goalCount"] isEqual:@2] &&
+                ![fish[@"goalsMet"] boolValue] && [fish[@"hazardsSafe"] boolValue] &&
+                ![fish[@"deadline"] boolValue] && ![fish[@"soloRetry"] boolValue],
+                "completed fishing failure preserves the unmet red goal and met water goal without an unnecessary retry");
+        }
+        Check([trace[@"reason"] containsString:@"未達成"] && [trace[@"reason"] containsString:@"1／2"] &&
+            [trace[@"reason"] containsString:@"撈火珠搜尋"] &&
+            ![trace[@"reason"] containsString:@"未開始轉珠；請調整目標"] &&
+            ![state[@"canExecute"] boolValue] && !engine->stages && !engine->allowedSpinnerCell && !engine->releases,
+            "partial fishing diagnostics name the real goal failure and never arm or execute the route");
+        Execute(session); Tick(session,engine,Frame());
+        Check(!engine->stages && !engine->allowedSpinnerCell && !engine->releases,
+            "an explicit execute request cannot turn a failed fishing preview into input");
+        [session queueStop:@"end partial fishing fixture"]; Tick(session,engine,Frame());
+    }
     // Same cause as uryu_t_lottery_test: optional shortage straddles the
     // spinner cycle. Auto must reach the existing fishing path without casting.
     for (bool required : {false,true}) {

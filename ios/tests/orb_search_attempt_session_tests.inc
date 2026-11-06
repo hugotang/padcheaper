@@ -24,6 +24,95 @@ static void SearchAttemptPolicyTests() {
         Check(PHOrbDecideSoloRetry(true,false,false,800,PHOrbSolveStatus::GoalsUnmet,candidate) == PHOrbSoloRetryDecision::Ineligible,
             "a missing or invalid retained route cannot be treated as a timed-out search candidate");
     }
+
+    // Script the observed ordering rather than depending on a host being slow
+    // enough to hit a solver deadline: ordinary shortage, then fishing timeout.
+    PHOrbSolveOptions options; options.milliseconds = 800; options.steps = 48; options.beam = 512;
+    options.goals.count = 2;
+    options.goals.items[0] = {PHOrbGoalT,8,1,0}; options.goals.items[1] = {PHOrbGoalFour,32,1,0};
+    options.diagonal = options.allowPoisonWithHeartFour = true;
+    std::atomic_bool cancel(false);
+    unsigned calls = 0;
+    PHOrbSearchWithSoloRetry(options,true,false,cancel,
+        [&](const PHOrbSolveOptions &trial, PHOrbRoute &output, bool retry) {
+            ++calls;
+            Check(trial.fishCell < 0 && trial.milliseconds == 800 && !retry && !output.count,
+                "ordinary inventory rejection is one fresh attempt without a retry");
+            return PHOrbSolveStatus::InsufficientOrbs;
+        });
+    Check(calls == 1, "ordinary shortage does not consume or preclude a later fishing retry");
+    options.fishCell = 6; options.fishColor = 3; options.steps = 36;
+    for (unsigned outcome = 0; outcome < 3; ++outcome) {
+        PHOrbRoute selected{}; PHOrbSolveStatus selectedStatus = PHOrbSolveStatus::InsufficientOrbs;
+        PHOrbSolveOptions selectedOptions; unsigned selectedIndex = 0;
+        calls = 0;
+        PHOrbSearchWithSoloRetry(options,true,false,cancel,
+            [&](const PHOrbSolveOptions &trial, PHOrbRoute &output, bool retry) {
+                const unsigned index = ++calls;
+                Check(retry == (index == 2) && trial.milliseconds == (retry ? PHOrbSoloRetryMilliseconds : 800u) &&
+                    trial.fishCell == 6 && trial.fishColor == 3 && trial.steps == 36 && trial.beam == 512 &&
+                    trial.diagonal && trial.allowPoisonWithHeartFour && trial.goals.count == 2 &&
+                    trial.goals.items[0].kind == PHOrbGoalT && trial.goals.items[0].colors == 8 &&
+                    trial.goals.items[1].kind == PHOrbGoalFour && trial.goals.items[1].colors == 32 && !output.count,
+                    "fishing retry changes only the time budget and starts with a fresh output route");
+                PHOrbSolveStatus status = PHOrbSolveStatus::GoalsUnmet;
+                if (retry && outcome == 2) status = PHOrbSolveStatus::NoRoute;
+                else {
+                    output.count = 2; output.cells[0] = 5; output.cells[1] = 6;
+                    output.fishing = true; output.fishCell = 6; output.fishColor = 3;
+                    output.hazardsSafe = true; output.goalCount = 2; output.matchedGoals = 1;
+                    output.goalHits[0] = 1; output.deadlineReached = true;
+                    if (retry && outcome == 0) {
+                        output.goalsMet = true; output.matchedGoals = 2; output.goalHits[1] = 1;
+                        status = PHOrbSolveStatus::Solved;
+                    }
+                }
+                if (PHOrbPreferSearchCandidate(status,output,selectedStatus,selected)) {
+                    selected = output; selectedStatus = status; selectedOptions = trial; selectedIndex = index;
+                }
+                return status;
+            });
+        Check(calls == 2 && selectedIndex == (outcome == 2 ? 1u : 2u) && selected.fishing &&
+            selectedOptions.fishCell == 6 && selectedOptions.fishColor == 3 && selectedOptions.steps == 36 &&
+            selectedOptions.milliseconds == (outcome == 2 ? 800u : PHOrbSoloRetryMilliseconds),
+            "one fishing retry retains matching route, options and attempt identity even when it finds no candidate");
+        Check(selectedStatus == (outcome == 0 ? PHOrbSolveStatus::Solved : PHOrbSolveStatus::GoalsUnmet) &&
+            selected.goalsMet == (outcome == 0),
+            "an equal-progress retry is visible without declaring its unfinished goals solved");
+        PHOrbRoute absent{};
+        Check(!PHOrbPreferSearchCandidate(PHOrbSolveStatus::InsufficientOrbs,absent,selectedStatus,selected),
+            "a later fishing colour rejected for shortage cannot hide a useful earlier fishing attempt");
+    }
+
+    for (unsigned scenario = 0; scenario < 7; ++scenario) {
+        calls = 0; cancel.store(scenario == 0);
+        PHOrbSolveOptions trialOptions = options;
+        if (scenario == 6) trialOptions.milliseconds = PHOrbSoloRetryMilliseconds;
+        PHOrbSearchWithSoloRetry(trialOptions,scenario != 4,scenario == 5,cancel,
+            [&](const PHOrbSolveOptions &, PHOrbRoute &output, bool retry) {
+                ++calls; Check(!retry, "ineligible fishing searches do not schedule an extended attempt");
+                output.count = scenario == 3 ? 0 : 2;
+                output.deadlineReached = scenario != 2;
+                if (scenario == 1) cancel.store(true);
+                return PHOrbSolveStatus::GoalsUnmet;
+            });
+        Check(calls == (scenario == 0 ? 0u : 1u),
+            "cancellation, completed search, absent candidate, multiplayer, assist and extended budgets suppress fishing retries");
+    }
+    cancel.store(false);
+
+    PHOrbRoute partial{}; partial.count = 2; partial.hazardsSafe = true; partial.matchedGoals = 1;
+    PHOrbRoute unsafe = partial; unsafe.hazardsSafe = false; unsafe.matchedGoals = 2;
+    PHOrbRoute solved = partial; solved.goalsMet = true; solved.matchedGoals = 2;
+    Check(PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,partial,PHOrbSolveStatus::Unsafe,unsafe) &&
+        !PHOrbPreferSearchCandidate(PHOrbSolveStatus::Unsafe,unsafe,PHOrbSolveStatus::GoalsUnmet,partial),
+        "failed candidate selection preserves the safer partial route ahead of a hazardous route with more goals");
+    Check(PHOrbPreferSearchCandidate(PHOrbSolveStatus::Solved,solved,PHOrbSolveStatus::GoalsUnmet,partial) &&
+        !PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,partial,PHOrbSolveStatus::Solved,solved),
+        "a complete safe solution takes precedence and cannot be replaced by a failed fishing route");
+    PHOrbRoute less = partial; less.matchedGoals = 0;
+    Check(!PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,less,PHOrbSolveStatus::GoalsUnmet,partial),
+        "a longer retry with fewer completed goals does not discard the better retained candidate");
 }
 
 static void CheckSearchAttemptTrace(NSDictionary *trace) {
@@ -33,13 +122,31 @@ static void CheckSearchAttemptTrace(NSDictionary *trace) {
         "completed search identifies the selected attempt by its zero-based index");
     if (!attempts.count || selected < 0 || NSUInteger(selected) >= attempts.count) return;
     uint64_t wallMS = 0, evaluated = 0, calls = 0, hits = 0;
-    unsigned passes = 0, backtracks = 0, deepest = 0;
+    unsigned passes = 0, backtracks = 0, deepest = 0, fishingRetries = 0;
     bool deadline = false, complete = true;
     for (NSDictionary *attempt in attempts) {
         for (NSString *key in @[@"budgetMS", @"elapsedMS", @"wallElapsedMS", @"deadline", @"deadlineKnown",
                 @"statisticsAvailable", @"evaluated", @"evaluationCalls", @"evaluationCacheHits", @"searchPasses",
-                @"backtracks", @"exploredDepth", @"stepLimit", @"beam"])
+                @"backtracks", @"exploredDepth", @"stepLimit", @"beam", @"fishingRequested", @"fishing"])
             Check([attempt[key] isKindOfClass:NSNumber.class], "each attempt retains its own limits and search statistics");
+        const bool fishingRequested = [attempt[@"fishingRequested"] boolValue];
+        fishingRetries += fishingRequested && [attempt[@"soloRetry"] boolValue];
+        Check(fishingRequested ? [attempt[@"fishCell"] isKindOfClass:NSNumber.class] &&
+            [attempt[@"fishColor"] isKindOfClass:NSNumber.class] : !attempt[@"fishCell"] && !attempt[@"fishColor"],
+            "requested spinner cell and colour are recorded independently of whether the route actually fished");
+        if ([attempt[@"statisticsAvailable"] boolValue]) {
+            Check([attempt[@"path"] isKindOfClass:NSArray.class] && [attempt[@"path"] count] >= 2 &&
+                [attempt[@"goalHits"] isKindOfClass:NSArray.class] &&
+                [attempt[@"goalHits"] count] == [attempt[@"goals"] count] &&
+                [attempt[@"goalCount"] unsignedIntegerValue] == [attempt[@"goals"] count],
+                "every retained candidate includes its own path and per-goal result, including failed fishing attempts");
+            for (NSString *key in @[@"goalsMet",@"matchedGoals",@"hazardsSafe"])
+                Check([attempt[key] isKindOfClass:NSNumber.class], "candidate outcome flags accompany per-goal diagnostics");
+        } else {
+            Check(!attempt[@"path"] && !attempt[@"goalHits"] && !attempt[@"goalsMet"] &&
+                !attempt[@"matchedGoals"] && !attempt[@"goalCount"] && !attempt[@"hazardsSafe"],
+                "inventory failures do not fabricate evaluated goal results or an executable path");
+        }
         wallMS += [attempt[@"wallElapsedMS"] unsignedLongLongValue];
         evaluated += [attempt[@"evaluated"] unsignedLongLongValue];
         calls += [attempt[@"evaluationCalls"] unsignedLongLongValue];
@@ -65,6 +172,8 @@ static void CheckSearchAttemptTrace(NSDictionary *trace) {
         [trace[@"totalSearchPasses"] unsignedIntValue] == passes &&
         [trace[@"totalBacktracks"] unsignedIntValue] == backtracks &&
         [trace[@"maximumExploredDepth"] unsignedIntValue] == deepest &&
+        [trace[@"fishingRetries"] isKindOfClass:NSNumber.class] &&
+        [trace[@"fishingRetries"] unsignedIntValue] == fishingRetries &&
         [trace[@"anyAttemptDeadlineReached"] boolValue] == deadline &&
         [trace[@"totalStatisticsComplete"] boolValue] == complete,
         "whole-job totals include all attempts without claiming a complete count for candidate-free failures");

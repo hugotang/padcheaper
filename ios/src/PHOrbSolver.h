@@ -38,15 +38,32 @@ enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
 PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept;
 
 enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Cancelled, Invalid, NoRoute, Failed, IncompatibleGoals };
-// Explains the same necessary inventory check used by ordinary search. None
-// does not prove a route exists; spinner failures describe one shared phase,
-// not all ways of fishing or playing the board.
-enum class PHOrbInventoryKind { None, Invalid, ShapeOrbs, MatchRule, GoalCapacity };
+// Explains the necessary inventory check used by search. None does not prove
+// a route exists. Fishing includes the unchanged board and one exchange of a
+// fixed orb for fishColor; the same exchange must pass every spinner phase.
+enum class PHOrbInventoryKind { None, Invalid, ShapeOrbs, MatchRule, GoalCapacity, FishingExchange };
 struct PHOrbInventoryIssue {
     PHOrbInventoryKind kind = PHOrbInventoryKind::None;
+    // phase identifies the first ordinary failure. Fishing may combine
+    // different failing phases for different exchanges; it has no one witness.
     unsigned goal = 0, color = 0, required = 0, available = 0, phase = 0, variants = 0;
 };
 PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGoalSet &goals) noexcept;
+PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept;
+struct PHOrbFishingCandidate {
+    unsigned color = 0, comboUpper = 0;
+    PHOrbInventoryIssue inventory{};
+};
+struct PHOrbFishingPlan {
+    bool valid = false;
+    unsigned count = 0, selectedCount = 0;
+    PHOrbFishingCandidate candidates[PHOrbBasicTypes]{};
+};
+// Caller supplies the eligible fishCell; native timing/solo gates stay in the
+// session. Consider all goal colours (all table colours for Combo), put those
+// passing the exchange bound first, and select at most two. fishColor is output
+// here, not an input filter. comboUpper ignores shape layout and route geometry.
+PHOrbFishingPlan PHOrbPlanFishing(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept;
 // Re-evaluate a released board. Shape goals require the first removal wave;
 // combos/colors/connected-match counts may include deterministic cascades.
 // Four means exactly four marked, connected orbs in a line; unmarked same-

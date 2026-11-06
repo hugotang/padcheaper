@@ -1,5 +1,19 @@
 # Android 開發與待驗證
 
+## 2026-11-06：共用撈珠來源本機回歸完成，iOS 編譯測試進行中
+
+- 使用者要求編譯測試，本機完整 solver／model／內部形狀引導回歸通過，包含單次選色及雙次離線案例。原盤 800／2000 ms 都未逾時但只取得首消六 Combo，仍未達九；詳細結果見 [iOS 開發紀錄](../../ios/docs/development.md)。
+- 本次 iOS 建置不等於 Android APK／ABI 驗證。Android 沒有接入雙次取色、live 盤面或新輸入；目前 0.1.1-probe 交付保持不變，後續需另核對共用來源建置與介面。
+
+## 2026-11-06：共用 solver 雙次取色離線來源，待驗證
+
+- 共用 `PHOrbSolver.cpp` 新包含 `PHOrbTimedFishing.h`／`.inc`，支援獨立離線兩次交換、指定匹配色與時間估算。沒有 Android JNI／預覽／live 輸入接入；iOS 23.6.1 的原生時序研究也不能當作 Android 時序證據，詳見 [模型與限制](../../ios/docs/solver-fishing-2026-11-06.md)。
+- Windows C++ 語法檢查涵蓋 solver／案例／probe，沒有跑測試或生成產品。core 建置會包含新來源，現有 Gradle `.h`／`.inc` 來源收集亦涵蓋；Android ABI／APK 與新模型仍待下次明確編譯測試，舊 0.1.1 交付結果不涵蓋本批。
+
+## 2026-11-06：共用 solver 單次撈珠來源更新，待驗證
+
+- iOS fishing 優化同時修改 core 引用的 `PHOrbSolver.cpp`：單顆交換珠量檢查、Combo 選色及是否已進入轉轉的去重。詳見 [來源與待驗證紀錄](../../ios/docs/solver-fishing-2026-11-06.md)。Android 普通六色預覽介面未新增轉轉支援；本批沒有重建 APK／Android ABI 或執行測試，舊 0.1.1 交付及先前本機回歸不驗證此版共用來源。
+
 ## 2026-11-06：盤面局部布局與離線預覽來源，待編譯測試
 
 - 使用者繼續分批開發，本輪以 `7f66fc8` 為基礎研究已保存的 ARM64 程式擷取，沒有重新連接／擷取裝置。讀取 29,095 筆 dynamic symbol table entry（含空項），23,946 筆為範圍內已定義函式符號；研究摘要保存 11 個直接支持布局的讀寫入口及指令位置，只對選定入口核對 GNU hash chain。符號數不代表完整解碼或盤面驗證，詳見 [盤面布局研究](board-layout-2026-11-06.md)。

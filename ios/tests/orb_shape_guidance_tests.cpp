@@ -206,11 +206,38 @@ static void ColorScoresUnaffected() {
     }
 }
 
+static void FishingTransitionKeys() {
+    PHOrbBoard board{}; board.width = 6; board.height = 5;
+    board.spinnerMask = UINT64_C(1) << 7; board.spinnerColors = 3;
+    for (unsigned i = 0; i < 30; ++i) board.tokens[i] = i + 1;
+    PHOrbRoute unused{}; unused.count = 5; unused.diagonal = true;
+    const uint8_t path[] = {0,6,1,2,8}; std::copy(std::begin(path), std::end(path), unused.cells);
+    auto used = unused; used.cells[2] = 7; used.fishing = true; used.fishCell = 7; used.fishColor = 0;
+    PHOrbBoard left{}, right{};
+    Check(PHOrbReplay(&board, &unused, 4, &left) && PHOrbReplay(&board, &used, 4, &right),
+        "two legal equal-length routes can reach the same color layout before and after taking a spinner");
+    Node fresh, spent;
+    fresh.cells = BoardCells(left); spent.cells = BoardCells(right);
+    fresh.length = spent.length = 5; spent.fished = true;
+    std::copy(unused.cells, unused.cells + unused.count, fresh.path.begin());
+    std::copy(used.cells, used.cells + used.count, spent.path.begin());
+    const auto context = MakeContext(board, Goal(PHOrbGoalCombo,0,1), true, false, true, {}, 7, 0);
+    Check(fresh.cells == spent.cells && fresh.path[0] == spent.path[0] &&
+        fresh.path[3] == spent.path[3] && fresh.path[4] == spent.path[4] &&
+        Hash(fresh,30) != Hash(spent,30) && LayoutKey(fresh,context) != LayoutKey(spent,context),
+        "visited and layout diversity keys preserve whether the single spinner entry is still available");
+    unused.fishing = true; unused.fishCell = 7; unused.fishColor = 0;
+    unused.cells[unused.count++] = 7; used.cells[used.count++] = 7;
+    Check(PHOrbReplay(&board, &unused, 5, &left) && !PHOrbReplay(&board, &used, 5, &right),
+        "the identical next hop is legal only for the history that has not used its spinner entry");
+}
+
 int main() {
     AllMetScores();
     PartialAndCacheScores();
     RankingAndThornSafety();
     ColorScoresUnaffected();
+    FishingTransitionKeys();
     std::printf("Private shape guidance tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }
