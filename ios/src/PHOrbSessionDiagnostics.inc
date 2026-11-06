@@ -1,5 +1,5 @@
 // Session-owned diagnostic histories and public snapshot assembly.
-// Snapshot retains at most 16 readiness changes; no native reads or actions.
+// Snapshot retains at most 16 readiness changes and one failed search; no native reads or actions.
 - (void)recordReadIssue:(const PHOrbSnapshot *)state reason:(NSString *)reason multiplayer:(BOOL)multiplayer {
     _lastReadIssue = ReadIssueTrace(*state, reason, _openingStep + (_openingInFlight ? 1 : 0),
         _auto.active(), _phase, _searchTrace[@"generation"] ?: @0, multiplayer);
@@ -27,6 +27,14 @@
         @"lastStop":_eightLastStop ?: @{}};
 }
 
+- (void)rememberFailedSearch {
+    if (![@[@"planning-blocked", @"assist-unavailable", @"enemy-counter-unavailable", @"window-closed",
+        @"insufficient-orbs", @"incompatible-goals", @"goals-unmet", @"unsafe", @"no-route", @"invalid", @"failed",
+        @"replay-failed"] containsObject:_searchTrace[@"status"]]) return;
+    // Diagnostic evidence only. Later successful searches and config reloads
+    // must not erase the most recent failed attempt in this session.
+    _lastFailedSearch = _searchTrace;
+}
 - (void)recordPlanningStatus:(NSString *)status reason:(NSString *)reason {
     // The capture is created before mechanism reads or plan validation. A
     // blocked attempt must not borrow a previous route, evaluation or board.
@@ -61,6 +69,7 @@
     trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
     trace[@"assistRecoveryBlocker"] = _goalPlan[@"assistRecoveryBlocker"] ?: @"";
     _searchTrace = [trace copy];
+    [self rememberFailedSearch];
 }
 - (void)recordExecution:(NSString *)status state:(const PHOrbSnapshot *)state evaluation:(NSDictionary *)evaluation {
     if (!_recordingExecution || !_executionHistory.count) return;
@@ -284,7 +293,7 @@
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),
             @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight),
             @"puzzlePending":@(_openingPuzzlePending), @"steps":[_openingLog copy]},
-        @"searchTrace":_searchTrace, @"executionHistory":[_executionHistory copy],
+        @"searchTrace":_searchTrace, @"lastFailedSearch":_lastFailedSearch, @"executionHistory":[_executionHistory copy],
         @"liveReadValid":@(liveReadable), @"searchTraceRelation":traceRelation,
         @"boardTransition":@(_live.boardTransition), @"boardTransitionFrames":@(_boardTransitionFrames),
         @"resizeProgress":@(_live.resizeProgress), @"resizeTarget":@(_live.resizeTarget), @"lastReadIssue":_lastReadIssue,

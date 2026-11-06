@@ -72,6 +72,7 @@ static NSDictionary *PHConfig;
 static NSDictionary *PHFormationDraft;
 static NSDictionary *PHFormationLibrary;
 static NSDictionary *PHFormationSaveResult;
+static NSDictionary *PHOrbProfileSaveResult;
 static BOOL PHFormationLibraryStored;
 static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
@@ -215,15 +216,20 @@ static BOOL PHSaveFormationLibrary(NSDictionary *library) {
     NSDictionary *selected = nil;
     NSString *reason = nil;
     if (!PHFormationReadLibrary(library, &selected, &reason)) { PHFeedback = reason; return NO; }
-    NSMutableDictionary *next = [PHConfig mutableCopy]; next[@"formations"] = library;
-    if (!PHStorageReady || !PHConfigurationIsValid(next) || !PHWriteJSON(next, @"config.json")) {
+    PHReloadConfig();
+    NSMutableDictionary *current = [PHConfig mutableCopy];
+    if (!current[@"formations"]) current[@"formations"] = PHFormationLibrary;
+    NSDictionary *next = PHConfigurationSavingFormations(current, library, &reason);
+    if (!next) { PHFeedback = reason; return NO; }
+    if (!PHStorageReady || !PHWriteJSON(next, @"config.json")) {
         PHFeedback = @"儲存失敗；草稿仍在編輯器，下次入場隊伍未變更。請檢查可用空間後重試。";
         return NO;
     }
     // Publish the selection only after the canonical file was written. A
     // failed save must not silently change the next automatic entry team.
     PHConfig = [next copy]; PHConfigValid = YES;
-    PHPublishFormationLibrary(library);
+    PHPublishFormationLibrary(next[@"formations"]);
+    [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
     // Legacy files are backups. Config is the single commit point for the
     // library and profiles, so a partial backup cannot split a plan import.
     PHWriteJSON(library, @"formations.json");
@@ -955,7 +961,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"leaderContext"], orbs[@"liveLeaderPlan"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb captured search: %@ / current read valid %@; history records are retained after stopping",
         orbs[@"searchTraceRelation"], orbs[@"liveReadValid"]];
-    for (NSString *key in @[@"searchTrace", @"executionHistory", @"opening", @"battleObservation"]) {
+    for (NSString *key in @[@"searchTrace", @"lastFailedSearch", @"executionHistory", @"opening", @"battleObservation"]) {
         id trace = orbs[key];
         NSData *data = trace ? [NSJSONSerialization dataWithJSONObject:trace options:NSJSONWritingSortedKeys error:NULL] : nil;
         NSString *json = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null";
@@ -1011,6 +1017,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         @"battleState": battle, @"battleSummary": battleSummary, @"formationDraft": PHFormationDraft ?: @{},
         @"formationLibrary": PHFormationLibrary ?: @{},
         @"formationSaveResult": PHFormationSaveResult ?: @{},
+        @"orbProfileSaveResult": PHOrbProfileSaveResult ?: @{},
         @"formationLibraryStored": @(PHFormationLibraryStored),
         @"badgeState": badge,
         @"timerState": timer, @"timerSummary": timerSummary,
@@ -1023,6 +1030,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         PHLastStatus = now;
         NSMutableDictionary *status = [snapshot mutableCopy];
         [status removeObjectForKey:@"formationLibrary"];
+        [status removeObjectForKey:@"orbProfileSaveResult"];
         // A requested comparison is an in-memory, one-shot handoff. Keep the
         // full capture out of the periodically persisted status snapshot.
         NSMutableDictionary *statusOrbs = [orbs mutableCopy];
@@ -1036,6 +1044,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 }
 
 static void PHHandleOverlayAction(NSString *action, id value) {
+    if ([action isEqual:@"orbsProfiles"]) {
+        NSString *requestID = [value isKindOfClass:NSDictionary.class] && [value[@"requestID"] isKindOfClass:NSString.class] ? value[@"requestID"] : @"";
+        PHOrbProfileSaveResult = @{@"requestID":requestID, @"ok":@NO};
+        PHOrbProfileNotice = nil;
+    }
     if ([action isEqual:@"orbsObserve"]) { [PHOrbTracker monitorReadiness]; return; }
     if ([action isEqual:@"orbsOnce"] || [action isEqual:@"orbsStart"] || [action isEqual:@"orbsExecute"]) {
         NSDictionary *battle = [PHBattleTracker snapshot];
@@ -1197,15 +1210,11 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         }
         if (![value isKindOfClass:NSDictionary.class] || !PHOrbProfilesValid(value[@"library"]) ||
             !PHOrbCanonicalSettings(value[@"settings"])) { PHOrbProfileNotice = @"策略格式或設定無效。"; return; }
-        NSDictionary *library = value[@"library"];
-        NSDictionary *selected = PHOrbProfileNamed(library, library[@"selected"]);
-        NSDictionary *settings = PHOrbCanonicalSettings(selected ? selected[@"settings"] : value[@"settings"]);
-        next[@"orbProfiles"] = library; next[@"orbs"] = settings;
-        if (selected[@"formation"]) {
-            NSDictionary *formations = PHOrbFormationsSelectingProfile(PHFormationLibrary, selected);
-            if (!formations) { PHOrbProfileNotice = @"隊伍庫已滿或資料無效；整包未儲存，請先整理隊伍庫。"; return; }
-            next[@"formations"] = formations;
-        }
+        if (!next[@"formations"]) next[@"formations"] = PHFormationLibrary;
+        NSString *reason = nil;
+        NSDictionary *saved = PHConfigurationSavingOrbProfiles(next, value[@"library"], value[@"settings"], value[@"baseProfiles"], &reason);
+        if (!saved) { PHOrbProfileNotice = reason; return; }
+        next = [saved mutableCopy];
     } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"] ||
         [action isEqual:@"orbsRecovery"] || [action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsPoisonWithHeartFour"] ||
         [action isEqual:@"orbsDiagonal"] || [action isEqual:@"orbsAssistRecoveryL"]) {
@@ -1297,6 +1306,10 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if (next[@"formations"]) PHPublishFormationLibrary(next[@"formations"]);
         [PHOrbTracker configureProfiles:PHConfigurationOrbProfiles(PHConfig)];
         [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
+        if ([action isEqual:@"orbsProfiles"]) PHOrbProfileSaveResult = @{
+            @"requestID":PHOrbProfileSaveResult[@"requestID"] ?: @"", @"ok":@YES,
+            @"library":PHConfigurationOrbProfiles(PHConfig), @"formations":PHFormationLibrary ?: @{},
+            @"settings":PHConfigurationOrbSettings(PHConfig)};
         PHOrbQualityNotice = nil; PHOrbGoalNotice = nil; PHOrbRuleNotice = nil; PHOrbRecoveryNotice = nil; PHOrbProfileNotice = nil; PHOrbAutoStartNotice = nil;
         PHOrbThornNotice = nil;
         PHOrbPoisonNotice = nil;

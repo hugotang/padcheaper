@@ -9,3 +9,5 @@ enum { PHFormationLibraryCapacity = 64 };
 FOUNDATION_EXPORT BOOL PHFormationReadLibrary(id value, NSDictionary **selectedTeam, NSString **reason);
 FOUNDATION_EXPORT NSDictionary *PHFormationLibraryFromTeam(NSDictionary *team);
 FOUNDATION_EXPORT NSDictionary *PHFormationLibraryUpdatingTeam(NSDictionary *library, NSDictionary *team);
+FOUNDATION_EXPORT NSDictionary *PHFormationLibraryTeam(NSDictionary *library, NSString *identifier);
+FOUNDATION_EXPORT NSString *PHFormationLibraryTeamLabel(NSDictionary *library, NSString *identifier);

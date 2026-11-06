@@ -90,6 +90,15 @@ assert.throws(()=>model.addLibraryTeam(full,team,'overflow'),/最多/);
 assert.equal(full.teams.length,64);
 assert.equal(model.deleteLibraryTeam(full).teams.length,63);
 
+const duplicates=model.addLibraryTeam(model.createLibrary(team),team,'same-name');
+assert.deepEqual(model.libraryTeamOptions(duplicates),[
+  ['legacy',`${team.title}（同名 1/2）`],['same-name',`${team.title}（同名 2/2）`]
+],'same-title teams keep distinct IDs and readable choices');
+assert.deepEqual(model.libraryTeamOptions(duplicates,{...team,title:'修改版'}),[
+  ['legacy',team.title],['same-name','修改版']
+],'the unsaved selected title is reflected without renaming another record');
+assert.equal(duplicates.teams[1].team.title,team.title,'display labels never modify saved titles');
+
 const swapped=model.moveSlot(team,0,4);
 assert.deepEqual(swapped.slots[4],team.slots[0],'swap carries all body, assist and training values');
 assert.deepEqual(swapped.slots[0],team.slots[4]);

@@ -122,6 +122,24 @@ BOOL PHFormationReadLibrary(id value, NSDictionary **selectedTeam, NSString **re
     return YES;
 }
 
+NSDictionary *PHFormationLibraryTeam(NSDictionary *library, NSString *identifier) {
+    for (NSDictionary *record in library[@"teams"]) if ([record[@"id"] isEqual:identifier]) return record[@"team"];
+    return nil;
+}
+
+NSString *PHFormationLibraryTeamLabel(NSDictionary *library, NSString *identifier) {
+    NSDictionary *team = PHFormationLibraryTeam(library, identifier);
+    if (!team) return @"隊伍已刪除";
+    NSString *title = [team[@"title"] length] ? team[@"title"] : @"未命名隊伍";
+    NSUInteger count = 0, index = 0;
+    for (NSDictionary *record in library[@"teams"]) {
+        NSString *other = [record[@"team"][@"title"] length] ? record[@"team"][@"title"] : @"未命名隊伍";
+        if (![title isEqual:other]) continue;
+        ++count; if ([record[@"id"] isEqual:identifier]) index = count;
+    }
+    return count > 1 ? [NSString stringWithFormat:@"%@（同名 %lu/%lu）", title, (unsigned long)index, (unsigned long)count] : title;
+}
+
 NSDictionary *PHFormationLibraryFromTeam(NSDictionary *team) {
     BOOL legacy = PHFormationReadTeam(team, NULL, NULL);
     if (!legacy) {

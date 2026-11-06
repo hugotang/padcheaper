@@ -115,7 +115,7 @@
     });
   }
   function renderLibrary() {
-    options($('team-choice'),library.teams.map(record=>[record.id,record.id===library.selected?team.title || '未命名隊伍':record.team.title || '未命名隊伍']),library.selected);
+    options($('team-choice'),model.libraryTeamOptions(library,team),library.selected);
     $('library-count').textContent=library.teams.length+' / '+model.libraryCapacity+' 隊 · 切換時儲存目前編輯';
   }
   function renderFields() {

@@ -159,6 +159,16 @@ const {pathToFileURL}=require('node:url');
  await page.screenshot({path:path.resolve('build/editor-browser/save-failure-390.png'),fullPage:true});
  await page.evaluate(()=>{window.__fail=false;});await page.locator('#save').click();await page.evaluate(()=>PHFormationUI.whenSaved());
  assert.equal(await page.evaluate(()=>PHFormationUI.getSaveState().dirty),false);
+ const beforeDuplicateFixture=await page.evaluate(()=>PHFormationUI.getLibrary());
+ await page.evaluate(()=>{
+  const library=PHFormationUI.getLibrary(),copy=JSON.parse(JSON.stringify(library.teams.find(t=>t.id===library.selected)));
+  copy.id='duplicate-label';library.teams.push(copy);PHFormationUI.receive({library});
+ });
+ assert.match(await page.locator('#team-choice option:checked').textContent(),/同名 1\/2/);
+ assert.match(await page.locator('#team-choice option[value="duplicate-label"]').textContent(),/同名 2\/2/);
+ await page.selectOption('#team-choice','duplicate-label');await page.evaluate(()=>PHFormationUI.whenSaved());
+ assert.equal(await page.evaluate(()=>__saved.selected),'duplicate-label','identically named options select distinct saved IDs');
+ await page.evaluate(library=>PHFormationUI.receive({library}),beforeDuplicateFixture);
  await page.evaluate(()=>PHFormationUI.setState({...__battle,automaticConfigured:false,multiplayerDisabled:true,canApply:false,canRestore:false,activeCount:0,members:[]}));
  assert.match(await page.locator('#entry-state').innerText(),/關閉/);assert.equal(await page.locator('#apply-all').isEnabled(),false);
  // The calculator runs outside a dungeon, even with all network requests blocked.

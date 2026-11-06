@@ -75,7 +75,7 @@ BOOL PHOrbProfilesValid(id library) {
         if (![record isKindOfClass:NSDictionary.class] ||
             !(Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings"]) ||
               Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"activity"]) ||
-              Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"formation", @"opening", @"source"])) ||
+              KeysWithOptional(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"formation", @"opening", @"source"], @[@"formationID"])) ||
             !Identifier(record[@"id"], NO) || [ids containsObject:record[@"id"]] ||
             ![record[@"name"] isKindOfClass:NSString.class] || [record[@"name"] length] > 60 ||
             ![[record[@"name"] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] length] ||
@@ -99,6 +99,7 @@ BOOL PHOrbProfilesValid(id library) {
         }
         if (record[@"formation"]) {
             if (!PHFormationReadTeam(record[@"formation"], NULL, NULL) ||
+                (record[@"formationID"] && !Identifier(record[@"formationID"], NO)) ||
                 !PHOrbOpeningValid(record[@"opening"], record[@"formation"]) ||
                 ![record[@"source"] isKindOfClass:NSString.class] || [record[@"source"] length] > 2048) return NO;
             for (NSUInteger i = 0; i < 6; ++i)
@@ -287,13 +288,37 @@ NSDictionary *PHOrbProfilesImportingPlan(NSDictionary *library, id plan, NSStrin
     }
     if ([library[@"profiles"] count] >= PHOrbMaxProfiles) { if (reason) *reason = @"策略庫已滿（64 份）"; return nil; }
     NSMutableArray *profiles = [library[@"profiles"] mutableCopy]; [profiles addObject:profile];
-    return @{@"schema":@1, @"selected":profile[@"id"], @"autoSelect":@NO, @"profiles":profiles};
+    NSMutableDictionary *result = [library mutableCopy];
+    result[@"selected"] = profile[@"id"]; result[@"autoSelect"] = @NO; result[@"profiles"] = profiles;
+    return [result copy];
+}
+
+NSDictionary *PHOrbProfileUpdatingFormation(NSDictionary *profile, NSDictionary *formation) {
+    if (!profile[@"formation"] || !PHFormationReadTeam(formation, NULL, NULL) ||
+        !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    for (NSUInteger i = 0; i < 6; ++i) for (NSString *kind in @[@"body", @"assist"])
+        if (![profile[@"formation"][@"slots"][i][kind][@"id"] isEqual:formation[@"slots"][i][kind][@"id"]]) return nil;
+    if (!PHOrbOpeningValid(profile[@"opening"], formation)) return nil;
+    NSMutableDictionary *updated = [profile mutableCopy]; updated[@"formation"] = formation;
+    return [updated copy];
 }
 
 NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictionary *profile) {
-    if (!PHFormationReadLibrary(formations, NULL, NULL) || !profile[@"formation"]) return nil;
+    if (!PHFormationReadLibrary(formations, NULL, NULL) || !PHOrbProfileUpdatingFormation(profile, profile[@"formation"])) return nil;
     NSMutableArray *teams = [formations[@"teams"] mutableCopy]; NSString *identifier = nil;
-    for (NSDictionary *record in teams) if ([record[@"team"] isEqual:profile[@"formation"]]) { identifier = record[@"id"]; break; }
+    if (profile[@"formationID"]) {
+        for (NSDictionary *record in teams) if ([record[@"id"] isEqual:profile[@"formationID"]]) {
+            if (!PHOrbProfileUpdatingFormation(profile, record[@"team"])) return nil;
+            return @{@"schema":@1, @"selected":record[@"id"], @"teams":teams};
+        }
+        return nil; // A deleted/incompatible binding must never silently restore the imported snapshot.
+    }
+    NSUInteger compatible = 0;
+    for (NSDictionary *record in teams) if (PHOrbProfileUpdatingFormation(profile, record[@"team"])) {
+        if (++compatible > 1) return nil;
+        if ([record[@"team"] isEqual:profile[@"formation"]]) identifier = record[@"id"];
+    }
+    if (compatible && !identifier) return nil;
     if (!identifier) {
         if (teams.count >= PHFormationLibraryCapacity) return nil;
         identifier = NSUUID.UUID.UUIDString.lowercaseString;
@@ -332,7 +357,9 @@ NSDictionary *PHOrbProfilesImportingData(NSDictionary *library, NSData *data, NS
     NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);
     NSArray *profiles = [library[@"profiles"] arrayByAddingObject:[canonical copy]];
     if (reason) *reason = nil;
-    return @{@"schema":@1, @"selected":profile[@"id"], @"autoSelect":@NO, @"profiles":profiles};
+    NSMutableDictionary *result = [library mutableCopy];
+    result[@"selected"] = profile[@"id"]; result[@"autoSelect"] = @NO; result[@"profiles"] = profiles;
+    return [result copy];
 }
 
 NSString *PHOrbPlanDescription(NSDictionary *plan) {

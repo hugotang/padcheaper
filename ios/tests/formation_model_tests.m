@@ -82,6 +82,10 @@ int main(void) {
             [records addObject:@{@"id":[NSString stringWithFormat:@"t%lu",(unsigned long)i], @"team":Team()}];
         NSDictionary *full = @{@"schema":@1, @"selected":@"t0", @"teams":records};
         Check(PHFormationReadLibrary(full, NULL, NULL), "all 64 saved teams validate");
+        Check([PHFormationLibraryTeamLabel(full, @"t0") containsString:@"同名 1/64"] &&
+              [PHFormationLibraryTeamLabel(full, @"t63") containsString:@"同名 64/64"] &&
+              [PHFormationLibraryTeam(full, @"t0") isEqual:records[0][@"team"]],
+              "native strategy choices distinguish identical names while selecting by stable ID");
         [records addObject:@{@"id":@"overflow", @"team":Team()}];
         Check(!PHFormationReadLibrary(full, NULL, NULL), "overflowing libraries are refused");
         printf("Formation native bridge tests: %s\n", failures ? "FAILED" : "passed");

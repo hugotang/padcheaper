@@ -2,6 +2,7 @@
 // See ios/third_party/pazusoba/LICENSE and NOTICE.md for provenance.
 #include "PHOrbSolver.h"
 #include "PHOrbTimedFishing.h"
+#include "PHOrbAssistFishing.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -1506,3 +1507,4 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
 }
 
 #include "PHOrbTimedFishing.inc"
+#include "PHOrbAssistFishing.inc"

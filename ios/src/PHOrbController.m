@@ -5,6 +5,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbEight.h"
 #import "PHOrbProfileEditor.h"
+#import "PHFormationModel.h"
 #import "PHOrbRuleEditor.h"
 #import "PHOrbRecoveryEditor.h"
 #include "PHOrbModel.h"
@@ -1025,14 +1026,20 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
         @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO,
         @"diagonal":state[@"diagonal"] ?: @NO, @"assistRecoveryL":state[@"assistRecoveryL"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
-    PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:state[@"profiles"] ?: PHOrbDefaultProfiles()
+    NSDictionary *baseProfiles = state[@"profiles"] ?: PHOrbDefaultProfiles();
+    PHOrbProfileEditor *editor = [[PHOrbProfileEditor alloc] initWithLibrary:baseProfiles
         settings:settings formations:self.snapshot()[@"formationLibrary"] ?: @{} context:state[@"profileContext"] ?: @{}
         save:^NSString *(NSDictionary *library, NSDictionary *working) {
             PHOrbController *controller = weakSelf; if (!controller) return @"頁面已關閉，請重新開啟後儲存。";
-            controller.action(@"orbsProfiles", @{@"library":library, @"settings":working}); [controller refresh];
+            NSString *requestID = NSUUID.UUID.UUIDString.lowercaseString;
+            controller.action(@"orbsProfiles", @{@"library":library, @"settings":working,
+                @"baseProfiles":baseProfiles, @"requestID":requestID}); [controller refresh];
             NSDictionary *saved = controller.state;
-            NSDictionary *selected = PHOrbProfileNamed(library,library[@"selected"]);
-            NSDictionary *wanted = PHOrbCanonicalSettings(selected ? selected[@"settings"] : working);
+            NSDictionary *snapshot = controller.snapshot(), *receipt = snapshot[@"orbProfileSaveResult"];
+            NSDictionary *committed = receipt[@"library"];
+            NSDictionary *selected = PHOrbProfileNamed(committed,committed[@"selected"]);
+            NSDictionary *requested = PHOrbProfileNamed(library,library[@"selected"]);
+            NSDictionary *wanted = PHOrbCanonicalSettings(requested ? requested[@"settings"] : working);
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
                 @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO,
@@ -1040,9 +1047,14 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
                 @"diagonal":saved[@"diagonal"] ?: @NO, @"assistRecoveryL":saved[@"assistRecoveryL"] ?: @NO});
             NSString *message = saved[@"profileMessage"];
             const BOOL formationSaved = !selected[@"formation"] ||
-                [controller.snapshot()[@"formationDraft"] isEqual:selected[@"formation"]];
-            if ([saved[@"canSetProfiles"] boolValue] && !message.length && formationSaved &&
-                [saved[@"profiles"] isEqual:library] && [actual isEqual:wanted]) return nil;
+                ([snapshot[@"formationDraft"] isEqual:selected[@"formation"]] &&
+                 [snapshot[@"formationLibrary"][@"selected"] isEqual:selected[@"formationID"]] &&
+                 [PHFormationLibraryTeam(snapshot[@"formationLibrary"], selected[@"formationID"]) isEqual:selected[@"formation"]]);
+            if ([receipt[@"requestID"] isEqual:requestID] && [receipt[@"ok"] isEqual:@YES] &&
+                [saved[@"canSetProfiles"] boolValue] && !message.length && formationSaved &&
+                [saved[@"profiles"] isEqual:committed] && [committed[@"selected"] isEqual:library[@"selected"]] &&
+                [snapshot[@"formationLibrary"] isEqual:receipt[@"formations"]] &&
+                [PHOrbCanonicalSettings(receipt[@"settings"]) isEqual:wanted] && [actual isEqual:wanted]) return nil;
             return message.length ? message : @"策略尚未確認儲存，請稍後重試。";
         }];
     editor.modalPresentationStyle = UIModalPresentationPageSheet;

@@ -44,6 +44,8 @@ static void AssistPlanningTraceTests() {
     }
     board.spinnerMask = UINT64_C(1) << 8; board.spinnerColors = 63;
     engine->live.assistRecovery.turns = 3; engine->live.assistRecovery.perColor[3] = 4;
+    engine->live.remainingFrames = 570; engine->live.fps = 30;
+    engine->live.spinnerPeriodFrames = 15; engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 12;
     Check(PHOrbBoardValid(&board), "shortage trace fixture has eight guaranteed light orbs and a ninth on a spinner");
     Check(!NextOrbTurn(session,engine), "new assist shortage stops before dispatching another search");
     NSDictionary *snapshot = session.snapshot, *trace = snapshot[@"searchTrace"];
@@ -63,9 +65,27 @@ static void AssistPlanningTraceTests() {
         [[snapshot[@"executionHistory"] lastObject] isEqual:executed],
         "blocked planning has no stale result or new input and preserves the actual prior release record");
     Check([NSJSONSerialization isValidJSONObject:snapshot], "blocked planning diagnostics remain serializable");
+    Check([snapshot[@"lastFailedSearch"] isEqual:trace] &&
+        [trace[@"timing"][@"remainingFrames"] isEqual:@570] && [trace[@"timing"][@"fps"] isEqual:@30] &&
+        [trace[@"timing"][@"spinnerPeriodFrames"] isEqual:@15] && [trace[@"timing"][@"spinnerCountdown"] isEqual:@12],
+        "a blocked assist search retains its own board, mechanism and movement/spinner timing");
+    Check([trace[@"playerState"][@"hpKnown"] boolValue] && [trace[@"playerState"][@"hp"] isEqual:@1000] &&
+        [trace[@"playerState"][@"maximumHP"] isEqual:@1000] &&
+        [trace[@"playerState"][@"postPlayerHPKnown"] isEqual:@NO] && [trace[@"playerState"][@"survivalKnown"] isEqual:@NO],
+        "captured current HP is not presented as post-move healing or permission to survive another turn");
     Check([session configureSettings:AssistSettings(NO)], "stopped automatic settings may be reloaded");
     for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
     Check([session.snapshot[@"searchTrace"] isEqual:trace], "idle configuration reload retains the captured stop evidence");
+    FakeOrbEngine *resumed = [FakeOrbEngine new]; SetAssistBoard(resumed, 0);
+    engine->live = resumed->live;
+    Check([session configureSettings:AssistSettings(YES)], "resume fixture restores enabled assist policy");
+    [session queueAutomatic];
+    Check(UntilPhase(session,engine,@"turnWaiting") && [session.snapshot[@"searchTrace"][@"status"] isEqual:@"solved"] &&
+        [session.snapshot[@"lastFailedSearch"] isEqual:trace],
+        "a later successful run cannot overwrite the earlier assist-shortage board");
+    engine->live.phase = 28; Tick(session,engine,Frame());
+    Check([session.snapshot[@"lastFailedSearch"] isEqual:trace] && ![session.snapshot[@"automatic"] boolValue],
+        "Dungeon Clear keeps the historical failure available for copying diagnostics");
 
     for (bool finalRead : {false,true}) {
         engine = [FakeOrbEngine new]; SetAssistBoard(engine,0);

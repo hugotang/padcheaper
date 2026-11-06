@@ -1,5 +1,6 @@
 #import "PHOrbProfileEditor.h"
 #import "PHOrbProfiles.h"
+#import "PHFormationModel.h"
 #import "PHOrbEight.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbEditorUI.h"
@@ -205,20 +206,45 @@
         NSMutableArray *numbers = [NSMutableArray array]; BOOL any = NO;
         for (NSNumber *number in record[@"team"]) { [numbers addObject:number.unsignedIntValue ? number.stringValue : @"不限"]; any |= number.unsignedIntValue != 0; }
         [binding addArrangedSubview:[self label:any ? [NSString stringWithFormat:@"開始時角色：%@", [numbers componentsJoinedByString:@"／"]] : @"隊伍限制：不限"]];
-        UIButton *team = [self button:@"從隊伍庫綁定角色"]; team.showsMenuAsPrimaryAction = YES;
+        BOOL fullPlan = record[@"formation"] != nil;
+        NSString *teamTitle = fullPlan ? (record[@"formationID"] ?
+            [@"使用的隊伍：" stringByAppendingString:PHFormationLibraryTeamLabel(self.formations, record[@"formationID"])] :
+            @"使用的隊伍：選擇既有配裝…") : @"從隊伍庫綁定角色";
+        UIButton *team = [self button:teamTitle]; team.showsMenuAsPrimaryAction = YES;
+        team.accessibilityIdentifier = @"padcheaper.orbsProfileFormation";
         NSMutableArray *teams = [NSMutableArray array];
         for (NSDictionary *formation in self.formations[@"teams"]) {
             NSDictionary *saved = formation[@"team"]; NSMutableArray *members = [NSMutableArray array];
             for (NSDictionary *slot in saved[@"slots"]) [members addObject:slot[@"body"][@"id"] ?: @0];
             if (members.count != 6) continue;
             NSArray *teamBinding = [members copy];
-            [teams addObject:[UIAction actionWithTitle:saved[@"title"] ?: @"未命名隊伍" image:nil identifier:nil handler:^(__kindof UIAction *sender) {
+            UIAction *choice = [UIAction actionWithTitle:PHFormationLibraryTeamLabel(self.formations, formation[@"id"]) image:nil identifier:nil handler:^(__kindof UIAction *sender) {
                 PHOrbProfileEditor *editor = weakSelf; if (!editor.selected) return;
-                editor.selected[@"team"] = [teamBinding mutableCopy]; [editor rebuild];
-            }]];
+                if (editor.selected[@"formation"]) {
+                    NSDictionary *updated = PHOrbProfileUpdatingFormation(editor.selected, saved);
+                    if (!updated) { editor.notice.text = @"這份隊伍的本體／武裝與開場不相容。"; return; }
+                    editor.selected[@"formation"] = updated[@"formation"];
+                    editor.selected[@"formationID"] = formation[@"id"];
+                } else editor.selected[@"team"] = [teamBinding mutableCopy];
+                [editor rebuild];
+            }];
+            if (fullPlan && !PHOrbProfileUpdatingFormation(record, saved)) choice.attributes = UIMenuElementAttributesDisabled;
+            if ([record[@"formationID"] isEqual:formation[@"id"]]) choice.state = UIMenuElementStateOn;
+            [teams addObject:choice];
         }
-        team.menu = [UIMenu menuWithTitle:@"使用開始時的角色形態核對" children:teams]; team.enabled = teams.count > 0 && !record[@"formation"] && !record[@"activity"];
+        team.menu = [UIMenu menuWithTitle:fullPlan ? @"選擇要保留的隊伍配裝" : @"使用開始時的角色形態核對" children:teams];
+        team.enabled = teams.count > 0 && !record[@"activity"];
         [binding addArrangedSubview:team];
+        if (fullPlan) {
+            UILabel *loadoutHelp = [self label:@"選用後記住這份隊伍。日後在隊伍編成儲存的潛覺、等級與加值會同步到使用它的策略及匯出；本體與武裝必須符合原開場。有同名隊伍時，可在隊伍編成查看各份潛覺後選回修改版。"];
+            loadoutHelp.font = [UIFont systemFontOfSize:13]; loadoutHelp.textColor = UIColor.secondaryLabelColor;
+            [binding addArrangedSubview:loadoutHelp];
+            if (record[@"formationID"] && !PHOrbProfileUpdatingFormation(record,
+                PHFormationLibraryTeam(self.formations, record[@"formationID"]))) {
+                UILabel *warning = [self label:@"原隊伍已刪除或更換本體／武裝；請重新選擇相容隊伍後儲存。"];
+                warning.textColor = UIColor.systemOrangeColor; [binding addArrangedSubview:warning];
+            }
+        }
         [binding addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
             if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請在活動 JSON 一併更新。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包會核對六格本體與武裝；請在匯入 JSON 一併修改隊伍及開場。"; return; }
@@ -408,6 +434,7 @@
     NSMutableDictionary *record = duplicate && self.selected ? [self.selected mutableCopy] :
         [@{@"settings":self.workingSettings, @"team":@[@0,@0,@0,@0,@0,@0], @"dungeon":@0, @"floor":@0} mutableCopy];
     record[@"id"] = NSUUID.UUID.UUIDString.lowercaseString;
+    [record removeObjectForKey:@"formationID"]; // A copy starts with its own loadout unless explicitly rebound.
     NSString *name = duplicate ? [record[@"name"] stringByAppendingString:@" 副本"] : [NSString stringWithFormat:@"新策略 %lu", (unsigned long)profiles.count + 1];
     record[@"name"] = name.length <= 60 ? name : [name substringToIndex:60];
     [profiles addObject:record]; self.draft[@"selected"] = record[@"id"]; [self rebuild];

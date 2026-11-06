@@ -26,6 +26,7 @@ static void *PHProbeDylib;
 @interface UIViewController (PHProbeOverlayState)
 - (void)updateWithSnapshot:(NSDictionary *)snapshot;
 - (void)openOrbs;
+- (void)rebuild;
 @end
 
 static NSDictionary *PHProbeJSON(NSString *name) {
@@ -45,6 +46,14 @@ static NSString *PHProbePrefix(void) {
 
 static void PHProbeCheck(BOOL condition, NSString *message) {
     if (!condition) [PHProbeFailures addObject:message];
+}
+
+static NSDictionary *PHProbeProfileReceipt(NSDictionary *value, NSDictionary *formations) {
+    NSDictionary *library = value[@"library"], *selected = nil;
+    for (NSDictionary *record in library[@"profiles"])
+        if ([record[@"id"] isEqual:library[@"selected"]]) { selected = record; break; }
+    return @{@"requestID":value[@"requestID"] ?: @"", @"ok":@YES, @"library":library,
+        @"formations":formations ?: @{}, @"settings":selected ? selected[@"settings"] : value[@"settings"]};
 }
 
 static BOOL PHProbeHasAwakeningArtwork(UIImage *image) {
@@ -1202,7 +1211,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 orbAction = action; orbValue = value;
                 if ([action isEqual:@"orbsProfiles"]) {
                     eightGuideState[@"profiles"] = value[@"library"]; eightGuideState[@"profileMessage"] = @"";
-                    orbFixture = @{@"orbState":eightGuideState};
+                    orbFixture = @{@"orbState":eightGuideState, @"formationLibrary":@{},
+                        @"orbProfileSaveResult":PHProbeProfileReceipt(value, nil)};
                 }
             } copy] forKey:@"action"];
             [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -1269,6 +1279,44 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 [exportedPlan[@"rotation"][5][@"color"] isEqual:@5] &&
                 [exportedPlan[@"rotation"][5][@"below"] isEqual:@4],
                 @"UI export preserves opening, first-puzzle Byakuya timing and independent shortage/rescue alternatives");
+            NSDictionary *originalFormations = [profileEditor valueForKey:@"formations"];
+            NSData *formationData = [NSJSONSerialization dataWithJSONObject:exportedPlan[@"formation"] options:0 error:NULL];
+            NSMutableDictionary *editedFormation = [NSJSONSerialization JSONObjectWithData:formationData options:NSJSONReadingMutableContainers error:NULL];
+            editedFormation[@"slots"][2][@"body"][@"latents"] = [@[@48,@11] mutableCopy];
+            NSMutableDictionary *incompatibleFormation = [NSJSONSerialization JSONObjectWithData:formationData options:NSJSONReadingMutableContainers error:NULL];
+            incompatibleFormation[@"title"] = @"不相容武裝";
+            incompatibleFormation[@"slots"][0][@"assist"][@"id"] = @0;
+            [profileEditor setValue:@{@"schema":@1, @"selected":@"original", @"teams":@[
+                @{@"id":@"original", @"team":exportedPlan[@"formation"]},
+                @{@"id":@"edited", @"team":editedFormation},
+                @{@"id":@"incompatible", @"team":incompatibleFormation}]} forKey:@"formations"];
+            [profileEditor rebuild];
+            UIButton *formationChoice = (UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileFormation");
+            NSArray<UIAction *> *formationChoices = (NSArray<UIAction *> *)formationChoice.menu.children;
+            PHProbeCheck(formationChoice.enabled && formationChoices.count == 3 &&
+                [formationChoices[0].title containsString:@"同名 1/2"] &&
+                [formationChoices[1].title containsString:@"同名 2/2"] &&
+                (formationChoices[2].attributes & UIMenuElementAttributesDisabled),
+                @"Full-plan formation menu distinguishes same-title loadouts and disables incompatible assists");
+            if (formationChoices.count == 3) {
+                UIButton *chooseEdited = [UIButton buttonWithType:UIButtonTypeSystem];
+                [chooseEdited addAction:formationChoices[1] forControlEvents:UIControlEventTouchUpInside];
+                [chooseEdited sendActionsForControlEvents:UIControlEventTouchUpInside];
+                NSDictionary *reboundDraft = [profileEditor valueForKey:@"draft"];
+                PHProbeCheck([reboundDraft[@"profiles"][0][@"formationID"] isEqual:@"edited"] &&
+                    [reboundDraft[@"profiles"][0][@"formation"] isEqual:editedFormation] &&
+                    [reboundDraft[@"profiles"][0][@"opening"] isEqual:exportedPlan[@"opening"]],
+                    @"Choosing the edited duplicate changes only the reviewed loadout and local link");
+                [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsPlanExport") sendActionsForControlEvents:UIControlEventTouchUpInside];
+                NSData *editedData = [UIPasteboard.generalPasteboard.string dataUsingEncoding:NSUTF8StringEncoding];
+                NSDictionary *editedExport = [NSJSONSerialization JSONObjectWithData:editedData options:0 error:NULL];
+                PHProbeCheck([editedExport[@"formation"] isEqual:editedFormation] && !editedExport[@"formationID"],
+                    @"The UI exports recovered latents without a device-local team link");
+            }
+            NSMutableDictionary *originalDraft = [profileEditor valueForKey:@"draft"];
+            originalDraft[@"profiles"][0][@"formation"] = exportedPlan[@"formation"];
+            [originalDraft[@"profiles"][0] removeObjectForKey:@"formationID"];
+            [profileEditor setValue:originalFormations forKey:@"formations"]; [profileEditor rebuild];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
             PHProbeCheck(orbController.presentedViewController == profileEditor && [orbValue[@"library"][@"profiles"][0][@"formation"] isEqual:exportedPlan[@"formation"]],
                 @"Failed full-plan save keeps the reviewable formation and opening draft open");
@@ -1398,7 +1446,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 if ([action isEqual:@"orbsProfiles"]) {
                     NSMutableDictionary *state = [profileFailure mutableCopy];
                     state[@"profiles"] = value[@"library"]; state[@"profileMessage"] = @"";
-                    orbFixture = @{@"orbState":state};
+                    orbFixture = @{@"orbState":state, @"formationLibrary":@{},
+                        @"orbProfileSaveResult":PHProbeProfileReceipt(value, nil)};
                 }
             } copy] forKey:@"action"];
             [(UIButton *)PHProbeFind(profileEditor.view, @"padcheaper.orbsProfileSave") sendActionsForControlEvents:UIControlEventTouchUpInside];
@@ -1449,7 +1498,10 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"A later idle snapshot clears the restore retry title and availability");
         }),
         PHProbeStep(@"profile-save-dismissed", ^BOOL { return PHProbeClosed(orbController, self.window); }, ^{
-            PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow && [orbValue isEqual:profilePayload],
+            PHProbeCheck(!orbController.presentedViewController && self.window.isKeyWindow &&
+                [orbValue[@"library"] isEqual:profilePayload[@"library"]] &&
+                [orbValue[@"settings"] isEqual:profilePayload[@"settings"]] &&
+                ![orbValue[@"requestID"] isEqual:profilePayload[@"requestID"]],
                 @"Acknowledged strategy save publishes the retained draft and restores game focus");
             [orbController setValue:[^(NSString *action, id value) { orbAction = action; orbValue = value; } copy] forKey:@"action"];
             orbFixture = baseOrbFixture; orbAction = nil; [orbController refresh];

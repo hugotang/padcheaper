@@ -172,7 +172,7 @@ struct EightPreparationState {
     uint8_t _temporaryMask;
     bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending, _openingManual;
     PHOrbSnapshot _openingBefore;
-    NSDictionary *_searchTrace;
+    NSDictionary *_searchTrace, *_lastFailedSearch;
     NSDictionary *_lastReadIssue;
     NSString *_liveReadReason;
     double _lastReadUptime;
@@ -246,7 +246,7 @@ struct EightPreparationState {
         _decisionContexts = [NSMutableArray array];
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
         _openingLog = [NSMutableArray array];
-        _searchTrace = @{}; _executionHistory = [NSMutableArray array];
+        _searchTrace = @{}; _lastFailedSearch = @{}; _executionHistory = [NSMutableArray array];
         _assistTrace = @{};
         _lastReadIssue = @{};
         _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
@@ -472,6 +472,15 @@ struct EightPreparationState {
         @"turn":@(_auto.active() ? _auto.turn : 0), @"observedTurn":@(_observedTurn), @"wave":@(_preview.wave),
         @"dungeon":@(_preview.identity.dungeon), @"floor":@(_preview.identity.floor),
         @"board":BoardTrace(_preview.board), @"quality":_quality,
+        @"timing":@{@"remainingFrames":@(_preview.remainingFrames), @"fps":@(_preview.fps),
+            @"spinnerPeriodFrames":@(_preview.spinnerPeriodFrames), @"spinnerCountdownKnown":@(_preview.spinnerCountdownKnown),
+            @"spinnerCountdown":@(_preview.spinnerCountdown)},
+        @"playerState":@{@"hpKnown":@(_preview.automation.valid && _preview.automation.hpKnown),
+            @"hp":_preview.automation.valid && _preview.automation.hpKnown ? @(_preview.automation.hp) : NSNull.null,
+            @"maximumHP":_preview.automation.valid && _preview.automation.hpKnown ? @(_preview.automation.maximumHP) : NSNull.null,
+            @"statusKnown":@(_preview.automation.valid && _preview.automation.statusKnown),
+            @"effects":_preview.automation.valid && _preview.automation.statusKnown ? @(_preview.automation.playerEffects) : NSNull.null,
+            @"postPlayerHPKnown":@NO, @"survivalKnown":@NO},
         @"thornComboPriority":@(options.thornComboPriority),
         @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
     _skillWindowWaitAt = 0;
@@ -740,6 +749,7 @@ struct EightPreparationState {
             if (result != PHOrbSolveStatus::Solved) trace[@"reason"] = SolveFailureMessage(result, board,
                 checkedOptions, session->_goalPlan, assistCandidates.count != 0, fishingPlan);
             session->_searchTrace = [trace copy];
+            [session rememberFailedSearch];
             // A failed preferred preparation is not an output failure: output
             // was never searched on this board, so fall back instead of stopping.
             const bool priorityPreparation = session->_eightPrep.active && session->_eightPrep.priority;
@@ -767,6 +777,8 @@ struct EightPreparationState {
                 evaluation.unmatchedBombs != route.unmatchedBombs ||
                 evaluation.erased != route.erased || evaluation.matchedGoals != route.matchedGoals || route.goalCount != checkedOptions.goals.count ||
                 !std::equal(std::begin(evaluation.goalHits), std::end(evaluation.goalHits), route.goalHits)) {
+                trace[@"status"] = @"replay-failed"; trace[@"reason"] = @"路徑重播校驗失敗，已停止";
+                session->_searchTrace = [trace copy]; [session rememberFailedSearch];
                 [session queueStop:@"路徑重播校驗失敗，已停止"]; session->_phase = PHOrbSessionPhase::Fault;
                 return;
             }
@@ -832,6 +844,7 @@ struct EightPreparationState {
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
             if (!route.goalsMet || !route.hazardsSafe) {
                 trace[@"reason"] = session->_message; session->_searchTrace = [trace copy];
+                [session rememberFailedSearch];
             }
             if ((session->_auto.active() || session->_oneShot) && (!route.goalsMet || !route.hazardsSafe)) [session queueStop:session->_message];
         });

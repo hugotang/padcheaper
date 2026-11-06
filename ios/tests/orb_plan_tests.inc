@@ -233,6 +233,15 @@ static void PlanTests(void) {
         [selectedTeam isEqual:plan[@"formation"]] && [formations[@"teams"] count] == 1,
         "plan selection adds a team without mutating or replacing an existing team");
     Check([PHOrbFormationsSelectingProfile(selected,profile) isEqual:selected], "selecting the same plan reuses its saved team");
+    NSMutableDictionary *trained = ReadPlanFixture();
+    trained[@"formation"][@"slots"][2][@"body"][@"latents"] = [@[@48,@11] mutableCopy];
+    NSDictionary *trainedLibrary = PHFormationLibraryUpdatingTeam(selected, trained[@"formation"]);
+    NSMutableDictionary *linked = [profile mutableCopy]; linked[@"formationID"] = selected[@"selected"];
+    Check([PHOrbFormationsSelectingProfile(trainedLibrary, linked) isEqual:trainedLibrary] &&
+        !PHOrbFormationsSelectingProfile(trainedLibrary, profile),
+        "stable links select edited loadouts while an unlinked old snapshot cannot silently create a duplicate");
+    linked[@"formationID"] = @"deleted";
+    Check(!PHOrbFormationsSelectingProfile(trainedLibrary, linked), "a missing local link cannot restore an old imported team");
     for (NSDictionary *change in @[@{@"format":@"other"}, @{@"schema":@2}, @{@"schema":@YES}, @{@"target":@"unknown"},
         @{@"target":@"jp.gungho.pad-ios-23.6.1-107554"}, @{@"target":@"jp.gungho.pad-ios-23.6.0-106879"},
         @{@"target":@"jp.gungho.pad-android-23.6.1"}, @{@"target":@YES}, @{@"target":NSNull.null},

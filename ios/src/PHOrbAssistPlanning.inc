@@ -120,9 +120,12 @@ NSDictionary *PHOrbPlanWithAssistRecovery(NSDictionary *plan, BOOL enabled, cons
                     name, minimum, capacity[color], evidence->perColor[color]]];
             }
         }
-        return AssistBlocked(result, @"insufficient-inventory", [NSString stringWithFormat:
+        NSString *message = [NSString stringWithFormat:
             @"珠數不足以同時完成原有目標及足量武裝回復 L（剩 %u 回合）；%@。請補珠或手動處理",
-            evidence->turns, [details componentsJoinedByString:@"；"]]);
+            evidence->turns, [details componentsJoinedByString:@"；"]];
+        if (PHOrbSpinnerVariants(&state->board) > 1) message = [message stringByAppendingString:
+            @"。此回復 L 規劃只計固定珠，尚未嘗試從轉轉補珠，不代表手動撈珠無解。"];
+        return AssistBlocked(result, @"insufficient-inventory", message);
     }
     [candidates sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
         for (NSString *key in @[@"addedGroups", @"groups", @"predictedTurns"])

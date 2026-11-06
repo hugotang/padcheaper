@@ -59,6 +59,136 @@ NSDictionary *PHConfigurationOrbProfiles(NSDictionary *configuration) {
     return configuration[@"orbProfiles"] ?: PHOrbDefaultProfiles();
 }
 
+static NSDictionary *PHConfigurationCopy(NSDictionary *configuration) {
+    if (!PHConfigurationIsValid(configuration)) return nil;
+    NSData *data = [NSJSONSerialization dataWithJSONObject:configuration options:0 error:NULL];
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+}
+
+static BOOL PHConfigurationTeamClaimed(NSDictionary *profiles, NSString *teamID, NSString *profileID) {
+    for (NSDictionary *record in profiles[@"profiles"])
+        if (![record[@"id"] isEqual:profileID] && [record[@"formationID"] isEqual:teamID]) return YES;
+    return NO;
+}
+
+// Legacy files have no durable link. Only an unambiguous, complete snapshot is
+// evidence for migration; matching titles or six body IDs is not sufficient.
+static NSString *PHConfigurationLegacyTeamID(NSDictionary *formations, NSDictionary *profile, NSDictionary *profiles) {
+    NSString *identifier = nil;
+    NSUInteger compatible = 0;
+    for (NSDictionary *other in profiles[@"profiles"])
+        if (![other[@"id"] isEqual:profile[@"id"]] && !other[@"formationID"] &&
+            [other[@"formation"] isEqual:profile[@"formation"]]) return nil;
+    for (NSDictionary *record in formations[@"teams"]) {
+        if (PHConfigurationTeamClaimed(profiles, record[@"id"], profile[@"id"]) ||
+            !PHOrbProfileUpdatingFormation(profile, record[@"team"])) continue;
+        if (++compatible > 1) return nil;
+        if ([record[@"team"] isEqual:profile[@"formation"]]) identifier = record[@"id"];
+    }
+    return identifier;
+}
+
+NSDictionary *PHConfigurationSavingFormations(NSDictionary *configuration, NSDictionary *formations, NSString **reason) {
+    if (reason) *reason = @"隊伍庫或目前設定無效，尚未儲存。";
+    if (!PHConfigurationIsValid(configuration) || !PHFormationReadLibrary(formations, NULL, NULL)) return nil;
+    NSMutableDictionary *next = [configuration mutableCopy];
+    NSMutableDictionary *library = [PHConfigurationOrbProfiles(configuration) mutableCopy];
+    NSMutableArray *profiles = [library[@"profiles"] mutableCopy];
+    library[@"profiles"] = profiles;
+    for (NSUInteger i = 0; i < profiles.count; ++i) {
+        NSDictionary *profile = profiles[i];
+        if (!profile[@"formation"]) continue;
+        NSString *identifier = profile[@"formationID"] ?: PHConfigurationLegacyTeamID(configuration[@"formations"], profile, library);
+        if (!identifier) continue;
+        NSMutableDictionary *updated = [profile mutableCopy]; updated[@"formationID"] = identifier;
+        NSDictionary *team = PHFormationLibraryTeam(formations, identifier);
+        // Keep an incompatible/deleted link visible. Reselecting that plan will
+        // ask for an explicit compatible team instead of restoring stale data.
+        profiles[i] = PHOrbProfileUpdatingFormation(updated, team) ?: updated;
+    }
+    next[@"formations"] = formations; next[@"orbProfiles"] = library;
+    NSDictionary *result = PHConfigurationCopy(next);
+    if (result && reason) *reason = nil;
+    return result;
+}
+
+static BOOL PHConfigurationSameProfileRevision(NSDictionary *base, NSDictionary *current) {
+    if (!PHOrbProfilesValid(base) || !PHOrbProfilesValid(current)) return NO;
+    NSMutableDictionary *left = [base mutableCopy], *right = [current mutableCopy];
+    [left removeObjectForKey:@"profiles"]; [right removeObjectForKey:@"profiles"];
+    if (![left isEqual:right] || [base[@"profiles"] count] != [current[@"profiles"] count]) return NO;
+    for (NSUInteger i = 0; i < [base[@"profiles"] count]; ++i) {
+        NSDictionary *before = base[@"profiles"][i], *now = current[@"profiles"][i];
+        if (before[@"formation"] && !PHOrbProfileUpdatingFormation(before, now[@"formation"])) return NO;
+        left = [before mutableCopy]; right = [now mutableCopy];
+        [left removeObjectForKey:@"formation"]; [right removeObjectForKey:@"formation"];
+        if (![left isEqual:right]) return NO;
+    }
+    return YES;
+}
+
+NSDictionary *PHConfigurationSavingOrbProfiles(NSDictionary *configuration, NSDictionary *profiles,
+    NSDictionary *settings, NSDictionary *baseProfiles, NSString **reason) {
+    if (reason) *reason = @"策略格式或目前設定無效，尚未儲存。";
+    if (!PHConfigurationIsValid(configuration) || !PHOrbProfilesValid(profiles) || !PHOrbCanonicalSettings(settings)) return nil;
+    NSDictionary *previous = PHConfigurationOrbProfiles(configuration);
+    if (baseProfiles && !PHConfigurationSameProfileRevision(baseProfiles, previous)) {
+        if (reason) *reason = @"策略已在其他操作中更新；請關閉後重新開啟，避免蓋掉較新的設定。";
+        return nil;
+    }
+    NSMutableDictionary *next = [configuration mutableCopy], *library = [profiles mutableCopy];
+    NSMutableArray *records = [profiles[@"profiles"] mutableCopy]; library[@"profiles"] = records;
+    NSDictionary *formations = configuration[@"formations"];
+    for (NSUInteger i = 0; i < records.count; ++i) {
+        NSDictionary *profile = records[i];
+        if (!profile[@"formation"]) continue;
+        NSDictionary *old = PHOrbProfileNamed(previous, profile[@"id"]);
+        // Deleting then re-importing the same ID in this editor deliberately
+        // removes its old local link. Preserve the old team as an independent
+        // record, but let the newly reviewed package establish a fresh link.
+        if (!profile[@"formationID"] && old[@"formationID"] &&
+            PHOrbProfileNamed(baseProfiles, profile[@"id"])[@"formationID"]) old = nil;
+        BOOL selected = [profile[@"id"] isEqual:library[@"selected"]];
+        NSString *identifier = profile[@"formationID"] ?: old[@"formationID"];
+        if (!identifier && old) identifier = PHConfigurationLegacyTeamID(formations, old, library);
+        if (!identifier && (selected || !old)) {
+            BOOL ambiguous = NO;
+            if (old) for (NSDictionary *record in formations[@"teams"])
+                if (PHOrbProfileUpdatingFormation(profile, record[@"team"])) ambiguous = YES;
+            if (ambiguous) {
+                if (reason) *reason = @"隊伍庫有相同或修改過的配裝；請在策略的「使用的隊伍」選回要保留的一份。";
+                return nil;
+            }
+            if (!PHFormationReadLibrary(formations, NULL, NULL) || [formations[@"teams"] count] >= PHFormationLibraryCapacity) {
+                if (reason) *reason = @"隊伍庫已滿或資料無效；整包未儲存，請先整理隊伍庫。";
+                return nil;
+            }
+            identifier = NSUUID.UUID.UUIDString.lowercaseString;
+            NSMutableArray *teams = [formations[@"teams"] mutableCopy];
+            [teams addObject:@{@"id":identifier, @"team":profile[@"formation"]}];
+            formations = @{@"schema":@1, @"selected":selected ? identifier : formations[@"selected"], @"teams":teams};
+        }
+        if (!identifier) continue;
+        NSMutableDictionary *linked = [profile mutableCopy]; linked[@"formationID"] = identifier;
+        NSDictionary *team = PHFormationLibraryTeam(formations, identifier);
+        NSDictionary *updated = PHOrbProfileUpdatingFormation(linked, team);
+        if (!updated && (selected || ![old[@"formationID"] isEqual:identifier])) {
+            if (reason) *reason = @"策略使用的隊伍已刪除或本體／武裝已更換；請選擇相容隊伍，或重新匯入配套開場。";
+            return nil;
+        }
+        // The latest saved team wins over the editor's older loadout snapshot.
+        records[i] = updated ?: PHOrbProfileUpdatingFormation(linked, old[@"formation"]) ?: linked;
+        if (selected) formations = @{@"schema":@1, @"selected":identifier, @"teams":formations[@"teams"]};
+    }
+    NSDictionary *selected = PHOrbProfileNamed(library, library[@"selected"]);
+    next[@"orbProfiles"] = library;
+    next[@"orbs"] = PHOrbCanonicalSettings(selected ? selected[@"settings"] : settings);
+    if (formations) next[@"formations"] = formations;
+    NSDictionary *result = PHConfigurationCopy(next);
+    if (result && reason) *reason = nil;
+    return result;
+}
+
 PHBattlePolicy PHConfigurationBattlePolicy(NSDictionary *configuration) {
     NSDictionary *filters = PHConfigurationBattleFilters(configuration);
     PHBattlePolicy policy = {.configured = true};

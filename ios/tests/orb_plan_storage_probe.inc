@@ -5,8 +5,10 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     __typeof__(&PHOrbProfilesImportingPlan) importPlan = (__typeof__(&PHOrbProfilesImportingPlan))dlsym(PHProbeDylib, "PHOrbProfilesImportingPlan");
     __typeof__(&PHOrbProfileNamed) profileNamed = (__typeof__(&PHOrbProfileNamed))dlsym(PHProbeDylib, "PHOrbProfileNamed");
     __typeof__(&PHFormationReadLibrary) readLibrary = (__typeof__(&PHFormationReadLibrary))dlsym(PHProbeDylib, "PHFormationReadLibrary");
-    PHProbeCheck(configProfiles && importPlan && profileNamed && readLibrary, @"Plan helpers resolve from the loaded test dylib");
-    if (!configProfiles || !importPlan || !profileNamed || !readLibrary) return;
+    __typeof__(&PHFormationLibraryUpdatingTeam) updateTeam = (__typeof__(&PHFormationLibraryUpdatingTeam))dlsym(PHProbeDylib, "PHFormationLibraryUpdatingTeam");
+    __typeof__(&PHOrbExportProfileData) exportProfile = (__typeof__(&PHOrbExportProfileData))dlsym(PHProbeDylib, "PHOrbExportProfileData");
+    PHProbeCheck(configProfiles && importPlan && profileNamed && readLibrary && updateTeam && exportProfile, @"Plan helpers resolve from the loaded test dylib");
+    if (!configProfiles || !importPlan || !profileNamed || !readLibrary || !updateTeam || !exportProfile) return;
     PHOverlaySnapshot snapshot = [overlay.rootViewController valueForKey:@"snapshot"];
     PHOverlayAction action = [overlay.rootViewController valueForKey:@"action"];
     NSDictionary *initial = snapshot();
@@ -25,7 +27,7 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     NSDictionary *profile = profileNamed(library, library[@"selected"]);
     PHProbeCheck(profile != nil, @"Real storage test loads the executable Uryu plan");
     if (!profile) return;
-    NSDictionary *payload = @{@"library":library, @"settings":profile[@"settings"]};
+    NSDictionary *payload = @{@"library":library, @"settings":profile[@"settings"], @"requestID":@"plan-storage-import"};
     NSFileManager *files = NSFileManager.defaultManager;
     NSString *backup = [path stringByAppendingFormat:@".probe-%@", NSUUID.UUID.UUIDString];
     BOOL moved = [files moveItemAtPath:path toPath:backup error:NULL];
@@ -40,7 +42,8 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     PHProbeCheck([failed[@"config"] isEqual:baseline] &&
         [failed[@"formationLibrary"] isEqual:baseline[@"formations"]] &&
         [failed[@"orbState"][@"profiles"] isEqual:configProfiles(baseline)] &&
-        [failed[@"orbState"][@"profileMessage"] length] > 0,
+        [failed[@"orbState"][@"profileMessage"] length] > 0 &&
+        [failed[@"orbProfileSaveResult"][@"ok"] isEqual:@NO],
         @"Failed full-plan disk write publishes neither the new formation nor the opening/strategy");
     BOOL repaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:backup toPath:path error:NULL];
     PHProbeCheck(repaired, @"Plan fixture restores the previous canonical file after the failed commit");
@@ -49,11 +52,52 @@ static void PHProbePlanStorage(UIWindow *overlay) {
     action(@"orbsProfiles", payload);
     NSDictionary *committed = snapshot(), *disk = PHProbeJSON(@"config.json"), *team = nil;
     readLibrary(disk[@"formations"], &team, NULL);
-    PHProbeCheck([disk[@"orbProfiles"] isEqual:library] && [disk[@"orbs"] isEqual:profile[@"settings"]] &&
+    NSDictionary *linkedProfile = profileNamed(configProfiles(disk), library[@"selected"]);
+    NSMutableDictionary *portableProfile = [linkedProfile mutableCopy]; [portableProfile removeObjectForKey:@"formationID"];
+    PHProbeCheck([portableProfile isEqual:profile] &&
+        [linkedProfile[@"formationID"] isEqual:disk[@"formations"][@"selected"]] && [disk[@"orbs"] isEqual:profile[@"settings"]] &&
         [disk[@"formations"][@"teams"] count] == [baseline[@"formations"][@"teams"] count] + 1 &&
         [team isEqual:plan[@"formation"]] && [committed[@"formationDraft"] isEqual:team] &&
-        [committed[@"orbState"][@"profiles"] isEqual:library],
+        [committed[@"orbState"][@"profiles"] isEqual:disk[@"orbProfiles"]] &&
+        [committed[@"orbProfileSaveResult"][@"requestID"] isEqual:payload[@"requestID"]] &&
+        [committed[@"orbProfileSaveResult"][@"ok"] isEqual:@YES],
         @"A successful full-plan commit saves all four parts and publishes the selected automatic entry team together");
+    NSData *teamData = [NSJSONSerialization dataWithJSONObject:team options:0 error:NULL];
+    NSMutableDictionary *editedTeam = [NSJSONSerialization JSONObjectWithData:teamData options:NSJSONReadingMutableContainers error:NULL];
+    editedTeam[@"slots"][2][@"body"][@"latents"] = [@[@48,@11] mutableCopy];
+    NSDictionary *editedLibrary = updateTeam(disk[@"formations"], editedTeam);
+    NSString *latentBackup = [path stringByAppendingFormat:@".latent-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL latentMoved = [files moveItemAtPath:path toPath:latentBackup error:NULL];
+    BOOL latentBlocked = latentMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(latentBlocked, @"Latent persistence fixture blocks the canonical file");
+    if (latentBlocked) {
+        action(@"formationLibrarySave", @{@"requestID":@"latent-failed", @"library":editedLibrary});
+        NSDictionary *failedLatents = snapshot();
+        PHProbeCheck([failedLatents[@"formationSaveResult"][@"ok"] isEqual:@NO] &&
+            [failedLatents[@"config"] isEqual:disk] && [failedLatents[@"formationLibrary"] isEqual:disk[@"formations"]],
+            @"Failed latent save publishes neither the edited team nor its strategy snapshot");
+        BOOL latentRepaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:latentBackup toPath:path error:NULL];
+        PHProbeCheck(latentRepaired, @"Latent fixture restores the canonical file");
+        if (!latentRepaired) return;
+    } else if (latentMoved) [files moveItemAtPath:latentBackup toPath:path error:NULL];
+    action(@"formationLibrarySave", @{@"requestID":@"latent-saved", @"library":editedLibrary});
+    NSDictionary *latentDisk = PHProbeJSON(@"config.json"), *latentState = snapshot();
+    PHProbeCheck([latentState[@"formationSaveResult"][@"ok"] isEqual:@YES] &&
+        [profileNamed(configProfiles(latentDisk), library[@"selected"])[@"formation"] isEqual:editedTeam] &&
+        [latentState[@"orbState"][@"profiles"] isEqual:configProfiles(latentDisk)],
+        @"Real team save persists and publishes the edited latent in the full strategy atomically");
+    action(@"orbsProfiles", @{@"requestID":@"latent-reselect", @"library":configProfiles(disk),
+        @"settings":profile[@"settings"], @"baseProfiles":configProfiles(disk)});
+    NSDictionary *reselectedDisk = PHProbeJSON(@"config.json"), *reselectedState = snapshot();
+    NSDictionary *reselectedProfile = profileNamed(configProfiles(reselectedDisk), library[@"selected"]);
+    NSData *exported = exportProfile(reselectedProfile, NULL);
+    NSDictionary *exportedPlan = exported ? [NSJSONSerialization JSONObjectWithData:exported options:0 error:NULL] : nil;
+    PHProbeCheck([reselectedState[@"orbProfileSaveResult"][@"ok"] isEqual:@YES] &&
+        [reselectedState[@"formationDraft"] isEqual:editedTeam] && [exportedPlan[@"formation"] isEqual:editedTeam] &&
+        [reselectedDisk[@"formations"][@"teams"] count] == [disk[@"formations"][@"teams"] count] &&
+        [reselectedDisk[@"formations"][@"selected"] isEqual:disk[@"formations"][@"selected"]],
+        @"Reselecting an older strategy draft retains edited latents, export and team count after the canonical reload");
+    disk = reselectedDisk;
     NSString *thornBackup = [path stringByAppendingFormat:@".thorn-probe-%@", NSUUID.UUID.UUIDString];
     BOOL thornMoved = [files moveItemAtPath:path toPath:thornBackup error:NULL];
     BOOL thornBlocked = thornMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];

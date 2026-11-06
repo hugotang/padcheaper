@@ -78,7 +78,8 @@ static void AssistPlanningTests(void) {
     state = AssistBoard(10, 0, 2); state.board.spinnerMask = UINT64_C(1) << 9; state.board.spinnerColors = 63;
     plan = PHOrbPlanWithAssistRecovery(base, YES, &state, YES);
     Check(![plan[@"available"] boolValue] && [plan[@"assistRecoveryInventory"][3][@"guaranteed"] isEqual:@9] &&
-        [plan[@"assistRecoveryInventory"][3][@"possible"] isEqual:@10],
+        [plan[@"assistRecoveryInventory"][3][@"possible"] isEqual:@10] &&
+        [plan[@"message"] containsString:@"尚未嘗試從轉轉補珠"],
         "a spinner cannot lend its currently observed tenth light orb to every phase");
     state = AssistBoard(5, 5, 6);
     plan = PHOrbPlanWithAssistRecovery(RecoveryBase(@[]), YES, &state, YES);

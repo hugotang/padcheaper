@@ -14,6 +14,8 @@ static void Check(BOOL condition, const char *message) {
     if (!condition) { fprintf(stderr, "FAIL: %s\n", message); failures++; }
 }
 
+#include "formation_profile_configuration_tests.inc"
+
 int main(void) {
     @autoreleasepool {
         NSDictionary *info = @{@"CFBundleIdentifier": @"jp.gungho.pad",
@@ -252,6 +254,7 @@ int main(void) {
             Check(!PHConfigurationReadFilterText(invalid, UINT16_MAX), "invalid GUI text cannot alter config");
         }
         Check(!PHConfigurationIsValid(nil), "missing config is rejected");
+        TestFormationProfilePersistence();
         NSMutableDictionary *atomic = [PHDefaultConfiguration() mutableCopy];
         atomic[@"formations"] = PHFormationLibraryFromTeam(nil);
         Check(PHConfigurationIsValid(atomic), "formation library can share the config atomic commit with profiles");

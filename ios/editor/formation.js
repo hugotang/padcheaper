@@ -132,6 +132,16 @@
       const library = normalizeLibrary(value);
       return library.teams.find(record=>record.id===library.selected).team;
     }
+    function libraryTeamOptions(value, draft) {
+      const records = value.teams.map(record=>({id:record.id,
+        title:(record.id===value.selected && draft ? draft.title : record.team.title) || '未命名隊伍'}));
+      const totals = new Map(), seen = new Map();
+      records.forEach(({title})=>totals.set(title,(totals.get(title) || 0)+1));
+      return records.map(({id,title})=>{
+        const index = (seen.get(title) || 0)+1; seen.set(title,index);
+        return [id,totals.get(title)>1 ? `${title}（同名 ${index}/${totals.get(title)}）` : title];
+      });
+    }
     function updateLibraryTeam(value, draft) {
       const library = normalizeLibrary(value), team = normalize(draft);
       library.teams.find(record=>record.id===library.selected).team = team;
@@ -265,7 +275,7 @@
     }
     return {cards,empty,normalize,selectCard,moveSlot,matchesRecipe,parseImport,exportLink,payload,search,validateCard,latentCost,
       latentName,latentNames,awakeningName,awakeningNames,libraryCapacity,createLibrary,normalizeLibrary,selectedTeam,updateLibraryTeam,
-      selectLibraryTeam,addLibraryTeam,deleteLibraryTeam};
+      selectLibraryTeam,addLibraryTeam,deleteLibraryTeam,libraryTeamOptions};
   }
   const api = {createModel,latentCost,latentName,latentNames,awakeningName,awakeningNames,libraryCapacity};
   if (typeof module !== 'undefined') module.exports = api;
