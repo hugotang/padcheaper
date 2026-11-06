@@ -15,11 +15,20 @@ function enemy(slot,attack,ids){
  b.writeBigUInt64LE(1n,128);b.writeBigUInt64LE(BigInt(attack),136);b.writeFloatLE(1,144);b.writeUInt16LE(10,176);
  return {slot,catalogID:1000+slot,level:10,catalogPrefixRawHex:b.toString('hex'),rows:ids.map((id,i)=>({row:i+1,actionID:id,operandsRaw:[100,0,0,0]}))};
 }
-const fixture=()=>({schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.0-106878',dungeon:12,floor:3,totalFloors:2,allDefinitionsCaptured:true,
+const fixture=()=>({schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.1-107553',dungeon:12,floor:3,totalFloors:2,allDefinitionsCaptured:true,
  floorDefinitions:[{wave:0,rawCaptureComplete:true,catalogs:[enemy(1,100,[1])],definitions:[record(1,15,[3,3,35])]},
  {wave:1,rawCaptureComplete:true,catalogs:[enemy(1,100850,[2]),enemy(2,100850,[3]),enemy(3,100850,[4])],
  definitions:[record(2,92,[1,1,1],100),record(3,15,[10,10,100]),record(4,92,[1,2,2],100)]}],
  observations:[{wave:0,enemies:[{slot:1,catalogID:1001,level:10,identityKnown:true,memoryKnown:true,baseAttack:2500}]}]});
+check('historical report versions remain explicit and unknown targets stay rejected',()=>{
+ for(const target of ['jp.gungho.pad-ios-23.6.1-107553','jp.gungho.pad-ios-23.6.0-106878']){
+  const f=fixture();f.target=target;const parsed=dungeon.parse(f);assert.equal(parsed.target,target);assert.equal(f.target,target);
+  assert.equal(dungeon.evaluate(parsed,model,team,{matches}).target,target);
+ }
+ for(const target of ['jp.gungho.pad-ios-23.6.1-107554','jp.gungho.pad-android-23.6.1',true,null]){
+  const f=fixture();f.target=target;assert.throws(()=>dungeon.parse(f));
+ }
+});
 check('native enemy curves and observed multiplier have separate provenance',()=>{
  const d=dungeon.parse(fixture());assert.equal(d.inferredScale,25);assert.equal(d.floors[0].enemies[0].observedAttack,2500);
  const r=dungeon.evaluate(d,model,team,{matches});assert.equal(r.floors[0].enemies[0].attackSource,'observed');

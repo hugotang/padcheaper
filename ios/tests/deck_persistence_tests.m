@@ -78,13 +78,35 @@ int main(void) { @autoreleasepool {
     Check([explicitZero[@"decksb"][0][5] isEqual:@0] &&
         [PHMergeBanks(saved,explicitZero,7)[@"decksb"][0][5] isEqual:@0],"verified explicit default removes previous badge");
     saved=Seed();
-    NSDictionary *account=@{@"schema":@1,@"target":@"jp.gungho.pad-ios-23.6.0-106878",@"player":@42,@"banks":saved};
+    NSDictionary *account=@{@"schema":@1,@"target":@(PHTargetID),@"player":@42,@"banks":saved};
     NSData *json=[NSJSONSerialization dataWithJSONObject:account options:0 error:NULL];
     NSDictionary *loaded=PHDeckAccountBanks([NSJSONSerialization JSONObjectWithData:json options:0 error:NULL],42);
     Check([loaded isEqual:saved] && !PHDeckAccountBanks(account,43).count,"restart restores only the same account snapshot");
-    for (id wrong in @[@YES,@42.5,@4294967338ULL,@"42",NSNull.null]) {
-        NSMutableDictionary *bad=[account mutableCopy]; bad[@"player"]=wrong;
-        Check(!PHDeckAccountBanks(bad,42).count,"account identity cannot be coerced, rounded or wrapped");
+    NSMutableDictionary *legacy=[account mutableCopy]; legacy[@"target"]=@"jp.gungho.pad-ios-23.6.0-106878";
+    json=[NSJSONSerialization dataWithJSONObject:legacy options:0 error:NULL];
+    loaded=PHDeckAccountBanks([NSJSONSerialization JSONObjectWithData:json options:0 error:NULL],42);
+    Check([loaded isEqual:saved] && !PHDeckAccountBanks(legacy,43).count &&
+        [legacy[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"],
+        "legacy schema-1 semantic deck choices retain same-player identity without relabeling the source");
+    for (id wrongTarget in @[@"jp.gungho.pad-ios-23.6.1-107554", @"jp.gungho.pad-ios-23.6.0-106879",
+        @"jp.gungho.pad-ios-23.5.0-106878", @"jp.gungho.pad-android-23.6.1", @YES, NSNull.null]) {
+        NSMutableDictionary *bad=[account mutableCopy]; bad[@"target"]=wrongTarget;
+        Check(!PHDeckAccountBanks(bad,42).count,"unknown game build or malformed target cannot restore account choices");
+    }
+    for (NSDictionary *supported in @[account,legacy]) {
+        for (id wrong in @[@YES,@42.5,@4294967338ULL,@"42",NSNull.null]) {
+            NSMutableDictionary *bad=[supported mutableCopy]; bad[@"player"]=wrong;
+            Check(!PHDeckAccountBanks(bad,42).count,"account identity cannot be coerced, rounded or wrapped");
+        }
+        for (id wrongSchema in @[@YES,@2,NSNull.null]) {
+            NSMutableDictionary *bad=[supported mutableCopy]; bad[@"schema"]=wrongSchema;
+            Check(!PHDeckAccountBanks(bad,42).count,"data compatibility never accepts another account schema");
+        }
+        for (NSArray *invalid in @[@[@1], @[@YES,@2,@3,@4,@5,@12,@77,@900008,@12],
+            @[@1,@2,@3,@4,@5,@256,@77,@900008,@12], @[@1,@2,@3,@4,@5,@12,@77,@999999,@12]]) {
+            NSMutableDictionary *bad=[supported mutableCopy]; bad[@"banks"]=@{@"decksb":@[invalid]};
+            Check(!PHDeckAccountBanks(bad,42).count,"every supported target retains decoded record shape, type and range validation");
+        }
     }
     PHDeckRestorer *r=[PHDeckRestorer new]; [r enqueue:loaded mask:7 epoch:1 source:@"登入後"];
     NSDictionary *first=Drain(r,1,7,PHFeatureSkin|PHFeatureBGM,NO);
@@ -109,5 +131,13 @@ int main(void) { @autoreleasepool {
     Check(!writes&&![[r snapshot][@"pending"] unsignedIntValue],"explicit disable cancels pending selection");
     [r enqueue:saved mask:7 epoch:8 source:@"登入後"]; [r cancel]; Drain(r,8,7,7,YES);
     Check(!writes,"new save including an explicit default cancels older delayed restore");
+    Seed(); [r enqueue:loaded mask:7 epoch:9 source:@"舊版登入後"]; primary=2; maximum=3;
+    Drain(r,9,7,7,YES);
+    Check(PHBadgeEncode(stored[0][95],0)==0 && PHBadgeEncode(stored[1][95],0)==34,
+        "legacy data still requires each current bank count and bank-local slot to match");
+    Seed(); [r enqueue:loaded mask:7 epoch:10 source:@"舊版登入後"];
+    uint32_t differentExtra=78; memcpy(stored[0]+20,&differentExtra,4); Drain(r,10,7,7,YES);
+    Check(PHBadgeEncode(stored[0][95],0)==0 && PHBadgeEncode(stored[1][95],0)==34,
+        "legacy data cannot restore a deck with matching cards but a different extra identity field");
     printf("Deck persistence tests: %u failures\n",failures);
 } return failures?1:0; }

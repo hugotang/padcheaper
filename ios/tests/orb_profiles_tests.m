@@ -2,6 +2,7 @@
 #import "PHOrbRules.h"
 #import "PHOrbPlanning.h"
 #import "PHFormationModel.h"
+#include "PHTargetGenerated.h"
 #include <stdio.h>
 
 static unsigned failures;
@@ -23,23 +24,52 @@ static void SharingTests(void) {
     NSDictionary *package = data ? [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL] : nil;
     NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),data,&reason);
     Check(library && !reason && [package[@"format"] isEqual:@"padcheaper-orb-profile"] &&
-        ![library[@"autoSelect"] boolValue] && [library[@"selected"] isEqual:@"portable"], "ordinary profile shares as a versioned file without automatic start");
+        [package[@"target"] isEqual:@(PHTargetID)] && ![library[@"autoSelect"] boolValue] &&
+        [library[@"selected"] isEqual:@"portable"], "ordinary profile shares with the current target without automatic start");
     Check([PHOrbExportProfileData(library[@"profiles"][0],NULL) isEqual:data], "portable profile preserves canonical settings after roundtrip");
     Check(!PHOrbProfilesImportingData(library,data,&reason) && [reason containsString:@"ID"], "duplicate file import never overwrites existing settings");
+    NSMutableDictionary *legacy=[package mutableCopy]; legacy[@"target"]=@"jp.gungho.pad-ios-23.6.0-106878";
+    NSData *legacyData=[NSJSONSerialization dataWithJSONObject:legacy options:0 error:NULL];
+    NSDictionary *legacyLibrary=PHOrbProfilesImportingData(PHOrbDefaultProfiles(),legacyData,&reason);
+    Check([legacyLibrary isEqual:library] && !reason &&
+        [PHOrbExportProfileData(legacyLibrary[@"profiles"][0],NULL) isEqual:data] &&
+        [legacy[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"],
+        "exact legacy profile data imports unchanged and only a new export uses the current target");
+    Check(!PHOrbProfilesImportingData(library,legacyData,&reason) && [reason containsString:@"ID"],
+        "legacy target cannot bypass duplicate profile protection");
     NSDictionary *planProfile = PHOrbProfileFromPlan(ReadPlanFixture(),NULL);
     NSData *planData = PHOrbExportProfileData(planProfile,NULL);
     NSDictionary *planLibrary = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),planData,NULL);
     Check([planLibrary[@"profiles"][0] isEqual:planProfile], "shared full package preserves all formation, opening, rotation and goal data");
-    for (NSDictionary *changes in @[@{@"schema":@2},@{@"schema":@YES},@{@"target":@"foreign"},@{@"format":@"other"},
-        @{@"apiHosts":@[@"example.invalid"]},@{@"profile":NSNull.null}]) {
-        NSMutableDictionary *bad=[package mutableCopy]; [bad addEntriesFromDictionary:changes];
-        NSData *encoded=[NSJSONSerialization dataWithJSONObject:bad options:0 error:NULL];
-        Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),encoded,NULL), "portable files reject foreign versions, keys and malformed profiles");
+    for (NSDictionary *supported in @[package,legacy]) {
+        for (NSDictionary *changes in @[@{@"schema":@2},@{@"schema":@YES},@{@"target":@"foreign"},
+            @{@"target":@"jp.gungho.pad-ios-23.6.1-107554"},@{@"target":@"jp.gungho.pad-ios-23.6.0-106879"},
+            @{@"target":@"jp.gungho.pad-android-23.6.1"},@{@"target":@YES},@{@"target":NSNull.null},@{@"format":@"other"},
+            @{@"apiHosts":@[@"example.invalid"]},@{@"profile":NSNull.null}]) {
+            NSMutableDictionary *bad=[supported mutableCopy]; [bad addEntriesFromDictionary:changes];
+            NSData *encoded=[NSJSONSerialization dataWithJSONObject:bad options:0 error:NULL];
+            Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),encoded,NULL), "portable files reject foreign versions, keys and malformed profiles");
+        }
     }
     Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),[NSMutableData dataWithLength:131073],NULL),"file import enforces byte limit");
     Check(!PHOrbExportProfileData(nil,NULL),"sharing with no selected profile is a reported error");
     NSMutableDictionary *badProfile=[profile mutableCopy]; badProfile[@"account"]=@42;
     Check(!PHOrbExportProfileData(badProfile,NULL),"export cannot include account or private config fields");
+}
+static void BundledDataCompatibilityTests(void) {
+    NSArray *paths=@[@"ishida-uryu-gamewith-574233/team-plan.json", @"ishida-uryu-gamewith-574233/team-plan-heart-l.json",
+        @"halloween-ciel-gamewith-579537/recommended.team-plan.json", @"halloween-ciel-gamewith-579537/recommended.post-opening.json",
+        @"halloween-ciel-gamewith-579537/kenpachi-1.team-plan.json", @"halloween-ciel-gamewith-579537/kenpachi-1.post-opening.json",
+        @"halloween-ciel-gamewith-579537/kenpachi-2.team-plan.json", @"halloween-ciel-gamewith-579537/kenpachi-2.post-opening.json",
+        @"eight-player-thanks-2026/activity-profile.json"];
+    for (NSString *path in paths) {
+        NSData *data=[NSData dataWithContentsOfFile:[@"ios/templates/" stringByAppendingString:path]];
+        NSDictionary *package=data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+        NSDictionary *library=PHOrbProfilesImportingData(PHOrbDefaultProfiles(),data,NULL);
+        Check([package[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] && PHOrbProfilesValid(library) &&
+            [library[@"profiles"] count]==1 && ![library[@"autoSelect"] boolValue] && ![library[@"eightAutoStart"] boolValue],
+            "all nine historical templates keep their source target and import without automatic selection or match-start intent");
+    }
 }
 #include "orb_assist_profiles_tests.inc"
 int main(void) {
@@ -47,6 +77,7 @@ int main(void) {
         PlanTests();
         AssistProfileTests();
         SharingTests();
+        BundledDataCompatibilityTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
         Check([PHOrbCanonicalSettings(Settings())[@"thornComboPriority"] isEqual:@NO],
             "legacy profile settings keep damage-first thorn ranking");

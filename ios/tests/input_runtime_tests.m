@@ -1,4 +1,6 @@
 #import "PHInput.h"
+#include "PHTargetGenerated.h"
+#include "PHBattleGenerated.h"
 #include <stdio.h>
 
 static unsigned failures, pointerReads;
@@ -12,7 +14,7 @@ static void Check(BOOL condition, const char *message) {
 }
 
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
-    if (address == Header + 0x2ac6fd8 && length == sizeof(uintptr_t)) {
+    if (address == Header + PHBattleInputRVA && length == sizeof(uintptr_t)) {
         ++pointerReads;
         uintptr_t value = changedPointer && pointerReads > 1 ? manager + 8 : manager;
         memcpy(output, &value, length);
@@ -22,8 +24,8 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         memcpy(output, storage, length);
         return YES;
     }
-    // The old GameMain +92 location contains nonzero initial configuration.
-    if (address == Header + 0x2abcdf0 + 92 && length == 4) {
+    // GameMain +92 contains initial configuration, not live input state.
+    if (address == Header + PHGameMainRVA + 92 && length == 4) {
         uint32_t initial = 0x02050103;
         memcpy(output, &initial, length);
         return YES;

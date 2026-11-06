@@ -60,17 +60,19 @@ done
 
 python3 - "$app_dir" <<'PY'
 from pathlib import Path
+import json
 import plistlib
 import sys
 
 app = Path(sys.argv[1])
+target = json.loads(Path('ios/targets/pad-23.6.1.json').read_text(encoding='utf-8'))['target']
 info = {
-    "CFBundleIdentifier": "jp.gungho.pad",
+    "CFBundleIdentifier": target['bundle_id'],
     "CFBundleName": "PADCheaper GUI Probe",
     "CFBundleExecutable": "OverlayProbe",
     "CFBundlePackageType": "APPL",
-    "CFBundleShortVersionString": "23.6.0",
-    "CFBundleVersion": "106878",
+    "CFBundleShortVersionString": target['marketing_version'],
+    "CFBundleVersion": target['ios_build'],
     "MinimumOSVersion": "16.0",
     "LSRequiresIPhoneOS": True,
     "UIDeviceFamily": [1, 2],

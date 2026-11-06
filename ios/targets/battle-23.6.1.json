@@ -1,0 +1,489 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.1-107553",
+  "prototype_version": "0.5.34-orbs",
+  "device_verified": false,
+  "server_acceptance_verified": false,
+  "provenance": "IDA comparison of workspace-extracted 23.6.0/106878 and 23.6.1/107553; new executable SHA256 3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6; see migration evidence.",
+  "gate": {
+    "entry_categories": "all-except-multiplayer",
+    "source_modes_default": [
+      0
+    ],
+    "multiplayer_modes_default": [
+      0
+    ],
+    "write_scope": "single-player-only",
+    "excluded_entry_modes": [
+      7,
+      10,
+      11
+    ],
+    "multiplayer_override": false,
+    "multiplayer_latch": "until-battle-exit",
+    "unsupported_banked_multiplayer": [
+      1,
+      4
+    ],
+    "supported_banked_multiplayer": [],
+    "runtime_configuration": "battle",
+    "player_input_phase": 2,
+    "automatic_entry_phase": 0,
+    "automatic_entry_window": "fresh-wave-zero-intro"
+  },
+  "fields": {
+    "PHBattleInputRVA": "0x2ac7858",
+    "PHBattleDragPointerOffset": "0x988b8",
+    "PHBattleImplRVA": "0x2abd6d0",
+    "PHBattleModeRVA": "0x211b0d8",
+    "PHBattleMultiplayerRVA": "0x1b4daac",
+    "PHBattleEntryHashRVA": "0x211a742",
+    "PHBattleKey1RVA": "0x2c6ea50",
+    "PHBattleKey2RVA": "0x1bd5d68",
+    "PHBattlePRNGRVA": "0x2c6ea54",
+    "PHBattleScaleRVA": "0x1b4f7b8",
+    "PHBattleDungeonOffset": "0x5c8774",
+    "PHBattleSourceModeOffset": "0x5c8778",
+    "PHBattleAuditOffset": "0x5ca0c4",
+    "PHBattleCatalogCountOffset": "0x5ef160",
+    "PHBattleCatalogPointerOffset": "0x5ef170",
+    "PHBattleCatalogStride": "0x348",
+    "PHBattleMemberOffset": "0xb11f0",
+    "PHBattleMemberStride": "0x5f0",
+    "PHBattlePhaseOffset": "0x92978",
+    "PHBattleHPOffset": "0xb7e48",
+    "PHBattleHPShadowOffset": "0xb7ef4",
+    "PHBattleDigestShadowOffset": "0xb7f00",
+    "PHBattleDungeonPointerOffset": "0xb0f20",
+    "PHBattleFormOffset": "0x118",
+    "PHBattleTempIDOffset": "0xf8",
+    "PHBattleTempTurnsOffset": "0x108",
+    "PHBattleSourceSlotOffset": "0xb8",
+    "PHBattleScriptSlotOffset": "0x128",
+    "PHBattleChargeOffset": "0x1c8",
+    "PHBattleCardParamOffset": "0x4e0",
+    "PHBattleCatalogIDOffset": "0x50c",
+    "PHBattleBaseIDOffset": "0x5b0",
+    "PHBattleAssistIDOffset": "0x5b2",
+    "PHBattleEffectiveAssistOffset": "0x59e",
+    "PHBattleAssistStateOffset": "0x1d8",
+    "PHBattleDungeonMemberFlagsOffset": "0x21",
+    "PHBattleScriptRVA": "0x2ab8e58",
+    "PHBattleParameterOffset": "0x4048",
+    "PHBattleScriptRunnerOffset": "0x4200",
+    "PHBattleScriptEventsOffset": "0x658",
+    "PHBattleSkillPointerOffset": "0xc761c8",
+    "PHBattleCardPoolOffset": "0x5ef178",
+    "PHBattleEnemyCountOffset": "0xbdc90",
+    "PHBattleEnemyFlagsOffset": "0xb815c",
+    "PHBattleEnemyStride": "0xba8",
+    "PHBattleIntroOffset": "0xb3590",
+    "PHBattleResumeFlagsOffset": "0x48",
+    "PHBattleWaveOffset": "0x92f68",
+    "PHBattleWaveCopyOffset": "0x92a10",
+    "PHBattleWaveBackupOffset": "0x92988",
+    "PHBattleSpecialEntryOffset": "0x92a38",
+    "PHBattleChargeShadowOffset": "0x5e8",
+    "PHBattleTeamCountOffset": "0xa3e54",
+    "PHBattleCurrentTeamOffset": "0xa3e58",
+    "PHBattleSharedTeamOffset": "0xa3e5c",
+    "PHBattlePlayerTeamOffset": "0xa3e4c",
+    "PHBattleTurnSerialOffset": "0xa3e48",
+    "PHBattleTeamHPOffset": "0x6c58",
+    "PHBattleTeamDescriptorOffset": "0xad270",
+    "PHBattleTeamDescriptorStride": "0x70",
+    "PHBattleTeamPointerOffset": "0x40",
+    "PHBattleTeamStorageRVA": "0x136e120",
+    "PHBattleTeamStorageStride": "0x6d88",
+    "PHBattleTeamBusyOffset": "0xafe76",
+    "PHBattleDungeonRulesOffset": "0x7c",
+    "PHBattleDungeonRulePoolOffset": "0xc761b0",
+    "PHBattleAwakeningStateOffset": "0xb466c",
+    "PHBattleHPControllerOffset": "0xb3590"
+  },
+  "guards": [
+    {
+      "name": "PHBattleScriptCompileGuardRVA",
+      "va": "0x100595330",
+      "rva": "0x595330",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191fb0301aaf50300aa180040b96bffff970003231e01102f1e0008211e0000391e",
+      "sha256": "5933a7e3e361c40ff6f696f1787d86ca59deb9234bb070bb9de97bb60d11e332"
+    },
+    {
+      "name": "PHBattleScriptDispatchGuardRVA",
+      "va": "0x10059b83c",
+      "rva": "0x59b83c",
+      "length": 64,
+      "bytes": "f40308aa9c164038740621f99f4f0071000100549c140034e9e25a3949010837fc2204799f17007101020054ae000014e826447908050011e8260479e80314aa",
+      "sha256": "55328ca7d89cd497f8a436f77c655a0b1b1d078204af0849a0c53edd1a312839"
+    },
+    {
+      "name": "PHBattleScriptPartyGuardRVA",
+      "va": "0x10059aae0",
+      "rva": "0x59aae0",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa1810409108abd8391f050071cb000054085b8c79094588526902098b",
+      "sha256": "c6d03ea2d00b6f2624669d01cfba01f8e33f2a455a590f7215e5e2bfd9dd4c6a"
+    },
+    {
+      "name": "PHBattleAllocatorLayoutGuardRVA",
+      "va": "0x10058e84c",
+      "rva": "0x58e84c",
+      "length": 64,
+      "bytes": "fa67bba9f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30304aaf70303aaf80302aaf90301aaf60300aa3a008052ba29a972083c0011086d1c1208210111",
+      "sha256": "ec58e72377f1ed74a933af0ae49dcc9ca22afaa4a40bddb6cc830577b883b0a1"
+    },
+    {
+      "name": "PHBattleSwitchTeamRVA",
+      "va": "0x10000cecc",
+      "rva": "0xcecc",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f40302aaf50301aaf30300aa083840f909cb87524901a072166969b8016929b8",
+      "sha256": "1a1d698d3e11a994ccb7ab2c9b00b0322ba229d48ac205dba7b5c3ca98909f9e"
+    },
+    {
+      "name": "PHBattleSet16RVA",
+      "va": "0x10056cbd4",
+      "rva": "0x56cbd4",
+      "length": 64,
+      "bytes": "083801d008514ab949b300b029694db90801094a0801014a080800b9a8008052e90301aa297d891308050071c1ffff5468518b52e850ad722801084a093801d0",
+      "sha256": "feac92ae375b12917a2c039f942c5b840f7caf650c6e738d594b906898dc846f"
+    },
+    {
+      "name": "PHBattleRebuildMemberRVA",
+      "va": "0x1005a1588",
+      "rva": "0x5a1588",
+      "length": 64,
+      "bytes": "ff0305d1fc6f0ea9fa670fa9f85f10a9f65711a9f44f12a9fd7b13a9fdc30491f50302aaf30301aaf40300aabf0319f80820a052a88318b8bfe318383f140039",
+      "sha256": "72617ce560d71427ec64858d7b2098f5de2ec8b3d26f56933e8c601e77176232"
+    },
+    {
+      "name": "PHBattleRefreshTeamRVA",
+      "va": "0x10006f800",
+      "rva": "0x6f800",
+      "length": 64,
+      "bytes": "e923ba6dfa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30301aaf40300aa55d600b0b542229188438a522800a072a86a68b81f1100710419417a",
+      "sha256": "cb0a38d8f3bdff2f3affb6c3455cfd40f83a77cf99306e1df88c12d446381647"
+    },
+    {
+      "name": "PHBattleDigestRVA",
+      "va": "0x1005a2dcc",
+      "rva": "0x5a2dcc",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aaa9ac00d02941229188438a522800a072286968b81f0500712101005400008052",
+      "sha256": "15506204559688cf01d6fc1d41af3f82ec5866ec5c41f6551d7aba686c2ef274"
+    },
+    {
+      "name": "PHBattleDecode32RVA",
+      "va": "0x100570d94",
+      "rva": "0x570d94",
+      "length": 64,
+      "bytes": "090840b9e83701d00a514ab928b300b00b694db9080040b9ac8d9f528ccdae7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "90a396ba4a60c6f9ca402f8b46f9883cd0c03532118ba7808900f61efc26b367"
+    },
+    {
+      "name": "PHBattleMaxChargeRVA",
+      "va": "0x10059fbf4",
+      "rva": "0x59fbf4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801d008811991003940f959000094f50300aa883ecb791f010071f6d79f1a80821391e10313aa",
+      "sha256": "edccb809041a8f2bc6e88f8d447c4c7668eceff75ab1bb978f2092c1508e380e"
+    },
+    {
+      "name": "PHBattleRadiusRVA",
+      "va": "0x10059f060",
+      "rva": "0x59f060",
+      "length": 64,
+      "bytes": "88ad00f00841009100102e1e29f291520969693869012037fd7bbfa9fd0300910821579100c11991c4ffff971f00007200102e1e01102d1e201c201efd7bc1a8",
+      "sha256": "d06d281a4c352e246a17f10be52a4e7e717d0b0a7815ef395f768998510fe56e"
+    },
+    {
+      "name": "PHBattleSet32RVA",
+      "va": "0x100570df4",
+      "rva": "0x570df4",
+      "length": 64,
+      "bytes": "e83701d008514ab929b300b029694db90801094a0801014a080800b9a8008052e90301aa297d891308050071c1ffff54a88d9f5288cdae722801084ae93701d0",
+      "sha256": "473aca7f7c1bace85b5ab628feefc1c541252ed81c8b4c747a87d188aa1222be"
+    },
+    {
+      "name": "PHBattleDismissDialogRVA",
+      "va": "0x10061c998",
+      "rva": "0x61c998",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd4300910140201ef30300aa085841b90879141208011f32085801b900b00591e003271e1691ef97685a41b908011e32685a01b9fd7b41a9",
+      "sha256": "3a3345720b89d96f3c6d70b04783ba584ab610206dbaf48681f98561a82437af"
+    },
+    {
+      "name": "PHBattleWaitTimerRVA",
+      "va": "0x1005894e8",
+      "rva": "0x5894e8",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa083840f9093b9d526901a072006969f878590294a8b884521f00086bc1050054683a40f9143b9d527401a072006974f8",
+      "sha256": "49308e1ec3306317c0ee1ab86e8a53887985e02f254305018af3d8ae02e5a2e7"
+    },
+    {
+      "name": "PHBattleSetByteRVA",
+      "va": "0x1005710f0",
+      "rva": "0x5710f0",
+      "length": 64,
+      "bytes": "281c0012e93701b029514ab92ab300904a694db929010a4a2901084a090800b9a9008052ea0308aa4a7d8a1329050071c1ffff5469518b52e950ad724901094a",
+      "sha256": "762ecf2d989bb13ed26896e4c728848f3e28d62dd03d9ecf175871cf04936e8d"
+    },
+    {
+      "name": "PHBattleAllocateRVA",
+      "va": "0x10058e840",
+      "rva": "0x58e840",
+      "length": 64,
+      "bytes": "030080520400805201000014fa67bba9f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30304aaf70303aaf80302aaf90301aaf60300aa3a008052ba29a972",
+      "sha256": "8ad11bcb41c12c74dbf65bd801dbe06acbff280b9e2fb241446eb140e0697ac8"
+    },
+    {
+      "name": "PHBattleReleaseRVA",
+      "va": "0x10058eaa8",
+      "rva": "0x58eaa8",
+      "length": 64,
+      "bytes": "ff0301d1f65701a9f44f02a9fd7b03a9fdc30091f50302aaf60301aaf40300aa13e000d108a05c78083d1053a929a9521f01096b0001005429cda9521f01096b",
+      "sha256": "8ab15771656fa2323af6daa28654054b8047ad83a70ba415a2fcfb2b2d473512"
+    },
+    {
+      "name": "PHBattleTeamAwakeningRVA",
+      "va": "0x10059f554",
+      "rva": "0x59f554",
+      "length": 64,
+      "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291e3130329f60301aaf70300aae21b00f95f0000393f50007160000054dfce0171",
+      "sha256": "27c22c1930b98566eb3465e10b28e18960a26fba9babdf8e0f3d184cb6af1937"
+    },
+    {
+      "name": "PHBattleTeamLatentRVA",
+      "va": "0x1005a0a38",
+      "rva": "0x5a0a38",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd4301915f000039410c0034f50300aa083840f909e481526901a072096969f8292140b9690b5037",
+      "sha256": "8ecb6fe2546571e7313e645320416041d7f79f4017d87d58a9b35e89135a630d"
+    },
+    {
+      "name": "PHBattleCurrentBadgeRVA",
+      "va": "0x1005a069c",
+      "rva": "0x5a069c",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30300aaca89fe970001003795ad00d0b5420091a822579100c119918bb0fa971f140071c100005400008052fd7b42a9",
+      "sha256": "df2d86dd6723c4028aabb04647376bfbeffe98233a8ce6b464714cdbda43e06e"
+    },
+    {
+      "name": "PHBattleBadgeBoostRVA",
+      "va": "0x10056d598",
+      "rva": "0x56d598",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa20af00b000400091e10313aa0200805203008052c4fdff971f5c0071a0010054e80300aa000080521f1d007161030054",
+      "sha256": "a2b5922e4b8e1f75759685de11c40a605c89e5b686d0979a6847354f5cca3044"
+    },
+    {
+      "name": "PHBattleAdvanceTeamRVA",
+      "va": "0x100606bdc",
+      "rva": "0x606bdc",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30302aaf40301aaf50300aa083840f909e481526901a072086969f8680000b4",
+      "sha256": "dd177594144b248c5378212fbd1588ee6d3278640b9e43156eb06fb863b06ba5"
+    },
+    {
+      "name": "PHBattleAdvanceMemberRVA",
+      "va": "0x100569f9c",
+      "rva": "0x569f9c",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f40301aaf30300aa00200791c91c0094f50300aae00313aa010080520ad700941f00156b2d040054d5b98c52",
+      "sha256": "b025cf1fa5e060dd5e07bec89bde29b6f126623b55acc48a9311d72574d6a96f"
+    },
+    {
+      "name": "PHBattleMemberHasSkillRVA",
+      "va": "0x100019fa0",
+      "rva": "0x19fa0",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa00801391c6a31194c0000034e00313aa010080520c1716941f000071e0d79f1afd7b41a9f44fc2a8c0035fd6f85fbca9",
+      "sha256": "056b9883a4636d22eed1b71147e61c83c53fac7e7862c0e7a75435609d271f92"
+    },
+    {
+      "name": "PHBattleTeamSizeRVA",
+      "va": "0x100019558",
+      "rva": "0x19558",
+      "length": 64,
+      "bytes": "fd7bbfa9fd030091000080520ca61494600000371ba6149460000036c000805209000014c8d900b0084100910821579100c11991dacc10941f1c0071a8008052",
+      "sha256": "ccff77cf5cc800b8962d9801c884313ff765d566a076a10daa19dee309baf52c"
+    },
+    {
+      "name": "PHBattleSoloRulesRVA",
+      "va": "0x100542d94",
+      "rva": "0x542d94",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa88b00090084100910821579100c11991d026fc971f2c007168020052e813881a1f28007100159f1afd7b41a9f44fc2a8",
+      "sha256": "d466fe610d7433244356addf8fda6768b7e248122c08ac2309ae8aabd3ce23e0"
+    },
+    {
+      "name": "PHBattleSharedHelperRVA",
+      "va": "0x100240e34",
+      "rva": "0x240e34",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091147c40b99401003488c800d00841009109368c52e918a072086969f8150940f9a002148b61028052020080d257feff97",
+      "sha256": "4550429d8df82ad30c96eaf84910042938ef0ddbaadfd342735ccdf4f0bb3311"
+    },
+    {
+      "name": "PHBattleSharedLeaderRVA",
+      "va": "0x100240efc",
+      "rva": "0x240efc",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091147c40b91405003488c800d00841009109368c52e918a072086969f8150940f9a002148b61028052020080d225feff97",
+      "sha256": "058fda317b8a85a255bb6e04b6b4b189117130c2d014a141f67970bf5384130e"
+    },
+    {
+      "name": "PHBattleMaximumHPRVA",
+      "va": "0x1005fba18",
+      "rva": "0x5fba18",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa082601d008811991083940f909e481526901a072006969f8950ff19740010034f40300aa1f000071",
+      "sha256": "954c266cd850837b3ead65d4929cabe5bbbebd1a805f985e33f865668e4b2e10"
+    },
+    {
+      "name": "PHBattleAdjustHPRVA",
+      "va": "0x1006073a4",
+      "rva": "0x6073a4",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f40302aaf60301aaf30300aa171789520000178b71a6fd97f50300aae00313aa8fd1ff971f00166b",
+      "sha256": "9dc0d927b5a09912fc8a38861020fa8d8ca91172ae0e547204ecb95125cf375f"
+    },
+    {
+      "name": "PHBattleAssistBuildGuardRVA",
+      "va": "0x100531d0c",
+      "rva": "0x531d0c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30301aa0820a052280000b93f180039012840b9e1030034020080524dfaff97082040796802007908284079680a007908484039",
+      "sha256": "d7cbb50135230aec083c5fab1c4ba23f442bfd7f829a33494792555c50954c03"
+    },
+    {
+      "name": "PHBattleAssistCopyGuardRVA",
+      "va": "0x100481480",
+      "rva": "0x481480",
+      "length": 64,
+      "bytes": "c92200b9c006803d02000014080080d2c80600f90820a052c8e20bb8df120339650000b4a80040f9c8e20bf888b600b00841009109f091520001098b6cba0294",
+      "sha256": "cb692c0924f97edf39fc3372e5e8927336754e2631cab68f68363fba6717cc40"
+    },
+    {
+      "name": "PHBattleAssistInitGuardRVA",
+      "va": "0x1005a15b4",
+      "rva": "0x5a15b4",
+      "length": 64,
+      "bytes": "bf0319f80820a052a88318b8bfe318383f140039083840f909e481526901a072006969f8c37cf29797ad00b0f7420091400c003460e20291a33eff97f50300aa",
+      "sha256": "54ecec6349ac591869a496ef1e1cf639941c47622df9ba90564f574b0a9ef229"
+    },
+    {
+      "name": "PHBattleAssistDisableGuardRVA",
+      "va": "0x1005a1f2c",
+      "rva": "0x5a1f2c",
+      "length": 64,
+      "bytes": "08e481526801a072276968f8c70000b4e8844039880018360820a052a88318b8bfe31838b9e37329ba0359f8a8e301d1e80300f960821391e6a30091e10315aa",
+      "sha256": "9ec632c6fc7b61bc4d91eac00b87d0d047824c1f54abd3a14a2eff4724dbfe0e"
+    }
+  ],
+  "input": {
+    "manager_pointer_rva": "0x2ac7858",
+    "slots_per_bank": 5,
+    "record_bytes": 264,
+    "frame_bank_offset": 1320,
+    "snapshot_bytes": 2642,
+    "event_bytes_offset": 213,
+    "frame_tracking_offset": 219,
+    "raw_deferred_tap_offset": 220,
+    "raw_touch_pointer_offset": 248,
+    "raw_count_offset": 2640,
+    "frame_count_offset": 2641,
+    "drag_pointer_impl_offset": "0x988b8"
+  },
+  "badge": {
+    "table_save_offset": "0xa0",
+    "table_end_save_offset": "0xb0",
+    "count_save_offset": "0x24e8",
+    "record_bytes": 180,
+    "owned_save_offset": "0x52f31c",
+    "owned_xor": "0x9a69f65a",
+    "device_verified": false
+  },
+  "timer": {
+    "phase_impl_offset": "0x92978",
+    "pending_impl_offset": "0x92a00",
+    "flags_impl_offset": "0xafef0",
+    "countdown_pointer_impl_offset": "0xb0f20",
+    "popup_pointer_impl_offset": "0xbe9d8",
+    "hold_impl_offset": "0xb3592",
+    "automatic_phases": [
+      2,
+      30
+    ],
+    "manual_popup_phase": 58,
+    "manual_popup_pending": 32,
+    "manual_resume_phase": 2,
+    "device_verified": false
+  },
+  "automatic_entry": {
+    "timing": "Single player only; first eligible completed drawFrame after constructor, during a fresh wave-zero intro",
+    "resume_flag_mask": "0x80000000",
+    "skill_boost_awakenings": {
+      "21": 1,
+      "56": 2,
+      "145": 2,
+      "105": -1
+    },
+    "latent": {
+      "id": 47,
+      "boost": 3
+    },
+    "badge": "Native current badge and native badge boost",
+    "charging": "Native 0x100606bdc loop; owned charge mirrors reset before the loop",
+    "failure_recovery": "Restore changed profiles, original charges and HP only while the live battle remains single player; preserve audit flags; stop if selectors change",
+    "awakening_rules": "Apply the constructor zero-SB-awakening rule at dungeon+33 bit 4 or impl+0xb466c bits 4..9",
+    "banked_teams": "Disabled; no bank selection, replacement, charging, HP update, restoration or profile release",
+    "current_hp": "Single player only: after the full team/SB batch, native maximum 0x1005fba18 plus 0x1006073a4(..., maximum, 1) initializes current HP and its display",
+    "rebind_timing": "Disabled; multiplayer rebind implementation removed",
+    "board_limit": "Constructor-generated board dimensions and opening board are not regenerated by the team refresh."
+  },
+  "banked_teams": {
+    "multiplayer": [
+      1,
+      4
+    ],
+    "capacity": 8,
+    "visible_slots": 6,
+    "native_storage_stride": "0x6d88",
+    "source_key": [
+      "team",
+      "native-source-slot"
+    ],
+    "synchronization": "Native 0x10006f800 calls 0x10000efd8 before selecting stored teams; no account-owned card record is modified",
+    "helper": "Other team leader; special shared leader/helper rules follow 0x100019ba8",
+    "restore": "Disabled; discard local intent and leave attached allocations to native scene cleanup",
+    "device_verified": false,
+    "enabled": false
+  },
+  "multiplayer_device_report": "2026-10-28: local team appeared replaced, other players retained original team; derived values did not appear rebuilt and disconnects occurred. Exact server rejection reason unverified.",
+  "assist_comparison": {
+    "descriptor_offset": "0x59e",
+    "bytes": 8,
+    "padding_byte": 7,
+    "no_assist_unused_bytes": [
+      4,
+      5
+    ],
+    "other_fields": "compared-exactly",
+    "dungeon_assist_disabled": {
+      "flag": "dungeon+33 bit 3 (0x08)",
+      "source_id": "member+1458 remains the profile assist ID and is compared exactly",
+      "effective_descriptor": "member+1438 must be 00 00 00 01 00 00 00 after normalizing unused bytes",
+      "rule_check": "same dungeon pointer and flags before and after the profile transaction"
+    }
+  },
+  "migration": {
+    "from_target": "jp.gungho.pad-ios-23.6.0-106878",
+    "report": "ios/docs/address-update-23.6.1.md",
+    "evidence": "ios/research/address-update-23.6.1.json",
+    "validation": "static-only; not compiled or device-tested",
+    "historical_evidence": "Earlier decomp/research artifacts cited by retained design notes describe 23.6.0; use migration report for the new input."
+  }
+}

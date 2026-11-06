@@ -180,7 +180,7 @@ static NSDictionary *PHLoadAccount(uint32_t player) {
 }
 
 static BOOL PHStoreBanks(NSDictionary *banks) {
-    NSDictionary *store = @{@"schema": @1, @"target": @"jp.gungho.pad-ios-23.6.0-106878",
+    NSDictionary *store = @{@"schema": @1, @"target": @(PHTargetID),
                             @"player": @(PHPlayer), @"banks": banks};
     return PHWriteJSON(store, [NSString stringWithFormat:@"account-%u.json", PHPlayer]);
 }
@@ -1358,7 +1358,8 @@ static void PHBootstrap(NSUInteger attempt, NSUInteger generation) {
     }
     NSString *reason = nil;
     PHValidated = header && PHValidateGuest(header, &reason);
-    PHValidationMessage = reason ?: @"未找到匹配的遊戲 UUID；檢查是否使用日服 23.6.0／106878。";
+    PHValidationMessage = reason ?: [NSString stringWithFormat:@"未找到匹配的遊戲 UUID；檢查是否使用日服 %s／%s。",
+                                    PHTargetVersion, PHTargetBuild];
     PHLastStatus = 0;
     if (!PHValidated) {
         PHStartupState = @"failed";

@@ -2,7 +2,7 @@
 #import "PHMemory.h"
 #import <CoreFoundation/CoreFoundation.h>
 #include "PHBadgeModel.h"
-#include "PHTargetGenerated.h"
+#include "PHDataTarget.h"
 #include <string.h>
 #include <math.h>
 
@@ -14,7 +14,7 @@ static BOOL UnsignedNumber(id number, uint32_t expected) {
 NSDictionary *PHDeckAccountBanks(id store, uint32_t player) {
     if (!player || ![store isKindOfClass:NSDictionary.class] || !UnsignedNumber(store[@"schema"], 1) ||
         !UnsignedNumber(store[@"player"], player) ||
-        ![store[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
+        !PHDataTargetIsSupported(store[@"target"]) ||
         ![store[@"banks"] isKindOfClass:NSDictionary.class]) return @{};
     NSDictionary *banks = store[@"banks"];
     if (![banks[@"decksb"] isKindOfClass:NSArray.class]) return @{};

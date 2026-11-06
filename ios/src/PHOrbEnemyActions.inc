@@ -211,7 +211,7 @@ NSString *EnemyActionDigest(const void *bytes, size_t size) {
 }
 NSMutableDictionary *EnemyActionStatus(NSString *status) {
     return [@{@"status":status, @"diagnosticOnly":@YES, @"parserVersion":@(EA::ParserVersion),
-        @"target":@"jp.gungho.pad-ios-23.6.0-106878", @"enemyForecastKnown":@NO,
+        @"target":@(PHTargetID), @"enemyForecastKnown":@NO,
         @"rawCaptureComplete":@NO, @"definitionCaptureComplete":@NO, @"damageBoundKnown":@NO, @"survivalKnown":@NO,
         @"structureSupported":@NO, @"actionReachabilityKnown":@NO,
         @"spawnIdentityKnown":@NO, @"nextFloorKnown":@NO,

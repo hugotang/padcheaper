@@ -190,7 +190,10 @@ static void PlanTests(void) {
     Check(profile && !reason && [profile[@"opening"] count] == 6, "complete Uryu template validates all six opening steps");
     if (!profile) return;
     NSDictionary *roundtrip = PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile), &reason);
-    Check([profile isEqual:roundtrip], "plan export/import preserves formation, opening, rotation and goals");
+    Check([profile isEqual:roundtrip] && [PHOrbPlanFromProfile(profile)[@"target"] isEqual:@(PHTargetID)],
+        "plan export/import preserves formation, opening, rotation and goals under the current target");
+    Check([plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"],
+        "legacy template imports without rewriting its original target provenance");
     NSMutableDictionary *thornPlan = ReadPlanFixture(); thornPlan[@"board"][@"thornComboPriority"] = @YES;
     NSDictionary *thornProfile = PHOrbProfileFromPlan(thornPlan, &reason);
     Check(thornProfile && [PHOrbPlanFromProfile(thornProfile)[@"board"][@"thornComboPriority"] isEqual:@YES] &&
@@ -230,7 +233,9 @@ static void PlanTests(void) {
         [selectedTeam isEqual:plan[@"formation"]] && [formations[@"teams"] count] == 1,
         "plan selection adds a team without mutating or replacing an existing team");
     Check([PHOrbFormationsSelectingProfile(selected,profile) isEqual:selected], "selecting the same plan reuses its saved team");
-    for (NSDictionary *change in @[@{@"format":@"other"}, @{@"schema":@2}, @{@"target":@"unknown"},
+    for (NSDictionary *change in @[@{@"format":@"other"}, @{@"schema":@2}, @{@"schema":@YES}, @{@"target":@"unknown"},
+        @{@"target":@"jp.gungho.pad-ios-23.6.1-107554"}, @{@"target":@"jp.gungho.pad-ios-23.6.0-106879"},
+        @{@"target":@"jp.gungho.pad-android-23.6.1"}, @{@"target":@YES}, @{@"target":NSNull.null},
         @{@"opening":@[@{@"action":@"tap"}]}, @{@"unknown":@YES}, @{@"rotation":@[@{@"action":@"use"}]}]) {
         NSMutableDictionary *bad = ReadPlanFixture(); [bad addEntriesFromDictionary:change];
         Check(!PHOrbProfileFromPlan(bad,NULL), "unsupported format, version, action or conditions reject the entire import");

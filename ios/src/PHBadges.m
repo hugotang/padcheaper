@@ -6,10 +6,6 @@
 #include "PHBattleGenerated.h"
 #include <string.h>
 
-static const uintptr_t PHBadgeTableOffset = 0xa0;
-static const uintptr_t PHBadgeEndOffset = 0xb0;
-static const uintptr_t PHBadgeCountOffset = 0x24e8;
-static const uintptr_t PHBadgeOwnedOffset = 0x52f314;
 static const uint32_t PHBadgeOwnedKey = 0x9a69f65au;
 
 @implementation PHBadges {

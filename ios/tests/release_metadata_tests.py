@@ -94,6 +94,29 @@ class ReleaseMetadataTests(unittest.TestCase):
                 release.finalize(root, self.manifest, "15.0")
             self.assertFalse((root / "build-info.json").exists())
 
+    def test_artifact_target_links_keep_historical_evidence_separate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            notes = root / "targets.md"
+            notes.write_text("[current](../targets/pad-23.6.1.json)\n"
+                             "[current battle](../targets/battle-23.6.1.json)\n"
+                             "[current orbs](../targets/orbs-23.6.1.json)\n"
+                             "[old](../targets/pad-23.6.0.json)\n"
+                             "[old battle](../targets/battle-23.6.0.json)\n"
+                             "[old orbs](../targets/orbs-23.6.0.json)\n"
+                             "[migration](docs/address-update-23.6.1.md)\n"
+                             "[evidence](../research/address-update-23.6.1.json)\n"
+                             "[source](../src/PHDataTarget.h)\n", encoding="utf-8")
+            release.rewrite_artifact_links(root, "a" * 40)
+            self.assertEqual(notes.read_text(encoding="utf-8"),
+                             "[current](target.json)\n[current battle](battle-target.json)\n"
+                             "[current orbs](orb-target.json)\n[old](targets/pad-23.6.0.json)\n"
+                             "[old battle](targets/battle-23.6.0.json)\n"
+                             "[old orbs](targets/orbs-23.6.0.json)\n"
+                             "[migration](address-update-23.6.1.md)\n"
+                             "[evidence](research/address-update-23.6.1.json)\n"
+                             f"[source](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/src/PHDataTarget.h)\n")
+
 
 if __name__ == "__main__":
     unittest.main()

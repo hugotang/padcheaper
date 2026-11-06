@@ -1,0 +1,1496 @@
+{
+  "schema_version": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.1-107553",
+  "purpose": "Static-analysis target description and implementation design. Not a runtime-verified offset pack.",
+  "analysis": {
+    "date": "2026-11-06",
+    "timezone": "Asia/Hong_Kong",
+    "scope": "23.6.0/23.6.1 IPA metadata and full IDA instruction/call/field comparison; source-only migration",
+    "dylib_compiled": false,
+    "device_tested": false,
+    "server_acceptance_verified": false
+  },
+  "target": {
+    "bundle_id": "jp.gungho.pad",
+    "executable": "pad",
+    "marketing_version": "23.6.1",
+    "ios_build": "107553",
+    "minimum_os": "15.0",
+    "architecture": "arm64",
+    "cpu_type": 16777228,
+    "cpu_subtype": 0,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "preferred_image_base": "0x100000000",
+    "original_file_type": "MH_EXECUTE",
+    "original_executable_size_bytes": 21574784,
+    "cryptid": 0,
+    "original_executable_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6"
+  },
+  "environment": {
+    "reported_ios_version": "27",
+    "reported_jit_enabled": false,
+    "reported_unmodified_game_runs": true,
+    "livecontainer_source_root": "https://github.com/hugotang/lc",
+    "livecontainer_source_commit": "94eb52a296b13c80bb82fb4515d073294035fc96",
+    "installed_livecontainer_build_verified": false
+  },
+  "provenance": {
+    "ipa_name": "jp.gungho.pad_23.6.1_decrypted.ipa",
+    "analysis_artifacts": "local only; executable and IDA database are not in this repository",
+    "metadata": "build/ios-address-23.6.1/23.6.1/metadata.json (local)",
+    "ida_database": "pad.i64 (local)",
+    "report": "ios/docs/address-update-23.6.1.md",
+    "binary_evidence_directory_is_local_only": true,
+    "prior_target": "ios/targets/pad-23.6.0.json"
+  },
+  "address_model": {
+    "va": "unslid IDA virtual address",
+    "rva": "va - preferred_image_base",
+    "runtime": "validated_guest_header + rva",
+    "file_offset": "segment.fileoff + (va - segment.vmaddr), only within file-backed range",
+    "guest_header_resolution": [
+      "optional dlsym getGuestAppHeader only when export exists",
+      "loaded-image UUID match, deduplicate headers, tolerate LiveContainer index/name translation"
+    ],
+    "image_index_zero_assumption": false
+  },
+  "runtime_gate": {
+    "required": [
+      "bundle_id",
+      "marketing_version",
+      "ios_build",
+      "arm64",
+      "uuid",
+      "all applicable __TEXT guards",
+      "mapped readable/writable target ranges",
+      "plausible initialized counts and pointer targets"
+    ],
+    "original_sha256_role": "input provenance only; LiveContainer patching and signing change whole-file bytes",
+    "allowed_header_file_types": [
+      "MH_DYLIB",
+      "MH_EXECUTE"
+    ],
+    "on_failure": "disable feature writes and log reason",
+    "runtime_verified": false,
+    "guards": [
+      {
+        "id": "skin_bgm_predicate",
+        "va": "0x10045b288",
+        "rva": "0x45b288",
+        "file_offset": "0x45b288",
+        "length_bytes": 64,
+        "bytes_hex": "e8e184122800080ba9b700f0294100912ac554914a410b9129c55491294107910be284523f000b6b29b18a9a28b0881a0a7d00111f0100714ab1881a4a7d0513",
+        "sha256": "dd32e9c8ca5573b42114eaf6a958f25fa0ab7be840e08ffb8a89b8c1050d1dac"
+      },
+      {
+        "id": "network_submit",
+        "va": "0x10045b6f0",
+        "rva": "0x45b6f0",
+        "file_offset": "0x45b6f0",
+        "length_bytes": 64,
+        "bytes_hex": "683401d008b11c91004105f8014500b900e6072f004100fc1f1500b91f4100391f1d007989008052090100b905c105f803310039e20800b4ff8301d1f65703a9",
+        "sha256": "e6d2b2d90e56cafc33efe195254b4b84df41fd335d026ee28c0c0619e57cdb19"
+      },
+      {
+        "id": "deck_record_parser",
+        "va": "0x10069d2f4",
+        "rva": "0x69d2f4",
+        "file_offset": "0x69d2f4",
+        "length_bytes": 64,
+        "bytes_hex": "ffc302d1fc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291f50302aaf30301aaf40300aaa85300b008b142f9080140f9e82700f9c3000034",
+        "sha256": "7761716a68814fc18562777fe9be52e95d84ea75684f1e904f0f2df17dae3b8e"
+      },
+      {
+        "id": "scene_resume",
+        "va": "0x1005b8ec8",
+        "rva": "0x5b8ec8",
+        "file_offset": "0x5b8ec8",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091f30300aa083840f909de9f524901a0720a6969384a011b320a69293886f5ff97683a40f90849429100413d91ec000294683a40f9",
+        "sha256": "db2d2b7b6ed27d46a0c25ce8eb3a98c9b35f57222b72f33af16bbced65c50905"
+      },
+      {
+        "id": "view_draw_frame",
+        "va": "0x10021e870",
+        "rva": "0x21e870",
+        "file_offset": "0x21e870",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091f30300aa148300f080e244f92e86319480000034e00313aa4b0a3294a3970094288300f008c985b9606a68f8400000b4d5533194",
+        "sha256": "abd0e4d266e0c12950075b05494081262a8403e6efbb716f60f6b51345a34812"
+      },
+      {
+        "id": "save_decks_request",
+        "va": "0x100698850",
+        "rva": "0x698850",
+        "length_bytes": 64,
+        "bytes_hex": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa170040f9351040f900008452d9d8fb97f40300aad8a500d018430091",
+        "sha256": "151830269692ef4cbce24bf4bab85ce80f54a5a6a545c9e9e47366db6159c380",
+        "file_offset": "0x698850"
+      },
+      {
+        "id": "save_decks_record",
+        "va": "0x100698a78",
+        "rva": "0x698a78",
+        "length_bytes": 64,
+        "bytes_hex": "ff8301d1fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f40302aaf30300aa180080d237040011680b805208c82138080c8052480c289b16310091",
+        "sha256": "20ced5d87610d40346ad3e8578f58daef3d20d97a4f922b8ff16ea27fe912810",
+        "file_offset": "0x698a78"
+      },
+      {
+        "id": "send_dispatch",
+        "va": "0x1006bb520",
+        "rva": "0x6bb520",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091130040f948b786520802a0727f6a2838290040b928008052290500513f010371483200540a4300b04a8900918b0000104c796978",
+        "sha256": "e680c38944e8b7e07ec0dca95faf7349fc8235e55c64cf861c70f03862fe1d46",
+        "file_offset": "0x6bb520"
+      },
+      {
+        "id": "response_dispatch",
+        "va": "0x1006bbba4",
+        "rva": "0x6bbba4",
+        "length_bytes": 64,
+        "bytes_hex": "ff8301d1fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f40300aa280040b91f01037121010054e00314aafd7b45a9f44f44a9f65743a9f85f42a9",
+        "sha256": "e8930cc000e7b6a3a51002b78b517810201ef7da4112ef81552239f9de86a78c",
+        "file_offset": "0x6bbba4"
+      },
+      {
+        "id": "save_decks_commit",
+        "va": "0x100698c00",
+        "rva": "0x698c00",
+        "length_bytes": 64,
+        "bytes_hex": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191080040f909e982520902a072136969b8f3000034c8a500d00841009109f09152",
+        "sha256": "7ed6087c62035b0735719dba0cbfd15a715f53f391e46f3179eb25ac8254e9f3",
+        "file_offset": "0x698c00"
+      },
+      {
+        "id": "music_selection",
+        "va": "0x1005a5020",
+        "rva": "0x5a5020",
+        "length_bytes": 64,
+        "bytes_hex": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd83019176ad00b0d642009188f69152c86a6838c81f1037f40300aa083840f909e38152",
+        "sha256": "c8ddf79f9db777da55a203e5d4e94f10cce9a01c9cbdb6b61609fff6a737cd1b",
+        "file_offset": "0x5a5020"
+      },
+      {
+        "id": "music_refresh",
+        "va": "0x1005a4f3c",
+        "rva": "0x5a4f3c",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f30300aa083840f989b786526901a072156969b80849429100a13d9110e9ff97f40300aabf02006be1c79f1ae00313aa",
+        "sha256": "1f953629af2b34e34ed3472d0425fbc870869e1e95e1533ed35e679a14dc654e",
+        "file_offset": "0x5a4f3c"
+      },
+      {
+        "id": "music_set_override",
+        "va": "0x1005a564c",
+        "rva": "0x5a564c",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f50302aaf40301aaf30300aae201f837b5060051683a40f90849429100a13d914be7ff97bf02006b6c030054683a40f9",
+        "sha256": "b325f30f928741295c873b9158762259acd3c571b2790f741e63f4743d5afa3f",
+        "file_offset": "0x5a564c"
+      },
+      {
+        "id": "music_clear_predicate",
+        "va": "0x10023b25c",
+        "rva": "0x23b25c",
+        "length_bytes": 64,
+        "bytes_hex": "487c011b091d0012a8c800f0084100910945298b0a868a52ea0aa0722d696a78e9ff9f52bf01096b40020054eaff89528b0180520c8692526c0aa072ad21ab9b",
+        "sha256": "672de94aff850be8c31a6ac4c4b0f0099f91d911e59985cd9be477f7dca19fd5",
+        "file_offset": "0x23b25c"
+      },
+      {
+        "id": "music_dungeon_policy",
+        "va": "0x1002409b8",
+        "rva": "0x2409b8",
+        "length_bytes": 64,
+        "bytes_hex": "f44fbea9fd7b01a9fd430091137c40b9d304003488c800d00841009109368c52e918a072086969f8140940f98002138b61028052020080d277ffff9760030034",
+        "sha256": "5017a640961cdad58a1dd2e4732a675c97c8c92a346fc5c08678370c34d510f3",
+        "file_offset": "0x2409b8"
+      },
+      {
+        "id": "music_resource",
+        "va": "0x1004eeff4",
+        "rva": "0x4eeff4",
+        "length_bytes": 64,
+        "bytes_hex": "f657bda9f44f01a9fd7b02a9fd830091f53001d0a87e43f909314079e9010034f40300aa130080d216018052080940f9016976f8e00314aac819f59700010034",
+        "sha256": "0e68abaec7a0b9a50295d1b6d8c9ee6c5881a76120a1abb333728ffb4e8c33f3",
+        "file_offset": "0x4eeff4"
+      },
+      {
+        "id": "music_resource_compare",
+        "va": "0x10023574c",
+        "rva": "0x23574c",
+        "length_bytes": 64,
+        "bytes_hex": "0800403988020034f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa8002c03995b83094081c085388010034157d18136016c038940600918fb83094",
+        "sha256": "4f45c5c75862afd5473ab6b20880718aaa64079cd530f99a788f083dfec3977e",
+        "file_offset": "0x23574c"
+      }
+    ]
+  },
+  "macho": {
+    "segments": [
+      {
+        "name": "__TEXT",
+        "vmaddr": "0x100000000",
+        "vmsize": "0x1110000",
+        "fileoff": "0x0",
+        "filesize": "0x1110000",
+        "initprot": 5,
+        "maxprot": 5
+      },
+      {
+        "name": "__DATA_CONST",
+        "vmaddr": "0x101110000",
+        "vmsize": "0xdc000",
+        "fileoff": "0x1110000",
+        "filesize": "0xdc000",
+        "initprot": 3,
+        "maxprot": 3
+      },
+      {
+        "name": "__DATA",
+        "vmaddr": "0x1011ec000",
+        "vmsize": "0x1af0000",
+        "fileoff": "0x11ec000",
+        "filesize": "0x184000",
+        "initprot": 3,
+        "maxprot": 3
+      },
+      {
+        "name": "__LINKEDIT",
+        "vmaddr": "0x102cdc000",
+        "vmsize": "0x124000",
+        "fileoff": "0x1370000",
+        "filesize": "0x123480",
+        "initprot": 1,
+        "maxprot": 1
+      }
+    ],
+    "load_command_free_bytes": "0x1848",
+    "load_command_segment_count": 5,
+    "chained_fixup_segment_count": 5,
+    "chained_pointer_format": 6,
+    "chained_pointer_format_name": "DYLD_CHAINED_PTR_64_OFFSET",
+    "chained_page_size": "0x4000",
+    "data_const_runtime_writable_assumption": false,
+    "never_request_text_writable_for_primary_route": true
+  },
+  "globals": {
+    "save_object": {
+      "va": "0x101b52010",
+      "rva": "0x1b52010",
+      "kind": "static_object_not_pointer_slot",
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "game_main": {
+      "va": "0x102abd660",
+      "rva": "0x2abd660",
+      "kind": "static_object_not_pointer_slot",
+      "impl_pointer_offset": "0x70",
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "scene_table": {
+      "va": "0x1012f27f0",
+      "rva": "0x12f27f0",
+      "entry_stride": "0x10",
+      "name_pointer_offset": "0x0",
+      "object_pointer_offset": "0x8",
+      "game_main_scene_index": 1,
+      "scene_guard": {
+        "current_scene_save_offset": "0x0",
+        "requested_scene_save_offset": "0x1",
+        "type": "i8/u8; check nonnegative before indexing",
+        "requires_equal": true
+      },
+      "static_confirmed": true,
+      "runtime_verified": false
+    },
+    "save_fields": [
+      {
+        "name": "player_id_candidate",
+        "save_offset": "0x83d58",
+        "va": "0x101bd5d68",
+        "rva": "0x1bd5d68",
+        "type": "u32",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "used as pid in save_decks query; account stability and login timing need device verification"
+      },
+      {
+        "name": "badge_parameter_table_pointer",
+        "save_offset": "0xa0",
+        "va": "0x101b520b0",
+        "rva": "0x1b520b0",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "0xB4 stride; correlated parameter values; do not overwrite blindly"
+      },
+      {
+        "name": "badge_owned_bitmap",
+        "save_offset": "0x52f31c",
+        "va": "0x10208132c",
+        "rva": "0x208132c",
+        "type": "8*u32",
+        "verified_span_bytes": 32,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "decodedWord = rawWord XOR 0x9A69F65A; predicate ID must also have valid parameter"
+      },
+      {
+        "name": "max_decks",
+        "save_offset": "0x52f38c",
+        "va": "0x10208139c",
+        "rva": "0x208139c",
+        "type": "u16",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "parser clamps to 32; allocated capacity is not active count"
+      },
+      {
+        "name": "secondary_deck_count",
+        "save_offset": "0x52f396",
+        "va": "0x1020813a6",
+        "rva": "0x20813a6",
+        "type": "u8",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "parser stores count, at most 16"
+      },
+      {
+        "name": "primary_deck_count",
+        "save_offset": "0x52f397",
+        "va": "0x1020813a7",
+        "rva": "0x20813a7",
+        "type": "u8",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "serializer clamps primary count to 32"
+      },
+      {
+        "name": "primary_decks",
+        "save_offset": "0x52f39c",
+        "va": "0x1020813ac",
+        "rva": "0x20813ac",
+        "type": "record_array",
+        "verified_span_bytes": 3072,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "allocated 32*0x60, valid count must be checked"
+      },
+      {
+        "name": "secondary_decks",
+        "save_offset": "0x52ffb4",
+        "va": "0x102081fc4",
+        "rva": "0x2081fc4",
+        "type": "record_array",
+        "verified_span_bytes": 1536,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "allocated 16*0x60; bank-local badge encoding; do not add both capacities as active count"
+      },
+      {
+        "name": "editing_structure",
+        "save_offset": "0x5305b4",
+        "va": "0x1020825c4",
+        "rva": "0x20825c4",
+        "type": "structure",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "record header +8 observed; badge +0x67 relative to structure; complete bank mapping pending"
+      },
+      {
+        "name": "skin_owned_bitmap",
+        "save_offset": "0x5311d0",
+        "va": "0x1020831e0",
+        "rva": "0x20831e0",
+        "type": "bitmap_u32_words",
+        "verified_span_bytes": 128,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "ID < 10000; confirmed login-clear span 0x80; adjacent New region is separate"
+      },
+      {
+        "name": "skin_new_related_bitmap",
+        "save_offset": "0x531250",
+        "va": "0x102083260",
+        "rva": "0x2083260",
+        "type": "bitmap",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "login explicitly clears skin default New bits; full semantics/span not independently established"
+      },
+      {
+        "name": "bgm_owned_bitmap",
+        "save_offset": "0x5312d0",
+        "va": "0x1020832e0",
+        "rva": "0x20832e0",
+        "type": "bitmap_u32_words",
+        "verified_span_bytes": 128,
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "ID >= 10000; index=id-10000; confirmed login-clear span 0x80"
+      },
+      {
+        "name": "skin_bgm_descriptor",
+        "save_offset": "0xc77398",
+        "va": "0x1027c93a8",
+        "rva": "0x27c93a8",
+        "type": "structure",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "entry lookup receives this descriptor"
+      },
+      {
+        "name": "skin_bgm_entry_count",
+        "save_offset": "0xc7739c",
+        "va": "0x1027c93ac",
+        "rva": "0x27c93ac",
+        "type": "u32",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "descriptor +4"
+      },
+      {
+        "name": "skin_bgm_entry_pointer",
+        "save_offset": "0xc773a0",
+        "va": "0x1027c93b0",
+        "rva": "0x27c93b0",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "descriptor +8; range-check count*0x34"
+      },
+      {
+        "name": "skin_bgm_string_table_pointer",
+        "save_offset": "0xc773a8",
+        "va": "0x1027c93b8",
+        "rva": "0x27c93b8",
+        "type": "pointer_u64",
+        "static_confirmed": true,
+        "runtime_verified": false,
+        "note": "resource/name table"
+      }
+    ]
+  },
+  "structures": {
+    "skin_bgm_entry": {
+      "stride_bytes": 52,
+      "fields": {
+        "id": {
+          "offset": "0x0",
+          "type": "u16"
+        },
+        "eligibility_flags": {
+          "offset": "0xe",
+          "type": "u16"
+        }
+      },
+      "eligibility": "flags == 0 || (flags & 1) != 0",
+      "recommended_flag_update": "leave flags==0 alone; otherwise OR bit 0 without changing other bits",
+      "bitmap": {
+        "verified_owned_span_bytes": 128,
+        "conservative_max_index_exclusive": 1024,
+        "skin_id_rule": "0 <= id < 10000, index=id",
+        "bgm_id_rule": "id >= 10000, index=id-10000",
+        "set_only_existing_validated_entries": true,
+        "do_not_copy_android_256_byte_write": true
+      },
+      "evidence": [
+        {
+          "artifact": "decomp-10045abe0.c",
+          "note": "entry lookup"
+        },
+        {
+          "artifact": "decomp-10045b0b4.c",
+          "note": "ownership/eligibility"
+        },
+        {
+          "artifact": "decomp-10003a3a4.c",
+          "note": "descriptor and stride"
+        },
+        {
+          "artifact": "decomp-10069d1e0.c",
+          "note": "8*16-byte clear per ownership bitmap, skdr/skbgm"
+        }
+      ]
+    },
+    "persisted_deck_record": {
+      "stride_bytes": 96,
+      "primary_capacity": 32,
+      "secondary_capacity": 16,
+      "fields": {
+        "card_ids": {
+          "offset": "0x0",
+          "type": "5*u32"
+        },
+        "extra_u32": {
+          "offset": "0x14",
+          "type": "u32",
+          "semantics": "unresolved; preserve"
+        },
+        "bgm1": {
+          "offset": "0x18",
+          "type": "u16"
+        },
+        "bgm2": {
+          "offset": "0x1a",
+          "type": "u16"
+        },
+        "skin": {
+          "offset": "0x1c",
+          "type": "u16"
+        },
+        "badge_raw": {
+          "offset": "0x5f",
+          "type": "u8"
+        }
+      },
+      "badge_encoding": "decoded = raw XOR uint8(15*bank_local_index+0x61); re-encode if index changes",
+      "editing": {
+        "save_base_offset": "0x5305b4",
+        "record_header_offset": "0x8",
+        "badge_offset_from_structure": "0x67",
+        "complete_bank_mapping_verified": false
+      },
+      "evidence": [
+        {
+          "artifact": "decomp-10069cc78.c",
+          "note": "fmt=1 parse and record fields"
+        },
+        {
+          "artifact": "decomp-10069c5e0.c",
+          "note": "primary/secondary capacity, counts"
+        },
+        {
+          "artifact": "decomp-10003f5c0.c",
+          "note": "editing badge record +8 header observed"
+        }
+      ]
+    },
+    "request_deck_records": {
+      "request_pointer_offset": "0x20",
+      "record_header_bytes": 12,
+      "stride_bytes": 96,
+      "serializer_record_pointer": "*(request+0x20)+index*0x60+0x0c",
+      "fields_relative_to_array_record": {
+        "bgm1": "0x24",
+        "bgm2": "0x26",
+        "skin": "0x28",
+        "badge_raw": "0x6b"
+      },
+      "request_and_persisted_bank_mapping_verified": false
+    },
+    "badge_parameters": {
+      "pointer_save_offset": "0xa0",
+      "stride_bytes": 180,
+      "prerequisite_location": "table + id*0xb4 - 4, u16",
+      "value_lookup": "0x10056cccc; effective ID may change with prerequisite ownership",
+      "secure_decode": "0x10056c5fc; correlated XOR and rotate values",
+      "owned_bitmap_save_offset": "0x52f31c",
+      "owned_word_count": 8,
+      "owned_word_xor": "0x9a69f65a",
+      "all_owned_raw_word": "0x659609a5",
+      "bitmap_alone_sufficient": false,
+      "evidence": [
+        {
+          "artifact": "decomp-100453cf4.c",
+          "note": "two-stage predicate"
+        },
+        {
+          "artifact": "decomp-10056ca88.c",
+          "note": "parameter table and prerequisite"
+        },
+        {
+          "artifact": "decomp-10056c3b8.c",
+          "note": "secure value decode"
+        }
+      ]
+    },
+    "timer": {
+      "game_main_impl_pointer_offset": "0x70",
+      "flags_impl_offset": "0xafef0",
+      "flags_type": "u8",
+      "resume_sets_mask": "0x20",
+      "render_invalid_mask": "0x22",
+      "primary_candidate_clear_mask": "0x20",
+      "do_not_copy_android_bit1_or_bit6_writes": true,
+      "other_render_conditions_exist": true,
+      "affected_timer_mode_guard_verified": false,
+      "vtable": {
+        "va": "0x10114b818",
+        "rva": "0x114b818",
+        "resume_slot_va": "0x10114b850",
+        "resume_slot_rva": "0x114b850",
+        "slot_offset": "0x38",
+        "target_va": "0x1005b8ec8",
+        "primary_route_requires_vtable_write": false
+      }
+    }
+  },
+  "functions": [
+    {
+      "role": "skin_bgm_entry_lookup",
+      "va": "0x10045adb4",
+      "rva": "0x45adb4",
+      "ida_name": "sub_10045ADB4",
+      "end_va": "0x10045ade0",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "descriptor.count at +4; descriptor.entries pointer at +8; entry stride 0x34"
+    },
+    {
+      "role": "skin_bgm_ownership_and_eligibility",
+      "va": "0x10045b288",
+      "rva": "0x45b288",
+      "ida_name": "sub_10045B288",
+      "end_va": "0x10045b31c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ownership bit AND table entry AND (flags == 0 OR (flags & 1) != 0)"
+    },
+    {
+      "role": "random_bgm_selection",
+      "va": "0x10003a3f0",
+      "rva": "0x3a3f0",
+      "ida_name": "sub_10003A3F0",
+      "end_va": "0x10003a654",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "independent corroboration of descriptor, stride and flag semantics"
+    },
+    {
+      "role": "bgm_resource_lookup",
+      "va": "0x10045af34",
+      "rva": "0x45af34",
+      "ida_name": "sub_10045AF34",
+      "end_va": "0x10045b0f8",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "resource names and availability are a separate condition"
+    },
+    {
+      "role": "av_audio_player_load",
+      "va": "0x10021d630",
+      "rva": "0x21d630",
+      "ida_name": "sub_10021D630",
+      "end_va": "0x10021d7a0",
+      "dispatch": "objective_c_boundary",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "AVAudioPlayer initWithContentsOfURL:error:; resources must be available"
+    },
+    {
+      "role": "save_decks_serializer",
+      "va": "0x100698850",
+      "rva": "0x698850",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "body has decksb/decksbs JSON, URL query action save_decks; a2+0x20 is request-record pointer"
+    },
+    {
+      "role": "deck_record_serializer",
+      "va": "0x100698a78",
+      "rva": "0x698a78",
+      "ida_name": "sub_100698A78",
+      "end_va": "0x100698c00",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "9 JSON values; hasBadge predicate may already reduce badge to zero before network hook"
+    },
+    {
+      "role": "query_action_wrapper",
+      "va": "0x100590938",
+      "rva": "0x590938",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "adds action, r and m to query"
+    },
+    {
+      "role": "request_url_and_key",
+      "va": "0x1005909b0",
+      "rva": "0x5909b0",
+      "ida_name": "sub_1005909B0",
+      "end_va": "0x100590abc",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "key input is query; body is passed separately; server acceptance unverified"
+    },
+    {
+      "role": "post_request_wrapper",
+      "va": "0x10045babc",
+      "rva": "0x45babc",
+      "ida_name": "sub_10045BABC",
+      "end_va": "0x10045bacc",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "forwards body to native network submit"
+    },
+    {
+      "role": "network_submit",
+      "va": "0x10045b6f0",
+      "rva": "0x45b6f0",
+      "ida_name": "sub_10045B6F0",
+      "end_va": "0x10045b94c",
+      "dispatch": "objective_c_boundary",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "NSMutableURLRequest HTTPBody; sharedSession dataTaskWithRequest:completionHandler:"
+    },
+    {
+      "role": "network_completion",
+      "va": "0x10045b94c",
+      "rva": "0x45b94c",
+      "ida_name": "sub_10045B94C",
+      "end_va": "0x10045baac",
+      "dispatch": "block_invoke",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "copies NSData to native receive buffer; this precedes native response parsing"
+    },
+    {
+      "role": "response_json_parse",
+      "va": "0x10059069c",
+      "rva": "0x59069c",
+      "ida_name": "sub_10059069C",
+      "end_va": "0x1005908bc",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "passes byte range to JSON parser 0x100591E20"
+    },
+    {
+      "role": "response_status_parse",
+      "va": "0x100688130",
+      "rva": "0x688130",
+      "ida_name": "sub_100688130",
+      "end_va": "0x1006883e4",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "looks for res field; HTTP 200 alone is insufficient"
+    },
+    {
+      "role": "response_variant_decode",
+      "va": "0x100687bc4",
+      "rva": "0x687bc4",
+      "ida_name": "sub_100687BC4",
+      "end_va": "0x100687d88",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "requires a parsed object variant, then copies it to caller"
+    },
+    {
+      "role": "response_deck_object_get",
+      "va": "0x10069c37c",
+      "rva": "0x69c37c",
+      "ida_name": "sub_10069C37C",
+      "end_va": "0x10069c498",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "retrieves named object from decoded response"
+    },
+    {
+      "role": "deck_all_parse",
+      "va": "0x10069cc5c",
+      "rva": "0x69cc5c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "writes primary and secondary persisted records from parsed data; called by login and recv_team; save_decks commits editing records separately"
+    },
+    {
+      "role": "deck_record_parse",
+      "va": "0x10069d2f4",
+      "rva": "0x69d2f4",
+      "ida_name": "sub_10069D2F4",
+      "end_va": "0x10069d6f8",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "fmt=1 mapping; badge XOR uses parser bank-local index"
+    },
+    {
+      "role": "login_player_parse",
+      "va": "0x10069d85c",
+      "rva": "0x69d85c",
+      "ida_name": "sub_10069D85C",
+      "end_va": "0x1006a0b20",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "clears 0x80-byte ownership spans and reads skdr/skbgm"
+    },
+    {
+      "role": "recv_team_response_handler",
+      "va": "0x1006b4170",
+      "rva": "0x6b4170",
+      "ida_name": "sub_1006B4170",
+      "end_va": "0x1006b44f0",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "request 122 recv_team calls deck_all_parse; this was mislabeled as save_decks before 0.5.8"
+    },
+    {
+      "role": "save_decks_response_handler",
+      "va": "0x100698c00",
+      "rva": "0x698c00",
+      "ida_name": "sub_100698C00",
+      "end_va": "0x100698ea4",
+      "dispatch": "native_direct",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "request 58 commits native editing records, re-encodes secondary badge with bank-local index, and clears dirty only on native success",
+      "evidence_file": "ios/research/address-update-23.6.1.json"
+    },
+    {
+      "role": "request_response_dispatch",
+      "va": "0x1006bbba4",
+      "rva": "0x6bbba4",
+      "ida_name": "sub_1006BBBA4",
+      "end_va": "0x1006bca7c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "request IDs 33 (login/player parse), 58 (save_decks), 122 (recv_team); corrected by dispatcher cross-check in 0.5.8"
+    },
+    {
+      "role": "request_pump",
+      "va": "0x100591730",
+      "rva": "0x591730",
+      "ida_name": "sub_100591730",
+      "end_va": "0x100591bf0",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "dispatches received request response synchronously"
+    },
+    {
+      "role": "game_frame_update",
+      "va": "0x100573fdc",
+      "rva": "0x573fdc",
+      "ida_name": "sub_100573FDC",
+      "end_va": "0x10057457c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls request_pump before further scene processing"
+    },
+    {
+      "role": "game_frame_update_wrapper",
+      "va": "0x100574a98",
+      "rva": "0x574a98",
+      "ida_name": "sub_100574A98",
+      "end_va": "0x100574abc",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "passes static save/global object to game_frame_update"
+    },
+    {
+      "role": "frame_body",
+      "va": "0x1004ec810",
+      "rva": "0x4ec810",
+      "ida_name": "sub_1004EC810",
+      "end_va": "0x1004ec97c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls game_frame_update_wrapper"
+    },
+    {
+      "role": "view_draw_frame",
+      "va": "0x10021e870",
+      "rva": "0x21e870",
+      "ida_name": "-[ViewController drawFrame]",
+      "end_va": "0x10021e900",
+      "dispatch": "objective_c_method",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ViewController.drawFrame; after-original observation point; thread and same-frame UI effects unverified"
+    },
+    {
+      "role": "view_metal_draw",
+      "va": "0x1002212dc",
+      "rva": "0x2212dc",
+      "ida_name": "-[ViewController drawInMTKView:]",
+      "end_va": "0x1002212e0",
+      "dispatch": "objective_c_method",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "ViewController.drawInMTKView: calls drawFrame"
+    },
+    {
+      "role": "badge_ownership",
+      "va": "0x100453ebc",
+      "rva": "0x453ebc",
+      "ida_name": "sub_100453EBC",
+      "end_va": "0x100453f44",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "requires nonzero parameter before ownership bitmap; direct BL/B callers observed"
+    },
+    {
+      "role": "badge_parameter",
+      "va": "0x10056cccc",
+      "rva": "0x56cccc",
+      "ida_name": "sub_10056CCCC",
+      "end_va": "0x10056cd60",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "parameter table +0xA0; 0xB4 stride; prerequisite handling"
+    },
+    {
+      "role": "badge_secure_value_decode",
+      "va": "0x10056c5fc",
+      "rva": "0x56c5fc",
+      "ida_name": "sub_10056C5FC",
+      "end_va": "0x10056c65c",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "multiple correlated XOR/rotate values"
+    },
+    {
+      "role": "badge_name_lookup",
+      "va": "0x10056ce04",
+      "rva": "0x56ce04",
+      "ida_name": "sub_10056CE04",
+      "end_va": "0x10056cee8",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "name table lookup can depend on prerequisite ownership"
+    },
+    {
+      "role": "badge_byte_decode",
+      "va": "0x100445da4",
+      "rva": "0x445da4",
+      "ida_name": "sub_100445DA4",
+      "end_va": "0x100445dc0",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "raw ^ uint8(15*index+0x61)"
+    },
+    {
+      "role": "scene_resume",
+      "va": "0x1005b8ec8",
+      "rva": "0x5b8ec8",
+      "ida_name": "sub_1005B8EC8",
+      "end_va": "0x1005b8fc0",
+      "dispatch": "vtable_slot",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "sets impl timer flags bit 5 (0x20)"
+    },
+    {
+      "role": "view_restore_from_background",
+      "va": "0x10021e728",
+      "rva": "0x21e728",
+      "ida_name": "-[ViewController restoreFromBackground]",
+      "end_va": "0x10021e760",
+      "dispatch": "objective_c_method",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "after-original candidate for conditional timer flag handling"
+    },
+    {
+      "role": "app_foreground",
+      "va": "0x1003af930",
+      "rva": "0x3af930",
+      "ida_name": "-[AppDelegate applicationWillEnterForeground:]",
+      "end_va": "0x1003af944",
+      "dispatch": "objective_c_method",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "calls restoreFromBackground"
+    },
+    {
+      "role": "scene_resume_wrapper",
+      "va": "0x100574768",
+      "rva": "0x574768",
+      "ida_name": "sub_100574768",
+      "end_va": "0x1005747b0",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "only resumes confirmed scene if current/requested scene indices match"
+    },
+    {
+      "role": "timer_render_a",
+      "va": "0x1004a25e8",
+      "rva": "0x4a25e8",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "checks flags mask 0x22 plus other conditions"
+    },
+    {
+      "role": "timer_render_b",
+      "va": "0x1004a27dc",
+      "rva": "0x4a27dc",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "checks flags mask 0x22 plus other conditions"
+    },
+    {
+      "role": "timer_render_c",
+      "va": "0x1004a3798",
+      "rva": "0x4a3798",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "mask 0x22 displays ---.--"
+    },
+    {
+      "role": "credential_file_load",
+      "va": "0x100443a58",
+      "rva": "0x443a58",
+      "ida_name": "sub_100443A58",
+      "end_va": "0x100443b14",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "data048.bin exists; actual iOS directory unverified"
+    },
+    {
+      "role": "credential_file_write",
+      "va": "0x100443b28",
+      "rva": "0x443b28",
+      "ida_name": "sub_100443B28",
+      "end_va": "0x100443bc4",
+      "dispatch": "native_direct",
+      "evidence_file": "ios/research/address-update-23.6.1.json",
+      "static_confirmed": true,
+      "runtime_verified": false,
+      "notes": "writes through game helpers; credential-file hash stability unverified"
+    }
+  ],
+  "objective_c_hooks": [
+    {
+      "class": "NSURLSession sharedSession concrete runtime class",
+      "selector": "dataTaskWithRequest:completionHandler:",
+      "mode": "capture compatible original IMP and use compiled replacement; add class-local override for inherited method",
+      "filter": "validated target + POST + exact action=save_decks + verified API host/path + account epoch",
+      "concrete_class_name_verified": false,
+      "method_encoding_verified": false
+    },
+    {
+      "class": "ViewController",
+      "selector": "drawFrame",
+      "expected_original_va": "0x10021e870",
+      "expected_original_rva": "0x21e870",
+      "mode": "call original exactly once, then check pending restore/initialized data",
+      "source_class_image_must_match_target": true,
+      "callback_thread_verified": false
+    },
+    {
+      "class": "ViewController",
+      "selector": "restoreFromBackground",
+      "expected_original_va": "0x10021e728",
+      "expected_original_rva": "0x21e728",
+      "mode": "call original first, conditionally handle GameMain flags",
+      "source_class_image_must_match_target": true,
+      "callback_thread_verified": false
+    }
+  ],
+  "network": {
+    "action": "save_decks",
+    "transport": "NSMutableURLRequest.HTTPBody via NSURLSession sharedSession",
+    "observed_content_type": "application/x-www-form-urlencoded",
+    "body_value_encoding": "raw JSON objects inside decksb/decksbs body parameters; not Android custom base64",
+    "body_keys": [
+      "decksb",
+      "decksbs"
+    ],
+    "fmt": 1,
+    "record_length": 9,
+    "json_record": [
+      {
+        "index": 0,
+        "name": "card0",
+        "preserve": true
+      },
+      {
+        "index": 1,
+        "name": "card1",
+        "preserve": true
+      },
+      {
+        "index": 2,
+        "name": "card2",
+        "preserve": true
+      },
+      {
+        "index": 3,
+        "name": "card3",
+        "preserve": true
+      },
+      {
+        "index": 4,
+        "name": "card4",
+        "preserve": true
+      },
+      {
+        "index": 5,
+        "name": "badge",
+        "default_value": 0,
+        "feature": "badge"
+      },
+      {
+        "index": 6,
+        "name": "extra_u32",
+        "preserve": true,
+        "semantics_verified": false
+      },
+      {
+        "index": 7,
+        "name": "bgm1_plus_100000_times_bgm2",
+        "default_value": 0,
+        "feature": "bgm"
+      },
+      {
+        "index": 8,
+        "name": "skin",
+        "default_value": 0,
+        "feature": "skin"
+      }
+    ],
+    "query_key": {
+      "input_observed": "URL query; request body sent separately",
+      "body_mutation_server_acceptance_verified": false
+    },
+    "badge_json_loss_warning": "serializer may emit zero if native badge predicate fails; snapshot verified local record instead of learning zero as user selection",
+    "request_change": "mutableCopy; replace only target JSON values; preserve unknown body bytes; reset Content-Length; call original IMP once",
+    "account_id_candidate": {
+      "query_key": "pid",
+      "save_offset": "0x83d58",
+      "type": "u32",
+      "stable_account_identity_verified": false
+    },
+    "response": {
+      "observed_decoder": "native JSON byte-range parser, with deck object lookup",
+      "status_key": "res",
+      "raw_nsurlsession_json_runtime_verified": false,
+      "body_gzip_runtime_behavior_verified": false,
+      "http_200_proves_game_success": false
+    },
+    "other_actions_audited": false
+  },
+  "restore": {
+    "strategy": "transaction snapshot before send, observe native parse after original ViewController.drawFrame, then restore only enabled fields on the same verified game thread",
+    "static_frame_chain": [
+      "0x10021e870",
+      "0x1004ec810",
+      "0x100574a98",
+      "0x100573fdc",
+      "0x100591730",
+      "0x1006bbba4"
+    ],
+    "static_parser_chain": [
+      "0x1006bbba4",
+      "0x10069d85c",
+      "0x10069cc5c",
+      "0x10069d2f4"
+    ],
+    "request_ids": {
+      "login_player_data": 33,
+      "save_decks": 58,
+      "recv_team": 122
+    },
+    "state_machine": [
+      "snapshotted",
+      "submitted",
+      "network_completed",
+      "native_parse_observed_success",
+      "restored"
+    ],
+    "requires": [
+      "verified account epoch and bank/slot mapping",
+      "game business success, not merely HTTP status",
+      "matching card/deck summary",
+      "preserve explicit user selection changes including zero",
+      "one restoration per matching transaction",
+      "handle restart/login/timeout/retry without learning defaults as local selection"
+    ],
+    "no_immediate_memory_restore_in_network_completion": true,
+    "native_parser_success_observer_implemented": true,
+    "runtime_verified": false,
+    "evidence": [
+      {
+        "artifact": "ida-query-frame.json",
+        "note": "Objective-C frame boundary"
+      },
+      {
+        "artifact": "ida-query-frame-path.json",
+        "note": "native frame calls request pump"
+      },
+      {
+        "artifact": "ida-query-frame-final.json",
+        "note": "static save/global frame wrapper"
+      },
+      {
+        "artifact": "ida-query-dispatch.json",
+        "note": "request IDs"
+      },
+      {
+        "artifact": "ida-query-delivery.json",
+        "note": "response parser and deck-all xrefs"
+      }
+    ],
+    "static_save_commit_chain": [
+      "0x1006bbba4",
+      "0x100698c00"
+    ],
+    "request_snapshot": {
+      "record_pointer": "queue_node+0x28 (request=q=node+8, q+0x20)",
+      "records_offset": 12,
+      "stride": 96,
+      "badge_index": "primary plus secondary local index for requests; bank-local for persisted banks",
+      "secondary_count": "max_decks - primary_count",
+      "native_save_decks_id": 58,
+      "recv_team_id": 122,
+      "wait_for_resources": true
+    }
+  },
+  "persistence": {
+    "directory": "NSHomeDirectory()/Library/Application Support/PADHelper",
+    "container_isolation_from_livecontainer": true,
+    "account_isolation_required_within_container": true,
+    "format": "own versioned format storing decoded selection fields, bank/slot and matching digest; atomic writes",
+    "credential_file": "data048.bin",
+    "credential_file_ios_path_verified": false,
+    "credential_file_hash_stability_verified": false,
+    "direct_game_save_file_write_recommended": false
+  },
+  "livecontainer": {
+    "primary_route": "signed arm64 dylib + Objective-C IMP replacement + verified writable data fields",
+    "runtime_text_modification_required": false,
+    "reference_root": "https://github.com/hugotang/lc",
+    "references": [
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 7,
+        "finding": "dlopen dylib/framework loader"
+      },
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 85,
+        "finding": "dontInjectTweakLoader can disable injection"
+      },
+      {
+        "file": "TweakLoader/TweakLoader.m",
+        "line": 95,
+        "finding": "LCTweakFolder per-app folder selection; .disabled skipped"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Utilities/LCUtilsExtensions.swift",
+        "line": 13,
+        "finding": "signTweaks only gathers immediate dylib/framework children; requires certificatePassword"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Utilities/LCUtilsExtensions.swift",
+        "line": 73,
+        "finding": "signFilesWithZSign"
+      },
+      {
+        "file": "LiveContainerSwiftUI/Models/LCAppModel.swift",
+        "line": 456,
+        "finding": "selected tweaks signing"
+      },
+      {
+        "file": "LiveContainer/LCMachOUtils.m",
+        "line": 112,
+        "finding": "MH_EXECUTE converted to MH_DYLIB; loader commands added"
+      },
+      {
+        "file": "LiveContainer/LCBootstrap.m",
+        "line": 472,
+        "finding": "guest HOME changed before app execution"
+      },
+      {
+        "file": "LiveContainer/Tweaks/Dyld.m",
+        "line": 396,
+        "finding": "getGuestAppHeader uses original dyld accessor; export visibility not yet verified"
+      }
+    ],
+    "substrate_load_does_not_prove_jitless_native_inline_hooks": true,
+    "recommended_dylib_placement": "direct child of selected LCTweakFolder",
+    "helper_export_verified": false
+  },
+  "feasibility": [
+    {
+      "feature": "skin",
+      "result": "strong_static_case_for_jitless_prototype",
+      "runtime_verified": false
+    },
+    {
+      "feature": "bgm",
+      "result": "strong_static_case_for_jitless_prototype_with_resource_availability_condition",
+      "runtime_verified": false
+    },
+    {
+      "feature": "upload_defaults",
+      "result": "strong_static_case_for_objc_json_rewrite; server acceptance pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "local_restore",
+      "result": "usable after-frame boundary; success observer and mapping must be validated",
+      "runtime_verified": false
+    },
+    {
+      "feature": "account_persistence",
+      "result": "container isolation confirmed; stable identity timing pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "timer_resume",
+      "result": "basic bit5 handling possible; mode and full timer semantics pending",
+      "runtime_verified": false
+    },
+    {
+      "feature": "badges",
+      "result": "conditional; parameter gate prevents bitmap-only completeness",
+      "runtime_verified": false
+    }
+  ],
+  "pending_runtime_validation": [
+    "signed dylib load without JIT on reported iOS27/custom LC",
+    "guest resolution under hidden LC mode and optional helper export",
+    "initialized memory permissions/ranges and table bounds",
+    "game frame/lifecycle thread",
+    "raw NSURLSession response shape and status semantics",
+    "API host/path filter",
+    "request/persisted/editing bank mapping and badge local index",
+    "native parse success signal",
+    "user changes to zero, retries, deck reorder and duplicate deck matching",
+    "stable account identity and A-B-A switching",
+    "resource download availability",
+    "timer mode/bit1/bit6 meanings and background elapsed time",
+    "badge valid parameters and gameplay effects",
+    "other network action coverage if claiming complete upload defaulting"
+  ],
+  "build": {
+    "recommended": "GitHub Actions macos-26 / Xcode iPhoneOS SDK; arm64 dylib",
+    "windows_path_ios_toolchain_found": false,
+    "dylib_built": false,
+    "release_ready": false,
+    "prototype_sources_added": true
+  },
+  "prototype": {
+    "runtime_notes": "ios/docs/runtime.md",
+    "default_mode": "diagnostic; experimental writes disabled",
+    "badge_implemented": true,
+    "runtime_verified": false,
+    "battle_replacement_implemented": true,
+    "manual_timer_popup_implemented": true,
+    "additional_target_manifest": "ios/targets/battle-23.6.1.json"
+  },
+  "music_playback": {
+    "implemented": true,
+    "default_enabled": false,
+    "device_verified": false,
+    "single_player_only": true,
+    "named_tracks_only": true,
+    "resource_matching": "native ASCII case-insensitive prefix, first registered match; resource registry is not loaded-file status",
+    "writes": "temporary native music override; no cleared flag, rewards, or network changes",
+    "native_script_precedence": true,
+    "symbols": {
+      "PHMusicSetRVA": "0x5a564c",
+      "PHMusicRefreshRVA": "0x5a4f3c",
+      "PHMusicAudioRVA": "0x2b0d6f8",
+      "PHMusicDescriptorOffset": "0xc77398",
+      "PHMusicStringObjectOffset": "0xc773a8",
+      "PHMusicSelectedDeckOffset": "0x52f392",
+      "PHMusicClearBucketsOffset": "0x575430",
+      "PHMusicClearRecordsOffset": "0x539430",
+      "PHMusicBossWaveOffset": "0xb35bc",
+      "PHMusicEffectOffset": "0xb5014",
+      "PHMusicOverrideOffset": "0x933a4",
+      "PHMusicTargetOffset": "0x933a6"
+    }
+  },
+  "runtime_fields": {
+    "PHAPIContextPointerOffset": "0xf65640",
+    "PHAPIActiveRequestOffset": "0xe08",
+    "PHAPIErrorOffset": "0x101748",
+    "PHNetworkStateRVA": "0x2ae9728",
+    "PHNetworkPhaseRVA": "0x2ae972c",
+    "PHEditDirtyOffset": "0x5305b4",
+    "PHBadgeTableOffset": "0xa0",
+    "PHBadgeEndOffset": "0xb0",
+    "PHBadgeCountOffset": "0x24e8",
+    "PHBadgeOwnedOffset": "0x52f31c",
+    "PHTimerPendingOffset": "0x92a00",
+    "PHTimerDialogOffset": "0xbe9d8",
+    "PHTimerHoldOffset": "0xb3592",
+    "PHTimerSceneIDOffset": "0x92a38"
+  },
+  "migration": {
+    "from_target": "jp.gungho.pad-ios-23.6.0-106878",
+    "report": "ios/docs/address-update-23.6.1.md",
+    "evidence": "ios/research/address-update-23.6.1.json",
+    "validation": "static-only; not compiled or device-tested",
+    "historical_evidence": "Earlier decomp/research artifacts cited by retained design notes describe 23.6.0; use migration report for the new input."
+  }
+}

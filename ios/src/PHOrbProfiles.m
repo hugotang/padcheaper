@@ -4,6 +4,7 @@
 #import "PHFormationModel.h"
 #import "PHOrbEight.h"
 #import <CoreFoundation/CoreFoundation.h>
+#include "PHDataTarget.h"
 #include <math.h>
 
 static BOOL PHOrbProfileIsBoolean(id value) {
@@ -251,7 +252,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
     if (![plan isKindOfClass:NSDictionary.class] || !Keys(plan, @[@"format", @"schema", @"target", @"id", @"name", @"formation",
             @"opening", @"rotation", @"board", @"dungeon", @"floor", @"source"]) ||
         ![plan[@"format"] isEqual:@"padcheaper-team-plan"] || !Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1] ||
-        ![plan[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
+        !PHDataTargetIsSupported(plan[@"target"]) ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
         !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
             @[@"thornComboPriority", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return nil;
@@ -271,7 +272,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
 NSDictionary *PHOrbPlanFromProfile(NSDictionary *profile) {
     if (!profile[@"formation"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
     NSMutableDictionary *board = [PHOrbCanonicalSettings(profile[@"settings"]) mutableCopy]; [board removeObjectForKey:@"rules"];
-    return @{@"format":@"padcheaper-team-plan", @"schema":@1, @"target":@"jp.gungho.pad-ios-23.6.0-106878",
+    return @{@"format":@"padcheaper-team-plan", @"schema":@1, @"target":@(PHTargetID),
         @"id":profile[@"id"], @"name":profile[@"name"], @"formation":profile[@"formation"], @"opening":profile[@"opening"],
         @"rotation":profile[@"settings"][@"rules"], @"board":board, @"dungeon":profile[@"dungeon"],
         @"floor":profile[@"floor"], @"source":profile[@"source"]};
@@ -307,7 +308,7 @@ NSData *PHOrbExportProfileData(NSDictionary *profile, NSString **reason) {
             @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
     NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);
     NSDictionary *package = profile[@"formation"] ? PHOrbPlanFromProfile(canonical) :
-        @{@"format":@"padcheaper-orb-profile", @"schema":@1, @"target":@"jp.gungho.pad-ios-23.6.0-106878", @"profile":canonical};
+        @{@"format":@"padcheaper-orb-profile", @"schema":@1, @"target":@(PHTargetID), @"profile":canonical};
     NSData *data = [NSJSONSerialization dataWithJSONObject:package options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL];
     if (!data.length || data.length > 131072) { if (reason) *reason = @"分享檔案超過單份 128 KiB 上限"; return nil; }
     if (reason) *reason = nil;
@@ -322,7 +323,7 @@ NSDictionary *PHOrbProfilesImportingData(NSDictionary *library, NSData *data, NS
     if ([package[@"format"] isEqual:@"padcheaper-team-plan"]) return PHOrbProfilesImportingPlan(library,package,reason);
     if (!Keys(package,@[@"format",@"schema",@"target",@"profile"]) ||
         ![package[@"format"] isEqual:@"padcheaper-orb-profile"] || !Integer(package[@"schema"],1) ||
-        ![package[@"schema"] isEqual:@1] || ![package[@"target"] isEqual:@"jp.gungho.pad-ios-23.6.0-106878"] ||
+        ![package[@"schema"] isEqual:@1] || !PHDataTargetIsSupported(package[@"target"]) ||
         ![package[@"profile"] isKindOfClass:NSDictionary.class]) return nil;
     NSDictionary *profile = package[@"profile"];
     if (profile[@"formation"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;

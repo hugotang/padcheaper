@@ -109,7 +109,7 @@ def verify_release_snapshot(metadata, release):
     validate_minimum(metadata.get("minimum_ios"))
 
 
-def rewrite_artifact_links(directory):
+def rewrite_artifact_links(directory, commit=None):
     # Packaged notes are flattened by build.sh. Source documents stay untouched.
     for notes in directory.glob("*.md"):
         content = notes.read_text(encoding="utf-8")
@@ -120,10 +120,18 @@ def rewrite_artifact_links(directory):
                          ("](../.github/workflows/ios-dylib.yml)",
                           "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
             content = content.replace(old, new)
-        for source, target in (("pad-23.6.0.json", "target.json"),
-                               ("battle-23.6.0.json", "battle-target.json"),
-                               ("orbs-23.6.0.json", "orb-target.json")):
+        for source, target in (("pad-23.6.1.json", "target.json"),
+                               ("battle-23.6.1.json", "battle-target.json"),
+                               ("orbs-23.6.1.json", "orb-target.json"),
+                               ("pad-23.6.0.json", "targets/pad-23.6.0.json"),
+                               ("battle-23.6.0.json", "targets/battle-23.6.0.json"),
+                               ("orbs-23.6.0.json", "targets/orbs-23.6.0.json")):
             content = content.replace("](../targets/" + source + ")", "](" + target + ")")
+        if commit:
+            # Implementation links refer to the source actually compiled; source
+            # files are not duplicated into the flattened user documentation.
+            content = content.replace("](../src/",
+                f"](https://github.com/hugotang/padcheaper/blob/{commit}/ios/src/")
         notes.write_text(content, encoding="utf-8", newline="\n")
     for notes in (directory / "templates").glob("*/*.md"):
         notes.write_text(notes.read_text(encoding="utf-8").replace("](../../docs/", "](../../"),
@@ -136,7 +144,7 @@ def finalize(directory, release, minimum_ios):
     binary = directory / "PADCheaper.dylib"
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     metadata = build_metadata(release, commit, binary.read_bytes(), minimum_ios)
-    rewrite_artifact_links(directory)
+    rewrite_artifact_links(directory, commit)
     for name, value in (("build-info.json", metadata), ("release.json", release)):
         (directory / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n",
                                       encoding="utf-8", newline="\n")

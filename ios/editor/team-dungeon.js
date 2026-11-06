@@ -4,7 +4,10 @@
   'use strict';
   const guides=typeof module==='object'&&module.exports?require('./dungeon-guides.json'):
     typeof PH_DUNGEON_GUIDES==='object'?PH_DUNGEON_GUIDES:null;
-  const f32=Math.fround,MAX=0x7fffffff,TARGET='jp.gungho.pad-ios-23.6.0-106878';
+  // Offline report parsing only. Preserve the source version; accepting an old
+  // report never identifies the current game or authorizes a native operation.
+  const f32=Math.fround,MAX=0x7fffffff,REPORT_TARGETS=new Set([
+    'jp.gungho.pad-ios-23.6.1-107553','jp.gungho.pad-ios-23.6.0-106878']);
   const controls=new Set([21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,43,44,45,91]);
   const supported=new Set([15,17,18,19,47,50,82,88,89,107,140,141]);
   const effectNames={88:'覺醒無效',89:'技能延遲',107:'不可消',140:'指定位置技能延遲',141:'武裝無效'};
@@ -49,7 +52,7 @@
   }
   function parse(input){
     if(typeof input==='string'){if(input.length>16000000)throw new Error('關卡 JSON 過大');input=JSON.parse(input.replace(/^\uFEFF/,''));}
-    if(!input||input.schema!==1||input.kind!=='PADCheaper-dungeon-report'||input.target!==TARGET)throw new Error('需要相容版本的 PADCheaper 全層關卡匯出');
+    if(!input||input.schema!==1||input.kind!=='PADCheaper-dungeon-report'||!REPORT_TARGETS.has(input.target))throw new Error('需要相容版本的 PADCheaper 全層關卡匯出');
     if(!number(input.dungeon,1)||!number(input.floor,1)||!number(input.totalFloors,1,100)||!Array.isArray(input.floorDefinitions)||input.floorDefinitions.length>100||
       !Array.isArray(input.observations)||input.observations.length>512)throw new Error('關卡資料結構或數量不符');
     const floors=[],seen=new Set();
@@ -113,7 +116,7 @@
       if(e.catalogAttack>0&&e.observedAttack!==null)ratios.push(e.observedAttack/e.catalogAttack);
     }
     const inferredScale=ratios.length&&ratios.every(n=>Math.abs(n-ratios[0])<1e-8)?ratios[0]:null;
-    return {schema:1,dungeon:input.dungeon,subDungeon:input.floor,totalFloors:input.totalFloors,floors,inferredScale,
+    return {schema:1,target:input.target,dungeon:input.dungeon,subDungeon:input.floor,totalFloors:input.totalFloors,floors,inferredScale,
       observationCount:input.observations.length,complete:input.allDefinitionsCaptured===true&&floors.length===input.totalFloors&&floors.every(f=>f.complete&&f.enemies.every(e=>e.complete))};
   }
   function describe(definitions,id){
@@ -268,7 +271,7 @@
     }
     const guide=parseGuides(options.guides).guides.find(g=>g.dungeon===dungeon.dungeon&&g.subDungeon===dungeon.subDungeon&&g.totalFloors===dungeon.totalFloors&&
       g.identityChecks.every(check=>dungeon.floors.find(f=>f.number===check.floor)?.enemies.some(e=>e.id===check.catalog)));
-    return {schema:1,dungeon:dungeon.dungeon,subDungeon:dungeon.subDungeon,totalFloors:dungeon.totalFloors,attackScale:scale,
+    return {schema:1,target:dungeon.target,dungeon:dungeon.dungeon,subDungeon:dungeon.subDungeon,totalFloors:dungeon.totalFloors,attackScale:scale,
       guide:guide?{...guide,matchedTeamNotes:guide.teamNotes.filter(n=>n.cards.every(id=>baseline.members.some(m=>m.id===id))).map(n=>n.text)}:null,
       scaleSource:options.attackScale!==undefined?'explicit':'inferred-from-observation',floors:byFloor,completeCapture:dungeon.complete,
       skills:[shield,ordinary,rescue].filter(Boolean).map(s=>({key:s.key,slot:s.slot+1,name:s.name,cooldown:s.cooldown,effects:s.effects})),

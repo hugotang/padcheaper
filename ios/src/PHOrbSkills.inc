@@ -107,8 +107,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
         !PHReadU32(impl + PHOrbSkillSpecialModeOffset, &specialMode) || !PHReadU32(impl + 601584, &inputMode) ||
         !Decode(impl + PHOrbSkillLimitOffset, key1, key2, 0x766cfc6du, skillLimit) ||
         !SmallProtected(impl + PHOrbSkillLimitRemainingOffset, key1, key2, UINT16_MAX, limitRemaining) ||
-        !PHReadMemory(impl + 751400, &animation, sizeof(animation)) ||
-        !PHReadMemory(impl + 751404, &animationTarget, sizeof(animationTarget)) ||
+        !PHReadMemory(impl + PHOrbSkillAnimationOffset, &animation, sizeof(animation)) ||
+        !PHReadMemory(impl + PHOrbSkillAnimationTargetOffset, &animationTarget, sizeof(animationTarget)) ||
         !std::isfinite(animation) || !std::isfinite(animationTarget) ||
         !PHReadPointer(impl + PHOrbSkillDungeonRulesOffset, &dungeonRules)) return false;
     out.window &= !PositiveDuration(bindTurns) && !PositiveDuration(sealTurns) && int16_t(special) < 0 &&
@@ -146,7 +146,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     // their effects is conservative: native 0x100562F74 can bypass these for
     // positive part mode, depending on the attack; we never assume that bypass.
     constexpr uintptr_t durationOffsets[]{2400, 2192, 2256, 2224};
-    constexpr uintptr_t bypassOffsets[]{739196, 739156, 739668, 739176};
+    constexpr uintptr_t bypassOffsets[]{PHOrbDamageAbsorbBypassOffset, PHOrbAttributeAbsorbBypassOffset,
+                                       PHOrbDamageVoidBypassOffset, PHOrbEnemyComboBypassOffset};
     bool partsCodeChecked = false;
     for (unsigned i = 0; i < enemies; ++i) {
         uintptr_t enemy = impl + PHOrbEnemyOffset + i * PHOrbEnemyStride;

@@ -1,0 +1,3724 @@
+{
+  "schema": 1,
+  "target_id": "jp.gungho.pad-ios-23.6.1-107553",
+  "prototype_version": "0.5.34-orbs",
+  "device_verified": false,
+  "provenance": "IDA comparison of workspace-extracted 23.6.0/106878 and 23.6.1/107553; new executable SHA256 3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6; see migration evidence.",
+  "scope": {
+    "multiplayer": {
+      "input": "explicit-local-once",
+      "modes": [
+        7,
+        11,
+        10
+      ],
+      "selector": 1,
+      "goal_modes": [
+        "combo",
+        "manual",
+        "leaders"
+      ],
+      "continuous": false,
+      "skills": false,
+      "team_mutation": false,
+      "timer_mutation": false,
+      "packet_mutation": false,
+      "thorn_contact": false,
+      "device_verified": false,
+      "ownership": "native-local-seat-turn-view-clock",
+      "preview_execute": false,
+      "leader_planning": "read-only-local-current-parameters",
+      "extra_helper": "four-player-native-extra-skill-no-helper-leader",
+      "continuation": {
+        "mode": 7,
+        "selector": 2,
+        "ownership": "native-local-bank-after-coop-cleanup",
+        "time": "native-move-timer",
+        "input": "explicit-local-once"
+      },
+      "eight_auto": {
+        "mode": 10,
+        "selector": 1,
+        "intent": "explicit-current-match",
+        "input": "fresh-local-gesture-per-board",
+        "skills": "native-current-fixed-source",
+        "profile": "portable-activity-validated-effects",
+        "stop": "results-manual-input-entry-clock-or-owner-change",
+        "score": "first-removal-shape-heuristic",
+        "rematch": false,
+        "device_verified": false
+      }
+    },
+    "dimensions": [
+      [
+        6,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        5,
+        4
+      ]
+    ],
+    "min_erase": [
+      3,
+      7
+    ],
+    "connected_match": true,
+    "continuous": true,
+    "input": "scoped-private-manager",
+    "goal_modes": [
+      "combo",
+      "manual",
+      "leaders"
+    ],
+    "max_goals": 6,
+    "shape_wave": "first-removal-only",
+    "leader_planning": "minimum-board-conditions-only",
+    "full_leader_activation": false,
+    "skill_rules": "ordered-conjunctive-single-player",
+    "max_skill_rules": 12,
+    "skill_entry": "native-confirmed-current-skill",
+    "enemy_conditions": [
+      "damage_absorb",
+      "attribute_absorb",
+      "damage_void",
+      "combo_absorb"
+    ],
+    "skill_groups": "round-robin-one-per-orb-turn",
+    "once_rules": "current-battle-memory",
+    "reserved_skills": true,
+    "strategy_profiles": 64,
+    "profile_selection": "explicit-start-only",
+    "locked_orbs": true,
+    "timed_spinners": false,
+    "spinner_strategy": "avoid-cells-all-shared-cycle-phases",
+    "spinner_colors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "board_constraints": [
+      "tape",
+      "fixed_start",
+      "unmatchable"
+    ],
+    "visual_effects": [
+      "cloud",
+      "blind",
+      "super_blind",
+      "weakened",
+      "nail",
+      "combo_orb"
+    ],
+    "hazards": {
+      "jammer": "ordinary-match",
+      "poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
+      "mortal_poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
+      "bomb": "all-first-wave",
+      "thorn": "bounded-contact-with-first-wave-heart-four"
+    },
+    "obstacle_conditions": [
+      "unmatchable",
+      "special_orbs",
+      "orb_effect",
+      "board_effect",
+      "spinner",
+      "locked",
+      "weakened",
+      "jammer",
+      "poison",
+      "mortal_poison",
+      "bomb",
+      "cloud",
+      "tape",
+      "blind",
+      "super_blind",
+      "nail",
+      "thorn",
+      "fixed_start",
+      "combo_orb",
+      "match_rule"
+    ],
+    "survival_conditions": [
+      "hp_at_most",
+      "awoken_bind",
+      "member_bind",
+      "skill_seal"
+    ],
+    "required_skills": "confirmed-rule-or-group-before-route",
+    "hp_read": "read-only-effective-cap",
+    "decision_reasons": true,
+    "recovery_goal": {
+      "mode": "continuous-only",
+      "hp_percent": [
+        1,
+        100
+      ],
+      "groups": [
+        1,
+        3
+      ],
+      "shapes": [
+        "match",
+        "four"
+      ],
+      "combine": "post-skill-conjunction"
+    },
+    "unmatchable_color_condition": "any-selected-basic-color",
+    "skill_source_choice": "native-same-family-body",
+    "battle_observation": {
+      "mode": "optional-read-only-single-player",
+      "cooldown": "table-and-initialized-cache-authoritative-stage",
+      "assist_recovery": "current-eligibility-only",
+      "enemies": "current-hp-effects",
+      "native_getters": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "optional_guards": true
+    },
+    "assist_recovery_goals": {
+      "mode": "opt-in-single-player-continuous",
+      "capture": "fresh-double-read-before-plan-and-input",
+      "combine": "retain-base-and-heart-goals",
+      "amount": "current-effective-L-per-distinct-member-color-per-first-wave-group",
+      "partial_recovery": false,
+      "candidate_limit": 12,
+      "shared_search_deadline": true,
+      "native_queue_capacity_confirmed": false,
+      "confirmation": "next-stable-native-duration-zero",
+      "survival_authorization": false,
+      "guards": "separate-policy-only",
+      "device_verified": false
+    },
+    "enemy_action_observation": {
+      "mode": "optional-read-only-stable-single-player",
+      "capture": "bounded-double-read-current-catalog-and-AI-state",
+      "rows": 64,
+      "max_records": 192,
+      "max_depth": 8,
+      "read_bytes_per_pass": 131072,
+      "read_calls_per_pass": 256,
+      "compound": "ordered-positive-prefix-with-cycle-and-nesting-markers",
+      "controls": "descriptions-and-raw-operands-only",
+      "unknown_opcodes": "retained",
+      "native_getters": false,
+      "spawn_identity": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "enemy_selector_analysis": {
+      "mode": "optional-read-only-stable-single-player",
+      "entry": "conditional-ordinary-row-zero-current-AI-state",
+      "hp": "all-native-percentages-0-through-100",
+      "modes": [
+        "ordered-weighted",
+        "legacy-two-pass"
+      ],
+      "state_limit_per_enemy": 512,
+      "candidate_limit_per_enemy": 256,
+      "step_limit_per_capture": 4096,
+      "weighted_pool_limit_per_path": 64,
+      "unknown_frontier": "partial-no-exclusion-proof",
+      "feasibility": "may-select-and-may-skip",
+      "probabilities": false,
+      "sequence": "positive-prefix-duplicates-kept-attached-attack-before-status",
+      "native_calls": false,
+      "projected_AI_state": false,
+      "next_entry": false,
+      "enemy_forecast": false,
+      "damage_bound": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "enemy_dispatch_analysis": {
+      "mode": "optional-read-only-stable-single-player",
+      "entry": "conditional-captured-scheduler-and-one-tick-checkpoints",
+      "post_selection": "before-action-preparation-only",
+      "read_bytes_per_pass": 4096,
+      "read_calls_per_pass": 64,
+      "post_player_state": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "enemy_damage_analysis": {
+      "mode": "optional-read-only-stable-single-player",
+      "scope": "local-post-resolver-field-checkpoints",
+      "snapshots": "raw-current-and-conditional-refresh",
+      "probes": "three-non-exhaustive-assumed-effective-damage-values",
+      "phase": "conditional-hp-count-and-target-animation-fields",
+      "read_bytes_per_pass": 4096,
+      "read_calls_per_pass": 64,
+      "resolver_side_effects": false,
+      "post_player_state": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "enemy_combo_countermeasure": {
+      "mode": "single-player-continuous",
+      "capture": "fresh-double-read-before-plan-and-input",
+      "requirement": "maximum-live-threshold-plus-one-or-active-bypass",
+      "combine": "retain-base-heart-and-assist-goals",
+      "combo_credit": "first-removal-plus-confirmed-leader-badge-active-minus-current-debits",
+      "max_combos": 14,
+      "unknown": "stop",
+      "survival_authorization": false,
+      "guards": "separate-policy-only",
+      "device_verified": false,
+      "upper_absorption": "stop-until-maximum-combo-proof"
+    },
+    "enemy_threat_events": {
+      "mode": "conditional-captured-definitions",
+      "opcodes": [
+        15,
+        17,
+        18,
+        19,
+        47,
+        50,
+        82,
+        88,
+        89,
+        107,
+        140,
+        141
+      ],
+      "order": "attached-hit-before-effect-compound-duplicates-retained",
+      "max_events": 128,
+      "bound": "before-player-shields-current-attack-assumption",
+      "gravity_hp": "requires-post-player-bound",
+      "unknown_events": "retained",
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "dungeon_report": {
+      "mode": "read-only-stable-single-player",
+      "scope": "loaded-entry-all-floors",
+      "max_floors": 100,
+      "max_spawns_per_floor": 8,
+      "capture": "one-floor-double-read-bound-to-current-spawn",
+      "retention": "most-recent-entry-in-memory",
+      "export": "explicit-json-file",
+      "random_alternatives": false,
+      "future_AI_state": false,
+      "enemy_forecast": false,
+      "survival_authorization": false,
+      "guards": "separate-optional-only",
+      "device_verified": false
+    },
+    "enemy_parts": {
+      "mode": "single-player",
+      "hp": "protected-signed-mode-and-separate-hp",
+      "live_owner": "validated-living-ordinary-enemy",
+      "effects": "conservative-live-part-union",
+      "skill_action": "ordinary-enemies-only",
+      "unknown": "stop",
+      "guards": "separate-on-parts-only",
+      "device_verified": false
+    }
+  },
+  "user_report": {
+    "date": "2026-10-28",
+    "version": "0.5.0-orbs",
+    "scope": "single-player ordinary 6x5 execute-once",
+    "result": "passed, reported by user; expanded geometry and quality settings pending",
+    "game_target": "jp.gungho.pad-ios-23.6.0-106878",
+    "applies_to_current_target": false
+  },
+  "fields": {
+    "PHOrbResizeProgressOffset": "0xb7c24",
+    "PHOrbFixedStartYOffset": "0xb4694",
+    "PHOrbMinMatchOffset": "0xb6264",
+    "PHOrbMinMatchExtraOffset": "0xb626c",
+    "PHOrbSpinnerDurationOffset": "0xb4830",
+    "PHOrbSpinnerCountOffset": "0xb4834",
+    "PHOrbSpinnerPeriodOffset": "0xb4844",
+    "PHOrbSpinnerRowsOffset": "0xb4864",
+    "PHOrbSpinnerColorsOffset": "0xb4fd0",
+    "PHOrbUnmatchableDurationOffset": "0xb47d4",
+    "PHOrbUnmatchableColorsOffset": "0xb47d8",
+    "PHOrbTapeRowDurationOffset": "0xb46b4",
+    "PHOrbTapeRowsOffset": "0xb46a4",
+    "PHOrbTapeColumnDurationOffset": "0xb46c8",
+    "PHOrbTapeColumnsOffset": "0xb46b8",
+    "PHOrbCloudDurationOffset": "0xb4750",
+    "PHOrbCloudXOffset": "0xb46f0",
+    "PHOrbCloudYOffset": "0xb4700",
+    "PHOrbCloudWidthOffset": "0xb4710",
+    "PHOrbCloudHeightOffset": "0xb4720",
+    "PHOrbPoolOffset": "0x988c0",
+    "PHOrbTableOffset": "0xa34c0",
+    "PHOrbMoveSerialOffset": "0x92e44",
+    "PHOrbRemainingOffset": "0x93390",
+    "PHOrbFixedStartOffset": "0xb4684",
+    "PHOrbSpecialDragOffset": "0xb7eb6",
+    "PHOrbDialogOffset": "0xbe9d8",
+    "PHOrbMoveBlockedOffset": "0x9299e",
+    "PHOrbTransformEnabledRVA": "0x1b4f0a2",
+    "PHOrbSkillUsesOffset": "0xb5058",
+    "PHOrbEnemyCountOffset": "0xbdc90",
+    "PHOrbEnemyOffset": "0xb7f48",
+    "PHOrbEnemyStride": "0xba8",
+    "PHOrbSkillMemberStateOffset": "0x4c8",
+    "PHOrbSkillOverrideOffset": "0x4c4",
+    "PHOrbSkillCountOffset": "0xc761bc",
+    "PHOrbSkillBoardResizeOffset": "0xb7c24",
+    "PHOrbSkillBindOffset": "0x48",
+    "PHOrbSkillSealOffset": "0xb43e8",
+    "PHOrbSkillSealExtraOffset": "0xb4a88",
+    "PHOrbSkillSpecialOffset": "0xb63e2",
+    "PHOrbSkillTimedOffset": "0xb7eb6",
+    "PHOrbSkillMovementOffset": "0xb3d68",
+    "PHOrbSkillSpecialModeOffset": "0xb3948",
+    "PHOrbSkillLimitOffset": "0xb3a10",
+    "PHOrbSkillLimitRemainingOffset": "0xb4fe0",
+    "PHOrbSkillDungeonRulesOffset": "0xb0f20",
+    "PHOrbTutorialIndexRVA": "0x1b5afd0",
+    "PHOrbTutorialTableRVA": "0x1322c48",
+    "PHOrbHPBaseLowOffset": "0xb7e20",
+    "PHOrbHPBaseHighOffset": "0xb7e30",
+    "PHOrbHPModifierTurnsOffset": "0xb481c",
+    "PHOrbHPModifierOffset": "0xb4820",
+    "PHOrbPendingDamageOffset": "0xb7e78",
+    "PHOrbPendingThornDamageOffset": "0xb7e7c",
+    "PHOrbSkillSelectedSourceOffset": "0x92e1c",
+    "PHOrbEightReceiptSkillOffset": "0x92e20",
+    "PHOrbEightReceiptCatalogOffset": "0x92e28",
+    "PHOrbEightReceiptSlotOffset": "0xb7ec6",
+    "PHOrbSkillFamilyOffset": "0x300",
+    "PHOrbMultiClockNumeratorRVA": "0x2c6fe74",
+    "PHOrbMultiClockDenominatorRVA": "0x2c6fe78",
+    "PHOrbMultiConnectionRVA": "0x1b37ab8",
+    "PHOrbMultiNetworkFlagsOffset": "0xafe70",
+    "PHOrbMultiSyncStateOffset": "0xa6398",
+    "PHOrbMultiResolveOffset": "0x9299a",
+    "PHOrbMultiTurnClockOffset": "0xa6368",
+    "PHOrbMultiMatchClockOffset": "0xafed8",
+    "PHOrbMultiCountdownOffset": "0xafc81",
+    "PHOrbMultiFinishedOffset": "0xb7e18",
+    "PHOrbLeaderSkillOffset": "0x5c",
+    "PHOrbLeaderCatalogNextOffset": "0x33c",
+    "PHOrbLeaderCatalogRecordsOffset": "0x5ef164",
+    "PHOrbLeaderExtraFlagOffset": "0x44",
+    "PHOrbLeaderExtraRegistryRVA": "0x27c93e8",
+    "PHOrbLeaderExtraSelectionOffset": "0x5cc200",
+    "PHOrbLeaderExtraStride": "0x350",
+    "PHOrbLeaderExtraSkillOffset": "0x54",
+    "PHOrbMultiSyncStepOffset": "0xa639c",
+    "PHOrbMultiDisconnectSeatOffset": "0xad6ec",
+    "PHOrbMultiRecoverySourceOffset": "0xafe78",
+    "PHOrbMultiRecoveryFlagsOffset": "0xafe74",
+    "PHOrbMultiDialogOffset": "0xbe9e0",
+    "PHOrbObservationCooldownOffset": "0xb3a00",
+    "PHOrbObservationAssistVoidOffset": "0xb4a9c",
+    "PHOrbObservationAddedAwakeningsOffset": "0x208",
+    "PHOrbObservationProfileOffset": "0x4e8",
+    "PHOrbObservationAwakeningGrantsOffset": "0xb5d2c",
+    "PHOrbAssistRecoveryQueueOffset": "0xb7d0",
+    "PHOrbAssistRecoveryQueueCountOffset": "0xb7e8",
+    "PHOrbAssistRecoveryDispatchOffset": "0x92a38",
+    "PHOrbEnemyActionsMetadataRVA": "0x27c81e8",
+    "PHOrbEnemyActionsCountRVA": "0x27c81f0",
+    "PHOrbEnemyActionsPointerRVA": "0x27c81f8",
+    "PHOrbEnemyActionsParameterOffset": "0x218",
+    "PHOrbEnemyActionsCatalogIDOffset": "0x244",
+    "PHOrbEnemyActionsRowsOffset": "0xec",
+    "PHOrbEnemyDispatchCacheOffset": "0x92df4",
+    "PHOrbEnemyDispatchHookOffset": "0xb3670",
+    "PHOrbEnemyDispatchSpecialOffset": "0xb3678",
+    "PHOrbEnemyDispatchLoopOffset": "0x92a38",
+    "PHOrbEnemyDispatchRedirectOffset": "0xb506c",
+    "PHOrbEnemyDamageImmediateOffset": "0x92e1b",
+    "PHOrbEnemyDamageSpecialOffset": "0xb3678",
+    "PHOrbEnemyDamageCallbackOffset": "0xbea00",
+    "PHOrbEnemyComboThresholdOffset": "0x8a0",
+    "PHOrbEnemyComboDurationOffset": "0x8b0",
+    "PHOrbEnemyComboBypassOffset": "0xb4778",
+    "PHOrbDungeonDumpCountAddress": "0x2a9da44",
+    "PHOrbDungeonDumpWavesAddress": "0x2a9da48",
+    "PHOrbDungeonDumpSpawnPointerOffset": "0x688",
+    "PHOrbDungeonDumpSpawnWaveOffset": "0x204",
+    "PHOrbEnemyComboAdjustmentOffset": "0xb46dc",
+    "PHOrbEnemyComboSubtractOffset": "0xb4ab0",
+    "PHOrbEnemyComboUpperDurationOffset": "0x980",
+    "PHOrbComboBonusLeaderOffset": "0xb5d44",
+    "PHOrbComboBonusBadgeOffset": "0xb6004",
+    "PHOrbComboBonusColorsOffset": "0xb62b0",
+    "PHOrbComboBonusAllLinksOffset": "0xb62f8",
+    "PHOrbSkillAnimationOffset": "0xb7738",
+    "PHOrbSkillAnimationTargetOffset": "0xb773c",
+    "PHOrbDamageAbsorbBypassOffset": "0xb478c",
+    "PHOrbAttributeAbsorbBypassOffset": "0xb4764",
+    "PHOrbDamageVoidBypassOffset": "0xb4964"
+  },
+  "guards": [
+    {
+      "name": "PHOrbLeaderCatalogAllocateRVA",
+      "va": "0x10052f5bc",
+      "rva": "0x52f5bc",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa000c40f9800000b48100805222048052327d0194740e00b908698052807e081b8100805222048052cf7c0194",
+      "sha256": "7ad311f5ea57426b6fb5cce4412c98ebca1a9571b6f5552353097be3ce879755"
+    },
+    {
+      "name": "PHOrbLeaderCatalogLinksRVA",
+      "va": "0x10052f838",
+      "rva": "0x52f838",
+      "length": 64,
+      "bytes": "6c0a80b99f010b6b0a0300546d0e40f90e6980520f6983d2ef88b5f2aff8d4f210d490523000a072917d0e9bb16971b8207ecf9b00c4b09b1110805201340e9b",
+      "sha256": "cfecc8647369f9ee05fcb833776264ef357f534eb2889ee5843f420d66f85966"
+    },
+    {
+      "name": "PHOrbLeaderCatalogDownloadRVA",
+      "va": "0x10068e4a8",
+      "rva": "0x68e4a8",
+      "length": 64,
+      "bytes": "9a0600114103150b142c9e52d40ba072c16a34b8c002088b3f84fa97882d9e52c80ba072e90f40b9c96a28b8da6a34b8082e9e52c80ba072c06a68f8882c9e52",
+      "sha256": "7893e4ba5af748e2b2cfb35f6d271aaa7d072c3fa372027fcba4d142fc7b6d0e"
+    },
+    {
+      "name": "PHOrbResizeRVA",
+      "va": "0x10055b8f4",
+      "rva": "0x55b8f4",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc301910840201ee10b0029f30300aa08644139096041392811080b093840f9",
+      "sha256": "85aaa37a9bfd2072372cc8995800cf5a60a9706ba26467f6ace1e670c18590f2"
+    },
+    {
+      "name": "PHOrbResizeSkillRVA",
+      "va": "0x1005c5fcc",
+      "rva": "0x5c5fcc",
+      "length": 64,
+      "bytes": "fa67bba9f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30304aaf40303aaf60302aaf70301aaf50300aa083840f909d1429138e125913910022a08d14291",
+      "sha256": "81e967a2a7c8feaa00f88239c3fb70b67645e19dbcc63b27936816a8e5bc291c"
+    },
+    {
+      "name": "PHOrbSpinnerUpdateRVA",
+      "va": "0x1005ab5f4",
+      "rva": "0x5ab5f4",
+      "length": 64,
+      "bytes": "ff0303d1ef3b026ded33036deb2b046de923056dfc6f06a9fa6707a9f85f08a9f65709a9f44f0aa9fd7b0ba9fdc30291f30300aa173840f908c786526801a072",
+      "sha256": "f21c142324d70f0138ead232e73898ccc1a29d03bc20d2846bbe88dfbe0b5549"
+    },
+    {
+      "name": "PHOrbBombResolveRVA",
+      "va": "0x1005fb1d4",
+      "rva": "0x5fb1d4",
+      "length": 64,
+      "bytes": "ff4303d1eb2b056de923066dfc6f07a9fa6708a9f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391f30300aa086481391f0500f1eb0300540a0080d209008052",
+      "sha256": "11459f4a7374bb42c4a277c7b14f339c50c9f5c46366d02c132877ed9818f165"
+    },
+    {
+      "name": "PHOrbTapeProjectRVA",
+      "va": "0x100609140",
+      "rva": "0x609140",
+      "length": 64,
+      "bytes": "0860c1391f050071eb0b0054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aa140080d2178886525701a0727b66c1397f070071",
+      "sha256": "49c76755c2ef29161bf935e3f73864d41a22d9a27bf66e077c632abbfd334637"
+    },
+    {
+      "name": "PHOrbBlindSetRVA",
+      "va": "0x10056499c",
+      "rva": "0x56499c",
+      "length": 64,
+      "bytes": "080080d269ff8f52a9ffbf720a0090524a00a0720b3840f96b8d42916b0113910c0080d26d696cf8ae0540b9af014039f01900514e0110371f12007122020054",
+      "sha256": "fe275ebcd67bbed592aa216789d7b4d99a4c6e3995d2cd97194970cd600730ec"
+    },
+    {
+      "name": "PHOrbSuperBlindSetRVA",
+      "va": "0x100565ad0",
+      "rva": "0x565ad0",
+      "length": 64,
+      "bytes": "0964c1393f0500714b090054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30303aaf40302aaf50301aaf60300aa170080d2f8ff8f52",
+      "sha256": "e13cfd2166c5a191c17df8ec641dd942fc8a09d5b96ad43ad7640cad8ac6b647"
+    },
+    {
+      "name": "PHOrbBlindTurnRVA",
+      "va": "0x100606584",
+      "rva": "0x606584",
+      "length": 64,
+      "bytes": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f40301aaf30300aa083840f989b286526901a0722a0080520a69297889be8552",
+      "sha256": "0b93db754cb8457b790dba15e32d12d085cbe0ee079914c4e01af3da52c5dede"
+    },
+    {
+      "name": "PHOrbFixedStartClearRVA",
+      "va": "0x1005602e4",
+      "rva": "0x5602e4",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa083840f908d1429100111a915d4300942007f837686681391f0500f1cb020054090080d26a6281390b988652",
+      "sha256": "c731d3c2963963409475d404cf9c517e87d7f57c7c570c58af0bd27cc0f78024"
+    },
+    {
+      "name": "PHOrbShapeMatchRVA",
+      "va": "0x1005f7cd8",
+      "rva": "0x5f7cd8",
+      "length": 64,
+      "bytes": "ffc302d1e923046dfc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291e40700f90840201ef40300aae38b01a95f0000b97f0000b9083840f9",
+      "sha256": "23a3c4a31b3412b9d75b1aa01bf676d769b61e042fcca5a7bc46021cb8d70ac9"
+    },
+    {
+      "name": "PHOrbLineMatchRVA",
+      "va": "0x1005f8e28",
+      "rva": "0x5f8e28",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f40303aaf30300aa0b64c1397f050071eb0f0054080080d2099886524901a0726c6241390a9886524a01a0728d1d0013",
+      "sha256": "d53b5420d156ac0e101ab6080c93fac846db1658aab27c77568407def252e422"
+    },
+    {
+      "name": "PHOrbCloudRVA",
+      "va": "0x1005ac2f8",
+      "rva": "0x5ac2f8",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30302aaf40300aa183840f908ea88526801a072096b68782a250013",
+      "sha256": "bbdc635e692cad4536dbf08960bc417009439ff059d85239ebaf6018d76f6b23"
+    },
+    {
+      "name": "PHOrbInitRVA",
+      "va": "0x1005f40d8",
+      "rva": "0x5f40d8",
+      "length": 64,
+      "bytes": "ff0304d1e923096dfc6f0aa9fa670ba9f85f0ca9f6570da9f44f0ea9fd7b0fa9fdc30391f40300aae85800d008b142f9080140f9a80319f8083840f909494291",
+      "sha256": "bd4ee27c5a983bf08c430ecf8499fdbe084f6d71c09a28710cc2a222b3193d1b"
+    },
+    {
+      "name": "PHOrbGeometryRVA",
+      "va": "0x1005f4a5c",
+      "rva": "0x5f4a5c",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30303aaf50302aaf40301aaf60300aac84e8052080dc21a0801221e0041201e294ce997800e0079bf1a0071",
+      "sha256": "31fdd70fdfca4c3712de852a9aaa54b4f62d067d2b0b1a9e04d55e5335581a76"
+    },
+    {
+      "name": "PHOrbNearestRVA",
+      "va": "0x1005f7454",
+      "rva": "0x5f7454",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191086481391f0500f1ab110054f40300aa090080d2130080d20a6081390b00b0120c9886524c01a072",
+      "sha256": "69a0ba20d61b0ce9d4c23d321c4a29eac8ec91746720d95e6baf9ad224f6f82f"
+    },
+    {
+      "name": "PHOrbPlayerInputRVA",
+      "va": "0x10060d578",
+      "rva": "0x60d578",
+      "length": 64,
+      "bytes": "ffc302d1e923046dfc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291f30300aad97080521901a072ca71e997f40300aae00313aa59f8fe97",
+      "sha256": "5a19305ccf26e8d8a8de420c6c86e103f8d7194881e527df2de89740fd0494c8"
+    },
+    {
+      "name": "PHOrbSwapRVA",
+      "va": "0x100608ac0",
+      "rva": "0x608ac0",
+      "length": 64,
+      "bytes": "ff4301d1e923016df65702a9f44f03a9fd7b04a9fd030191f50302aaf30301aaf40300aa48384079493c407948400079494400792a3840794a3800792b3c4079",
+      "sha256": "4e7c111ed4e514a5cbaada11078f60ec09f22fdf9fbe57157b822031fbb6f97c"
+    },
+    {
+      "name": "PHOrbInputUpdateRVA",
+      "va": "0x100069d14",
+      "rva": "0x69d14",
+      "length": 64,
+      "bytes": "ff0302d1e923026dfa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc3019142e437940840601ef55201d0b32e44f96842693968462939b40080527ff61739",
+      "sha256": "ac415dc44f97aaff18f0416a79e1d3cafdbad9b3ef8681f9203867f10abd2399"
+    },
+    {
+      "name": "PHOrbInputGetRVA",
+      "va": "0x100069cd0",
+      "rva": "0x69cd0",
+      "length": 64,
+      "bytes": "e85201d0082d44f90945a9393f0900f1eb00005400a114910a544339aa00003700200491290500f181ffff5400a11491c0035fd6e85201d0082d44f9004d2939",
+      "sha256": "c0f72a65bb6acdbf1cbf3cb72bd9b5260642dc0a17d5e8df4d6ae7556c2ec8fc"
+    },
+    {
+      "name": "PHOrbInputTransformRVA",
+      "va": "0x1000692b4",
+      "rva": "0x692b4",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa28d700d008210291080140b91f050071200300541f090071800100541f0d0071c103005428d700b008713e9100a5407d",
+      "sha256": "00f97af61500b930826fc38f916b6dc301fa8494b3491c4c63f2ad34f1dd9760"
+    },
+    {
+      "name": "PHOrbInputHistoryRVA",
+      "va": "0x10006a124",
+      "rva": "0x6a124",
+      "length": 64,
+      "bytes": "ffc300d1f44f01a9fd7b02a9fd830091f30300aa017440fd0038611e0040621e00c000bd0084402d020c5c2d0438221e2238231e0488022d8340211e8820201e",
+      "sha256": "2f32dac13711afda4014f25d32dee7f0e150ee5d40df7ea025f5bf4bd4341ddf"
+    },
+    {
+      "name": "PHOrbFlagsRVA",
+      "va": "0x1005a0c10",
+      "rva": "0x5a0c10",
+      "length": 64,
+      "bytes": "ffc301d1e923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa193840f938d34291083b537908651a53083d00131f050071",
+      "sha256": "b9d5725f100f1396771c780f89ea2e0ae94968150fa76b143f36f8eb45fc74d5"
+    },
+    {
+      "name": "PHOrbSkillConditionRVA",
+      "va": "0x1005c3c28",
+      "rva": "0x5c3c28",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f30302aaf40300aa481840791ff90371ad0600541ffd0371200a00541f4d0471401000541f5d0471",
+      "sha256": "7faa59291f981c5eb52935d28bd8ef14a2c5c4d9cc985e0f203a38c2abcb10fc"
+    },
+    {
+      "name": "PHOrbSkillOrbConditionRVA",
+      "va": "0x1005c3d9c",
+      "rva": "0x5c3d9c",
+      "length": 64,
+      "bytes": "630000b42800805268000039e13b0091e00314aa6eabff97080080520c008052691640b9ea3f8039eb3b80392d25cc1a0d0400365f0500714b0300540e0080d2",
+      "sha256": "5e2619cb891434980b3ec050aba2871f42400153932173edea1d203b35560b06"
+    },
+    {
+      "name": "PHOrbSkillCompositeRVA",
+      "va": "0x1005c41c8",
+      "rva": "0x5c41c8",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aaf40300aa431840797fe00171a00400547fd00171a1060054170080d2",
+      "sha256": "fc908c59423835e686e483ceccea34a0720b2f39cf605b19823a4dd4a53a8780"
+    },
+    {
+      "name": "PHOrbSkillTableLoadRVA",
+      "va": "0x100535148",
+      "rva": "0x535148",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f5b000b0b5420091e0e5002f08378c52e818a072a06a28fc00058052b9b92494",
+      "sha256": "3a3c20aef8a211aea243e5a5927ae0b770b6beb55542826e65f3a0fe340b8877"
+    },
+    {
+      "name": "PHOrbSkillBoardSizeRVA",
+      "va": "0x1005aeb68",
+      "rva": "0x5aeb68",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa083840f909dd429120294cbd21254cbd0020211e80010054953189527501a0720001158b3509ff97",
+      "sha256": "1cc5db4d3d7b47e2c73b3b5c0aec6c631058057c88e26b3e7835cdccd436c472"
+    },
+    {
+      "name": "PHOrbCanUseSkillRVA",
+      "va": "0x1005c4324",
+      "rva": "0x5c4324",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f60302aaf30301aaf40300aa09feff97a00d00346062059149b3fe97e20300aa6082139101008052",
+      "sha256": "664d51da2189cebf02fa03de8e2c617c2bdb3cd831851c3693adaaeaef8e6208"
+    },
+    {
+      "name": "PHOrbStartSkillRVA",
+      "va": "0x1005cc628",
+      "rva": "0x5cc628",
+      "length": 64,
+      "bytes": "ffc306d1fc6f16a9f85f17a9f65718a9f44f19a9fd7b1aa9fd830691f40301aa285a00d008b142f9080140f9a8831bf8083840f9092987526901a072096969b8",
+      "sha256": "74120d911eb144bc6c97a071c4de93e735c2440cf97dbd2089bb58e5a52416d7"
+    },
+    {
+      "name": "PHOrbBaseSkillRVA",
+      "va": "0x100482ecc",
+      "rva": "0x482ecc",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa080040f989b6009029410091085580b90a398c52ea18a07229696af88a06805200252a9b3ed30294e80300aa690240f9",
+      "sha256": "97250fae26a513f637485469412962e911cc3e26816cb17a74f560bb576e3d0b"
+    },
+    {
+      "name": "PHOrbAssistSkillRVA",
+      "va": "0x100482ff4",
+      "rva": "0x482ff4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30300aa087cc1791f0100710d030054691243390a488852ea01a07221210a1b75b600f0b542009108f09152a002088b",
+      "sha256": "47f7a9aba901c4ea2a77107108d09bbcf0791f2f7969d13c4b450506e31828b5"
+    },
+    {
+      "name": "PHOrbBaseCooldownRVA",
+      "va": "0x10059fdcc",
+      "rva": "0x59fdcc",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801d008811991003940f9e3ffff97f50300aa80821391e10313aa748bfb970800150b1f000071",
+      "sha256": "f59209b3546279a4c5fb40a5ba1908a5f793ffe540a4a5e1205833592288fcd8"
+    },
+    {
+      "name": "PHOrbTotalCooldownRVA",
+      "va": "0x10059fbf4",
+      "rva": "0x59fbf4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aae82801d008811991003940f959000094f50300aa883ecb791f010071f6d79f1a80821391e10313aa",
+      "sha256": "edccb809041a8f2bc6e88f8d447c4c7668eceff75ab1bb978f2092c1508e380e"
+    },
+    {
+      "name": "PHOrbSkillSelectionResetRVA",
+      "va": "0x1005cd070",
+      "rva": "0x5cd070",
+      "length": 64,
+      "bytes": "0800801288c604b9e00313aae10314aa81ffff97a00100348800805288ca04b9683a40f90849429100e12591c1028052558ffe97e00313aae10314aafd7b41a9",
+      "sha256": "408d22c53c0157f040c2b1451b05f66f63543e5530fc21cdc682ccc24bf7a108"
+    },
+    {
+      "name": "PHOrbSkillUpdateRVA",
+      "va": "0x1005cd0cc",
+      "rva": "0x5cd0cc",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f30300aa173e82527701a072d4008052783a40f91603178bc0e20291",
+      "sha256": "44b5a4a655737d24724619c19778446a1e821ff045db822f4ee389ba6257ee84"
+    },
+    {
+      "name": "PHOrbBattleUpdateRVA",
+      "va": "0x1005b5180",
+      "rva": "0x5b5180",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f30300aacdd2ea97f40300aa0d37fe97e0000034683a40f949de8f526901a0720a6969784a791512",
+      "sha256": "b02cf528257ff4228555214e9e717258a119337a40f720c79c4ade88aef1191c"
+    },
+    {
+      "name": "PHOrbEnemyDamageRVA",
+      "va": "0x1005631b8",
+      "rva": "0x5631b8",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f50307aaf40306aaf30305aaf90304aafa0303aaf80302aaf60301aaf70300aa083840f9",
+      "sha256": "46be76f61baef297518f93e1ea485cc70c3cf76a137f154540d8401cbceb4e01"
+    },
+    {
+      "name": "PHOrbMemberTapRVA",
+      "va": "0x1005afd18",
+      "rva": "0x5afd18",
+      "length": 64,
+      "bytes": "ff4302d1e923026dfc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291fb0300aae4e7ea97e00300f9e0031baaa3cdff97733b40f968ce4291",
+      "sha256": "7d5d5f86fd232117441f28288ae05df30932be01f1c71eef1326136ce3b0c5c0"
+    },
+    {
+      "name": "PHOrbSkillEffectsRVA",
+      "va": "0x1005cb9c8",
+      "rva": "0x5cb9c8",
+      "length": 64,
+      "bytes": "ff0302d1e923016dfc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191f40301aaf30300aa39ac00f03943009108958f52e818a072296b68b8",
+      "sha256": "6fc7c185fd1a0a3fcd80062dfc84b2962ade48fff03cc8f9cfeb5420e1fa0ae1"
+    },
+    {
+      "name": "PHOrbSpinnerSetRVA",
+      "va": "0x100566130",
+      "rva": "0x566130",
+      "length": 64,
+      "bytes": "ff4303d1fc6f07a9fa6708a9f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391e71f00b9f80306aaf90305aafa0304aaf50303aaf60302aaf40301aaf30300aa",
+      "sha256": "bb157cb203a13733c0f3d7af155af82a2031631c33ea013ae90ea969d92f2e1b"
+    },
+    {
+      "name": "PHOrbLockedRVA",
+      "va": "0x1005ac1d8",
+      "rva": "0x5ac1d8",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091150440b975035836f30301aaf40300aa28ad00d0084100915649009029f2915209696938490120370821579100c11991",
+      "sha256": "c8ff613408e1ad06cf0178104920b7956b5c7b2baff9bb791b2ee0e723fb99cd"
+    },
+    {
+      "name": "PHOrbChangeRVA",
+      "va": "0x1005bf194",
+      "rva": "0x5bf194",
+      "length": 64,
+      "bytes": "f85fbca9f65701a9f44f02a9fd7b03a9fdc30091282440791f050071a00b0054f80304aaf70303aaf40302aaf60301aaf30300aae00301aa2100805202b4ff97",
+      "sha256": "94c1d9f6f873d73ea432a8851ca6d2e434381dd747de6f114b7eb66ec4a7d292"
+    },
+    {
+      "name": "PHOrbMatchRVA",
+      "va": "0x1005fc954",
+      "rva": "0x5fc954",
+      "length": 64,
+      "bytes": "ef3bb66ded33016deb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291ff8307d1a85800d008b142f9080140f9a88315f8",
+      "sha256": "648dc67dc418a531d6961d94f99a922a5b44e43cb0bafc228087b842615248a1"
+    },
+    {
+      "name": "PHOrbMaximumHPRVA",
+      "va": "0x1005fba18",
+      "rva": "0x5fba18",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa082601d008811991083940f909e481526901a072006969f8950ff19740010034f40300aa1f000071",
+      "sha256": "954c266cd850837b3ead65d4929cabe5bbbebd1a805f985e33f865668e4b2e10"
+    },
+    {
+      "name": "PHOrbDungeonHPRVA",
+      "va": "0x10023f89c",
+      "rva": "0x23f89c",
+      "length": 64,
+      "bytes": "ffc300d1f44f01a9fd7b02a9fd830091f30300aae23300916103805252fbff9760000034e00f40b908000014e2330091e00313aa810380524bfbff9760000034",
+      "sha256": "fdbd8b59b8ddeac45fe061ab0a046819e222cccbefd93aacb7d8d611f3cce80f"
+    },
+    {
+      "name": "PHOrbDungeonOptionRVA",
+      "va": "0x10023e600",
+      "rva": "0x23e600",
+      "length": 64,
+      "bytes": "ffc303d1fa670aa9f85f0ba9f6570ca9f44f0da9fd7b0ea9fd830391a876009008b142f9080140f9a8831bf8087c40b9c8060034a9c80090294100910a368c52",
+      "sha256": "0ff0f3e6a25033517b4bc2a8bf8935be7d7b90aea93849c518b7694f929ebd3f"
+    },
+    {
+      "name": "PHOrbDungeonOptionParseRVA",
+      "va": "0x10023e74c",
+      "rva": "0x23e74c",
+      "length": 64,
+      "bytes": "ff4303d1f85f09a9f6570aa9f44f0ba9fd7b0ca9fd030391f30301aaf50300aa080080d2a976009029b142f9290140f9a9831cf81480af52f72300911840a752",
+      "sha256": "29c6ab1ad7f867437da7f3c8db6763b1a31b423570853d0e401690eeee770f36"
+    },
+    {
+      "name": "PHOrbAwakeningCheckRVA",
+      "va": "0x10059f554",
+      "rva": "0x59f554",
+      "length": 64,
+      "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291e3130329f60301aaf70300aae21b00f95f0000393f50007160000054dfce0171",
+      "sha256": "27c22c1930b98566eb3465e10b28e18960a26fba9babdf8e0f3d184cb6af1937"
+    },
+    {
+      "name": "PHOrbThornDamageGuardRVA",
+      "va": "0x100608bc0",
+      "rva": "0x608bc0",
+      "length": 64,
+      "bytes": "a91a403929071836a932403929190072c00600542001231e0959a8522101271e0018211e08c0221e08cd4291004116918acbff970000621e0009601e4efde897",
+      "sha256": "61e7a851cbf44671caae4217ecb83d201e011fd6c42db1cbc350a1a755a06aaa"
+    },
+    {
+      "name": "PHOrbPendingDamageGuardRVA",
+      "va": "0x10059f250",
+      "rva": "0x59f250",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc300911410409188226239680000360000805221000014f30300aa88ea48b90801010b0900b0121f01096b0831891a",
+      "sha256": "71c6db737fc4e3435eca105176d3f66f2f87349cb3447bcca5148ad67f4c19ec"
+    },
+    {
+      "name": "PHOrbOrbDamageResolveGuardRVA",
+      "va": "0x100604eac",
+      "rva": "0x604eac",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f30300aa153840f9a8de4291003947fd0820601e2d020054008d47bd160be997753a40f91f040071ab010054",
+      "sha256": "96f2bb6048d8e3cd96fe688fe70393cf514c477bd19ef330993cbf5176c50940"
+    },
+    {
+      "name": "PHOrbCanChooseSkillRVA",
+      "va": "0x1005beb54",
+      "rva": "0x5beb54",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa00200491dec9fe97a000003400008052fd7b41a9f44fc2a8c0035fd6683ecb791f0500714bffff5461624b79a8ac0090",
+      "sha256": "1d09207ed09a93abd2c17f8141dcd7b2ab66a59ece8795b4bd4a4c9f4f0ca868"
+    },
+    {
+      "name": "PHOrbSkillChoiceSourceRVA",
+      "va": "0x1005beb80",
+      "rva": "0x5beb80",
+      "length": 64,
+      "bytes": "683ecb791f0500714bffff5461624b79a8ac00900841009109f091520001098bb3c4fd9761664b79fd7b41a9f44fc2a8e42be917fc6fbaa9fa6701a9f85f02a9",
+      "sha256": "5e24c4a517ea09a7ede573b64eb4c4919a7a3e2fd0afc04c147fa75f8e8c967c"
+    },
+    {
+      "name": "PHOrbSkillFamilyRVA",
+      "va": "0x100009ac8",
+      "rva": "0x9ac8",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aa3f040071cb010054e10300aa55da00b0b542009116f09152a002168bdd981494f40300aaa002168be10313aa",
+      "sha256": "97e7ea0c1702e0e4b2559b5160e8e8a14c82c4623f2bf0553cb2f14dbe1109dc"
+    },
+    {
+      "name": "PHOrbSkillFamilyCompareRVA",
+      "va": "0x100009b0c",
+      "rva": "0x9b0c",
+      "length": 64,
+      "bytes": "9f0200f1041840fa610000540000805205000014880243b9090043b91f01096be0179f1afd7b42a9f44f41a9f657c3a8c0035fd6000040b9e1ffff17f44fbea9",
+      "sha256": "907b9b2b3750f633ebc35b228b245a8b0ee3d95c09813c4426268c5fcb8ca3df"
+    },
+    {
+      "name": "PHOrbSkillChoiceDialogRVA",
+      "va": "0x100584eb0",
+      "rva": "0x584eb0",
+      "length": 64,
+      "bytes": "e00313aaef6d0094e0030034883ecb791f0500718b030054e00314aa22e70094800c0034e00313aae10314aa0200805211fd0094f56c00b0b5221c91a0460039",
+      "sha256": "4b64e781471c111655bbd3aa33a7e77d1adf8df10ffdc397911934de3568c4e4"
+    },
+    {
+      "name": "PHOrbSkillChoiceCheckRVA",
+      "va": "0x10058517c",
+      "rva": "0x58517c",
+      "length": 64,
+      "bytes": "683a40f9006975f8010080529b6a00941f00146bec070054683a40f909ac87526901a072016969f8c029019000801991220080525dfc0094c006003674018052",
+      "sha256": "905313fb26e6bbb5f6965ab47876e3fe687707cd5d54da1a80ad12acca29d30f"
+    },
+    {
+      "name": "PHOrbSkillChooseBodyRVA",
+      "va": "0x1005cd30c",
+      "rva": "0x5cd30c",
+      "length": 64,
+      "bytes": "1403178b80821391eed6fa9780c604b9683a40f989c385522901a0721f692938fd7b47a9f44f46a9f65745a9f85f44a9fa6743a9fc6f42a9e923416dff030291",
+      "sha256": "f0f659be4e37ed54a4d20ba9422d574361185340edfb34cbcfb251b1a86989e8"
+    },
+    {
+      "name": "PHOrbSkillChosenSourceRVA",
+      "va": "0x1005cd58c",
+      "rva": "0x5cd58c",
+      "length": 64,
+      "bytes": "0903178b29c544b9c902f8361f713839e00313aa344cff97400200340803178b093dcb793f050071cb01005400210791498ffe97f60300aae00314aa01008052",
+      "sha256": "d712cc46d7f64914645bbd186c7a58acf647b1e11513d6a8fcd4714542e461de"
+    },
+    {
+      "name": "PHOrbSkillSourceEffectsRVA",
+      "va": "0x1005ccd44",
+      "rva": "0x5ccd44",
+      "length": 64,
+      "bytes": "4b4eff97a0010034683ecb791f0500714b010054883a40f989c385522901a072086969381f0500718100005460821391a0d8fa97f50300aa36ac00d0d6420091",
+      "sha256": "be7db3a703c4afeda3257c95117bb3efd7644bce20960a313ef38cba70041e29"
+    },
+    {
+      "name": "PHOrbSkillBodyCheckRVA",
+      "va": "0x1005851fc",
+      "rva": "0x5851fc",
+      "length": 64,
+      "bytes": "683a40f909ac87526901a072016969f8c0290190008019910200805243fc009420030036540180520b000014683a40f909ac87526901a072016969f8c0290190",
+      "sha256": "d1956390a570b55e85314a67c8e84e4199945a09beff48d21c65c33cf058876c"
+    },
+    {
+      "name": "PHOrbSkillCanUseSelectorRVA",
+      "va": "0x1005c43f4",
+      "rva": "0x5c43f4",
+      "length": 64,
+      "bytes": "df060071e0000054d601003560821391b2fafa97f50300aa080080520500001460821391f7fafa97f50300aa28008052893a40f98ac385522a01a07228692a38",
+      "sha256": "64488fbd66cdfddaebe55d054a71f26c94c65ed026fe4d595e4226c4f7a46e8f"
+    },
+    {
+      "name": "PHOrbMultiModeRVA",
+      "va": "0x100542d94",
+      "rva": "0x542d94",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa88b00090084100910821579100c11991d026fc971f2c007168020052e813881a1f28007100159f1afd7b41a9f44fc2a8",
+      "sha256": "d466fe610d7433244356addf8fda6768b7e248122c08ac2309ae8aabd3ce23e0"
+    },
+    {
+      "name": "PHOrbMultiFourModeRVA",
+      "va": "0x100542dd8",
+      "rva": "0x542dd8",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009188b00090084100910821579100c11991c126fc971f2c0071e0179f1afd7bc1a8c0035fd6e923bd6df44f01a9fd7b02a9fd830091f30300aa",
+      "sha256": "6e77f4748f3b415c63174631d400bf7e08897e34edcc55c4408a2e64bd5d15df"
+    },
+    {
+      "name": "PHOrbMultiInitRVA",
+      "va": "0x10000be88",
+      "rva": "0xbe88",
+      "length": 64,
+      "bytes": "ff0301d1f65701a9f44f02a9fd7b03a9fdc30091f30300aa083840f9c9940090287904f915dc14940001003768d9009008a12a91081140b908090051a9008012",
+      "sha256": "156f021f62495ccbcc34fec501d5c0c845afbbb04577d9f14e03ba924a796d5b"
+    },
+    {
+      "name": "PHOrbMultiInputGateRVA",
+      "va": "0x1000164e0",
+      "rva": "0x164e0",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd83009114d900d09442229188438a522800a072886a68b81f1100710419417a21100054f30300aa083840f9098d429129213991",
+      "sha256": "ab7fd8d7b63dd8d8e9aa67920f89a177a2b50e72b40f3e30e1561938809d7987"
+    },
+    {
+      "name": "PHOrbMultiDispatchRVA",
+      "va": "0x1005b5180",
+      "rva": "0x5b5180",
+      "length": 64,
+      "bytes": "e923bb6df85f01a9f65702a9f44f03a9fd7b04a9fd030191f30300aacdd2ea97f40300aa0d37fe97e0000034683a40f949de8f526901a0720a6969784a791512",
+      "sha256": "b02cf528257ff4228555214e9e717258a119337a40f720c79c4ade88aef1191c"
+    },
+    {
+      "name": "PHOrbMultiSendRVA",
+      "va": "0x10001358c",
+      "rva": "0x1358c",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091ff4324d1143840f908ce9f524801a072886a68b8a8161037f30300aa899a42912b450d91898e429122013a9169014039",
+      "sha256": "5f91e0209125b04af0058955eab9a5e7e338cb9bb262d77f881449a96bad2d6e"
+    },
+    {
+      "name": "PHOrbMultiEndRVA",
+      "va": "0x100542ea8",
+      "rva": "0x542ea8",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa88b00090084100910821579100c119918b26fc9708781f121f290071c1000054683a40f909c38f526901a07208696938",
+      "sha256": "50e36d7ae74a7e80b37703f89628128e6924403d0ec0323295c1dac969afbfd1"
+    },
+    {
+      "name": "PHOrbMultiCountdownRVA",
+      "va": "0x10060f5e4",
+      "rva": "0x60f5e4",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091083840f929909f524901a0721469693894010037f30300aa0849429100e12591c1088052f885fd97683a40f908dd429100f11b91",
+      "sha256": "9eeebed5b76a7fccb5442539123b479ef38820e0c78d4d3ba7627b019f7c1c72"
+    },
+    {
+      "name": "PHOrbMultiElapsedRVA",
+      "va": "0x1005a7978",
+      "rva": "0x5a7978",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009109e481526901a07208bc429108c13b910a0140392a0108370a012837e003271e2a0110364a01203708bc429100613b91fd7bc1a848460214",
+      "sha256": "80e69d8cd264a0657f281a57c294961e22f0dec8d4e367b1b925e3d60d0b1a2e"
+    },
+    {
+      "name": "PHOrbMultiClockRVA",
+      "va": "0x1006392d4",
+      "rva": "0x6392d4",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091130040f9a4ab2094080013cb0001239ea83101d008d139910109402d21d8217e0008211e41d8217e0018211e0800399e0001239e",
+      "sha256": "00bd9f4e5c6342bac3a4d585d47f9689256919053550eea9b06398a169975d67"
+    },
+    {
+      "name": "PHOrbMultiDeadlineRVA",
+      "va": "0x1005a736c",
+      "rva": "0x5a736c",
+      "length": 64,
+      "bytes": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa193840f928df429118311d9128cf4291154d1691a83385522801a072",
+      "sha256": "32a07766292ef22d96a975fac65bec554050f0e0465e7f4d04e17fe64b4047fc"
+    },
+    {
+      "name": "PHOrbMultiTurnElapsedRVA",
+      "va": "0x10001eca4",
+      "rva": "0x1eca4",
+      "length": 64,
+      "bytes": "08204039e003271e28030036f44fbea9fd7b01a9fd430091f30300aac8000837e00313aa83691894610e40bd0028211e09000014681240b929749e524978a672",
+      "sha256": "204625495959798be1a29ba66de6bff0f199015818c88974332706be198bd1ca"
+    },
+    {
+      "name": "PHOrbMultiMatchLimitRVA",
+      "va": "0x10023ccfc",
+      "rva": "0x23ccfc",
+      "length": 64,
+      "bytes": "0018c079c0035fd6f44fbea9fd7b01a9fd430091f30300aa000c40f9600000b4e63bf797c69a309400038052d09a3094f40300aa886500b000a941fd000000fd",
+      "sha256": "d3924cd848b723e14770b38ccf9ec3042423206d92df8d46b7d73f9106cb7fb9"
+    },
+    {
+      "name": "PHOrbMultiSyncRVA",
+      "va": "0x100012da8",
+      "rva": "0x12da8",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f40301aaf30300aa282000511f0d003168010054683a40f908994291099943b9a900003509a943b93f01146b400000541fa103b9",
+      "sha256": "e124019af651ba61fa92a60383d04bd8ef26ae97c4b3fdf2b11e9b52ed86b15b"
+    },
+    {
+      "name": "PHOrbMultiTurnInitRVA",
+      "va": "0x10001b2a8",
+      "rva": "0x1b2a8",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091083840f9899586522901a072096969383f05007100020054491d0035f30300aa09ce9f524901a072146969b8",
+      "sha256": "7b06a9915a5b33f62a8b9b617d1b625a8493022112722339d962ac4063450208"
+    },
+    {
+      "name": "PHOrbLeaderTeamSizeRVA",
+      "va": "0x100019558",
+      "rva": "0x19558",
+      "length": 64,
+      "bytes": "fd7bbfa9fd030091000080520ca61494600000371ba6149460000036c000805209000014c8d900b0084100910821579100c11991dacc10941f1c0071a8008052",
+      "sha256": "ccff77cf5cc800b8962d9801c884313ff765d566a076a10daa19dee309baf52c"
+    },
+    {
+      "name": "PHOrbLeaderLoadRVA",
+      "va": "0x100019ba8",
+      "rva": "0x19ba8",
+      "length": 64,
+      "bytes": "ffc301d1fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa083840f909cb87524901a072166969b8143e82527401a072d5008052",
+      "sha256": "9c520d8d8f10cb1192db08e7cfb4185692d2fd832167dcb779b44299ee6a8cba"
+    },
+    {
+      "name": "PHOrbLeaderStoreRVA",
+      "va": "0x10000efd8",
+      "rva": "0xefd8",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191083840f9c9ce9f524901a07209696938c91318375bd900b07b43229189438a52",
+      "sha256": "e24c70471a38d3989c49efacf3779d3ace065f27b8e0a9dad0691d06035780f8"
+    },
+    {
+      "name": "PHOrbLeaderReloadRVA",
+      "va": "0x1005a1588",
+      "rva": "0x5a1588",
+      "length": 64,
+      "bytes": "ff0305d1fc6f0ea9fa670fa9f85f10a9f65711a9f44f12a9fd7b13a9fdc30491f50302aaf30301aaf40300aabf0319f80820a052a88318b8bfe318383f140039",
+      "sha256": "72617ce560d71427ec64858d7b2098f5de2ec8b3d26f56933e8c601e77176232"
+    },
+    {
+      "name": "PHOrbLeaderInitializeRVA",
+      "va": "0x1005a12d0",
+      "rva": "0x5a12d0",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aa140080d2083840f909518b526901a0721f6929381a4782527a01a07236008052",
+      "sha256": "3da748e64cccad358a43585cea51c9f852345e33c8a2d71e7513bbfac289ea57"
+    },
+    {
+      "name": "PHOrbLeaderSwapRVA",
+      "va": "0x1005a2f78",
+      "rva": "0x5a2f78",
+      "length": 64,
+      "bytes": "fc6fbca9f65701a9f44f02a9fd7b03a9fdc30091ff030dd1f40302aaf50301aaf30300aae003009121200191024c80528b042394a022019181220191024c8052",
+      "sha256": "6acf6ad9c578f561b31bb820430d8dff0f70a34845ef3bcd189f73563feb1fe0"
+    },
+    {
+      "name": "PHOrbLeaderCatalogRVA",
+      "va": "0x10052fe6c",
+      "rva": "0x52fe6c",
+      "length": 64,
+      "bytes": "ff8300d1fd7b01a9fd4300918107f83708d092520813a0723f00086ba101005408b100f00841009109409852890ba072016969b808dd719100610f916b60fe97",
+      "sha256": "6a9d091b6c9692d86b7a9abcd967864826313fffdf88667aa442d3968089e4fa"
+    },
+    {
+      "name": "PHOrbLeaderExtraLookupRVA",
+      "va": "0x1004c8054",
+      "rva": "0x4c8054",
+      "length": 64,
+      "bytes": "684d9952e86bad72287ca89b09fd76d308d092520813a0722985081b3f00086b29c1811a0a084079ea0100b4000440f96b4d9952eb6bad720c0080b98d7d2b9b",
+      "sha256": "e56136d31f648c2922253c9b51e242d0a26deb3a5739183968752434f041c05e"
+    },
+    {
+      "name": "PHOrbLeaderExtraBindRVA",
+      "va": "0x100484b30",
+      "rva": "0x484b30",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa68b600d00841009109f0915214d092521413a0720001098b01d092520113a072c3ac0294600200f9742e00b9fd7b41a9",
+      "sha256": "b38ee99f05327f264e0e67d84e50f9bb9f634cc6ac9146ec951badcd602d9989"
+    },
+    {
+      "name": "PHOrbLeaderApplyRVA",
+      "va": "0x10006fb6c",
+      "rva": "0x6fb6c",
+      "length": 64,
+      "bytes": "ff8302d1eb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291fa0301aaf30300aa1c3840f999db4291f3e9ff97e00313aa",
+      "sha256": "8b4a4f8e764ca4e747c308bcb2a7664fef509aaad308f449c817560cfe65ef02"
+    },
+    {
+      "name": "PHOrbLeaderSkillRVA",
+      "va": "0x10006f414",
+      "rva": "0x6f414",
+      "length": 64,
+      "bytes": "ff4302d1fc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291088500f008b142f9080140f9e81700f9280040f9165d40b9df0600716b040054",
+      "sha256": "2cfb2ecf6839b04b030830437fe76619d033dd207254747f4d87e4095bfc351b"
+    },
+    {
+      "name": "PHOrbLeaderHelperApplyRVA",
+      "va": "0x1000715d4",
+      "rva": "0x715d4",
+      "length": 64,
+      "bytes": "ff4301d1e923016df65702a9f44f03a9fd7b04a9fd030191f30301aaf40300aa083840f909c1429135813c91a90240f9690000b429814039a90538374800621e",
+      "sha256": "189e4e0da70611a712e9d437ce03977cc529d0374b7285aa0a1e511a493e682b"
+    },
+    {
+      "name": "PHOrbLeaderDisplayRVA",
+      "va": "0x100493968",
+      "rva": "0x493968",
+      "length": 64,
+      "bytes": "ff8306d1ef3b106ded33116deb2b126de923136dfc6f14a9fa6715a9f85f16a9f65717a9f44f18a9fd7b19a9fd430691f30300aae86300f008b142f9080140f9",
+      "sha256": "082d1efbecce42eb50ff7a7141be39cf93c08a65a1fc07b5efc32199dab7a116"
+    },
+    {
+      "name": "PHOrbLeaderFixedTeamRVA",
+      "va": "0x100241b60",
+      "rva": "0x241b60",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f40304aaf30303aaf50302aaf60301aaff0f00b9e2330091a10980529bf2ff97e80300aa00008052",
+      "sha256": "eb2226310241b5a6af424f2bd791b2da4abec4808af3284e00a5294571953985"
+    },
+    {
+      "name": "PHOrbMultiNextBoardRVA",
+      "va": "0x10001342c",
+      "rva": "0x1342c",
+      "length": 64,
+      "bytes": "5abe149400f7ff34683a40f989289f524901a072096969b8c90000340849429100e12591a108805268761594683a40f90000805209ce9f524901a0721f6929b8",
+      "sha256": "1bd77e669318d228094d4e4387849a28a6cc4c71fef70796b801389ef35b0d21"
+    },
+    {
+      "name": "PHOrbMultiSubmittedGateRVA",
+      "va": "0x100013330",
+      "rva": "0x13330",
+      "length": 64,
+      "bytes": "00008052e9fe0f3697be1494a009003488ee9052880ba072f5d900f0b5420091a16ae87814f09152a002148b4f9e0894e10300aac8ee9052880ba072a26ae878",
+      "sha256": "6e55a2c68f803c75288e7af5037cd0204ae65dfbce22bb8994dfaf284dee0592"
+    },
+    {
+      "name": "PHOrbMultiPeerDetectRVA",
+      "va": "0x10000dfb4",
+      "rva": "0xdfb4",
+      "length": 64,
+      "bytes": "880640b9ff0208eb40030054a81e40b908791e121f150071c0020054a11a40b900a334913e2d1494600000b4196040b90200001419008012e10315aa9a430094",
+      "sha256": "46e841b567c26095bccd424e26f337d93fe2b3872a76ebaa544e3a52bf5f61ec"
+    },
+    {
+      "name": "PHOrbMultiRecoveryEntryRVA",
+      "va": "0x10000fe30",
+      "rva": "0xfe30",
+      "length": 64,
+      "bytes": "153840f988738c524801a072a86a68b81f0500710d0100541f090071602200541f0d0071000100541f110071e0210054c2020014280500341f050071a01c0054",
+      "sha256": "8cf1c320447b25d5d780a1eb794d6ec6e4cbb5e18b8df2e6d46363d052cbe1ac"
+    },
+    {
+      "name": "PHOrbMultiRecoveryResetRVA",
+      "va": "0x1000101d4",
+      "rva": "0x101d4",
+      "length": 64,
+      "bytes": "683a40f9091791522901a0721f6929f8493385522901a07208696938290080522101280ae00313aa69cb179400008052e4ca1494e0030037603a40f9cd020094",
+      "sha256": "0768d85f5dc2578ab0870d1d8ebb096ef4d85d115a42e7aa6f583d97aa7513a5"
+    },
+    {
+      "name": "PHOrbMultiRecoveryReadyRVA",
+      "va": "0x100010284",
+      "rva": "0x10284",
+      "length": 64,
+      "bytes": "753a40f988738c524801a07249008052a96a28b8a89a429109214e3989010036089543bda89a429100010e9109a4189400b8a15e00d8215e0039201e0800381e",
+      "sha256": "863afc86ef80ea68eb1e8f3e88c89e0cb00f2c679793e12c23b162ddef0f3a99"
+    },
+    {
+      "name": "PHOrbMultiPeerDispatchRVA",
+      "va": "0x100012ea0",
+      "rva": "0x12ea0",
+      "length": 64,
+      "bytes": "1f390071000400541f3d007161080054e00313aa49fbff97d5ffff171f0d0071200300541f110071600300541f15007141070054e00313aae10314aacaf3ff97",
+      "sha256": "649a0ec0a48276cfa43d5a01161d442636db2996991a0ce6e21adf8616e58813"
+    },
+    {
+      "name": "PHOrbMultiPeerStatusRVA",
+      "va": "0x10000dd58",
+      "rva": "0xdd58",
+      "length": 64,
+      "bytes": "b6000036c800805209000014180080d2b6ff073708534039080b088b090d40b929011e32090d00b9a8008052081f00b90000805202d41494a000003497000034",
+      "sha256": "d6aaea02198940bbfe114cf14e4e50cc92516be8a309c269de09685cd9092d25"
+    },
+    {
+      "name": "PHOrbMultiPeerSeatRVA",
+      "va": "0x10000de84",
+      "rva": "0xde84",
+      "length": 64,
+      "bytes": "89dd9a524901a072156929b814010036fd7b45a9f44f44a9f65743a9f85f42a9fa6741a9e923c66cc0035fd609738c524901a0722a7600f0400dc23d0069a93c",
+      "sha256": "01808cc7c0e074174ecd1222065e63ea991965f4eae763c901c507257232deb6"
+    },
+    {
+      "name": "PHOrbMultiPeerFinishRVA",
+      "va": "0x100011d6c",
+      "rva": "0x11d6c",
+      "length": 64,
+      "bytes": "080080520200001468008052899a429129610e91287d0029080080123f21012908ce9f524801a072896a68b829011032896a28b820008052fd7b42a9f44f41a9",
+      "sha256": "af817884540ab027e8643f2ce21663f26b207e308db8967d502f42ef2b434605"
+    },
+    {
+      "name": "PHOrbMultiPeerViewRVA",
+      "va": "0x100013c5c",
+      "rva": "0x13c5c",
+      "length": 64,
+      "bytes": "09ce9f524901a0720a6969b84a01203709cb87524901a0722a0180368add9a524a01a0720a696ab80b6969b85f010b6b61000054090080520b000014096969b8",
+      "sha256": "5da8767487d87ab7b49e1cb92f55e2b3a7dd207ea6a4c3b81c1a021680705908"
+    },
+    {
+      "name": "PHOrbMultiInputPrecheckRVA",
+      "va": "0x100016664",
+      "rva": "0x16664",
+      "length": 64,
+      "bytes": "e00313aa57f2ff976007003788438a522800a0728b6a68b87f1100718004005400008052c3b1149440010037683a40f9098d42912a494eb92b554eb94c0dcb1a",
+      "sha256": "92726c99158439bd9917de458f19b6a8ae91d300b7f234f9da5b251596d27f7a"
+    },
+    {
+      "name": "PHOrbMultiPrecheckResultRVA",
+      "va": "0x10060e5d4",
+      "rva": "0x60e5d4",
+      "length": 64,
+      "bytes": "e00313aac21fe89780a3073788199452880ba0722aaa00904a410091496968b829050011496928b8080340f9c9d68f526901a0721669e978df0600718b010054",
+      "sha256": "1753946fa75708c3202520dec518e00a5c434c3ce144d0b4725d188438c86507"
+    },
+    {
+      "name": "PHOrbMultiSoloViewRVA",
+      "va": "0x10001c868",
+      "rva": "0x1c868",
+      "length": 64,
+      "bytes": "e00313aae10314aa0200805296c1ff9788438a522800a07249008052096b28b83f03146b20020054c8750090010d49bde003271e60108052010080526b0d1694",
+      "sha256": "0968ac5dbaf2f3c73bc33998a6212f8e2249b05fe3fb51cb6046496462f3bf2c"
+    },
+    {
+      "name": "PHOrbMultiSoloFinalizeRVA",
+      "va": "0x10001cbcc",
+      "rva": "0x1cbcc",
+      "length": 64,
+      "bytes": "683a40f9088d429100213991210080527fbeff97683a40f9c9d68f526901a0720869e9781f0500712b020054e00313aa15b11794683a40f9c9d68f526901a072",
+      "sha256": "1fcec7612f9ef8466e234360f583bc5c5581efafbfaf6872c9def39b690b5af7"
+    },
+    {
+      "name": "PHOrbMultiSoloResetRVA",
+      "va": "0x10000c8bc",
+      "rva": "0xc8bc",
+      "length": 64,
+      "bytes": "4876009000f1c13d6056893d7f6225b908ad84526802088b29008052eb0308aaea0308aa497d0029ea030baa6b610591290500113f35007161ffff54e003679e",
+      "sha256": "025aecb0c91980ee56825de60a91f2d2f0f0823c6ca94be14607d2b69c0b6de2"
+    },
+    {
+      "name": "PHOrbMultiSoloInputReturnRVA",
+      "va": "0x100016710",
+      "rva": "0x16710",
+      "length": 64,
+      "bytes": "000080521200001408d1429100d12091b75715941f040071cb000054683a40f9a93385522901a0722a0080520a692938e00313aa7fca1794e00313aa89f4ff97",
+      "sha256": "5ffabbab0f2dcec4aa33ae1d3d0b0bd637b2842a5d6d9868b29b98ea7dff21ff"
+    },
+    {
+      "name": "PHOrbMultiSoloRecoveryGateRVA",
+      "va": "0x10060d84c",
+      "rva": "0x60d84c",
+      "length": 64,
+      "bytes": "080340f909cf9f524901a072096969383f010071890598524a0698524911899a0801098b09c987524901a07208696938680b3037e00313aa3af0ff97200e0037",
+      "sha256": "ddf731a8b2fab69850cde16a157e0d0578de08c98f7e459725b1e0e117e27f4a"
+    },
+    {
+      "name": "PHOrbMultiSoloReleaseRVA",
+      "va": "0x10060ebfc",
+      "rva": "0x60ebfc",
+      "length": 64,
+      "bytes": "89438a522900a072496b69b83f110071600100543f050071c171ff54098d4291292139912a0d40b92b2540296c0dca1a8aad0a1b5f01096bc170ff5409ce9f52",
+      "sha256": "d06a46ecb8b69a13e9c6ed1000606cbd8d034c3abefe82945c02b28958dd69d2"
+    },
+    {
+      "name": "PHOrbMultiSoloNetworkResetRVA",
+      "va": "0x10000c5fc",
+      "rva": "0xc5fc",
+      "length": 64,
+      "bytes": "085c97521700088b08f29452898592521600098bff4a05b9090c40b94a7600904b7600903f0500716b0800542c0d00118c757e922d0500d141e9c13d62edc13d",
+      "sha256": "23da8acd91765062a921354e5271bcfbc66120991302060066f02536669498da"
+    },
+    {
+      "name": "PHOrbObservationCooldownCacheRVA",
+      "va": "0x10059fd7c",
+      "rva": "0x59fd7c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa144087527401a0720000148bff43ff970001f83608e481526801a072606a68f8be7af297e10300aa6002148b0f44ff97",
+      "sha256": "0403d8736278ed9ebc961ef848a805760f568bdb95e7e262dcce49db415012f5"
+    },
+    {
+      "name": "PHOrbObservationBodyCooldownRVA",
+      "va": "0x100482bd0",
+      "rva": "0x482bd0",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091080040f9085580b989b60090294100918a378c52ea18a0722a696ab81f010a6b62020054f40301aaf30300aa0a398c52",
+      "sha256": "cb6ae4b903b2054b651b9b1b78c825842832c634f2920019f2d608653b02b02b"
+    },
+    {
+      "name": "PHOrbObservationTotalCooldownRVA",
+      "va": "0x100482a00",
+      "rva": "0x482a00",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa080040f996b60090d642009109398c52e918a072c96a69f8085580b98a06805200252a9b887ec179",
+      "sha256": "38ad95fa8512526a08fedea03b366d8719d4ddbb462f14b3398ff7e865ccf00f"
+    },
+    {
+      "name": "PHOrbObservationEvolvedCooldownRVA",
+      "va": "0x100482acc",
+      "rva": "0x482acc",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f40302aaf50301aaf30300aa44d4029460050036681a40791fa50371c1010054e00313aa3ed40294a0010034681640b9",
+      "sha256": "ee5fa9d0f8d1609f08ed964975418e3d52e378eea37b222e7b8cc189c744bcbe"
+    },
+    {
+      "name": "PHOrbObservationEvolvedSkillRVA",
+      "va": "0x100482f30",
+      "rva": "0x482f30",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f30301aaf50300aa88b600900841009109398c52e918a072166969f8880680521458289be00314aa24d30294a0030034",
+      "sha256": "9264fa401e93853596f07878a5ca972a89dd392349e78b87d20f3cc41c94d729"
+    },
+    {
+      "name": "PHOrbObservationLatentRVA",
+      "va": "0x1005a0928",
+      "rva": "0x5a0928",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091810600b4f40300aa083840f909e481526901a072096969f829854039a905103789cd88526901a0720869697808651a53",
+      "sha256": "c032f10cea8a048f5a5e6e5c82f2269d76c04869c49ecebd672019402a3ee7e7"
+    },
+    {
+      "name": "PHOrbObservationLatentDecodeRVA",
+      "va": "0x10004562c",
+      "rva": "0x4562c",
+      "length": 64,
+      "bytes": "090040b92a0d0012291d04535f3d00712a018a1a5f210071090180524931891a8a040034e80300aa00008052080140f908fd48d3ea008052cb0180522c008052",
+      "sha256": "2ecbb84df64e70e06fbff442bf54e9db20715a673b6389ca8e913eb65501c04b"
+    },
+    {
+      "name": "PHOrbObservationLAwakeningRVA",
+      "va": "0x1005a0194",
+      "rva": "0x5a0194",
+      "length": 64,
+      "bytes": "280040391f05007101050054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30302aaf40301aaf50300aa20200191ab43ff971f040071",
+      "sha256": "24b549fa735870f2f683398d704ae71f51483841e39f7744f92008a60e3c1822"
+    },
+    {
+      "name": "PHOrbObservationAddedAwakeningRVA",
+      "va": "0x10001cccc",
+      "rva": "0x1cccc",
+      "length": 64,
+      "bytes": "3f200071a8000054286c1c530800088b000107912451151400008052c0035fd6f657bda9f44f01a9fd7b02a9fd830091f30301aaf40300aa15008052e00314aa",
+      "sha256": "b13b82e61903009644d03bc9175b856c9397f8de7f8411606a7a803c222a8afb"
+    },
+    {
+      "name": "PHOrbObservationBaseAwakeningRVA",
+      "va": "0x100481c78",
+      "rva": "0x481c78",
+      "length": 64,
+      "bytes": "ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f40301aaf50300aa000040f9a19ac039e20314aad820ee97f30300aab60640f9960900b4b70240f9",
+      "sha256": "825cd36e05f5b0acc0eca26b95a4a749045b6f3a9ad8f42562d1b8656a5c4933"
+    },
+    {
+      "name": "PHOrbObservationAwakeningCountRVA",
+      "va": "0x10000a004",
+      "rva": "0xa004",
+      "length": 64,
+      "bytes": "3f2800714801805229b0881a0b0080122c0080525fec0071cc0100544d380051bf95007168060054480080520a0c80524e7600d0ce211a918f000010d0696d38",
+      "sha256": "29b164f0e6482aa0615404d4b36defdde04a784c4079603d8398f4df0b6b1be2"
+    },
+    {
+      "name": "PHOrbObservationAttributeRVA",
+      "va": "0x10060f91c",
+      "rva": "0x60f91c",
+      "length": 64,
+      "bytes": "081cd439e90308aa6800f836097042f9293140392924c91a290200370920d439c900f836097042f92a31c339ca00f8371f01007149b1881a2924c91a09010037",
+      "sha256": "77ac629ce66ca2d01ce8c4135af62b13656758d4a7861f6c9be01cede5046a2c"
+    },
+    {
+      "name": "PHOrbObservationAssistVoidRVA",
+      "va": "0x1005f710c",
+      "rva": "0x5f710c",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191083840f9895389526901a072086969781f25007200010054fd7b45a9f44f44a9f65743a9",
+      "sha256": "269a5e119f8d5289794456b618095ad7bcd6bca7b00cbca97a5b8eaa555f519a"
+    },
+    {
+      "name": "PHOrbObservationEquipRVA",
+      "va": "0x10000a23c",
+      "rva": "0xa23c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aac101f836010080d268b20b910979e1782ad101512b7901515f1500716931891a293d00133f0500718b00005421040091",
+      "sha256": "9adf07fd6095a83b9096919cda0fee33c3eb7f42607b43d5f8c993a67371ffc3"
+    },
+    {
+      "name": "PHOrbObservationGrantsRVA",
+      "va": "0x1005a0460",
+      "rva": "0x5a0460",
+      "length": 64,
+      "bytes": "c9d6429136b13491290080529a018052fb0309aa15591a9be00315aae10314aa1bcbfb97a0010034080080d2a91200912a6968381f0700716b0000541f030a6b",
+      "sha256": "904b7d83d3c292fd2b4fd172942b868f16b2e11680286a95a0064877781d9714"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL1RVA",
+      "va": "0x1005f8af4",
+      "rva": "0x5f8af4",
+      "length": 64,
+      "bytes": "bb0c38378862c139080900511f01196b00ab457a010c0054491f00133f0900716b0500542a0b0011883a40f90b8d42916b0113914c11090b6cd96cf88d254079",
+      "sha256": "05946f82f8d4ed619e23412f02be6f7a5c071c00282863a03b8b19a4f9b44cc2"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL2RVA",
+      "va": "0x1005f8b34",
+      "rva": "0x5f8b34",
+      "length": 64,
+      "bytes": "bf150071410400548d29c079bf050031e10300548c01c039ed2f40b9bf010c6b610300542c6d1c538c8100518d01190b6dd96df8ae254079df15007101010054",
+      "sha256": "48eeab56377d67cdbdd7e7ca644429e8074b2e193d28e277c8bae614f4102686"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL3RVA",
+      "va": "0x1005f8b74",
+      "rva": "0x5f8b74",
+      "length": 64,
+      "bytes": "ae29c079df050031a1000054ad01c039ee2f40b9df010d6b600700548a010a0b6ad96af84b2540797f150071010100544b29c0797f050031a10000544a01c039",
+      "sha256": "07d359c17fa1e9d2fe83bb109a7012057f3a88cf61642162b1253c307f0ff573"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL4RVA",
+      "va": "0x1005f8bb4",
+      "rva": "0x5f8bb4",
+      "length": 64,
+      "bytes": "eb2f40b97f010a6be00500548866c139080900511f01096bed0500542a0b0011883a40f90b8d42916b0113914c11090b6cd96cf88d254079bf150071c1040054",
+      "sha256": "d862f3964e20db6561ffc3a980adc7853400de24da53d0110e08d0da58d5b9d3"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL5RVA",
+      "va": "0x1005f8bf4",
+      "rva": "0x5f8bf4",
+      "length": 64,
+      "bytes": "8d29c079bf050031610400548c01c039ed2f40b9bf010c6be1030054296d1c53298100112c01190b6cd96cf88d254079bf150071010100548d29c079bf050031",
+      "sha256": "83e591b91984acf40c64f2f155eba7f1460a2b2d5840c4029d9580a0240973bd"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL6RVA",
+      "va": "0x1005f8c34",
+      "rva": "0x5f8c34",
+      "length": 64,
+      "bytes": "a10000548c01c039ed2f40b9bf010c6ba001005429010a0b69d969f82a2540795f150071810100542a29c0795f050031210100542901c039ea2f40b95f01096b",
+      "sha256": "dfd344374db44a864a21853c85ef5af0ee0875af7b6469219bee716a7c081f2c"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeL7RVA",
+      "va": "0x1005f8c74",
+      "rva": "0x5f8c74",
+      "length": 64,
+      "bytes": "a1000054c9c285522901a0722a0080520a692938893a40f928494291084d38918a7786522a01a0722a696a780b7886522b01a07229696b785f01096bc1000054",
+      "sha256": "841e1fbbdf7129e7903b45da8e4f566d040c55fad8af76dde440a1f57ef2771b"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeDispatchRVA",
+      "va": "0x1005ff2c0",
+      "rva": "0x5ff2c0",
+      "length": 64,
+      "bytes": "690240f9c8c285522801a072286968381f050071e12d0054c80240391f150071010e0054ea5f40b95f050071ab0d0054d4538c527401a07228697438a80b0037",
+      "sha256": "1b354818d6de53f8f725513f798f0e75bdc3ab55ef08983825888b64577f0873"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag1RVA",
+      "va": "0x1005ff4a0",
+      "rva": "0x5ff4a0",
+      "length": 64,
+      "bytes": "021d00135f100071cc0a0054091d4093ea43039149696938490a0034683b40f9e0cf40bd09cf86526901a0720001098b810780523097e997683b40f9084d4291",
+      "sha256": "bf2a5bef710b67e368573d77f266ded3994aa1fdafda0f6e1954192482675f47"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag2RVA",
+      "va": "0x1005ff4e0",
+      "rva": "0x5ff4e0",
+      "length": 64,
+      "bytes": "0981c7790ae1ce390b09c7796c0111126c3d4c0b8c3d00134a058c0b6929091b2001221e0979c77929290b1b2101221e0038211e00082f1e0028211e0985c779",
+      "sha256": "dc49cb44840a2d0f2bf7b29fe914028c8a791c58455e556d45455812692d22b0"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag3RVA",
+      "va": "0x1005ff520",
+      "rva": "0x5ff520",
+      "length": 64,
+      "bytes": "0a0dc7796c67c1398901094b29290b1b2101221e087dc7798801084b08290b1b0201221e2138221e21082f1e2128221e02103e1ee0031baae108805202008052",
+      "sha256": "09fc02f7eb0f27e31d7d8623efa7eb35144d8583394faae5d733d7466abe2374"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag4RVA",
+      "va": "0x1005ff560",
+      "rva": "0x5ff560",
+      "length": 64,
+      "bytes": "5d9afe97400300b4f50300aae0031baae10315aa02008052e2c6fe97bf0e00b9683b40f9897086522901a07208696978a8220079c802c039a8260079b17efe97",
+      "sha256": "f6ec03668949ff9e8faa89a2d20a2ce1b2ed21a70cd7c1088e971a61de821458"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag5RVA",
+      "va": "0x1005ff5a0",
+      "rva": "0x5ff5a0",
+      "length": 64,
+      "bytes": "e1cf40bd0a28211e20182a1ea02a00bda0b20091e003271e1706f097a0b2009100102e1e4141201e1506f097e8af40b908011a32e8af00b9e0031baa81018052",
+      "sha256": "8bfa13553ec47ab19c4cb5a14e313fc2805bfc3ec51b24a1322fd066a53d491e"
+    },
+    {
+      "name": "PHOrbAssistRecoveryGroupLFlag6RVA",
+      "va": "0x1005ff5e0",
+      "rva": "0x5ff5e0",
+      "length": 64,
+      "bytes": "0200801203008052040080d207f2ff97e89340b90800080be89300b9c8024039090080d2140080522a0080525521c81af6030aaa680240f90a5a8c526a01a072",
+      "sha256": "3e13a30cdf62a3d3cc28bfe9afd6da7b851770381685bd563d11f09290115dc6"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember1RVA",
+      "va": "0x1006026d4",
+      "rva": "0x6026d4",
+      "length": 64,
+      "bytes": "48231c9b1b01188b680340391f050071010d00546023019163bafd971f0000718c0c0054e00313aae1031baa82058052a476fe971f040071ab010054683a40f9",
+      "sha256": "2f1d3ba20a7260f57d61b98272da138b5f39ac1574cc8046c64e2967e70c28d2"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember2RVA",
+      "va": "0x100602714",
+      "rva": "0x602714",
+      "length": 64,
+      "bytes": "08d9429109b14079ea0380525f01296ae100005408b54079e90380523f01286a6000005428008052680b0039e00313aae1031baa550f00946000003428008052",
+      "sha256": "6ea1605e63b5a574d202e786934fb2cc02818c5a6719b86daed07aa056d81f68"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember3RVA",
+      "va": "0x100602754",
+      "rva": "0x602754",
+      "length": 64,
+      "bytes": "680b0039681fd4396800f837081d001203000014687342f9083140391f01156bc1010054e00313aa01008052e2031aaae30315aae40740f90041201ee51740b9",
+      "sha256": "1addaaf6ebabf8f9e3738fc010736fff1145af632616c186ab08368f748f3ec2"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember4RVA",
+      "va": "0x100602794",
+      "rva": "0x602794",
+      "length": 64,
+      "bytes": "2141201ee60319aae70316aa4d0d009414008052f70600116823d4394801f836687342f90831c339c800f837691fd4393f01007108b1891a081d001302000014",
+      "sha256": "fd8db03f107280e206d6ff44817ad7e2f6f18ad2845635410e94fb7996a1aabc"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember5RVA",
+      "va": "0x1006027d4",
+      "rva": "0x6027d4",
+      "length": 64,
+      "bytes": "080080121f01156bc1010054e00313aa21008052e2031aaae30315aae40740f90041201ee51740b92141201ee60319aae70316aa330d009414008052f7060011",
+      "sha256": "ae78a223a1ee55f58d1b11b3e1e287e82e1b0f88429c178611194f401d167d02"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember6RVA",
+      "va": "0x100602814",
+      "rva": "0x602814",
+      "length": 64,
+      "bytes": "687342f90861c339c800f837691fd4393f01007108b1891a081d001302000014080080121f01156b41020054e00313aa41008052e2031aaae30315aae40740f9",
+      "sha256": "f98dd7460a1e5862176eb042c7f1681c263168e500f2ca6c4dd6ec8759f33791"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryMember7RVA",
+      "va": "0x100602854",
+      "rva": "0x602854",
+      "length": 64,
+      "bytes": "0041201ee51740b92141201ee60319aae70316aa1b0d009414008052f70600115a0700915f1b00f1a1f2ff54730100145a0700915f1b00f121f2ff54f42d0036",
+      "sha256": "53ac06633cbc444f158be40238431894d96758d86c046bbefd4a8a936c8f2bde"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryAllocate1RVA",
+      "va": "0x100605cfc",
+      "rva": "0x605cfc",
+      "length": 64,
+      "bytes": "0a3840f9482d409109e947b93ffd03716d0000541b0080d2a8010014fa0307aaf90306aa2840201e0940201ef70304aaf80303aaf60302aaf30300aae5870029",
+      "sha256": "2cfbf857f9a50696e85346c8883dbfdae07122ae83f1ade7a7143d8c967391ae"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryAllocate2RVA",
+      "va": "0x100605d3c",
+      "rva": "0x605d3c",
+      "length": 64,
+      "bytes": "15f143f9ab0240b90c0c8052ed0b80126c350c1b0dfa8a524a010d8b4a010c8b7f010071ea038a9a0af103f9bf0200f92905001109e907b9bf2e00b900008052",
+      "sha256": "6325edc5f6ddc8b6cf45aa3b114645868c2e201b33eba8bd0cc60693276481f0"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryL1RVA",
+      "va": "0x10060627c",
+      "rva": "0x60627c",
+      "length": 64,
+      "bytes": "0801092aa82e00b948034039e8013036e00313aae10319aa82078052bf67fe971f0400712b010054a82e40b908011a32a82e00b9280080520821d61aa9424139",
+      "sha256": "0924e6cf78a52bf44761686fa6c1ebc2bbb87105e3b0152b081fa63cf2f04328"
+    },
+    {
+      "name": "PHOrbAssistRecoveryEntryL2RVA",
+      "va": "0x1006062bc",
+      "rva": "0x6062bc",
+      "length": 64,
+      "bytes": "2801082aa8420139480b4039e8010836e00313aae10319aac20f8052af67fe971f0400712b010054a82e40b908010f32a82e00b9280080520821d61aa9424139",
+      "sha256": "6ad569ae78553a2e7431a336d464c0827df59146e6051bcca20510c4c995a676"
+    },
+    {
+      "name": "PHOrbAssistRecoveryProviders1RVA",
+      "va": "0x1005ac7d4",
+      "rva": "0x5ac7d4",
+      "length": 64,
+      "bytes": "5a018052fb6701911f6b35387c3a40f9886b77381f050071c10500548103178be00313aa020580524bd0ff971f040071ab0100548103178be00313aa82028052",
+      "sha256": "e80aa2f7b43769350f40faf2d6eb40fb60bf1701bdab53d790ee4413a85d63f8"
+    },
+    {
+      "name": "PHOrbAssistRecoveryProviders2RVA",
+      "va": "0x1005ac814",
+      "rva": "0x5ac814",
+      "length": 64,
+      "bytes": "60ceff971f040071eb0000542823d51ad602082af6870139e83f40b908201a1be83f00b98103178be00313aa2205805239d0ff971f0400710b0100548103178b",
+      "sha256": "606e3f33cbfdc92979dba1b9a9d01c926da2743bce21ddb87e8d84013e6e236e"
+    },
+    {
+      "name": "PHOrbAssistRecoveryProviders3RVA",
+      "va": "0x1005ac854",
+      "rva": "0x5ac854",
+      "length": 64,
+      "bytes": "e00313aa620380524eceff971f0400714b000054006b35387f6b35388103178be00313aa020680522bd0ff971f0400710b0100548103178be00313aa82078052",
+      "sha256": "d56b9cd1c358a3d8cfbe9da442618a535b13e1940d2e3553d788abdaa27066b3"
+    },
+    {
+      "name": "PHOrbAssistRecoveryProviders4RVA",
+      "va": "0x1005ac894",
+      "rva": "0x5ac894",
+      "length": 64,
+      "bytes": "40ceff971f0400714b000054606b3538b5060091f7c21791bf1a00f161f9ff54683a40f909fa9652196969f899cd00b4ff1300f9ff1f00b9e83f40b9083d0012",
+      "sha256": "59c4ad10e86b00d671c40acc8ebf667845dad9cf05801667327dcc6050ac10b5"
+    },
+    {
+      "name": "PHOrbAssistRecoveryQueueWalk1RVA",
+      "va": "0x1005ac8bc",
+      "rva": "0x5ac8bc",
+      "length": 64,
+      "bytes": "196969f899cd00b4ff1300f9ff1f00b9e83f40b9083d0012e81700b988d6429108b12a91e82b00f9150c8052f40b801216fa8a520a102e1e0b30271e1859a852",
+      "sha256": "be179b4437feef0a21aa1856d530d751e688cbdc71590f1577a3ec0d62adebe3"
+    },
+    {
+      "name": "PHOrbAssistRecoveryQueueWalk2RVA",
+      "va": "0x1005ac8fc",
+      "rva": "0x5ac8fc",
+      "length": 64,
+      "bytes": "48490090000949bde01b00bd0f102c1e0c102b1e1b2c8052683a40f9e82300f9280340b9e84f00b92063009141fae9972007432d2020201e6004005428b34039",
+      "sha256": "af2534d1e814e1dc3eda7a6ab83e487c0c3ea9742f4d39b20fa0480328ef6ade"
+    },
+    {
+      "name": "PHOrbAssistRecoveryQueueWalk3RVA",
+      "va": "0x1005ac93c",
+      "rva": "0x5ac93c",
+      "length": 64,
+      "bytes": "e8be3036211740bd02102e1e2d6dea970820201e4dbe0054f60314aae00313aa915f0094743a40f917ad87527701a0728002178b0100805209070094e0010034",
+      "sha256": "f34498b77a23ed94b4c3b4e73bbdb78023b1ef2f8e64ba749249c995870e544f"
+    },
+    {
+      "name": "PHOrbAssistRecoveryApplyL1RVA",
+      "va": "0x1005add68",
+      "rva": "0x5add68",
+      "length": 64,
+      "bytes": "282f40b908093036e00313aae10315aa8207805206c9ff971f0400716b0100540100231e484b00b000414abdfdd922940840201ec002221e0009201e6467ea97",
+      "sha256": "7f7ee77ed0696989acd3a604788bf4d1f6424d50b600017a36bb98ae52db97fd"
+    },
+    {
+      "name": "PHOrbAssistRecoveryApplyL2RVA",
+      "va": "0x1005adda8",
+      "rva": "0x5adda8",
+      "length": 64,
+      "bytes": "f60300aaad09281ee81740f90859557908651a53083d00131f010071ad02005429d38039e86701910a696938282f40b9aa0500342802083768048036ac7242f9",
+      "sha256": "fb60c8c361213033ea323285f80b406911bb0c74eb1dd8357d1b50506a2af6e0"
+    },
+    {
+      "name": "PHOrbAssistRecoveryApplyL3RVA",
+      "va": "0x1005adde8",
+      "rva": "0x5adde8",
+      "length": 64,
+      "bytes": "8b61c3390b04f837ad1ed439cd04f8366b1d00128d314039bf010b6b40040054ad22d4390d1af837ac1d0012d1000014282f40b91c000014ad1ed439ac1d0012",
+      "sha256": "9ccc0178366302ab46d8447504669a2c02ff9ce9c7c00eeeb0bf3f0fc4acf8f5"
+    },
+    {
+      "name": "PHOrbAssistRecoveryApplyL4RVA",
+      "va": "0x1005ade28",
+      "rva": "0x5ade28",
+      "length": 64,
+      "bytes": "eb030caa6d00f836ab7242f96b314039ad22d4396d00f837ac1d001208000014ad7242f9ad31c339ed00f837ad1d00128e1d0013df010071acb18c1a7f010c6b",
+      "sha256": "b466d80bbd92b3495bc8a86ed762a4536e16db3e65ececd75a9f41445851350c"
+    },
+    {
+      "name": "PHOrbAssistRecoveryApplyL5RVA",
+      "va": "0x1005ade68",
+      "rva": "0x5ade68",
+      "length": 64,
+      "bytes": "20010054eb2340b96b010a0beb2300b92a0080524921c91aea7f41394901092ae97f013908022036e00313aae10315aa02068052bec8ff971f0400714b010054",
+      "sha256": "b3643890f3ba29f8dd87c681461dc44cfae9eaf9eebd3cb48a60132c6e00524d"
+    },
+    {
+      "name": "PHOrbAssistRecoveryThirdDuplicateRVA",
+      "va": "0x1005ae14c",
+      "rva": "0x5ae14c",
+      "length": 64,
+      "bytes": "8c31c339ece8ff378c1d00129f010b6b81e8ff544bffff17ec2740b99f0500718b030054683a40f9893389526901a0720a6969784b2500137f050071ab020054",
+      "sha256": "20868023c8572e9721332e7592b255da36f10aeb408246cee5380fea46e5514c"
+    },
+    {
+      "name": "PHOrbAssistRecoveryDurationApply1RVA",
+      "va": "0x1005ae208",
+      "rva": "0x5ae208",
+      "length": 64,
+      "bytes": "e92340b93f0500710b030054f51740f9a85a5579082500131401094be00313aa410e805260000094e17f0191e00313aa02008052854b009488260012a95a5579",
+      "sha256": "05e0be4476fd73c30970ccdfbd3937c674c75e5faebb215908ae9e90f28ba7f2"
+    },
+    {
+      "name": "PHOrbAssistRecoveryDurationApply2RVA",
+      "va": "0x1005ae248",
+      "rva": "0x5ae248",
+      "length": 64,
+      "bytes": "9f060071e8b3881a291115120801092aa85a15799f0200718c000054e00313aa21008052a8230194fd7b50a9f44f4fa9f6574ea9f85f4da9fa674ca9fc6f4ba9",
+      "sha256": "d4c28a309045cc60aa186bc4daa949a21fb2c50267baf51742554953ecd9c340"
+    },
+    {
+      "name": "PHOrbAssistRecoveryShapeAnchorRVA",
+      "va": "0x1005f80dc",
+      "rva": "0x5f80dc",
+      "length": 64,
+      "bytes": "5f0f007189664139ea4343a99003901aca028a1aea1b00f9ea2f40b9ea028a1aea2f00b9ea0309aa9c070091730202919f832aebebe6ff540700001415008052",
+      "sha256": "801634914bdaba6a56a71d46d59382bea28781852acd6d4e5e349aa05f530e4c"
+    },
+    {
+      "name": "PHOrbAssistRecoveryAssistRetained1RVA",
+      "va": "0x1005a1f88",
+      "rva": "0x5a1f88",
+      "length": 64,
+      "bytes": "083940f9895389526901a0720869697808651a53083d00131f0500716b010054e028019000801991e10313aa8212805277f8ff971f0000718c0000540820a052",
+      "sha256": "63452606a5f9f5c2d4adbd6d98fac1683eca5414cdee24c23245642c1b8a3bac"
+    },
+    {
+      "name": "PHOrbAssistRecoveryAssistRetained2RVA",
+      "va": "0x1005a1fc8",
+      "rva": "0x5a1fc8",
+      "length": 64,
+      "bytes": "a88318b8bfe3183860620791a53cff971fb00271800000540820a052a88318b8bfe31838e00314aaabf9ff97962dff97800000340820a052a88318b8bfe31838",
+      "sha256": "89b3881adceba98279908a3131bb610a540bfb2084fbc56069d182ebd20a7090"
+    },
+    {
+      "name": "PHOrbAssistRecoveryOrdinaryDispatch1RVA",
+      "va": "0x1006016d8",
+      "rva": "0x6016d8",
+      "length": 64,
+      "bytes": "680240f9094785522901a0720901098b2a0140b9cb7080520b01a0725f010b6ba1010054e2c740b923ed4779e0cf40bde0031baae10316aaf99340b9e40319aa",
+      "sha256": "daf52014d26ed19fce3ca3cfaed0d158335d1673c22d4a14c4c7e8f3a26a6124"
+    },
+    {
+      "name": "PHOrbAssistRecoveryOrdinaryDispatch2RVA",
+      "va": "0x100601718",
+      "rva": "0x601718",
+      "length": 64,
+      "bytes": "f6f2f99796aa00b0d64200913700805213010014e0c340bd00202c1e96aa00b0d642009137008052f4038052f99340b9800400542811d3792a01e6392b99d279",
+      "sha256": "ce900c889c1bce3ec00fea92ad1d7da6dfef03c5a5d7956908d4b12be3f923ce"
+    },
+    {
+      "name": "PHOrbEnemyActionsCatalogLookupRVA",
+      "va": "0x10052fe6c",
+      "rva": "0x52fe6c",
+      "length": 64,
+      "bytes": "ff8300d1fd7b01a9fd4300918107f83708d092520813a0723f00086ba101005408b100f00841009109409852890ba072016969b808dd719100610f916b60fe97",
+      "sha256": "6a9d091b6c9692d86b7a9abcd967864826313fffdf88667aa442d3968089e4fa"
+    },
+    {
+      "name": "PHOrbEnemyActionsCatalogChainRVA",
+      "va": "0x10052ff00",
+      "rva": "0x52ff00",
+      "length": 64,
+      "bytes": "092e9e52c90ba072086969f8297c0553aa588b528a4fa172297daa9b29fd67d30ad490522a00a0722b850a1be90f80520a6980526021aa9b0b0040b97f01016b",
+      "sha256": "5b31cc771a8bf3d7487301eb3808b1cc5ed4f0b4a890d12977dd629c6e7f382f"
+    },
+    {
+      "name": "PHOrbEnemyActionsCatalogAllocationRVA",
+      "va": "0x10052f778",
+      "rva": "0x52f778",
+      "length": 64,
+      "bytes": "fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30300aa0a0c40b94b7d4093294d00b0284d00b05f0500716b0400546c0e40f94d0d0011",
+      "sha256": "097b1f817864faf689ab6dfbfeb92e3e232664b4232efdaf745dea5e5cf4df95"
+    },
+    {
+      "name": "PHOrbEnemyActionsParameterInitRVA",
+      "va": "0x1004849b4",
+      "rva": "0x4849b4",
+      "length": 64,
+      "bytes": "f40303aaf50302aaf30300aa012c00b91f0400f968b600d00841009109f091520001098b25ad0294600200f97f920039e00313aae10315aa2200805203008012",
+      "sha256": "95156d39cdc68263382a00ac337c0c817015ca84487ebc360d854155da2f84e8"
+    },
+    {
+      "name": "PHOrbEnemyActionsEnemyInitRVA",
+      "va": "0x1005a36dc",
+      "rva": "0x5a36dc",
+      "length": 64,
+      "bytes": "77620891810640b9c83a40f909e481526901a072036969f8e00317aaa984fb976afec839481d0012e90308aa6a00f836e90240f9293140393f19007141020054",
+      "sha256": "b2f83e75840015a8d0ccd42f1cdb06f1baf5aa066814c0e7d4e40c0a6a9cf135"
+    },
+    {
+      "name": "PHOrbEnemyActionsEnemyAIInitRVA",
+      "va": "0x1005a3854",
+      "rva": "0x5a3854",
+      "length": 64,
+      "bytes": "60de813d60e2813d60e6813d60ea813d60ee813d60f2813d60f6813d60fa813d680e41f908c5417968aa0f7968e21a91000100ad000101ad7ffa06b97fde07b9",
+      "sha256": "2a410f13ca8d1094d0c05412bd42d27fdde138b3c6643a9957347f5021b54188"
+    },
+    {
+      "name": "PHOrbEnemyActionsLookupRVA",
+      "va": "0x100533058",
+      "rva": "0x533058",
+      "length": 64,
+      "bytes": "e8b000f008410091093c8c52e918a072096969b80a3d8c52ea18a07208696af80a09805228202a9b3f01016b00c19f9ac0035fd6e8b000f008410091093e8c52",
+      "sha256": "baaaaa19ea589ec57b94c5bc2feead9aef7a4cd0c7981dc56b2ad2c86f867905"
+    },
+    {
+      "name": "PHOrbEnemyActionsSelectEntryRVA",
+      "va": "0x10055e7c8",
+      "rva": "0x55e7c8",
+      "length": 64,
+      "bytes": "20c01f918c3700941f0000716d000054000080120600001460822491863700946002003460c22491604a0094e82f40f9a95d009029b142f9290140f93f0108eb",
+      "sha256": "ba4b5ee30d3ed92a72b7ea7f38e1f72e77fe23339b06c4c554a25db8a323e5ad"
+    },
+    {
+      "name": "PHOrbEnemyActionsRowsRVA",
+      "va": "0x10055e910",
+      "rva": "0x55e910",
+      "length": 64,
+      "bytes": "1b00805259b30391b54d00f0b572029116f09152a84b00d0091147bdea03271ee80318aa087d7d93216b68b8010e0034a8af0090084100910001168bc351ff97",
+      "sha256": "9dfbef39862d75353bcedb02af55e47b1748fec3c0a37a05f4f6c7ad37a2a47b"
+    },
+    {
+      "name": "PHOrbEnemyActionsSelectModeRVA",
+      "va": "0x100561fa0",
+      "rva": "0x561fa0",
+      "length": 64,
+      "bytes": "680e41f908c14179a8000037e00314aae10313aa1cf4ff9704000014e00314aae10313aaf1f1ff97609206b960c22a91c43c0094087c05531f491d71e8000054",
+      "sha256": "f9d87bac1393b732d2e35827be4e6cdad8b1fd0eeb7e5f16479c97bd4d1e41c7"
+    },
+    {
+      "name": "PHOrbEnemyActionsAIStateRVA",
+      "va": "0x100561ff8",
+      "rva": "0x561ff8",
+      "length": 64,
+      "bytes": "68c246b90805001168c206b9680e41f969aa4f790ac9c17902c5c1794001090b010080527397eb9760aa0f79619246b93f040071eb01005488af009008410091",
+      "sha256": "28bbaefdf3451027bcfbcd4bf7c27a5348ad36c5c41289db9672ce90f2ff867f"
+    },
+    {
+      "name": "PHOrbEnemyActionsCompoundDispatchRVA",
+      "va": "0x100562080",
+      "rva": "0x562080",
+      "length": 64,
+      "bytes": "f643ff97600200b4e20300aa0880407969aa4f792801084b68aa0f79689246b9091e80522825082a68de07b9080840791f4d017141010054e00314aae10313aa",
+      "sha256": "6d926f236562f36a9c0c375dd6e107c0f5d7eb8138881b0d920a352102244e80"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlOnceRVA",
+      "va": "0x10055bd8c",
+      "rva": "0x55bd8c",
+      "length": 64,
+      "bytes": "e9ba46b9884200916a0280b90a0d0a8b4a1140393f010a6ac14b005429010a2ae9ba06b9690280b929f17dd3006969b8590200141fd10171ed04005409150251",
+      "sha256": "b06e8ab86cd5bb2f48c32cb805537cf8a5941011f04294f34887b7a66f58a4d5"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlFlagsRVA",
+      "va": "0x10055c030",
+      "rva": "0x55c030",
+      "length": 64,
+      "bytes": "680280b9880e088b08514039e9ba46b92801082a9c010014e9be46b9680280b9880e088b0a5140393f010a6b013600540851413825000014e9be46b9680280b9",
+      "sha256": "88713950f7719577f3a64bc2a4382bb2a260d72b6209ff3c8d73499b88ba1a1c"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlCounterRVA",
+      "va": "0x10055c0c4",
+      "rva": "0x55c0c4",
+      "length": 64,
+      "bytes": "680280b9880e088b085140390a000014e8be46b9283200340805005106000014e8be46b9e9771f321f01096b6831005408050011e8be06b988010014680280b9",
+      "sha256": "0fa7b1800bb6092f67980278a08259546de0a5c730ef69c4ac5c30480d39e1bc"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlHPRVA",
+      "va": "0x10055c170",
+      "rva": "0x55c170",
+      "length": 64,
+      "bytes": "280be8d20101679e0008611e680280b9880e088b0151403d21d8617e0020611ee920005462010014280be8d20101679e0008611e680280b9880e088b0151403d",
+      "sha256": "b44c7bbcdd69f01c05b5f8bf17e28d7e811060d358dc2486951cc66408c2edfd"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlJumpRVA",
+      "va": "0x10055c5ac",
+      "rva": "0x55c5ac",
+      "length": 64,
+      "bytes": "0851413859000014e0422a91b05200941f0000712d010054e0822a91ac520094680280b9880e088b095140391f00096b8d0000544f000014680280b9880e088b",
+      "sha256": "102cc89525c5ec830e94359209a66e8a3598fbdf1f18fe6890e8612e8af135b3"
+    },
+    {
+      "name": "PHOrbEnemyActionsControlTargetRVA",
+      "va": "0x10055c6f0",
+      "rva": "0x55c6f0",
+      "length": 64,
+      "bytes": "081540390800001409008052c81240b91f01296ac1000054680280b9880e088b0855403908090051680200b920008012fd7b46a9f44f45a9f65744a9f85f43a9",
+      "sha256": "58a09a88b03e7f242152ebdd549278c49d4110b2ef4f3f9b7cd01fbb09aa0c77"
+    },
+    {
+      "name": "PHOrbEnemyActionsCompoundRVA",
+      "va": "0x100561c38",
+      "rva": "0x561c38",
+      "length": 64,
+      "bytes": "0845ff97080840791f4d01718104005468de47b9097d49d3699206b9080d40920808088b011140b93f0000712d03005408f09152a002088bfa44ff97000300b4",
+      "sha256": "e10eec0360617713878b4b1589616633e9a214b63f28086e721b4e8c50ee4250"
+    },
+    {
+      "name": "PHOrbEnemyActionsAttackStatsRVA",
+      "va": "0x10056a1c8",
+      "rva": "0x56a1c8",
+      "length": 64,
+      "bytes": "20802191e91b00941f0400718b00005460422191661b00940808281e60020a91eb1a0094f70300aa60c20991e81a0094e803002a088117aa0001229e0009201e",
+      "sha256": "fe5dbaff341f4d0d9c5276c87845ac56449833ca6f079c74b93a0f87506f71a9"
+    },
+    {
+      "name": "PHOrbEnemyActionsAttributeRVA",
+      "va": "0x10056a2f0",
+      "rva": "0x56a2f0",
+      "length": 64,
+      "bytes": "02000014b804805208cd429108e1379169fec8396900f836690e41f929314039291d40928a0480522821aa9b00410091941b00941f0400714b040054883a40f9",
+      "sha256": "10b89176beb069acf7158fc1ad8e294c8d89d46b3b338dac03fd096e66015150"
+    },
+    {
+      "name": "PHOrbEnemyActionsAttachedAttackRVA",
+      "va": "0x100560474",
+      "rva": "0x560474",
+      "length": 64,
+      "bytes": "68008052681e00b968825f3908151e120801003268821f39884640b968ea07b9fd7b41a9f44fc2a8c0035fd6ffc302d1e923046dfc6f05a9fa6706a9f85f07a9",
+      "sha256": "00158d813d34b7600b257491ed83b9958497b9bf4adb83cbfdc89395b82f74c7"
+    },
+    {
+      "name": "PHOrbEnemyActionsAwokenBindRVA",
+      "va": "0x100567f44",
+      "rva": "0x567f44",
+      "length": 64,
+      "bytes": "883a40f909cd8d526901a072ea7f60b20a6929f808d9429100d13991e003271eac63f297883a40f989cd88526901a0720a6969786b324d794c651a538c3d0013",
+      "sha256": "dee6a82f193fc67d76b874b0c50fb25857aa1ac489b3bfc1b8374ae2e13080ff"
+    },
+    {
+      "name": "PHOrbEnemyActionsAssistVoidRVA",
+      "va": "0x100568dac",
+      "rva": "0x568dac",
+      "length": 64,
+      "bytes": "ff1b00b908008052893a40f98a5389526a01a0722b696a78ac2240796b1115128b2500336b0116322b692a78ffa30039ff2700b916be8052173e82527701a072",
+      "sha256": "4869c4ce077346e8c81126204f83250aa86eb6d2af995baa2b6813c00e3e49b7"
+    },
+    {
+      "name": "PHOrbEnemyActionsProtectedFloatRVA",
+      "va": "0x100570f74",
+      "rva": "0x570f74",
+      "length": 64,
+      "bytes": "090840b9e83701d00a514ab928b300b00b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "861461e136e7d6ceb1afaa53f7cec8779cbc2718ee93cc83dccbdf4c402710cc"
+    },
+    {
+      "name": "PHOrbEnemyActionsProtectedShortRVA",
+      "va": "0x100571170",
+      "rva": "0x571170",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyActionsProtectedNumericRVA",
+      "va": "0x100570d94",
+      "rva": "0x570d94",
+      "length": 64,
+      "bytes": "090840b9e83701d00a514ab928b300b00b694db9080040b9ac8d9f528ccdae7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "90a396ba4a60c6f9ca402f8b46f9883cd0c03532118ba7808900f61efc26b367"
+    },
+    {
+      "name": "PHOrbEnemyActionsOverrideRVA",
+      "va": "0x10055e7d8",
+      "rva": "0x55e7d8",
+      "length": 64,
+      "bytes": "000080120600001460822491863700946002003460c22491604a0094e82f40f9a95d009029b142f9290140f93f0108eb212d0054fd7b4da9f44f4ca9f6574ba9",
+      "sha256": "f72a4f149e769923be11f927d36f061ddace3f671d1fb347f4e381cef155960f"
+    },
+    {
+      "name": "PHOrbEnemyActionsCountdownRVA",
+      "va": "0x1005a078c",
+      "rva": "0x5a078c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30301aa083840f909e481526901a072086969f8680100b40831407928013836680e41f90171433960a204918c41ff9760a20491",
+      "sha256": "4ff9224854229bd266646a49c68a09e25c10533120d466e1b43cdd8203f6eba0"
+    },
+    {
+      "name": "PHOrbEnemyActionsTableMetadataRVA",
+      "va": "0x100697270",
+      "rva": "0x697270",
+      "length": 64,
+      "bytes": "083b8c52e818a07289008052296b28b808888252680aa072286b68b8893b8c52e918a072286b29b8083c8c52e818a072e90b40f9296b28b8883c8c52e818a072",
+      "sha256": "502b486d9a5cadeecafacfad4787861ec9799e913a0d5eca26e4cfdb1d763985"
+    },
+    {
+      "name": "PHOrbEnemyActionsTableLoadRVA",
+      "va": "0x1005357c0",
+      "rva": "0x5357c0",
+      "length": 64,
+      "bytes": "e00313aa50b2f497083c8c52e818a072c06a28b8e00313aa4bb2f497883c8c52e818a072c06a28b8083c8c52e818a072c86a68b81f8140710c0c0054080d080b",
+      "sha256": "44fbaaf4973c8190af82d86321e8394d503b638fc237b030dcd4cc7f316a9f06"
+    },
+    {
+      "name": "PHOrbEnemyActionsRecordLoadRVA",
+      "va": "0x100535864",
+      "rva": "0x535864",
+      "length": 64,
+      "bytes": "083d8c52e818a072d46a68f8e00313aa24b2f49708098052bc52089b800300b9e00313aab7b2f497800b0079e00313aa1cb2f497800b00b9e00313aa19b2f497",
+      "sha256": "5b1284139a5e0227a2be04348fd4ff595eac23942df2d4561f76c1b23b2402e4"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlCompareRVA",
+      "va": "0x10055c068",
+      "rva": "0x55c068",
+      "length": 64,
+      "bytes": "e9be46b9680280b9880e088b0a5140393f010a6b89290054a7010014e9be46b956000014e9ba46b9680280b9880e088b0a5140393f010a6ae033005408514138",
+      "sha256": "f646ca557f4acdb9b929659aa4590e91a82f034947c932326c03343ed5465f0c"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlXorRVA",
+      "va": "0x10055c0ac",
+      "rva": "0x55c0ac",
+      "length": 64,
+      "bytes": "680280b9880e088b08514039e9ba46b92801084a7d010014680280b9880e088b085140390a000014e8be46b9283200340805005106000014e8be46b9e9771f32",
+      "sha256": "3d953f1fc9b068f6bd315c797f3c86f9d482bc2e5694c17ad779e83527436fe6"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlEmitClearRVA",
+      "va": "0x10055c110",
+      "rva": "0x55c110",
+      "length": 64,
+      "bytes": "e8be46b94830003408050071e8be06b9e02f0054680280b9880e088b001140b97c010014680280b9880e088b08514039e9ba46b92801280a5b010014e9724279",
+      "sha256": "5e818cb4bd0ad818c295191f20c1712f0fa9ae6f59beb8ca82655bfa5d3d6919"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlEqualRVA",
+      "va": "0x10055c14c",
+      "rva": "0x55c14c",
+      "length": 64,
+      "bytes": "e972427902000014e9be46b9680280b9880e088b0a5140393f010a6b202200546c010014280be8d20101679e0008611e680280b9880e088b0151403d21d8617e",
+      "sha256": "a03bc46a852f57e9641d918ac4cc18f8fdaed5efd3c4b62a319c4e801182c819"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlFlagsLevelRVA",
+      "va": "0x10055c1b4",
+      "rva": "0x55c1b4",
+      "length": 64,
+      "bytes": "0020611eaa1f005458010014e9ba46b9680280b9880e088b0a5140393f010a6ac11e005451010014e9724279680280b9880e088b0a5140393f010a6be21d0054",
+      "sha256": "555bf5a5e7dcde058887e7a204c1c48949d713f974fa3889a559b4aeec77bab3"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlSetElseJumpRVA",
+      "va": "0x10055c258",
+      "rva": "0x55c258",
+      "length": 64,
+      "bytes": "e8ba46b9690280b9890e098b2a5140391f010a6a202200542851413808050051280100143f010a6b8d23005426010014e00317aa9708ff97e84240f91f0100eb",
+      "sha256": "f1d7a8ea01be6e68e9285e82ac230d39262553d91a6edb622391a7a27821e5ed"
+    },
+    {
+      "name": "PHOrbEnemySelectorControlStoreRVA",
+      "va": "0x10055c6b0",
+      "rva": "0x55c6b0",
+      "length": 64,
+      "bytes": "08010a2ae8ba06b91900001400008052ca0a407988420091690280b9080d098b091140395fbd0271810000541f00096b8a0000540e0000141f00096b8c010054",
+      "sha256": "af3529d3d0844ba5942fd02e905b0ce895c158f71fe0bacfb76479efc4c3f167"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedControlRVA",
+      "va": "0x10055e9b4",
+      "rva": "0x55e9b4",
+      "length": 64,
+      "bytes": "daf4ff971f080031e00900541f0c00310017005460f1ff36f81740b91f040031410900541c7f409388f37dd3216b68b8e00314aaf200009480080037e80a4079",
+      "sha256": "c30941f544b1a6a6b2264e0ed0f9381de4e43942c880b3f923078e9088851ef3"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedFiltersRVA",
+      "va": "0x10055e9f0",
+      "rva": "0x55e9f0",
+      "length": 64,
+      "bytes": "e80a40791f1d017168000054a97a6878a908003769aa4f79ea4240b95f01096b6c070054290be8d22001679e0009601ee93a40b92101621e0020611e8c060054",
+      "sha256": "ecbae38f0239c4d5ff9630d275d701b6cfe922cb71abfee07412f5c3029520b2"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedLoopRVA",
+      "va": "0x10055eaf8",
+      "rva": "0x55eaf8",
+      "length": 64,
+      "bytes": "f81740b908070011e81700b91fff0071f80308aa2bf1ff54650000141f91007121ffff5462000014600641f9c0feffb4fc1240b9a559fa97600641f901008052",
+      "sha256": "3e32b04a61194c85a4a792f5a25253966b6311be46d13d6996e435def7d542f9"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedPoolRVA",
+      "va": "0x10055ebcc",
+      "rva": "0x55ebcc",
+      "length": 64,
+      "bytes": "3c0f1c8b8817403988000034e863009118c93b387b070011f5031caaa84e40386805003400102e1ee00314aae10313aae20317aadef6ff970820201e8d040054",
+      "sha256": "25cdfdcaa34f341d75bc85d84f3c4b1622dd42faa11f231b017f40020ec0a161"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedProbabilityRVA",
+      "va": "0x10055ec0c",
+      "rva": "0x55ec0c",
+      "length": 64,
+      "bytes": "e8264629287d081ba9024039087d091be9a39052693daa72087d299b09fd7fd308fd65930801090b0101221e0008211e0020291e20cd201e2039201e883a40f9",
+      "sha256": "478a96ac6fe79e7ff158dd0cf59ccddddaa4536e6eedba7c25a5db7e7fa30b72"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedFallbackRVA",
+      "va": "0x10055eca4",
+      "rva": "0x55eca4",
+      "length": 64,
+      "bytes": "7f0700718bd9ff5417008052f6031b2af86300911af09152fb1f8052fc0316aa08038039350f088ba10240b9a8af00900841009100011a8bdf50ff97800100b4",
+      "sha256": "2256e0f4128361f0850109ce692f4723ba2d723dba0d05a82b1b19197c050169"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedRecheckRVA",
+      "va": "0x10055ece4",
+      "rva": "0x55ece4",
+      "length": 64,
+      "bytes": "e20300aa00102e1ee00314aae10313aaa1f6ff970820201e89000054a8164039f702080b020000141b030039180700919c0700f161fdff54883a40f9092e8552",
+      "sha256": "0bf306a0d634d3bea2412c0e6d99140154c47197afb78a769dfb20a76077c28c"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacyControlRVA",
+      "va": "0x10055f214",
+      "rva": "0x55f214",
+      "length": 64,
+      "bytes": "c2f2ff971f080031000400541f0c003100100054e0f2ff36fb2b40b91f04003161030054787f409319f37dd3816b79b8e00314aadafeff97a0020037a83a40b9",
+      "sha256": "8b8245e242a6140c6281bf2b1c30deea8273e72032ac03374bbc5acab301b881"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacyFiltersRVA",
+      "va": "0x10055f270",
+      "rva": "0x55f270",
+      "length": 64,
+      "bytes": "3fbd0071600200543fc5007120010054890f188b29114039c90000340001621e2021601e6d01005402000014fb2b40b968070011e82b00b97fff0071fb0308aa",
+      "sha256": "cb7b31271b225303dd3ac7dec20fc709d06da3187b859b83b97d7eba61829ac1"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacySecondEntryRVA",
+      "va": "0x10055f424",
+      "rva": "0x55f424",
+      "length": 64,
+      "bytes": "fb0316aa1c008052ff2700b917f0915219f0a7521a2e85523a01a072780e41f916b30391e8031caa087d7d93c16a68b8e10500343f90007160e0ff546003178b",
+      "sha256": "9806d09705a138081aecd49b78bd7262aaec41ff25b82b5c26378450f95d7b99"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacyRowSentinelRVA",
+      "va": "0x10055f450",
+      "rva": "0x55f450",
+      "length": 64,
+      "bytes": "c16a68b8e10500343f90007160e0ff546003178bfd4eff97400500b4f50300aa02730391e4930091e00314aae10313aae30315aa0041601e25f2ff971f080031",
+      "sha256": "e797102594101673ca405b6af6ed160128e08d6e5535de7b9dd49ba700646156"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacySecondControlRVA",
+      "va": "0x10055f488",
+      "rva": "0x55f488",
+      "length": 64,
+      "bytes": "25f2ff971f080031e00300541f0c003180deff5440dfff36fc2740b91f04003141030054887f4093e80f00f918f17dd3c16a78b8e00314aa3cfeff9760020037",
+      "sha256": "bf58f5bcec101b16c71b3792e0838a665dfc480295c5b44c3999603d3bb71aa1"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacySecondFiltersRVA",
+      "va": "0x10055f4d8",
+      "rva": "0x55f4d8",
+      "length": 64,
+      "bytes": "f92f00b9a80a4079080500511f710171083a0054ab4d00b06b213491890000106a79687829090a8b20011fd6ff2f00b9c8010014fc2740b988070011e82700b9",
+      "sha256": "6a68b907422e5659105b0d09553b1bb815472c9345c61a46bd9ad97460d7d913"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacySecondaryChanceRVA",
+      "va": "0x10055fc28",
+      "rva": "0x55fc28",
+      "length": 64,
+      "bytes": "e80f40f9c80e088b08154039e8c6ff34a93240b9287d081b0001221ee12f40bd2008201e0800381e893a40f92a697ab8ab7f88526b00a0726cd89352cc04a072",
+      "sha256": "a5ce26c0d2228c1f288c50eb44461bdb2cd3f8b2b4c360a938bc9726b9795dfa"
+    },
+    {
+      "name": "PHOrbEnemySelectorCompoundEligibilityRVA",
+      "va": "0x100561c88",
+      "rva": "0x561c88",
+      "length": 64,
+      "bytes": "080840791f4901712003005400102e1ee00314aae10313aae20315aab5eaff970820201e49020054e00314aae10313aae20315aaf9f9ff9760a247bd08000014",
+      "sha256": "757f3ea3696677274349755b59e378dbdce80c7e1fd19451c6284167656b514a"
+    },
+    {
+      "name": "PHOrbEnemySelectorRoot82FallbackRVA",
+      "va": "0x100562044",
+      "rva": "0x562044",
+      "length": 64,
+      "bytes": "000100b4080840791f490171a100005408008012689206b908103e1e24000014619246b908103e1e2104f83788af00900841009109f091520001098bf643ff97",
+      "sha256": "b6d4659ce793f962aedb1e753438666f5b85984da2fb6ab92967c5abb6592d48"
+    },
+    {
+      "name": "PHOrbEnemySelectorAttachedDamageOrderRVA",
+      "va": "0x100566e6c",
+      "rva": "0x566e6c",
+      "length": 64,
+      "bytes": "68825f3908011f3268821f3960ea47bd00d8217e0859a8520101271e0018211ee00314aae10313aa2200805203008012b70c0094390b00141f8101718d060054",
+      "sha256": "3d4f070ca472fcebd07caf8f3e592a2a7e04dc2077879011ec1e4f5795cb9483"
+    },
+    {
+      "name": "PHOrbEnemySelectorNegativeSelectionAttackRVA",
+      "va": "0x10056af08",
+      "rva": "0x56af08",
+      "length": 64,
+      "bytes": "a80240394002003488030034683a40f989008a526901a0720001098bef180094a002083600102e1ee00313aae10315aa02008052030080128efcff970e000014",
+      "sha256": "c07a650fb706f0d40cc69d76bfecb933b9988097ff7025dd892def30847a3abe"
+    },
+    {
+      "name": "PHOrbEnemySelectorOrderedLeafMaskRVA",
+      "va": "0x10055ea30",
+      "rva": "0x55ea30",
+      "length": 64,
+      "bytes": "1fc50071e8000054290080522921c89aea4751b24a00e0f23f010aea810500541f390271600600541f750171810b0054e8264629287d081b290f1c8b29114039",
+      "sha256": "fdfb3eb917740dfd172ad3249e3a28d756ebc1a7027b69bc3e2e268601ef8cd0"
+    },
+    {
+      "name": "PHOrbEnemySelectorLegacyCostRVA",
+      "va": "0x10055f2b8",
+      "rva": "0x55f2b8",
+      "length": 64,
+      "bytes": "3f910071400b005468aa4f79a94240b93f01086bacfeff54a83e40b916350012e8cec1791f0500710b010054c87e081b0001231e0859a8520101271e0018211e",
+      "sha256": "0e8c8c77acdeefd98e3343e0013f457bbf836efd4bc5539dbcc481bf8825af91"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerCacheRVA",
+      "va": "0x1005628a4",
+      "rva": "0x5628a4",
+      "length": 64,
+      "bytes": "083840f989be85522901a07209696938a903003708f5429100413291353900941f0400710b0300541400805235731f911600801217929b527701a072683a40f9",
+      "sha256": "9bca6327afceac26b48ab082668a42754a388d4bb971604e9b4a03f18954d43d"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerCacheClearRVA",
+      "va": "0x1005628d8",
+      "rva": "0x5628d8",
+      "length": 64,
+      "bytes": "17929b527701a072683a40f90901158b2a0540392a0100372a5111d12b4111d1600140bd410140bd0020211e61000054293105d1360100b90001178b20390094",
+      "sha256": "cf3b92f3f1a920d444b8f3f31936a34641e22e5f491856a8068a4f787531520e"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerLifeRVA",
+      "va": "0x1005629cc",
+      "rva": "0x5629cc",
+      "length": 64,
+      "bytes": "5503198ba82a4479e8144037a0420191ee380094f60300aaa0020191eb380094e803002a088116aaa9f24039890000371f0500f1ca0000549b000014a92a4479",
+      "sha256": "8b5816ed500c113d8314413fe0544d7aab3a6e6820bbdfcd028e517d16913c95"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerEligibilityRVA",
+      "va": "0x1005629f4",
+      "rva": "0x5629f4",
+      "length": 64,
+      "bytes": "a9f24039890000371f0500f1ca0000549b000014a92a4479690008371f0100f1ed1200544803198b00a10491dd3800941f0000714c120054a82a447908121837",
+      "sha256": "2c183e007efc378956196d372aa625e5c68f0bd8b323baddfb695efe80c73f6d"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerCountdownRVA",
+      "va": "0x100562a18",
+      "rva": "0x562a18",
+      "length": 64,
+      "bytes": "4803198b00a10491dd3800941f0000714c120054a82a447908121837fb0317aaa0420191d6380094f60300aaa0020191d3380094e803002a088116aa5703198b",
+      "sha256": "7446e997cab246fe07973f81483f2ce4a72676faf34e73964e54aae8a5b53b1c"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerHookRVA",
+      "va": "0x100562a7c",
+      "rva": "0x562a7c",
+      "length": 64,
+      "bytes": "a82a447908791a12a82a047908008012e8da07b9683a40f909ce86526901a072086969381f05007181060054e00313aa684c0294683a40f909ce86526901a072",
+      "sha256": "acf683bab889450c38b2469c4c161656b5b93443efdcc19f7f94ecbc434dc355"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSchedulerActionGateRVA",
+      "va": "0x100562b74",
+      "rva": "0x562b74",
+      "length": 64,
+      "bytes": "e00313aab4f6009460030034e00313aae10315aac2fcff970840201e488fb8520001271e0021201e890600540821201e2d0200545503198ba0220e91e003271e",
+      "sha256": "6d1c72a1cb82351497bd2f9ee3307fad82c545311a9a1f2b7339886722d669ff"
+    },
+    {
+      "name": "PHOrbEnemyDispatchActionEnabledRVA",
+      "va": "0x1005a0648",
+      "rva": "0x5a0648",
+      "length": 64,
+      "bytes": "083840f909e481526901a072086969f8880000b408314079001d0753c0035fd600008052c0035fd6083840f909e481526901a072086969f8a80000b408854039",
+      "sha256": "4418967af6dc1c140ff58c822f37e5372650beba8a02dd2edf593098e397550d"
+    },
+    {
+      "name": "PHOrbEnemyDispatchPriorityRVA",
+      "va": "0x100561ea8",
+      "rva": "0x561ea8",
+      "length": 64,
+      "bytes": "28dc47b948034037883a40f989be85522901a072096969383f050071c1040054619246b93f0400716b04005488af00b00841009109f091520001098b5d44ff97",
+      "sha256": "8ac7c2a4c05888e188d8cae3f186a91a0abd3d5240c64cae3c7d825a7ff3cd50"
+    },
+    {
+      "name": "PHOrbEnemyDispatchCachedPreparationRVA",
+      "va": "0x100561ee8",
+      "rva": "0x561ee8",
+      "length": 64,
+      "bytes": "f40300aae10313aae20300aa76f7ff97e10313aae20314aa3ef9ff9760a647bd60aa07bd68a247bd78000014017d095388af00b00841009109f091520001098b",
+      "sha256": "73376809e363893699592040d53ba9c2b2158350c800f4847895ad0bb21f1914"
+    },
+    {
+      "name": "PHOrbEnemyDispatchCompoundPriorityRVA",
+      "va": "0x100561f2c",
+      "rva": "0x561f2c",
+      "length": 64,
+      "bytes": "0908407968de47b93f4d017181020054090d00120a1d08533f718a6b810b005409050011280d003368de07b95800001408cd429100e119914e04ec97c0010034",
+      "sha256": "2ead7a2782d8c80edb69117682749a2a1305dcd7156fb030a3b68ac9de138430"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSpecialCallRVA",
+      "va": "0x100561f5c",
+      "rva": "0x561f5c",
+      "length": 64,
+      "bytes": "08cd429100e119914e04ec97c0010034883a40f908cd429100e119912100805202008052f104ec97120000140879171268de07b9e00314aae10313aa5bffff97",
+      "sha256": "75cb11903617aea3cd341a8c2acf4f7dc99349115ffe441cc22da8309c115590"
+    },
+    {
+      "name": "PHOrbEnemyDispatchModeAndCountRVA",
+      "va": "0x100561fa0",
+      "rva": "0x561fa0",
+      "length": 64,
+      "bytes": "680e41f908c14179a8000037e00314aae10313aa1cf4ff9704000014e00314aae10313aaf1f1ff97609206b960c22a91c43c0094087c05531f491d71e8000054",
+      "sha256": "f9d87bac1393b732d2e35827be4e6cdad8b1fd0eeb7e5f16479c97bd4d1e41c7"
+    },
+    {
+      "name": "PHOrbEnemyDispatchProtectedCountRVA",
+      "va": "0x100561fcc",
+      "rva": "0x561fcc",
+      "length": 64,
+      "bytes": "60c22a91c43c0094087c05531f491d71e800005460c22a91bf3c00940804001160c22a91013d0012f82a009468c246b90805001168c206b9680e41f969aa4f79",
+      "sha256": "8f715d1577a52fd92bceb99f46fac16064c5c10bfc4f8eef72b3a2224e7713d7"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRegenerationRVA",
+      "va": "0x100561ff8",
+      "rva": "0x561ff8",
+      "length": 64,
+      "bytes": "68c246b90805001168c206b9680e41f969aa4f790ac9c17902c5c1794001090b010080527397eb9760aa0f79619246b93f040071eb01005488af009008410091",
+      "sha256": "28bbaefdf3451027bcfbcd4bf7c27a5348ad36c5c41289db9672ce90f2ff867f"
+    },
+    {
+      "name": "PHOrbEnemyDispatchCostAndPackRVA",
+      "va": "0x100562080",
+      "rva": "0x562080",
+      "length": 64,
+      "bytes": "f643ff97600200b4e20300aa0880407969aa4f792801084b68aa0f79689246b9091e80522825082a68de07b9080840791f4d017141010054e00314aae10313aa",
+      "sha256": "6d926f236562f36a9c0c375dd6e107c0f5d7eb8138881b0d920a352102244e80"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSignedClampRVA",
+      "va": "0x100047de8",
+      "rva": "0x47de8",
+      "length": 64,
+      "bytes": "1f00026b08b0821a1f00016b20b0881ac0035fd60340201ee003271e6020211ee900005400102e1e6020221e8a0000546038211e4138211e0018211ec0035fd6",
+      "sha256": "d31b528c980fc0d8677e85b3d2e37aefc2e899463156c4d554bda689d27d6322"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSpecialMarkerRVA",
+      "va": "0x1000630a8",
+      "rva": "0x630a8",
+      "length": 64,
+      "bytes": "c85201d008811991143940f993ce4291687a46b989be9252a958a7721f01096ba101005488f6429100413291303714941f0400710b010054884a429100a13d91",
+      "sha256": "a99f60fb0119a88ad5edbd271daaf3f42f1ffe46f0e8864fb09640931f5a35ce"
+    },
+    {
+      "name": "PHOrbEnemyDispatchOrderedOverrideRVA",
+      "va": "0x10055e7c8",
+      "rva": "0x55e7c8",
+      "length": 64,
+      "bytes": "20c01f918c3700941f0000716d000054000080120600001460822491863700946002003460c22491604a0094e82f40f9a95d009029b142f9290140f93f0108eb",
+      "sha256": "ba4b5ee30d3ed92a72b7ea7f38e1f72e77fe23339b06c4c554a25db8a323e5ad"
+    },
+    {
+      "name": "PHOrbEnemyDispatchOrderedSpecialRVA",
+      "va": "0x10055e834",
+      "rva": "0x55e834",
+      "length": 64,
+      "bytes": "611e41b96100f837682a4479c82908377a0e41f9ff1700b9883a40f908cd42910041169106adfc9780050034883a40f9690208cb29dd42d129213dd129fd43d3",
+      "sha256": "7be1fe772fb7839dc6b7d53f6b21b3aebf7ef2f1f65d44f20c025bfe2de13f34"
+    },
+    {
+      "name": "PHOrbEnemyDispatchLegacyOverrideRVA",
+      "va": "0x10055f058",
+      "rva": "0x55f058",
+      "length": 64,
+      "bytes": "20c01f91683500941f0000716d00005400008012060000146082249162350094c001003460c224913c480094fd7b4ba9f44f4aa9f65749a9f85f48a9fa6747a9",
+      "sha256": "fb766345fd38e9bfa17ec9dea73675eacece520bdf5a17343a5485d95579fe96"
+    },
+    {
+      "name": "PHOrbEnemyDispatchLegacySpecialRVA",
+      "va": "0x10055f0b0",
+      "rva": "0x55f0b0",
+      "length": 64,
+      "bytes": "681e41b96800f837682a447968fd0f376042019134470094f50300aa6002019131470094e803002a088115aa0801629e608209912c470094f50300aa60420991",
+      "sha256": "c9e1d9013a6a4f46685d956087e62959a7b61e4b730acb2f424598f99e1efd1c"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRedirectSlotRVA",
+      "va": "0x10055e860",
+      "rva": "0x55e860",
+      "length": 64,
+      "bytes": "883a40f9690208cb29dd42d129213dd129fd43d3aadb8052ca6bb772357d0a1b08d5429100b10191fc490094bf02006be1030054883a40f908d5429100310291",
+      "sha256": "83ec3dbb333e8693e164a63d0d35fda5f442216cedb5a03ebba5d6bb97f38d37"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRedirectParameterRVA",
+      "va": "0x10055e8bc",
+      "rva": "0x55e8bc",
+      "length": 64,
+      "bytes": "f60300aa883a40f908d5429100f10191674a00941f001f7208058052890580522801889ad56a68b8b8060051f81700b9883a40f908cd42910041169121008052",
+      "sha256": "1807d8daa68f6cab3fc4231fc9c7855e420b79266f616a9e4c31b45d59770254"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRedirectPredicateRVA",
+      "va": "0x100489c80",
+      "rva": "0x489c80",
+      "length": 64,
+      "bytes": "885b83520000088bfc9c0394e001f837885f83526002088b598a0394e10300aa48b600b00841009109f091520001098beaa40294c00000b4080840791fd10271",
+      "sha256": "4b1a61b5f6a1012a7a907234cab33a8b6172b882f72c77d2b923f9297826e302"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRedirectOpcodeRVA",
+      "va": "0x100489c9c",
+      "rva": "0x489c9c",
+      "length": 64,
+      "bytes": "e10300aa48b600b00841009109f091520001098beaa40294c00000b4080840791fd10271e0179f1a0200001400008052fd7b41a9f44fc2a8c0035fd6ff0302d1",
+      "sha256": "16b9b6031921ae01f24a7b03c6d7309a5050549f2aa95e5666d943fea2421a2f"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSignedByteRVA",
+      "va": "0x1005710b4",
+      "rva": "0x5710b4",
+      "length": 64,
+      "bytes": "0a0440b90b0c40b96a35ca4a3f01086b610000541f010a6be00000543f010a6b2b019f1a1f010a6b6a11881a3f01086b4811881a001d0013c0035fd6281c0012",
+      "sha256": "176d4f2c79b538c937b326848f65de2fa20e7d49eaa805c168542a7d1e8b4209"
+    },
+    {
+      "name": "PHOrbEnemyDispatchUnsignedByteRVA",
+      "va": "0x1005712a8",
+      "rva": "0x5712a8",
+      "length": 64,
+      "bytes": "0b0c40b96a35ca4a3f01086b610000541f010a6be00000543f010a6b2b019f1a1f010a6b6a11881a3f01086b4811881a001d0012c0035fd6090840b9e83701b0",
+      "sha256": "bc1a13b51bb5e172c5ca5b6350972caf2f88606fc06e3898ef67e4afeff92098"
+    },
+    {
+      "name": "PHOrbEnemyDispatchUnsignedShortRVA",
+      "va": "0x100571320",
+      "rva": "0x571320",
+      "length": 64,
+      "bytes": "0b0c40b96a35ca4a3f01086b610000541f010a6be00000543f010a6b2b019f1a1f010a6b6a11881a3f01086b4811881a003d0012c0035fd6fd7bbfa9fd030091",
+      "sha256": "c306d783e8145f6dc1bec11c0f6eafb8e105b13bfeb3d741e3fb397c3b6de899"
+    },
+    {
+      "name": "PHOrbEnemyDispatchTickCacheRVA",
+      "va": "0x1006065ac",
+      "rva": "0x6065ac",
+      "length": 64,
+      "bytes": "083840f989b286526901a0722a0080520a69297889be85522901a0721f69293876aa0090d6420091c89a7d9100c131913098ff97e0010034c89a7d9100c13191",
+      "sha256": "ec23bd575ee7fa4e8ce6435426af34be636aca9796ce3c7eadf84901e6edd4c5"
+    },
+    {
+      "name": "PHOrbEnemyDispatchTickSkipRVA",
+      "va": "0x100606600",
+      "rva": "0x606600",
+      "length": 64,
+      "bytes": "4798ff971f5c0071a1000054c89a7d9100c1319101008052d999ff97683a40f9094785522901a072096969b8290142513f190e71402c005408f5429100413291",
+      "sha256": "6f05b9751a4848b751a7d1a215ee3c69871462b01096a2afe7e8238ba6b35728"
+    },
+    {
+      "name": "PHOrbEnemyDispatchTickPartsRVA",
+      "va": "0x100606668",
+      "rva": "0x606668",
+      "length": 64,
+      "bytes": "7c3a40f99a03188b4817089108014079a8174037404726917eaafd97e80300aa4047269101791a1298aafd9740070191bfa9fd97f50300aa40c70091bca9fd97",
+      "sha256": "47bcdf1dbdaee75aa637340e2e679aa8ad397c407b557052b804196d681280ce"
+    },
+    {
+      "name": "PHOrbEnemyDispatchTickLifeRVA",
+      "va": "0x100606694",
+      "rva": "0x606694",
+      "length": 64,
+      "bytes": "40070191bfa9fd97f50300aa40c70091bca9fd97e803002a088115aa1f0100f18c0000548803188b08b54039681500369503188ba0660491b2a9fd971f040071",
+      "sha256": "608ee601411a919c761c75b62ea2e945bc661fe794889be88b56b96f61518eac"
+    },
+    {
+      "name": "PHOrbEnemyDispatchTickCountdownRVA",
+      "va": "0x1006066c4",
+      "rva": "0x6066c4",
+      "length": 64,
+      "bytes": "9503188ba0660491b2a9fd971f040071cb140054a0660491aea9fd9701040051a0660491c3a9fd975d62fe970808291ea0a60c91e003271ec6e9ef97a0a60c91",
+      "sha256": "6809c61f4944211845b25e6b91254e4ffe64786a0366829cbc4dc87e39e96de3"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRoot82RVA",
+      "va": "0x100562044",
+      "rva": "0x562044",
+      "length": 64,
+      "bytes": "000100b4080840791f490171a100005408008012689206b908103e1e24000014619246b908103e1e2104f83788af00900841009109f091520001098bf643ff97",
+      "sha256": "b6d4659ce793f962aedb1e753438666f5b85984da2fb6ab92967c5abb6592d48"
+    },
+    {
+      "name": "PHOrbEnemyDispatchRedirectLimitRVA",
+      "va": "0x10055e8ec",
+      "rva": "0x55e8ec",
+      "length": 64,
+      "bytes": "883a40f908cd429100411691210080528beafc97bf020171acf6ff5402000014180080521b00805259b30391b54d00f0b572029116f09152a84b00d0091147bd",
+      "sha256": "29e0fb99673d55f7ad9de6b087eeff01ae2518f6cad94335a03a0fcefdb64fb5"
+    },
+    {
+      "name": "PHOrbEnemyDispatchSignedByteEncodingRVA",
+      "va": "0x100571078",
+      "rva": "0x571078",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyDispatchUnsignedByteEncodingRVA",
+      "va": "0x100571268",
+      "rva": "0x571268",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyDispatchUnsignedShortEncodingRVA",
+      "va": "0x1005712e0",
+      "rva": "0x5712e0",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyDamageSnapshotFirstRVA",
+      "va": "0x100605c2c",
+      "rva": "0x605c2c",
+      "length": 64,
+      "bytes": "545307d1551307d1e00315aa57acfd97f60300aae00314aa54acfd97e803002a088116aa497306d1280100f9e00315aa4eacfd97f50300aae00314aa4bacfd97",
+      "sha256": "be8bd2c1bbbffcff452f0f08d33f69dcea0924a3b7d5a612cd7f8c7281a5c5c9"
+    },
+    {
+      "name": "PHOrbEnemyDamageSnapshotSecondRVA",
+      "va": "0x100605c58",
+      "rva": "0x605c58",
+      "length": 64,
+      "bytes": "e00315aa4eacfd97f50300aae00314aa4bacfd97e803002a088115aa495306d1280100f9480340790879181248030079486307d11f0100b9683a40f90001198b",
+      "sha256": "680fd7cd182cd960204b59429d9b8095e918fab259e7c37751473bc8ce167935"
+    },
+    {
+      "name": "PHOrbEnemyDamageSnapshotCallerRVA",
+      "va": "0x10060accc",
+      "rva": "0x60accc",
+      "length": 64,
+      "bytes": "e00313aa01008052bcebff97683a40f908cd429100e11991ee60e997ff2700b9200e0037150e0037e002188b1e99fd971f0400716b0d0054683a40f929348552",
+      "sha256": "1e1d4d5ccbdffcbf2521df4bde8f3a2f88b159104305d11e6dc9c05d0e93114f"
+    },
+    {
+      "name": "PHOrbEnemyDamageSpecialGateRVA",
+      "va": "0x100563d5c",
+      "rva": "0x563d5c",
+      "length": 64,
+      "bytes": "f60301aaf40300aae45f00b9ffb70079ff670139083840f908cd429100e11991c8fceb97a002003468af00f00841009169f6915208696938c80128375f430071",
+      "sha256": "296bfaaa7574953b331797390c166c845725979d7e0379f8204aca91c20fcb8a"
+    },
+    {
+      "name": "PHOrbEnemyDamageResolverCallRVA",
+      "va": "0x100563de4",
+      "rva": "0x563de4",
+      "length": 64,
+      "bytes": "e86b0191e96f0191e92300a9e5730191e00314aa01008052e20316aae30317aae40315aae60313aae7031aaaeafcff97f50300aafb6b41397f030071e813999a",
+      "sha256": "28949a62fd7a32b159e7edabb44289bb40f689ebc0adcf7caf6f2a0638513ccf"
+    },
+    {
+      "name": "PHOrbEnemyDamageSeparateGateRVA",
+      "va": "0x100563ec8",
+      "rva": "0x563ec8",
+      "length": 64,
+      "bytes": "60422a916b3400941f000071f9d79f1ad70000b4081c0013e90240393f011e720409407af9d79f1ae86f4139e84700b9e81800373902003460c21f918d00eb97",
+      "sha256": "9a1b6b3aad1de770af3f383428c5ecf025ad833685256a483e4beba4b3d5b0f5"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPSubtractRVA",
+      "va": "0x100563f40",
+      "rva": "0x563f40",
+      "length": 64,
+      "bytes": "6042019194330094fc0300aa6002019191330094e803002a080115cb1c811cab44020054608209918b330094f80300aa6042099188330094e803002a088118aa",
+      "sha256": "98a1bd6d7045867869c85628a51ea09a4d3bdd71529408578b65f4b243d502b4"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPClampRVA",
+      "va": "0x100563f7c",
+      "rva": "0x563f7c",
+      "length": 64,
+      "bytes": "088118aa9f0308eb4d0100546082099182330094f80300aa604209917f330094e803002a1c8118aa020000141c0080d260020191e1031caaf4d5ea97e00314aa",
+      "sha256": "a76194410113857a92dc98313aa7e9ca8a73b31d529bcb5a8af94d62cd0e0c8e"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPPhaseCallRVA",
+      "va": "0x100563fac",
+      "rva": "0x563fac",
+      "length": 64,
+      "bytes": "60020191e1031caaf4d5ea97e00314aae10313aa13ffff97bf0600f18b050054883a40f909409d526901a072086969f8e80400b4604201916c330094f80300aa",
+      "sha256": "9a139c372f834b21728199f5316a8f83d016c1355a15810990a3b6a003783d00"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPCallbackRVA",
+      "va": "0x100564050",
+      "rva": "0x564050",
+      "length": 64,
+      "bytes": "08f54291004132914f330094e20300aa080340f9088140f9e00318aae1031caa0041201e00013fd6689e567988040034e00313aa3fc4f897fc0300aa68f24039",
+      "sha256": "f2a4b6703a312086358a301b4c4edef34ec18c0330ed638e34ce3700c84023ec"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperFloorGateRVA",
+      "va": "0x100564078",
+      "rva": "0x564078",
+      "length": 64,
+      "bytes": "689e567988040034e00313aa3fc4f897fc0300aa68f2403988031837604201913f330094f80300aa600201913c330094e803002a088118aa1f011cebca020054",
+      "sha256": "512d64adcf6de06f5b7a2c50de1dec2e406b1b69a23a393c2677b28f5733d4eb"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperTriggerCallRVA",
+      "va": "0x1005640a8",
+      "rva": "0x5640a8",
+      "length": 64,
+      "bytes": "e803002a088118aa1f011cebca020054e00313aace0100946002003460020191e1031caaaed5ea97883a40f969c385522901a072086969381f05007141010054",
+      "sha256": "392427d34a45a755515321ae817e38703cec5bba30e55dd58116223db8f17546"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperImmediateRVA",
+      "va": "0x1005640d4",
+      "rva": "0x5640d4",
+      "length": 64,
+      "bytes": "69c385522901a072086969381f05007141010054e00314aafe9902949f0700f1cb0000547cf207a90400001460020191e1031caa9fd5ea9768f2403968070037",
+      "sha256": "1d9e9c4cf6fc3abd4138bd4ea52b1683105f417883c2146319c998b6312d4af7"
+    },
+    {
+      "name": "PHOrbEnemyDamageNormalExistingRVA",
+      "va": "0x10056410c",
+      "rva": "0x56410c",
+      "length": 64,
+      "bytes": "68f2403968070037604201911f330094f80300aa600201911c330094e803002a088118aa1f0100f1ac060054681e41b96803f837e00314aa41f1009400030034",
+      "sha256": "bfac4bc4bcdcfe4b7163cf3b02baca2dd954e6627c3e4c9bc078d90e595fb561"
+    },
+    {
+      "name": "PHOrbEnemyDamageSpecialLethalRVA",
+      "va": "0x100564138",
+      "rva": "0x564138",
+      "length": 64,
+      "bytes": "681e41b96803f837e00314aa41f100940003003468f240390801003268f20039682a447908011f32682a047960a2049101008052223300946002019121008052",
+      "sha256": "ad22e6cb4f96afd711887f507f78c0a31ad9b811b677bdcf13877057a7b1a638"
+    },
+    {
+      "name": "PHOrbEnemyDamageSpecialSnapshotRVA",
+      "va": "0x100564174",
+      "rva": "0x564174",
+      "length": 64,
+      "bytes": "2100805283d5ea97883a40f969c385522901a072086969381f050071c1000054e00314aad399029428008052000d084e6082873ce00313aab5010094c0020034",
+      "sha256": "5778247175dd250bffa8cbc7ff16c38fa9757a2a334ae7a9a49567ed591a8aad"
+    },
+    {
+      "name": "PHOrbEnemyDamageNormalCallRVA",
+      "va": "0x1005641a8",
+      "rva": "0x5641a8",
+      "length": 64,
+      "bytes": "e00313aab5010094c002003468f240390801003268f2003960020191210080526fd5ea97883a40f969c385522901a072086969381f05007141010054e00314aa",
+      "sha256": "934fd51a73f4e3b78749a55de11768e64c7a28d15d7880c5c767d9ee76bbcd8f"
+    },
+    {
+      "name": "PHOrbEnemyDamageNormalSnapshotRVA",
+      "va": "0x1005641cc",
+      "rva": "0x5641cc",
+      "length": 64,
+      "bytes": "883a40f969c385522901a072086969381f05007141010054e00314aabf99029428008052000d084e6082873c04000014600201912100805260d5ea97600642ad",
+      "sha256": "cda78951cf80cc257ef3b7015204cb8eb832f25a94783b02db6f6f80337e13ea"
+    },
+    {
+      "name": "PHOrbEnemyDamageNormalThresholdRVA",
+      "va": "0x1005648b4",
+      "rva": "0x5648b4",
+      "length": 64,
+      "bytes": "0001629e619a567d21d8617e280be8d20201679e2118621e2008601e448eeb97683e40f91f0100ebaa000054000080520700001400008052c0035fd668f24039",
+      "sha256": "bd21127e063c7815fb67a79b761affecbf68e412cbdef6e7835abe932a0f2728"
+    },
+    {
+      "name": "PHOrbEnemyDamageNormalFlagRVA",
+      "va": "0x1005648d4",
+      "rva": "0x5648d4",
+      "length": 64,
+      "bytes": "683e40f91f0100ebaa000054000080520700001400008052c0035fd668f240390801003268f2003920008052fd7b41a9f44fc2a8c0035fd6010400b4282000d1",
+      "sha256": "780b69e4f5f7076a17cdc3fc076c80b12709022db4329ff6bd5d177994077ff9"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperThresholdGateRVA",
+      "va": "0x10051e4e8",
+      "rva": "0x51e4e8",
+      "length": 64,
+      "bytes": "089c567928010034f44fbea9fd7b01a9fd430091f30300aa08ac45f9a80000b40001639e11000014000080d2c0035fd6608209911e4a0194f40300aa60420991",
+      "sha256": "f8fc778a87357bf2edd12db18a7be28a79efdcbe8ba31d5c1da54a97d4dd43d3"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperThresholdMathRVA",
+      "va": "0x10051e51c",
+      "rva": "0x51e51c",
+      "length": 64,
+      "bytes": "1e4a0194f40300aa604209911b4a0194e803002a088114aa0001629e619e567d21d8617e2008601e280be8d20101679e0018611efd7b41a9f44fc2a822a7ec17",
+      "sha256": "b9711f27419f98277ea7eb5e851e1be25ba08c26c9bc80812b0b46f0ec0729b6"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperFloorSourceRVA",
+      "va": "0x100395180",
+      "rva": "0x395180",
+      "length": 64,
+      "bytes": "089c567928010034f44fbea9fd7b01a9fd430091f30300aa08ac45f9a80000b40001639e11000014000080d2c0035fd660820991f86e0794f40300aa60420991",
+      "sha256": "892e2ebe3396aab43c422403434a31a262175f7cf5ebab82a76aed90b99db4a3"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperFloorMathRVA",
+      "va": "0x1003951b4",
+      "rva": "0x3951b4",
+      "length": 64,
+      "bytes": "f86e0794f40300aa60420991f56e0794e803002a088114aa0001629e61a2567d21d8617e2008601e280be8d20101679e0018611efd7b41a9f44fc2a8fccbf217",
+      "sha256": "953c41a0b8b38e42dcb5a59b4211bfbc176b25c2441237327d50aedcfba20c9d"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperSnapshotCompareRVA",
+      "va": "0x100564810",
+      "rva": "0x564810",
+      "length": 64,
+      "bytes": "36e7fe97683e40f91f0100eb4d020054e00313aa57c2f897f40300aa6042019159310094f50300aa6002019156310094e803002a088115aa1f0114ebca000054",
+      "sha256": "ee1ff1d376eeb95d0e10917b5e8be4b1908c3ddad3b103af926c0d4bb593e87a"
+    },
+    {
+      "name": "PHOrbEnemyDamageSuperCurrentCompareRVA",
+      "va": "0x100564838",
+      "rva": "0x564838",
+      "length": 64,
+      "bytes": "6002019156310094e803002a088115aa1f0114ebca00005468f2403908011d3268f20039200080520200001400008052fd7b42a9f44f41a9f657c3a8c0035fd6",
+      "sha256": "bb5a50a3f1c671368b3a89659ef5b88242ff18d5e0d0c694d0ae4a26054d8e09"
+    },
+    {
+      "name": "PHOrbEnemyDamageRoundThresholdRVA",
+      "va": "0x1000481e0",
+      "rva": "0x481e0",
+      "length": 64,
+      "bytes": "0820601e01106c1e02107c1e41bc611e2028601e0000789ec0035fd60100621e2200621e00c0221e4104401f687400b0001147fd2020601eec000054083cf8d2",
+      "sha256": "70b2a5a823407b225449617e0b97b152c4daabeb71f6bcc257881ec6a9a02da8"
+    },
+    {
+      "name": "PHOrbEnemyDamageCeilFloatRVA",
+      "va": "0x100048160",
+      "rva": "0x48160",
+      "length": 64,
+      "bytes": "0820201e01b8a15e21d8215e24c4201e6000005401102e1e0028211e0000381ec0035fd60820601e01b8e15e21d8615e24c4601e6000005401106e1e0028611e",
+      "sha256": "5598edbad65b6ebc87b57620c9fbe05f40952942efc2f7c211419a5dc7b29a9d"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPPhaseGateRVA",
+      "va": "0x100563c28",
+      "rva": "0x563c28",
+      "length": 64,
+      "bytes": "20802691133500941f781a72c1060054e00313aaa4d7ea976006003468c2d6791f0500710b0600546042019150340094f50300aa600201914d340094e803002a",
+      "sha256": "342335eb14b103f447550ac9828d5028ed5f9e0f39f2a289729ab6e492c7851a"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPPhaseRatioRVA",
+      "va": "0x100563c70",
+      "rva": "0x563c70",
+      "length": 64,
+      "bytes": "6082099148340094f50300aa6042099145340094e803002a088115aa0001629e0019601e280be8d20101679e0008611e0040621e2f91eb9768c2d6791f00086b",
+      "sha256": "b37ab2cac873784b98c1029844c251c44288486370796a5017332f7c0cf59389"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPPhaseFlagsRVA",
+      "va": "0x100563cb4",
+      "rva": "0x563cb4",
+      "length": 64,
+      "bytes": "60822691f0340094e80300aa60822691010100320a350094883a40f969c385522901a072086969381f0500716101005460822691e4340094e80300aa60822691",
+      "sha256": "2baafa7f21bfe799e32a7c470038bcbd15d0ea5bf5bba691ffdd25bb4a9cda2c"
+    },
+    {
+      "name": "PHOrbEnemyDamageHPPhaseImmediateRVA",
+      "va": "0x100563ccc",
+      "rva": "0x563ccc",
+      "length": 64,
+      "bytes": "883a40f969c385522901a072086969381f0500716101005460822691e4340094e80300aa6082269101011e32fd7b43a9f44f42a9f65741a9e923c46cfa340014",
+      "sha256": "cd720dfb3fa33aa48a85b1f176fc4081f13ddf8a6f817de8f526c196a9e5994c"
+    },
+    {
+      "name": "PHOrbEnemyDamageLivingOrdinaryRVA",
+      "va": "0x100019acc",
+      "rva": "0x19acc",
+      "length": 64,
+      "bytes": "0828447928024037f44fbea9fd7b01a9fd430091f30300aa00400191ab5c1594f40300aa60020191a85c1594e803002a088114aa1f0100f1e0d79f1afd7b41a9",
+      "sha256": "c00e2a3362438672abdf1adba08075e2fc41522953dfd7a90a78e7eeb6d0c1d1"
+    },
+    {
+      "name": "PHOrbEnemyDamageCleanupGateRVA",
+      "va": "0x10060a948",
+      "rva": "0x60a948",
+      "length": 64,
+      "bytes": "793a40f93403168b880640391f050071010a005488f24039280500363b03168b682b4479680908376883c2790001221e6887c2790101221e02103e1ee00313aa",
+      "sha256": "f4b4a5dd1031d33ca18fa0b267fd8eec150f7e4815c2a6edc501fca42813bec6"
+    },
+    {
+      "name": "PHOrbEnemyDamageCleanupNormalRVA",
+      "va": "0x10060a9cc",
+      "rva": "0x60a9cc",
+      "length": 64,
+      "bytes": "88f2403908191f1288f20039683a40f90869773888000037682b447908011b32682b0479e00313aae10314aa8564fd9788f240393a008052a80418363a03168b",
+      "sha256": "2a7d3c6f4afe335d7691946f1b18746c64a680eac0abec2539435c7df61e06a2"
+    },
+    {
+      "name": "PHOrbEnemyDamageCleanupSuperRVA",
+      "va": "0x10060aa60",
+      "rva": "0x60aa60",
+      "length": 64,
+      "bytes": "88f2403908791c1288f20039683a40f908697738a80000372803168b092944792901193209290479e00313aae10314aa5f64fd973a008052683a40f90001188b",
+      "sha256": "60813634edbaf3f14a0f1d75ac78b087ebdc2e533e2dc3636abcdabc0ddd5c4a"
+    },
+    {
+      "name": "PHOrbEnemyDamageActiveSumLoadRVA",
+      "va": "0x10060de60",
+      "rva": "0x60de60",
+      "length": 64,
+      "bytes": "080340f9e81700f91601178bc82a4479ca06403969030012ea7306294901092a3f010071e9079f1a1f0118723b019b1ac0422a91798cfd971f0400718b080054",
+      "sha256": "25e94b75cb55ff5694e4fccb5eed926df99a13acd0a830867ae5f0b0ad2e3fd4"
+    },
+    {
+      "name": "PHOrbEnemyDamageActiveSumAddRVA",
+      "va": "0x10060e0dc",
+      "rva": "0x60e0dc",
+      "length": 64,
+      "bytes": "e97346299c03090b080340f909929b526901a0720001098b288bfd97f7a22e91b50600111f00156beceaff5411000014e80b40f9080d41f908314039e90b40b9",
+      "sha256": "d630212e7db6bb3d22d76e860153276bcc8ebb912a365c28cea08221df9413f3"
+    },
+    {
+      "name": "PHOrbEnemyDamageCountPhaseGateRVA",
+      "va": "0x10060e2e0",
+      "rva": "0x60e2e0",
+      "length": 64,
+      "bytes": "686bf7781f050071ab0300546803178b15e107d1e00315aa608bfd9700032837e00315aa5d8bfd97a0020837686bf7789f03086b4c020054e00315aa578bfd97",
+      "sha256": "84d6ac774c93a4a92a480e5206f83e198ce6e465a520d543d1b0bc19e1544bfd"
+    },
+    {
+      "name": "PHOrbEnemyDamageCountPhaseFlagsRVA",
+      "va": "0x10060e310",
+      "rva": "0x60e310",
+      "length": 64,
+      "bytes": "9f03086b4c020054e00315aa578bfd97280280520100082ae00315aa718bfd97080340f969c385522901a072086969381f050071c1000054e00315aa4b8bfd97",
+      "sha256": "eaa35012400a756744af15c9be341fe377fccb4bfa3a92750889e27cd73c8a7d"
+    },
+    {
+      "name": "PHOrbEnemyDamageCountPhaseImmediateRVA",
+      "va": "0x10060e330",
+      "rva": "0x60e330",
+      "length": 64,
+      "bytes": "080340f969c385522901a072086969381f050071c1000054e00315aa4b8bfd9701001e32e00315aa668bfd976803178b15e107d1e00315aa448bfd9780000036",
+      "sha256": "2262c5a69f0673caa42ccba3594329194817ed3d9fe64c1202da70f41e5c067e"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseTargetGateRVA",
+      "va": "0x10060e35c",
+      "rva": "0x60e35c",
+      "length": 64,
+      "bytes": "6803178b15e107d1e00315aa448bfd9780000036e00315aa418bfd97e02d0836080340f909929b526901a0720001098b828afd97f7a22e91d60600111f00166b",
+      "sha256": "a6b4d078b2dd006f532979ca86a2cf7a20900ad00b3eb0808b27efd3ca48e37b"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseTargetStoreRVA",
+      "va": "0x10060e934",
+      "rva": "0x60e934",
+      "length": 64,
+      "bytes": "7403178b93e207d1e00313aace89fd9701001f32e00313aae989fd97080340f90849429100e12591610280522589fd97080340f989622ed10a919b526a01a072",
+      "sha256": "51e6fc445ee1b908191fbaeca880b7dfe20d49f7bedd1065be7f612fd2b25c24"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseAnimationWaitRVA",
+      "va": "0x1005b3760",
+      "rva": "0x5b3760",
+      "length": 64,
+      "bytes": "156969f8350200b4145a8152f6598112170280523700a072a02640f9400600b4080040f9082540f900013fd6c0050037683a40f9a90240b92a59141b0b01178b",
+      "sha256": "42f76c2279c4779056a4d170ab091f597c1d22807362a244f5fea08d6895e133"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseCountdownGateRVA",
+      "va": "0x1005b382c",
+      "rva": "0x5b382c",
+      "length": 64,
+      "bytes": "a082269112f6fe9720011037a0a20491010080520d000014fd7b43a9f44f42a9f65741a9f85fc4a8c0035fd6a082269107f6fe9760002037a1c6567902000014",
+      "sha256": "c10bf60c0fc91eb97745e131999141a544cdda3134ab627dac56ce04e4ed8508"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseIntervalsRVA",
+      "va": "0x1005b3858",
+      "rva": "0x5b3858",
+      "length": 64,
+      "bytes": "a082269107f6fe9760002037a1c6567902000014a136d779a0a2049160f5fe97a0220e91e003271e6535f197f4ac00f09442009101102c1e28f29152886a6838",
+      "sha256": "aa008effe0452c886cf766cd27fd3718777c7e3f0b113a190d837d031085b819"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseSelectedClearRVA",
+      "va": "0x1005b38b8",
+      "rva": "0x5b38b8",
+      "length": 64,
+      "bytes": "a0220e9100102e1e5735f197bfa20bb9bf9206b90010231e28f29152886a6838080120378822579100c11991adadff971f0000720010231e0150221e201c201e",
+      "sha256": "0cd93025e9acc0c0f7955e68aa9ea5516d33af26355d03070e49e6567884c3fc"
+    },
+    {
+      "name": "PHOrbEnemyDamagePhaseAnimationFlagsRVA",
+      "va": "0x1005b38f8",
+      "rva": "0x5b38f8",
+      "length": 64,
+      "bytes": "0190221e0018211ea0a207bda0822691dcf5fe97e80300aaa082269101011d32f6f5fe97683a40f908dd429100f11b91e003271e0110291e3b35f197683a40f9",
+      "sha256": "c685224a1b439e23eec9b4ba106cc141873e7a01b56d129720eb56f23b082c57"
+    },
+    {
+      "name": "PHOrbEnemyDamageOverrideAccumulationGateRVA",
+      "va": "0x1005637b8",
+      "rva": "0x5637b8",
+      "length": 64,
+      "bytes": "80422491c9360094c002003480c22391c6360094680240b90824c81a2802003680022491c1360094e803002a287f089b0001239e0859a8520101271e0018211e",
+      "sha256": "24e7d1a917f04d506361737dd904582310535f9bb5a283251ff3dc3bc346ae21"
+    },
+    {
+      "name": "PHOrbEnemyDamageOverrideAccumulationWriteRVA",
+      "va": "0x1005637d8",
+      "rva": "0x5637d8",
+      "length": 64,
+      "bytes": "80022491c1360094e803002a287f089b0001239e0859a8520101271e0018211ecf90eb97fa0300aa808224917e230094e80300aa8082249101011a0bf0240094",
+      "sha256": "0d04ab4e38cf5c6f379f0de65258f2c6d51aa0594e987a41b8f2f3d64bfc323c"
+    },
+    {
+      "name": "PHOrbEnemyDamageUnsignedShortRVA",
+      "va": "0x1005712e0",
+      "rva": "0x5712e0",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyDamageSignedByteRVA",
+      "va": "0x100571078",
+      "rva": "0x571078",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyDamageActionEnabledRVA",
+      "va": "0x1005a0648",
+      "rva": "0x5a0648",
+      "length": 64,
+      "bytes": "083840f909e481526901a072086969f8880000b408314079001d0753c0035fd600008052c0035fd6083840f909e481526901a072086969f8a80000b408854039",
+      "sha256": "4418967af6dc1c140ff58c822f37e5372650beba8a02dd2edf593098e397550d"
+    },
+    {
+      "name": "PHOrbEnemyDamageSpecialMarkerRVA",
+      "va": "0x10006309c",
+      "rva": "0x6309c",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091c85201d008811991143940f993ce4291687a46b989be9252a958a7721f01096ba101005488f6429100413291303714941f040071",
+      "sha256": "f64d2573dc2a68bfbcb7d01fb2367bebbb08f177a133d6a73ec1e1bf8911732d"
+    },
+    {
+      "name": "PHOrbEnemyComboThresholdRVA",
+      "va": "0x100563818",
+      "rva": "0x563818",
+      "length": 64,
+      "bytes": "bf0600716b05005480c22291533600941f040071eb040054808222914f3600941f00156b6b040054e83a40f908d1429109f14e7929651a53293d00133f050071",
+      "sha256": "41e8a04e1f9620f977c347ce9e23e33bd19323acaf5a7f7b2590a5bc0465977e"
+    },
+    {
+      "name": "PHOrbEnemyComboBypassRVA",
+      "va": "0x100563844",
+      "rva": "0x563844",
+      "length": 64,
+      "bytes": "08d1429109f14e7929651a53293d00133f0500710b01005408f54e7908651a53083d00131f0101716a000054e8031caa1300001476000036f90319cb0d000014",
+      "sha256": "cb2b6b4ddb1f09078c667dd387bed75bcc86674ee0b056f9d547776c653967b5"
+    },
+    {
+      "name": "PHOrbEnemyThreatPrepareAttachedRVA",
+      "va": "0x1005603f8",
+      "rva": "0x5603f8",
+      "length": 64,
+      "bytes": "220500b4f44fbea9fd7b01a9fd430091f40302aa484440b91f0500710b040054f30301aa33fb009460a207bd08e0a75289af00d0294100910a3e8c52ea18a072",
+      "sha256": "667eb55b7987aa8cef6bee39fa2f490a2bd4bd4d94403b66a44cdecf3b1dfa32"
+    },
+    {
+      "name": "PHOrbEnemyThreatPrepareOrderRVA",
+      "va": "0x1005604e4",
+      "rva": "0x5604e4",
+      "length": 64,
+      "bytes": "e10313aaf9fdff977f2a0d7978621a9100e4004f000300ade10313aae20315aabdffff97a80a4079090500513fd1027168010054aa4d00904a0937918b000010",
+      "sha256": "b83536523a2e08d44ddd3d8de74573af25521a4e7672827f2bdb04753553e930"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiRangeRVA",
+      "va": "0x100560fa4",
+      "rva": "0x560fa4",
+      "length": 64,
+      "bytes": "883a40f9aa2642290b2e85522b01a0720c696bb829010a4baa7f88526a00a0726dd89352cd04a0728a350a1b0a692bb8487d1053087d091b08414a0ba91240b9",
+      "sha256": "02eaaea53f80dbe8c751f4840cc4c3b4ecb2d07965362bc2247a97d946e60f60"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiClampRVA",
+      "va": "0x100560fd8",
+      "rva": "0x560fd8",
+      "length": 64,
+      "bytes": "087d091b08414a0ba91240b92841880b1f3d0071e901805208b1891a689a06b97f9e06b9b9feff1768d89352c804a072a97f88526900a0728a3a40f90b2e8552",
+      "sha256": "f2e9e435a0a171fb2eedaf1789d69a208f3066a21c215ccacf49098a8e209f59"
+    },
+    {
+      "name": "PHOrbEnemyThreatMultiHitRVA",
+      "va": "0x100564af4",
+      "rva": "0x564af4",
+      "length": 64,
+      "bytes": "699e46b9aa22d61a3f010a6aa101005428010a2a689e06b960a246bd00d8215ee102271e0018211ee00314aae10313aa220080520300801293150094689a46b9",
+      "sha256": "10bf95e0cd7a1d69b6d73ff3de6c5603f483a3b3465bb51fc2d1092dd3df3729"
+    },
+    {
+      "name": "PHOrbEnemyThreatPercentParamRVA",
+      "va": "0x100560700",
+      "rva": "0x560700",
+      "length": 64,
+      "bytes": "a4040014a81640b9a1040014090080d21f450171ea179f1aaa4a2a8b4a4100916ba21a914c6969b86c6929b8291100913f4100f181ffff541f450171a1920054",
+      "sha256": "65c2933eb1e0641fd8c46c83e2fb69d35e2592e17566e9db288491cbbe5eb3a2"
+    },
+    {
+      "name": "PHOrbEnemyThreatPercentExecuteRVA",
+      "va": "0x100568ac8",
+      "rva": "0x568ac8",
+      "length": 64,
+      "bytes": "609a46bd00d8215e0859a8520101271e0018211ee00314aae10313aa22008052030080122f000014e00314aae10313aa8dc4ff971b04001460020191010080d2",
+      "sha256": "f2419d6cef9bfbc1b85b44610a75949917912fb3f1d31e629bb578df82ffdbe4"
+    },
+    {
+      "name": "PHOrbEnemyThreatGravityRVA",
+      "va": "0x100568b6c",
+      "rva": "0x568b6c",
+      "length": 64,
+      "bytes": "bf920171400100546000221e619a46bd21d8215e0008211e0859a8520101271e0018211e477deb97e30300aae003271ee00314aae10313aa2200805274050094",
+      "sha256": "579955efad27758bc6997532ba7be303fc8e5b891ae22bd221b10ec3edcb735b"
+    },
+    {
+      "name": "PHOrbEnemyThreatDamageEnrageRVA",
+      "va": "0x10056a1c8",
+      "rva": "0x56a1c8",
+      "length": 64,
+      "bytes": "20802191e91b00941f0400718b00005460422191661b00940808281e60020a91eb1a0094f70300aa60c20991e81a0094e803002a088117aa0001229e0009201e",
+      "sha256": "fe5dbaff341f4d0d9c5276c87845ac56449833ca6f079c74b93a0f87506f71a9"
+    },
+    {
+      "name": "PHOrbEnemyThreatDamageAdditionRVA",
+      "va": "0x10056a208",
+      "rva": "0x56a208",
+      "length": 64,
+      "bytes": "4b76eb97df020071d7c2801a60c21f91f9080094f60300aa60c21f91010080526b0a0094883a40f908cd429100e1199199e3eb97883a40f9e000003408dd4291",
+      "sha256": "1030f16656fcb8bf68ae14849250e6f1102e966bdc1be26fb3578d602dc4f997"
+    },
+    {
+      "name": "PHOrbEnemyThreatFloatRoundRVA",
+      "va": "0x100047b34",
+      "rva": "0x47b34",
+      "length": 64,
+      "bytes": "0820201e01102c1e02103c1e41bc211e2028201e0000381ec0035fd6287c0853297c10534a7c08534b7c105301102e1e0020211e21cc201e0820201ee003271e",
+      "sha256": "7fa5b500ac6445c98774d4c8ddc2e9cc0a077b3d24e30d6e9a07a4e9ca77328b"
+    },
+    {
+      "name": "PHOrbEnemyThreatLayerRoundRVA",
+      "va": "0x1000481fc",
+      "rva": "0x481fc",
+      "length": 64,
+      "bytes": "0100621e2200621e00c0221e4104401f687400b0001147fd2020601eec000054083cf8d20001679e2020601e2040601e450000540001679e0820601e01106c1e",
+      "sha256": "f8a3f371b6e15b2a08656e1dbade32247a56c5776ede3bf6d84cea2b575c6876"
+    },
+    {
+      "name": "PHOrbEnemyThreatGravityFloorRVA",
+      "va": "0x1000480ac",
+      "rva": "0x480ac",
+      "length": 64,
+      "bytes": "0820201e01b8a15e21d8215e24d4201e6000005401103e1e0028211e0000381ec0035fd606103c1e8208061f4428241e4020201e8494201ea00c061f0228251e",
+      "sha256": "660fd95bb78b6639bbd8108364ff06ae4ead924207d570e64901ede70d74d304"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageParamsRVA",
+      "va": "0x10056060c",
+      "rva": "0x56060c",
+      "length": 64,
+      "bytes": "a81640b9689a06b914000014883a40f9aa26422929010a4b0a2e85522a01a0720b696ab8ac7f88526c00a0726dd89352cd04a0726b350c1b0b692ab8687d1053",
+      "sha256": "d40443317d94bc5a10ff59d85f277b93b3b4a69d6514d132685ef4f8b9988c81"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageFirstParamRVA",
+      "va": "0x100560530",
+      "rva": "0x560530",
+      "length": 64,
+      "bytes": "a81240b9689a06b9a81640b94b00001408008012689206b900103e1e16050014a81240b90e050014090080d2aa5200916ba21a914cb57f29ac410c2a6c6929b8",
+      "sha256": "26aad06937831ffd6d63a7a6b9e38d124029ed1a652e60f6ef1a8631b8100f39"
+    },
+    {
+      "name": "PHOrbEnemyThreatEnrageApplyRVA",
+      "va": "0x100567440",
+      "rva": "0x567440",
+      "length": 64,
+      "bytes": "6132cd796082219168270094609e46bd00d8215e0859a8520101271e0018211e60422191e52600942800805268022d39be090014619a46b91fe10071e8008052",
+      "sha256": "8641feaa9be3f29bbbb6a9c3694bf731a511d238da5c545f23ef61b7de7015a2"
+    },
+    {
+      "name": "PHOrbEnemyThreatAwokenApplyRVA",
+      "va": "0x100567f6c",
+      "rva": "0x567f6c",
+      "length": 64,
+      "bytes": "89cd88526901a0720a6969786b324d794c651a538c3d00134b010b0b6b2500129f0500714bc900544a1516126a010a2a4a0600146132cd796042229190240094",
+      "sha256": "6863453d9b602142c647d8b11e91be53222b83ee3b0ecf32cfc9c17bdd110f22"
+    },
+    {
+      "name": "PHOrbEnemyThreatAssistApplyRVA",
+      "va": "0x100568dac",
+      "rva": "0x568dac",
+      "length": 64,
+      "bytes": "ff1b00b908008052893a40f98a5389526a01a0722b696a78ac2240796b1115128b2500336b0116322b692a78ffa30039ff2700b916be8052173e82527701a072",
+      "sha256": "4869c4ce077346e8c81126204f83250aa86eb6d2af995baa2b6813c00e3e49b7"
+    },
+    {
+      "name": "PHOrbEnemyThreatUnmatchableRVA",
+      "va": "0x100568654",
+      "rva": "0x568654",
+      "length": 64,
+      "bytes": "d6060011df86017121ffff54883a40f9a92240798afa88526a01a0720b696a786b1115122b2500336901163209692a78883a40f909696a782979141209692a78",
+      "sha256": "306f89a8a3afaf4e7b1b844ae8945da3a75b15d633a646d6ca05332851240e89"
+    },
+    {
+      "name": "PHOrbEnemyThreatUnmatchableRandomRVA",
+      "va": "0x100568694",
+      "rva": "0x568694",
+      "length": 64,
+      "bytes": "a81640b92896f837893a40f929d1429120611f91013d00124a110094c30400146132cd7960c221917d040014e00314aaf1caff97e00314aa010080524c1cec97",
+      "sha256": "14122b2fb2ae7076c74deeb3e7b9c4a80d77633478fd1be469e0f6913de6449a"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayParamsRVA",
+      "va": "0x10055ff70",
+      "rva": "0x55ff70",
+      "length": 64,
+      "bytes": "ff8302d1fc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291f40303aae21300f9f50300aa1b0080d2ffff0229885d00f008b142f9080140f9",
+      "sha256": "0aea826fc186fb3f99901372db834810ecd70a8033e2323ee7f275ef887c9671"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayTargetsRVA",
+      "va": "0x10055ffe4",
+      "rva": "0x55ffe4",
+      "length": 64,
+      "bytes": "e0021c8b0100805202ff0094a00c0034f3021c8b60220791b9440094200c00349401f8379f0a0071e00000549f06007101010054fb0000347f170071a0000054",
+      "sha256": "9082414ff9da4fd8c2f475e0245e76e839b3c22a74e14d84c0eaf3e9fb18844b"
+    },
+    {
+      "name": "PHOrbEnemyThreatDelayApplyRVA",
+      "va": "0x100567538",
+      "rva": "0x567538",
+      "length": 64,
+      "bytes": "160080d277621a91889382526801a07218f10c9108102a1ed9b98c52791fad729a3a40f94803188b08a117d1080140391f05007181030054fb6a76b87f070071",
+      "sha256": "ef66378ef574072964d29e7618e4f94f8cf0fe3069ddc2c0f0e65b7d3c4f10a2"
+    },
+    {
+      "name": "PHOrbDungeonDumpCountRVA",
+      "va": "0x1005a0500",
+      "rva": "0x5a0500",
+      "length": 64,
+      "bytes": "88ad00d00841009189469752891ea0720069e978c0035fd608409d526801a072006868f8200100b4fd7bbfa9fd030091080040f9087140f900013fd6fd7bc1a8",
+      "sha256": "708e9f444ec3ffc1f071880534f970d0d5cc56970dfc1428d9994c4e4edf4ce8"
+    },
+    {
+      "name": "PHOrbDungeonDumpLoadCountRVA",
+      "va": "0x100446a0c",
+      "rva": "0x446a0c",
+      "length": 64,
+      "bytes": "130080d288469752881ea072206b2878282f7d911661299158479752981ea0721a4697529a1ea0728855009008794bbd1b658452e00315aad06df89708218052",
+      "sha256": "36621063a2955abd4e142a3a11a4491809992d250d06b999f88746f1fa346f6f"
+    },
+    {
+      "name": "PHOrbDungeonDumpLoadStrideRVA",
+      "va": "0x100446b50",
+      "rva": "0x446b50",
+      "length": 64,
+      "bytes": "948200919c0700f121f8ff5473060091d62204917f9201f1c1f6ff54ffb2007103030054e00315aa636df897082b8452a81ea072206b28b8e00315aad86df897",
+      "sha256": "566285b833fdd8978d9f33a02aa638754cfc6ba2bafe07f4c2d88c6ecee00c50"
+    },
+    {
+      "name": "PHOrbDungeonDumpParseEntryRVA",
+      "va": "0x10069122c",
+      "rva": "0x69122c",
+      "length": 64,
+      "bytes": "e81340f908151b8b15190079170500b91a110079eaa745290a150079140d00f9091100b9e81f40f90005009108004039092500513f090071630000541f810071",
+      "sha256": "10ea759d1cec1d5408ffdf9b8d921f3a7cdc4f1cf6ec4e4170fe66ee6e5a8d82"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnWaveRVA",
+      "va": "0x1005a40ac",
+      "rva": "0x5a40ac",
+      "length": 64,
+      "bytes": "0821805269ad00d0294100912827289b082d7d9114e128918106c079083b40f913929b527301a0720001138b4733ff97083b40f90001138b2c33ff971f040071",
+      "sha256": "f30609cd2c274e1463206e887371d1d04ce5de692a754dec7fba399f8c61dd67"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnEntryRVA",
+      "va": "0x1005a4124",
+      "rva": "0x5a4124",
+      "length": 64,
+      "bytes": "810640b91af0915280031a8b4f2ffe97f50300aa21031b8be00318aae20314aa030080521afdff97a21e407980031a8be1b300914734fd97083b40f909cf8652",
+      "sha256": "7e1bd1993a2c16517ac2b101a0440c798277d2998a831550db0d6c87add809a4"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnCatalogRVA",
+      "va": "0x1005a3668",
+      "rva": "0x5a3668",
+      "length": 64,
+      "bytes": "810640b977ad00f0f742009108f09152e002088bfc31fe97f80300aac83a40f908cd429100e1199183feea97a0000037810640b908f09152e002088b1931fe97",
+      "sha256": "4c67aabcafc62644e426957b8abd83c3c1faafbac9bd9e56593ce38340a93ad7"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnLevelRVA",
+      "va": "0x1005a36a8",
+      "rva": "0x5a36a8",
+      "length": 64,
+      "bytes": "081f4079e91784520801090b684a027982124079627202797f1e003908208052680200797fd200787f4a00397f8e00397f22007977620891810640b9c83a40f9",
+      "sha256": "39474f0a061c7e3c5a51b9305bbb836dc4b8281cd8fa4b790039298dd3df29bf"
+    },
+    {
+      "name": "PHOrbDungeonDumpSpawnBindingRVA",
+      "va": "0x1005a360c",
+      "rva": "0x5a360c",
+      "length": 64,
+      "bytes": "c83a40f90849429100a13d9164efff97600a0479744603f9880680b929b19652099fa272097d299b2afd7fd329fd6d9329010a0b0ad490522a00a07228a10a1b",
+      "sha256": "b360ec500d15febf9349b00c21f2c8449a2c3eedb62bdb621d3bb0fe88e18a80"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentRVA",
+      "va": "0x1004a964c",
+      "rva": "0x4a964c",
+      "length": 64,
+      "bytes": "fd7bbfa9fd03009100601f9105000094e803004b007d800afd7bc1a8c0035fd6f44fbea9fd7b01a9fd430091f30300aa0808537908651a53083d00131f050071",
+      "sha256": "02e7d510da37d30095a4ef0fc6bda1c6ec399a76132b0e16944feba17d652523"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentSubtractRVA",
+      "va": "0x1004a96a4",
+      "rva": "0x4a96a4",
+      "length": 64,
+      "bytes": "68925a7908651a53083d00131f0500718b00005460323591091f03949402004be00314aafd7b41a9f44fc2a8c0035fd6fd7bbfa9fd03009100601f91e3ffff97",
+      "sha256": "76a9471f55b59c5bcbbf6ad350284060cf4143e414290baf8944b60b1f59358a"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentSkipRVA",
+      "va": "0x1005fc510",
+      "rva": "0x5fc510",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa083840f949c685522901a0720a6969784a0500110a69297808cd42910041169143b4fa97683a40f9084942911f040071",
+      "sha256": "5c7f48cb11ef38f612da2543054d0517624bcb36d31d45daeb28eb5593cb4e1f"
+    },
+    {
+      "name": "PHOrbEnemyComboAdjustmentRecordRVA",
+      "va": "0x1005fb080",
+      "rva": "0x5fb080",
+      "length": 64,
+      "bytes": "eb2bb96de923016dfa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f60306aaf30305aaf40304aa4840601e2940601e0a40201ef70303aaf80302aa",
+      "sha256": "703e5702d0b8d57ec23629d161cebf5ab35671213c519950a1acbd1037e8c3bd"
+    },
+    {
+      "name": "PHOrbEnemyComboActualCountRVA",
+      "va": "0x1006157ac",
+      "rva": "0x6157ac",
+      "length": 64,
+      "bytes": "06008052bcdaff97e30300aae71740f9883a40f909c885522901a072086969b808050011e80300b9e26300910503198be00314aae10316aae40313aae60315aa",
+      "sha256": "553b6c971d20b0b9af19f2baee3f580b666db904285f55e0185f460f2fd19e33"
+    },
+    {
+      "name": "PHOrbEnemyComboUpperThresholdRVA",
+      "va": "0x100563b18",
+      "rva": "0x563b18",
+      "length": 64,
+      "bytes": "bf0600718b03005480022691933500941f0400710b03005480422691b22200941f00156b8c02005476000036f90319cb0d00001480321791e003271eb074f297",
+      "sha256": "781ff67bbcda9062e9540d274232840362ab614e1852bdf0cd52cd232a8cb29d"
+    },
+    {
+      "name": "PHOrbEightCompetitiveSkillRVA",
+      "rva": "0x4dc370",
+      "bytes": "ff4302d1fc6f03a9fa6704a9f85f05a9f65706a9f44f07a9fd7b08a9fd030291f30301aae00700f9973101b0f7220b91ff2f00b900e4004fe00200ad48184079",
+      "sha256": "8068f8ff099d94ff6476c34cf06cad79f2e14aa20290832b9ddd247d0f96f34e",
+      "va": "0x1004dc370",
+      "length": 64
+    },
+    {
+      "name": "PHOrbEightSkillOwnerRVA",
+      "rva": "0xefd8",
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191083840f9c9ce9f524901a07209696938c91318375bd900b07b43229189438a52",
+      "sha256": "e24c70471a38d3989c49efacf3779d3ace065f27b8e0a9dad0691d06035780f8",
+      "va": "0x10000efd8",
+      "length": 64
+    },
+    {
+      "name": "PHOrbEightSkillReceiptStartRVA",
+      "va": "0x1005cba28",
+      "rva": "0x5cba28",
+      "length": 64,
+      "bytes": "683a40f90949429137214eb97704f836f60300aa20210eb98a0e45b92a290eb908d54291006101912496fe971ff8037148010054773a40f9180b8a527801a072",
+      "sha256": "bc56f58b9101da1845d369b71f518bd275cb1d39b93bf49b899da908dd6c7a37"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptCountRVA",
+      "va": "0x1005cba68",
+      "rva": "0x5cba68",
+      "length": 64,
+      "bytes": "e002188b1d96fe9708040011e002188b013d00125684fe97e00316aa81218052020080d2aee2ff9760010034bf020071083d8052093f80523711889a8002178b",
+      "sha256": "4cb751750bba9c46867a55ce32fdce4beb8004352793792f1be8325619610d50"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptOwnerRVA",
+      "va": "0x1005cbca8",
+      "rva": "0x5cbca8",
+      "length": 64,
+      "bytes": "5f190039572100b808c5429108c10791890208cb29fd4493ec738bd24c9cbaf2ec3dd7f2acc4e9f2297d0c9b490100796a0140390a020035293d40930abe8052",
+      "sha256": "7c2e910c88b5e4ce648128ce76db3db93e811adea0d3274470e275483fce4cb0"
+    },
+    {
+      "name": "PHOrbEightSkillReceiptSlotRVA",
+      "va": "0x1005cbcb8",
+      "rva": "0x5cbcb8",
+      "length": 64,
+      "bytes": "890208cb29fd4493ec738bd24c9cbaf2ec3dd7f2acc4e9f2297d0c9b490100796a0140390a020035293d40930abe805237212a9bff3f0039e0821391a1020052",
+      "sha256": "d85bb23d4793a6ffb67cc8e5b6e01dc444449aabf0848401a6685b4a28191390"
+    },
+    {
+      "name": "PHOrbTerminalDispatchRVA",
+      "va": "0x1005b56cc",
+      "rva": "0x5b56cc",
+      "length": 64,
+      "bytes": "0849429100e12591b0edfe971f2c017168edff54e803002a094b009029813f91eaecff102b7968784a090b8b40011fd6e00313aaea35fe9720370034683a40f9",
+      "sha256": "6df2a427fe964f0a4f2632ac07302d5d43b3a1136cc0c471a12a51e8a4fc20ad"
+    },
+    {
+      "name": "PHOrbTerminalTableLowRVA",
+      "va": "0x100f16018",
+      "rva": "0xf16018",
+      "length": 64,
+      "bytes": "0b0263018801c7019001c800e500d5011602d100c101ce00cb00000000000701ad01e301b900d700b001be012002b301c500bc002c021302c200c401db01bf00",
+      "sha256": "e5a2d37fa4fcb5e7c36ef76fbb050fea0ba521537fa666e024018aa5216d4fb4"
+    },
+    {
+      "name": "PHOrbTerminalTableHighRVA",
+      "va": "0x100f16060",
+      "rva": "0xf16060",
+      "length": 64,
+      "bytes": "2f02e901f201dd000302ac002302290285013202fa01b60002000400110013000100030015000f000d003a00160019001a001c001e0020001f00220024002600",
+      "sha256": "4463d44cf91336cddbf53eea72e436647ba56b9f01f0a2de422ff54b65bc1129"
+    },
+    {
+      "name": "PHOrbDungeonClearDispatchRVA",
+      "va": "0x1005b5cb4",
+      "rva": "0x5b5cb4",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aaae3dff97eefdff17e00313aa5da2e997ebfdff17683a40f90849429100e12591a104805241ecfe97",
+      "sha256": "27d5e635ad4ea54ce77b2afab3393a0f6a26a155701bee81eb4e36a93035559b"
+    },
+    {
+      "name": "PHOrbDungeonClearResultRVA",
+      "va": "0x100585f64",
+      "rva": "0x585f64",
+      "length": 64,
+      "bytes": "000080528bf3fe97683a40f92001003409929f524901a0720ac285522a01a0721f6929381f692a388108805202000014a10380520849429100e1259195abff97",
+      "sha256": "4bea943c4a7e5a8fd349c1a20d6c129e859f59e8a8e332b337b889374f158a1f"
+    },
+    {
+      "name": "PHOrbCompetitiveResultDispatchRVA",
+      "va": "0x1005b57fc",
+      "rva": "0x5b57fc",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aa6047ff971cffff17e00313aa0428ff9719ffff1708199452880ba072c96a68b829050011c96a28b8",
+      "sha256": "2430157accc944a0eeb16ae6db59493912b73fe49f38dd324d3fca502dc1429e"
+    },
+    {
+      "name": "PHOrbCompetitiveResultRVA",
+      "va": "0x1005b5c94",
+      "rva": "0x5b5c94",
+      "length": 64,
+      "bytes": "683a40f9093585522901a0722a0080520a692938e00313aabc49ff97f6fdff17683a40f9093585522901a0722a0080520a692938e00313aaae3dff97eefdff17",
+      "sha256": "23cc68e48c8356b2ca06752ce626b16cffd44494d70eab87090f2d4369cc0ae7"
+    },
+    {
+      "name": "PHOrbComboBonusResetRVA",
+      "va": "0x10006a370",
+      "rva": "0x6a370",
+      "length": 64,
+      "bytes": "ff0303d1e923056dfc6f06a9fa6707a9f85f08a9f65709a9f44f0aa9fd7b0ba9fdc30291fc0300aa163840f9c8d6429115b11f91c8d2429119c11e91c8c24291",
+      "sha256": "8101f74cbfb63b9ac3f406ade2da67187b3659ed1220c7ea547fb0b7c4a64c62"
+    },
+    {
+      "name": "PHOrbComboBonusApplyRVA",
+      "va": "0x10006fb6c",
+      "rva": "0x6fb6c",
+      "length": 64,
+      "bytes": "ff8302d1eb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291fa0301aaf30300aa1c3840f999db4291f3e9ff97e00313aa",
+      "sha256": "8b4a4f8e764ca4e747c308bcb2a7664fef509aaad308f449c817560cfe65ef02"
+    },
+    {
+      "name": "PHOrbComboBonusLeaderRVA",
+      "va": "0x10006b124",
+      "rva": "0x6b124",
+      "length": 64,
+      "bytes": "ff0302d1fc6f02a9fa6703a9f85f04a9f65705a9f44f06a9fd7b07a9fdc30191173840f9e84a42910ae12891480140b9080142511f190e7121010054fd7b47a9",
+      "sha256": "4b344d5cc540ca5c486443164dbc697c1220a8c78a80a4ee1c7c799aa0385c5a"
+    },
+    {
+      "name": "PHOrbComboBonusBadgeRVA",
+      "va": "0x100070ee4",
+      "rva": "0x70ee4",
+      "length": 64,
+      "bytes": "f657bda9f44f01a9fd7b02a9fd830091f40301aaf30300aa1f60003915d700d0b5420091e00315aa42008052030080526eef1394600200b9e00315aae10314aa",
+      "sha256": "5991fdf51cd28d122e471b2269b63f1c4dbcdb87d3c39e497ca58b72bbc9194d"
+    },
+    {
+      "name": "PHOrbComboBonusResolveRVA",
+      "va": "0x100603df4",
+      "rva": "0x603df4",
+      "length": 64,
+      "bytes": "ffc301d1eb2b016de923026df85f03a9f65704a9f44f05a9fd7b06a9fd830191f30300aa083840f908d142910011259111b5fd971f18007240010054743a40f9",
+      "sha256": "f078fdccc7a7ba543b9f34ac540942925a3812b0561d5d4416e4dae1675a2b7b"
+    },
+    {
+      "name": "PHOrbComboBonusAwakeningRVA",
+      "va": "0x100603a08",
+      "rva": "0x603a08",
+      "length": 64,
+      "bytes": "280040b9680a0034ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f50302aaf40301aaf30300aa0a0080d209008052163840f9cbce42916bb11a91",
+      "sha256": "e50f56e8642ab626a3bd3945796b699ed1aa951f4d6adb05854900b1210c3d12"
+    },
+    {
+      "name": "PHOrbComboBonusColumnRVA",
+      "va": "0x100603b5c",
+      "rva": "0x603b5c",
+      "length": 64,
+      "bytes": "280040b9680a0034ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f50302aaf40301aaf30300aa0a0080d209008052163840f9cbce42916bb11a91",
+      "sha256": "e50f56e8642ab626a3bd3945796b699ed1aa951f4d6adb05854900b1210c3d12"
+    },
+    {
+      "name": "PHOrbComboBonusRepeatRVA",
+      "va": "0x100603cb0",
+      "rva": "0x603cb0",
+      "length": 64,
+      "bytes": "280040b91f050071cb090054ff4301d1f85f01a9f65702a9f44f03a9fd7b04a9fd030191f40301aaf30300aa163840f9c802088b89d586526901a07208696938",
+      "sha256": "9a14daf38af223f823e7b37000a181fc7fc95da3748c2241a0b2c2a50ae41047"
+    },
+    {
+      "name": "PHOrbComboBonusMatchRVA",
+      "va": "0x1005fc954",
+      "rva": "0x5fc954",
+      "length": 64,
+      "bytes": "ef3bb66ded33016deb2b026de923036dfc6f04a9fa6705a9f85f06a9f65707a9f44f08a9fd7b09a9fd430291ff8307d1a85800d008b142f9080140f9a88315f8",
+      "sha256": "648dc67dc418a531d6961d94f99a922a5b44e43cb0bafc228087b842615248a1"
+    },
+    {
+      "name": "PHOrbComboBonusColorRVA",
+      "va": "0x1005fa450",
+      "rva": "0x5fa450",
+      "length": 64,
+      "bytes": "ff8304d1e9230b6dfc6f0ca9fa670da9f85f0ea9f6570fa9f44f10a9fd7b11a9fd430491f90306aae51300f9e41f00f9e30700f9f80302aaf30300aac8580090",
+      "sha256": "fb2b487104102cc99981cbd984c32aecfda6fbef6a9810f42821354b2e4db196"
+    },
+    {
+      "name": "PHOrbComboBonusProviderRVA",
+      "va": "0x1005a0194",
+      "rva": "0x5a0194",
+      "length": 64,
+      "bytes": "280040391f05007101050054fc6fbaa9fa6701a9f85f02a9f65703a9f44f04a9fd7b05a9fd430191f30302aaf40301aaf50300aa20200191ab43ff971f040071",
+      "sha256": "24b549fa735870f2f683398d704ae71f51483841e39f7744f92008a60e3c1822"
+    },
+    {
+      "name": "PHOrbComboBonusAttackColorsRVA",
+      "va": "0x1005f9e00",
+      "rva": "0x5f9e00",
+      "length": 64,
+      "bytes": "f85fbca9f65701a9f44f02a9fd7b03a9fdc30091f30300aa1400805215df82527501a072d600805237008052783a40f90803158b092114d1290140393f050071",
+      "sha256": "71c3cdeb5282e8732c6c218348ddd0861954f63416d5c8e4c67198a1d7035bf7"
+    },
+    {
+      "name": "PHOrbComboBonusGroupCreditRVA",
+      "va": "0x1006013c0",
+      "rva": "0x6013c0",
+      "length": 64,
+      "bytes": "61feff545f01096beb0100544bca85522b01a07209696b384a8f423929010a0b09692b38c8188052488b0239e0cf40bd41930291e0031baa020080526abffe97",
+      "sha256": "86004c515754a1a1c4499d3bd0714e4755fb16f2d65974bc4ade491375958e78"
+    },
+    {
+      "name": "PHOrbComboBonusTCreditRVA",
+      "va": "0x1005ff9f8",
+      "rva": "0x5ff9f8",
+      "length": 64,
+      "bytes": "e89300b9683b40f9e0cf40bdc202c03909cf86526901a0720001098bc10f8052df95e997683b40f969538c526901a072096969383f050071610c0054c902c039",
+      "sha256": "017260789bc5781ea390e5f7090d2613f49d0779cf70464d1f00945f1c17db50"
+    },
+    {
+      "name": "PHOrbComboBonusTProviderRVA",
+      "va": "0x1005fd280",
+      "rva": "0x5fd280",
+      "length": 64,
+      "bytes": "37008052f8630391e0031baae10315aac20f80529f8dfe97e0050034690240f92a01168b482114d1080140391f050071210500544bf1df38681d0012ab01f837",
+      "sha256": "3ae67087f6ad7e941b61b342b7c392e5eacd9839614fba958ff02b859e5ae905"
+    },
+    {
+      "name": "PHOrbComboBonusAwakeningCreditRVA",
+      "va": "0x1006044a8",
+      "rva": "0x6044a8",
+      "length": 64,
+      "bytes": "2ca18c52cd109052ee0310aaef290b9bf04142791f020c6be1000054f0454279b00000349402100bf09144390801102ae82f0039f07942791f020c6be1000054",
+      "sha256": "09c53e392928b07394c9f5ee0a074e18e5a086b692ef8a606c2323817d47d208"
+    },
+    {
+      "name": "PHOrbComboBonusEquipmentProviderRVA",
+      "va": "0x100481df0",
+      "rva": "0x481df0",
+      "length": 64,
+      "bytes": "0841009109f091520001098b1cb80294f60300aab5024339a11a00120c21ee97c0000034a11a0012e00316aae20314aa7920ee971300130be00313aafd7b44a9",
+      "sha256": "d8438495ad277c38301812f4b5d6ef2086efacd6e43b851f97bd4f914f632f38"
+    },
+    {
+      "name": "PHOrbComboBonusActivationCounterRVA",
+      "va": "0x100065194",
+      "rva": "0x65194",
+      "length": 64,
+      "bytes": "e923bc6df65701a9f44f02a9fd7b03a9fdc30091f50302aaf30301aa0840201ef40300aa3f580071c00000547f56027180000054e80313aa7f26017141000054",
+      "sha256": "7ee8b9fbeb29d5b3d6b115a10119cf540c7f9342a57f3c1172c9e229eae58d49"
+    },
+    {
+      "name": "PHOrbEnemyPartsOrdinaryRVA",
+      "va": "0x100019acc",
+      "rva": "0x19acc",
+      "length": 64,
+      "bytes": "0828447928024037f44fbea9fd7b01a9fd430091f30300aa00400191ab5c1594f40300aa60020191a85c1594e803002a088114aa1f0100f1e0d79f1afd7b41a9",
+      "sha256": "c00e2a3362438672abdf1adba08075e2fc41522953dfd7a90a78e7eeb6d0c1d1"
+    },
+    {
+      "name": "PHOrbEnemyPartsAliveRVA",
+      "va": "0x1004905a4",
+      "rva": "0x4905a4",
+      "length": 64,
+      "bytes": "082844796800403700008052c0035fd6f44fbea9fd7b01a9fd430091f30300aa00402a91ac820394c000f83760c21f91d94eee971f0000f1e0d79f1a02000014",
+      "sha256": "722521ed56d105235005f1a5476ba95907d7c4d185bdec639be4136f66d20067"
+    },
+    {
+      "name": "PHOrbEnemyPartsHPRVA",
+      "va": "0x100024138",
+      "rva": "0x24138",
+      "length": 64,
+      "bytes": "f44fbea9fd7b01a9fd430091f30300aa00800a91cb3315942001f83760020a9129211594f40300aa60420a9126211594e803002a008114aa0200001400008092",
+      "sha256": "497a4c373f1c4dc8ada75192dcf32a37554a981b28ea09fa82597297883df43e"
+    },
+    {
+      "name": "PHOrbEnemyPartsSignedByteRVA",
+      "va": "0x100571078",
+      "rva": "0x571078",
+      "length": 64,
+      "bytes": "090840b9e83701b00a514ab928b300900b694db9080040b96c518b52ec50ad7208010c4aac008052080588138c050071c1ffff544901094a29010b4a0a0440b9",
+      "sha256": "891671f7800a6b53cb5b5194badf6dfece7104e67c9c24ad31d8a6a1b7e3b4f6"
+    },
+    {
+      "name": "PHOrbEnemyPartsSkillActionRVA",
+      "va": "0x1005b050c",
+      "rva": "0x5b050c",
+      "length": 64,
+      "bytes": "7a3b40f94803148b005d00d16da5e99760000034486bf4384803f836683b40f90001198b1902ff9794a22e91730600111f00136b6cfeff54683b40f908d14291",
+      "sha256": "02cb64fe9fbbe720538ddaf0c46f6ea732f21ab1ae69b181e5988b3d0e0e4cf7"
+    },
+    {
+      "name": "PHOrbEnemyPartsSkillCountRVA",
+      "va": "0x1005b01ac",
+      "rva": "0x5b01ac",
+      "length": 64,
+      "bytes": "7a3b40f94803148b159500d1e00315aa44a6e99760000034f70600110a000014e00315aaf580fb97e0000034486bb438693b40f90825389b0001198b39a6e997",
+      "sha256": "25e2dfd3cb506c43f549a3107c935c597c804da9e3a748fe4249c987ccb86dfe"
+    },
+    {
+      "name": "PHOrbEnemyPartsEffectsRVA",
+      "va": "0x10056329c",
+      "rva": "0x56329c",
+      "length": 64,
+      "bytes": "80422a91763700941f0400718b0000541a4700b448034039c846103680022791ad3700941f0400713ab39f9aeb010054d60100378022189100102e1ecf76f297",
+      "sha256": "0e97c826ba643a7dd0b5c08303f211ad92ca64014e548bd2556d5d24b5c19c48"
+    }
+  ],
+  "thorn_budget": {
+    "damage": "native-float-percent-rounded-effective-maximum",
+    "pending_damage": 753272,
+    "pending_thorn_damage": 753276,
+    "survival": "current-HP-greater-than-pending-plus-route-upper-bound",
+    "healing": "not-credited",
+    "awakening_resistance": "not-credited",
+    "contact": "target-token-after-swap-only",
+    "heart_requirement": "first-removal-exact-four"
+  },
+  "migration": {
+    "from_target": "jp.gungho.pad-ios-23.6.0-106878",
+    "report": "ios/docs/address-update-23.6.1.md",
+    "evidence": "ios/research/address-update-23.6.1.json",
+    "validation": "static-only; not compiled or device-tested",
+    "historical_evidence": "Earlier decomp/research artifacts cited by retained design notes describe 23.6.0; use migration report for the new input."
+  }
+}

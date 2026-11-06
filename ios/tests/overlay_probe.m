@@ -8,6 +8,7 @@
 #import "PHOrbSession.h"
 #import "PHConfiguration.h"
 #import "PHFormationModel.h"
+#include "PHTargetGenerated.h"
 #import <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <math.h>
@@ -1941,7 +1942,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             UIWindow *comparisonWindow = [overlay.rootViewController valueForKey:@"orbWindow"];
             [comparisonController loadViewIfNeeded];
             NSMutableDictionary *comparisonState = [@{@"dungeonReport":@{@"available":@YES}} mutableCopy];
-            NSDictionary *partialCapture = @{@"schema":@1,@"kind":@"PADCheaper-dungeon-report",@"target":@"jp.gungho.pad-ios-23.6.0-106878",
+            NSDictionary *partialCapture = @{@"schema":@1,@"kind":@"PADCheaper-dungeon-report",@"target":@(PHTargetID),
                 @"dungeon":@12,@"floor":@3,@"totalFloors":@2,@"allDefinitionsCaptured":@NO,@"observations":@[],
                 @"floorDefinitions":@[@{@"wave":@0,@"rawCaptureComplete":@NO},@{@"wave":@1,@"rawCaptureComplete":@NO}]};
             [comparisonController setValue:[^NSDictionary *{ return @{@"orbState":comparisonState}; } copy] forKey:@"snapshot"];

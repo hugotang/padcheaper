@@ -6,6 +6,7 @@
 #import "PHOrbProfiles.h"
 #import "PHOrbPlanning.h"
 #import "PHFormationModel.h"
+#include "PHTargetGenerated.h"
 #include <stdio.h>
 
 static NSUInteger failures;
@@ -16,28 +17,32 @@ static void Check(BOOL condition, const char *message) {
 int main(void) {
     @autoreleasepool {
         NSDictionary *info = @{@"CFBundleIdentifier": @"jp.gungho.pad",
-                               @"CFBundleShortVersionString": @"23.6.0", @"CFBundleVersion": @"106878"};
+                               @"CFBundleShortVersionString": @(PHTargetVersion), @"CFBundleVersion": @(PHTargetBuild)};
         NSString *reason = nil;
-        Check(PHBundleIdentityMatches(info, @{}, @"jp.gungho.pad", @"23.6.0", @"106878", &reason),
+        Check(PHBundleIdentityMatches(info, @{}, @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason),
               "original PAD bundle matches");
         NSMutableDictionary *hostID = [info mutableCopy];
         hostID[@"CFBundleIdentifier"] = @"com.example.LiveContainer";
         NSDictionary *metadata = @{@"doUseLCBundleId": @YES, @"LCOrignalBundleIdentifier": @"jp.gungho.pad"};
-        Check(PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @"23.6.0", @"106878", &reason),
+        Check(PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason),
               "LC host bundle ID accepts the verified original ID");
         Check(!PHBundleIdentityMatches(hostID, @{@"doUseLCBundleId": @NO, @"LCOrignalBundleIdentifier": @"jp.gungho.pad"},
-                                       @"jp.gungho.pad", @"23.6.0", @"106878", &reason), "stale original ID is rejected");
+                                       @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason), "stale original ID is rejected");
         Check(!PHBundleIdentityMatches(hostID, @{@"LCOrignalBundleIdentifier": @"jp.gungho.pad"},
-                                       @"jp.gungho.pad", @"23.6.0", @"106878", &reason), "original ID requires LC mode");
+                                       @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason), "original ID requires LC mode");
         Check(!PHBundleIdentityMatches(hostID, @{@"doUseLCBundleId": @YES, @"LCOrignalBundleIdentifier": @"other.game"},
-                                       @"jp.gungho.pad", @"23.6.0", @"106878", &reason), "other guest is rejected");
-        hostID[@"CFBundleVersion"] = @"106879";
-        Check(!PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @"23.6.0", @"106878", &reason) &&
-              [reason containsString:@"106879"], "LC mode still requires the exact iOS build");
-        hostID[@"CFBundleVersion"] = @"106878";
+                                       @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason), "other guest is rejected");
+        hostID[@"CFBundleVersion"] = @"107554";
+        Check(!PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason) &&
+              [reason containsString:@"107554"], "LC mode still requires the exact iOS build");
+        hostID[@"CFBundleVersion"] = @(PHTargetBuild);
         hostID[@"CFBundleShortVersionString"] = @"23.7.0";
-        Check(!PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @"23.6.0", @"106878", &reason),
+        Check(!PHBundleIdentityMatches(hostID, metadata, @"jp.gungho.pad", @(PHTargetVersion), @(PHTargetBuild), &reason),
               "LC mode still requires the exact version");
+        NSDictionary *previous = @{@"CFBundleIdentifier":@"jp.gungho.pad",
+            @"CFBundleShortVersionString":@"23.6.0", @"CFBundleVersion":@"106878"};
+        Check(!PHBundleIdentityMatches(previous, @{}, @(PHTargetBundleID), @(PHTargetVersion), @(PHTargetBuild), &reason),
+              "legacy portable data compatibility never relaxes the exact runtime game target");
         Check([PHResolvedBundleIdentifier(@{}, @{@"doUseLCBundleId": @[], @"LCOrignalBundleIdentifier": @1}) isEqual:@""],
               "malformed metadata does not crash or match");
 

@@ -44,7 +44,7 @@ done
     -c ios/src/PHOrbPlanning.m -o "$build_dir/PHOrbPlanning.o"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     -c ios/src/PHOrbRules.m -o "$build_dir/PHOrbRules.o"
-"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src -Iios/generated \
     -c ios/src/PHOrbProfiles.m -o "$build_dir/PHOrbProfiles.o"
 "$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
     -c ios/src/PHOrbEight.m -o "$build_dir/PHOrbEight.o"
@@ -56,7 +56,7 @@ done
     ios/tests/orb_rules_tests.m "$build_dir/PHOrbRules.o" "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -framework Foundation -framework CoreFoundation -o "$build_dir/orb-rules-tests"
 "$build_dir/orb-rules-tests"
-"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src \
+"$clang_path" -isysroot "$sdk_path" -std=gnu11 -fobjc-arc -fblocks -Wall -Wextra -Werror -Iios/src -Iios/generated \
     ios/tests/orb_profiles_tests.m "$build_dir/PHOrbProfiles.o" "$build_dir/PHOrbEight.o" "$build_dir/PHFormationModel.o" "$build_dir/PHBattlePreset.o" "$build_dir/PHOrbRules.o" "$build_dir/PHOrbPlanning.o" \
     "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -framework Foundation -framework CoreFoundation -o "$build_dir/orb-profiles-tests"

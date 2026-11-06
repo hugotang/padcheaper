@@ -101,7 +101,7 @@
     }
     NSMutableDictionary *report = [[self dungeonReportSummary] mutableCopy];
     report[@"schema"] = @1; report[@"kind"] = @"PADCheaper-dungeon-report";
-    report[@"target"] = @"jp.gungho.pad-ios-23.6.0-106878";
+    report[@"target"] = @(PHTargetID);
     report[@"source"] = @"loaded-entry-spawn-table-and-observed-player-windows";
     report[@"spawnTableSHA256"] = _dungeonTableSHA ?: @"";
     report[@"actionTableMetadataRaw"] = _dungeonMetadata ?: @[];

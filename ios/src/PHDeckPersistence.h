@@ -12,6 +12,8 @@ typedef struct {
 // Only the same live request, matching every other serialized field, is trusted.
 FOUNDATION_EXPORT NSDictionary *PHReadRequestedDecks(uintptr_t header, NSDictionary *serialized,
     PHDeckRequest *observation);
+// Only validated semantic records for the same player and supported data
+// target. Restoring them still requires the current live bank/deck identity.
 FOUNDATION_EXPORT NSDictionary *PHDeckAccountBanks(id store, uint32_t player);
 
 @interface PHDeckRestorer : NSObject

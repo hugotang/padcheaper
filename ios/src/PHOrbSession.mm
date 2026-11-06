@@ -7,6 +7,7 @@
 #include "PHOrbSolver.h"
 #include "PHOrbSearchAttempt.h"
 #include "PHOrbSessionState.h"
+#include "PHTargetGenerated.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>

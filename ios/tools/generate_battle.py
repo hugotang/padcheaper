@@ -7,7 +7,7 @@ import re
 
 
 def generate(manifest):
-    if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.0-106878":
+    if manifest["schema"] != 1 or manifest["target_id"] != "jp.gungho.pad-ios-23.6.1-107553":
         raise ValueError("Unsupported battle target")
     if manifest["gate"] != {"entry_categories": "all-except-multiplayer", "source_modes_default": [0], "multiplayer_modes_default": [0],
                             "write_scope": "single-player-only", "excluded_entry_modes": [7, 10, 11], "multiplayer_override": False,
@@ -16,14 +16,14 @@ def generate(manifest):
                             "automatic_entry_phase": 0, "automatic_entry_window": "fresh-wave-zero-intro"}:
         raise ValueError("Battle gate differs from the reviewed prototype")
     if manifest["input"] != {
-        "manager_pointer_rva": "0x2ac6fd8", "slots_per_bank": 5, "record_bytes": 264,
+        "manager_pointer_rva": "0x2ac7858", "slots_per_bank": 5, "record_bytes": 264,
         "frame_bank_offset": 1320, "snapshot_bytes": 2642, "event_bytes_offset": 213,
         "frame_tracking_offset": 219, "raw_deferred_tap_offset": 220, "raw_touch_pointer_offset": 248,
         "raw_count_offset": 2640, "frame_count_offset": 2641, "drag_pointer_impl_offset": "0x988b8"
     } or manifest["fields"]["PHBattleInputRVA"] != manifest["input"]["manager_pointer_rva"] or \
             manifest["fields"]["PHBattleDragPointerOffset"] != manifest["input"]["drag_pointer_impl_offset"]:
         raise ValueError("Input layout differs from the reviewed native handlers")
-    lines = ["// Generated from ios/targets/battle-23.6.0.json. Do not edit.", "#pragma once",
+    lines = ["// Generated from ios/targets/battle-23.6.1.json. Do not edit.", "#pragma once",
              "#include <stdint.h>", "#include <stddef.h>"]
     member_layout = {
         "PHBattleBaseIDOffset": 0x5b0, "PHBattleAssistIDOffset": 0x5b2,
@@ -32,7 +32,7 @@ def generate(manifest):
         "PHBattleFormOffset": 0x118, "PHBattleTempIDOffset": 0xf8, "PHBattleTempTurnsOffset": 0x108,
     }
     if any(int(manifest["fields"].get(name, "0"), 0) != offset for name, offset in member_layout.items()):
-        raise ValueError("Member source/effective layout differs from PAD 23.6.0")
+        raise ValueError("Member source/effective layout differs from PAD 23.6.1")
     for name, value in manifest["fields"].items():
         if not re.fullmatch(r"PHBattle[A-Za-z0-9]+", name):
             raise ValueError("Invalid field name")
@@ -73,7 +73,7 @@ def generate(manifest):
 
 
 if __name__ == "__main__":
-    manifest = json.loads(Path("ios/targets/battle-23.6.0.json").read_text(encoding="utf-8"))
+    manifest = json.loads(Path("ios/targets/battle-23.6.1.json").read_text(encoding="utf-8"))
     output = Path("ios/generated/PHBattleGenerated.h")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(generate(manifest), encoding="utf-8", newline="\n")

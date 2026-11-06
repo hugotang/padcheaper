@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the reviewed 23.6.0 orb/input layout, with independent code guards."""
+"""Generate the reviewed 23.6.1 orb/input layout, with independent code guards."""
 import hashlib
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ import re
 
 
 def generate(manifest):
-    if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.0-106878':
+    if manifest['schema'] != 1 or manifest['target_id'] != 'jp.gungho.pad-ios-23.6.1-107553':
         raise ValueError('Unsupported orb target')
     if manifest['scope'] != {'multiplayer': {
                                  'input': 'explicit-local-once', 'modes': [7, 11, 10], 'selector': 1,
@@ -357,32 +357,32 @@ def generate(manifest):
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
-        'PHOrbMultiClockNumeratorRVA': 0x2c6f634, 'PHOrbMultiClockDenominatorRVA': 0x2c6f638,
-        'PHOrbMultiConnectionRVA': 0x1b37258, 'PHOrbMultiNetworkFlagsOffset': 0xafe70,
+        'PHOrbMultiClockNumeratorRVA': 0x2c6fe74, 'PHOrbMultiClockDenominatorRVA': 0x2c6fe78,
+        'PHOrbMultiConnectionRVA': 0x1b37ab8, 'PHOrbMultiNetworkFlagsOffset': 0xafe70,
         'PHOrbMultiSyncStateOffset': 0xa6398, 'PHOrbMultiSyncStepOffset': 0xa639c,
         'PHOrbMultiDisconnectSeatOffset': 0xad6ec, 'PHOrbMultiResolveOffset': 0x9299a,
         'PHOrbMultiTurnClockOffset': 0xa6368, 'PHOrbMultiMatchClockOffset': 0xafed8,
-        'PHOrbMultiCountdownOffset': 0xafc81, 'PHOrbMultiFinishedOffset': 0xb7e08,
+        'PHOrbMultiCountdownOffset': 0xafc81, 'PHOrbMultiFinishedOffset': 0xb7e18,
         'PHOrbMultiRecoverySourceOffset': 0xafe78, 'PHOrbMultiRecoveryFlagsOffset': 0xafe74,
-        'PHOrbMultiDialogOffset': 0xbe9d0,
+        'PHOrbMultiDialogOffset': 0xbe9e0,
     }
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbMulti')} != multiplayer_fields:
         raise ValueError('Unreviewed multiplayer layout')
     leader_fields = {
         'PHOrbLeaderSkillOffset': 0x5c, 'PHOrbLeaderCatalogNextOffset': 0x33c,
-        'PHOrbLeaderCatalogRecordsOffset': 0x5ef15c,
-        'PHOrbLeaderExtraFlagOffset': 0x44, 'PHOrbLeaderExtraRegistryRVA': 0x27c8b80,
-        'PHOrbLeaderExtraSelectionOffset': 0x5cc1f8, 'PHOrbLeaderExtraStride': 0x350,
+        'PHOrbLeaderCatalogRecordsOffset': 0x5ef164,
+        'PHOrbLeaderExtraFlagOffset': 0x44, 'PHOrbLeaderExtraRegistryRVA': 0x27c93e8,
+        'PHOrbLeaderExtraSelectionOffset': 0x5cc200, 'PHOrbLeaderExtraStride': 0x350,
         'PHOrbLeaderExtraSkillOffset': 0x54,
     }
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbLeader')} != leader_fields:
         raise ValueError('Unreviewed multiplayer leader layout')
     observation_fields = {
-        'PHOrbObservationCooldownOffset': 0xb39f0, 'PHOrbObservationAssistVoidOffset': 0xb4a8c,
+        'PHOrbObservationCooldownOffset': 0xb3a00, 'PHOrbObservationAssistVoidOffset': 0xb4a9c,
         'PHOrbObservationAddedAwakeningsOffset': 520, 'PHOrbObservationProfileOffset': 1256,
-        'PHOrbObservationAwakeningGrantsOffset': 744732,
+        'PHOrbObservationAwakeningGrantsOffset': 0xb5d2c,
     }
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbObservation')} != observation_fields:
@@ -393,24 +393,24 @@ def generate(manifest):
             if name.startswith('PHOrbAssistRecovery')} != assist_recovery_fields:
         raise ValueError('Unreviewed assist recovery layout')
     enemy_combo_fields = {'PHOrbEnemyComboThresholdOffset': 2208, 'PHOrbEnemyComboDurationOffset': 2224,
-        'PHOrbEnemyComboBypassOffset': 739176, 'PHOrbEnemyComboAdjustmentOffset': 739020,
-        'PHOrbEnemyComboSubtractOffset': 740000, 'PHOrbEnemyComboUpperDurationOffset': 2432}
+        'PHOrbEnemyComboBypassOffset': 0xb4778, 'PHOrbEnemyComboAdjustmentOffset': 0xb46dc,
+        'PHOrbEnemyComboSubtractOffset': 0xb4ab0, 'PHOrbEnemyComboUpperDurationOffset': 2432}
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyCombo')} != enemy_combo_fields:
         raise ValueError('Unreviewed enemy Combo layout')
-    combo_bonus_fields = {'PHOrbComboBonusLeaderOffset': 744756, 'PHOrbComboBonusBadgeOffset': 745460, 'PHOrbComboBonusColorsOffset': 746144, 'PHOrbComboBonusAllLinksOffset': 746216}
+    combo_bonus_fields = {'PHOrbComboBonusLeaderOffset': 0xb5d44, 'PHOrbComboBonusBadgeOffset': 0xb6004, 'PHOrbComboBonusColorsOffset': 0xb62b0, 'PHOrbComboBonusAllLinksOffset': 0xb62f8}
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbComboBonus')} != combo_bonus_fields:
         raise ValueError('Unreviewed Combo bonus layout')
-    dungeon_dump_fields = {'PHOrbDungeonDumpCountAddress': 0x2a9d1dc, 'PHOrbDungeonDumpWavesAddress': 0x2a9d1e0,
+    dungeon_dump_fields = {'PHOrbDungeonDumpCountAddress': 0x2a9da44, 'PHOrbDungeonDumpWavesAddress': 0x2a9da48,
         'PHOrbDungeonDumpSpawnPointerOffset': 1672, 'PHOrbDungeonDumpSpawnWaveOffset': 516}
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbDungeonDump')} != dungeon_dump_fields:
         raise ValueError('Unreviewed dungeon report layout')
     enemy_action_fields = {
-        'PHOrbEnemyActionsMetadataRVA': 0x27c7980,
-        'PHOrbEnemyActionsCountRVA': 0x27c7988,
-        'PHOrbEnemyActionsPointerRVA': 0x27c7990,
+        'PHOrbEnemyActionsMetadataRVA': 0x27c81e8,
+        'PHOrbEnemyActionsCountRVA': 0x27c81f0,
+        'PHOrbEnemyActionsPointerRVA': 0x27c81f8,
         'PHOrbEnemyActionsParameterOffset': 0x218,
         'PHOrbEnemyActionsCatalogIDOffset': 0x244,
         'PHOrbEnemyActionsRowsOffset': 0xec,
@@ -419,26 +419,30 @@ def generate(manifest):
             if name.startswith('PHOrbEnemyActions')} != enemy_action_fields:
         raise ValueError('Unreviewed optional enemy action layout')
     enemy_dispatch_fields = {
-        'PHOrbEnemyDispatchCacheOffset': 601588, 'PHOrbEnemyDispatchHookOffset': 734816,
-        'PHOrbEnemyDispatchSpecialOffset': 734824, 'PHOrbEnemyDispatchLoopOffset': 600632,
-        'PHOrbEnemyDispatchRedirectOffset': 741468,
+        'PHOrbEnemyDispatchCacheOffset': 601588, 'PHOrbEnemyDispatchHookOffset': 0xb3670,
+        'PHOrbEnemyDispatchSpecialOffset': 0xb3678, 'PHOrbEnemyDispatchLoopOffset': 600632,
+        'PHOrbEnemyDispatchRedirectOffset': 0xb506c,
     }
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyDispatch')} != enemy_dispatch_fields:
         raise ValueError('Unreviewed optional enemy dispatch layout')
     enemy_damage_fields = {
-        'PHOrbEnemyDamageImmediateOffset': 601627, 'PHOrbEnemyDamageSpecialOffset': 734824,
-        'PHOrbEnemyDamageCallbackOffset': 780784,
+        'PHOrbEnemyDamageImmediateOffset': 601627, 'PHOrbEnemyDamageSpecialOffset': 0xb3678,
+        'PHOrbEnemyDamageCallbackOffset': 0xbea00,
     }
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEnemyDamage')} != enemy_damage_fields:
         raise ValueError('Unreviewed optional enemy damage layout')
     receipt_fields = {'PHOrbEightReceiptSkillOffset': 0x92e20,
-        'PHOrbEightReceiptCatalogOffset': 0x92e28, 'PHOrbEightReceiptSlotOffset': 0xb7eb6}
+        'PHOrbEightReceiptCatalogOffset': 0x92e28, 'PHOrbEightReceiptSlotOffset': 0xb7ec6}
     if {name: int(value, 0) for name, value in manifest['fields'].items()
             if name.startswith('PHOrbEightReceipt')} != receipt_fields:
         raise ValueError('Unreviewed native 8P skill receipt layout')
-    lines = ['// Generated from ios/targets/orbs-23.6.0.json. Do not edit.', '#pragma once',
+    if any(manifest['thorn_budget'][key] != int(manifest['fields'][name], 0)
+           for key, name in (('pending_damage', 'PHOrbPendingDamageOffset'),
+                             ('pending_thorn_damage', 'PHOrbPendingThornDamageOffset'))):
+        raise ValueError('Thorn budget offsets differ from the native field map')
+    lines = ['// Generated from ios/targets/orbs-23.6.1.json. Do not edit.', '#pragma once',
              '#include <stdint.h>', '#include <stddef.h>']
     for name, value in manifest['fields'].items():
         number = int(value, 0)
@@ -517,7 +521,7 @@ def generate(manifest):
 
 
 if __name__ == '__main__':
-    manifest = json.loads(Path('ios/targets/orbs-23.6.0.json').read_text(encoding='utf-8'))
+    manifest = json.loads(Path('ios/targets/orbs-23.6.1.json').read_text(encoding='utf-8'))
     output = Path('ios/generated/PHOrbGenerated.h')
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(generate(manifest), encoding='utf-8', newline='\n')

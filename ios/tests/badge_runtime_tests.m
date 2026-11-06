@@ -20,7 +20,7 @@ static void *Resolve(uintptr_t address, size_t size) {
         {Header + PHSaveRVA + 0xa0, &tablePointer, sizeof(tablePointer)},
         {Header + PHSaveRVA + 0xb0, &endPointer, sizeof(endPointer)},
         {Header + PHSaveRVA + 0x24e8, &count, sizeof(count)},
-        {Header + PHSaveRVA + 0x52f314, words, sizeof(words)},
+        {Header + PHSaveRVA + PHBadgeOwnedOffset, words, sizeof(words)},
         {Header + PHBattleKey1RVA, &key1, sizeof(key1)},
         {Header + PHBattleKey2RVA, &key2, sizeof(key2)},
         {Table, records, sizeof(records)},
@@ -40,7 +40,7 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t size) {
 }
 BOOL PHWriteData(uintptr_t address, const void *input, size_t size) {
     void *destination = Resolve(address, size);
-    if (refuseWrite || !destination || address != Header + PHSaveRVA + 0x52f314 || size != sizeof(words)) return NO;
+    if (refuseWrite || !destination || address != Header + PHSaveRVA + PHBadgeOwnedOffset || size != sizeof(words)) return NO;
     memcpy(destination, input, size); writes++; return YES;
 }
 BOOL PHMemoryHasProtection(uintptr_t address, size_t size, vm_prot_t required, vm_prot_t forbidden) {

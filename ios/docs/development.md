@@ -4,6 +4,16 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-06：iOS 23.6.1 地址遷移與舊資料相容，來源完成、待編譯測試
+
+- 已完成 iOS 23.6.0／106878 → 23.6.1／107553 的三份地址表與來源整合，詳見 [地址遷移與資料相容性](address-update-23.6.1.md) 及 [靜態證據](../research/address-update-23.6.1.json)。新版 UUID 為 `38A9F704-C562-3BDD-B510-2112DAC084B0`；PAD 17／Battle 35／Orb 404 共 456 組指紋與原版 bytes／SHA-256 全部吻合。304 組完整函式匯出核對覆蓋與 bytes，237 項欄位／全域位址中 139 項改變，100 項小欄位具基底／寬度或局部資料流證據；118 組 callee 未遞迴認證，不能推論所有原生行為不變。
+- Save、GameMain、輸入／隊伍 storage、save 欄位與部分 impl 欄位分別移動，未套用固定差值；原生隊伍 stride 改為 `0x6d88`，隊員 pool `0xb11f0`／stride `0x5f0` 保持不變。補齊 API／network、徽章、timer、動畫與貫通的生成常數，荊棘說明欄與正式欄位一致；build／test／GUI 選用新版表。原生徽章條件改用有效 kind，reader 繼續讀原生有效結果。
+- `PHDataTarget.h` 只對 schema-1 資料接受當前 target 及確切的舊版 `jp.gungho.pad-ios-23.6.0-106878`。策略／整包計畫保留完整欄位與內容校驗；帳號只沿用九數字語意記錄，要求同一 player、bank／index／count、五卡片加 extra 身分及現有 epoch／功能／資源／回讀檢查。舊原生地址、未知版本、Android target 及其他 schema 不因這次相容而放行。
+- 九份範本保留舊 target 來源；新匯出／新保存帳號用當前 target，離線關卡報告保留原來源版本。遊戲 runtime 的版本／build／UUID／指令 guards 仍只接受當前版本，既有單人／8 人授權邊界不變。
+- 已新增舊資料、九份範本、錯誤 target／schema／型別／範圍、重複 ID、bank count 與 extra 身分不符的案例，**尚未執行**。待明確「編譯測試」後完整跑原生／Session／solver／設定／編隊回歸、iPhoneOS／GUI 與生成資料一致性；新版登入、回復、讀盤、技能及多人同步仍需裝置驗證。這些新來源不能引用舊 CI、舊版交付或先前 solver 測試當作通過。
+- 已完成三份地址標頭／編輯器來源生成、Python／GUI 內嵌 Python AST、三份 JavaScript syntax-only、三個 shell 入口 `-n`、JSON 重複鍵／跨表欄位、九份範本原 target、相容 helper 引用位置、差異空白及新說明連結檢查。受檢舊位址常數無來源殘留；Objective-C／Objective-C++ 尚未做型別或編譯驗證。舊 target 文件保留，未升 dylib 版本；未來交付來源已接上本次說明與證據，但尚未產生新包。
+- **本輪未編譯、未跑測試套件、未 dispatch CI、未安裝裝置及未打包**。CI 仍只有手動觸發；`E:/ipa` 既有交付不變。下面各批紀錄保留其當時狀態。
+
 ## 2026-11-06：Android 盤面局部研究與預覽來源，待編譯測試
 
 - 使用者繼續分批開發，Android 以已保存程式擷取核對尺寸、impl／索引表／物件池、原始色碼與動作欄位；`block+0x12` 已確認為動作／狀態，不能當作色碼。新增離線布局解讀與普通六色純資料預覽來源，raw native 與 solver 正規化資料尚未橋接，詳見 [Android 盤面布局研究](../../android/docs/board-layout-2026-11-06.md)。

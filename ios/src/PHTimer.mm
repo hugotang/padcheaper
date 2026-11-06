@@ -9,7 +9,8 @@
 #include <stdexcept>
 
 namespace {
-constexpr uintptr_t Pending = 0x92a00, Dialog = 0xbe9c8, Hold = 0xb3592, SceneID = 0x92a38;
+constexpr uintptr_t Pending = PHTimerPendingOffset, Dialog = PHTimerDialogOffset,
+                    Hold = PHTimerHoldOffset, SceneID = PHTimerSceneIDOffset;
 
 static BOOL CheckTimerCode(uintptr_t header, NSString **reason) {
     if (!PHValidateGuest(reinterpret_cast<const mach_header_64 *>(header), reason)) return NO;

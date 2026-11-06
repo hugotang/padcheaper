@@ -226,7 +226,7 @@ const {pathToFileURL}=require('node:url');
    defs.push({actionID:slot,opcode:op,parameters:p,attachedAttackPercentRaw:attached,known:true,rawHex:hex(action)});
    catalogs.push({slot,catalogID:1000+slot,level:10,catalogPrefixRawHex:hex(raw),rows:[{row:1,actionID:slot,operandsRaw:[100,0,0,0]}]});
   }
-  return {schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.0-106878',dungeon:12,floor:3,totalFloors:1,allDefinitionsCaptured:true,
+  return {schema:1,kind:'PADCheaper-dungeon-report',target:'jp.gungho.pad-ios-23.6.1-107553',dungeon:12,floor:3,totalFloors:1,allDefinitionsCaptured:true,
    floorDefinitions:[{wave:0,rawCaptureComplete:true,catalogs,definitions:defs}],observations:[{wave:0,enemies:[{slot:1,catalogID:1001,level:10,baseAttack:2521250,identityKnown:true,memoryKnown:true}]}]};
  });
  await page.locator('#tab-dungeon').click();
