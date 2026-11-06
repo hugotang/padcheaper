@@ -67,6 +67,10 @@ done
     ios/tests/orb_solver_tests.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
     "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/orb-solver-tests"
 "$build_dir/orb-solver-tests"
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
+    ios/tests/orb_shape_guidance_tests.cpp "$build_dir/PHOrbModel.o" \
+    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/orb-shape-guidance-tests"
+"$build_dir/orb-shape-guidance-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
     ios/tests/orb_native_tests.mm "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \

@@ -51,7 +51,11 @@ struct Context {
     bool colorRecovery = false, colorGuidance = false;
     uint8_t wantedColors = 0, colorFocus = PHOrbBasicTypes;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
+    // Alternate ordinary-shape passes change exploration only. Retained
+    // candidates are compared using the primary context's scoring scale.
+    bool alternateShapeHints = false;
     unsigned borderRepairWeight = 2;
+    unsigned shapeHoleWeight = 2, shapeDistanceWeight = 1;
     std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
     bool diagonal = false;
     PHOrbActivityObjective activity{};
@@ -414,11 +418,11 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
             const unsigned missing = Count(holes);
             // No repair can score above the cost of filling its holes alone.
             // Discard that upper bound before computing runs and distances.
-            if (hints.count == HintLimit && 3072 * size / (size + 2 * missing) < hints.items.back().value) continue;
+            if (hints.count == HintLimit && 3072 * size / (size + context.shapeHoleWeight * missing) < hints.items.back().value) continue;
             // Only a neighbouring *marked* orb would merge into an exact
             // shape after filling; unmarked same-colour neighbours are fine.
             const Bits interfering = exact ? MarkedRuns(color | pattern.cells, context) & pattern.border : 0;
-            unsigned cost = 2 * missing + context.borderRepairWeight * Count(interfering);
+            unsigned cost = context.shapeHoleWeight * missing + context.borderRepairWeight * Count(interfering);
             hint.value = 3072 * size / (size + cost);
             if (hints.count == HintLimit && hint.value < hints.items.back().value) continue;
             const Bits supply = color & ~pattern.cells & ~used & ~context.blocked;
@@ -429,7 +433,7 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
                 unsigned distance = 1;
                 while (distance <= context.distanceDepth[cell] && !(context.distanceMasks[cell][distance] & supply)) ++distance;
                 if (distance > context.distanceDepth[cell]) { reachable = false; break; }
-                cost += distance - 1;
+                cost += context.shapeDistanceWeight * (distance - 1);
             }
             if (!reachable) continue;
             // Supply distances are optimistic: different holes may use the
@@ -1089,6 +1093,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
         const bool recover = (context.shapeGoals || context.colorRecovery) && options.recoveryPasses;
+        const bool ordinaryShapeRecovery = context.shapeGoals && !board.spinnerMask &&
+            options.fishCell < 0 && !context.activity.firstWaveOnly;
         const bool comboSearch = context.activity.firstWaveOnly && context.activity.comboPriority;
         const bool retain = (context.shapeGoals || context.colorRecovery || comboSearch) && options.backtrackLimit && options.steps >= 12;
         unsigned comboUpper = 0, comboCounts[PHOrbTypes] = {0};
@@ -1188,7 +1194,14 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             ++evaluationCache.hits;
                         } else child.score = evaluationCache.score(child.cells, scoring);
                         const Score guidedScore = child.score;
-                        if (activityRows) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
+                        // A changed hint scale must never displace the primary
+                        // candidate just because it inflates partial progress.
+                        // Once a safe solution exists, an unmet candidate cannot
+                        // beat it. With all goals met, hole/distance weights are
+                        // unused; only a winning candidate needs normalization.
+                        const bool canonicalScore = activityRows || (scoring.alternateShapeHints &&
+                            !child.score.result.goalsMet && !met());
+                        if (canonicalScore) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
                         // A branch can finish its heart four later. Keep the
@@ -1198,9 +1211,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             (options.allowPoisonWithHeartFour && child.score.result.poisonErased));
                         if (heartPending) child.score.result.hazardsSafe = false;
                         if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity)) {
+                            if (scoring.alternateShapeHints && !canonicalScore) {
+                                child.score = Evaluate(child.cells,context); ++evaluationCache.calls;
+                                if (heartPending) child.score.result.hazardsSafe = false;
+                            }
                             best = child; found = true;
                         }
-                        if (activityRows) child.score = guidedScore;
+                        if (activityRows || scoring.alternateShapeHints) child.score = guidedScore;
                         if (heartPending) child.score.result.hazardsSafe =
                             ReleaseHazardsSafe(child.score.result, options.allowPoisonWithHeartFour, false);
                         next.push_back(child);
@@ -1253,6 +1270,15 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // when no single layout is phase-independent. Never delete those
             // possibilities from exact evaluation or the recovery search.
             recovery.stableHints = false;
+            if (ordinaryShapeRecovery) {
+                recovery.alternateShapeHints = true;
+                // One shape clause (including multiple copies) can get stuck
+                // chasing nearby fragments: emphasize legal supply distance.
+                // Different shape clauses compete for space: emphasize filled
+                // templates instead. Neither strategy changes exact matches.
+                recovery.shapeHoleWeight = context.shapeGoals > 1 ? 4 : 2;
+                recovery.shapeDistanceWeight = context.shapeGoals > 1 ? 1 : 2;
+            }
             if (stableShapeRecovery) {
                 // Moving an interfering border orb can fill a hole in the
                 // same drag. Try a lower repair cost while retaining stable
@@ -1280,6 +1306,12 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             beam = std::move(frontier.nodes); ++backtracks;
             Context revisit = context;
             revisit.colorGuidance = context.colorRecovery;
+            if (ordinaryShapeRecovery) {
+                revisit.alternateShapeHints = true;
+                // Saved frontiers already provide a different starting beam;
+                // revisit their incomplete layouts with hole-focused scoring.
+                revisit.shapeHoleWeight = 4;
+            }
             // One revisit favors balanced colour progress, the other the
             // remaining bottleneck; neither repeats the completed baseline.
             if (revisit.colorGuidance && saved.empty()) revisit.colorFocus = uint8_t(colorFocus(revisit));

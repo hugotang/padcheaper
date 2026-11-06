@@ -31,6 +31,12 @@ solver_tests() {
 }
 solver_tests ios/src/PHOrbSolver.cpp "$build_dir/solver"
 
+# Private scoring contract: the test includes the solver implementation so
+# alternate hints can be checked without exporting implementation details.
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src ios/tests/orb_shape_guidance_tests.cpp \
+    "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -o "$build_dir/shape-guidance-tests.exe"
+"$build_dir/shape-guidance-tests.exe"
+
 if [ -n "${BASELINE:-}" ]; then
     git show "$BASELINE:ios/src/PHOrbSolver.cpp" > "$build_dir/PHOrbSolver.baseline.cpp"
     solver_tests "$build_dir/PHOrbSolver.baseline.cpp" "$build_dir/solver-baseline"

@@ -184,6 +184,7 @@ static void ShapeTests() {
 #include "orb_exact_solver_tests.inc"
 #include "orb_thorn_solver_tests.inc"
 #include "orb_t_boundary_solver_tests.inc"
+#include "orb_alternate_shape_solver_tests.inc"
 #include "orb_search_recovery_tests.inc"
 #include "orb_color_solver_tests.inc"
 #include "orb_recorded_thorn_solver_tests.inc"
@@ -215,6 +216,7 @@ int main() {
     DiagonalSolverTests();
     ShapeTests();
     TBoundarySolverTests();
+    AlternateShapeSolverTests();
     OrbEffectSolverTests();
     PoisonHeartFourSolverTests();
     ThornSolverTests();

@@ -132,7 +132,10 @@ def main():
     args = parser.parse_args()
     if args.output.exists() or not args.probe.is_file() or not 1 <= args.beam <= 512 or not 1 <= args.budget <= 2500 or not 1 <= args.steps <= 48:
         parser.error("preserve existing output; require a built probe and valid solver limits")
-    source = json.loads(args.dataset.read_text(encoding="utf-8"))
+    dataset_bytes = args.dataset.read_bytes()
+    dataset_hash = hashlib.sha256(dataset_bytes).hexdigest()
+    probe_hash = digest(args.probe)
+    source = json.loads(dataset_bytes)
     cases = source["cases"]
     if args.ids:
         ids = set(args.ids.split(","))
@@ -160,6 +163,8 @@ def main():
                              capture_output=True, timeout=max(30, len(cases)*(args.budget/1000+1)), cwd=ROOT)
     if process.returncode:
         raise RuntimeError(f"probe exited {process.returncode}: {process.stderr}")
+    if digest(args.dataset) != dataset_hash or digest(args.probe) != probe_hash:
+        raise ValueError("dataset or probe changed during this batch")
     rows = [json.loads(line) for line in process.stdout.splitlines()]
     if [r["id"] for r in rows] != [c["id"] for c in cases]:
         raise ValueError("missing, reordered or duplicate probe results")
@@ -168,6 +173,11 @@ def main():
         if not r["immutable"] or r["status"] not in (0, 1, 6):
             raise ValueError(f"unexpected solver status or source mutation: {c['id']}")
         if r["path"]:
+            if r["status"] not in (0, 1) or r["diagonal"] != args.diagonal:
+                raise ValueError(f"route/status or movement metadata mismatch: {c['id']}")
+            if not (1 <= r["depth"] <= args.steps and 0 <= r["backtracks"] <= args.backtracks and
+                    1+r["backtracks"] <= r["passes"] <= 1+args.recovery+r["backtracks"]):
+                raise ValueError(f"search exceeded its configured bounds: {c['id']}")
             checked = oracle(replay(c, r["path"], args.steps, args.diagonal, args.fixed_start), c["width"], c["height"], c["goals"])
             if any(checked[key] != r[key] for key in ("hits", "combos", "erased", "goalsMet")) or not r["hazardsSafe"]:
                 raise ValueError(f"independent oracle mismatch: {c['id']}")
@@ -183,7 +193,7 @@ def main():
         stats["maxMS"] = max(stats["maxMS"], r["elapsedMS"])
         if not r["goalsMet"]:
             stats["misses"].append(r["id"])
-    report = dict(datasetSHA256=digest(args.dataset), probeSHA256=digest(args.probe), sourceCommit=args.source_commit,
+    report = dict(datasetSHA256=dataset_hash, probeSHA256=probe_hash, sourceCommit=args.source_commit,
                   platform=platform.platform(), parameters={k: v for k, v in vars(args).items() if k not in ("probe", "dataset", "output")},
                   cases=len(cases), solved=sum(r["goalsMet"] for r in rows), independentOracle="passed", summary=summary, rows=rows)
     args.output.parent.mkdir(parents=True, exist_ok=True)

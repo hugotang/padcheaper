@@ -23,4 +23,13 @@ if(PH_BUILD_CORE_TESTS)
     target_link_libraries(padcheaper_core_tests PRIVATE padcheaper_core)
     target_compile_options(padcheaper_core_tests PRIVATE -Wall -Wextra -Werror -UNDEBUG)
     add_test(NAME padcheaper_core_tests COMMAND padcheaper_core_tests)
+    # The private-score test includes PHOrbSolver.cpp itself; link only its
+    # model dependencies so no duplicate solver implementation is introduced.
+    add_executable(padcheaper_shape_guidance_tests
+        "${CMAKE_CURRENT_LIST_DIR}/../ios/tests/orb_shape_guidance_tests.cpp"
+        "${PH_SOURCE}/PHInputModel.c" "${PH_SOURCE}/PHBattleModel.c" "${PH_SOURCE}/PHOrbModel.c")
+    target_include_directories(padcheaper_shape_guidance_tests PRIVATE "${PH_SOURCE}")
+    target_compile_options(padcheaper_shape_guidance_tests PRIVATE -Wall -Wextra -Werror -UNDEBUG
+        "$<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:GNU>>:-O2>")
+    add_test(NAME padcheaper_shape_guidance_tests COMMAND padcheaper_shape_guidance_tests)
 endif()

@@ -40,6 +40,7 @@ int main() {
         std::cout << "{\"id\":\"" << id << "\",\"status\":" << unsigned(status)
             << ",\"goalsMet\":" << (route.goalsMet ? "true" : "false")
             << ",\"hazardsSafe\":" << (route.hazardsSafe ? "true" : "false")
+            << ",\"diagonal\":" << (route.diagonal ? "true" : "false")
             << ",\"immutable\":" << (immutable ? "true" : "false") << ",\"hits\":[";
         for (unsigned g = 0; g < count; ++g) { if (g) std::cout << ','; std::cout << unsigned(route.goalHits[g]); }
         std::cout << "],\"elapsedMS\":" << route.elapsedMS << ",\"wallUS\":" << wall

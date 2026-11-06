@@ -1,5 +1,11 @@
 # Android 開發與待驗證
 
+## 2026-11-06：共用形狀補搜優化，本機驗證完成
+
+- 使用者繼續授權本機優化與編譯模擬，不打包、不啟動 CI。共用 `PHOrbSolver.cpp` 在無轉轉、非撈珠、非活動的形狀 recovery／saved frontier 改用不同引導，保留主搜尋尺度比較、既有 pass／beam／時間／步數額度與安全判定。詳見 [形狀補搜修正與驗證](../../ios/docs/solver-shape-recovery-2026-11-06.md)。重新評分有額外成本，不能宣稱所有情況性能不變。
+- 原 828 盤的 48／128／120 壓力設定由 821／828 改善為 828／828，七個漏解全解、零 deadline；這不是產品 Fast。另一批在查詢 solver 前生成的新 360 盤為 359／360，仍有一個同色心 T＋十字未解且 deadline，另有一個達標但 deadline。Thorough 48／512／800 共 1,188／1,188 達標且零 deadline；獨立 oracle、最終 Windows model／solver 完整回歸與內部引導分數測試，以及 core CMake／CTest 2／2 通過。七個漏解已納入固定回歸，窄 beam 另重跑三輪 21／21 達標、零 deadline。構造資料不能當實戰成功率。
+- Android core 引用這批已修改的共用來源，但本輪沒有重建 APK／Android ABI 核心或操作裝置；Windows 結果不驗證 Android 接入、ABI 或 iOS Session。手機／多人同步仍待驗證，既有 0.1.1-probe 和 `E:/ipa` 交付不變。以下「產品來源未改」及「尚未建置」保留為當時歷史，最新共用 C／C++ 本機結果以本節為準。
+
 ## 2026-11-06：共用 solver 本機形狀模擬完成
 
 - 使用者授權本機編譯模擬，不打包、不啟動 CI。`084f2c7` Windows 共用 C/C++ model／solver 回歸通過，五色原盤與兩變體達到 5／5。828 個已知解形狀盤在 48／512／800 全過；窄 beam 有 7 個未逾時漏解，加時間無效，詳見 [形狀本機模擬](../../ios/docs/solver-shapes-2026-11-06.md)。結果是構造資料覆蓋，不能當實戰成功率。

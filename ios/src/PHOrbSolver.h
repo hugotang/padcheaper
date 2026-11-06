@@ -86,6 +86,10 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // Ordinary spinner-free multi-colour goals keep the baseline beam, then use
 // remaining time for distance-guided recovery and bounded discarded frontiers.
 // The hints neither require optional colours nor satisfy exact release goals.
+// Ordinary spinner-free shape recovery alternates supply-distance and hole
+// priorities within the existing pass budget; best candidates retain primary
+// scoring. Evaluation calls can exceed candidate counts when scores are checked
+// under both guidance policies. Spinner/fishing/activity passes are unchanged.
 constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;
