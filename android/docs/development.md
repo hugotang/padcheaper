@@ -1,5 +1,17 @@
 # Android 開發與待驗證
 
+## 2026-11-06：0.1.1-probe 編譯測試完成，待封裝
+
+- 使用者明確要求「編譯測試」，本輪合併第四批固定程式區段擷取與第五批離線分析。版本升至 0.1.1-probe／versionCode 2，詳見 [版本驗證紀錄](release-0.1.1-probe.md)。以下兩批的未建置描述保留為當時歷史；本節區分已通過與仍待完成項目。
+- Gradle 8.13／AGP 8.12.0／SDK 36／NDK 27 的雙 ABI debug APK 建置成功；Java 13 個案例、Python 27 個案例、模擬器 x86_64 library inventory／runtime code capture 兩個原生執行檔，以及 Windows GCC 15.2.0／Release `-O2` 共用求路器回歸 1/1 全部通過。原生與核心執行檔斷言開啟，APK v2 簽章通過，證據在 `build/android/verification-0.1.1/`。
+- APK 1,757,211 bytes，SHA-256 `359bd6d5a1ac7aee8638ee8f40e13b8a872acc92b6b03240dac131b2a4f74834`；產品來源指紋 `08a5f75987f833921fac55b14b83cb88c683648d628badcb3ca01d9cb7151dcc`。已安裝到 emulator-5568，成功接入紀錄 `probe-entry-02.json` 與此 APK／x86_64 payload 一致、零 issues，約 29.992 fps；早期 `probe-entry.json` 的 incomplete 不是成功驗證。
+- 真遊戲固定區段擷取及匯出成功，`runtime-code-collected`、零 issues：17,295,152 bytes，SHA-256 `43d41b01f7252f269bb3f9728688c12a6c0889a3bb51b71d09f0a81a09248109`。PID 3896／start tick 239598，雙次讀取及映射穩定，完整 Java 請求 135 ms，匯出後程序／APK 重新核對一致。完整證據在 `build/android/runtime-code-0.1.1/capture-01/result/`。
+- 離線分析成功重驗封存裝置時鐘與實際擷取，保持原始位元組；與原版對應區段相比，12,457,407 bytes、3,443 個頁面有變化，形成四段頁面候選範圍。結果在 `build/android/runtime-analysis-0.1.1/capture-01/result/`；差異不是解碼或盤面驗證。
+- IDA raw 匯入核對通過，AArch64／64-bit／little-endian、完整 byte hash 與精確 `[0,0x107e730)` 一致。初始自動 CODE／22,526 函式未作為證據，已移除並停用自動分析，保存為唯一唯讀 DATA／全部 unknown／零函式，範圍外未映射、無 RW／BSS。初始／最終狀態見 `build/android/verification-0.1.1/ida-import.json`，資料庫已保存並關閉。
+- 裝機開始前取消核對通過，原檔案清單／報告 hash 不變；返回前景同 PID 3896 的世代增至 2，完整重開後新 PID 5534／start tick 298109／世代 1，接入擷取正常。重開後第二、三份 runtime 擷取完整且 hash 與第一份相同，三份均已匯出；第四次介面顯示容量已滿、失敗報告成功保存／匯出、三份 binary／hash 不變且無新暫存檔，程序仍正常。
+- 嚴格一秒時效、重開後尚未擷取與容量拒絕三份電腦端結果均不接受 binary。裝置三份檔案共 51,885,456 bytes 仍保留、容量已滿，未清理。開始前取消、前背景切換及容量拒絕不替代擷取途中背景中斷、程序內 Activity 重建及實際保存 I/O 故障的裝機驗證；後三項仍待執行。
+- **本輪驗證完成、0.1.1-probe 待封裝**；已交付的 0.1.0-probe／iOS 資料保持不變。`deviceVerified`／`runtimeLayoutVerified`／`boardReadEnabled`／`actionsEnabled`／`unpackedCodeVerified` 全部仍 false，Android 盤面與遊戲操作未接通。
+
 ## 2026-11-06：第五批，擷取後的離線核對與分析，待編譯測試
 
 - 使用者要求「繼續」。新增 [離線分析](runtime-code-analysis.md)，輸入有效 collector 成對結果、該次模組 APK 及精確原版 libpad，重新核對來源／程序／hash／能力旗標，再列出頁面差異與原版區段對照。輸出保持擷取位元組不變，不重建不完整 ELF 或接受參考專案偏移。
@@ -64,5 +76,5 @@
 
 1. 補驗 OpenGL／Vulkan 分別覆蓋、程序內 Activity 重建、失敗介面、完整程序隔離及原生 arm64 裝置；雙 ABI 包裝、x86_64 載入、前背景與完整重開已通過本次接入驗證。
 2. x86_64 payload 的有限 maps/header 讀取與約 30 fps callback 已取得證據；下一步需辨認實際渲染路徑與 native 操作窗口。不能靠 Java thread ID 的穩定性推論遊戲呼叫安全。
-3. 取得本版 Android 的執行期程式證據，以 IDA 核對只讀盤面、尺寸、phase、單人模式、protected 欄位與特殊珠。另建 Android layout／fingerprint，不移用 iOS 或旧探針偏移。
+3. 已取得本版 Android 固定不可寫區段的執行期程式證據，接著以 IDA 核對只讀盤面、尺寸、phase、單人模式、protected 欄位與特殊珠。另建 Android layout／fingerprint，不移用 iOS 或舊探針偏移。
 4. 正規化盤面接共用求路器，再逐步驗證明確的單人轉一次、取消／放手；Auto／技能／換隊留在後續批次，8 人最後處理。

@@ -1,6 +1,6 @@
 # Android 程式擷取的離線核對與 IDA 匯入
 
-2026-11-06，第五批來源。分析工具與案例已寫，**尚未執行工具、測試或新建置**；第四批手動程式擷取也仍待編譯裝機。本頁是取得有效擷取後的流程，不代表目前已有 runtime image 或盤面 reader。
+2026-11-06，`0.1.1-probe` 已完成新建置、自動測試及真遊戲固定程式區段擷取，分析工具亦已成功核對該組證據並產生差異資料。IDA raw 匯入的 AArch64／64-bit／little-endian、完整 byte hash 與精確範圍核對通過；盤面 reader 仍未接通。詳見 [版本驗證紀錄](release-0.1.1-probe.md)。
 
 ## 輸入與來源核對
 
@@ -30,7 +30,7 @@ python android/tools/analyze_runtime_code.py --capture build/android/runtime-cod
 | `runtime-code.bin` | 與有效擷取逐位元組相同的複本，沒有重建 ELF、修補或補零 |
 | `collector-report.json` | 原封不動的 collector 報告，保留 hash 對應 |
 | `analysis.json` | 當時時效重驗、hash、改變位元組／頁數、連續改變頁面範圍及原版區段標籤 |
-| `ida-load.json` | AArch64 raw 匯入範圍與來源；是待驗證的匯入規格，不是執行結果 |
+| `ida-load.json` | AArch64 raw 匯入範圍與來源；規格本身不是 IDA 執行結果，需另附實際匯入核對 |
 | `README.md` | 匯入與證據限制 |
 | `SHA256SUMS` | 其餘五份檔案的內容 hash |
 
@@ -40,10 +40,14 @@ python android/tools/analyze_runtime_code.py --capture build/android/runtime-cod
 
 ## IDA 匯入邊界
 
-必須**強制 Binary/raw loader**；只改 `.bin` 副檔名不能阻止 ELF magic 觸發 ELF loader。選 AArch64、64-bit、little-endian，file offset＝0、load VA＝0、長度 `0x107e730`，初始區段為 data／unknown。此規格在本地 IDA 工具的實際 64-bit 匯入行為，保留到下次授權測試確認。
+必須**強制 Binary/raw loader**；只改 `.bin` 副檔名不能阻止 ELF magic 觸發 ELF loader。選 AArch64、64-bit、little-endian，file offset＝0、load VA＝0、長度 `0x107e730`，研究起始狀態應為 data／unknown。
+
+本次本地 IDA 的 raw 匯入已核對成功，但 loader 初始自動建立 CODE 區段與 22,526 個函式，不能視為已驗證指令。驗證時已停用自動分析、移除推測函式／指令並清除佇列；最終唯一區段為唯讀 DATA、全部位元組 unknown、零函式，完整 hash 不變且範圍外未映射，沒有建立 RW／BSS。報告為 `build/android/verification-0.1.1/ida-import.json`，資料庫已保存並關閉於 `build/android/ida-0.1.1/capture-01/runtime-code.bin.i64`。後續匯入須再次檢查實際 loader 狀態，不能只依 `ida-load.json` 規格假定已保留 unknown。
 
 匯入後先核對範圍与原始 hash，再逐步標記有獨立證據的指令／函式。地址是 ELF-relative VA，不是當次程序中的絕對位址。header、唯讀資料與 unwind tables 都在擷取範圍，不能把整個區段標成已知指令。
 
 原版 `.text` 範圍 `0x552960..0x104aedc` 僅是原版 metadata；不能因此假定其中全部已是正確 runtime 指令。對範圍外的 ADRP／全域引用，保留未知地址，不從原版檔案填補可寫段、不建立有內容的 BSS，也不把缺失值當零。
 
-差異不等於解碼成功，相同也不等於解碼失敗。`unpackedCodeVerified`、`runtimeLayoutVerified`、`deviceVerified`、`boardReadEnabled`、`actionsEnabled` 全部保持 false。下一步需要實際擷取、IDA 核對盤面 getter／writer 及原生布局，然後逐格對照畫面。
+本次實際分析結果為 `offline-code-comparison-ready`：17,295,152 bytes 中有 12,457,407 bytes 與原版對應段不同，涉及 3,443 個 4096-byte 頁面、四段連續頁面候選範圍。擷取 hash 為 `43d41b01f7252f269bb3f9728688c12a6c0889a3bb51b71d09f0a81a09248109`；原版對應段 hash 為 `70aa1dc509bfd109da293d898b37f034f034a8eab4c56e62434a31cf15412170`。完整結果位於 `build/android/runtime-analysis-0.1.1/capture-01/result/analysis.json`。後續重開後的第二、三份有效擷取具有相同完整 hash；這不代表測遍所有遊戲狀態。
+
+差異不等於解碼成功，相同也不等於解碼失敗。`unpackedCodeVerified`、`runtimeLayoutVerified`、`deviceVerified`、`boardReadEnabled`、`actionsEnabled` 全部保持 false。下一步以 IDA 核對盤面 getter／writer 及原生布局，然後逐格對照畫面。

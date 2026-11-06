@@ -1,6 +1,6 @@
 # Android 盤面研究：有限程式區段擷取
 
-2026-11-06，接在已交付 0.1.0-probe 的入口驗證之後。本批只有來源與靜態檢查，**尚未建置、跑測試或安裝**；已交付 APK 沒有本頁的新按鈕。Android 盤面仍未定位。
+2026-11-06，接在已交付 0.1.0-probe 的入口驗證之後。`0.1.1-probe` 已建置、測試並安裝到 `emulator-5568`，固定程式區段擷取、匯出及本輪裝機驗證完成、待封裝。Android 盤面仍未定位；已驗證與未實測項目詳見 [版本驗證紀錄](release-0.1.1-probe.md)。
 
 ## 為何先取得程式證據
 
@@ -8,9 +8,9 @@
 
 參考 `E:/PADhelper` 的 `getBoardWidth`、`setBurBlockFlag`、`_checkFlood`、`calcBlocks`／`getNearestBlock` 可用於後續語意核對，不採用其位址作為本版 reader。其基址算法要求 executable mapping，與目前 Houdini `hasExecutableMapping=false` 不符；`sBLOCK+0x12` 的「類型」解讀亦與 iOS motion／settled 語意不同，需查 Android 實際讀寫者。
 
-## 下次編譯後的操作
+## 操作步驟
 
-1. 收到明確「編譯測試」後建置、安裝新來源，完整重開指定遊戲。
+1. 安裝已核對的新 APK，完整重開指定遊戲；後續來源建置仍等明確「編譯測試」。本次指定模擬器已安裝 0.1.1-probe。
 2. 在「PC 診斷」選「擷取程式資料」→「開始擷取」，保持遊戲前景。原有「擷取接入狀態」仍只做有限 header 診斷。
 3. 使用剛安裝的確切 APK，於工作目錄執行：
 
@@ -22,7 +22,7 @@ python android/tools/collect_runtime_code.py --adb C:/Users/tangk/AppData/Local/
 
 工具只讀模組產生的報告與 binary，依目前程序 UID 選擇 Android user，核對原版目標、已安裝 APK、來源／payload、PID／start tick／boot、影格、時效、長度與 hash。binary 傳輸後再次比對報告、程序、APK 與時間；不安裝、不重啟、不點按或讀任意記憶體位址。
 
-第五批補上保存最後實際讀到的裝置時間與當次有效期限制，供後續 [離線核對與 IDA 匯入](runtime-code-analysis.md) 重驗當時證據。離線工具只分析已接受的完整結果，不把電腦當前時間當成擷取時的裝置 elapsed time；這批工具來源也仍未執行驗證。
+第五批補上保存最後實際讀到的裝置時間與當次有效期限制，供後續 [離線核對與 IDA 匯入](runtime-code-analysis.md) 重驗當時證據。離線工具只分析已接受的完整結果，不把電腦當前時間當成擷取時的裝置 elapsed time；本版已用實際擷取完成重驗與差異分析。
 
 ## 固定讀取範圍
 
@@ -41,6 +41,12 @@ python android/tools/collect_runtime_code.py --adb C:/Users/tangk/AppData/Local/
 
 `runtime-code-collected` 僅代表來源與固定區段擷取契約成立。`unpackedCodeVerified`／`runtimeLayoutVerified`／`boardReadEnabled`／`actionsEnabled`／`deviceVerified` 仍為 false；執行期程式、盤面布局與 native 操作窗口都必須另行核對。
 
-新增 C++ 案例涵蓋 r--p 映射、缺口／重疊、不同 offset／路徑、可寫區段、錯誤 header、描述符限制、合成映射的雙次完整複製；Java 案例涵蓋原前景／執行緒與過期影格；Python 案例涵蓋來源、時效、檔名、內容、程序／APK／報告在传輸中改變與成對發布。**案例已寫，尚未執行**。
+新增 C++ 案例涵蓋 r--p 映射、缺口／重疊、不同 offset／路徑、可寫區段、錯誤 header、描述符限制、合成映射的雙次完整複製；Java 案例涵蓋原前景／執行緒與過期影格；Python 案例涵蓋來源、時效、檔名、內容、程序／APK／報告在傳輸中改變與成對發布。這些案例已隨本版 Java 13、Python 27、模擬器 x86_64 兩個原生測試執行檔通過。
 
-下次裝機須檢查擷取後程序仍存活、前背景／中斷拒絕、三份容量上限、失敗保存與匯出；若 header 或映射條件不符，保留原因再研究，不能默認調整成可写區段。取得證據後以 IDA 核對 singleton、impl、索引表／物件池、尺寸／方向、色號／motion／旗標與單人 phase，再逐格對照畫面，最後才接正規化 `PHOrbBoard`。
+本次真遊戲已取得 `runtime-code-collected`、零 issues：17,295,152 bytes，SHA-256 `43d41b01f7252f269bb3f9728688c12a6c0889a3bb51b71d09f0a81a09248109`。native 雙次讀取與映射皆穩定，Java 完整請求 135 ms，匯出後仍核對到同一 PID／start tick／boot／APK。紀錄位於 `build/android/runtime-code-0.1.1/capture-01/result/report.json`。
+
+開始前按「取消」沒有改變檔案清單或原報告 hash；返回前景後同一 PID 的前景世代增加，完整重開後新 PID 5534／start tick 298109 的世代重置為 1，接入擷取成功。重開前後共三次程式擷取皆為完整 17,295,152 bytes、相同 hash，已分別匯出到 `capture-01`／`capture-02`／`capture-03`。
+
+第四次擷取在介面明確顯示「擷取空間已滿」，失敗報告成功保存與匯出，原三份 binary／hash 不變、沒有新暫存檔、程序仍正常。嚴格一秒時效、重開後尚未擷取及容量拒絕三份電腦端結果均只發布報告，沒有接受 binary。裝置目前保留三份完整檔案、容量已滿，未自動清理；再擷取前應先確認本機證據，再清理裝置上已匯出的舊檔。
+
+上述開始前取消、前背景切換與容量拒絕，不代表已實測擷取途中背景中斷、程序內 Activity 重建或保存 I/O 故障；這三項仍待裝機驗證。若 header 或映射條件不符，保留原因再研究，不能默認調整成可寫區段。後續以 IDA 核對 singleton、impl、索引表／物件池、尺寸／方向、色號／motion／旗標與單人 phase，再逐格對照畫面，最後才接正規化 `PHOrbBoard`。
