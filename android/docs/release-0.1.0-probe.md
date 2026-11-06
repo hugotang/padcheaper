@@ -11,6 +11,8 @@
 
 包內 `verification.json` 記錄來源提交與每份證據雜湊，`source-identity.json` 保存 114 份產品／建置輸入的指紋清單，`SHA256SUMS` 可核對包內所有檔案。交付重用已通過裝機的同一 APK，不因後續文件提交另建二進位。
 
+交付已完成：來源提交 `5c61e85f52de885f9ea43a1b6119e7af44aea5f9`，40 份檔案校驗與 41 項 ZIP 逐檔／CRC 核對通過。ZIP 580,150 bytes，SHA-256 `0bdb49e57684f59a4c89a438316e6532d58d48549dd35f0bdf450a97639f4a2e`。本段為交付後補記，包內文件保留原快照；[交付收據](../research/verification-0.1.0-probe.json) 記錄最終數值。
+
 | 身分 | 值 |
 |---|---|
 | APK bytes | 1,640,219 |

@@ -10,6 +10,7 @@
 - 最終 APK 已安裝並在現有 LSPosed 啟用日服 PAD。首次擷取、返回前景、完整重開三份結果均為 `entry-evidence-collected`、零 issues；前背景同一程序的世代由 1→2，重開後 PID／start tick 改變且世代回到 1。約 29.984–29.996 fps；x86_64 payload 成功觀察 ARM64 ELF header。這不是 native 操作窗口或讀盤驗證。
 - APK SHA-256 `f6bf4e3ee48c09353d02edcffe7e9278b5e5bbf765aab6ef1bf206c05bcab909`，1,640,219 bytes；產品來源指紋 `72698704498a06d38d53a8eeee0b89132f03ada3ce5a6012081a53b5e01033a1`。早期 `apk-identity.json` 與 6 案例 Python log 保留為歷史，最終證據另存 `apk-identity-final.json` 及 `python-tests-final.log`。
 - `deviceVerified`／`runtimeLayoutVerified`／`boardReadEnabled`／`actionsEnabled` 全部仍為 false。OpenGL／Vulkan 分別實測、程序內 Activity 重建、原生 arm64 裝置、載入失敗介面及多人程序隔離仍待驗證；沒有取得 Android 執行期程式段或盤面 layout。iOS 來源／CI／既有交付不變。
+- 已保存來源提交 `5c61e85f52de885f9ea43a1b6119e7af44aea5f9`，逐一確認 114 份提交內容與 APK 產品指紋一致；當前安裝 APK 雜湊亦再次吻合。已交付 `E:/ipa/PADCheaper-Android-0.1.0-probe` 及同名 ZIP，40 份檔案校驗、41 項 ZIP 逐檔與 CRC 核對通過。ZIP 580,150 bytes，SHA-256 `0bdb49e57684f59a4c89a438316e6532d58d48549dd35f0bdf450a97639f4a2e`。後續僅記錄完成結果，不變更包內文件快照或 APK，詳見 [交付收據](../research/verification-0.1.0-probe.json)。
 
 ## 2026-11-06：第三批，裝機身分與只讀擷取
 

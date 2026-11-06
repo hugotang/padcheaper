@@ -10,6 +10,7 @@
 - 裝機修正有限 header 讀取令程序退出的問題，改以 `process_vm_readv` 讀取已核對範圍的 20 bytes；擷取工具補上同名子程序樹辨識。這些修正已包含在最後通過的 APK 及測試中。本次接續只整理文件、身分證據及交付，沒有未測的新產品來源。
 - LSPosed 日服 PAD 入口、x86_64 payload、約 30 fps callback 與前背景／完整重開已驗證。Android 盤面 layout、讀盤及操作仍未接通，arm64 真機、兩種渲染方式分別驗證及完整生命週期／隔離回歸仍待進行；所有功能／完整裝置驗證旗標維持 false。首次 GCC `-O3` 警告仍列限制，通過配置為 `-O2`。
 - iOS 產品來源、手動 CI 與 0.5.35 既有交付檔不變。以下 Android 三批未建置描述保留為歷史狀態。
+- Android 來源已保存為 `5c61e85f52de885f9ea43a1b6119e7af44aea5f9`；114 份產品輸入、APK 及目前安裝檔吻合。新交付 `E:/ipa/PADCheaper-Android-0.1.0-probe` 與同名 ZIP 已完成 40 份校驗及 41 項 ZIP 逐檔／CRC 核對，詳見 [交付收據](../../android/research/verification-0.1.0-probe.json)。此後只補文件，不重新建置或修改已交付包。
 
 ## 2026-11-06：Android root 接入第一批，當時待編譯測試
 
