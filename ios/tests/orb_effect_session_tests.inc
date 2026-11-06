@@ -81,7 +81,7 @@ static void FishSessionTests() {
         }
         Check(seen == 63 && [state[@"message"] containsString:@"珠數上限 8 Combo"] &&
             [state[@"message"] containsString:@"只撈一顆"] &&
-            [state[@"message"] isEqual:trace[@"reason"] && ![state[@"canExecute"] boolValue] &&
+            [state[@"message"] isEqual:trace[@"reason"]] && ![state[@"canExecute"] boolValue] &&
             !engine->stages && !engine->releases && !engine->allowedSpinnerCell,
             "the visible stop distinguishes single-exchange capacity from search time and submits no input");
     }
