@@ -40,6 +40,9 @@ PHOrbTimedFishingReservation PHOrbReserveMultiFishing(const PHOrbBoard &board,
 // Time-feasible retained geometry plans reserve one third of the remaining
 // search time after inventory planning. Baseline plans run first; unused time
 // is lent to geometry. This reallocates the same deadline, not extra CPU time.
+// For the narrow monochrome T + donor Four case, a static exact-group proof
+// can return NoRoute before search with exactGeometryBound and a necessary
+// minimumExchangesLowerBound. This does not raise the six-exchange limit.
 PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState *recovery, const PHOrbTimedFishingTiming &timing, unsigned maxExchanges,
     const std::atomic_bool &cancel, PHOrbMultiFishingResult &result, unsigned geometryExtraExchanges = 0) noexcept;

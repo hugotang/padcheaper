@@ -1706,3 +1706,4 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
 
 #include "PHOrbTimedFishing.inc"
 #include "PHOrbAssistFishing.inc"
+#include "PHOrbMonochromeTemplate.inc"

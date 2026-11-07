@@ -132,9 +132,26 @@ NSString *SolveFailureMessage(PHOrbSolveStatus status, const PHOrbBoard &board,
     return [message stringByAppendingString:@"\n未開始轉珠；請調整目標、使用對應技能或手動處理。"];
 }
 
+NSString *MonochromeGeometryFailureMessage(const PHOrbGoalSet &goals, unsigned minimumExchanges) {
+    NSString *target = @"指定色", *donor = @"同色";
+    for (unsigned g = 0; g < goals.count; ++g) {
+        if (goals.items[g].kind == PHOrbGoalT) target = PHOrbColorTitle(goals.items[g].colors);
+        if (goals.items[g].kind == PHOrbGoalFour) donor = PHOrbColorTitle(goals.items[g].colors);
+    }
+    return [NSString stringWithFormat:
+        @"29 顆同色＋1 個轉轉：%@ T 與獨立%@四連要在轉轉任何終色都成立，至少需取出 %u 顆異色珠；目前最多連撈 %u 次。"
+         "四連還需要額外異色珠隔開旁邊的同色消除，因此已略過無法達標的搜尋。"
+         "至少 %u 顆只是必要條件，尚未確認更多取色的路徑或時間是否可行。未開始轉珠；可用技能改盤或手動處理。",
+        target,donor,minimumExchanges,PHOrbMultiFishingMaxExchanges,minimumExchanges];
+}
+
 NSString *MultiFishingFailureMessage(NSString *base, const PHOrbBoard &board,
     const PHOrbGoalSet &goals, NSArray *multiAttempts) {
     if (!multiAttempts.count) return base;
+    for (NSDictionary *attempt in multiAttempts)
+        if ([attempt[@"exactGeometryBound"] boolValue] &&
+            [attempt[@"minimumExchangesLowerBound"] unsignedIntValue] > PHOrbMultiFishingMaxExchanges)
+            return MonochromeGeometryFailureMessage(goals,[attempt[@"minimumExchangesLowerBound"] unsignedIntValue]);
     NSMutableArray *missing = [NSMutableArray array];
     for (unsigned color = 0; color < PHOrbBasicTypes; ++color) {
         const unsigned required = PHOrbRequiredShapeOrbs(&goals,color);

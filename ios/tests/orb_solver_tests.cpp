@@ -186,6 +186,7 @@ static void ShapeTests() {
 #include "orb_assist_fishing_tests.inc"
 #include "orb_multi_fishing_tests.inc"
 #include "orb_fishing_geometry_tests.inc"
+#include "orb_monochrome_template_tests.inc"
 #include "orb_enemy_combo_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
 #include "orb_exact_solver_tests.inc"
@@ -220,6 +221,7 @@ int main() {
     AssistFishingTests();
     MultiFishingTests();
     FishingGeometryTests();
+    MonochromeTemplateTests();
     EnemyActionModelTests();
     EnemySelectorModelTests();
     EnemyDispatchModelTests();

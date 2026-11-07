@@ -6,6 +6,7 @@
 #import "PHOrbSkillWindow.h"
 #include "PHOrbSolver.h"
 #include "PHOrbMultiFishing.h"
+#include "PHOrbMonochromeTemplate.h"
 #include "PHOrbSearchAttempt.h"
 #include "PHOrbSessionState.h"
 #include "PHTargetGenerated.h"
@@ -299,6 +300,9 @@ NSDictionary *MultiFishingAttemptDetails(const PHOrbMultiFishingResult &result, 
         !inventory.stateLimitReached && !inventory.deadlineReached;
     return @{@"multiFishing":@YES, @"fishCell":@(cell), @"scope":@"target-independent-other-shared-phases",
         @"exchangeCount":@(result.route.exchangeCount), @"take":take, @"leave":leave,
+        @"exactGeometryBound":@(result.exactGeometryBound),
+        @"minimumExchangesLowerBound":@(result.minimumExchangesLowerBound),
+        @"timeReservationKnown":@(result.reservation.valid),
         @"geometryExtraExchanges":@(result.route.plan.geometryExtraExchanges),
         @"inventoryValid":@(result.inventory.valid), @"inventoryComplete":@(result.inventory.enumerationComplete),
         @"inventoryCompleteScope":@"baseline-net-inventory", @"inventoryCountsScope":@"baseline-plus-geometry",
@@ -806,14 +810,44 @@ struct EightPreparationState {
         }
     }
     _solveOptions = options;
-    [self recordPlanningStatus:@"searching" reason:nil];
-    _cancel = std::make_shared<std::atomic_bool>(false);
-    const auto cancel = _cancel;
     const PHOrbBoard board = _preview.board;
     const bool solo = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
         !_auto.eight() && !_preview.multiplayerDisabled;
     NSArray<NSDictionary *> *const assistCandidates = _goalPlan[@"assistRecoveryCandidates"] ?: @[];
     const bool multiNeedsRecovery = solo && _auto.active() && _assistRecoveryL && _preview.assistRecovery.turns;
+    // This exact first-wave geometry cannot fit within the existing exchange
+    // cap. Detect it before ordinary/single/multi searches; no timing estimate
+    // or native permission follows from this necessary lower bound.
+    if (solo && !multiNeedsRecovery && !assistCandidates.count) {
+        auto inspected = options;
+        for (unsigned i = 0; i < board.width * board.height; ++i)
+            if (board.spinnerMask & (UINT64_C(1) << i)) { inspected.fishCell = int(i); break; }
+        const auto shape = PHOrbInspectMonochromeTemplate(board,inspected);
+        if (shape.eligible && shape.minimumExchanges > PHOrbMultiFishingMaxExchanges) {
+            NSString *message = MonochromeGeometryFailureMessage(options.goals,shape.minimumExchanges);
+            [self recordPlanningStatus:@"no-route" reason:message];
+            NSMutableDictionary *trace = [_searchTrace mutableCopy];
+            trace[@"monochromeTemplate"] = @{@"eligible":@YES, @"applied":@YES,
+                @"reason":@(shape.reason), @"method":@"exact-first-wave-geometry-lower-bound",
+                @"minimumExchangesLowerBound":@(shape.minimumExchanges),
+                @"maximumExchanges":@(PHOrbMultiFishingMaxExchanges), @"lowerBoundOnly":@YES,
+                @"timeFeasibilityEvaluated":@NO, @"routeFound":@NO};
+            trace[@"fishingNotAttemptedReason"] = @(shape.reason);
+            trace[@"ordinarySearchSkipped"] = @(shape.reason);
+            trace[@"soloRetrySkipped"] = @(shape.reason);
+            trace[@"candidateAttempts"] = @[]; trace[@"multiFishingAttempts"] = @[];
+            trace[@"multiFishingCoverage"] = @{@"started":@NO, @"reason":@(shape.reason)};
+            trace[@"selectedAttemptIndex"] = @(-1); trace[@"selectedStatus"] = @"none";
+            trace[@"path"] = @[]; trace[@"statisticsAvailable"] = @NO;
+            _searchTrace = [trace copy]; [self rememberFailedSearch];
+            _phase = PHOrbSessionPhase::Stopped; _message = message;
+            if (_auto.active() || _oneShot) [self queueStop:message];
+            return;
+        }
+    }
+    [self recordPlanningStatus:@"searching" reason:nil];
+    _cancel = std::make_shared<std::atomic_bool>(false);
+    const auto cancel = _cancel;
     const PHOrbAssistRecoveryState multiRecovery = _preview.assistRecovery;
     PHOrbSolveOptions multiBaseOptions = options;
     bool multiGoalsValid = true;

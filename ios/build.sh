@@ -95,6 +95,7 @@ cp ios/docs/solver-assist-fishing-2026-11-06.md ios/docs/formation-profile-persi
 cp ios/docs/solver-native-fishing-2026-11-07.md ios/docs/solver-route-review-2026-11-07.md "$build_dir/"
 cp ios/docs/solver-colors-spinner-2026-11-07.md ios/docs/solver-native-rules-2026-11-07.md "$build_dir/"
 cp ios/docs/solver-four-spinners-2026-11-07.md ios/docs/solver-single-spinner-2026-11-07.md "$build_dir/"
+cp ios/docs/orb-monochrome-pattern.md "$build_dir/"
 cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
 mkdir -p "$build_dir/templates"
 cp -R ios/templates/ishida-uryu-gamewith-574233 "$build_dir/templates/"

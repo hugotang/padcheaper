@@ -49,6 +49,10 @@ struct PHOrbAssistFishingResult {
     bool searchBudgetExhausted = false, deadlineReached = false;
     uint8_t geometryPlansSearched = 0, geometryPlansTimeRejected = 0, geometryPlanSlicesExpired = 0;
     uint8_t plansBudgetSkipped = 0, geometryPlansBudgetSkipped = 0;
+    // A proven release-layout bound, separate from discovered inventories.
+    // It does not claim this number of exchanges is sufficient or permitted.
+    bool exactGeometryBound = false;
+    unsigned minimumExchangesLowerBound = 0;
 };
 
 // Enumerates minimal L allocations and unique net color inventories, filling

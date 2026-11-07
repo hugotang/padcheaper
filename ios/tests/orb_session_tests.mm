@@ -524,6 +524,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_multi_fishing_session_tests.inc"
 #include "orb_three_fishing_session_tests.inc"
 #include "orb_color_phase_session_tests.inc"
+#include "orb_monochrome_session_tests.inc"
 
 int main() {
     @autoreleasepool {
@@ -532,6 +533,7 @@ int main() {
         MultiFishingSessionTests();
         ThreeFishingSessionTests();
         ColorPhaseDiagnosticSessionTests();
+        MonochromeSessionTests();
         if (failures) return 1;
         AssistSessionTests();
         EnemyComboSessionTests();

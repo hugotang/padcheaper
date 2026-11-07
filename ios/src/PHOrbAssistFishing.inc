@@ -1,6 +1,7 @@
 // Shared bounded multi-take planning. Legacy assist entry points remain
 // restricted to their original input contract; native submission is separate.
 #include "PHOrbMultiFishing.h"
+#include "PHOrbMonochromeTemplate.h"
 namespace {
 using AssistCounts = std::array<uint8_t, PHOrbBasicTypes>;
 bool MultiFishingBoardValid(const PHOrbBoard &board, int fish) {
@@ -592,6 +593,14 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
         !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
         geometryExtraExchanges > PHOrbMultiFishingMaxGeometryExtra) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
+    if (!recovery) {
+        const auto geometry = PHOrbInspectMonochromeTemplate(board,options);
+        if (geometry.eligible && maxExchanges < geometry.minimumExchanges) {
+            out.exactGeometryBound = true;
+            out.minimumExchangesLowerBound = geometry.minimumExchanges;
+            return PHOrbSolveStatus::NoRoute;
+        }
+    }
     try {
         const auto started = Clock::now(), deadline = started + std::chrono::milliseconds(options.milliseconds);
         const auto reserve = std::chrono::milliseconds(std::min(25u,std::max(1u,options.milliseconds / 20)));
