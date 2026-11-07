@@ -234,6 +234,7 @@ static void FishingTransitionKeys() {
 
 #include "orb_route_simplification_tests.inc"
 #include "orb_fishing_model_tests.inc"
+#include "orb_fishing_budget_tests.inc"
 
 int main() {
     AllMetScores();
@@ -243,6 +244,7 @@ int main() {
     FishingTransitionKeys();
     RouteSimplificationTests();
     FishingModelTests();
+    FishingBudgetTests();
     std::printf("Private shape guidance tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

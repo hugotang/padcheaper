@@ -119,6 +119,22 @@ uint32_t AssistAllocationKey(const PHOrbAssistFishingPlan &plan) {
     for (unsigned c = 0; c < 5; ++c) key |= uint32_t(plan.lCounts[c]) << (4 * c);
     return key;
 }
+std::array<unsigned,PHOrbAssistFishingMaxPlans> FishingSearchWeights(const PHOrbAssistFishingInventory &inventory) {
+    std::array<unsigned,PHOrbAssistFishingMaxPlans> weights{};
+    if (inventory.count > weights.size() || inventory.geometrySelectedPlans > inventory.count) return weights;
+    std::fill(weights.begin(),weights.begin() + inventory.count,1u);
+    const unsigned baselineCount = inventory.count - inventory.geometrySelectedPlans;
+    if (baselineCount < 4) return weights;
+    const uint32_t allocation = AssistAllocationKey(inventory.plans[0]);
+    for (unsigned p = 1; p < baselineCount; ++p)
+        if (AssistAllocationKey(inventory.plans[p]) != allocation) return weights;
+    // Many donor inventories for the same L allocation must not all stop at
+    // the same shallow depth. The best-ranked representative gets half of
+    // its existing stage budget; every other baseline retains equal shares
+    // of the other half. Cross-allocation and geometry shares stay unchanged.
+    weights[0] = baselineCount - 1;
+    return weights;
+}
 bool AssistInventoryPasses(const Inventory &fixed, const PHOrbBoard &board, const Context &context,
     unsigned fish, unsigned &upper) {
     upper = PHOrbMaxCells;
@@ -600,6 +616,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
         }
         const unsigned size = board.width * board.height, fish = unsigned(options.fishCell);
         const unsigned baselinePlans = out.inventory.count - out.inventory.geometrySelectedPlans;
+        const auto searchWeights = FishingSearchWeights(out.inventory);
         bool geometryHasTime = false;
         for (unsigned p = baselinePlans; p < out.inventory.count; ++p) {
             const unsigned minimumMoves = 2u * out.inventory.plans[p].exchangeCount;
@@ -635,7 +652,10 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
             const auto planStart = Clock::now();
             if (planStart >= stageDeadline) { ++out.plansBudgetSkipped; out.geometryPlansBudgetSkipped += geometry; continue; }
             ++out.plansSearched; out.geometryPlansSearched += geometry;
-            const auto planDeadline = planStart + (stageDeadline - planStart) / (geometry ? out.inventory.count - p : baselinePlans - p);
+            unsigned remainingWeight = 0;
+            for (unsigned next = p; next < (geometry ? out.inventory.count : baselinePlans); ++next)
+                remainingWeight += searchWeights[next];
+            const auto planDeadline = planStart + (stageDeadline - planStart) * searchWeights[p] / remainingWeight;
             auto trial = options; trial.goals = plan.goals;
             auto context = MakeContext(board,trial.goals,true,trial.allowPoisonWithHeartFour,trial.diagonal,{},trial.fishCell);
             std::vector<AssistFishingNode> beam, next;
