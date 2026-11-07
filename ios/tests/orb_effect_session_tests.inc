@@ -169,6 +169,8 @@ static void FishSessionTests() {
             ![trace[@"reason"] containsString:@"未開始轉珠；請調整目標"] &&
             ![state[@"canExecute"] boolValue] && !engine->stages && !engine->allowedSpinnerCell && !engine->releases,
             "partial fishing diagnostics name the real goal failure and never arm or execute the route");
+        Check([trace[@"multiFishingAttempts"] count] && [trace[@"reason"] containsString:@"嘗試連續撈珠"],
+            "a later multi-take failure is reported alongside the retained candidate's exact unmet goals");
         Execute(session); Tick(session,engine,Frame());
         Check(!engine->stages && !engine->allowedSpinnerCell && !engine->releases,
             "an explicit execute request cannot turn a failed fishing preview into input");
@@ -250,6 +252,12 @@ static void FishSessionTests() {
     Check([session.snapshot[@"phase"] isEqual:@"stopped"] && ![session.snapshot[@"canExecute"] boolValue] && !engine->stages &&
         attempts.count && ![[attempts valueForKey:@"fishColor"] containsObject:@0],
         "a spinner table without the wanted colour never attempts to fish it");
+    NSArray<NSDictionary *> *multiAttempts = session.snapshot[@"searchTrace"][@"multiFishingAttempts"];
+    Check(multiAttempts.count && !engine->releases && !engine->allowedSpinnerCell,
+        "the restricted-table inventory failure leaves no open spinner or staged release");
+    for (NSDictionary *attempt in multiAttempts)
+        Check(![attempt[@"exchanges"] count] && !attempt[@"fishColor"],
+            "a multi-take attempt without a retained exchange has no invented single-take colour");
 }
 static void OrbEffectSessionTests() {
     FishSessionTests();

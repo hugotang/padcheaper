@@ -983,6 +983,10 @@ struct EightPreparationState {
                 NSMutableDictionary *attempt = SearchAttemptTrace(described,status,candidateRoute,uint64_t(wallMS));
                 [attempt addEntriesFromDictionary:MultiFishingAttemptDetails(candidate,trial.fishCell)];
                 attempt[@"exchanges"] = FishingExchangesTrace(candidateRoute);
+                // Multi-take planning requests an inventory, not the default
+                // single-take colour zero. Name a colour only after a real
+                // exchange has been retained in the returned candidate.
+                if (!candidateRoute.fishingExchangeCount) [attempt removeObjectForKey:@"fishColor"];
                 attempt[@"evaluationBreakdownKnown"] = @NO;
                 [attempts addObject:attempt]; [multiAttempts addObject:attempt];
                 if (status == PHOrbSolveStatus::Solved && candidate.evaluation.goalsMet && candidate.evaluation.hazardsSafe) {
@@ -1215,7 +1219,11 @@ struct EightPreparationState {
             if (!route.hazardsSafe)
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
             if (!route.goalsMet || !route.hazardsSafe) {
-                session->_message = MultiFishingFailureMessage(session->_message,board,multiBaseOptions.goals,multiAttempts);
+                // Keep this replayed candidate's exact unmet goals and hazard
+                // evidence when the later multi-take fallback also fails.
+                // The no-candidate path may still replace an initial shortage.
+                if (multiAttempts.count) session->_message = [session->_message stringByAppendingFormat:@"\n%@",
+                    MultiFishingFailureMessage(@"",board,multiBaseOptions.goals,multiAttempts)];
                 trace[@"reason"] = session->_message; session->_searchTrace = [trace copy];
                 [session rememberFailedSearch];
             }
