@@ -4,15 +4,13 @@
 
 ## 最新交付
 
-0.5.40-orbs 正在本輪編譯測試，候選內容見 [版本說明](docs/release-0.5.40.md)；以下 0.5.39 仍是此來源快照時已交付版本。
-
-[0.5.39-orbs](docs/release-0.5.39.md) 已通過 [CI 148](https://github.com/hugotang/padcheaper/actions/runs/42337957516) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，交付 E:/ipa/PADCheaper-0.5.39-orbs 及同名 ZIP。連續多色取珠與多轉轉逐次確認已接入，原缺心盤在本機兩種預算各三次成功；人工三轉轉變體仍未解，真機時序未驗證。詳見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.39.json)。
+[0.5.40-orbs](docs/release-0.5.40.md) 已通過 [CI 151](https://github.com/hugotang/padcheaper/actions/runs/42350207036) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存已驗證；真機多人時序待驗收，徽章仍須在遊戲內選用。詳見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.40.json)。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.40-orbs](docs/release-0.5.40.md) | 2026-11-07 | 五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存；本輪編譯測試中 |
+| [0.5.40-orbs](docs/release-0.5.40.md) | 2026-11-07 | 五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存；已驗證交付 |
 | [0.5.39-orbs](docs/release-0.5.39.md) | 2026-11-07 | 單人連續多色取珠、多轉轉逐次確認、額外取色改善位置、去循環與成功證據；已驗證交付 |
 | [0.5.38-orbs](docs/release-0.5.38.md) | 2026-11-07 | 隊伍／策略配裝同步、失敗紀錄保留、六次回復撈珠離線模型；已驗證交付 |
 | [0.5.37-orbs](docs/release-0.5.37.md) | 2026-11-06 | 單次撈珠選色／重試與診斷，雙次取色離線模型；原盤九 Combo 尚未解出 |
