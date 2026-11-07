@@ -1,6 +1,7 @@
 #include "PHOrbSolver.h"
 #include "PHOrbTimedFishing.h"
 #include "PHOrbAssistFishing.h"
+#include "PHOrbMultiFishing.h"
 #include "PHEnemyActions.h"
 #include "PHEnemySelector.h"
 #include "PHEnemyDispatch.h"
@@ -183,6 +184,8 @@ static void ShapeTests() {
 #include "orb_inventory_solver_tests.inc"
 #include "orb_timed_fishing_tests.inc"
 #include "orb_assist_fishing_tests.inc"
+#include "orb_multi_fishing_tests.inc"
+#include "orb_fishing_geometry_tests.inc"
 #include "orb_enemy_combo_solver_tests.inc"
 #include "orb_shape_solver_tests.inc"
 #include "orb_exact_solver_tests.inc"
@@ -212,6 +215,8 @@ int main() {
     FishingInventoryTests();
     TimedFishingTests();
     AssistFishingTests();
+    MultiFishingTests();
+    FishingGeometryTests();
     EnemyActionModelTests();
     EnemySelectorModelTests();
     EnemyDispatchModelTests();

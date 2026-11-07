@@ -84,6 +84,8 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
                    bool allowPoisonWithHeartFour) noexcept;
 bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept;
+// Explicit multi-exchange routes enumerate the selected spinner independently
+// of the untouched cells' common phase; ordinary routes use the shared clock.
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept;
 // One caller-owned worker, immutable input, no native/game calls or process exit.

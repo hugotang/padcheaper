@@ -961,7 +961,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"leaderContext"], orbs[@"liveLeaderPlan"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb captured search: %@ / current read valid %@; history records are retained after stopping",
         orbs[@"searchTraceRelation"], orbs[@"liveReadValid"]];
-    for (NSString *key in @[@"searchTrace", @"lastFailedSearch", @"executionHistory", @"opening", @"battleObservation"]) {
+    for (NSString *key in @[@"searchTrace", @"lastFailedSearch", @"lastFishingSuccess", @"lastAssistRecoverySuccess",
+        @"executionHistory", @"opening", @"battleObservation"]) {
         id trace = orbs[key];
         NSData *data = trace ? [NSJSONSerialization dataWithJSONObject:trace options:NSJSONWritingSortedKeys error:NULL] : nil;
         NSString *json = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null";

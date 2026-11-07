@@ -151,6 +151,37 @@ bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b) {
     return SameBoard(a, b, PHOrbSpinnerSupported(a) && PHOrbSpinnerSupported(b));
 }
 
+bool PHOrbSameFishingPlanBoard(const PHOrbBoard *a, const PHOrbBoard *b, unsigned fishCell, uintptr_t heldToken) {
+    if (!PHOrbBoardValid(a) || !PHOrbBoardValid(b) || a->width != b->width || a->height != b->height ||
+        fishCell >= a->width * a->height || a->spinnerMask != b->spinnerMask || a->spinnerColors != b->spinnerColors ||
+        !(a->spinnerMask & (UINT64_C(1) << fishCell)) || (a->spinnerColors & ~63u) ||
+        (a->flags[fishCell] & PHOrbFlagLocked) || (b->flags[fishCell] & PHOrbFlagLocked) ||
+        a->tapeMask != b->tapeMask || a->cloudMask != b->cloudMask || a->fixedStart != b->fixedStart ||
+        a->unmatchableColors != b->unmatchableColors || a->minErase != b->minErase || a->minMatch != b->minMatch) return false;
+    const unsigned size = a->width * a->height;
+    // Match only the established native visual exceptions from SameBoard:
+    // touching clears ordinary darkness, and accepted fixed-start selection
+    // can clear dimming while retaining the exact fixed-start coordinate.
+    // Neither exception permits super-darkness duration, gameplay flags,
+    // enhancement or token identity to change during a spinner wait.
+    const uint32_t ignored = PHOrbFlagBlindTouch | (a->fixedStart ? PHOrbFlagStartDim : 0);
+    for (unsigned i = 0; i < size; ++i)
+        if (a->tokens[i] != b->tokens[i] || (a->flags[i] & ~ignored) != (b->flags[i] & ~ignored) ||
+            a->enhancement[i] != b->enhancement[i] ||
+            a->blindTurns[i] != b->blindTurns[i] || a->thornDamage[i] != b->thornDamage[i] ||
+            a->x[i] != b->x[i] || a->y[i] != b->y[i]) return false;
+    if (heldToken && a->tokens[fishCell] == heldToken && a->types[fishCell] != b->types[fishCell]) return false;
+    // Board validity already restricts both target colors to the current
+    // table. Only this cell is independent; another spinner may not drift.
+    for (unsigned phase = 0; phase < PHOrbSpinnerVariants(a); ++phase) {
+        bool matches = true;
+        for (unsigned i = 0; i < size; ++i)
+            if (i != fishCell && PHOrbSpinnerType(a,i,phase) != b->types[i]) { matches = false; break; }
+        if (matches) return true;
+    }
+    return false;
+}
+
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     return a && b && PHBattleSameIdentity(&a->identity, &b->identity) && a->wave == b->wave &&
         PHOrbSameMultiplayerTurn(&a->multiplayer, &b->multiplayer) &&
@@ -582,7 +613,81 @@ bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, 
     return dx <= 1 && dy <= 1;
 }
 
+static bool FishingListValid(const PHOrbBoard *board, const PHOrbRoute *route) {
+    if (!PHOrbBoardValid(board) || !route || !route->fishing || !route->fishingExchangeCount ||
+        route->fishingExchangeCount > PHOrbRouteMaxFishingExchanges || route->count < 3 || route->count > PHOrbMaxSteps + 1 ||
+        route->fishCell >= board->width * board->height || (board->spinnerColors & ~63u) ||
+        PHOrbSpinnerVariants(board) < 2 || !(board->spinnerMask & (UINT64_C(1) << route->fishCell)) ||
+        (board->tapeMask & (UINT64_C(1) << route->fishCell))) return false;
+    const unsigned size = board->width * board->height;
+    for (unsigned i = 0; i < size; ++i)
+        if (board->flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return false;
+    const uint64_t blocked = board->tapeMask | (board->spinnerMask & ~(UINT64_C(1) << route->fishCell));
+    if (route->cells[0] >= size || route->cells[0] == route->fishCell ||
+        (blocked & (UINT64_C(1) << route->cells[0]))) return false;
+    for (unsigned i = 0; i < route->fishingExchangeCount; ++i) {
+        const PHOrbFishingExchange *exchange = &route->fishingExchanges[i];
+        if (!exchange->entry || exchange->exit != exchange->entry + 1 || exchange->exit >= route->count ||
+            (i && exchange->entry <= route->fishingExchanges[i - 1].exit) ||
+            exchange->take >= PHOrbBasicTypes || exchange->leave >= PHOrbBasicTypes || exchange->take == exchange->leave ||
+            !(board->spinnerColors & (1u << exchange->take)) || !(board->spinnerColors & (1u << exchange->leave)) ||
+            route->cells[exchange->entry] != route->fishCell || route->cells[exchange->exit] == route->fishCell) return false;
+    }
+    unsigned visits = 0;
+    for (unsigned step = 1; step < route->count; ++step) {
+        const unsigned from = route->cells[step - 1], to = route->cells[step];
+        if (!PHOrbMoveAdjacent(from,to,board->width,board->height,route->diagonal) ||
+            (blocked & (UINT64_C(1) << to))) return false;
+        if (to == route->fishCell) {
+            if (visits >= route->fishingExchangeCount || route->fishingExchanges[visits].entry != step) return false;
+            ++visits;
+        } else if (from == route->fishCell && (!visits || route->fishingExchanges[visits - 1].exit != step)) return false;
+    }
+    return visits == route->fishingExchangeCount && route->cells[route->count - 1] != route->fishCell;
+}
+
+static void SwapFishingFields(PHOrbBoard *board, unsigned a, unsigned b) {
+#define PH_FISH_SWAP(field, type) do { type value = board->field[a]; board->field[a] = board->field[b]; board->field[b] = value; } while (0)
+    PH_FISH_SWAP(types, uint8_t); PH_FISH_SWAP(flags, uint32_t); PH_FISH_SWAP(enhancement, uint32_t);
+    PH_FISH_SWAP(tokens, uintptr_t); PH_FISH_SWAP(blindTurns, uint8_t); PH_FISH_SWAP(thornDamage, uint8_t);
+#undef PH_FISH_SWAP
+    board->flags[a] &= ~PHOrbFlagBlindTouch; board->flags[b] &= ~PHOrbFlagBlindTouch;
+}
+
+static bool ApplyFishingStep(PHOrbBoard *board, const PHOrbRoute *route, unsigned step, bool observed) {
+    const unsigned from = route->cells[step - 1], to = route->cells[step];
+    for (unsigned i = 0; i < route->fishingExchangeCount; ++i) {
+        const PHOrbFishingExchange *exchange = &route->fishingExchanges[i];
+        if (step == exchange->entry) {
+            if (board->types[from] >= PHOrbBasicTypes || !(board->spinnerColors & (1u << board->types[from])) ||
+                (observed && board->types[to] != exchange->take)) return false;
+            board->types[to] = exchange->take;
+        }
+        if (step == exchange->exit && board->types[to] != exchange->leave) return false;
+    }
+    SwapFishingFields(board,from,to);
+    return true;
+}
+
+static bool ReplayFishingList(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result) {
+    if (!result || !FishingListValid(board,route) || through >= route->count || !PHOrbCanStartAt(board,route->cells[0])) return false;
+    PHOrbBoard replay = *board, prefix = *board;
+    for (unsigned step = 1; step < route->count; ++step) {
+        if (!ApplyFishingStep(&replay,route,step,false)) return false;
+        if (step == through) prefix = replay;
+    }
+    *result = prefix; return true;
+}
+
+bool PHOrbReplayFishingStep(const PHOrbBoard *board, const PHOrbRoute *route, unsigned step, PHOrbBoard *result) {
+    if (!result || !FishingListValid(board,route) || !step || step >= route->count) return false;
+    PHOrbBoard replay = *board;
+    if (!ApplyFishingStep(&replay,route,step,true)) return false;
+    *result = replay; return true;
+}
+
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result) {
+    if (route && route->fishingExchangeCount) return ReplayFishingList(board,route,through,result);
     if (!PHOrbBoardValid(board) || !route || !result || route->count < 1 ||
         route->count > PHOrbMaxSteps + 1 || through >= route->count || route->cells[0] >= board->width * board->height) return false;
     if (!PHOrbCanStartAt(board, route->cells[0])) return false;

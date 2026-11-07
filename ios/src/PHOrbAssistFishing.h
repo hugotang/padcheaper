@@ -1,9 +1,10 @@
 #pragma once
 #include "PHOrbTimedFishing.h"
 
-// Offline recovery planning. Every release color must pass; no final-phase
-// control is assumed. These routes are not PHOrbRoute and have no native input
-// caller. Timing values are supplied assumptions, not device authorization.
+// Legacy recovery-only entry points; every release color must pass. Shared
+// planning types are also used by PHOrbMultiFishing, whose Session caller
+// converts validated exchanges to PHOrbRoute and confirms native input.
+// Timing values are supplied assumptions, not device authorization.
 constexpr unsigned PHOrbAssistFishingMaxExchanges = 6, PHOrbAssistFishingMaxPlans = 12;
 constexpr unsigned PHOrbAssistFishingMaxInventoryStates = 8192;
 
@@ -13,6 +14,7 @@ struct PHOrbAssistFishingPlan {
     uint8_t exchangeCount = 0, providers = 0;
     uint32_t predictedTurns = 0;
     unsigned comboUpper = 0;
+    uint8_t geometryExtraExchanges = 0; // Search provenance only, not native permission.
 };
 struct PHOrbAssistFishingInventory {
     // Complete only for the restricted net-inventory enumeration described
@@ -24,6 +26,11 @@ struct PHOrbAssistFishingInventory {
     unsigned minimumExchanges = PHOrbAssistFishingMaxExchanges + 1;
     uint8_t fixed[PHOrbBasicTypes]{};
     PHOrbAssistFishingPlan plans[PHOrbAssistFishingMaxPlans]{};
+    // Combined counts include geometry; enumerationComplete and the earlier
+    // goal/state/deadline flags describe baseline enumeration only.
+    unsigned geometryRequestedExtra = 0, geometryVisitedStates = 0, geometryFeasiblePlans = 0, geometrySelectedPlans = 0;
+    bool geometrySelectionTruncated = false, geometryStateLimitReached = false;
+    bool geometryDeadlineReached = false, geometrySlotLimitReached = false;
 };
 struct PHOrbAssistFishingRoute {
     uint8_t count = 0, cells[PHOrbMaxSteps + 1]{};
@@ -40,6 +47,8 @@ struct PHOrbAssistFishingResult {
     uint32_t evaluated = 0, elapsedMS = 0;
     uint8_t plansSearched = 0, plansTimeRejected = 0, exploredDepth = 0, planSlicesExpired = 0;
     bool searchBudgetExhausted = false, deadlineReached = false;
+    uint8_t geometryPlansSearched = 0, geometryPlansTimeRejected = 0, geometryPlanSlicesExpired = 0;
+    uint8_t plansBudgetSkipped = 0, geometryPlansBudgetSkipped = 0;
 };
 
 // Enumerates minimal L allocations and unique net color inventories, filling

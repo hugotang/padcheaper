@@ -350,7 +350,14 @@ typedef struct {
     PHOrbEnemyComboState enemyCombo;
     PHOrbEightState eight;
     PHOrbEightSkillReceipt eightReceipt;
+    // Captured from the existing token-pool read. Motion is observation only;
+    // it is not swapped board metadata or a replacement for token identity.
+    uint8_t orbMotion[PHOrbMaxCells];
+    bool orbMotionKnown;
 } PHOrbSnapshot;
+
+enum { PHOrbRouteMaxFishingExchanges = 6 };
+typedef struct { uint8_t entry, exit, take, leave; } PHOrbFishingExchange;
 
 typedef struct {
     uint8_t count, cells[PHOrbMaxSteps + 1]; // Includes the starting cell.
@@ -371,6 +378,11 @@ typedef struct {
     // orb is state 4). The session waits for the colour before this step.
     bool fishing;
     uint8_t fishCell, fishColor;
+    // Explicit repeated exchanges use the same selected cell. Zero keeps the
+    // legacy single-entry contract above; nonzero requires every entry/exit
+    // in the complete list, even when only a prefix is replayed.
+    uint8_t fishingExchangeCount;
+    PHOrbFishingExchange fishingExchanges[PHOrbRouteMaxFishingExchanges];
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);
@@ -388,6 +400,11 @@ bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 // enhancement, geometry and all restrictions must still agree. Fixed-start
 // dimming is visual and is cleared by native start acceptance.
 bool PHOrbSamePlanBoard(const PHOrbBoard *a, const PHOrbBoard *b);
+// Multi-take input only: the selected spinner can have a new relative phase
+// after an exchange. Untouched spinners still share one phase, all tokens and
+// metadata remain exact except the existing ordinary-darkness/fixed-start
+// visual flag tolerance, and the selected cell cannot recolor while held.
+bool PHOrbSameFishingPlanBoard(const PHOrbBoard *a, const PHOrbBoard *b, unsigned fishCell, uintptr_t heldToken);
 bool PHOrbSameTurn(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 PHOrbMultiplayerKind PHOrbMultiplayerMode(int16_t mode, uint32_t multiplayer);
 bool PHOrbMultiplayerTransitionAllowed(PHOrbMultiplayerKind from, PHOrbMultiplayerKind to);
@@ -421,6 +438,11 @@ unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *state, const PH
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);
+// One acknowledged-step prediction from the actual pre-step board, not the
+// original route board. The caller must already have accepted a full replay.
+// step is the one-based target path index. Entry requires the observed take
+// color; exit requires the declared donor. Failure leaves result unchanged.
+bool PHOrbReplayFishingStep(const PHOrbBoard *board, const PHOrbRoute *route, unsigned step, PHOrbBoard *result);
 bool PHOrbCanPreview(const PHOrbSnapshot *state);
 bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b);
 bool PHOrbSameAutomationExceptWindow(const PHOrbSnapshot *a, const PHOrbSnapshot *b);

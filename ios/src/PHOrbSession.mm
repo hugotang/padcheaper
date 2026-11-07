@@ -5,6 +5,7 @@
 #import "PHOrbEight.h"
 #import "PHOrbSkillWindow.h"
 #include "PHOrbSolver.h"
+#include "PHOrbMultiFishing.h"
 #include "PHOrbSearchAttempt.h"
 #include "PHOrbSessionState.h"
 #include "PHTargetGenerated.h"
@@ -61,14 +62,101 @@ double TimeAvailable(const PHOrbSnapshot &state) {
 double StepDuration(const PHOrbSnapshot &state) {
     return state.fps >= 15 && state.fps <= 120 ? std::ceil(StepSeconds * state.fps) / state.fps : StepSeconds;
 }
+unsigned FishingTakes(const PHOrbRoute &route) {
+    return route.fishing ? std::max(1u,unsigned(route.fishingExchangeCount)) : 0;
+}
+double RouteExecutionLimit(const PHOrbSnapshot &state, const PHOrbRoute &route) {
+    const double settle = route.fishingExchangeCount && state.fps ?
+        (route.fishingExchangeCount + 1) * std::max(2.0,std::ceil(0.20 * state.fps)) / state.fps : 0;
+    return ExecutionLimit + FishingTakes(route) * FishWaitSeconds(state) + settle;
+}
+PHOrbTimedFishingTiming MultiFishingTiming(const PHOrbSnapshot &state) {
+    PHOrbTimedFishingTiming timing;
+    timing.remainingFrames = state.remainingFrames;
+    timing.framesPerMove = unsigned(std::ceil(StepSeconds * state.fps));
+    // Wait for a displaced token to settle before watching a complete cycle.
+    timing.settleFramesPerWait = std::max(2u,unsigned(std::ceil(0.20 * state.fps)));
+    timing.inputAndCaptureFrames = std::max(2u,unsigned(std::ceil(TimeMargin * state.fps)));
+    timing.spinnerPeriodFrames = state.spinnerPeriodFrames;
+    return timing;
+}
+bool MultiFishingEligible(const PHOrbSnapshot &state) {
+    if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer) || state.multiplayerDisabled ||
+        !PHOrbBoardValid(&state.board) || PHOrbSpinnerVariants(&state.board) < 2 ||
+        !state.spinnerCountdownKnown || state.spinnerPeriodFrames < FishMinPeriod ||
+        state.fps < 15 || state.fps > 120 || (state.board.spinnerColors & ~63u)) return false;
+    for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
+        if (state.board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return false;
+    return state.orbMotionKnown && TimeAvailable(state) > FishWaitSeconds(state) + TimeMargin + 2 * StepDuration(state);
+}
 bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route, double delay = 0) {
     if (route.count < 2) return false;
-    const double wait = route.fishing ? FishWaitSeconds(state) : 0;
-    const double required = (route.count - 1) * StepDuration(state) + wait + TimeMargin;
-    if (required > std::min(TimeAvailable(state), ExecutionLimit + wait)) return false;
+    const double wait = FishingTakes(route) * FishWaitSeconds(state);
+    const double settle = route.fishingExchangeCount ?
+        double(MultiFishingTiming(state).settleFramesPerWait * (route.fishingExchangeCount + 1)) / state.fps : 0;
+    const double required = (route.count - 1) * StepDuration(state) + wait + settle + TimeMargin;
+    if (required > std::min(TimeAvailable(state), RouteExecutionLimit(state,route))) return false;
     return PHBattleIsSinglePlayer(state.identity.entryMode, state.identity.multiplayer) ||
         state.multiplayer.kind == PHOrbMultiplayerThreeSolo ||
         required + delay <= state.multiplayer.remainingSeconds;
+}
+bool SameFishingPosition(const PHOrbSnapshot &current, const PHOrbSnapshot &expected, const PHOrbRoute &route) {
+    if (!route.fishingExchangeCount) return SamePosition(current,expected);
+    return PHOrbSameTurn(&current,&expected) && PHOrbSameLeaders(&current,&expected) && current.moves == expected.moves &&
+        PHOrbSameFishingPlanBoard(&current.board,&expected.board,route.fishCell,current.dragged);
+}
+int FishingExchangeAt(const PHOrbRoute &route, unsigned step, bool exit) {
+    for (unsigned i = 0; i < route.fishingExchangeCount; ++i)
+        if ((exit ? route.fishingExchanges[i].exit : route.fishingExchanges[i].entry) == step) return int(i);
+    return -1;
+}
+bool FishingTimingUnchanged(const PHOrbSnapshot &current, const PHOrbSnapshot &origin) {
+    return current.orbMotionKnown && current.spinnerCountdownKnown &&
+        current.fps >= 15 && current.fps <= 120 && current.spinnerPeriodFrames >= FishMinPeriod &&
+        current.spinnerCountdown <= current.spinnerPeriodFrames &&
+        current.spinnerPeriodFrames == origin.spinnerPeriodFrames && current.fps == origin.fps &&
+        current.board.spinnerMask == origin.board.spinnerMask && current.board.spinnerColors == origin.board.spinnerColors;
+}
+bool MultiFishingReadyToEnter(const PHOrbSnapshot &state, const PHOrbRoute &route, unsigned step) {
+    const int index = FishingExchangeAt(route,step,false);
+    if (index < 0) return false;
+    const auto &exchange = route.fishingExchanges[index];
+    return state.orbMotionKnown && state.orbMotion[route.fishCell] == 0 && state.spinnerCountdownKnown &&
+        state.spinnerCountdown >= FishMinCountdown && state.board.types[route.fishCell] == exchange.take &&
+        (state.board.spinnerColors & (1u << exchange.take));
+}
+bool MultiFishingReadyToRelease(const PHOrbSnapshot &state) {
+    if (!state.orbMotionKnown) return false;
+    for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
+        if (state.board.tokens[i] != state.dragged && state.orbMotion[i] != 0) return false;
+    return true;
+}
+bool HasRemainingFishingTime(const PHOrbSnapshot &state, const PHOrbRoute &route, unsigned confirmed,
+    double elapsed, double executionLimit) {
+    if (confirmed + 1 >= route.count) return false;
+    const int index = FishingExchangeAt(route,confirmed + 1,false);
+    if (index < 0 || !state.orbMotionKnown || !state.spinnerCountdownKnown ||
+        state.fps < 15 || state.fps > 120 || state.spinnerCountdown > state.spinnerPeriodFrames) return false;
+    const auto timing = MultiFishingTiming(state);
+    const unsigned future = route.fishingExchangeCount - unsigned(index) - 1;
+    double wait = 0;
+    if (!MultiFishingReadyToEnter(state,route,confirmed + 1)) {
+        if (state.orbMotion[route.fishCell] != 0) {
+            wait = FishWaitSeconds(state) + double(timing.settleFramesPerWait) / state.fps;
+        } else {
+            const unsigned variants = PHOrbSpinnerVariants(&state.board);
+            unsigned ticks = 1;
+            for (; ticks <= variants; ++ticks)
+                if (PHOrbSpinnerType(&state.board,route.fishCell,ticks) == route.fishingExchanges[index].take) break;
+            if (ticks > variants) return false;
+            // Use the observed phase while waiting, rather than reserving a
+            // new full cycle on every frame. One frame covers the tick edge.
+            wait = double(state.spinnerCountdown + 1 + (ticks - 1) * state.spinnerPeriodFrames) / state.fps;
+        }
+    }
+    const double required = (route.count - 1 - confirmed) * StepDuration(state) + wait +
+        future * FishWaitSeconds(state) + double((future + 1) * timing.settleFramesPerWait) / state.fps + TimeMargin;
+    return required <= std::min(TimeAvailable(state),std::max(0.0,executionLimit - elapsed));
 }
 PHOrbSolveOptions OptionsForQuality(NSString *quality) {
     return PHOrbOptionsForQuality([quality isEqual:@"fast"] ? PHOrbSearchQuality::Fast :
@@ -76,12 +164,19 @@ PHOrbSolveOptions OptionsForQuality(NSString *quality) {
 }
 #include "PHOrbDiagnosticPresentation.inc"
 
+NSDictionary *FishingEvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &goals, bool independent) {
+    NSMutableDictionary *trace = [EvaluationTrace(value,goals) mutableCopy];
+    if (independent) trace[@"scope"] = @"target-independent-other-shared-phases";
+    return trace;
+}
+
 NSMutableDictionary *SearchAttemptTrace(const PHOrbSolveOptions &options, PHOrbSolveStatus status,
                                        const PHOrbRoute &route, uint64_t wallElapsedMS) {
     const bool statisticsAvailable = PHOrbHasSearchCandidate(status, route);
     NSMutableDictionary *trace = [@{@"goals":PHOrbGoalsJSON(&options.goals), @"status":SolveStatusName(status),
         @"budgetMS":@(options.milliseconds), @"elapsedMS":@(route.elapsedMS), @"wallElapsedMS":@(wallElapsedMS),
         @"statisticsAvailable":@(statisticsAvailable), @"deadlineKnown":@(statisticsAvailable),
+        @"evaluationBreakdownKnown":@(statisticsAvailable),
         @"deadline":@(route.deadlineReached), @"evaluated":@(route.evaluated),
         @"evaluationCalls":@(route.evaluationCalls), @"evaluationCacheHits":@(route.evaluationCacheHits),
         @"fishingRequested":@(options.fishCell >= 0), @"fishing":@(route.fishing),
@@ -114,6 +209,72 @@ NSDictionary *FishingPlanTrace(const PHOrbFishingPlan &plan, int cell) {
             @"required":@(issue.required), @"available":@(issue.available), @"variants":@(issue.variants)}];
     }
     return @{@"fishCell":@(cell), @"scope":@"one-exchange-all-phases", @"selectedCount":@(plan.selectedCount), @"colors":colors};
+}
+NSArray *FishingExchangesTrace(const PHOrbRoute &route) {
+    NSMutableArray *exchanges = [NSMutableArray array];
+    for (unsigned i = 0; i < route.fishingExchangeCount; ++i) {
+        const auto &change = route.fishingExchanges[i];
+        [exchanges addObject:@{@"entry":@(change.entry), @"exit":@(change.exit),
+            @"take":@(change.take), @"leave":@(change.leave)}];
+    }
+    return exchanges;
+}
+PHOrbRoute ExecutableMultiFishing(const PHOrbMultiFishingResult &result) {
+    PHOrbRoute route{}; const auto &path = result.route; const auto &value = result.evaluation;
+    route.count = path.count; std::copy(path.cells,path.cells + path.count,route.cells);
+    route.diagonal = path.diagonal; route.fishing = path.exchangeCount != 0;
+    route.fishCell = path.fishCell; route.fishColor = path.exchangeCount ? path.exchanges[0].take : 0;
+    route.fishingExchangeCount = path.exchangeCount;
+    for (unsigned i = 0; i < path.exchangeCount; ++i) {
+        const auto &change = path.exchanges[i];
+        route.fishingExchanges[i] = {change.entry,change.exit,change.take,change.leave};
+    }
+    route.combos = value.combos; route.erased = value.erased;
+    std::copy(std::begin(value.goalHits),std::end(value.goalHits),route.goalHits);
+    route.goalCount = path.plan.goals.count; route.matchedGoals = value.matchedGoals;
+    route.goalsMet = value.goalsMet; route.hazardsSafe = value.hazardsSafe;
+    route.poisonErased = value.poisonErased; route.mortalPoisonErased = value.mortalPoisonErased;
+    route.unmatchedBombs = value.unmatchedBombs; route.heartFours = value.heartFours;
+    route.evaluated = result.evaluated; route.elapsedMS = result.elapsedMS;
+    route.searchPasses = result.plansSearched; route.exploredDepth = result.exploredDepth;
+    route.deadlineReached = result.deadlineReached;
+    return route;
+}
+NSDictionary *MultiFishingAttemptDetails(const PHOrbMultiFishingResult &result, int cell) {
+    NSMutableArray *take = [NSMutableArray array], *leave = [NSMutableArray array];
+    for (unsigned c = 0; c < PHOrbBasicTypes; ++c) {
+        [take addObject:@(result.route.plan.take[c])]; [leave addObject:@(result.route.plan.leave[c])];
+    }
+    const auto &inventory = result.inventory;
+    const bool minimumFound = inventory.valid && inventory.minimumExchanges <= PHOrbMultiFishingMaxExchanges;
+    const bool minimumKnown = minimumFound && inventory.enumerationComplete && !inventory.goalLimit &&
+        !inventory.stateLimitReached && !inventory.deadlineReached;
+    return @{@"multiFishing":@YES, @"fishCell":@(cell), @"scope":@"target-independent-other-shared-phases",
+        @"exchangeCount":@(result.route.exchangeCount), @"take":take, @"leave":leave,
+        @"geometryExtraExchanges":@(result.route.plan.geometryExtraExchanges),
+        @"inventoryValid":@(result.inventory.valid), @"inventoryComplete":@(result.inventory.enumerationComplete),
+        @"inventoryCompleteScope":@"baseline-net-inventory", @"inventoryCountsScope":@"baseline-plus-geometry",
+        @"inventoryGoalLimit":@(result.inventory.goalLimit),
+        @"inventoryStates":@(result.inventory.visitedStates), @"inventoryStateLimit":@(result.inventory.stateLimitReached),
+        @"inventoryDeadline":@(result.inventory.deadlineReached), @"inventoryPlans":@(result.inventory.feasiblePlans),
+        @"selectedPlans":@(result.inventory.count), @"planSelectionTruncated":@(result.inventory.selectionTruncated),
+        @"minimumExchanges":@(result.inventory.minimumExchanges), @"minimumFound":@(minimumFound),
+        @"minimumKnown":@(minimumKnown), @"minimumScope":@"restricted-net-inventory",
+        @"plansSearched":@(result.plansSearched), @"planSlicesExpired":@(result.planSlicesExpired),
+        @"plansBudgetSkipped":@(result.plansBudgetSkipped),
+        @"plansTimeRejected":@(result.plansTimeRejected), @"searchBudgetExhausted":@(result.searchBudgetExhausted),
+        @"geometryRequestedExtra":@(inventory.geometryRequestedExtra),
+        @"geometryVisitedStates":@(inventory.geometryVisitedStates),
+        @"geometryFeasiblePlans":@(inventory.geometryFeasiblePlans), @"geometrySelectedPlans":@(inventory.geometrySelectedPlans),
+        @"geometrySelectionTruncated":@(inventory.geometrySelectionTruncated),
+        @"geometryStateLimitReached":@(inventory.geometryStateLimitReached),
+        @"geometryDeadlineReached":@(inventory.geometryDeadlineReached),
+        @"geometrySlotLimitReached":@(inventory.geometrySlotLimitReached),
+        @"geometryPlansSearched":@(result.geometryPlansSearched),
+        @"geometryPlansTimeRejected":@(result.geometryPlansTimeRejected),
+        @"geometryPlanSlicesExpired":@(result.geometryPlanSlicesExpired),
+        @"geometryPlansBudgetSkipped":@(result.geometryPlansBudgetSkipped),
+        @"requiredFrames":@(result.reservation.requiredFrames)};
 }
 
 }
@@ -149,6 +310,7 @@ struct EightPreparationState {
     std::shared_ptr<std::atomic_bool> _cancel;
     PHBattleFrame _frame;
     PHOrbSnapshot _live, _stable, _preview, _expected, _decisionState, _traceOrigin;
+    PHOrbSnapshot _fishStepOrigin;
     PHOrbRoute _route;
     PHOrbSessionPhase _phase;
     NSString *_message, *_quality, *_goalMode;
@@ -172,7 +334,7 @@ struct EightPreparationState {
     uint8_t _temporaryMask;
     bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending, _openingManual;
     PHOrbSnapshot _openingBefore;
-    NSDictionary *_searchTrace, *_lastFailedSearch;
+    NSDictionary *_searchTrace, *_lastFailedSearch, *_lastFishingSuccess, *_lastAssistRecoverySuccess;
     NSDictionary *_lastReadIssue;
     NSString *_liveReadReason;
     double _lastReadUptime;
@@ -246,7 +408,8 @@ struct EightPreparationState {
         _decisionContexts = [NSMutableArray array];
         _profileLibrary = PHOrbDefaultProfiles(); _activeProfile = @{};
         _openingLog = [NSMutableArray array];
-        _searchTrace = @{}; _lastFailedSearch = @{}; _executionHistory = [NSMutableArray array];
+        _searchTrace = @{}; _lastFailedSearch = @{}; _lastFishingSuccess = @{}; _lastAssistRecoverySuccess = @{};
+        _executionHistory = [NSMutableArray array];
         _assistTrace = @{};
         _lastReadIssue = @{};
         _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
@@ -300,7 +463,8 @@ struct EightPreparationState {
     if ([_engine respondsToSelector:@selector(allowSpinnerEntry:)]) [_engine allowSpinnerEntry:cell];
 }
 - (void)clearRoute {
-    _route = {}; _confirmed = _target = 0; _fishEntered = false;
+    _route = {};
+    _confirmed = _target = 0; _fishEntered = false;
     [self openSpinnerCell:-1];
     _startSent = _awaitingStart = false;
     _executionElapsed = 0;
@@ -423,6 +587,9 @@ struct EightPreparationState {
         if (_oneShot || _auto.active()) [self queueStop:_message];
         return;
     }
+    if (_route.fishingExchangeCount && !FishingTimingUnchanged(_live,_preview)) {
+        [self queueStop:@"連續撈珠的轉轉色表或時間資料已改變，請重新讀盤"]; return;
+    }
     if (![self hasThornBudget:&_live]) {
         [self queueStop:@"荊棘路徑的 HP 或待結算傷害已改變，請重新求路"]; return;
     }
@@ -536,7 +703,12 @@ struct EightPreparationState {
         _goalPlan = [plan copy];
     }
     _recoveryTurn = _auto.active() ? _auto.turn : 0;
-    if (![_goalPlan[@"available"] boolValue] || !PHOrbReadGoals(_goalPlan[@"goals"], &options.goals)) {
+    // Fixed-inventory recovery shortages may be filled by real exchanges.
+    // All other mechanism and goal blockers retain their stop behavior.
+    const bool assistFishingOnly = _auto.active() && !_auto.eight() && _assistRecoveryL &&
+        [_goalPlan[@"assistRecoveryBlocker"] isEqual:@"insufficient-inventory"] && MultiFishingEligible(_preview);
+    if ((![_goalPlan[@"available"] boolValue] && !assistFishingOnly) ||
+        !PHOrbReadGoals(assistFishingOnly ? _goalPlan[@"assistRecoveryBaseGoals"] : _goalPlan[@"goals"], &options.goals)) {
         _phase = PHOrbSessionPhase::Blocked; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
         [self recordPlanningStatus:@"planning-blocked" reason:_message];
         if (_auto.eight()) [self rememberEightBlock:_goalPlan];
@@ -587,10 +759,21 @@ struct EightPreparationState {
     const bool solo = PHBattleIsSinglePlayer(_preview.identity.entryMode, _preview.identity.multiplayer) &&
         !_auto.eight() && !_preview.multiplayerDisabled;
     NSArray<NSDictionary *> *const assistCandidates = _goalPlan[@"assistRecoveryCandidates"] ?: @[];
+    const bool multiNeedsRecovery = solo && _auto.active() && _assistRecoveryL && _preview.assistRecovery.turns;
+    const PHOrbAssistRecoveryState multiRecovery = _preview.assistRecovery;
+    PHOrbSolveOptions multiBaseOptions = options;
+    bool multiGoalsValid = true;
+    if (multiNeedsRecovery) {
+        multiGoalsValid = PHOrbReadGoals(_goalPlan[@"assistRecoveryBaseGoals"], &multiBaseOptions.goals);
+        multiBaseOptions.goals.comboFirstWave = options.goals.comboFirstWave;
+        multiBaseOptions.goals.bonusFirstWave = options.goals.bonusFirstWave;
+    }
+    const bool multiEligible = solo && multiGoalsValid && MultiFishingEligible(_preview);
+    const PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
     // Fishing is a solo fallback for one unlocked spinner. Its colour must be in
     // the spinner's own table: some spinners cycle only some colours.
     int fishCell = -1; unsigned fishSteps = 0;
-    if (solo && !assistCandidates.count && PHOrbSpinnerVariants(&board) > 1 && _preview.spinnerCountdownKnown &&
+    if (solo && !multiNeedsRecovery && !assistCandidates.count && PHOrbSpinnerVariants(&board) > 1 && _preview.spinnerCountdownKnown &&
         _preview.spinnerPeriodFrames >= FishMinPeriod && _preview.fps >= 15 && _preview.fps <= 120 && !(board.spinnerColors & ~63u)) {
         unsigned dynamic = 0; bool thorns = false;
         for (unsigned i = 0; i < unsigned(board.width) * board.height; ++i) {
@@ -616,6 +799,10 @@ struct EightPreparationState {
         NSString *soloRetrySkipped = @"";
         unsigned fishingRetries = 0;
         PHOrbFishingPlan fishingPlan;
+        PHOrbMultiFishingResult multiResult;
+        bool selectedMulti = false;
+        NSMutableArray *multiAttempts = [NSMutableArray array];
+        NSDictionary *multiCoverage = @{@"started":@NO};
         const auto start = std::chrono::steady_clock::now();
         const auto solveAttempt = [&](const PHOrbSolveOptions &trial, PHOrbRoute &candidate, NSDictionary *details) {
             const auto attemptStart = std::chrono::steady_clock::now();
@@ -626,7 +813,7 @@ struct EightPreparationState {
             [attempt addEntriesFromDictionary:details]; [attempts addObject:attempt];
             return status;
         };
-        const NSUInteger choices = std::max(NSUInteger(1), assistCandidates.count);
+        const NSUInteger choices = assistFishingOnly ? 0 : std::max(NSUInteger(1), assistCandidates.count);
         for (NSUInteger choice = 0; choice < choices; ++choice) {
             const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
             if (cancel->load(std::memory_order_relaxed) || (assistCandidates.count && spent >= options.milliseconds)) break;
@@ -683,6 +870,59 @@ struct EightPreparationState {
                     return status;
                 });
         }
+        // All multi-take target cells, inventory plans and final checks share
+        // one fallback budget. Never grant one whole budget per color/cell.
+        if (multiEligible && !cancel->load(std::memory_order_relaxed) &&
+            !(result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) {
+            std::vector<unsigned> cells;
+            for (unsigned i = 0; i < board.width * board.height; ++i)
+                if ((board.spinnerMask & (UINT64_C(1) << i)) && !(board.tapeMask & (UINT64_C(1) << i))) cells.push_back(i);
+            const auto multiStarted = std::chrono::steady_clock::now();
+            const auto multiDeadline = multiStarted + std::chrono::milliseconds(options.milliseconds);
+            NSString *endReason = cells.empty() ? @"no-eligible-cell" : @"all-attempted";
+            for (size_t index = 0; index < cells.size(); ++index) {
+                const auto now = std::chrono::steady_clock::now();
+                if (cancel->load(std::memory_order_relaxed) || now >= multiDeadline) {
+                    endReason = cancel->load(std::memory_order_relaxed) ? @"cancelled" : @"deadline"; break;
+                }
+                auto trial = multiBaseOptions; trial.fishCell = int(cells[index]);
+                const auto remainingMS = std::chrono::duration_cast<std::chrono::milliseconds>(multiDeadline - now).count();
+                trial.milliseconds = unsigned(remainingMS / (cells.size() - index));
+                if (!trial.milliseconds) { endReason = @"insufficient-slice"; break; }
+                PHOrbMultiFishingResult candidate;
+                const auto status = PHOrbSolveMultiFishing(board,trial,multiNeedsRecovery ? &multiRecovery : nullptr,
+                    multiTiming,PHOrbMultiFishingMaxExchanges,*cancel,candidate,PHOrbMultiFishingMaxGeometryExtra);
+                const auto candidateRoute = ExecutableMultiFishing(candidate);
+                const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - now).count();
+                auto described = trial; described.goals = candidate.route.count ? candidate.route.plan.goals : trial.goals;
+                described.fishColor = candidateRoute.fishColor;
+                NSMutableDictionary *attempt = SearchAttemptTrace(described,status,candidateRoute,uint64_t(wallMS));
+                [attempt addEntriesFromDictionary:MultiFishingAttemptDetails(candidate,trial.fishCell)];
+                attempt[@"exchanges"] = FishingExchangesTrace(candidateRoute);
+                attempt[@"evaluationBreakdownKnown"] = @NO;
+                [attempts addObject:attempt]; [multiAttempts addObject:attempt];
+                if (status == PHOrbSolveStatus::Solved && candidate.evaluation.goalsMet && candidate.evaluation.hazardsSafe) {
+                    multiResult = candidate; selectedMulti = true; route = candidateRoute; result = status;
+                    selectedOptions = described; selectedAttemptIndex = NSInteger(attempts.count) - 1;
+                    if (multiNeedsRecovery) {
+                        const auto &plan = candidate.route.plan;
+                        selectedAssist = @{@"goals":PHOrbGoalsJSON(&plan.goals),
+                            @"counts":@[@(plan.lCounts[0]),@(plan.lCounts[1]),@(plan.lCounts[2]),@(plan.lCounts[3]),@(plan.lCounts[4])],
+                            @"predictedTurns":@(plan.predictedTurns), @"providers":@(plan.providers), @"multiFishing":@YES};
+                    }
+                    endReason = @"solved"; break;
+                }
+            }
+            NSMutableArray *eligibleCells = [NSMutableArray array], *unsearchedCells = [NSMutableArray array];
+            for (size_t index = 0; index < cells.size(); ++index) {
+                [eligibleCells addObject:@(cells[index])];
+                if (index >= multiAttempts.count) [unsearchedCells addObject:@(cells[index])];
+            }
+            const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - multiStarted).count();
+            multiCoverage = @{@"started":@YES,@"eligibleCells":eligibleCells,@"attemptedCells":@(multiAttempts.count),
+                @"unsearchedCells":unsearchedCells,@"endReason":endReason,@"budgetMS":@(options.milliseconds),@"wallElapsedMS":@(wallMS)};
+        }
         // Retain the original configured/shared budget for existing callers.
         // The selected attempt separately records its actual slice/retry budget.
         selectedOptions.milliseconds = options.milliseconds;
@@ -699,7 +939,7 @@ struct EightPreparationState {
             totalBacktracks += [attempt[@"backtracks"] unsignedIntValue];
             maximumExploredDepth = std::max(maximumExploredDepth, [attempt[@"exploredDepth"] unsignedIntValue]);
             anyAttemptDeadlineReached |= [attempt[@"deadline"] boolValue];
-            totalStatisticsComplete &= [attempt[@"statisticsAvailable"] boolValue];
+            totalStatisticsComplete &= [attempt[@"statisticsAvailable"] boolValue] && [attempt[@"evaluationBreakdownKnown"] boolValue];
         }
         const auto searchElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -713,11 +953,16 @@ struct EightPreparationState {
             trace[@"soloRetrySkipped"] = soloRetrySkipped;
             trace[@"fishingRetries"] = @(fishingRetries);
             trace[@"fishingPlan"] = FishingPlanTrace(fishingPlan, fishCell);
+            trace[@"multiFishingAttempts"] = [multiAttempts copy];
+            trace[@"multiFishingCoverage"] = multiCoverage;
+            trace[@"multiFishingSelected"] = @(selectedMulti);
+            trace[@"geometryExtraExchanges"] = selectedMulti ? selectedAttempt[@"geometryExtraExchanges"] ?: @0 : @0;
             trace[@"statisticsScope"] = @"selected-attempt";
             trace[@"initialBudgetMS"] = @(options.milliseconds);
             trace[@"selectedBudgetMS"] = selectedAttempt[@"budgetMS"] ?: @0;
             trace[@"selectedWallElapsedMS"] = selectedAttempt[@"wallElapsedMS"] ?: @0;
             trace[@"statisticsAvailable"] = selectedAttempt[@"statisticsAvailable"] ?: @NO;
+            trace[@"evaluationBreakdownKnown"] = selectedAttempt[@"evaluationBreakdownKnown"] ?: @NO;
             trace[@"deadlineKnown"] = selectedAttempt[@"deadlineKnown"] ?: @NO;
             trace[@"stepLimit"] = selectedAttempt[@"stepLimit"] ?: @(checkedOptions.steps);
             trace[@"beam"] = selectedAttempt[@"beam"] ?: @(checkedOptions.beam);
@@ -734,10 +979,15 @@ struct EightPreparationState {
             session->_solveOptions = checkedOptions;
             if (selectedAssist.count) {
                 NSMutableDictionary *plan = [session->_goalPlan mutableCopy];
+                plan[@"available"] = @YES; plan[@"assistRecoveryBlocker"] = @"";
                 plan[@"goals"] = selectedAssist[@"goals"]; plan[@"assistRecoveryChoice"] = selectedAssist;
-                plan[@"message"] = PHOrbGoalsDescription(plan[@"goals"]); session->_goalPlan = [plan copy];
+                plan[@"message"] = PHOrbGoalsDescription(plan[@"goals"]);
+                if (selectedMulti) plan[@"assistRecoveryMessage"] = @"已按可取顏色規劃補足武裝回復 L，尚未執行";
+                session->_goalPlan = [plan copy];
                 NSMutableDictionary *decision = [session->_assistTrace mutableCopy];
                 decision[@"choice"] = selectedAssist; decision[@"actualConfirmed"] = @NO;
+                decision[@"status"] = @"planned"; decision[@"blocker"] = @"";
+                decision[@"reason"] = selectedMulti ? @"已規劃實際取色以補足回復 L，尚未執行" : @"已選擇回復 L 路徑，尚未執行";
                 session->_assistTrace = [decision copy]; trace[@"assistRecovery"] = session->_assistTrace;
             }
             trace[@"path"] = RouteCells(route); trace[@"elapsedMS"] = @(route.elapsedMS);
@@ -746,8 +996,9 @@ struct EightPreparationState {
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result);
-            if (result != PHOrbSolveStatus::Solved) trace[@"reason"] = SolveFailureMessage(result, board,
-                checkedOptions, session->_goalPlan, assistCandidates.count != 0, fishingPlan);
+            NSString *failureMessage = MultiFishingFailureMessage(SolveFailureMessage(result, board,
+                checkedOptions, session->_goalPlan, assistCandidates.count != 0, fishingPlan),board,multiBaseOptions.goals,multiAttempts);
+            if (result != PHOrbSolveStatus::Solved) trace[@"reason"] = failureMessage;
             session->_searchTrace = [trace copy];
             [session rememberFailedSearch];
             // A failed preferred preparation is not an output failure: output
@@ -761,15 +1012,19 @@ struct EightPreparationState {
                 [session recoverEightSolve]) return;
             if ((result != PHOrbSolveStatus::Solved && result != PHOrbSolveStatus::GoalsUnmet && result != PHOrbSolveStatus::Unsafe) || route.count < 2) {
                 session->_phase = PHOrbSessionPhase::Stopped;
-                session->_message = SolveFailureMessage(result, board, checkedOptions, session->_goalPlan, assistCandidates.count != 0, fishingPlan);
+                session->_message = failureMessage;
                 if (session->_auto.active() || session->_oneShot) [session queueStop:session->_message];
                 return;
             }
             PHOrbBoard replay{};
             PHOrbEvaluation evaluation{};
             uint32_t thornDamage = 0; uint8_t thornContacts = 0;
+            auto multiCheckOptions = multiBaseOptions; multiCheckOptions.fishCell = route.fishCell;
+            const bool evaluationValid = selectedMulti ?
+                PHOrbEvaluateMultiFishing(board,multiResult.route,multiCheckOptions,multiNeedsRecovery ? &multiRecovery : nullptr,evaluation) :
+                PHOrbEvaluateRoute(board,route,checkedOptions,evaluation,thornDamage,thornContacts);
             if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
-                !PHOrbEvaluateRoute(board, route, checkedOptions, evaluation, thornDamage, thornContacts) ||
+                !evaluationValid ||
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
@@ -783,9 +1038,12 @@ struct EightPreparationState {
                 return;
             }
             trace[@"predictedBoard"] = BoardTrace(replay);
-            trace[@"evaluation"] = EvaluationTrace(evaluation, checkedOptions.goals); session->_searchTrace = [trace copy];
+            trace[@"evaluation"] = FishingEvaluationTrace(evaluation,checkedOptions.goals,selectedMulti);
+            session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = PHOrbSessionPhase::Preview; session->_previewAt = session->_now;
             trace[@"fishing"] = @(route.fishing); trace[@"fishCell"] = @(route.fishCell); trace[@"fishColor"] = @(route.fishColor);
+            trace[@"fishingExchanges"] = FishingExchangesTrace(route);
+            if (selectedMulti) trace[@"evaluationScope"] = @"target-independent-other-shared-phases";
             session->_searchTrace = [trace copy];
             NSString *summary = [NSString stringWithFormat:@"預計 %u Combo（不含天降／加算）· %u 步 · 約 %.1f 秒",
                 route.combos, route.count - 1, (route.count - 1) * StepDuration(session->_preview)];
@@ -803,7 +1061,13 @@ struct EightPreparationState {
             if (checkedOptions.fishCell >= 0 && (!route.goalsMet || !route.hazardsSafe)) summary = [summary stringByAppendingFormat:
                 @"\n本次撈%@珠搜尋未取得完整且安全的路徑，未開始轉珠。",
                 @[@"火",@"水",@"木",@"光",@"闇",@"心"][checkedOptions.fishColor]];
-            else if (route.fishing) summary = [summary stringByAppendingFormat:
+            else if (route.fishingExchangeCount) {
+                NSMutableArray *takes = [NSMutableArray array];
+                for (unsigned i = 0; i < route.fishingExchangeCount; ++i)
+                    [takes addObject:@[@"火",@"水",@"木",@"光",@"闇",@"心"][route.fishingExchanges[i].take]];
+                summary = [summary stringByAppendingFormat:@"\n連續撈珠 %u 次：%@；每次等指定色並確認交換，預留等待共 %.1f 秒。",
+                    route.fishingExchangeCount,[takes componentsJoinedByString:@" → "],FishingTakes(route) * FishWaitSeconds(session->_preview)];
+            } else if (route.fishing) summary = [summary stringByAppendingFormat:
                 @"\n路徑會從轉轉格撈出%@珠：走到旁邊後等該色出現才進入，最多多等 %.1f 秒。",
                 @[@"火",@"水",@"木",@"光",@"闇",@"心"][route.fishColor], FishWaitSeconds(session->_preview)];
             else if (board.spinnerMask && std::all_of(board.flags, board.flags + board.width * board.height,
@@ -843,6 +1107,7 @@ struct EightPreparationState {
             if (!route.hazardsSafe)
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];
             if (!route.goalsMet || !route.hazardsSafe) {
+                session->_message = MultiFishingFailureMessage(session->_message,board,multiBaseOptions.goals,multiAttempts);
                 trace[@"reason"] = session->_message; session->_searchTrace = [trace copy];
                 [session rememberFailedSearch];
             }
@@ -921,6 +1186,9 @@ struct EightPreparationState {
         if (![self hasThornBudget:&current]) {
             [self queueStop:@"執行前荊棘傷害預算已不符合，已停止"]; return;
         }
+        if (_route.fishingExchangeCount && !FishingTimingUnchanged(current,_preview)) {
+            [self queueStop:@"連續撈珠的轉轉色表或時間資料已改變，未開始轉珠"]; return;
+        }
         if (time - _requestedAt < ArmDelay) return;
         if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
             [self queueStop:time - _requestedAt > 2 ? @"開始轉珠等候超過 2 秒，已停止" :
@@ -931,10 +1199,12 @@ struct EightPreparationState {
     }
     if (_phase == PHOrbSessionPhase::Running) {
         _executionElapsed = std::max(0.0, time - _startedAt);
-        const double executionLimit = ExecutionLimit + (_route.fishing ? FishWaitSeconds(_preview) : 0);
+        const double executionLimit = RouteExecutionLimit(_preview,_route);
         NSString *stopReason = !frame.enabled ? @"總開關或前景狀態已改變，已停止" :
             !PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" :
             !current.ordinary ? @"盤面操作限制已改變，已停止" :
+            _route.fishingExchangeCount && !FishingTimingUnchanged(current,_preview) ? @"轉轉色表、速度或讀取狀態已改變，已停止連續撈珠" :
+            _route.fishingExchangeCount && TimeAvailable(current) <= TimeMargin ? @"連續撈珠剩餘時間不足，已停止並放開" :
             multiplayer && TimeAvailable(current) <= TimeMargin ? @"多人剩餘時間不足，已停止並放開" :
             time < _startedAt ? @"執行時鐘異常，已停止" :
             time - _startedAt > executionLimit ? [NSString stringWithFormat:@"轉珠執行超過 %.1f 秒上限（已確認 %lu／%u 步），已停止",
@@ -944,16 +1214,20 @@ struct EightPreparationState {
             [self queueStop:stopReason];
         } else if (!_awaitingStart && current.dragged != _ownedOrb) {
             [self queueStop:@"拖珠已由遊戲接管，已停止"]; _ownedOrb = 0; _phase = PHOrbSessionPhase::Stopped; _recordingExecution = false; return;
-        } else if (!SamePosition(current, _expected)) {
+        } else if (!SameFishingPosition(current, _expected, _route)) {
             [self queueStop:@"盤面與已確認步驟不同，已停止"];
         } else if (!_awaitingStart && _target == _confirmed && time - _stepAt >= StepSeconds) {
-            if (_confirmed + 1 == _route.count) {
+            if (_route.fishingExchangeCount && _confirmed + 1 == _route.count && !MultiFishingReadyToRelease(current)) {
+                _message = @"路徑完成，等待珠子穩定後核對放手…";
+            } else if (_confirmed + 1 == _route.count) {
                 // Re-evaluate the actual board at the release boundary. Do
                 // not reuse a solver score or credit the dragged orb twice.
                 PHOrbEvaluation evaluation{};
-                const bool valid = PHOrbEvaluateWithOptions(current.board, _solveOptions, evaluation);
+                const bool valid = _route.fishingExchangeCount ?
+                    PHOrbEvaluateMultiFishingBoard(current.board,_route.fishCell,_solveOptions,evaluation) :
+                    PHOrbEvaluateWithOptions(current.board,_solveOptions,evaluation);
                 [self recordExecution:@"release-check" state:&current evaluation:valid ?
-                    EvaluationTrace(evaluation, _solveOptions.goals) : @{@"valid":@NO}];
+                    FishingEvaluationTrace(evaluation,_solveOptions.goals,_route.fishingExchangeCount != 0) : @{@"valid":@NO}];
                 if (!valid || !evaluation.goalsMet || !evaluation.hazardsSafe ||
                     (_route.thornContacts && !evaluation.heartFours)) {
                     NSString *failure = !valid ? @"放手前無法核對實際盤面" :
@@ -972,7 +1246,13 @@ struct EightPreparationState {
                     }
                     _phase = PHOrbSessionPhase::Releasing; _releaseComplete = true; _message = @"路徑完成，正在放開…";
                 }
-            } else if (_route.fishing && !_fishEntered && _route.cells[_confirmed + 1] == _route.fishCell &&
+            } else if (_route.fishingExchangeCount && _route.cells[_confirmed + 1] == _route.fishCell &&
+                !HasRemainingFishingTime(current,_route,unsigned(_confirmed),_executionElapsed,executionLimit)) {
+                [self queueStop:@"剩餘時間不足以完成後續取色與路徑，已停止並放開"];
+            } else if (_route.fishingExchangeCount && _route.cells[_confirmed + 1] == _route.fishCell &&
+                !MultiFishingReadyToEnter(current,_route,unsigned(_confirmed + 1))) {
+                _message = @"等待轉轉穩定並轉出下一次需要的顏色…";
+            } else if (!_route.fishingExchangeCount && _route.fishing && !_fishEntered && _route.cells[_confirmed + 1] == _route.fishCell &&
                 !(current.spinnerCountdownKnown && current.spinnerCountdown >= FishMinCountdown &&
                   current.board.types[_route.fishCell] == _route.fishColor)) {
                 _message = @"等待轉轉轉出路徑需要的顏色…"; // Keep holding the orb next to the cell.
@@ -985,6 +1265,16 @@ struct EightPreparationState {
                         @"color":@(current.board.types[_route.fishCell]), @"countdown":@(current.spinnerCountdown),
                         @"elapsedMS":@(unsigned(_executionElapsed * 1000)),
                         @"sinceLastStepMS":@(unsigned(std::max(0.0, time - _stepAt) * 1000))};
+                    if (_route.fishingExchangeCount) {
+                        NSMutableArray *entries = [record[@"fishEntries"] mutableCopy] ?: [NSMutableArray array];
+                        NSMutableDictionary *entry = [record[@"fishEntry"] mutableCopy];
+                        entry[@"exchange"] = @(FishingExchangeAt(_route,unsigned(_confirmed + 1),false));
+                        entry[@"spinnerBoard"] = BoardTrace(current.board); entry[@"confirmed"] = @NO;
+                        entry[@"remainingFrames"] = @(current.remainingFrames);
+                        entry[@"sourceMotionKnown"] = @(current.orbMotionKnown);
+                        entry[@"sourceMotion"] = @(current.orbMotion[_route.fishCell]);
+                        [entries addObject:entry]; record[@"fishEntries"] = entries;
+                    }
                     _executionHistory[_executionHistory.count - 1] = [record copy];
                 }
                 _fishEntered |= entering;
@@ -1018,6 +1308,14 @@ struct EightPreparationState {
     // Tall phone layouts defer selection from began to the following held
     // frame. Send began once, then retain the private input bank while waiting.
     // Every native frame still needs a hold, including between route cells.
+    if (_route.fishingExchangeCount) {
+        PHOrbBoard predicted{};
+        if (!_awaitingStart && _target != _confirmed &&
+            !PHOrbReplayFishingStep(&current.board,&_route,unsigned(_target),&predicted)) {
+            [self queueStop:@"輸入前取色或供珠與計畫不符，已停止並放開"]; return;
+        }
+        _fishStepOrigin = current;
+    }
     _staged = [_engine stageCell:_route.cells[_target] down:YES beginning:(_awaitingStart && !_startSent)
         expected:&current frame:frame reason:&reason];
     if (!_staged) [self queueStop:reason ?: @"輸入前校驗失敗，已停止"];
@@ -1109,6 +1407,7 @@ struct EightPreparationState {
                 if (_recordingExecution) {
                     NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy]; record[@"releaseConfirmed"] = @YES;
                     _executionHistory[_executionHistory.count - 1] = [record copy]; _recordingExecution = false;
+                    if (_releaseComplete && _route.fishing) _lastFishingSuccess = [record copy];
                 }
                 _ownedOrb = 0;
                 // The native frame has acknowledged this release. A Stop tap
@@ -1142,7 +1441,7 @@ struct EightPreparationState {
                         _message = @"本回合已放開，等待消除、敵人行動與下一回合…";
                     }
                 }
-            } else if (time - _startedAt > ExecutionLimit + (_route.fishing ? FishWaitSeconds(_preview) : 0) + 0.5) {
+            } else if (time - _startedAt > RouteExecutionLimit(_preview,_route) + 0.5) {
                 _ownedOrb = 0; [self queueStop:@"已停止輸入；遊戲尚未確認放開，請手動檢查"]; _phase = PHOrbSessionPhase::Stopped;
             }
             return;
@@ -1180,8 +1479,20 @@ struct EightPreparationState {
             return;
         }
         PHOrbBoard expectedBoard{};
-        const bool replayed = PHOrbReplay(&_preview.board, &_route, unsigned(_target), &expectedBoard);
-        if (replayed && current.dragged == _ownedOrb && current.phase == 2 && PHOrbSamePlanBoard(&current.board, &expectedBoard) &&
+        const bool advancedTarget = _target != _confirmed;
+        const bool replayed = _route.fishingExchangeCount ?
+            (advancedTarget ? PHOrbReplayFishingStep(&_fishStepOrigin.board,&_route,unsigned(_target),&expectedBoard) :
+                (expectedBoard = _fishStepOrigin.board,true)) :
+            PHOrbReplay(&_preview.board, &_route, unsigned(_target), &expectedBoard);
+        const bool boardMatches = _route.fishingExchangeCount ?
+            PHOrbSameFishingPlanBoard(&current.board,&expectedBoard,_route.fishCell,_ownedOrb) :
+            PHOrbSamePlanBoard(&current.board,&expectedBoard);
+        const int exitIndex = advancedTarget ? FishingExchangeAt(_route,unsigned(_target),true) : -1;
+        // The native displaced token is still moving after this input and
+        // cannot tick yet. Confirm the donor before allowing independent phase.
+        const bool donorMatches = exitIndex < 0 ||
+            current.board.types[_route.fishCell] == _route.fishingExchanges[exitIndex].leave;
+        if (replayed && donorMatches && current.dragged == _ownedOrb && current.phase == 2 && boardMatches &&
             current.moves == _preview.moves + _target) {
             // Pace from the frame that submitted this target. Restarting at
             // its afterFrame acknowledgement adds native render/read time to
@@ -1190,11 +1501,26 @@ struct EightPreparationState {
             // _target == _confirmed above prevents skipping unconfirmed swaps.
             const bool advanced = _confirmed != _target;
             _confirmed = _target; _expected = current;
+            if (advanced && _route.fishingExchangeCount && _recordingExecution && _executionHistory.count) {
+                const int entryIndex = FishingExchangeAt(_route,unsigned(_confirmed),false);
+                const int exitIndex = FishingExchangeAt(_route,unsigned(_confirmed),true);
+                NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
+                NSMutableArray *entries = [record[@"fishEntries"] mutableCopy];
+                if (entries.count && (entryIndex >= 0 || exitIndex >= 0)) {
+                    NSMutableDictionary *entry = [entries.lastObject mutableCopy];
+                    entry[exitIndex >= 0 ? @"exitConfirmed" : @"confirmed"] = @YES;
+                    entry[exitIndex >= 0 ? @"exitBoard" : @"entryBoard"] = BoardTrace(current.board);
+                    entry[exitIndex >= 0 ? @"exitMotion" : @"entryMotion"] = @(current.orbMotion[_route.fishCell]);
+                    entry[exitIndex >= 0 ? @"exitElapsedMS" : @"entryElapsedMS"] = @(unsigned(std::max(0.0,time - _startedAt) * 1000));
+                    entries[entries.count - 1] = entry; record[@"fishEntries"] = entries;
+                    _executionHistory[_executionHistory.count - 1] = [record copy];
+                }
+            }
             if (advanced) [self recordExecution:@"dragging" state:&current evaluation:nil];
-        } else if (SamePosition(current, _expected) && time - _sentAt <= 0.20 && current.dragged == _ownedOrb) {
+        } else if (SameFishingPosition(current, _expected, _route) && time - _sentAt <= 0.20 && current.dragged == _ownedOrb) {
             // Keep the same target; never skip an unacknowledged swap.
         } else {
-            [self queueStop:SamePosition(current, _expected) && current.dragged == _ownedOrb ?
+            [self queueStop:SameFishingPosition(current, _expected, _route) && current.dragged == _ownedOrb ?
                 @"等待遊戲確認換珠超過 0.20 秒，已停止並放開" : @"原生交換結果與路徑不符，已停止"];
         }
         return;

@@ -13,7 +13,48 @@ static void SpinnerFixture(unsigned width, unsigned height, std::initializer_lis
         Protected(Impl + PHOrbSpinnerRowsOffset + 16 * row, mask, 0x6a875a8b);
     }
 }
+static void OrbMotionNativeTests() {
+    for (auto dimensions : {std::pair<unsigned,unsigned>{6,5}, {7,6}, {5,4}}) {
+        const unsigned w = dimensions.first, h = dimensions.second, last = w * h - 1;
+        Reset(w,h); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
+        const uintptr_t top = OrbCell(0,w,h), bottom = OrbCell(last,w,h);
+        Put<uint16_t>(top + 18,3); Put<uint16_t>(bottom + 18,4);
+        Check([engine read:&state frame:Frame() reason:&reason] && state.orbMotionKnown &&
+            state.orbMotion[0] == 3 && state.orbMotion[1] == 0 && state.orbMotion[last] == 4 &&
+            state.board.tokens[0] == top && state.board.tokens[last] == bottom && state.ordinary &&
+            !state.settled && !PHOrbCanPreview(&state) && !writes,
+            "native motion 0/3/4 follows bottom-first table pointers into top-first cells without writes");
+
+        // Reassign two table entries with their new cell coordinates. Motion
+        // must follow the token's pool block, not its former table index.
+        const int16_t topX = state.board.x[0], topY = state.board.y[0];
+        const int16_t bottomX = state.board.x[last], bottomY = state.board.y[last];
+        Put<uintptr_t>(Impl + PHOrbTableOffset + (h - 1) * 16 * 8,bottom);
+        Put<uintptr_t>(Impl + PHOrbTableOffset + (w - 1) * 8,top);
+        for (unsigned offset : {24u,28u}) {
+            Put<int16_t>(bottom + offset,topX); Put<int16_t>(bottom + offset + 2,topY);
+            Put<int16_t>(top + offset,bottomX); Put<int16_t>(top + offset + 2,bottomY);
+        }
+        Check([engine read:&state frame:Frame() reason:&reason] && state.orbMotionKnown &&
+            state.orbMotion[0] == 4 && state.orbMotion[last] == 3 &&
+            state.board.tokens[0] == bottom && state.board.tokens[last] == top && !writes,
+            "motion observations follow swapped token identities while native cell geometry remains valid");
+
+        Put<uint16_t>(top + 18,0); Put<uint16_t>(bottom + 18,0);
+        Check([engine read:&state frame:Frame() reason:&reason] && state.orbMotionKnown &&
+            state.orbMotion[0] == 0 && state.orbMotion[last] == 0 && PHOrbCanPreview(&state) && !writes,
+            "settled native tokens restore known zero motion without any write from the reader");
+        for (uint16_t invalid : {uint16_t(0x100),uint16_t(0x103),uint16_t(0x104)}) {
+            Put<uint16_t>(bottom + 18,invalid);
+            Check([engine read:&state frame:Frame() reason:&reason] && !state.orbMotionKnown &&
+                !state.ordinary && !state.settled && !PHOrbCanPreview(&state) &&
+                ![engine stageCell:1 down:YES beginning:YES expected:&state frame:Frame() reason:&reason] && !writes,
+                "oversized motion cannot be truncated into an authorized 0/3/4 state or stage native input");
+        }
+    }
+}
 static void OrbEffectNativeTests() {
+    OrbMotionNativeTests();
     PHOrbSnapshot state{}, previous{}; NSString *reason = nil;
     id<PHOrbEngine> engine;
     for (auto dimensions : {std::pair<unsigned, unsigned>{6,5}, {7,6}, {5,4}}) {

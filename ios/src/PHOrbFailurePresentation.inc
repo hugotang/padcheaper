@@ -78,3 +78,77 @@ NSString *SolveFailureMessage(PHOrbSolveStatus status, const PHOrbBoard &board,
     if ([plan[@"recoveryActive"] boolValue]) message = [message stringByAppendingFormat:@"\n%@", plan[@"recoveryMessage"] ?: @"本回合另有補心條件。"];
     return [message stringByAppendingString:@"\n未開始轉珠；請調整目標、使用對應技能或手動處理。"];
 }
+
+NSString *MultiFishingFailureMessage(NSString *base, const PHOrbBoard &board,
+    const PHOrbGoalSet &goals, NSArray *multiAttempts) {
+    if (!multiAttempts.count) return base;
+    NSMutableArray *missing = [NSMutableArray array];
+    for (unsigned color = 0; color < PHOrbBasicTypes; ++color) {
+        const unsigned required = PHOrbRequiredShapeOrbs(&goals,color);
+        unsigned minimum = 0, maximum = 0;
+        PHOrbColorCountRange(&board,color,&minimum,&maximum);
+        if (required > maximum && !(board.spinnerColors & (1u << color)))
+            [missing addObject:[NSString stringWithFormat:@"%@需 %u 顆，盤面最多 %u 顆，而且轉轉色表沒有此色",
+                PHOrbColorTitle(1u << color),required,maximum]];
+    }
+    if (missing.count) return [NSString stringWithFormat:
+        @"%@。等待更久也不會轉出缺少的顏色；沒有開始取色或轉珠。",
+        [missing componentsJoinedByString:@"；"]];
+
+    NSUInteger searched = 0, timeRejected = 0, evaluated = 0, slicesExpired = 0, budgetSkipped = 0;
+    NSUInteger geometryRequested = 0, geometrySearched = 0, geometrySelected = 0, geometryTimeRejected = 0;
+    NSUInteger geometryBudgetSkipped = 0;
+    BOOL limited = NO, inventoryIncomplete = NO, anyValidInventory = NO, invalid = NO;
+    BOOL geometryLimited = NO, geometryTruncated = NO, geometrySlotsFull = NO;
+    for (NSDictionary *attempt in multiAttempts) {
+        searched += [attempt[@"plansSearched"] unsignedIntegerValue];
+        timeRejected += [attempt[@"plansTimeRejected"] unsignedIntegerValue];
+        evaluated += [attempt[@"evaluated"] unsignedIntegerValue];
+        slicesExpired += [attempt[@"planSlicesExpired"] unsignedIntegerValue];
+        budgetSkipped += [attempt[@"plansBudgetSkipped"] unsignedIntegerValue];
+        limited |= [attempt[@"searchBudgetExhausted"] boolValue] || [attempt[@"deadline"] boolValue] ||
+            [attempt[@"inventoryDeadline"] boolValue];
+        inventoryIncomplete |= [attempt[@"inventoryStateLimit"] boolValue] ||
+            [attempt[@"planSelectionTruncated"] boolValue] || [attempt[@"inventoryGoalLimit"] boolValue];
+        anyValidInventory |= [attempt[@"inventoryValid"] boolValue];
+        invalid |= [attempt[@"status"] isEqual:@"invalid"] || [attempt[@"status"] isEqual:@"failed"];
+        geometryRequested = std::max(geometryRequested,[attempt[@"geometryRequestedExtra"] unsignedIntegerValue]);
+        geometrySelected += [attempt[@"geometrySelectedPlans"] unsignedIntegerValue];
+        geometrySearched += [attempt[@"geometryPlansSearched"] unsignedIntegerValue];
+        geometryTimeRejected += [attempt[@"geometryPlansTimeRejected"] unsignedIntegerValue];
+        geometryBudgetSkipped += [attempt[@"geometryPlansBudgetSkipped"] unsignedIntegerValue];
+        geometryLimited |= [attempt[@"geometryDeadlineReached"] boolValue] ||
+            [attempt[@"geometryStateLimitReached"] boolValue];
+        geometryTruncated |= [attempt[@"geometrySelectionTruncated"] boolValue];
+        geometrySlotsFull |= [attempt[@"geometrySlotLimitReached"] boolValue];
+    }
+    // Replace the earlier single-take explanation after multi-take attempts;
+    // neither a capped inventory enumeration nor beam failure proves no route.
+    NSMutableString *message = [[NSString stringWithFormat:
+        @"已按完整目標嘗試連續撈珠（最多 %u 次），檢查 %lu 個轉轉入口，搜尋 %lu 個方案、評估 %lu 個候選；尚未取得同時符合形狀、取色與妨礙處理條件的可執行路徑。",
+        PHOrbMultiFishingMaxExchanges,(unsigned long)multiAttempts.count,(unsigned long)searched,(unsigned long)evaluated] mutableCopy];
+    if (!searched && anyValidInventory) [message appendString:@"珠量／可用色表或時間預檢尚未留下可搜尋的方案。"];
+    if (timeRejected) [message appendFormat:@"有 %lu 個方案的移動、逐次等待及放手預留超出操作時間。",(unsigned long)timeRejected];
+    if (limited) [message appendString:@"本次搜尋／規劃時間額度已用盡。"];
+    if (slicesExpired) [message appendFormat:@"有 %lu 個方案用完分配的搜尋時間；單一方案逾時並不代表整體無解。",(unsigned long)slicesExpired];
+    if (budgetSkipped) [message appendFormat:@"有 %lu 個方案因分配的時間已用盡而略過，沒有進入路徑搜尋。",(unsigned long)budgetSkipped];
+    if (inventoryIncomplete) [message appendString:@"候選保留或狀態上限有截斷，並非窮盡所有可能。"];
+    if (geometryRequested) {
+        if (geometrySearched) [message appendFormat:
+            @"也搜尋了 %lu 個以額外取色改善珠子位置的方案（比原補珠方案最多多 %lu 次，總取色仍最多 %u 次），未找到完整路徑。",
+            (unsigned long)geometrySearched,(unsigned long)geometryRequested,PHOrbMultiFishingMaxExchanges];
+        else if (geometrySelected) [message appendFormat:
+            @"已保留 %lu 個額外取色的位置改善方案，但本次尚未進入它們的路徑搜尋。",(unsigned long)geometrySelected];
+        else [message appendString:@"本次未保留可供路徑搜尋的額外取色位置改善方案。"];
+        if (geometryTimeRejected) [message appendFormat:
+            @"其中 %lu 個位置改善方案未通過操作時間預檢。",(unsigned long)geometryTimeRejected];
+        if (geometryBudgetSkipped) [message appendFormat:
+            @"其中 %lu 個位置改善方案因搜尋時間不足而略過，未計入已搜尋數。",(unsigned long)geometryBudgetSkipped];
+        if (geometrySlotsFull) [message appendString:@"原補珠候選已佔用方案名額，限制了可保留的位置改善方案。"];
+        if (geometryLimited) [message appendString:@"位置改善規劃達到本次時間或狀態額度。"];
+        if (geometryTruncated) [message appendString:@"額外取色候選亦有保留上限。"];
+    }
+    if (invalid || !anyValidInventory) [message appendString:@"部分入口的資料或重播校驗未通過，請保留診斷紀錄。"];
+    [message appendString:@"這不代表手動撈珠無解。未開始轉珠；可用技能改盤或手動處理。"];
+    return message;
+}

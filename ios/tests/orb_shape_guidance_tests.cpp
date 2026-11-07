@@ -232,12 +232,17 @@ static void FishingTransitionKeys() {
         "the identical next hop is legal only for the history that has not used its spinner entry");
 }
 
+#include "orb_route_simplification_tests.inc"
+#include "orb_fishing_model_tests.inc"
+
 int main() {
     AllMetScores();
     PartialAndCacheScores();
     RankingAndThornSafety();
     ColorScoresUnaffected();
     FishingTransitionKeys();
+    RouteSimplificationTests();
+    FishingModelTests();
     std::printf("Private shape guidance tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

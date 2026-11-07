@@ -43,6 +43,11 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL unavailableSkills[6], hangSkill, failSkillAck, hasteFirst, changeBoardWithSkill, clearObstaclesWithSkill;
     BOOL healWithSkill, clearPlayerStatusWithSkill, dropHPOnStart, dropHPOnMove, rejectStartedSkill, makeHeartsWithSkill;
     BOOL tickSpinners, createSpinnerWithSkill, removeSpinnerWithSkill;
+    // Opt-in native-order fixture for the new multi-take executor cases.
+    // Existing tickSpinners tests retain their historical every-frame fake.
+    BOOL nativeSpinnerTiming, corruptNativeSpinnerExit;
+    unsigned nativeSettleFrames, nativeMotionFrames[PHOrbMaxCells];
+    NSUInteger nativeSpinnerHeldTicks, nativeSpinnerMovingTicks;
     uint64_t allowedSpinnerCell; // Mirrors the native fishing gate.
     BOOL requireNineLight, omitResolvingBoard, multiplayerReleaseMetadata;
     BOOL resizeWithSkill, hangResize;
@@ -56,6 +61,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 }
 - (instancetype)initWithWidth:(unsigned)width height:(unsigned)height;
 - (void)nativeFrame;
+- (void)nativeInputFrame;
 @end
 @implementation FakeOrbEngine
 - (instancetype)init { return [self initWithWidth:6 height:5]; }
@@ -249,6 +255,38 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     staged = NO; return YES;
 }
 - (void)nativeFrame {
+    [self nativeInputFrame];
+    if (!nativeSpinnerTiming) return;
+    live.orbMotionKnown = true;
+    // Phase-2 input runs before the shared spinner tick. A held token (4) or
+    // displaced token (3) skips that tick. Motion settles only after ticking.
+    if (live.phase == 2 && live.spinnerCountdownKnown && live.spinnerPeriodFrames) {
+        if (live.dragged && live.remainingFrames) --live.remainingFrames;
+        if (live.spinnerCountdown) --live.spinnerCountdown;
+        if (!live.spinnerCountdown) {
+            live.spinnerCountdown = live.spinnerPeriodFrames;
+            for (unsigned i = 0; i < live.board.width * live.board.height; ++i) {
+                if (!(live.board.spinnerMask & (UINT64_C(1) << i)) || (live.board.flags[i] & PHOrbFlagLocked)) continue;
+                if (live.orbMotion[i]) {
+                    nativeSpinnerHeldTicks += live.orbMotion[i] == 4;
+                    nativeSpinnerMovingTicks += live.orbMotion[i] == 3;
+                    continue;
+                }
+                for (unsigned next = 1; next <= PHOrbBasicTypes; ++next) {
+                    const unsigned color = (live.board.types[i] + next) % PHOrbBasicTypes;
+                    if (live.board.spinnerColors & (1u << color)) { live.board.types[i] = uint8_t(color); break; }
+                }
+            }
+        }
+    }
+    bool moving = false;
+    for (unsigned i = 0; i < live.board.width * live.board.height; ++i) {
+        if (live.orbMotion[i] == 3 && nativeMotionFrames[i] && !--nativeMotionFrames[i]) live.orbMotion[i] = 0;
+        moving |= live.orbMotion[i] != 0;
+    }
+    live.settled = !live.dragged && !moving;
+}
+- (void)nativeInputFrame {
     if (resizeFrames) {
         Check(!staged,"no synthetic input is staged during phase-2 native resizing");
         live.resizeProgress = resizeFrames == 1 ? 1 : 0.5f;
@@ -338,7 +376,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         }
         return;
     }
-    if (tickSpinners && live.phase == 2) {
+    if (tickSpinners && !nativeSpinnerTiming && live.phase == 2) {
         // Independent fake of the native shared countdown, deliberately fast
         // enough to cross colors during stability sampling and every gesture.
         for (unsigned i = 0; i < live.board.width * live.board.height; ++i)
@@ -351,6 +389,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (!staged) return;
     if (!down) {
         if (ignoreRelease) return;
+        if (nativeSpinnerTiming) for (unsigned i = 0; i < live.board.width * live.board.height; ++i)
+            if (live.orbMotion[i] == 4) { live.orbMotion[i] = 0; nativeMotionFrames[i] = 0; }
         if (multiplayerReleaseMetadata && live.multiplayer.kind != PHOrbMultiplayerNone) {
             live.dragged = 0; live.settled = false; live.phase = 2;
             live.multiplayer.resolvePending = 1; live.multiplayer.networkFlags |= 2u;
@@ -365,6 +405,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     if (beginning || !live.dragged) {
         if (!ignoreStart) {
             live.dragged = live.board.tokens[cell]; live.settled = false;
+            if (nativeSpinnerTiming) { live.orbMotion[cell] = 4; nativeMotionFrames[cell] = 0; }
             for (auto &flags : live.board.flags) flags &= ~PHOrbFlagStartDim;
         }
         if (replaceLeaderOnStart) { live.leaderNumbers[0] = 14242; replaceLeaderOnStart = NO; }
@@ -388,6 +429,19 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     std::swap(live.board.tokens[from], live.board.tokens[cell]); std::swap(live.board.types[from], live.board.types[cell]);
     std::swap(live.board.flags[from], live.board.flags[cell]); std::swap(live.board.enhancement[from], live.board.enhancement[cell]);
     std::swap(live.board.blindTurns[from], live.board.blindTurns[cell]); std::swap(live.board.thornDamage[from], live.board.thornDamage[cell]);
+    if (nativeSpinnerTiming) {
+        live.orbMotion[from] = 3; nativeMotionFrames[from] = nativeSettleFrames ? nativeSettleFrames : 2;
+        live.orbMotion[cell] = 4; nativeMotionFrames[cell] = 0;
+        if (corruptNativeSpinnerExit && (live.board.spinnerMask & (UINT64_C(1) << from))) {
+            // Corrupt the just-deposited donor before afterFrame can accept it;
+            // the moving token is ineligible for a legitimate spinner tick.
+            for (unsigned next = 1; next < PHOrbBasicTypes; ++next) {
+                const unsigned color = (live.board.types[from] + next) % PHOrbBasicTypes;
+                if (live.board.spinnerColors & (1u << color)) { live.board.types[from] = uint8_t(color); break; }
+            }
+            corruptNativeSpinnerExit = NO;
+        }
+    }
     live.board.flags[from] &= ~PHOrbFlagBlindTouch; live.board.flags[cell] &= ~PHOrbFlagBlindTouch;
     ++live.moves;
     if (dropHPOnMove) { live.automation.hp = 100; dropHPOnMove = NO; }
@@ -465,10 +519,13 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_assist_session_tests.inc"
 #include "orb_enemy_combo_session_tests.inc"
 #include "orb_dungeon_session_tests.inc"
+#include "orb_multi_fishing_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         ReadinessStopSessionTests();
+        if (failures) return 1;
+        MultiFishingSessionTests();
         if (failures) return 1;
         AssistSessionTests();
         EnemyComboSessionTests();

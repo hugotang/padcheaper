@@ -64,7 +64,7 @@ bool ReadSpinner(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t k
             columns > 127) return false;
         state.spinnerRawRows[row] = uint8_t(columns);
         state.spinnerStoredCells += uint8_t(__builtin_popcount(columns));
-        // 0x1005AB350 clips updates to current width/height after resizing.
+        // 23.6.1: 0x1005AB5F4 clips updates to current width/height after resizing.
         // The setter's count and six native row masks retain offscreen cells.
         if (row >= state.board.height) continue;
         for (unsigned column = 0; column < state.board.width; ++column) if (columns & (1u << column)) {
@@ -76,7 +76,7 @@ bool ReadSpinner(PHOrbSnapshot &state, uintptr_t impl, uint32_t key1, uint32_t k
     state.board.spinnerMask = mask;
     state.board.spinnerColors = mask ? uint16_t(colors ? colors : 63) : 0;
     state.spinnerPeriodFrames = uint16_t(period);
-    // The countdown record follows the period record (0x1005AB350 copies the
+    // The countdown record follows the period record (0x1005AB5F4 copies the
     // 16-byte period record into it on every step); same encoding and salt.
     uint32_t countdown = 0;
     state.spinnerCountdownKnown = Decode(impl + PHOrbSpinnerPeriodOffset + 16, key1, key2, 0x6a875a8bu, countdown) &&
@@ -296,7 +296,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
     if (!PHReadMemory(impl + PHOrbPoolOffset, pool.data(), pool.size()) ||
         !PHReadMemory(impl + PHOrbTableOffset, table.data(), sizeof(table))) return false;
     const uintptr_t start = impl + PHOrbPoolOffset, end = start + pool.size();
-    state.settled = true;
+    state.settled = true; state.orbMotionKnown = true;
     for (unsigned row = 0; row < height; ++row) for (unsigned col = 0; col < width; ++col) {
         const unsigned i = row * width + col;
         const uintptr_t token = table[(height - 1 - row) * 16 + col];
@@ -305,6 +305,8 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
         for (unsigned previous = 0; previous < i; ++previous) if (state.board.tokens[previous] == token) return false;
         const uint8_t *block = pool.data() + token - start;
         const uint16_t motion = Load<uint16_t>(block + 18);
+        state.orbMotionKnown &= motion <= UINT8_MAX;
+        state.orbMotion[i] = uint8_t(motion);
         state.board.tokens[i] = token; state.board.types[i] = block[0];
         state.board.flags[i] = Load<uint32_t>(block + 4); state.board.enhancement[i] = Load<uint32_t>(block + 8);
         state.board.blindTurns[i] = block[1] & 0x7fu;

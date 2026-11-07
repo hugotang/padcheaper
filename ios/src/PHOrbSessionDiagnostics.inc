@@ -1,5 +1,6 @@
 // Session-owned diagnostic histories and public snapshot assembly.
-// Snapshot retains at most 16 readiness changes and one failed search; no native reads or actions.
+// Snapshot retains bounded readiness, failed-search and mechanism-success
+// evidence. These in-memory records add no native reads or actions.
 - (void)recordReadIssue:(const PHOrbSnapshot *)state reason:(NSString *)reason multiplayer:(BOOL)multiplayer {
     _lastReadIssue = ReadIssueTrace(*state, reason, _openingStep + (_openingInFlight ? 1 : 0),
         _auto.active(), _phase, _searchTrace[@"generation"] ?: @0, multiplayer);
@@ -105,12 +106,20 @@
         @"scope":_auto.active() ? @"continuous" : _oneShot ? @"once" : @"preview-execute",
         @"multiplayer":MultiplayerTrace(_preview),
         @"startBoard":BoardTrace(_preview.board), @"path":RouteCells(_route),
+        @"fishing":@(_route.fishing), @"fishingExchanges":FishingExchangesTrace(_route),
+        @"geometryExtraExchanges":_searchTrace[@"geometryExtraExchanges"] ?: @0,
+        @"evaluationScope":_route.fishingExchangeCount ? @"target-independent-other-shared-phases" : @"all-shared-spinner-phases",
+        @"timing":@{@"fps":@(_preview.fps), @"remainingFrames":@(_preview.remainingFrames),
+            @"spinnerPeriodFrames":@(_preview.spinnerPeriodFrames), @"spinnerCountdownKnown":@(_preview.spinnerCountdownKnown),
+            @"spinnerCountdown":@(_preview.spinnerCountdown),
+            @"executionLimitMS":@(unsigned(RouteExecutionLimit(_preview,_route) * 1000))},
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
             @"diagonal":@(_route.diagonal),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
             @"evaluationCalls":@(_route.evaluationCalls), @"evaluationCacheHits":@(_route.evaluationCacheHits),
+            @"evaluationBreakdownKnown":_searchTrace[@"evaluationBreakdownKnown"] ?: @NO,
             @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
             @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage)},
         @"predictedBoard":BoardTrace(predicted), @"observedBoard":BoardTrace(state->board),
@@ -276,7 +285,7 @@
             @"ruleLastUseTurns":ruleUses, @"groupLastUseTurns":groupUses},
         @"ruleDecisionDetails":decisionDetails, @"decisionPhase":@(_decisionState.phase),
         @"executionElapsedMS":@(unsigned(_executionElapsed * 1000)),
-        @"executionLimitMS":@(unsigned((ExecutionLimit + (_route.fishing ? FishWaitSeconds(_preview) : 0)) * 1000)),
+        @"executionLimitMS":@(unsigned(RouteExecutionLimit(_preview,_route) * 1000)),
         @"decisionSkillWindow":@(_decisionState.automation.window), @"decisionSkillBusy":@(_decisionState.automation.busy),
         @"decisionSkillWindowReason":PHOrbSkillWindowDescription(&_decisionState.automation),
         @"decisionContextCurrent":@(decisionCurrent),
@@ -294,6 +303,8 @@
             @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight),
             @"puzzlePending":@(_openingPuzzlePending), @"steps":[_openingLog copy]},
         @"searchTrace":_searchTrace, @"lastFailedSearch":_lastFailedSearch, @"executionHistory":[_executionHistory copy],
+        @"lastFishingSuccess":_lastFishingSuccess ?: @{},
+        @"lastAssistRecoverySuccess":_lastAssistRecoverySuccess ?: @{},
         @"liveReadValid":@(liveReadable), @"searchTraceRelation":traceRelation,
         @"boardTransition":@(_live.boardTransition), @"boardTransitionFrames":@(_boardTransitionFrames),
         @"resizeProgress":@(_live.resizeProgress), @"resizeTarget":@(_live.resizeTarget), @"lastReadIssue":_lastReadIssue,
@@ -339,6 +350,7 @@
         @"combos":@(_route.combos), @"steps":@(_route.count ? _route.count - 1 : 0), @"confirmed":@(_confirmed),
         @"elapsedMS":@(_route.elapsedMS), @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached),
         @"evaluationCalls":@(_route.evaluationCalls), @"evaluationCacheHits":@(_route.evaluationCacheHits),
+        @"evaluationBreakdownKnown":@(_route.count && [_searchTrace[@"evaluationBreakdownKnown"] boolValue]),
         @"searchPasses":@(_route.searchPasses), @"backtracks":@(_route.backtracks), @"exploredDepth":@(_route.exploredDepth),
         @"completed":@(_completed), @"cancelled":@(_cancelled), @"inputFrames":@(_sentFrames), @"inputFault":@(_inputFault),
         @"startSent":@(_startSent), @"startAccepted":@(_startSent && !_awaitingStart),

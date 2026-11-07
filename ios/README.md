@@ -4,6 +4,8 @@
 
 目前交付 **0.5.38-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。潛覺／策略配裝同步、失敗紀錄保留與六次回復撈珠離線模型已通過 [CI 146](https://github.com/hugotang/padcheaper/actions/runs/42260667556) 完整回歸、iPhoneOS 編譯／簽章、瀏覽器與四次 iPhone GUI；456 組指紋符合原始 IPA。詳見 [0.5.38 更新](docs/release-0.5.38.md)、[開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.38.json)。手機仍只支援單次撈珠，連續交換和三光三心耐久未接入；真機操作與多人同步仍待驗證。
 
+正在驗證 **0.5.39-orbs**：單人一般／武裝回復共用最多六次連續多色取珠、多轉轉相位與逐次手機確認、珠量足夠後最多多取兩次改善位置、普通路徑去循環及成功證據保留。詳見 [0.5.39 說明](docs/release-0.5.39.md)；完整測試、CI 與交付尚待本輪結果，真機仍未驗證，不以上一版通過紀錄作為本版結論。
+
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 
 同一份 dylib 保留 **Dopamine rootless 與 LiveContainer** 兩種載入方式。使用者確認兩者目前都能使用；本次改盤與 BGM 修正共用同一套原生讀取及 frame hook，載入說明分列於下方。
@@ -30,6 +32,7 @@ iOS 已採用手動建置流程：推送及 PR 不會啟動 [.github/workflows/i
 - config.example.json
 - SHA256SUMS、build-info.json
 - 本文件、formation.md、feasibility.md、runtime.md、device-testing.md、monster-replacement.md、badge-timer.md、team-presets.md、target.json、battle-target.json、LICENSE
+- 各版說明及經整理的研究證據；程式與案例連結指向實際建置的 Git commit，原始私人 log 不納包。
 
 workflow 執行真正的 arm64 iPhoneOS 編譯，並檢查隊伍 JSON、LiveContainer 原始 Bundle ID、設定格式、儲存交易狀態及 iOS 模擬器 GUI。模擬器檢查會載入相同 runtime，驗證校驗失敗時 GUI 仍顯示、設定開關儲存、API 套用、觸控穿透及橫向畫面；另外檢查這份 PAD 使用的舊式 AppDelegate 視窗及 LiveContainer 改寫 Bundle ID 的模式。`PADCheaper-GUI-probe-<run number>` artifact 包含檢查報告和畫面。2026-10-27 使用者回報 `0.2.0-gui` 在 iOS 27／自訂 LiveContainer 無 JIT 下 GUI 正常、Skin／BGM 已生效；CI 不替代儲存／重啟等真機驗證，詳見 [真機測試記錄](docs/device-testing.md)。
 
@@ -54,7 +57,7 @@ bash ios/build.sh
 2. 在 LiveContainer 的 Tweaks 畫面按 **＋ → Add Tweak**，選擇新下載的 PADCheaper.dylib。若放入子資料夾，須在 PAD 的 app 設定中選取相同 Tweak Folder；dylib 直接放在該資料夾內，方便 LiveContainer 簽署。
 3. 確認未啟用 `dontInjectTweakLoader`，dylib／資料夾名稱沒有 `.disabled`，並由 LiveContainer 使用有效憑證重新簽署 tweaks。CI 的 ad-hoc 簽章不是 iPhone 裝置簽章。
 4. 啟動 PAD，在遊戲視窗出現後應看到 **PC** 浮動按鈕；可拖動至左右邊緣，閒置點一下展開快捷列，再點 PC 開設定，按 × 關閉面板。按鈕／面板外的觸控會穿透，遊戲維持 key window。
-5. 面板標頭應顯示新交付包的版本號（本批為 `0.5.36-orbs`），載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
+5. 面板標頭應顯示新交付包 `release.json` 的版本號，載入、功能及儲存狀態每秒更新；策略草稿的攻略開關須按「儲存並選用」。編隊與清單輸入期間使用可輸入的視窗，儲存並關閉後返回原遊戲視窗。
 
 浮動按鈕的含義：
 

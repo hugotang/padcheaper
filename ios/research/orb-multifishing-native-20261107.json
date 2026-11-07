@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "date": "2026-11-07",
+  "timezone": "Asia/Hong_Kong",
+  "game": "Puzzle & Dragons JP",
+  "game_version": "23.6.1",
+  "input_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+  "database_relative_path": "build/ios-address-23.6.1/23.6.1/pad.i64",
+  "method": "Read-only IDA decompilation, instruction and cross-reference review of the existing database; public documentation used as secondary corroboration.",
+  "database_mutated": false,
+  "build_run": false,
+  "test_suites_run": false,
+  "device_verified": false,
+  "raw_pseudocode_committed": false,
+  "address_convention": "Unslid virtual addresses in this exact 23.6.1 input; not runtime pointers or offsets for another game version.",
+  "functions": [
+    {"address": "0x1005AB5F4", "end": "0x1005AC1D8", "role": "spinner and orb update", "bytes_sha256": "02fc718593d31d7ece775974c6b49febd9d04c32bdf3cec587e13f8599ab3c2e"},
+    {"address": "0x1005AC1D8", "end": "0x1005AC26C", "role": "locked orb check with visual side effects", "bytes_sha256": "5955c0ac38e65e3de5aa2423c63d29bd07644188567aa28a476c28fce5d062fc"},
+    {"address": "0x100608AC0", "end": "0x100608CF0", "role": "orb pointer exchange and movement setup", "bytes_sha256": "aabb9d39ed65569440f5a315c25a127748d47fe489ca2a9304df1e36b395cc04"},
+    {"address": "0x100608CF0", "end": "0x100609050", "role": "input cell traversal", "bytes_sha256": "b1b93e7ca51eb86e5febc5060ece881a3e02a2528f483f42a6dd99322692ff02"},
+    {"address": "0x1005B5180", "end": "0x1005B5E08", "role": "phase dispatcher and common update tail", "bytes_sha256": "ea4a0901a48eec9ba4aef95e5e643b162406263ae63cd36a8f160ab0afd8aea7"},
+    {"address": "0x10060D578", "end": "0x10060F5E4", "role": "puzzle input, grab and release", "bytes_sha256": "52b068c5cc6d2b4a9e1001d75d804b66cddbc58f1bd31e51fc67b7a40faaae0b"},
+    {"address": "0x100602FA0", "end": "0x100603014", "role": "release-related orb cleanup", "bytes_sha256": "19aefa070794fb546c235e51b92ee411aba40bd0ba57121657fbe97df7ec4018"},
+    {"address": "0x100603DF4", "end": "0x100604810", "role": "movement and special-state gate before matching", "bytes_sha256": "241b8370ff70f6288076d27c01105f04a89fafd47afcad088f2502e5cdae650b"},
+    {"address": "0x1005FC954", "end": "0x100602258", "role": "native match processing", "bytes_sha256": "840fb55aa687924e7ec96c6ab69a57251ccf7865eb7a3010d30b6f82ac83b431"}
+  ],
+  "claims": [
+    {
+      "id": "N1",
+      "claim": "Active spinner cells share a countdown, but the updater visits every active row/cell and applies per-orb eligibility.",
+      "evidence": ["0x1005AB95C", "0x1005AB968", "0x1005AB96C", "0x1005AB974", "0x1005AB980", "0x1005AB990", "0x1005AB994", "0x1005AB9A8", "0x1005ABAC0", "0x1005ABADC"],
+      "offsets": {"countdown": "impl+0xB4854", "period_record": "impl+0xB4844", "row_mask_base": "impl+0xB4864", "row_mask_stride_bytes": 16, "orb_pointer_table": "impl+0xA34C0", "orb_pointer_row_stride_bytes": 128},
+      "implication": "Multiple spinners are supported by native behavior. Shared countdown does not imply identical or fixed relative colors after orb movement."
+    },
+    {
+      "id": "N2",
+      "claim": "A spinner recolors only when its current orb has state 0 and its lock bit is clear.",
+      "evidence": ["0x1005ABA0C", "0x1005ABA10", "0x1005ABA1C", "0x1005ABA20", "0x1005AC1E8", "0x1005AC1EC"],
+      "offsets": {"orb_state": "orb+0x12", "orb_flags": "orb+0x4", "lock_mask": "0x800"},
+      "implication": "Held or moving orbs can skip a shared tick independently of the other spinner cells. The check function itself is not a pure reader and need not be called by the tweak."
+    },
+    {
+      "id": "N3",
+      "claim": "The initial grabbed orb is set to state 4; an exchange sets the displaced orb to state 3, swaps orb pointers, and starts movement interpolation on both orbs.",
+      "evidence": ["0x10060F45C", "0x10060F460", "0x100608B30", "0x100608B48", "0x100608B64", "0x100608B98", "0x100608BA4"],
+      "offsets": {"interpolation_current": "orb+0x24", "interpolation_target": "orb+0x28"},
+      "implication": "Model token identity and associated orb fields through each swap. A target spinner must reach its desired color before entering it; holding on that cell does not advance its held orb color. The interpolation argument 0.125 alone does not establish a verified eight-frame settle bound."
+    },
+    {
+      "id": "N4",
+      "claim": "In the same updater, spinner recoloring precedes orb movement processing; state is cleared to 0 only when interpolation current equals target and state is neither 4 nor 5.",
+      "evidence": ["0x1005ABA0C", "0x1005ABDF0", "0x1005ABDF4", "0x1005ABDF8", "0x1005ABDFC", "0x1005ABE00", "0x1005ABE04", "0x1005ABE08", "0x1005ABE0C"],
+      "implication": "An orb that becomes settled in this update can already have skipped that update's spinner tick. Rebase remaining phase predictions from a native read after exchanges."
+    },
+    {
+      "id": "N5",
+      "claim": "The raw-zero ordinary cycle maps colors 0..4 to the next color and a current color above 4 to fire 0. Custom color selection scans the configured color bit table; custom results 6..9 clear enhancement data and flags 0x28000.",
+      "evidence": ["0x1005ABA24", "0x1005ABA30", "0x1005ABA40", "0x1005ABA54", "0x1005ABA68", "0x1005ABA6C", "0x1005ABA70", "0x1005ABA74", "0x1005ABA88", "0x1005ABA8C", "0x1005ABA90", "0x1005ABA98", "0x1005ABA9C", "0x1005ABAA0", "0x1005ABABC"],
+      "offsets": {"color_table": "impl+0xB4FD0", "orb_color": "orb+0x0", "enhancement_data": "orb+0x8", "cleared_flag_mask": "0x28000"},
+      "implication": "Hazard conversion is a real native possibility, but supporting it needs branch-specific color and metadata replay. A normal six-color model must not silently accept an unsupported custom table or leave stale orb metadata."
+    },
+    {
+      "id": "N6",
+      "claim": "In the normal phase-2 dispatcher branch, input is processed before the common updater tail.",
+      "evidence": ["0x1005B5964", "0x1005B59C0", "0x1005B59D4", "0x1005B5A10", "0x1005B5488", "0x1005B5538"],
+      "implication": "Input and spinner update can occur in the same game frame. Function address order alone is not execution order; these sites are connected by the dispatcher control flow."
+    },
+    {
+      "id": "N7",
+      "claim": "Release cleanup clears an orb flag and conditionally resets state 4. Native matching waits for states 1..3, and for a state-4 orb whose interpolation current differs from target, plus other special-state checks.",
+      "evidence": ["0x100602FA0", "0x10060F220", "0x10060F26C", "0x100603EA0", "0x100603EA4", "0x100603EA8", "0x100603EB0", "0x100603EEC", "0x100603EF0", "0x100603EF4", "0x100603FC8", "0x100604044"],
+      "implication": "Visible release color is not sufficient evidence of the actual match snapshot. A route valid for all allowed terminal phases can avoid relying on a specific release frame, but only if its terminal spinner colors were modeled correctly."
+    },
+    {
+      "id": "N8",
+      "claim": "All active cells use the same decoded color mask at impl+0xB4FD0. A nonzero mask selects the next set color bit in ascending color order with wrap; unset colors are skipped within this one tick. Raw zero instead selects the ordinary six-color cycle.",
+      "evidence": ["0x1005AB9B4", "0x1005ABA24", "0x1005ABA28", "0x1005ABA2C", "0x1005ABA30", "0x1005ABA38", "0x1005ABA40", "0x1005ABA44", "0x1005ABA48", "0x1005ABA4C", "0x1005ABA50", "0x1005ABA54", "0x1005ABA58", "0x1005ABA60", "0x1005ABA68"],
+      "offsets": {"shared_color_mask": "impl+0xB4FD0"},
+      "model_comparison": "For the supported basic-color subsets (bits 0..5, at least two set, current color in table), PHOrbSpinnerType's ascending next-allowed-color selection matches the native result. The native bit-search sentinel and loop iterations are not extra elapsed frames. ReadSpinner normalizes raw zero to 63; a nonzero subset remains that actual subset.",
+      "implication": "Do not assume every spinner can supply all six colors. Plan only takes and supported donors inside the current mask, and revoke a pending route when that mask changes. Shared color table still permits per-cell phase differences after held/moving skips."
+    }
+  ],
+  "public_sources": [
+    {
+      "id": "W1",
+      "url": "https://game8.jp/pazudora/351119#hs_40",
+      "title": "盤面に影響のあるギミックの対策一覧",
+      "accessed": "2026-11-07",
+      "scope": "Held spinner orb stays fixed while other spinners continue; ordinary color cycle and missing-color extraction.",
+      "short_quote": "ルーレットマスのドロップは、掴んでいる間は色が変わりません。",
+      "caveat": "Some other subsections contain older awakening values; only native-corroborated spinner behavior is used here."
+    },
+    {
+      "id": "W2",
+      "url": "https://appmedia.jp/pazudora/789324",
+      "title": "盤面妨害ギミックの対策",
+      "accessed": "2026-11-07",
+      "scope": "Held orb does not change, spinner rates vary, locked orbs resist recoloring, missing colors can be extracted.",
+      "short_quote": "持ったドロップは変化の影響を受けない",
+      "caveat": "Old guide sections are not a reliable inventory of currently available countermeasure skills. Runtime period remains the source of timing."
+    },
+    {
+      "id": "W3",
+      "url": "https://pad.gungho.jp/member/updates/20_4.html",
+      "title": "Ver.20.4 アップデート情報",
+      "published": "2022-12-14",
+      "accessed": "2026-11-07",
+      "scope": "Assist-void recovery latent requires unlocked L-attack awakening and its activation; five matching orbs in an L.",
+      "short_quote": "L字消し攻撃を発動すると アシスト無効状態を1ターン回復する",
+      "caveat": "Historical damage-cap multipliers are not adopted. This announcement alone does not establish every present-day primary/sub/third-attribute eligibility rule."
+    },
+    {
+      "id": "W4",
+      "url": "https://pad.gungho.jp/member/updates/20_7/",
+      "title": "Ver.20.7 アップデート情報",
+      "published": "2023-06-16",
+      "accessed": "2026-11-07",
+      "scope": "T awakening uses five same-color orbs in a T and enhanced-orb treatment.",
+      "caveat": "Historical damage multiplier is not adopted; exact connected-group behavior still belongs in the native matching/evaluation audit."
+    },
+    {
+      "id": "W5",
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/404584",
+      "title": "T字消し攻撃の倍率と効果",
+      "accessed": "2026-11-07",
+      "scope": "T shape works in all four orientations and uses five matching orbs."
+    },
+    {
+      "id": "W6",
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/170895",
+      "title": "回復ドロップ強化の効果",
+      "accessed": "2026-11-07",
+      "scope": "Four-heart healing depends on recovery-enhance awakenings; source for making recovery targets team-dependent.",
+      "caveat": "This is not a complete native healing/poison resolution-order proof."
+    },
+    {
+      "id": "W7",
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/379761",
+      "title": "アシスト無効回復の効果",
+      "page_updated": "2026-11-01",
+      "accessed": "2026-11-07",
+      "scope": "Current secondary description of L activation and assist-void recovery; supports the official mechanism."
+    },
+    {
+      "id": "W8",
+      "url": "https://pad.gungho.jp/member/updates/23_6/",
+      "title": "Ver.23.6 アップデート情報",
+      "published": "2026-10-20",
+      "accessed": "2026-11-07",
+      "scope": "Current major-version change context; no spinner behavior change stated.",
+      "caveat": "Absence from release notes does not prove implementation stability; current binary was inspected independently."
+    }
+  ],
+  "unverified": [
+    "Exact iPhone callback/read/input timing relative to native spinner ticks.",
+    "A fixed upper bound for exchange movement settling under all game rates and states.",
+    "Exact release-to-match delay on the device.",
+    "Native execution of a newly planned multi-spinner or multi-color route.",
+    "Complete hazard conversion metadata and poison/recovery resolution equivalence.",
+    "Full current team awakening, attribute and enemy next-action eligibility; no survival downgrade follows from these spinner findings."
+  ]
+}

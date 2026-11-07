@@ -1,3 +1,5 @@
+static void SetAssistBoard(FakeOrbEngine *engine, unsigned turns);
+static PHOrbSession *AssistSession(FakeOrbEngine *engine, NSDictionary *settings);
 static void DiagnosticAssemblySessionTests() {
     const NSSet *commonKeys = [NSSet setWithArray:@[@"reason", @"phase", @"valid", @"automationValid",
         @"width", @"height", @"resizeProgress", @"resizeTarget", @"openingStep", @"duringAutomatic",
@@ -20,6 +22,8 @@ static void DiagnosticAssemblySessionTests() {
         Check(engine->reads == reads && !engine->skillAttempts && !engine->stages &&
             [NSJSONSerialization isValidJSONObject:snapshot],
             "snapshot assembly adds no native reads or action intent and remains JSON serializable");
+        Check(![snapshot[@"lastFishingSuccess"] count] && ![snapshot[@"lastAssistRecoverySuccess"] count],
+            "a newly created session has no fabricated or restored successful mechanism records");
     }
     for (bool resizing : {false, true}) {
         FakeOrbEngine *engine = [FakeOrbEngine new];
@@ -43,5 +47,35 @@ static void DiagnosticAssemblySessionTests() {
         Check(engine->reads == reads && !engine->skillAttempts && !engine->stages &&
             [NSJSONSerialization isValidJSONObject:snapshot], "diagnostic export cannot turn failed or resizing reads into actions");
         [session queueStop:@"diagnostic fixture finished"];
+    }
+    {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetAssistBoard(engine,2);
+        PHOrbSession *session = AssistSession(engine,nil);
+        Check(UntilPhase(session,engine,@"turnWaiting"), "successful recovery retention fixture releases its L route");
+        Check(![session.snapshot[@"lastAssistRecoverySuccess"] count],
+            "an accepted gesture alone cannot be marked as confirmed assist recovery");
+        engine->live.assistRecovery.turns = 0;
+        Check(NextOrbTurn(session,engine), "retention fixture observes the next-turn recovered mechanism");
+        NSDictionary *retained = session.snapshot[@"lastAssistRecoverySuccess"];
+        Check(retained.count && [retained[@"releaseConfirmed"] boolValue] &&
+            [retained[@"assistRecovery"][@"actualConfirmed"] boolValue] &&
+            ![retained[@"assistRecovery"][@"lOnlyAmountConfirmed"] boolValue] &&
+            [retained[@"startBoard"][@"types"] count] == 30 && [retained[@"path"] count] >= 2,
+            "confirmed recovery retains its full original board and path without claiming L-only duration removal");
+        for (unsigned run = 0; run < 4; ++run) {
+            Check(UntilPhase(session,engine,@"turnWaiting"), "later ordinary board releases in retention fixture");
+            if (run < 3) Check(NextOrbTurn(session,engine), "later ordinary board advances without replacing recovery evidence");
+        }
+        Check([session.snapshot[@"executionHistory"] count] == 3 &&
+            ![session.snapshot[@"executionHistory"] containsObject:retained] &&
+            [session.snapshot[@"lastAssistRecoverySuccess"] isEqual:retained],
+            "successful recovery witness survives eviction from the last-three execution history");
+        [session queueStop:@"retention fixture stop"];
+        Check([session configureQuality:@"fast"] && [session.snapshot[@"lastAssistRecoverySuccess"] isEqual:retained],
+            "Stop and settings changes do not erase bounded in-session recovery evidence");
+        engine->live.phase = 29; Tick(session,engine,Frame());
+        Check([session.snapshot[@"lastAssistRecoverySuccess"] isEqual:retained] &&
+            ![session.snapshot[@"lastFishingSuccess"] count] && [NSJSONSerialization isValidJSONObject:session.snapshot],
+            "dungeon results retain recovery evidence separately from unexercised fishing success");
     }
 }

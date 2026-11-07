@@ -1,0 +1,1903 @@
+{
+  "schema": 1,
+  "version": "0.5.38-orbs",
+  "input_sha256": "949f1b579e42df20dd4fb47e571f6a6ca9578c870a85ee1f0d44ac2bc6048b5c",
+  "method": "Independent arithmetic on supplied routes and boards; no solver execution, build, or device commands.",
+  "recorded_stop": "Dungeon Clear",
+  "opening_completed": 6,
+  "opening_count": 6,
+  "last_failed_search_empty": true,
+  "history_count": 3,
+  "routes": [
+    {
+      "turn": 5,
+      "wave_zero_based": 4,
+      "search_ms": 544,
+      "evaluated": 95395,
+      "evaluation_calls": 56538,
+      "cache_hits": 38857,
+      "cache_hit_percent": 40.73,
+      "search_depth": 48,
+      "deadline_reached": false,
+      "execution_ms": 1967,
+      "confirmed_steps": 27,
+      "release_confirmed": true,
+      "release_scope": "all-shared-spinner-phases",
+      "start_board": {
+        "blindTurns": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cloudMask": 0,
+        "enhancementBits": [
+          3204448256,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0
+        ],
+        "fixedStart": 0,
+        "flags": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "height": 5,
+        "minErase": 3,
+        "minMatch": 0,
+        "spinnerColors": 63,
+        "spinnerMask": 2097152,
+        "tapeMask": 0,
+        "thornPercent": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "types": [
+          3,
+          3,
+          4,
+          5,
+          3,
+          5,
+          5,
+          5,
+          3,
+          3,
+          2,
+          3,
+          3,
+          3,
+          3,
+          2,
+          5,
+          5,
+          1,
+          3,
+          5,
+          2,
+          3,
+          1,
+          5,
+          4,
+          3,
+          3,
+          2,
+          0
+        ],
+        "unmatchableColors": 0,
+        "width": 6
+      },
+      "goals": [
+        {
+          "colors": 8,
+          "count": 1,
+          "kind": "t",
+          "length": 0
+        },
+        {
+          "colors": 32,
+          "count": 1,
+          "kind": "four",
+          "length": 0
+        }
+      ],
+      "path": [
+        18,
+        12,
+        7,
+        14,
+        19,
+        20,
+        25,
+        18,
+        19,
+        20,
+        15,
+        10,
+        5,
+        4,
+        3,
+        10,
+        17,
+        22,
+        27,
+        20,
+        15,
+        16,
+        23,
+        22,
+        15,
+        16,
+        10,
+        3
+      ],
+      "shortened_path": [
+        18,
+        12,
+        7,
+        14,
+        19,
+        20,
+        25,
+        18,
+        19,
+        20,
+        15,
+        10,
+        5,
+        4,
+        3,
+        10,
+        17,
+        22,
+        27,
+        20,
+        15,
+        16,
+        23,
+        22,
+        15,
+        16,
+        10,
+        3
+      ],
+      "identity_cycles": [],
+      "steps_removed": 0,
+      "same_final_per_orb_fields_and_token_permutation": true,
+      "same_start_and_end": true,
+      "spinner_visited": false,
+      "observed_nonspinner_fields_match": true,
+      "fixed_counts": [
+        1,
+        2,
+        3,
+        13,
+        2,
+        8
+      ],
+      "minimum_evaluation": {
+        "combos": 6,
+        "first_wave_combos": 4,
+        "erased": 23,
+        "heart_fours": 2,
+        "goal_hits": [
+          1,
+          2
+        ]
+      },
+      "phase_evaluations": [
+        {
+          "spinner_color": 0,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 23,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 1,
+          "combos": 7,
+          "first_wave_combos": 4,
+          "erased": 26,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 2,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 23,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 3,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 23,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 4,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 23,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 5,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 23,
+          "goal_hits": [
+            1,
+            2
+          ],
+          "heart_fours": 2,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                1,
+                7,
+                8,
+                9,
+                13
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                6,
+                12,
+                18,
+                24
+              ]
+            }
+          ]
+        }
+      ],
+      "inventory_caps": [
+        {
+          "spinner_color": 0,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 24
+        },
+        {
+          "spinner_color": 1,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 27
+        },
+        {
+          "spinner_color": 2,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 25
+        },
+        {
+          "spinner_color": 3,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 25
+        },
+        {
+          "spinner_color": 4,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 27
+        },
+        {
+          "spinner_color": 5,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 25
+        }
+      ],
+      "guaranteed_combo_upper_bound": 6,
+      "guaranteed_erased_upper_bound": 24,
+      "assist_before_turns": 0,
+      "previous_recovery_outcome": {
+        "actualConfirmed": true,
+        "beforeTurns": 3,
+        "lOnlyAmountConfirmed": false,
+        "observedTurns": 0,
+        "status": "observed-clear",
+        "turn": 4
+      },
+      "estimated_ms_saved_at_30fps": 0,
+      "estimate_fps_is_not_captured_for_each_historical_route": true
+    },
+    {
+      "turn": 6,
+      "wave_zero_based": 5,
+      "search_ms": 389,
+      "evaluated": 86915,
+      "evaluation_calls": 42001,
+      "cache_hits": 44914,
+      "cache_hit_percent": 51.68,
+      "search_depth": 48,
+      "deadline_reached": false,
+      "execution_ms": 2901,
+      "confirmed_steps": 42,
+      "release_confirmed": true,
+      "release_scope": "all-shared-spinner-phases",
+      "start_board": {
+        "blindTurns": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cloudMask": 0,
+        "enhancementBits": [
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3204448256,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fixedStart": 0,
+        "flags": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "height": 5,
+        "minErase": 3,
+        "minMatch": 0,
+        "spinnerColors": 63,
+        "spinnerMask": 2097152,
+        "tapeMask": 0,
+        "thornPercent": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "types": [
+          4,
+          5,
+          1,
+          2,
+          3,
+          4,
+          0,
+          0,
+          4,
+          5,
+          5,
+          4,
+          3,
+          4,
+          5,
+          3,
+          3,
+          3,
+          5,
+          5,
+          5,
+          3,
+          3,
+          3,
+          4,
+          4,
+          3,
+          2,
+          3,
+          5
+        ],
+        "unmatchableColors": 0,
+        "width": 6
+      },
+      "goals": [
+        {
+          "colors": 8,
+          "count": 1,
+          "kind": "t",
+          "length": 0
+        },
+        {
+          "colors": 32,
+          "count": 1,
+          "kind": "four",
+          "length": 0
+        }
+      ],
+      "path": [
+        11,
+        16,
+        22,
+        27,
+        20,
+        19,
+        13,
+        8,
+        9,
+        14,
+        7,
+        2,
+        3,
+        4,
+        11,
+        17,
+        16,
+        11,
+        17,
+        16,
+        11,
+        17,
+        23,
+        28,
+        27,
+        20,
+        26,
+        19,
+        24,
+        18,
+        12,
+        7,
+        1,
+        0,
+        6,
+        12,
+        19,
+        25,
+        18,
+        19,
+        26,
+        25,
+        24
+      ],
+      "shortened_path": [
+        11,
+        16,
+        22,
+        27,
+        20,
+        19,
+        13,
+        8,
+        9,
+        14,
+        7,
+        2,
+        3,
+        4,
+        11,
+        17,
+        23,
+        28,
+        27,
+        20,
+        26,
+        19,
+        24,
+        18,
+        12,
+        7,
+        1,
+        0,
+        6,
+        12,
+        19,
+        25,
+        18,
+        19,
+        26,
+        25,
+        24
+      ],
+      "identity_cycles": [
+        {
+          "from_step": 14,
+          "through_step": 20,
+          "moves_removed": 6,
+          "closed_walk": [
+            11,
+            17,
+            16,
+            11,
+            17,
+            16,
+            11
+          ]
+        }
+      ],
+      "steps_removed": 6,
+      "same_final_per_orb_fields_and_token_permutation": true,
+      "same_start_and_end": true,
+      "spinner_visited": false,
+      "observed_nonspinner_fields_match": true,
+      "fixed_counts": [
+        2,
+        1,
+        2,
+        9,
+        7,
+        8
+      ],
+      "minimum_evaluation": {
+        "combos": 6,
+        "first_wave_combos": 4,
+        "erased": 21,
+        "heart_fours": 1,
+        "goal_hits": [
+          1,
+          1
+        ]
+      },
+      "phase_evaluations": [
+        {
+          "spinner_color": 0,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 1,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 2,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 3,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 4,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 5,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 21,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                15,
+                16,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 4,
+              "cells": [
+                12,
+                18,
+                24
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                27,
+                28,
+                29
+              ]
+            }
+          ]
+        }
+      ],
+      "inventory_caps": [
+        {
+          "spinner_color": 0,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 27
+        },
+        {
+          "spinner_color": 1,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 24
+        },
+        {
+          "spinner_color": 2,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 27
+        },
+        {
+          "spinner_color": 3,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 25
+        },
+        {
+          "spinner_color": 4,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 25
+        },
+        {
+          "spinner_color": 5,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 25
+        }
+      ],
+      "guaranteed_combo_upper_bound": 6,
+      "guaranteed_erased_upper_bound": 24,
+      "assist_before_turns": 0,
+      "previous_recovery_outcome": null,
+      "estimated_ms_saved_at_30fps": 400,
+      "estimate_fps_is_not_captured_for_each_historical_route": true
+    },
+    {
+      "turn": 7,
+      "wave_zero_based": 5,
+      "search_ms": 528,
+      "evaluated": 95693,
+      "evaluation_calls": 54916,
+      "cache_hits": 40777,
+      "cache_hit_percent": 42.61,
+      "search_depth": 48,
+      "deadline_reached": false,
+      "execution_ms": 933,
+      "confirmed_steps": 12,
+      "release_confirmed": true,
+      "release_scope": "all-shared-spinner-phases",
+      "start_board": {
+        "blindTurns": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cloudMask": 0,
+        "enhancementBits": [
+          0,
+          1031127695,
+          0,
+          1031127695,
+          1031127695,
+          0,
+          1031127695,
+          0,
+          1031127695,
+          1031127695,
+          0,
+          1031127695,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1031127695,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fixedStart": 0,
+        "flags": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "height": 5,
+        "minErase": 3,
+        "minMatch": 0,
+        "spinnerColors": 63,
+        "spinnerMask": 2097152,
+        "tapeMask": 0,
+        "thornPercent": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "types": [
+          3,
+          3,
+          3,
+          5,
+          5,
+          1,
+          4,
+          4,
+          5,
+          2,
+          3,
+          5,
+          3,
+          5,
+          5,
+          0,
+          1,
+          3,
+          0,
+          3,
+          3,
+          0,
+          3,
+          3,
+          3,
+          5,
+          3,
+          5,
+          2,
+          4
+        ],
+        "unmatchableColors": 0,
+        "width": 6
+      },
+      "goals": [
+        {
+          "colors": 8,
+          "count": 1,
+          "kind": "t",
+          "length": 0
+        },
+        {
+          "colors": 32,
+          "count": 1,
+          "kind": "four",
+          "length": 0
+        }
+      ],
+      "path": [
+        25,
+        20,
+        13,
+        12,
+        7,
+        14,
+        9,
+        3,
+        10,
+        11,
+        17,
+        22,
+        28
+      ],
+      "shortened_path": [
+        25,
+        20,
+        13,
+        12,
+        7,
+        14,
+        9,
+        3,
+        10,
+        11,
+        17,
+        22,
+        28
+      ],
+      "identity_cycles": [],
+      "steps_removed": 0,
+      "same_final_per_orb_fields_and_token_permutation": true,
+      "same_start_and_end": true,
+      "spinner_visited": false,
+      "observed_nonspinner_fields_match": true,
+      "fixed_counts": [
+        2,
+        2,
+        2,
+        12,
+        3,
+        8
+      ],
+      "minimum_evaluation": {
+        "combos": 5,
+        "first_wave_combos": 4,
+        "erased": 19,
+        "heart_fours": 1,
+        "goal_hits": [
+          1,
+          1
+        ]
+      },
+      "phase_evaluations": [
+        {
+          "spinner_color": 0,
+          "combos": 5,
+          "first_wave_combos": 4,
+          "erased": 19,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 1,
+          "combos": 5,
+          "first_wave_combos": 4,
+          "erased": 19,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 2,
+          "combos": 6,
+          "first_wave_combos": 4,
+          "erased": 22,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 3,
+          "combos": 5,
+          "first_wave_combos": 4,
+          "erased": 19,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 4,
+          "combos": 5,
+          "first_wave_combos": 4,
+          "erased": 19,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        },
+        {
+          "spinner_color": 5,
+          "combos": 5,
+          "first_wave_combos": 4,
+          "erased": 19,
+          "goal_hits": [
+            1,
+            1
+          ],
+          "heart_fours": 1,
+          "first_groups": [
+            {
+              "color": 3,
+              "cells": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                7,
+                8,
+                9,
+                10
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                11,
+                17,
+                23
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                13,
+                19,
+                24,
+                25,
+                26
+              ]
+            }
+          ]
+        }
+      ],
+      "inventory_caps": [
+        {
+          "spinner_color": 0,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 26
+        },
+        {
+          "spinner_color": 1,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 26
+        },
+        {
+          "spinner_color": 2,
+          "combo_upper_bound": 7,
+          "erased_upper_bound": 26
+        },
+        {
+          "spinner_color": 3,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 24
+        },
+        {
+          "spinner_color": 4,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 24
+        },
+        {
+          "spinner_color": 5,
+          "combo_upper_bound": 6,
+          "erased_upper_bound": 24
+        }
+      ],
+      "guaranteed_combo_upper_bound": 6,
+      "guaranteed_erased_upper_bound": 24,
+      "assist_before_turns": 0,
+      "previous_recovery_outcome": null,
+      "estimated_ms_saved_at_30fps": 0,
+      "estimate_fps_is_not_captured_for_each_historical_route": true
+    }
+  ],
+  "limits": [
+    "Only the last three complete routes are retained.",
+    "Post-release native combo totals and complete damage are not recorded.",
+    "Shortened-route duration is an estimate; it was not run on a device."
+  ],
+  "latest_timing": {
+    "fps": 30,
+    "remainingFrames": 570,
+    "spinnerCountdown": 11,
+    "spinnerCountdownKnown": true,
+    "spinnerPeriodFrames": 15
+  },
+  "product_source_commit": "5e3921d55bdc4700e608f9dd0eb96565c5779f0b",
+  "review_head_commit": "37565c359cee6d5c6ed78ba6db1b9ec037c45bba",
+  "validation_scope": "Recorded-route arithmetic and source review only; not product or device testing.",
+  "input_bytes": 56552,
+  "analysis_script_sha256": "1c56ddc2ab4090efb59f4dc3f340e674664a914842cecceaa9f88cf2d0482a04"
+}

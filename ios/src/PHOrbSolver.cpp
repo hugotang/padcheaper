@@ -1,6 +1,7 @@
 // Bounded iOS beam-search adaptation of the approach in pazusoba/core.
 // See ios/third_party/pazusoba/LICENSE and NOTICE.md for provenance.
 #include "PHOrbSolver.h"
+#include "PHOrbMultiFishing.h"
 #include "PHOrbTimedFishing.h"
 #include "PHOrbAssistFishing.h"
 #include <algorithm>
@@ -826,6 +827,82 @@ Score Evaluate(Cells cells, const Context &context) {
     return worst;
 }
 
+// Final-route cleanup only: an identical color layout is not enough. Equal
+// synthetic token permutations and drag endpoints prove the removed walk
+// leaves every orb in place, including its enhancement and native identity.
+// Never remove a fishing wait/entry, touch effect, thorn contact or activity
+// gesture. Those can depend on history even when their final colors match.
+bool SameCycleEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
+    const auto same = [](const auto &left, const auto &right) {
+        return std::equal(std::begin(left), std::end(left), std::begin(right));
+    };
+    return a.combos == b.combos && a.erased == b.erased && same(a.goalHits,b.goalHits) &&
+        a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
+        same(a.rowGroups,b.rowGroups) && same(a.linkGroups,b.linkGroups) && same(a.largestGroups,b.largestGroups) &&
+        a.activityValue == b.activityValue && same(a.retainedAfterConversion,b.retainedAfterConversion) &&
+        a.preparationReady == b.preparationReady && a.poisonErased == b.poisonErased &&
+        a.unmatchedBombs == b.unmatchedBombs && a.heartFours == b.heartFours &&
+        a.goalsMet == b.goalsMet && a.hazardsSafe == b.hazardsSafe && a.mortalPoisonErased == b.mortalPoisonErased;
+}
+
+bool SimplifyIdentityCycles(const PHOrbBoard &board, const PHOrbSolveOptions &options, const Context &context,
+    const std::atomic_bool &cancel, Clock::time_point deadline, Node &best) {
+    const auto interrupted = [&]() { return cancel.load(std::memory_order_relaxed) || Clock::now() >= deadline; };
+    const auto &activity = options.activity;
+    if (best.length < 3 || best.length > PHOrbMaxSteps + 1 || best.fished || options.fishCell >= 0 ||
+        activity.firstWaveOnly || activity.comboPriority || activity.colors || activity.linkLength != 12 ||
+        activity.comboWeight || activity.rowWeight || activity.linkWeight || activity.stepCost || activity.linkRewardLimit ||
+        activity.attackLinkMultiplier != 1 || activity.attackLinkComboBonus || activity.preparation ||
+        activity.primaryColor || activity.primaryMinimum != 3 || best.thornContacts || best.thornDamage ||
+        !best.score.result.goalsMet || !best.score.result.hazardsSafe || interrupted()) return false;
+    for (unsigned color = 0; color < PHOrbBasicTypes; ++color)
+        if (activity.attackWeights[color] || activity.attackRowPercent[color] || activity.conversion[color] != color) return false;
+    const unsigned size = unsigned(board.width) * board.height;
+    // Keep this first implementation to basic-color boards with no effects.
+    // Untouched basic spinners remain valid in every phase of their table.
+    if (!size || size > PHOrbMaxCells || (board.spinnerColors & ~63u)) return false;
+    for (unsigned i = 0; i < size; ++i)
+        if (board.types[i] >= PHOrbBasicTypes || board.flags[i] || board.blindTurns[i] || board.thornDamage[i]) return false;
+
+    PHOrbRoute original{}; original.count = best.length; original.diagonal = options.diagonal;
+    std::copy(best.path.begin(), best.path.begin() + best.length, original.cells);
+    PHOrbBoard before{};
+    if (!PHOrbReplay(&board,&original,original.count - 1,&before) || interrupted()) return false;
+
+    PHOrbRoute shortened = original; shortened.count = 1;
+    std::array<Cells,PHOrbMaxSteps + 1> states{};
+    for (unsigned i = 0; i < size; ++i) states[0][i] = uint8_t(i);
+    for (unsigned step = 1; step < original.count; ++step) {
+        if (interrupted()) return false;
+        const unsigned last = shortened.count - 1, next = original.cells[step];
+        Cells state = states[last];
+        std::swap(state[shortened.cells[last]],state[next]);
+        unsigned repeated = shortened.count;
+        for (unsigned previous = 0; previous < shortened.count; ++previous)
+            if (shortened.cells[previous] == next && states[previous] == state) { repeated = previous; break; }
+        if (repeated < shortened.count) shortened.count = uint8_t(repeated + 1);
+        else {
+            shortened.cells[shortened.count] = uint8_t(next);
+            states[shortened.count] = state; ++shortened.count;
+        }
+    }
+    // Do not turn a move request into an empty gesture. Exact endpoint and
+    // permutation checks also protect repeated same-color cells and loops
+    // which return to their start but still rotate the other tokens.
+    if (shortened.count < 2 || shortened.count >= original.count ||
+        shortened.cells[0] != original.cells[0] ||
+        shortened.cells[shortened.count - 1] != original.cells[original.count - 1] || interrupted()) return false;
+    PHOrbBoard after{};
+    if (!PHOrbReplay(&board,&shortened,shortened.count - 1,&after) ||
+        !PHOrbSameBoard(&before,&after) || std::memcmp(after.types,best.cells.data(),size) || interrupted()) return false;
+    Cells cells{}; std::copy(after.types,after.types + size,cells.begin());
+    const auto checked = Evaluate(cells,context);
+    if (!SameCycleEvaluation(checked.result,best.score.result) || interrupted()) return false;
+    best.length = shortened.count;
+    std::copy(shortened.cells,shortened.cells + shortened.count,best.path.begin());
+    return true;
+}
+
 // A score depends on the color layout and this pass's immutable context, not
 // the drag endpoint or path. Reuse it across those candidates, but compare
 // every cell so a hash collision can only cost a cache miss. Thorn damage and
@@ -1139,7 +1216,8 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
     result = {}; thornDamage = 0; thornContacts = 0;
     PHOrbBoard replay{};
     if (!route.count || route.diagonal != options.diagonal || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
-        !PHOrbEvaluateWithOptions(replay,options,result)) return false;
+        !(route.fishingExchangeCount ? PHOrbEvaluateMultiFishingBoard(replay,route.fishCell,options,result) :
+            PHOrbEvaluateWithOptions(replay,options,result))) return false;
     Cells thorns{};
     for (unsigned i = 0; i < board.width * board.height; ++i)
         thorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
@@ -1473,6 +1551,10 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         }
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         if (!found) return PHOrbSolveStatus::NoRoute;
+        // Use only the original remaining budget. An interrupted cleanup
+        // leaves the searched route intact; cancellation still publishes none.
+        SimplifyIdentityCycles(board,options,context,cancel,deadline,best);
+        if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         route.count = best.length;
         route.diagonal = options.diagonal;
         route.fishing = best.fished;

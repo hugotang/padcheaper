@@ -68,6 +68,8 @@
     if (_executionHistory.count) {
         NSMutableDictionary *record = [_executionHistory.lastObject mutableCopy];
         record[@"assistRecovery"] = _assistTrace; _executionHistory[_executionHistory.count - 1] = [record copy];
+        if (confirmed && [record[@"releaseConfirmed"] boolValue])
+            _lastAssistRecoverySuccess = [record copy];
     }
     if (!confirmed) {
         [self queueStop:@"轉珠後仍未確認武裝無效已解除，可能有殘留或再次施加；已停止，請檢查戰況"]; return NO;
