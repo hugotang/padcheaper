@@ -2,7 +2,7 @@
 
 來源版本與功能描述以 [release.json](release.json) 為準；各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，待驗證的改動見 [開發紀錄](docs/development.md)。
 
-目前交付 **0.5.40-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。五色＋心／轉轉補搜、3 人手動取色、每隊徽章保存與診斷修正已通過 [CI 151](https://github.com/hugotang/padcheaper/actions/runs/42350207036) 完整回歸、iPhoneOS 建置／簽章、瀏覽器及四份 iPhone GUI；456 組指紋符合原始 IPA。原五色＋心盤在本機 3 人預算模型三次全部解出；真機等待／交換／放手及多人同步未驗證。徽章選擇隨隊伍保存，仍須在遊戲內選用，試算未計其效果。詳見 [0.5.40 更新](docs/release-0.5.40.md)、[開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.40.json)。
+目前交付 **0.5.41-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。轉轉候選保留、荊棘補搜方向及 `ThreeSolo` 本次手動取色已通過 [CI 153](https://github.com/hugotang/padcheaper/actions/runs/42361324288) 完整回歸、iPhoneOS 建置／簽章、瀏覽器及四份 iPhone GUI；456 組指紋符合原始 IPA。四轉轉原盤仍缺水、五色未解，單轉轉原盤在共用流程的普通 400 ms 階段達標；真機取色時序、效能及多人同步尚未驗證。詳見[0.5.41 更新](docs/release-0.5.41.md)、[開發紀錄](docs/development.md)及[驗證收據](research/verification-0.5.41.json)。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 

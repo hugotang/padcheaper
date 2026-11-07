@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.40-orbs](docs/release-0.5.40.md) 已通過 [CI 151](https://github.com/hugotang/padcheaper/actions/runs/42350207036) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存已驗證；真機多人時序待驗收，徽章仍須在遊戲內選用。詳見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.40.json)。
+[0.5.41-orbs](docs/release-0.5.41.md) 已通過 [CI 153](https://github.com/hugotang/padcheaper/actions/runs/42361324288) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。修正轉轉候選保留、荊棘補搜方向與單人續玩手動取色；四轉轉原盤仍缺水、五色未解，單轉轉原盤在共用流程的普通 400 ms 階段達標。真機時序與多人同步仍待驗收。詳見[開發紀錄](docs/development.md)及[驗證收據](research/verification-0.5.41.json)。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.41-orbs](docs/release-0.5.41.md) | 2026-11-07 | 轉轉候選保留、荊棘補搜與單人續玩手動取色；編譯測試中 |
+| [0.5.41-orbs](docs/release-0.5.41.md) | 2026-11-07 | 轉轉候選保留、荊棘補搜與單人續玩手動取色；已驗證交付，四轉轉五色仍未解 |
 | [0.5.40-orbs](docs/release-0.5.40.md) | 2026-11-07 | 五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存；已驗證交付 |
 | [0.5.39-orbs](docs/release-0.5.39.md) | 2026-11-07 | 單人連續多色取珠、多轉轉逐次確認、額外取色改善位置、去循環與成功證據；已驗證交付 |
 | [0.5.38-orbs](docs/release-0.5.38.md) | 2026-11-07 | 隊伍／策略配裝同步、失敗紀錄保留、六次回復撈珠離線模型；已驗證交付 |
