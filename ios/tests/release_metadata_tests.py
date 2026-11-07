@@ -106,6 +106,8 @@ class ReleaseMetadataTests(unittest.TestCase):
                              "[old orbs](../targets/orbs-23.6.0.json)\n"
                              "[migration](docs/address-update-23.6.1.md)\n"
                              "[evidence](../research/address-update-23.6.1.json)\n"
+                             "[badges](../editor/badge-catalog.json)\n"
+                             "[artwork](../editor/assets/badge.png)\n"
                              "[source](../src/PHDataTarget.h)\n"
                              "[test](../tests/orb_shape_guidance_tests.cpp)\n", encoding="utf-8")
             release.rewrite_artifact_links(root, "a" * 40)
@@ -116,6 +118,8 @@ class ReleaseMetadataTests(unittest.TestCase):
                              "[old orbs](targets/orbs-23.6.0.json)\n"
                              "[migration](address-update-23.6.1.md)\n"
                              "[evidence](research/address-update-23.6.1.json)\n"
+                             "[badges](editor-source/badge-catalog.json)\n"
+                             "[artwork](third_party/PADDashFormation/badge.png)\n"
                              f"[source](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/src/PHDataTarget.h)\n"
                              f"[test](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/tests/orb_shape_guidance_tests.cpp)\n")
 

@@ -28,12 +28,14 @@ static void TestFormationProfilePersistence(void) {
     team[@"slots"][2][@"body"][@"latents"] = [@[@48,@11] mutableCopy];
     team[@"slots"][1][@"body"][@"level"] = @110;
     team[@"slots"][1][@"body"][@"plus"] = [@[@99,@99,@99] mutableCopy];
+    team[@"badge"] = @89;
     NSDictionary *edited = PHConfigurationSavingFormations(saved,
         PHFormationLibraryUpdatingTeam(saved[@"formations"], team), &reason);
     Check(edited && [FormationProfileSelected(edited)[@"formation"] isEqual:team] &&
         [FormationProfileSelected(edited)[@"formationID"] isEqual:teamID] &&
-        [FormationProfileSelected(saved)[@"formation"][@"slots"][2][@"body"][@"latents"] isEqual:@[@48]],
-        "formation save atomically updates linked latents, level and plus values without aliasing the old snapshot");
+        [FormationProfileSelected(saved)[@"formation"][@"slots"][2][@"body"][@"latents"] isEqual:@[@48]] &&
+        !FormationProfileSelected(saved)[@"formation"][@"badge"],
+        "formation save atomically updates linked latents, level, plus and badge without aliasing the old snapshot");
     if (!edited) return;
     NSDictionary *reselected = PHConfigurationSavingOrbProfiles(edited, baseProfiles, settings, baseProfiles, &reason);
     Check(reselected && [FormationProfileSelected(reselected)[@"formation"] isEqual:team] &&
@@ -47,6 +49,18 @@ static void TestFormationProfilePersistence(void) {
         [package[@"formation"] isEqual:team] && !package[@"formationID"] &&
         PHOrbProfileFromPlan(package, NULL),
         "restart and portable export retain edited loadout without leaking a device-local formation ID");
+    NSMutableDictionary *withoutBadge = FormationProfileMutableCopy(team); [withoutBadge removeObjectForKey:@"badge"];
+    NSDictionary *clearedBadge = PHConfigurationSavingFormations(reloaded,
+        PHFormationLibraryUpdatingTeam(reloaded[@"formations"], withoutBadge), NULL);
+    Check(clearedBadge && !FormationProfileSelected(clearedBadge)[@"formation"][@"badge"] &&
+        [FormationProfileSelected(reloaded)[@"formation"][@"badge"] isEqual:@89],
+        "removing a badge override updates linked plans without changing the previous saved selection");
+    NSMutableDictionary *defaultBadge = FormationProfileMutableCopy(team); defaultBadge[@"badge"] = @0;
+    NSDictionary *zeroBadge = PHConfigurationSavingFormations(clearedBadge,
+        PHFormationLibraryUpdatingTeam(clearedBadge[@"formations"], defaultBadge), NULL);
+    NSDictionary *zeroPackage = PHOrbPlanFromProfile(FormationProfileSelected(zeroBadge));
+    Check([zeroPackage[@"formation"][@"badge"] isEqual:@0] && PHOrbProfileFromPlan(zeroPackage,NULL),
+        "explicit no-badge survives linked-plan portable export distinctly from absent selection");
 
     NSMutableDictionary *otherSelection = [PHConfigurationOrbProfiles(reloaded) mutableCopy]; otherSelection[@"selected"] = @"";
     NSDictionary *away = PHConfigurationSavingOrbProfiles(reloaded, otherSelection, settings, nil, NULL);
@@ -71,11 +85,15 @@ static void TestFormationProfilePersistence(void) {
         "copying a full strategy creates an independent loadout even when title and cards match");
     if (!copied) return;
     NSMutableDictionary *copyTeam = FormationProfileMutableCopy(team); copyTeam[@"slots"][2][@"body"][@"latents"] = [@[@48] mutableCopy];
+    copyTeam[@"badge"] = @129;
     NSDictionary *copyEdited = PHConfigurationSavingFormations(copied,
         PHFormationLibraryUpdatingTeam(copied[@"formations"], copyTeam), NULL);
     Check([FormationProfileSelected(copyEdited)[@"formation"] isEqual:copyTeam] &&
         [PHOrbProfileNamed(PHConfigurationOrbProfiles(copyEdited), plan[@"id"])[@"formation"] isEqual:team],
-        "editing an independent copy does not change the original strategy's latents");
+        "editing an independent copy's latents and PAD Pass selection does not change the original strategy");
+    NSDictionary *passPackage = PHOrbPlanFromProfile(FormationProfileSelected(copyEdited));
+    Check([passPackage[@"formation"][@"badge"] isEqual:@129] && PHOrbProfileFromPlan(passPackage,NULL),
+        "full-plan sharing preserves synthetic PAD Pass selection without converting it to a native ID");
 
     NSMutableDictionary *legacy = [baseline mutableCopy];
     legacy[@"formations"] = PHFormationLibraryFromTeam(plan[@"formation"]);

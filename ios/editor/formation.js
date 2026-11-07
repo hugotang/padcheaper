@@ -103,8 +103,35 @@
     }
     function normalize(value) {
       if (!value || value.schema !== 1 || !Array.isArray(value.slots) || value.slots.length !== 6) throw new Error('隊伍需要六個位置');
-      return {schema:1,title:typeof value.title === 'string' ? value.title.slice(0,80) : '我的隊伍',
+      const team = {schema:1,title:typeof value.title === 'string' ? value.title.slice(0,80) : '我的隊伍',
         slots:value.slots.map(s=>({body:validateCard(s.body,false,true),assist:validateCard(s.assist,true,true)}))};
+      // Stored selection IDs follow PADDashFormation, including its synthetic
+      // PAD Pass value 129. They are not native IDs or permission to apply.
+      // Missing retains the game's choice; explicit zero means no badge.
+      if (Object.prototype.hasOwnProperty.call(value,'badge')) team.badge = integer(value.badge,0,255,'徽章');
+      return team;
+    }
+    function selectBadge(team, value) {
+      const result = normalize(team);
+      if (value === undefined) delete result.badge;
+      else result.badge = integer(value,0,255,'徽章');
+      return result;
+    }
+    function importedBadge(value, version) {
+      // PADDashFormation's loadObj/badgeConvert (fbbafa14, 2026-11-07).
+      // v2/v3 used menu indices; v4 used 50 for PAD Pass; v5 uses 129.
+      // A later leader-swap field makes an omitted array slot JSON null.
+      // Treat that transport placeholder like omission, not explicit zero.
+      if (value === null) value = undefined;
+      if (value !== undefined) integer(value,0,255,'分享徽章');
+      if (version >= 4) return version === 4 && value === 50 ? 129 : value;
+      if (value <= 8) return value + 1;
+      if (value === 9) return 11;
+      if (value >= 10 && value <= 12) return value + 7;
+      if (value === 13) return 21;
+      if (value === 14) return 10;
+      if (value >= 15 && value <= 17) return value - 3;
+      return value === 18 ? 129 : 1;
     }
     function libraryID(value) {
       if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(value)) throw new Error('隊伍識別碼無效');
@@ -241,11 +268,14 @@
       if (!Array.isArray(bodies) || !Array.isArray(assists) || bodies.length > 6 || assists.length > 6) throw new Error('隊伍位置超出六個');
       const team = {schema:1,title:typeof object.t === 'string' ? object.t.slice(0,80) : '匯入隊伍',
         slots:Array.from({length:6},(_,i)=>({body:readMember(bodies[i],false,version),assist:readMember(assists[i],true,version)}))};
+      const selectedBadge = importedBadge(badge,version);
+      if (selectedBadge !== undefined) team.badge = selectedBadge;
       const omitted = [];
-      if (badge) omitted.push('徽章');
       if (swap) omitted.push('入場後的隊長交換');
       if (object.r) omitted.push('關卡倍率');
-      return {team:normalize(team),notice:omitted.length ? '已匯入角色設定；'+omitted.join('、')+'請在遊戲中設定。' : '已匯入六個位置的本體與武裝設定。'};
+      const imported = selectedBadge === undefined ? '已匯入六個位置的本體與武裝設定。' :
+        '已匯入角色與徽章選擇；實際徽章請在遊戲中設定。';
+      return {team:normalize(team),notice:imported+(omitted.length ? omitted.join('、')+'請在遊戲中設定。' : '')};
     }
     function exportLink(team) {
       team = normalize(team);
@@ -257,6 +287,7 @@
           value.plus,value.latents,assist ? 0 : sa,value.skill || c.maxSkill];
       };
       const object = {v:5,t:team.title,f:[[team.slots.map(s=>row(s.body,false)),team.slots.map(s=>row(s.assist,true))]]};
+      if (Object.prototype.hasOwnProperty.call(team,'badge')) object.f[0][2] = team.badge;
       return 'https://mapaler.github.io/PADDashFormation/solo.html?s=ja&d='+encodeURIComponent(JSON.stringify(object));
     }
     function payload(team, selected = -1) {
@@ -273,7 +304,7 @@
         (!query || String(c.id) === query || (c.name+' '+c.aliases).toLowerCase().includes(query)));
       return matches.sort((a,b)=>Number(String(b.id)===query)-Number(String(a.id)===query) || b.id-a.id).slice(0,60);
     }
-    return {cards,empty,normalize,selectCard,moveSlot,matchesRecipe,parseImport,exportLink,payload,search,validateCard,latentCost,
+    return {cards,empty,normalize,selectBadge,selectCard,moveSlot,matchesRecipe,parseImport,exportLink,payload,search,validateCard,latentCost,
       latentName,latentNames,awakeningName,awakeningNames,libraryCapacity,createLibrary,normalizeLibrary,selectedTeam,updateLibraryTeam,
       selectLibraryTeam,addLibraryTeam,deleteLibraryTeam,libraryTeamOptions};
   }

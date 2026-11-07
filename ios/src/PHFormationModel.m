@@ -54,12 +54,23 @@ static BOOL ReadCard(id value, BOOL assist, PHBattleLoadout *loadout) {
     return YES;
 }
 
+BOOL PHFormationReadBadge(id team, BOOL *specified, uint8_t *badge) {
+    if (![team isKindOfClass:NSDictionary.class]) return NO;
+    id value = team[@"badge"];
+    NSInteger parsed = 0;
+    if (value && !ReadInteger(value, 0, UINT8_MAX, &parsed)) return NO;
+    if (specified) *specified = value != nil;
+    if (badge) *badge = (uint8_t)parsed;
+    return YES;
+}
+
 BOOL PHFormationReadTeam(id value, PHBattleLoadout loadouts[6], NSString **reason) {
     PHBattleLoadout parsed[6] = {0};
     NSInteger schema;
     BOOL valid = [value isKindOfClass:NSDictionary.class] && ReadInteger(value[@"schema"], 1, 1, &schema) &&
         [value[@"title"] isKindOfClass:NSString.class] && [value[@"title"] length] <= 80 &&
-        [value[@"slots"] isKindOfClass:NSArray.class] && [value[@"slots"] count] == 6;
+        [value[@"slots"] isKindOfClass:NSArray.class] && [value[@"slots"] count] == 6 &&
+        PHFormationReadBadge(value, NULL, NULL);
     if (valid) for (NSUInteger i = 0; i < 6; ++i) {
         id slot = value[@"slots"][i];
         if (![slot isKindOfClass:NSDictionary.class] || !ReadCard(slot[@"body"], NO, &parsed[i]) ||

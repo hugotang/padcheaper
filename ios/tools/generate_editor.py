@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Embed the offline editor in the dylib; no separately installed resource files."""
 import base64
+import hashlib
 import json
 from pathlib import Path
 
@@ -9,6 +10,15 @@ catalog = json.loads((root / "catalog.json").read_text(encoding="utf-8"))
 assert catalog["region"] == "ja" and catalog["numbering"] == "encyclopedia"
 assert len(catalog["cards"]) > 14000
 team_catalog = json.loads((root / "team-catalog.json").read_text(encoding="utf-8"))
+badge_catalog = json.loads((root / "badge-catalog.json").read_text(encoding="utf-8"))
+assert badge_catalog["schema"] == 1
+assert len({entry["id"] for entry in badge_catalog["entries"]}) == len(badge_catalog["entries"])
+assert all(type(entry["id"]) is int and 0 <= entry["id"] <= 255 and isinstance(entry["name"], str)
+           for entry in badge_catalog["entries"])
+badge_sprite = (root / "assets/badge.png").read_bytes()
+assert hashlib.sha256(badge_sprite).hexdigest() == badge_catalog["sprite"]["sha256"]
+assert (badge_catalog["sprite"]["width"], badge_catalog["sprite"]["height"],
+        badge_catalog["sprite"]["cellWidth"], badge_catalog["sprite"]["cellHeight"]) == (408, 9196, 102, 76)
 assert team_catalog["schema"] == 1
 assert [r[0] for r in team_catalog["cards"]] == [r[0] for r in catalog["cards"]]
 for key in ("revision", "card_sha256", "skill_sha256", "region", "numbering"):
@@ -17,6 +27,7 @@ html = (root / "editor.html").read_text(encoding="utf-8")
 for marker, text in [
     ("/*__FORMATION_MODEL__*/", (root / "formation.js").read_text(encoding="utf-8")),
     ("/*__CATALOG__*/", json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")),
+    ("/*__BADGE_CATALOG__*/", json.dumps(badge_catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")),
     ("/*__TEAM_SKILLS__*/", (root / "team-skills.js").read_text(encoding="utf-8")),
     ("/*__TEAM_MODEL__*/", (root / "team-model.js").read_text(encoding="utf-8")),
     ("/*__TEAM_DUNGEON__*/", (root / "team-dungeon.js").read_text(encoding="utf-8")),
@@ -26,6 +37,7 @@ for marker, text in [
     ("/*__TEAM_VIEW__*/", (root / "team-view.js").read_text(encoding="utf-8")),
     ("__AWAKENING_SPRITE__", base64.b64encode((root / "assets/awoken.png").read_bytes()).decode("ascii")),
     ("__LATENT_SPRITE__", base64.b64encode((root / "assets/latent.png").read_bytes()).decode("ascii")),
+    ("__BADGE_SPRITE__", base64.b64encode(badge_sprite).decode("ascii")),
     ("/*__EDITOR_UI__*/", (root / "editor.js").read_text(encoding="utf-8")),
 ]:
     assert html.count(marker) == 1

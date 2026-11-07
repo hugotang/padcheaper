@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "date": "2026-11-07",
+  "upstream_revision": "fbbafa14ed1364842e783ba4db4680d1b3a8d525",
+  "upstream_commit_date": "2026-11-06T13:11:09Z",
+  "source_hashes": {
+    "script.js": "281a8adffbb1c8da7d5cfe1d88b1ba3315027465ae5ccfe23bf30acbc494f0a2",
+    "script-json_data.js": "95b9217632ebe38b1f1752080627955adb65df2d84d2e3dd1790bfcd0ebb1cf8",
+    "style-monsterimages.css": "452b0cf8de10b966c2a364648928284b6cf7cbf7d8ce5687f620a20395c9d17d",
+    "images/badge.png": "4860df05ffd2f5bd0cb782001f56e12eb7eef431019a45c765dc1b6d9f92a076",
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  },
+  "catalog": "ios/editor/badge-catalog.json",
+  "sprite": "ios/editor/assets/badge.png",
+  "entry_count": 121,
+  "format": {
+    "versions_2_3": {
+      "0..8": "old + 1",
+      "9": 11,
+      "10..12": "old + 7",
+      "13": 21,
+      "14": 10,
+      "15..17": "old - 3",
+      "18": 129,
+      "missing_or_unknown_upstream_default": 1
+    },
+    "version_4": {
+      "50": 129,
+      "other": "unchanged"
+    },
+    "version_5": {
+      "other": "unchanged",
+      "129": "Synthetic PAD_PASS_BADGE = (1 << 7) | 1; not a native badge identifier."
+    },
+    "native_json_import": "PlayerDataDeck reads deck row index 5 directly. When secondary deck bank exists and badge == 1, upstream adds bit 7 to display PAD Pass. Other share versions must be normalized before native interpretation.",
+    "native_application": "Never write the synthetic value 129 as a badge table ID. Native effective badge may depend on prerequisite ownership and dungeon rules; catalog is not eligibility or effect evidence."
+  },
+  "reviewed_sources": [
+    {
+      "file": "script.js",
+      "sections": [
+        "Formation.prototype.loadObj + badgeConvert",
+        "PlayerDataDeck constructor/parseDataArray",
+        "Formation.pdcBadgeMap/paddbBadgeMap",
+        "getBadgeHPScale"
+      ]
+    },
+    {
+      "file": "script-json_data.js",
+      "sections": [
+        "PAD_PASS_BADGE",
+        "official_badge_sorting"
+      ]
+    },
+    {
+      "file": "style-monsterimages.css",
+      "sections": [
+        "badge sprite geometry and special icon coordinates"
+      ]
+    }
+  ],
+  "limitations": [
+    "Labels without independently confirmed categories remain Badge #ID.",
+    "ID 20 is absent from the upstream selectable order and omitted from the new picker; previously saved unknown IDs must be retained by the editor.",
+    "CSS includes future/reserved rows 121..126, but the downloaded sprite and selectable order stop at 120; these entries are not fabricated.",
+    "No native badge application, live ownership check, effect calculation, or game execution was performed."
+  ],
+  "checks": {
+    "json_parse": true,
+    "unique_ids": true,
+    "sprite_bounds": true,
+    "unchanged_sprite_sha256": true,
+    "tests_run": false,
+    "build_run": false,
+    "device_verified": false
+  }
+}

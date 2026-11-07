@@ -333,7 +333,7 @@ static CGFloat PHClamp(CGFloat value, CGFloat minimum, CGFloat maximum) {
         [self card:@"外觀與音樂" rows:@[
             [self switchRow:@"Skin" key:@"skin"], [self switchRow:@"BGM" key:@"bgm"],
             [self switchRow:@"未通關也使用隊伍 BGM" key:@"bgmUncleared"],
-            [self switchRow:@"隊伍徽章" key:@"badge"]]],
+            [self switchRow:@"解鎖徽章" key:@"badge"]]],
         [self card:@"計時" rows:@[
             [self switchRow:@"背景計時修正" key:@"timerFix"], self.timerDismiss, self.timerLabel]],
         [self card:@"診斷與 API" rows:@[version, self.reasonLabel,

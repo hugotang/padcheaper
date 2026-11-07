@@ -26,6 +26,27 @@ int main(void) {
               values[5].assistSkillLevel == 1 && values[5].superAwakening == 153 && values[5].latentCount == 2 && values[5].assistPlus,
               "bridge keeps encyclopedia IDs, body/weapon skill levels, super, latents and +297 separate");
         PHBattleLoadout sentinel[6]; memcpy(sentinel, values, sizeof(values));
+        BOOL specified = YES; uint8_t badge = 99;
+        Check(PHFormationReadBadge(team, &specified, &badge) && !specified && badge == 0 &&
+            !team[@"badge"], "legacy team preserves an absent badge instead of requesting the default");
+        for (NSNumber *identifier in @[@0,@1,@34,@89,@129,@255]) {
+            NSMutableDictionary *badged = Team(); badged[@"badge"] = identifier;
+            Check(PHFormationReadTeam(badged, values, NULL) && PHFormationReadBadge(badged, &specified, &badge) &&
+                specified && badge == identifier.unsignedCharValue && !memcmp(sentinel,values,sizeof(values)),
+                "team badge selection is distinct from and preserves all six member loadouts");
+            NSDictionary *savedBadge = PHFormationLibraryFromTeam(badged), *selectedBadge = nil;
+            Check(PHFormationReadLibrary(savedBadge,&selectedBadge,NULL) && [selectedBadge[@"badge"] isEqual:identifier],
+                "library migration persists explicit zero and nonzero badge selections");
+            badged[@"badge"] = @0;
+            Check([selectedBadge[@"badge"] isEqual:identifier],"stored team badge is independent of later mutable edits");
+        }
+        for (id malformed in @[@-1,@256,@1.5,@YES,@NO,@"34",NSNull.null,@[],@{}]) {
+            NSMutableDictionary *badged = Team(); badged[@"badge"] = malformed;
+            specified = YES; badge = 77;
+            Check(!PHFormationReadTeam(badged,values,NULL) && !memcmp(sentinel,values,sizeof(values)) &&
+                !PHFormationReadBadge(badged,&specified,&badge) && specified && badge == 77,
+                "malformed optional badge refuses the entire team and leaves outputs untouched");
+        }
         NSMutableArray *slots = [team[@"slots"] mutableCopy];
         NSMutableDictionary *slot = [slots[5] mutableCopy], *body = [Card(NO) mutableCopy];
         body[@"id"] = @YES; slot[@"body"] = body; slots[5] = slot; team[@"slots"] = slots;

@@ -139,4 +139,49 @@ assert.equal(model.awakeningName(106),'浮游');
 assert.equal(model.awakeningName(131),'部位破壞');
 assert.equal(model.awakeningName(48),'傷害無效貫通');
 assert.equal(model.awakeningName(145),'希望之魂');
+// Optional team-level badges keep legacy behaviour distinct from a chosen
+// default. Written regression cases; execution follows the build/test batch.
+assert.equal(Object.prototype.hasOwnProperty.call(model.empty(),'badge'),false,'a new team initially retains the game selection');
+assert.equal(Object.prototype.hasOwnProperty.call(model.normalize(team),'badge'),false,'legacy team normalization never invents a default badge');
+for (const badge of [0,1,34,89,129,255]) {
+  const selected=model.selectBadge(team,badge);
+  assert.equal(selected.badge,badge);
+  assert.equal(Object.prototype.hasOwnProperty.call(team,'badge'),false,'badge edits cannot mutate the previous draft');
+  assert.equal(model.moveSlot(selected,0,4).badge,badge,'moving members keeps the team-wide badge');
+  assert.equal(model.selectCard(selected,0,'body',fixtures[0][0]).badge,badge,'replacing one member retains its team badge');
+  assert.equal(model.payload(selected).team.badge,badge,'the reviewed apply payload retains the explicit badge');
+  assert.equal(model.parseImport(JSON.stringify(selected)).team.badge,badge,'native JSON retains the exact badge');
+  assert.equal(model.parseImport(model.exportLink(selected)).team.badge,badge,'v5 sharing retains zero, PAD Pass and unknown selections without native-ID coercion');
+  let badges=model.addLibraryTeam(model.createLibrary(selected),model.selectBadge(team,0),'badge-copy');
+  badges=model.normalizeLibrary(JSON.parse(JSON.stringify(badges)));
+  assert.equal(model.selectedTeam(badges).badge,0,'JSON restart keeps the copy default distinct');
+  badges=model.selectLibraryTeam(badges,'legacy');
+  assert.equal(model.selectedTeam(badges).badge,badge,'switching back retrieves the original badge');
+  badges=model.updateLibraryTeam(badges,model.selectBadge(model.selectedTeam(badges),undefined));
+  assert.equal(Object.prototype.hasOwnProperty.call(model.selectedTeam(badges),'badge'),false,'choosing game selection removes the optional override');
+}
+const sharedLegacy=JSON.parse(new URL(model.exportLink(team)).searchParams.get('d'));
+assert.equal(sharedLegacy.f[0].length,2,'sharing a legacy team never invents a badge choice');
+assert.equal(Object.prototype.hasOwnProperty.call(model.parseImport(JSON.stringify(sharedLegacy)).team,'badge'),false,
+  'v5 missing badge remains absent after a direct roundtrip');
+for (const version of [2,3]) {
+  const converted=[1,2,3,4,5,6,7,8,9,11,17,18,19,21,10,12,13,14,129];
+  converted.forEach((badge,index)=>assert.equal(model.parseImport(JSON.stringify({v:version,f:[[[],[],index]]})).team.badge,badge,
+    `v${version} legacy badge index ${index} uses the upstream mapping`));
+  assert.equal(model.parseImport(JSON.stringify({v:version,f:[[[],[]]]})).team.badge,1,'upstream legacy missing defaults to selection 1');
+}
+assert.equal(model.parseImport(JSON.stringify({v:4,f:[[[],[],50]]})).team.badge,129,'v4 PAD Pass becomes its v5 synthetic selection');
+assert.equal(model.parseImport(JSON.stringify({v:5,f:[[[],[],50]]})).team.badge,50,'v5 ID 50 is not remapped as legacy PAD Pass');
+for (const version of [4,5]) assert.equal(Object.prototype.hasOwnProperty.call(
+  model.parseImport(JSON.stringify({v:version,f:[[[],[]]]})).team,'badge'),false,'v4/v5 missing remains unspecified');
+for (const version of [2,3,4,5]) {
+  const placeholder=model.parseImport(JSON.stringify({v:version,f:[[[],[],null,2]]})).team;
+  if (version < 4) assert.equal(placeholder.badge,1,'legacy null placeholder follows upstream default conversion');
+  else assert.equal(Object.prototype.hasOwnProperty.call(placeholder,'badge'),false,'null array gap before leader swap is missing, not explicit no-badge');
+}
+for (const badge of [-1,256,1.5,true,false,null,'34',[],{}]) {
+  assert.throws(()=>model.normalize({...team,badge}),/徽章/);
+  assert.throws(()=>model.selectBadge(team,badge),/徽章/);
+  if (badge !== null) for (const version of [2,3,4,5]) assert.throws(()=>model.parseImport(JSON.stringify({v:version,f:[[[],[],badge]]})),/徽章/);
+}
 console.log('Formation editor model/import/library/awakening-label tests: passed');

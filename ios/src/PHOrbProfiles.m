@@ -139,7 +139,7 @@ static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
 
 BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
     if (![opening isKindOfClass:NSArray.class] || [opening count] > 24 || !PHFormationReadTeam(formation, NULL, NULL)) return NO;
-    if (!Keys(formation, @[@"schema", @"title", @"slots"])) return NO;
+    if (!KeysWithOptional(formation, @[@"schema", @"title", @"slots"], @[@"badge"])) return NO;
     NSMutableArray *bodies = [NSMutableArray array], *assists = [NSMutableArray array];
     for (NSDictionary *slot in formation[@"slots"]) {
         if (!Keys(slot, @[@"body", @"assist"]) || ![slot[@"body"][@"id"] unsignedIntValue]) return NO;

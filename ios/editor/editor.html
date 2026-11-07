@@ -25,6 +25,7 @@ body.editing{overflow:hidden}body.editing #main{visibility:hidden}.editor-dialog
 .workspace-tabs button{flex:1;min-width:0;padding:9px 5px;font-size:14px;border-color:transparent;background:transparent}
 .workspace-tabs button.active{background:#213d33;border-color:var(--green)}
 .workspace-panel{outline:none}.workspace-panel>.team-lab{margin-top:0}
+.team-badge{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}.team-badge-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;margin-bottom:10px}.team-badge-selection{display:flex;align-items:center;gap:12px}.team-badge-field{flex:1;min-width:0}.team-badge-field select{min-width:0}.team-badge p{margin:10px 0 0}.badge-icon{display:block;width:51px;height:38px;flex:none;background-image:url(data:image/png;base64,__BADGE_SPRITE__);background-size:204px 4598px;background-position:calc(var(--badge-x)*-51px) calc(var(--badge-y)*-38px);background-repeat:no-repeat}.badge-icon.empty{background-image:none;display:grid;place-items:center;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:20px}#team-badge-picker{margin-top:10px}#team-badge-picker>summary{min-height:44px;padding:10px 0;color:var(--green)}#team-badge-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:7px;max-height:340px;overflow:auto;padding:3px}#team-badge-options button{display:flex;align-items:center;gap:6px;min-width:0;text-align:left;padding:8px;font-size:12px}#team-badge-options .badge-label{overflow-wrap:anywhere}.team-badge [data-tone=notice]{color:var(--gold)}
 </style></head><body>
 <main class="wrap" id="main">
 <header><div class="mark">PC</div><div class="heading"><div class="eyebrow">PAD CHEAPER</div><strong>隊伍編成</strong></div><button id="close">儲存並關閉</button></header>
@@ -43,6 +44,11 @@ body.editing{overflow:hidden}body.editing #main{visibility:hidden}.editor-dialog
 <div id="panel-formation" class="workspace-panel" role="tabpanel" aria-labelledby="tab-formation">
 <div class="overview-head"><strong>六人隊伍</strong><button id="undo" disabled>撤銷上一步</button></div>
 <section class="sheet" aria-label="六人隊伍總覽"><div id="positions" class="grid"></div><div class="row-title">本體 · 點擊編輯</div><div id="body-grid" class="grid"></div><div class="row-title weapon">武裝</div><div id="assist-grid" class="grid"></div></section>
+<section class="team-badge" aria-labelledby="team-badge-title"><div class="team-badge-heading"><strong id="team-badge-title">隊伍徽章</strong><span class="quiet">隨這支隊伍儲存</span></div>
+<div class="team-badge-selection"><div id="team-badge-icon" aria-hidden="true"></div><div class="team-badge-field"><label for="team-badge-choice">此隊保存的徽章</label><select id="team-badge-choice" aria-describedby="team-badge-note team-badge-status"></select></div></div>
+<details id="team-badge-picker"><summary>瀏覽徽章圖示</summary><div id="team-badge-options" role="group" aria-label="選擇隊伍徽章"></div></details>
+<p class="quiet" id="team-badge-note"></p><p class="quiet" id="team-badge-status" role="status"></p><p class="quiet">隊伍試算目前未計入徽章效果。</p>
+</section>
 </div>
 <div id="panel-calculator" class="workspace-panel" role="tabpanel" aria-labelledby="tab-calculator" hidden>
 <section class="team-lab" id="team-lab" aria-labelledby="lab-title">
@@ -101,4 +107,4 @@ body.editing{overflow:hidden}body.editing #main{visibility:hidden}.editor-dialog
 <details class="slot-tools"><summary>換位、複製與移除</summary><label for="slot-destination">目標位置（包含本體與武裝）</label><select id="slot-destination"></select><div class="toolbar"><button id="swap-slot">交換位置</button><button id="copy-slot">複製整格</button></div><div class="toolbar"><button id="clear-card">移除此本體</button></div></details>
 <div class="editor-actions"><button id="apply-one">套用本格</button><button id="restore-one">還原本格</button><div class="quiet wide" id="slot-state"></div></div>
 </div></div></section>
-<script>/*__FORMATION_MODEL__*/</script><script>const PH_CATALOG = /*__CATALOG__*/;</script><script>/*__TEAM_SKILLS__*/</script><script>/*__TEAM_MODEL__*/</script><script>const PH_DUNGEON_GUIDES = /*__DUNGEON_GUIDES__*/;</script><script>/*__TEAM_DUNGEON__*/</script><script>const PH_TEAM_CATALOG = /*__TEAM_CATALOG__*/;</script><script>/*__TEAM_DUNGEON_VIEW__*/</script><script>/*__TEAM_VIEW__*/</script><script>/*__EDITOR_UI__*/</script></body></html>
+<script>/*__FORMATION_MODEL__*/</script><script>const PH_CATALOG = /*__CATALOG__*/;</script><script>const PH_BADGE_CATALOG = /*__BADGE_CATALOG__*/;</script><script>/*__TEAM_SKILLS__*/</script><script>/*__TEAM_MODEL__*/</script><script>const PH_DUNGEON_GUIDES = /*__DUNGEON_GUIDES__*/;</script><script>/*__TEAM_DUNGEON__*/</script><script>const PH_TEAM_CATALOG = /*__TEAM_CATALOG__*/;</script><script>/*__TEAM_DUNGEON_VIEW__*/</script><script>/*__TEAM_VIEW__*/</script><script>/*__EDITOR_UI__*/</script></body></html>

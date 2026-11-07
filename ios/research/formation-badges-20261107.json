@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "date": "2026-11-07",
+  "timezone": "Asia/Hong_Kong",
+  "game": "Puzzle & Dragons JP",
+  "game_version": "23.6.1",
+  "input_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+  "input_bytes": 21574784,
+  "database_relative_path": "build/ios-address-23.6.1/23.6.1/pad.i64",
+  "method": "Read-only IDA pseudocode, instruction and call-site review, with source inspection. No native invocation, game-memory read/write or runtime experiment.",
+  "address_convention": "Unslid virtual addresses for the exact input SHA256 above.",
+  "database_mutated": false,
+  "database_explicitly_saved": false,
+  "build_run": false,
+  "test_suites_run": false,
+  "device_verified": false,
+  "raw_pseudocode_committed": false,
+  "identity_review": {
+    "ida_input_path_and_sha256_verified": true,
+    "local_file_size_verified": true,
+    "full_function_ranges_and_hashes_verified": 10,
+    "target_guard_file": "ios/targets/battle-23.6.1.json",
+    "guard_bytes_and_hashes_verified": [
+      {
+        "name": "PHBattleCurrentBadgeRVA",
+        "address": "0x1005a069c",
+        "length": 64,
+        "sha256": "df2d86dd6723c4028aabb04647376bfbeffe98233a8ce6b464714cdbda43e06e"
+      },
+      {
+        "name": "PHBattleBadgeBoostRVA",
+        "address": "0x10056d598",
+        "length": 64,
+        "sha256": "a2b5922e4b8e1f75759685de11c40a605c89e5b686d0979a6847354f5cca3044"
+      }
+    ],
+    "info_plist_rechecked": false,
+    "mach_o_uuid_rechecked": false,
+    "all_target_guards_rechecked": false,
+    "device_loaded_image_rechecked": false
+  },
+  "functions": [
+    {
+      "address": "0x1005a069c",
+      "end_exclusive": "0x1005a078c",
+      "size": 240,
+      "bytes_sha256": "d9f80b65b52ec881dd906f95dd280464cf39c3c63ffa9c1c77f4f159076b7485",
+      "role": "effective badge selection for the current battle"
+    },
+    {
+      "address": "0x100006a0c",
+      "end_exclusive": "0x100006a50",
+      "size": 68,
+      "bytes_sha256": "f2557e95a83b543f89ac6adb4d2155e6b6a09a576bd9d9b0a6874ed143abefcf",
+      "role": "currently selected persisted-deck badge read"
+    },
+    {
+      "address": "0x100445da4",
+      "end_exclusive": "0x100445dc0",
+      "size": 28,
+      "bytes_sha256": "ac536289462203add4930311857bb35a4b2774761338c437dccdd129f76c76fb",
+      "role": "bank-local badge XOR decode"
+    },
+    {
+      "address": "0x10056cccc",
+      "end_exclusive": "0x10056cd60",
+      "size": 148,
+      "bytes_sha256": "510b0173754ca578f05ea68b7f37cc71b2623d6ed42545de3acb670e75b0ac36",
+      "role": "effective descriptor field lookup with owned prerequisite substitution"
+    },
+    {
+      "address": "0x10056d598",
+      "end_exclusive": "0x10056d64c",
+      "size": 180,
+      "bytes_sha256": "4b0fffdeec457b3b94f2c469e110d3c838677c6fa152d716bd53201ab984cc74",
+      "role": "native badge skill-boost amount"
+    },
+    {
+      "address": "0x10056ce04",
+      "end_exclusive": "0x10056cee8",
+      "size": 228,
+      "bytes_sha256": "a8ce6f512c5657d8f54211be3a94aea295dd05b65d95204b84b2bab8cd44dde9",
+      "role": "native badge name lookup"
+    },
+    {
+      "address": "0x100542dd8",
+      "end_exclusive": "0x100542e04",
+      "size": 44,
+      "bytes_sha256": "532844fe7bd957c3afb6daeb98ecd84ffd351e16f3c0511013ec68f1285373fa",
+      "role": "mode 11 predicate"
+    },
+    {
+      "address": "0x100240480",
+      "end_exclusive": "0x1002404b0",
+      "size": 48,
+      "bytes_sha256": "1a00a2a1b5f50a392915765f54ffef4a36f0e16d665e7400db3c58fecbcf76b2",
+      "role": "dungeon field 119 badge override"
+    },
+    {
+      "address": "0x1002409b8",
+      "end_exclusive": "0x100240a70",
+      "size": 184,
+      "bytes_sha256": "fc24ab2414336d38dc49e571fe33d405ccfc1215e198e3d4b1d846c913d02e03",
+      "role": "dungeon fields 19-24 predicate that suppresses badge fallback"
+    },
+    {
+      "address": "0x10000680c",
+      "end_exclusive": "0x100006a0c",
+      "size": 512,
+      "bytes_sha256": "28216cdb8acf005e3cda9791fc92d03ecd8a656c2ada7cefcedbc6dfc17191ee",
+      "role": "native deck validation and invalid badge fallback"
+    }
+  ],
+  "claims": [
+    {
+      "id": "B1",
+      "status": "confirmed_native_getter",
+      "claim": "The effective badge is recomputed from native mode, dungeon rules and the selected saved deck, with a further mode-7 source override. No independent writable battle-badge slot is established by this audit.",
+      "evidence": [
+        "0x1005a069c",
+        "0x100542dd8",
+        "0x100240480",
+        "0x1002409b8"
+      ],
+      "selection_order": [
+        "Native mode 11 or 5 returns 0.",
+        "Null dungeon pointer returns 0.",
+        "Dungeon field 119 supplies an override when its signed value is between 0 and the signed16 badge count inclusive.",
+        "If no valid field-119 override, the fields-19-through-24 predicate can return 0 before consulting the deck.",
+        "Otherwise read the currently selected persisted deck.",
+        "Mode 7 with the observed nonzero state reads its local team store instead; selected badge 10 is suppressed to 0."
+      ],
+      "offsets": {
+        "game_impl": "game+0x70",
+        "dungeon": "impl+0xb0f20",
+        "badge_count": "save+0x24e8",
+        "mode7_source_state": "save+0x88c0",
+        "mode7_team_index": "impl+0xa3e58"
+      },
+      "qualification": "Mode numbers are recorded as native values; this audit does not independently reassign every multiplayer mode label."
+    },
+    {
+      "id": "B2",
+      "status": "confirmed_persisted_selection",
+      "claim": "The ordinary fallback reads badge byte 95 of a 96-byte persisted deck record and decodes it with the bank-local index.",
+      "evidence": [
+        "0x100006a0c",
+        "0x100445da4"
+      ],
+      "offsets": {
+        "save_base": "0x101b52010",
+        "current_deck_signed16": "save+0x52f392",
+        "deck_limit_signed16": "save+0x52f38c",
+        "deck_base": "save+0x52f39c",
+        "record_stride": 96,
+        "badge_byte": 95
+      },
+      "encoding": "raw_byte XOR uint8(15 * bank_index + 0x61)",
+      "qualification": "Native reader resets an index above either its limit or 32 to 0. This observation is not a newly approved arbitrary-write API."
+    },
+    {
+      "id": "B3",
+      "status": "confirmed_dynamic_consumers",
+      "claim": "Multiple gameplay calculations call the effective getter. A temporary selection used only during team rebuild or initial boost calculation would not establish consistent later badge effects.",
+      "evidence": [
+        {
+          "callsite": "0x1005b7480",
+          "role": "current badge then native boost in battle construction"
+        },
+        {
+          "callsite": "0x100604a74",
+          "role": "move-time badge term"
+        },
+        {
+          "callsite": "0x100604a8c",
+          "role": "additional move-time kind condition"
+        },
+        {
+          "callsite": "0x10060a658",
+          "role": "badge value consumed in later resistance/effect logic"
+        }
+      ],
+      "current_badge_callers": [
+        "0x10006fca4",
+        "0x100070cf0",
+        "0x100070d80",
+        "0x100548388",
+        "0x100559e14",
+        "0x10055a174",
+        "0x100565544",
+        "0x1005a1c58",
+        "0x1005a1ff0",
+        "0x1005b7480",
+        "0x1005c7fa8",
+        "0x100604a74",
+        "0x100604a8c",
+        "0x10060a658",
+        "0x100613968",
+        "0x1006151b4",
+        "0x100615454"
+      ],
+      "qualification": "Callers were enumerated; only the identified branches were followed. This is not a complete HP/attack/resistance/assist effect audit."
+    },
+    {
+      "id": "B4",
+      "status": "confirmed_descriptor_substitution",
+      "claim": "Effective fields may come from an owned prerequisite badge rather than the selected ID. The native skill-boost helper uses effective kind 23 with field2 / 100 % 100, or effective kind 7 with field2.",
+      "evidence": [
+        "0x10056cccc",
+        "0x10056d598"
+      ],
+      "offsets": {
+        "badge_table_pointer": "save+0xa0",
+        "record_stride": 180,
+        "prerequisite_u16": "record+176",
+        "protected_field_stride": 16
+      },
+      "qualification": "Do not infer native gameplay kind directly from a shared badge ID or a historical numeric list."
+    },
+    {
+      "id": "B5",
+      "status": "confirmed_native_name_source",
+      "claim": "Native name lookup uses the save name-table pointer and can substitute an owned prerequisite. Badge 1 receives additional dynamic formatting.",
+      "evidence": [
+        "0x10056ce04"
+      ],
+      "offsets": {
+        "name_table_pointer": "save+0x98",
+        "column_count_u16": "nameTable+4",
+        "row_bound_u16": "nameTable+6",
+        "string_offset": "nameTable+8+4*(id-1)*columns+4"
+      },
+      "qualification": "This batch does not call or expose the native name function and does not claim a complete live badge catalog."
+    },
+    {
+      "id": "B6",
+      "status": "confirmed_native_validation",
+      "claim": "Native saved-deck validation corrects an invalid or unowned badge selection to encoded ID 1.",
+      "evidence": [
+        "0x10000680c"
+      ],
+      "qualification": "Do not conflate this native recovery default with the editor's explicit shared selection 0 or an absent optional field."
+    }
+  ],
+  "source_review": {
+    "PHFormationReadBadge": "Strict optional 0..255 integer validation; missing selection and explicit 0 stay distinct. The stored value belongs to the PADDashFormation interchange domain and is not accepted here as a native-write ID.",
+    "PHBadges": "Existing feature enables validated ownership bits; it does not choose a badge for a formation. Snapshot ready/eligibleCount describe unlock readiness, not per-team selection or battle application.",
+    "PHDeckPersistence": "Existing guarded restore reconciles previously verified native saved-deck selections. It is not repurposed as a setter for editor recipes.",
+    "PHBattleEntry": "InitialTeamBoost continues using native.currentBadge(game) followed by native.badgeBoost. Saved editor badge metadata must not silently replace this effective runtime source."
+  },
+  "implementation_boundary": {
+    "included": "Per-team badge selection metadata, local persistence and compatible sharing, with UI that states the user must choose the actual badge in game.",
+    "not_implemented": [
+      "Native badge auto-application on team replacement",
+      "Temporary badge lease and restore",
+      "New battle badge setter or getter interception",
+      "New multiplayer mutation",
+      "New native badge catalog reader"
+    ],
+    "pending_verification": [
+      "Authorized compilation and test execution",
+      "Editor save/reopen/switch/clone/share behaviour on iPhone",
+      "Any future badge-application implementation needs native source/effect and restoration review"
+    ]
+  }
+}

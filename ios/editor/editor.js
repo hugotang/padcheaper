@@ -1,8 +1,9 @@
-/* global PHFormation, PH_CATALOG, PHTeamView */
+/* global PHFormation, PH_CATALOG, PH_BADGE_CATALOG, PHTeamView */
 (() => {
   'use strict';
   const model = PHFormation.createModel(PH_CATALOG), $ = id => document.getElementById(id);
   const clone = value => JSON.parse(JSON.stringify(value));
+  const badgeCatalog = new Map(PH_BADGE_CATALOG.entries.map(entry=>[entry.id,entry]));
   const histories = new Map();
   let library = model.createLibrary(), team = model.selectedTeam(library), savedLibrary = null;
   let selected = {slot:0,kind:'body'}, battle = {}, recent = [], savedJSON = '', pending = null;
@@ -56,6 +57,33 @@
     return p;
   }
   function options(element,values,value) { element.replaceChildren();for(const [id,label] of values)element.add(new Option(label,String(id)));element.value=String(value); }
+  function badgeIcon(id) {
+    const icon=document.createElement('span'),entry=badgeCatalog.get(id);
+    icon.className='badge-icon';icon.setAttribute('aria-hidden','true');
+    if(entry?.icon){icon.style.setProperty('--badge-x',entry.icon.x);icon.style.setProperty('--badge-y',entry.icon.y);}
+    else {icon.classList.add('empty');icon.textContent=id===undefined?'—':'?';}
+    return icon;
+  }
+  function renderBadge() {
+    const entry=badgeCatalog.get(team.badge),selectedBadge=team.badge===undefined?'inherit':String(team.badge);
+    const choices=[['inherit','沿用遊戲內徽章'],...PH_BADGE_CATALOG.entries.map(item=>[item.id,item.name])];
+    if(team.badge!==undefined&&!entry)choices.push([team.badge,'未收錄徽章 #'+team.badge+'（保留設定）']);
+    options($('team-badge-choice'),choices,selectedBadge);
+    $('team-badge-icon').replaceChildren(badgeIcon(team.badge));
+    $('team-badge-note').textContent=team.badge===undefined?
+      '此隊不指定徽章，沿用遊戲內的選擇。':
+      team.badge===129?'月卡徽章選擇會隨隊伍保存；月卡資格與效果仍由遊戲判定。':
+      !entry?'已保留匯入的徽章編號；目前圖鑑未收錄，請在遊戲內確認。':
+      '徽章選擇會隨隊伍、複製及分享資料保存。效果與可用資格以遊戲為準。';
+    for(const button of $('team-badge-options').children) {
+      const active=button.dataset.badge===selectedBadge;
+      button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));
+    }
+  }
+  function chooseBadge(value) {
+    guarded(()=>{readFields();commitTeam(model.selectBadge(team,value==='inherit'?undefined:Number(value)),'更換徽章');
+      render();$('team-badge-picker').open=false;$('team-badge-choice').focus({preventScroll:true});});
+  }
   function candidateFromFields() {
     const next=clone(team),v=member(),assist=selected.kind==='assist';
     const numeric=(id,original)=>$(id).value===$(id).dataset.rendered ? original : Number($(id).value);
@@ -170,6 +198,15 @@
     const unsaved=dirty(),configured=battle.automaticConfigured??battle.automaticEnabled;
     $('save-status-row').dataset.tone=lastSaveError?'error':unsaved?'dirty':'saved';
     $('save-status').textContent=pending?'正在儲存，等待確認…':lastSaveError?'儲存未完成 · 草稿仍保留':unsaved?'有未儲存的變更':'已儲存目前隊伍';
+    const storedTeam=savedLibrary?.teams.find(record=>record.id===library.selected)?.team;
+    const badgeStored=Boolean(storedTeam)&&storedTeam.badge===team.badge;
+    const submittedTeam=pending?.library.teams.find(record=>record.id===library.selected)?.team;
+    const badgeSubmitted=Boolean(submittedTeam)&&submittedTeam.badge===team.badge;
+    const badgeStatus=pending?(badgeSubmitted?'正在儲存徽章設定。':'新徽章選擇尚未儲存；正在儲存先前版本。'):
+      !badgeStored?'徽章選擇尚未儲存。':'徽章選擇已儲存。';
+    $('team-badge-status').dataset.tone=team.badge===undefined?'':'notice';
+    $('team-badge-status').textContent=badgeStatus+(team.badge===undefined?' 儲存或套隊不會更改遊戲內徽章。':
+      ' 請在遊戲的隊伍畫面選用；本場套隊與入場自動套隊暫不切換徽章。');
     const scheduled=battle.automaticTeamTitle || (savedLibrary?model.selectedTeam(savedLibrary).title:'未設定');
     $('entry-state').textContent=!configured?'入場自動套用：關閉。可在 PC 面板開啟。':
       battle.automaticSwitchesReady===false?'入場自動套用：等待總開關與戰鬥隊員替換。':
@@ -199,7 +236,7 @@
     $('undo').disabled=$('editor-undo').disabled=!history().length;
     const steps=history(),last=steps[steps.length-1];$('undo').setAttribute('aria-label',last?'撤銷'+last.label:'沒有可撤銷的編輯');
   }
-  function render() { renderLibrary();renderFields();renderGrid();renderState();teamView.render(); }
+  function render() { renderLibrary();renderFields();renderGrid();renderBadge();renderState();teamView.render(); }
   function chooseCard(id) {
     guarded(()=>{readFields();commitTeam(model.selectCard(team,selected.slot,selected.kind,id),'選擇角色');
       if(id){recent=[id,...recent.filter(n=>n!==id)].slice(0,24);bridge('recent',recent);}
@@ -309,6 +346,14 @@
     };
   }
   for(let i=0;i<6;i++)$('positions').append(text('position',i===0?'1 隊長':i===5?'6 助人':String(i+1)));
+  for(const entry of [{name:'沿用遊戲內徽章'},...PH_BADGE_CATALOG.entries]) {
+    const button=document.createElement('button');button.type='button';
+    button.dataset.badge=entry.id===undefined?'inherit':String(entry.id);
+    button.append(badgeIcon(entry.id),text('badge-label',entry.name));
+    button.setAttribute('aria-label',entry.name);button.onclick=()=>chooseBadge(button.dataset.badge);
+    $('team-badge-options').append(button);
+  }
+  $('team-badge-choice').onchange=()=>chooseBadge($('team-badge-choice').value);
   for(const id of Object.keys(model.latentNames).map(Number)) {
     const button=document.createElement('button');button.type='button';button.dataset.latent=String(id);
     button.append(teamView.icon(id,true),text('latent-label',model.latentName(id)),text('latent-cost',model.latentCost(id)+' 格'));
