@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "id": "solver-beam-crash-20261107",
+  "status": "source-defect-confirmed-crash-causality-unproven",
+  "reviewDate": "2026-11-07",
+  "app": {
+    "name": "PAD",
+    "version": "23.6.1"
+  },
+  "module": {
+    "name": "PADCheaper.dylib",
+    "version": "0.5.41-orbs",
+    "architecture": "arm64",
+    "uuid": "6bec3d6f-6b69-39af-aa8b-40ffd1c1fa10",
+    "sourceCommit": "dde438dc09a41bf98d7b46033014b52376ddee04"
+  },
+  "reports": [
+    {
+      "captureTime": "2026-11-07 21:24:02.8321 +0800",
+      "sourceSHA256": "b01f1e4827bfcf2f34d6b8c6b2de4a64c69f39c015aae602969b79aba5f0246c"
+    },
+    {
+      "captureTime": "2026-11-07 21:54:12.2966 +0800",
+      "sourceSHA256": "9ebaa2dfc38eff90295637f8bf03c1875a1c04308f845522206aa972d871c896"
+    }
+  ],
+  "commonCrash": {
+    "exception": "EXC_CRASH",
+    "signal": "SIGABRT",
+    "queue": "jp.padcheaper.orbs.solver",
+    "frames": [
+      {
+        "module": "libsystem_malloc.dylib",
+        "symbol": "free_list_checksum_botch",
+        "imageOffset": "0x13e3c",
+        "symbolOffset": 40
+      },
+      {
+        "module": "libsystem_malloc.dylib",
+        "symbol": "small_free_list_remove_ptr_no_clear",
+        "imageOffset": "0x7094",
+        "symbolOffset": 956
+      },
+      {
+        "module": "libsystem_malloc.dylib",
+        "symbol": "free_small",
+        "imageOffset": "0x7618",
+        "symbolOffset": 696
+      },
+      {
+        "module": "PADCheaper.dylib",
+        "symbol": "SelectBeam",
+        "imageOffset": "0xd5444",
+        "symbolOffset": 4388
+      },
+      {
+        "module": "PADCheaper.dylib",
+        "symbol": "PHOrbSolve search lambda",
+        "imageOffset": "0xc14e0",
+        "symbolOffset": 3328
+      },
+      {
+        "module": "PADCheaper.dylib",
+        "symbol": "PHOrbSolve",
+        "imageOffset": "0xbf200",
+        "symbolOffset": 4096
+      },
+      {
+        "module": "PADCheaper.dylib",
+        "symbol": "PHOrbSession beginSolve worker lambda",
+        "imageOffset": "0xaff60",
+        "symbolOffset": 108
+      },
+      {
+        "module": "PADCheaper.dylib",
+        "symbol": "PHOrbSession beginSolve block",
+        "imageOffset": "0xac958",
+        "symbolOffset": 1552
+      }
+    ],
+    "sameModuleAndRelevantStack": true,
+    "allCrashFramesMatch": true,
+    "matchedFrameCount": 21
+  },
+  "sourceDefect": {
+    "file": "ios/src/PHOrbSolver.cpp",
+    "producer": "ColorGuidance",
+    "consumer": "SelectBeam",
+    "basicTypes": 6,
+    "maximumGoals": 6,
+    "noMissingColorSentinel": 6,
+    "oldBucketCapacity": 384,
+    "oldLargestValidIndex": 383,
+    "bucketExpression": "missingColors | (unsigned(weakestColor) << PHOrbBasicTypes)",
+    "boundaryCase": {
+      "missingColors": 0,
+      "weakestColor": 6,
+      "computedBucket": 384
+    },
+    "outOfBoundsAccesses": [
+      "head[bucket]",
+      "tail[bucket]"
+    ],
+    "possibleSecondaryWrite": "link[tail[bucket]]",
+    "confirmedBySourceReview": true,
+    "observedTriggerIndexInCrash": false
+  },
+  "binaryReview": {
+    "method": "IDA review of a copy of the delivered dylib by the primary investigator",
+    "selectBeamStartOffset": "0xd4320",
+    "selectBeamEndOffsetExclusive": "0xd56d4",
+    "reportedReturnPC": "0xd5444",
+    "precedingCallOffset": "0xd5440",
+    "precedingCall": "operator delete",
+    "releaseContext": "layouts unordered_set bucket array destruction",
+    "isObservedOutOfBoundsInstruction": false,
+    "consistentWithEarlierMemoryCorruption": true,
+    "uniqueCauseEstablished": false
+  },
+  "sourceFix": {
+    "goalBucketCapacity": 384,
+    "colorBucketCapacity": 448,
+    "colorBucketExpression": "(1u << PHOrbBasicTypes) * (PHOrbBasicTypes + 1u)",
+    "combinedCapacity": "max(GoalBuckets, ColorBuckets)",
+    "preservesExistingBucketKeys": true,
+    "preservesSelectionOrderAndQuota": true,
+    "includedInNewDeliveredBinary": false,
+    "sanitizerTestEntry": "ios/test.sh",
+    "sanitizersConfigured": [
+      "address",
+      "undefined"
+    ],
+    "sanitizerFailureStopsTests": true,
+    "regressionSource": "ios/tests/orb_beam_bucket_tests.inc"
+  },
+  "verification": {
+    "reportsReviewed": true,
+    "attachmentFingerprintsRecorded": true,
+    "sourceReviewed": true,
+    "deliveredBinaryReviewedWithIDA": true,
+    "originalBoardAvailable": false,
+    "crashCandidateScoresAvailable": false,
+    "crashTriggerIndexAvailable": false,
+    "originalCrashesReproduced": false,
+    "testsExecuted": false,
+    "sanitizersExecuted": false,
+    "productBuilt": false,
+    "deviceVerified": false,
+    "pending": [
+      "Execute evaluator-produced sentinel cases through SelectBeam, including complete colours with unmet Combo and four-spinner phases",
+      "Sanitizer-enabled solver checks and related regressions",
+      "Authorized compilation and a new delivered version",
+      "Device verification with the corrected version"
+    ],
+    "regressionCasesWritten": true,
+    "cppSyntaxOnlyChecked": [
+      "ios/src/PHOrbSolver.cpp",
+      "ios/tests/orb_solver_tests.cpp",
+      "ios/tests/orb_shape_guidance_tests.cpp"
+    ],
+    "shellSyntaxOnlyChecked": [
+      "ios/test.sh",
+      "ios/build.sh"
+    ],
+    "jsonSyntaxChecked": true
+  },
+  "privacy": {
+    "rawReportsCopied": false,
+    "onlyNecessaryApplicationModuleTimeStackAndSourceEvidenceRetained": true
+  }
+}

@@ -237,6 +237,7 @@ static void FishingTransitionKeys() {
 #include "orb_fishing_budget_tests.inc"
 #include "orb_color_spinner_guidance_tests.inc"
 #include "orb_thorn_color_guidance_tests.inc"
+#include "orb_beam_bucket_tests.inc"
 
 int main() {
     AllMetScores();
@@ -249,6 +250,7 @@ int main() {
     FishingBudgetTests();
     ColorSpinnerGuidanceTests();
     ThornColorGuidanceTests();
+    BeamBucketTests();
     std::printf("Private shape guidance tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

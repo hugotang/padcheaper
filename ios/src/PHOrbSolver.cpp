@@ -1152,7 +1152,13 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
     // Keep three quarters by the normal objective order. The remainder is
     // shared round-robin by missing-goal set and weakest goal, with distinct
     // layouts and starts. Linked indices avoid one allocation per bucket.
-    constexpr unsigned Buckets = (1u << PHOrbMaxGoals) * PHOrbMaxGoals;
+    constexpr unsigned GoalBuckets = (1u << PHOrbMaxGoals) * PHOrbMaxGoals;
+    // ColorGuidance uses PHOrbBasicTypes as the "no missing colour" sentinel.
+    // Such candidates still enter selection (including when only Combo is
+    // unmet), so keep a separate lane for that value instead of indexing past
+    // the six ordinary colour lanes. Preserve every existing bucket key.
+    constexpr unsigned ColorBuckets = (1u << PHOrbBasicTypes) * (PHOrbBasicTypes + 1u);
+    constexpr unsigned Buckets = std::max(GoalBuckets, ColorBuckets);
     std::array<size_t, Buckets> head, tail;
     head.fill(none); tail.fill(none);
     std::vector<size_t> link(next.size(), none);
