@@ -1321,11 +1321,14 @@ struct EightPreparationState {
         if (_route.fishing && !FishingTimingUnchanged(current,_preview)) {
             [self queueStop:@"連續撈珠的轉轉色表或時間資料已改變，未開始轉珠"]; return;
         }
-        if (time - _requestedAt < ArmDelay) return;
-        if (time - _requestedAt > 2 || !HasRouteTime(current, _route)) {
+        // A preparation delay cannot keep an expired gesture armed. Check
+        // remaining route time on every frame, including the peer-clock cost
+        // of the still-pending delay; continuation uses its native move clock.
+        if (time - _requestedAt > 2 || !HasRouteTime(current, _route, std::max(0.0,ArmDelay - (time - _requestedAt)))) {
             [self queueStop:time - _requestedAt > 2 ? @"開始轉珠等候超過 2 秒，已停止" :
                 @"剩餘操作時間不足以完成路徑及必要等待，未開始轉珠"]; return;
         }
+        if (time - _requestedAt < ArmDelay) return;
         _phase = PHOrbSessionPhase::Running; _startedAt = _stepAt = _sentAt = time;
         _expected = current;
     }

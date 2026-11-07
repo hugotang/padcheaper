@@ -1,4 +1,4 @@
-// Source-only regressions until the next explicitly requested build/test.
+// Independent graph and scoring regressions for thorn-aware colour guidance.
 // Distances constrain hints, never exact phase evaluation or route admission.
 static void ThornColorGuidanceTests() {
     auto board = ColorSpinnerGuidanceBoard();

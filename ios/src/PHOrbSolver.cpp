@@ -71,7 +71,7 @@ struct Context {
     unsigned shapeGoals = 0;
     // Ordinary multi-colour recovery may avoid spinner cells. It never opens
     // a spinner or changes exact goals; the primary objective/beam is retained.
-    bool colorRecovery = false, colorGuidance = false;
+    bool colorRecovery = false, colorGuidance = false, thornColorGuidance = false;
     uint8_t wantedColors = 0, colorFocus = PHOrbBasicTypes;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
     // Alternate ordinary-shape passes change exploration only. Retained
@@ -1367,8 +1367,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 colorMovements.push_back(MakeColorMovement(context,thornCells & ~(Bits(1) << cell)));
             }
         }
-        const auto movementFor = [&](const Node &node) -> const ColorMovement * {
-            return colorMovements.empty() ? nullptr : &colorMovements[colorMovementIndex[node.path[0]]];
+        const auto movementFor = [&](const Node &node, const Context &scoring) -> const ColorMovement * {
+            return !scoring.thornColorGuidance || colorMovements.empty() ? nullptr :
+                &colorMovements[colorMovementIndex[node.path[0]]];
         };
         struct Frontier { unsigned depth; std::vector<Node> nodes; };
         std::vector<Frontier> saved;
@@ -1403,7 +1404,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             hints.colorProgress.fill(0);
             std::array<Bits, PHOrbTypes> colors{};
             for (unsigned i = 0; i < size; ++i) colors[best.cells[i]] |= Bits(1) << i;
-            ColorGuidance(hints, colors, scoring, movementFor(best));
+            ColorGuidance(hints, colors, scoring, movementFor(best,scoring));
             return hints.missingColors ? unsigned(hints.weakestColor) : unsigned(PHOrbBasicTypes);
         };
         // Upper bounds for an exact stop: no skyfall, so each colour yields at
@@ -1433,7 +1434,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             Context cachedScoring = scoring;
             // These starts have different stationary-thorn graphs. Cache only
             // their common evaluation, then compute the appropriate hints once.
-            if (!colorMovements.empty()) cachedScoring.colorGuidance = false;
+            if (scoring.thornColorGuidance) cachedScoring.colorGuidance = false;
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
                 if (cannotImprove(depth)) break;
@@ -1484,13 +1485,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                                 ReleaseHazardsSafe(child.score.result, scoring.allowPoisonWithHeartFour);
                             ++evaluationCache.hits;
                         } else child.score = evaluationCache.score(child.cells, cachedScoring);
-                        if (scoring.colorGuidance && !colorMovements.empty()) {
+                        if (scoring.colorGuidance && scoring.thornColorGuidance) {
                             std::array<Bits,PHOrbTypes> colors{};
                             for (unsigned i = 0; i < size; ++i) colors[child.cells[i]] |= Bits(1) << i;
                             // Cache entries remain endpoint/start-independent.
                             // Reapply only hint fields after every score reuse,
                             // including same-colour swaps carrying a thorn.
-                            ColorGuidance(child.score,colors,scoring,movementFor(child));
+                            ColorGuidance(child.score,colors,scoring,movementFor(child,scoring));
                         }
                         const Score guidedScore = child.score;
                         // A changed hint scale must never displace the primary
@@ -1564,6 +1565,9 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (recover && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
             Context recovery = context;
             recovery.colorGuidance = context.colorRecovery;
+            // Retain the original full recovery direction. First-removal
+            // templates cannot represent every cascade around fixed thorns;
+            // their stricter movement hints get separate existing backtracks.
             recovery.colorFocus = uint8_t(colorFocus(recovery));
             // Alternate layouts can collectively satisfy all phases even
             // when no single layout is phase-independent. Never delete those
@@ -1605,6 +1609,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             beam = std::move(frontier.nodes); ++backtracks;
             Context revisit = context;
             revisit.colorGuidance = context.colorRecovery;
+            revisit.thornColorGuidance = !colorMovements.empty();
             if (ordinaryShapeRecovery) {
                 revisit.alternateShapeHints = true;
                 // Saved frontiers already provide a different starting beam;

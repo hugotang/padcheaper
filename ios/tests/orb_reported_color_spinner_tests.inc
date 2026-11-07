@@ -1,5 +1,5 @@
 // Sanitized 0.5.40 regression fixtures. No successful route is seeded.
-// Written only; execute with the next authorized full build/test.
+// Independently replay and score returned candidates; unfinished goals remain failures.
 static PHOrbBoard FourSpinnerThornBoard() {
     auto board = Board(6,5,1);
     const uint8_t types[] = {0,5,0,3,5,4,3,4,2,4,2,3,1,2,4,2,1,1,2,1,5,2,3,4,0,5,3,2,2,5};
@@ -36,6 +36,7 @@ static void ReportedColorSpinnerSolverTests() {
     std::atomic_bool cancel{false}; PHOrbRoute route{};
     auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
     options.goals = ColorSpinnerGoals(); options.diagonal = true;
+    options.allowPoisonWithHeartFour = true; options.thornComboPriority = true;
     // Thorn HP remains unknown; never borrow unrelated main-panel HP.
     options.thorns = {};
     for (unsigned fixture = 0; fixture < 2; ++fixture) for (unsigned variant = 0; variant < 3; ++variant) {
@@ -61,6 +62,9 @@ static void ReportedColorSpinnerSolverTests() {
         Check(!std::memcmp(&before,&board,sizeof(board)) && route.count <= options.steps + 1 &&
             route.searchPasses <= 4 && route.backtracks <= options.backtrackLimit,
             "reported layouts retain immutable metadata and original search limits");
+        if (!fixture && route.count && !route.deadlineReached)
+            Check(route.goalHits[0] >= 4 && route.goalHits[1] >= 1,
+                "completed four-spinner searches retain four colours plus heart across relabeling and rotation");
         if (route.count) {
             CheckColorSpinnerRoute(board,options,status,route);
             PHOrbBoard moved = board; unsigned contacts = 0;

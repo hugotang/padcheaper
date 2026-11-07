@@ -125,6 +125,15 @@ static void ThreeFishingSessionTests() {
         if (change == 1) engine->live.multiplayer.continuationOwnerFlags = 3;
         if (change == 2) engine->live.remainingFrames = 18;
         if (change == 3) engine->live.phase = 22;
+        Tick(session,engine,Frame(),1.0 / 60);
+        const bool cancelledImmediately = !engine->stages && !engine->releases && !engine->multiplayerArmed &&
+            !engine->allowedSpinnerCell && ![session.snapshot[@"once"] boolValue] && ![session.snapshot[@"busy"] boolValue];
+        if (!cancelledImmediately) std::fprintf(stderr,"Continuation pre-touch change %u: phase=%s stages=%lu releases=%lu armed=%d\n",
+            change,[session.snapshot[@"phase"] UTF8String],(unsigned long)engine->stages,(unsigned long)engine->releases,int(engine->multiplayerArmed));
+        Check(cancelledImmediately,
+            "continuation invalidation revokes the arm and spinner permission on the next frame before its preparation delay");
+        if (change == 2) Check([session.snapshot[@"message"] containsString:@"剩餘操作時間不足"],
+            "short native move clock names its timing failure while continuation is still preparing");
         for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame(),1.0 / 60);
         Check(!engine->stages && !engine->releases && !engine->multiplayerArmed,
             "new continuation source, short move clock or skill phase cancels before first touch");
