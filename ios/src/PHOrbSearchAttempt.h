@@ -21,14 +21,44 @@ static inline PHOrbSoloRetryDecision PHOrbDecideSoloRetry(bool solo, bool assist
 // Keep a useful failed candidate for diagnostics, without treating it as an
 // executable result. The session still replays it and checks all input gates.
 // On equal progress retain the later attempt so an extended search is visible.
+// When both attempts use identical goals, compare progress within each clause
+// too: four of five colours must not be replaced by three merely because both
+// candidates completed the separate heart clause.
+static inline bool PHOrbComparableSearchGoals(const PHOrbGoalSet &a, const PHOrbGoalSet &b) {
+    if (!a.count || a.count > PHOrbMaxGoals || a.count != b.count ||
+        a.comboFirstWave != b.comboFirstWave || a.bonusFirstWave != b.bonusFirstWave) return false;
+    for (unsigned g = 0; g < a.count; ++g) {
+        const auto &x = a.items[g], &y = b.items[g];
+        if (!x.count || x.kind != y.kind || x.colors != y.colors || x.count != y.count || x.length != y.length) return false;
+    }
+    return true;
+}
+static inline unsigned PHOrbSearchGoalProgress(const PHOrbRoute &route, const PHOrbGoalSet &goals) {
+    if (goals.count > PHOrbMaxGoals) return 0;
+    unsigned progress = 0;
+    for (unsigned g = 0; g < goals.count; ++g) {
+        const unsigned required = goals.items[g].count, hits = route.goalHits[g];
+        if (!required) return 0;
+        progress += 4096u * (hits < required ? hits : required) / required;
+    }
+    return progress;
+}
 static inline bool PHOrbPreferSearchCandidate(PHOrbSolveStatus status, const PHOrbRoute &candidate,
-    PHOrbSolveStatus selectedStatus, const PHOrbRoute &selected) {
+    PHOrbSolveStatus selectedStatus, const PHOrbRoute &selected,
+    const PHOrbGoalSet *candidateGoals = nullptr, const PHOrbGoalSet *selectedGoals = nullptr) {
     if (!PHOrbHasSearchCandidate(status, candidate)) return false;
     if (status == PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) return true;
     if (selectedStatus == PHOrbSolveStatus::Solved && selected.goalsMet && selected.hazardsSafe) return false;
     if (!PHOrbHasSearchCandidate(selectedStatus, selected)) return true;
     if (candidate.hazardsSafe != selected.hazardsSafe) return candidate.hazardsSafe;
-    return candidate.matchedGoals >= selected.matchedGoals;
+    if (candidate.matchedGoals != selected.matchedGoals) return candidate.matchedGoals > selected.matchedGoals;
+    if (candidateGoals && selectedGoals && PHOrbComparableSearchGoals(*candidateGoals,*selectedGoals) &&
+        candidate.goalCount == candidateGoals->count && selected.goalCount == selectedGoals->count) {
+        const unsigned a = PHOrbSearchGoalProgress(candidate,*candidateGoals);
+        const unsigned b = PHOrbSearchGoalProgress(selected,*selectedGoals);
+        if (a != b) return a > b;
+    }
+    return true;
 }
 
 // Each fishing colour gets its own deadline decision. A failed ordinary

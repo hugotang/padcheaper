@@ -91,6 +91,14 @@ struct Context {
     std::array<std::array<Bits, PHOrbMaxCells>, PHOrbMaxCells> distanceMasks{};
     std::array<unsigned, PHOrbMaxCells> distanceDepth{};
 };
+// In a zero-contact search, every thorn except the initially held token
+// stays at its original cell. Recovery hints use that start's movement graph;
+// exact matching still includes these stationary tokens and all spinner phases.
+struct ColorMovement {
+    Bits blocked = 0;
+    std::array<std::array<Bits, PHOrbMaxCells>, PHOrbMaxCells> distanceMasks{};
+    std::array<unsigned, PHOrbMaxCells> distanceDepth{};
+};
 struct Score {
     PHOrbEvaluation result{};
     unsigned progress = 0, potential = 0, jointPenalty = 0;
@@ -124,6 +132,23 @@ Bits MoveNeighbours(Bits cells, const Context &context) {
         result |= ((horizontal << context.width) | (horizontal >> context.width)) & context.boardMask;
     }
     return result;
+}
+
+ColorMovement MakeColorMovement(const Context &context, Bits stationaryThorns) {
+    ColorMovement movement; movement.blocked = context.blocked | stationaryThorns;
+    const unsigned size = context.width * context.height;
+    for (unsigned i = 0; i < size; ++i) {
+        Bits frontier = Bits(1) << i, seen = frontier;
+        if (frontier & movement.blocked) continue;
+        for (unsigned distance = 1; distance < size; ++distance) {
+            frontier = MoveNeighbours(frontier,context) & ~seen & ~movement.blocked;
+            if (!frontier) break;
+            movement.distanceMasks[i][distance] = frontier;
+            movement.distanceDepth[i] = distance;
+            seen |= frontier;
+        }
+    }
+    return movement;
 }
 
 Bits MarkedRuns(Bits color, const Context &context) {
@@ -386,26 +411,30 @@ unsigned NearColor(Bits color, const std::vector<Pattern> &patterns) {
 }
 
 struct ColorHint { unsigned value = 0; uint16_t tag = 0; };
-ColorHint RepairColor(Bits color, const std::vector<Pattern> &patterns, unsigned type, const Context &context) {
+ColorHint RepairColor(Bits color, const std::vector<Pattern> &patterns, unsigned type, const Context &context,
+    const ColorMovement *movement = nullptr) {
     ColorHint best;
+    const Bits blocked = movement ? movement->blocked : context.blocked;
+    const auto &distanceMasks = movement ? movement->distanceMasks : context.distanceMasks;
+    const auto &distanceDepth = movement ? movement->distanceDepth : context.distanceDepth;
     for (unsigned p = 0; p < patterns.size(); ++p) {
         const auto &pattern = patterns[p];
         // A fixed-colour repair cannot rely on a spinner's current phase,
         // even when that phase already fills this template's cell.
         if (pattern.cells & context.dynamicSpinners) continue;
         Bits holes = pattern.cells & ~color;
-        if (holes & context.blocked) continue;
+        if (holes & blocked) continue;
         const unsigned size = Count(pattern.cells), missing = Count(holes);
         unsigned cost = 2 * missing;
         if (3072 * size / (size + cost) <= best.value) continue;
-        const Bits supply = color & ~pattern.cells & ~context.blocked;
+        const Bits supply = color & ~pattern.cells & ~blocked;
         if (Count(supply) < missing) continue;
         bool reachable = true;
         while (holes) {
             const unsigned cell = unsigned(__builtin_ctzll(holes)); holes &= holes - 1;
             unsigned distance = 1;
-            while (distance <= context.distanceDepth[cell] && !(context.distanceMasks[cell][distance] & supply)) ++distance;
-            if (distance > context.distanceDepth[cell]) { reachable = false; break; }
+            while (distance <= distanceDepth[cell] && !(distanceMasks[cell][distance] & supply)) ++distance;
+            if (distance > distanceDepth[cell]) { reachable = false; break; }
             cost += distance - 1;
         }
         if (!reachable) continue;
@@ -418,7 +447,8 @@ ColorHint RepairColor(Bits color, const std::vector<Pattern> &patterns, unsigned
     return best;
 }
 
-void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, const Context &context) {
+void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, const Context &context,
+    const ColorMovement *movement = nullptr) {
     if (!context.colorGuidance) return;
     score.colorProgress.fill(0); score.colorGuidedProgress = 0;
     score.missingColors = 0; score.weakestColor = PHOrbBasicTypes;
@@ -429,7 +459,7 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
     for (unsigned c = 0; c < PHOrbBasicTypes; ++c) if (context.wantedColors & (1u << c)) {
         if (score.matchedColors & (1u << c)) score.colorProgress[c] = 4096;
         else {
-            hints[c] = RepairColor(colors[c] & ~context.dynamicSpinners, context.patterns[patternGoal], c, context);
+            hints[c] = RepairColor(colors[c] & ~context.dynamicSpinners, context.patterns[patternGoal], c, context, movement);
             score.colorProgress[c] = hints[c].value;
         }
     }
@@ -939,6 +969,18 @@ bool SimplifyIdentityCycles(const PHOrbBoard &board, const PHOrbSolveOptions &op
 // the drag endpoint or path. Reuse it across those candidates, but compare
 // every cell so a hash collision can only cost a cache miss. Thorn damage and
 // contact-dependent heart requirements are applied to a copy by the caller.
+bool UseEvaluationCache(const Context &context) {
+    if (context.variants <= 1) return false;
+    if (context.shapeGoals || context.colorRecovery) return true;
+    // Single-take colour searches use the same phase evaluator even though
+    // their movement rules exclude ordinary colour-recovery guidance. Cache
+    // only the context's colour-layout score; fished/held/path state remains
+    // in the search node and its visited key. Capacity and deadlines do not grow.
+    if (context.fishColor >= 0) for (unsigned g = 0; g < context.goals.count; ++g)
+        if (context.goals.items[g].kind == PHOrbGoalColors && context.goals.items[g].count > 1) return true;
+    return false;
+}
+
 class EvaluationCache {
     struct Entry { Cells cells{}; Score score{}; uint32_t pass = 0; };
     std::vector<Entry> _entries;
@@ -1308,12 +1350,32 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             if (!PHOrbCanStartAt(&board, i)) continue;
             Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); starts.push_back(node);
         }
+        std::vector<ColorMovement> colorMovements;
+        std::array<unsigned,PHOrbMaxCells> colorMovementIndex{};
+        Bits thornCells = 0;
+        for (unsigned i = 0; i < size; ++i) if (initialThorns[i]) thornCells |= Bits(1) << i;
+        if (context.colorRecovery && !budgetKnown && thornCells && (options.recoveryPasses || options.backtrackLimit)) {
+            // At most one shared graph plus one per legal thorn start. These
+            // bounded setup costs are charged to the original search deadline.
+            colorMovements.reserve(1 + Count(thornCells));
+            colorMovements.push_back(MakeColorMovement(context,thornCells));
+            for (const auto &node : starts) {
+                if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
+                const unsigned cell = node.path[0];
+                if (!(thornCells & (Bits(1) << cell))) continue;
+                colorMovementIndex[cell] = unsigned(colorMovements.size());
+                colorMovements.push_back(MakeColorMovement(context,thornCells & ~(Bits(1) << cell)));
+            }
+        }
+        const auto movementFor = [&](const Node &node) -> const ColorMovement * {
+            return colorMovements.empty() ? nullptr : &colorMovements[colorMovementIndex[node.path[0]]];
+        };
         struct Frontier { unsigned depth; std::vector<Node> nodes; };
         std::vector<Frontier> saved;
         Node best;
         bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
-        EvaluationCache evaluationCache(context.variants > 1 && context.shapeGoals);
+        EvaluationCache evaluationCache(UseEvaluationCache(context));
         // A beam holds at most max(beam, starts, saved frontier) parents.
         VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
@@ -1341,7 +1403,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             hints.colorProgress.fill(0);
             std::array<Bits, PHOrbTypes> colors{};
             for (unsigned i = 0; i < size; ++i) colors[best.cells[i]] |= Bits(1) << i;
-            ColorGuidance(hints, colors, scoring);
+            ColorGuidance(hints, colors, scoring, movementFor(best));
             return hints.missingColors ? unsigned(hints.weakestColor) : unsigned(PHOrbBasicTypes);
         };
         // Upper bounds for an exact stop: no skyfall, so each colour yields at
@@ -1368,6 +1430,10 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // Recovery changes hint policy/repair weights, so it must not
             // inherit another pass's scores. Exact validation is unchanged.
             evaluationCache.nextPass();
+            Context cachedScoring = scoring;
+            // These starts have different stationary-thorn graphs. Cache only
+            // their common evaluation, then compute the appropriate hints once.
+            if (!colorMovements.empty()) cachedScoring.colorGuidance = false;
             bool passEnded = false;
             for (unsigned depth = firstDepth; depth < options.steps && !passEnded && !timedOut; ++depth) {
                 if (cannotImprove(depth)) break;
@@ -1417,7 +1483,15 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             child.score.result.hazardsSafe =
                                 ReleaseHazardsSafe(child.score.result, scoring.allowPoisonWithHeartFour);
                             ++evaluationCache.hits;
-                        } else child.score = evaluationCache.score(child.cells, scoring);
+                        } else child.score = evaluationCache.score(child.cells, cachedScoring);
+                        if (scoring.colorGuidance && !colorMovements.empty()) {
+                            std::array<Bits,PHOrbTypes> colors{};
+                            for (unsigned i = 0; i < size; ++i) colors[child.cells[i]] |= Bits(1) << i;
+                            // Cache entries remain endpoint/start-independent.
+                            // Reapply only hint fields after every score reuse,
+                            // including same-colour swaps carrying a thorn.
+                            ColorGuidance(child.score,colors,scoring,movementFor(child));
+                        }
                         const Score guidedScore = child.score;
                         // A changed hint scale must never displace the primary
                         // candidate just because it inflates partial progress.

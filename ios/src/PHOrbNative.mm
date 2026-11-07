@@ -426,7 +426,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     _multiplayerOwnedOrb = _multiplayerStartOrb = 0;
     _multiplayerStartCell = 0; _multiplayerGesture = {};
 }
-// The session opens one spinner cell for a solo or explicitly armed 3P route.
+// The session opens one spinner cell for a solo or explicitly armed 3P/
+// native continuation route.
 // A cell flag alone never grants a multiplayer gesture; -1 closes the cell.
 // stageCell: still requires the cell to be a spinner on the live board.
 - (void)allowSpinnerEntry:(NSInteger)cell {
@@ -875,7 +876,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         }
     }
     const bool fishingLease = !multiplayer ||
-        (live.multiplayer.kind == PHOrbMultiplayerThree && _multiplayerOnce && !_eightAuto &&
+        ((live.multiplayer.kind == PHOrbMultiplayerThree || live.multiplayer.kind == PHOrbMultiplayerThreeSolo) &&
+            _multiplayerOnce && !_eightAuto &&
             PHOrbSameTurn(&_multiplayerGesture,&live));
     const uint64_t spinnerEntry = fishingLease ? _allowedSpinnerCell & live.board.spinnerMask : 0;
     // These checks apply to holds as well as swaps: waiting must not retain a
@@ -889,8 +891,9 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             state.spinnerPeriodFrames != expected->spinnerPeriodFrames || state.fps != expected->fps ||
             state.board.spinnerMask != expected->board.spinnerMask || state.board.spinnerColors != expected->board.spinnerColors ||
             !(state.board.spinnerMask & _allowedSpinnerCell) || (state.board.spinnerColors & ~63u)) return false;
-        if (multiplayer && (!PHOrbMultiplayerWindow(&state) || !state.multiplayer.clockKnown ||
-            state.multiplayer.remainingSeconds <= 0.40)) return false;
+        if (multiplayer && (!PHOrbMultiplayerWindow(&state) ||
+            (state.multiplayer.kind != PHOrbMultiplayerThreeSolo &&
+                (!state.multiplayer.clockKnown || state.multiplayer.remainingSeconds <= 0.40)))) return false;
         const bool taking = (_allowedSpinnerCell & (UINT64_C(1) << cell)) &&
             state.dragged && state.board.tokens[cell] != state.dragged;
         return !taking || (state.orbMotionKnown && state.orbMotion[cell] == 0 && state.spinnerCountdown >= 6 &&

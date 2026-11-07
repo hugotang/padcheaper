@@ -195,6 +195,7 @@ static void ShapeTests() {
 #include "orb_search_recovery_tests.inc"
 #include "orb_color_solver_tests.inc"
 #include "orb_color_spinner_solver_tests.inc"
+#include "orb_reported_color_spinner_tests.inc"
 #include "orb_native_rule_matrix_tests.inc"
 #include "orb_recorded_thorn_solver_tests.inc"
 #include "orb_recorded_spinner_solver_tests.inc"
@@ -239,6 +240,7 @@ int main() {
     SearchRecoveryTests();
     ColorSolverTests();
     ColorSpinnerSolverTests();
+    ReportedColorSpinnerSolverTests();
     NativeRuleMatrixTests();
     RecordedThornSolverTests();
     RecordedSpinnerSolverTests();

@@ -72,8 +72,8 @@ double RouteExecutionLimit(const PHOrbSnapshot &state, const PHOrbRoute &route) 
 }
 PHOrbTimedFishingTiming MultiFishingTiming(const PHOrbSnapshot &state) {
     PHOrbTimedFishingTiming timing;
-    // Co-op has both the move timer and the native local-turn clock. Neither
-    // source may grant time the other does not have, including while holding.
+    // Online co-op uses both move and local-turn clocks, including holds.
+    // Native continuation retains only the move timer after peer-clock retirement.
     timing.remainingFrames = state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ? state.remainingFrames : 0;
     if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer)) {
         if (!PHOrbMultiplayerWindow(&state)) timing.remainingFrames = 0;
@@ -90,8 +90,12 @@ PHOrbTimedFishingTiming MultiFishingTiming(const PHOrbSnapshot &state) {
 NSString *FishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualOnce, bool automatic) {
     if (state.multiplayerDisabled || !state.present || !state.valid) return @"state-unavailable";
     if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer)) {
-        if (state.multiplayer.kind != PHOrbMultiplayerThree) return @"mode-not-supported";
-        if (automatic || !boundManualOnce) return @"three-player-manual-once-required";
+        const bool continuation = state.multiplayer.kind == PHOrbMultiplayerThreeSolo;
+        if (state.multiplayer.kind != PHOrbMultiplayerThree && !continuation) return @"mode-not-supported";
+        if (automatic || !boundManualOnce) return continuation ? @"continuation-manual-once-required" :
+            @"three-player-manual-once-required";
+        // Selector 2 retires the peer decision clock. Its existing native
+        // continuation window and move timer still gate this fresh once.
         if (!PHOrbMultiplayerWindow(&state)) return @"local-window-closed";
     }
     if (!PHOrbBoardValid(&state.board)) return @"invalid-board";
@@ -944,7 +948,7 @@ struct EightPreparationState {
                     singleNotAttempted = @"";
                     if (retry) ++fishingRetries;
                     const auto status = solveAttempt(fishOptions, candidate, retry ? @{@"soloRetry":@YES} : @{});
-                    if (PHOrbPreferSearchCandidate(status, candidate, result, route)) {
+                    if (PHOrbPreferSearchCandidate(status, candidate, result, route, &fishOptions.goals, &selectedOptions.goals)) {
                         route = candidate; result = status; selectedOptions = fishOptions;
                         selectedAttemptIndex = NSInteger(attempts.count) - 1;
                     }
@@ -1054,7 +1058,15 @@ struct EightPreparationState {
             trace[@"fishingReservedBudgetMS"] = @(!solo ? options.milliseconds - ordinaryStageMS : 0);
             trace[@"fishingNotAttemptedReason"] = anyFishingAttempt ? @"" : ![fishingEligibility isEqual:@"eligible"] ? fishingEligibility :
                 result == PHOrbSolveStatus::Solved ? @"ordinary-route-satisfied" :
+                ![multiEligibility isEqual:@"eligible"] ? multiEligibility :
                 !solo ? @"shared-search-budget-or-no-feasible-plan" : @"no-feasible-plan";
+            const bool explainSearchFailure = result == PHOrbSolveStatus::NoRoute || result == PHOrbSolveStatus::GoalsUnmet ||
+                result == PHOrbSolveStatus::Unsafe || result == PHOrbSolveStatus::InsufficientOrbs;
+            NSString *fishingNotAttemptedMessage = !anyFishingAttempt && explainSearchFailure ? FishingNotAttemptedMessage(board,fishingEligibility,
+                    singleFishingEligibility,multiEligibility,multiCoverage) : @"";
+            trace[@"fishingNotAttemptedMessage"] = fishingNotAttemptedMessage;
+            NSString *thornSearchRestrictionMessage = explainSearchFailure ? ThornSearchRestrictionMessage(board,options) : @"";
+            trace[@"thornSearchRestrictionMessage"] = thornSearchRestrictionMessage;
             trace[@"colorRecoveryEligibilityReason"] = @(PHOrbColorRecoveryEligibilityReason(board,options));
             trace[@"colorRecoveryConfiguredPasses"] = @(options.recoveryPasses);
             trace[@"colorRecoveryOrdinarySearchPasses"] = @(ordinarySearchPasses);
@@ -1107,6 +1119,8 @@ struct EightPreparationState {
             trace[@"status"] = SolveStatusName(result);
             NSString *failureMessage = MultiFishingFailureMessage(SolveFailureMessage(result, board,
                 checkedOptions, session->_goalPlan, assistCandidates.count != 0, fishingPlan),board,multiBaseOptions.goals,multiAttempts);
+            if (fishingNotAttemptedMessage.length) failureMessage = [failureMessage stringByAppendingFormat:@"\n%@",fishingNotAttemptedMessage];
+            if (thornSearchRestrictionMessage.length) failureMessage = [failureMessage stringByAppendingFormat:@"\n%@",thornSearchRestrictionMessage];
             if (result != PHOrbSolveStatus::Solved) trace[@"reason"] = failureMessage;
             session->_searchTrace = [trace copy];
             [session rememberFailedSearch];
@@ -1224,6 +1238,8 @@ struct EightPreparationState {
                 // The no-candidate path may still replace an initial shortage.
                 if (multiAttempts.count) session->_message = [session->_message stringByAppendingFormat:@"\n%@",
                     MultiFishingFailureMessage(@"",board,multiBaseOptions.goals,multiAttempts)];
+                if (fishingNotAttemptedMessage.length) session->_message = [session->_message stringByAppendingFormat:@"\n%@",fishingNotAttemptedMessage];
+                if (thornSearchRestrictionMessage.length) session->_message = [session->_message stringByAppendingFormat:@"\n%@",thornSearchRestrictionMessage];
                 trace[@"reason"] = session->_message; session->_searchTrace = [trace copy];
                 [session rememberFailedSearch];
             }
@@ -1319,8 +1335,9 @@ struct EightPreparationState {
         NSString *stopReason = !frame.enabled ? @"總開關或前景狀態已改變，已停止" :
             !PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" :
             !current.ordinary ? @"盤面操作限制已改變，已停止" :
-            _route.fishing && multiplayer && (current.multiplayer.kind != PHOrbMultiplayerThree || _auto.active() ||
-                !_oneShot || !_oneShotBound || !PHOrbSameTurn(&_oneShotOrigin,&current)) ? @"本次 3 人手動撈珠授權已改變，已停止" :
+            _route.fishing && multiplayer && ((current.multiplayer.kind != PHOrbMultiplayerThree &&
+                current.multiplayer.kind != PHOrbMultiplayerThreeSolo) || _auto.active() ||
+                !_oneShot || !_oneShotBound || !PHOrbSameTurn(&_oneShotOrigin,&current)) ? @"本次 3 人／單人續玩手動撈珠授權已改變，已停止" :
             _route.fishing && !FishingTimingUnchanged(current,_preview) ? @"轉轉色表、速度或讀取狀態已改變，已停止撈珠" :
             _route.fishing && (!_awaitingStart && !HasRemainingFishingTime(current,_route,unsigned(_confirmed),
                 _executionElapsed,executionLimit)) ? @"剩餘時間不足以完成後續取色與路徑，已停止並放開" :

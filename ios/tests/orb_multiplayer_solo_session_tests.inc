@@ -3,7 +3,7 @@ static void SetSessionContinuation(FakeOrbEngine *engine, unsigned seat = 1) {
     engine->live.identity.multiplayer = 2;
     auto &m = engine->live.multiplayer; m.kind = PHOrbMultiplayerThreeSolo;
     m.turnSerial = (seat + 1) % 3; m.networkFlags = m.connectionState = 0;
-    m.continuationOwnerKnown = true; m.clockKnown = false; m.remainingSeconds = 0;
+    m.continuationOwnerKnown = true; m.continuationOwnerFlags = 1; m.clockKnown = false; m.remainingSeconds = 0;
 }
 static void MultiplayerSoloSessionTests() {
     for (unsigned seat = 0; seat < 3; ++seat) {

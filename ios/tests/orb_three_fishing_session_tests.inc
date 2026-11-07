@@ -9,21 +9,27 @@ static void FishingIntent(PHOrbSession *session, FakeOrbEngine *engine, bool aut
 }
 static void ThreeFishingSessionTests() {
     // The same public multi-take request works for solo once, solo continuous,
-    // and one expressly armed local 3P turn; it never turns 3P into Auto.
-    for (unsigned mode : {0u,1u,3u}) {
+    // an expressly armed local 3P turn and all native continuation seats.
+    // Continuation cases have four spinners and no usable peer clock.
+    for (unsigned mode : {0u,1u,3u,5u,6u,7u}) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(true);
         if (mode == 3) SetMultiplayer(engine,3,1);
+        if (mode >= 5) {
+            SetSessionContinuation(engine,mode - 5);
+            engine->live.board.spinnerMask |= UINT64_C(1) << 28;
+        }
         PHOrbSession *session = MultiFishingSession(engine);
         FishingIntent(session,engine,mode == 1);
         NSDictionary *trace = session.snapshot[@"searchTrace"];
         Check([trace[@"fishingEligibilityReason"] isEqual:@"eligible"] &&
             [trace[@"multiFishingSelected"] boolValue] && [trace[@"fishingExchanges"] count] == 2,
-            "solo once/continuous and armed 3P once plan the same two heart takes");
-        if (mode == 3) Check(![session.snapshot[@"automatic"] boolValue] &&
+            "solo once/continuous, armed 3P and four-spinner continuation once plan two heart takes");
+        Check(![trace[@"fishingNotAttemptedMessage"] length],"successful fishing has no unattempted restriction message");
+        if (mode >= 3) Check(![session.snapshot[@"automatic"] boolValue] &&
             [trace[@"soloRetrySkipped"] isEqual:@"not-single-player"] &&
             [trace[@"multiplayerSearchBudgetShared"] boolValue] && [trace[@"fishingReservedBudgetMS"] unsignedIntValue] > 0 &&
             [trace[@"ordinaryStageBudgetMS"] unsignedIntValue] < [trace[@"initialBudgetMS"] unsignedIntValue],
-            "3P fishing keeps manual once and one shared search budget without a solo retry");
+            "3P and continuation fishing keep manual once and one shared search budget without a solo retry");
         for (unsigned i = 0; i < 1000 && !engine->releases && [session.snapshot[@"busy"] boolValue]; ++i)
             Tick(session,engine,Frame(),1.0 / 60);
         Check(engine->releases == 1 && !engine->live.dragged &&
@@ -39,14 +45,15 @@ static void ThreeFishingSessionTests() {
     }
     // MultiFishingTiming must reserve against the shorter co-op clock even
     // when move time would otherwise allow several full spinner cycles.
-    for (bool shortMove : {false,true}) {
+    for (unsigned clock = 0; clock < 3; ++clock) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(); SetMultiplayer(engine,3,1);
-        if (shortMove) engine->live.remainingFrames = 48;
+        if (clock == 2) SetSessionContinuation(engine,1);
+        if (clock) engine->live.remainingFrames = 48;
         else engine->live.multiplayer.remainingSeconds = 0.8;
         PHOrbSession *session = MultiFishingSession(engine);
         FishingIntent(session,engine);
         Check(!engine->stages && !engine->releases,
-            "either short native timer prevents beginning a multi-take gesture");
+            "short online clocks or continuation move time prevent beginning a multi-take gesture");
         [session queueStop:@"short clock fixture complete"]; Tick(session,engine,Frame());
     }
     for (unsigned players : {4u,8u}) {
@@ -57,41 +64,38 @@ static void ThreeFishingSessionTests() {
             "4P/8P manual once retains an explicit no-fishing reason");
         [session queueStop:@"excluded mode fixture complete"]; Tick(session,engine,Frame());
     }
-    {
-        FakeOrbEngine *engine = MultiFishingSessionEngine(); SetSessionContinuation(engine,1);
-        PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
-        Check([session.snapshot[@"searchTrace"][@"fishingEligibilityReason"] isEqual:@"mode-not-supported"] && !engine->stages,
-            "selector-2 continuation has no valid co-op clock and remains outside fishing");
-        [session queueStop:@"continuation fixture complete"]; Tick(session,engine,Frame());
-    }
-    {
+    for (bool continuation : {false,true}) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(); SetMultiplayer(engine,3,1);
+        if (continuation) SetSessionContinuation(engine,1);
         PHOrbSession *session = MultiFishingSession(engine);
         Preview(session,engine);
-        Check([session.snapshot[@"searchTrace"][@"fishingEligibilityReason"] isEqual:@"three-player-manual-once-required"] &&
+        NSString *reason = continuation ? @"continuation-manual-once-required" : @"three-player-manual-once-required";
+        Check([session.snapshot[@"searchTrace"][@"fishingEligibilityReason"] isEqual:reason] &&
             !engine->stages && !engine->multiplayerArmed,
-            "3P read/preview alone does not authorize fishing");
+            "3P and continuation read/preview alone do not authorize fishing");
         [session queueAutomatic]; Tick(session,engine,Frame());
         Check(![session.snapshot[@"automatic"] boolValue] && !engine->stages,
-            "3P Auto remains excluded after the fishing extension");
+            "3P and continuation Auto remain excluded after the fishing extension");
         [session queueStop:@"unarmed fixture complete"]; Tick(session,engine,Frame());
     }
     // Clock reduction while held immediately withdraws further takes but
     // allows releasing exactly our held token while the local window remains.
-    for (bool shortMove : {false,true}) {
+    for (unsigned clock = 0; clock < 3; ++clock) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(); SetMultiplayer(engine,3,1);
+        if (clock == 2) SetSessionContinuation(engine,1);
         PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
         if (!MultiFishingSessionWait(session,engine)) continue;
         const auto moves = engine->live.moves; const uintptr_t held = engine->live.dragged;
-        if (shortMove) engine->live.remainingFrames = 18;
+        if (clock) engine->live.remainingFrames = 18;
         else engine->live.multiplayer.remainingSeconds = 0.3;
         Tick(session,engine,Frame(),1.0 / 60);
         Check(held && engine->live.moves == moves && engine->releases == 1 && !engine->live.dragged &&
             !engine->multiplayerArmed && !engine->allowedSpinnerCell,
-            "shortening either clock during a wait cancels the take and releases only the owned token");
+            "shortening online clocks or continuation move time during a wait cancels the take and releases only the owned token");
     }
-    for (unsigned change = 0; change < 5; ++change) {
+    for (bool continuation : {false,true}) for (unsigned change = 0; change < (continuation ? 13u : 5u); ++change) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(); SetMultiplayer(engine,3,1);
+        if (continuation) SetSessionContinuation(engine,1);
         PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
         if (!MultiFishingSessionWait(session,engine)) continue;
         const NSUInteger stages = engine->stages;
@@ -100,19 +104,61 @@ static void ThreeFishingSessionTests() {
         if (change == 2) engine->live.identity.entryHash[0] ^= 1;
         if (change == 3) engine->live.inputManager++;
         if (change == 4) engine->live.dragged = engine->live.board.tokens[29];
+        if (change == 5) engine->live.multiplayer.recoverySource = 1;
+        if (change == 6) engine->live.multiplayer.continuationOwnerFlags = 3;
+        if (change == 7) engine->live.multiplayer.continuationOwnerKnown = false;
+        if (change == 8) engine->live.multiplayer.continuationDialog = true;
+        if (change == 9) engine->live.multiplayer.recoveryFlags = 0x40;
+        if (change == 10) engine->live.phase = 22;
+        if (change == 11) SetMultiplayer(engine,3,1);
+        if (change == 12) engine->live.multiplayer.resolvePending = 1;
         Tick(session,engine,Frame(),1.0 / 60);
         Check(engine->stages == stages && !engine->releases && !engine->multiplayerArmed,
-            "turn/team/entry/input identity change or foreign held token receives no stale swap or release");
+            "identity, local continuation source/window, rejoin or foreign held token receives no stale swap or release");
     }
-    {
+    for (unsigned change = 0; change < 4; ++change) {
+        FakeOrbEngine *engine = MultiFishingSessionEngine(true); SetSessionContinuation(engine,1);
+        PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
+        Check([session.snapshot[@"phase"] isEqual:@"arming"] && !engine->stages,
+            "continuation pre-touch withdrawal starts from a publicly planned route");
+        if (change == 0) engine->live.multiplayer.recoverySource = 1;
+        if (change == 1) engine->live.multiplayer.continuationOwnerFlags = 3;
+        if (change == 2) engine->live.remainingFrames = 18;
+        if (change == 3) engine->live.phase = 22;
+        for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame(),1.0 / 60);
+        Check(!engine->stages && !engine->releases && !engine->multiplayerArmed,
+            "new continuation source, short move clock or skill phase cancels before first touch");
+    }
+    for (bool locked : {false,true}) {
+        FakeOrbEngine *engine = MultiFishingSessionEngine(true); SetSessionContinuation(engine,1);
+        engine->live.board.spinnerMask |= UINT64_C(1) << 28;
+        engine->live.board.flags[29] |= locked ? PHOrbFlagLocked : PHOrbFlagThorn;
+        if (!locked) engine->live.board.thornDamage[29] = 1;
+        PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
+        NSDictionary *trace = session.snapshot[@"searchTrace"];
+        Check([trace[@"fishingEligibilityReason"] isEqual:@"eligible"] &&
+            [trace[@"singleFishingEligibilityReason"] isEqual:@"requires-one-unlocked-spinner"] &&
+            [trace[@"multiFishingEligibilityReason"] isEqual:@"locked-or-thorn-token"] &&
+            [trace[@"fishingNotAttemptedReason"] isEqual:@"locked-or-thorn-token"] &&
+            [trace[@"fishingNotAttemptedMessage"] containsString:(locked ? @"鎖珠" : @"荊棘")] &&
+            [session.snapshot[@"message"] containsString:@"本次未嘗試取色"] &&
+            ![trace[@"multiFishingAttempts"] count] && !engine->stages && !engine->releases,
+            "four-spinner continuation retains locked/thorn exclusions and explains why neither take path was attempted");
+        if (!locked) Check([trace[@"thornSearchRestrictionMessage"] containsString:@"零荊棘接觸"] &&
+            [session.snapshot[@"message"] containsString:@"起手持有荊棘珠仍可"],
+            "unknown continuation HP explains zero-contact ordinary search without forbidding a thorn start");
+    }
+    for (bool continuation : {false,true}) {
         FakeOrbEngine *engine = MultiFishingSessionEngine(); SetMultiplayer(engine,3,1);
+        if (continuation) SetSessionContinuation(engine,1);
         PHOrbSession *session = MultiFishingSession(engine); FishingIntent(session,engine);
         const NSUInteger count = [session.snapshot[@"path"] count];
         for (unsigned i = 0; i < 1000 && [session.snapshot[@"busy"] boolValue] && engine->live.moves + 1 < count; ++i)
             Tick(session,engine,Frame(),1.0 / 60);
         if (count > 1 && engine->live.dragged && engine->live.moves + 1 == count) {
             for (unsigned i = 0; i < 30; ++i) if (engine->live.board.tokens[i] != engine->live.dragged) engine->live.orbMotion[i] = 0;
-            engine->live.multiplayer.remainingSeconds = 0.5;
+            if (continuation) engine->live.remainingFrames = 30;
+            else engine->live.multiplayer.remainingSeconds = 0.5;
             for (unsigned i = 0; i < 10 && !engine->releases; ++i) Tick(session,engine,Frame(),1.0 / 60);
             Check([session.snapshot[@"lastFishingSuccess"][@"releaseConfirmed"] boolValue] && engine->releases == 1,
                 "already stable final board uses the release margin without charging another settling wait");

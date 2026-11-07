@@ -57,6 +57,7 @@ BOOL PHMemoryHasProtection(uintptr_t address, size_t length, vm_prot_t required,
         ((dialogProtection & required) != required || (dialogProtection & forbidden))) return NO;
     return Range(address, length);
 }
+static void Protected(uintptr_t address, uint32_t value, uint32_t salt);
 BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     // Change an earlier part after its complete read, while the later slot is
     // collected. The next capture must not agree with the first snapshot.
@@ -189,6 +190,14 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
             const uintptr_t token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset + 4 * 16 * 8));
             *reinterpret_cast<uint8_t *>(token) = uint8_t((*reinterpret_cast<uint8_t *>(token) + 1) % 6);
         }
+        if (mutation == 4) Store<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiRecoverySourceOffset), 1);
+        if (mutation == 5) {
+            const auto seat = Load<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattlePlayerTeamOffset));
+            Store<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTeamDescriptorOffset + seat * PHBattleTeamDescriptorStride), 3);
+        }
+        if (mutation == 6) Protected(Impl + PHBattlePhaseOffset, 22, 0x766cfc6d);
+        if (mutation == 7) Store<uintptr_t>(reinterpret_cast<uint8_t *>(Header + PHBattleInputRVA),
+            reinterpret_cast<uintptr_t>(newInput.data()));
     }
     if (changePeerDuringMultiRead == 1 && address == Impl + PHOrbMultiDisconnectSeatOffset) {
         changePeerDuringMultiRead = 0;

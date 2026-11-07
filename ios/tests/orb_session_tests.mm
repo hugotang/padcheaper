@@ -242,7 +242,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
         (hold && (PHOrbBlockedCells(&live.board) & ~((PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
-            (live.multiplayer.kind == PHOrbMultiplayerThree && multiplayerArmed && !eightArmed)) ?
+            ((live.multiplayer.kind == PHOrbMultiplayerThree || live.multiplayer.kind == PHOrbMultiplayerThreeSolo) &&
+                multiplayerArmed && !eightArmed)) ?
             allowedSpinnerCell & live.board.spinnerMask : 0) & (UINT64_C(1) << target))) ||
         (hold && !PHOrbCanEnterThorn(&live,unsigned(target))) ||
         (hold && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(target)))) return NO;

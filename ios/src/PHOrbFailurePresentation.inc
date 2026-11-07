@@ -1,5 +1,58 @@
 // Included in PHOrbSession.mm's anonymous namespace. Presentation only: keep
 // search statuses and 8P skill/preparation recovery in their existing order.
+NSString *FishingSkipReasonMessage(NSString *reason) {
+    if ([reason isEqual:@"mode-not-supported"]) return @"此模式尚未支援取色";
+    if ([reason isEqual:@"continuation-manual-once-required"]) return @"3 人協力・單人續玩須在目前操作窗口手動點「轉一次」";
+    if ([reason isEqual:@"three-player-manual-once-required"]) return @"3 人協力取色須在自己的目前回合手動點「轉一次」";
+    if ([reason isEqual:@"local-window-closed"]) return @"本機操作窗口已關閉或剩餘操作時間無法確認";
+    if ([reason isEqual:@"state-unavailable"] || [reason isEqual:@"invalid-board"]) return @"盤面或本機操作狀態無法確認";
+    if ([reason isEqual:@"unsupported-color-table"]) return @"轉轉色表含尚未支援的珠色";
+    if ([reason isEqual:@"timing-unavailable"]) return @"轉轉速度、倒數或遊戲影格時間無法確認";
+    if ([reason isEqual:@"motion-unavailable"]) return @"轉轉珠子的移動狀態無法確認";
+    if ([reason isEqual:@"insufficient-time"] || [reason isEqual:@"insufficient-move-time"]) return @"剩餘原生操作時間不足以保留取色等待及放手時間";
+    if ([reason isEqual:@"requires-one-unlocked-spinner"]) return @"單次取色目前需要剛好一個未鎖定的轉轉";
+    if ([reason isEqual:@"thorn-token"]) return @"單次取色目前不支援有荊棘的盤面";
+    if ([reason isEqual:@"assist-multi-plan-required"]) return @"目前回復目標需要連續取色規劃";
+    if ([reason isEqual:@"invalid-goals"]) return @"連續取色目標未通過解析";
+    return @"";
+}
+NSString *FishingNotAttemptedMessage(const PHOrbBoard &board, NSString *eligibility,
+    NSString *singleEligibility, NSString *multiEligibility, NSDictionary *coverage) {
+    if (PHOrbSpinnerVariants(&board) < 2) return @"";
+    NSString *common = FishingSkipReasonMessage(eligibility);
+    if (common.length) return [NSString stringWithFormat:@"本次未嘗試取色：%@。",common];
+    NSMutableArray<NSString *> *reasons = [NSMutableArray array];
+    NSString *single = FishingSkipReasonMessage(singleEligibility);
+    if (single.length) [reasons addObject:single];
+    if ([multiEligibility isEqual:@"locked-or-thorn-token"]) {
+        bool locked = false, thorn = false;
+        for (unsigned i = 0; i < board.width * board.height; ++i) {
+            locked |= (board.flags[i] & PHOrbFlagLocked) != 0;
+            thorn |= (board.flags[i] & PHOrbFlagThorn) != 0;
+        }
+        [reasons addObject:[NSString stringWithFormat:@"連續取色目前不支援有%@的盤面",
+            locked && thorn ? @"鎖珠及荊棘" : locked ? @"鎖珠" : @"荊棘"]];
+    } else {
+        NSString *multi = FishingSkipReasonMessage(multiEligibility);
+        if (multi.length && ![multi isEqual:single]) [reasons addObject:multi];
+        if ([multiEligibility isEqual:@"eligible"]) [reasons addObject:
+            [coverage[@"endReason"] isEqual:@"no-eligible-cell"] ? @"沒有未被封條擋住的取色入口" :
+            @"本次共用搜尋時間內未進入連續取色搜尋"];
+    }
+    if (!reasons.count) return @"";
+    return [NSString stringWithFormat:@"本次未嘗試取色：%@。這些限制不代表手動取色無解。",
+        [reasons componentsJoinedByString:@"；"]];
+}
+
+NSString *ThornSearchRestrictionMessage(const PHOrbBoard &board, const PHOrbSolveOptions &options) {
+    const auto &t = options.thorns;
+    if (t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX && t.pendingDamage < t.hp) return @"";
+    for (unsigned i = 0; i < board.width * board.height; ++i)
+        if ((board.flags[i] & PHOrbFlagThorn) && board.thornDamage[i]) return
+            @"荊棘傷害預算未確認，普通求路只允許零荊棘接觸；起手持有荊棘珠仍可，途中不可碰入其他會造成傷害的荊棘珠。";
+    return @"";
+}
+
 NSString *InventoryFailureMessage(const PHOrbBoard &board, const PHOrbSolveOptions &options) {
     const unsigned minimum = std::max(unsigned(board.minErase ? board.minErase : 3), unsigned(board.minMatch));
     const unsigned capacity = unsigned(board.width) * board.height / minimum;

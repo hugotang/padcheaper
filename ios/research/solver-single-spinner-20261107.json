@@ -1,0 +1,3739 @@
+{
+  "schema": 1,
+  "date": "2026-11-07",
+  "reported_version": "0.5.40-orbs",
+  "reviewed_source_commit": "982646b6f81438ff8f30f038821438db085c758e",
+  "input_sha256": "20976321c30fb84b257d5d39656083f72531642f07870bd58b423868a2015646",
+  "input_bytes": 95985,
+  "method": "Read-only extraction and independent coordinate swaps, metadata replay, six terminal spinner phases, run scans, orthogonal groups and gravity applied only to the four already-recorded candidate routes. No product solver, compiled code, test suite, device, CI or package execution.",
+  "privacy": "Original attachment, account/storage paths, native addresses, absolute clock source, seat/turn identity and unrelated history omitted. Synthetic replay token labels 1..30 are not native identities.",
+  "failure": {
+    "board": {
+      "blindTurns": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        3,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        3,
+        3,
+        0,
+        0
+      ],
+      "cloudMask": 0,
+      "enhancementBits": [
+        1031127695,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        1031127695,
+        0,
+        1031127695,
+        1031127695,
+        0,
+        1031127695,
+        1031127695,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fixedStart": 0,
+      "flags": [
+        0,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        4096,
+        0,
+        4096,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        4096,
+        4096,
+        0,
+        0
+      ],
+      "height": 5,
+      "minErase": 3,
+      "minMatch": 0,
+      "spinnerColors": 63,
+      "spinnerMask": 512,
+      "tapeMask": 0,
+      "thornPercent": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "types": [
+        1,
+        4,
+        3,
+        1,
+        4,
+        4,
+        3,
+        0,
+        5,
+        5,
+        1,
+        2,
+        2,
+        3,
+        1,
+        5,
+        2,
+        1,
+        5,
+        4,
+        2,
+        1,
+        3,
+        0,
+        5,
+        3,
+        3,
+        0,
+        3,
+        1
+      ],
+      "unmatchableColors": 0,
+      "width": 6
+    },
+    "predictedBoard": {
+      "blindTurns": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        3,
+        1,
+        1,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      "cloudMask": 0,
+      "enhancementBits": [
+        1031127695,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1031127695,
+        0,
+        1031127695,
+        1031127695,
+        1031127695,
+        0,
+        1031127695,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        1031127695,
+        0
+      ],
+      "fixedStart": 0,
+      "flags": [
+        0,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4096,
+        4096,
+        4096,
+        4096,
+        4096,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        4096,
+        0,
+        0,
+        0
+      ],
+      "height": 5,
+      "minErase": 3,
+      "minMatch": 0,
+      "spinnerColors": 63,
+      "spinnerMask": 512,
+      "tapeMask": 0,
+      "thornPercent": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "types": [
+        1,
+        4,
+        3,
+        1,
+        4,
+        4,
+        3,
+        0,
+        1,
+        5,
+        1,
+        0,
+        2,
+        5,
+        5,
+        2,
+        2,
+        2,
+        5,
+        4,
+        3,
+        1,
+        3,
+        0,
+        5,
+        3,
+        3,
+        3,
+        1,
+        1
+      ],
+      "unmatchableColors": 0,
+      "width": 6
+    },
+    "path": [
+      27,
+      28,
+      21,
+      14,
+      15,
+      20,
+      13,
+      8,
+      3,
+      10,
+      17,
+      11
+    ],
+    "goals": [
+      {
+        "colors": 31,
+        "count": 5,
+        "kind": "colors",
+        "length": 0
+      },
+      {
+        "colors": 32,
+        "count": 1,
+        "kind": "match",
+        "length": 3
+      }
+    ],
+    "baseGoals": [
+      {
+        "colors": 31,
+        "count": 5,
+        "kind": "colors",
+        "length": 0
+      },
+      {
+        "colors": 32,
+        "count": 1,
+        "kind": "match",
+        "length": 3
+      }
+    ],
+    "quality": "thorough",
+    "diagonal": true,
+    "beam": 512,
+    "stepLimit": 48,
+    "budgetMS": 800,
+    "initialBudgetMS": 800,
+    "ordinaryStageBudgetMS": 400,
+    "fishingReservedBudgetMS": 400,
+    "elapsedMS": 133,
+    "totalElapsedMS": 793,
+    "evaluated": 29761,
+    "evaluationCalls": 25021,
+    "evaluationCacheHits": 4740,
+    "searchPasses": 1,
+    "backtracks": 0,
+    "exploredDepth": 14,
+    "deadline": true,
+    "status": "goals-unmet",
+    "evaluation": {
+      "activityHeuristic": 0,
+      "bonusTriggersFirstWaveRequired": false,
+      "comboFirstWaveRequired": false,
+      "combos": 5,
+      "firstWaveCombos": 2,
+      "goalHits": [
+        3,
+        1
+      ],
+      "goalsMet": false,
+      "hazardsSafe": true,
+      "heartFours": 0,
+      "linkGroups": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "mortalPoisonErased": 0,
+      "nativeScoreKnown": false,
+      "poisonErased": 0,
+      "preparationReady": false,
+      "retainedAfterConversion": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rowGroups": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "scope": "all-shared-spinner-phases",
+      "unmatchedBombs": 0,
+      "valid": true
+    },
+    "colorPhases": {
+      "applicable": true,
+      "firstWaveOnly": false,
+      "missingInAnyFailedPhase": 17,
+      "missingInAnyFailedPhaseNames": "火／闇",
+      "missingSemantics": "absent allowed alternatives in unmet colour clauses; only additionalColorsNeeded is required",
+      "phaseCount": 6,
+      "phases": [
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 0
+        },
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 1
+        },
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 2
+        },
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 3
+        },
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 4
+        },
+        {
+          "deficits": [
+            {
+              "absentAllowedColorNames": [
+                "火",
+                "闇"
+              ],
+              "absentAllowedColors": 17,
+              "additionalColorsNeeded": 2,
+              "goalIndex": 0,
+              "matchedColorCount": 3,
+              "requiredColorCount": 5
+            }
+          ],
+          "independentPhase": -1,
+          "matchedColors": 46,
+          "sharedPhase": 5
+        }
+      ],
+      "scope": "all-shared-spinner-phases",
+      "valid": true
+    },
+    "candidateAttempts": [
+      {
+        "backtracks": 0,
+        "beam": 512,
+        "budgetMS": 400,
+        "deadline": true,
+        "deadlineKnown": true,
+        "elapsedMS": 400,
+        "evaluated": 80266,
+        "evaluationBreakdownKnown": true,
+        "evaluationCacheHits": 9887,
+        "evaluationCalls": 70379,
+        "exploredDepth": 40,
+        "fishing": false,
+        "fishingRequested": false,
+        "goalCount": 2,
+        "goalHits": [
+          4,
+          1
+        ],
+        "goals": [
+          {
+            "colors": 31,
+            "count": 5,
+            "kind": "colors",
+            "length": 0
+          },
+          {
+            "colors": 32,
+            "count": 1,
+            "kind": "match",
+            "length": 3
+          }
+        ],
+        "goalsMet": false,
+        "hazardsSafe": true,
+        "matchedGoals": 1,
+        "path": [
+          27,
+          22,
+          21,
+          14,
+          15,
+          20,
+          13,
+          8,
+          1,
+          2,
+          3,
+          8,
+          7,
+          12,
+          13,
+          14,
+          7,
+          6,
+          13,
+          20
+        ],
+        "searchPasses": 1,
+        "statisticsAvailable": true,
+        "status": "goals-unmet",
+        "stepLimit": 48,
+        "wallElapsedMS": 400
+      },
+      {
+        "backtracks": 0,
+        "beam": 512,
+        "budgetMS": 133,
+        "deadline": true,
+        "deadlineKnown": true,
+        "elapsedMS": 133,
+        "evaluated": 30073,
+        "evaluationBreakdownKnown": true,
+        "evaluationCacheHits": 5165,
+        "evaluationCalls": 24908,
+        "exploredDepth": 14,
+        "fishCell": 9,
+        "fishColor": 0,
+        "fishing": true,
+        "fishingRequested": true,
+        "goalCount": 2,
+        "goalHits": [
+          4,
+          1
+        ],
+        "goals": [
+          {
+            "colors": 31,
+            "count": 5,
+            "kind": "colors",
+            "length": 0
+          },
+          {
+            "colors": 32,
+            "count": 1,
+            "kind": "match",
+            "length": 3
+          }
+        ],
+        "goalsMet": false,
+        "hazardsSafe": true,
+        "matchedGoals": 1,
+        "path": [
+          27,
+          22,
+          21,
+          14,
+          15,
+          20,
+          13,
+          8,
+          9,
+          10,
+          17,
+          11,
+          4,
+          3
+        ],
+        "searchPasses": 1,
+        "statisticsAvailable": true,
+        "status": "goals-unmet",
+        "stepLimit": 48,
+        "wallElapsedMS": 133
+      },
+      {
+        "backtracks": 0,
+        "beam": 512,
+        "budgetMS": 133,
+        "deadline": true,
+        "deadlineKnown": true,
+        "elapsedMS": 133,
+        "evaluated": 29761,
+        "evaluationBreakdownKnown": true,
+        "evaluationCacheHits": 4740,
+        "evaluationCalls": 25021,
+        "exploredDepth": 14,
+        "fishCell": 9,
+        "fishColor": 2,
+        "fishing": false,
+        "fishingRequested": true,
+        "goalCount": 2,
+        "goalHits": [
+          3,
+          1
+        ],
+        "goals": [
+          {
+            "colors": 31,
+            "count": 5,
+            "kind": "colors",
+            "length": 0
+          },
+          {
+            "colors": 32,
+            "count": 1,
+            "kind": "match",
+            "length": 3
+          }
+        ],
+        "goalsMet": false,
+        "hazardsSafe": true,
+        "matchedGoals": 1,
+        "path": [
+          27,
+          28,
+          21,
+          14,
+          15,
+          20,
+          13,
+          8,
+          3,
+          10,
+          17,
+          11
+        ],
+        "searchPasses": 1,
+        "statisticsAvailable": true,
+        "status": "goals-unmet",
+        "stepLimit": 48,
+        "wallElapsedMS": 133
+      },
+      {
+        "backtracks": 0,
+        "beam": 512,
+        "budgetMS": 133,
+        "deadline": false,
+        "deadlineKnown": true,
+        "elapsedMS": 127,
+        "evaluated": 24153,
+        "evaluationBreakdownKnown": false,
+        "evaluationCacheHits": 0,
+        "evaluationCalls": 0,
+        "exchangeCount": 0,
+        "exchanges": [],
+        "exploredDepth": 9,
+        "fishCell": 9,
+        "fishing": false,
+        "fishingRequested": true,
+        "geometryDeadlineReached": false,
+        "geometryExtraExchanges": 0,
+        "geometryFeasiblePlans": 155,
+        "geometryPlansBudgetSkipped": 0,
+        "geometryPlanSlicesExpired": 4,
+        "geometryPlansSearched": 4,
+        "geometryPlansTimeRejected": 0,
+        "geometryRequestedExtra": 2,
+        "geometrySelectedPlans": 4,
+        "geometrySelectionTruncated": true,
+        "geometrySlotLimitReached": false,
+        "geometryStateLimitReached": false,
+        "geometryVisitedStates": 270,
+        "goalCount": 2,
+        "goalHits": [
+          2,
+          1
+        ],
+        "goals": [
+          {
+            "colors": 31,
+            "count": 5,
+            "kind": "colors",
+            "length": 0
+          },
+          {
+            "colors": 32,
+            "count": 1,
+            "kind": "match",
+            "length": 3
+          }
+        ],
+        "goalsMet": false,
+        "hazardsSafe": true,
+        "inventoryComplete": true,
+        "inventoryCompleteScope": "baseline-net-inventory",
+        "inventoryCountsScope": "baseline-plus-geometry",
+        "inventoryDeadline": false,
+        "inventoryGoalLimit": false,
+        "inventoryPlans": 156,
+        "inventoryStateLimit": false,
+        "inventoryStates": 271,
+        "inventoryValid": true,
+        "leave": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "matchedGoals": 1,
+        "minimumExchanges": 0,
+        "minimumFound": true,
+        "minimumKnown": true,
+        "minimumScope": "restricted-net-inventory",
+        "multiFishing": true,
+        "path": [
+          27,
+          22,
+          21,
+          14,
+          13,
+          20,
+          25,
+          24,
+          19
+        ],
+        "plansBudgetSkipped": 0,
+        "planSelectionTruncated": true,
+        "planSlicesExpired": 5,
+        "plansSearched": 5,
+        "plansTimeRejected": 0,
+        "requiredFrames": 34,
+        "scope": "target-independent-other-shared-phases",
+        "searchBudgetExhausted": true,
+        "searchPasses": 5,
+        "selectedPlans": 5,
+        "statisticsAvailable": true,
+        "status": "goals-unmet",
+        "stepLimit": 48,
+        "take": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "wallElapsedMS": 127
+      }
+    ],
+    "selectedAttemptIndex": 2,
+    "selectedStatus": "goals-unmet",
+    "selectedBudgetMS": 133,
+    "selectedWallElapsedMS": 133,
+    "singleFishingEligibilityReason": "eligible",
+    "fishingEligibilityReason": "eligible",
+    "multiFishingEligibilityReason": "eligible",
+    "singleFishingNotAttemptedReason": "",
+    "fishingNotAttemptedReason": "",
+    "multiFishingAttempts": [
+      {
+        "backtracks": 0,
+        "beam": 512,
+        "budgetMS": 133,
+        "deadline": false,
+        "deadlineKnown": true,
+        "elapsedMS": 127,
+        "evaluated": 24153,
+        "evaluationBreakdownKnown": false,
+        "evaluationCacheHits": 0,
+        "evaluationCalls": 0,
+        "exchangeCount": 0,
+        "exchanges": [],
+        "exploredDepth": 9,
+        "fishCell": 9,
+        "fishing": false,
+        "fishingRequested": true,
+        "geometryDeadlineReached": false,
+        "geometryExtraExchanges": 0,
+        "geometryFeasiblePlans": 155,
+        "geometryPlansBudgetSkipped": 0,
+        "geometryPlanSlicesExpired": 4,
+        "geometryPlansSearched": 4,
+        "geometryPlansTimeRejected": 0,
+        "geometryRequestedExtra": 2,
+        "geometrySelectedPlans": 4,
+        "geometrySelectionTruncated": true,
+        "geometrySlotLimitReached": false,
+        "geometryStateLimitReached": false,
+        "geometryVisitedStates": 270,
+        "goalCount": 2,
+        "goalHits": [
+          2,
+          1
+        ],
+        "goals": [
+          {
+            "colors": 31,
+            "count": 5,
+            "kind": "colors",
+            "length": 0
+          },
+          {
+            "colors": 32,
+            "count": 1,
+            "kind": "match",
+            "length": 3
+          }
+        ],
+        "goalsMet": false,
+        "hazardsSafe": true,
+        "inventoryComplete": true,
+        "inventoryCompleteScope": "baseline-net-inventory",
+        "inventoryCountsScope": "baseline-plus-geometry",
+        "inventoryDeadline": false,
+        "inventoryGoalLimit": false,
+        "inventoryPlans": 156,
+        "inventoryStateLimit": false,
+        "inventoryStates": 271,
+        "inventoryValid": true,
+        "leave": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "matchedGoals": 1,
+        "minimumExchanges": 0,
+        "minimumFound": true,
+        "minimumKnown": true,
+        "minimumScope": "restricted-net-inventory",
+        "multiFishing": true,
+        "path": [
+          27,
+          22,
+          21,
+          14,
+          13,
+          20,
+          25,
+          24,
+          19
+        ],
+        "plansBudgetSkipped": 0,
+        "planSelectionTruncated": true,
+        "planSlicesExpired": 5,
+        "plansSearched": 5,
+        "plansTimeRejected": 0,
+        "requiredFrames": 34,
+        "scope": "target-independent-other-shared-phases",
+        "searchBudgetExhausted": true,
+        "searchPasses": 5,
+        "selectedPlans": 5,
+        "statisticsAvailable": true,
+        "status": "goals-unmet",
+        "stepLimit": 48,
+        "take": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "wallElapsedMS": 127
+      }
+    ],
+    "multiFishingCoverage": {
+      "attemptedCells": 1,
+      "budgetMS": 800,
+      "eligibleCells": [
+        9
+      ],
+      "endReason": "all-attempted",
+      "started": true,
+      "unsearchedCells": [],
+      "wallElapsedMS": 127
+    },
+    "fishingPlan": {
+      "colors": [
+        {
+          "available": 0,
+          "color": 0,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "selected",
+          "required": 0,
+          "selected": true,
+          "variants": 0
+        },
+        {
+          "available": 0,
+          "color": 2,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "selected",
+          "required": 0,
+          "selected": true,
+          "variants": 0
+        },
+        {
+          "available": 0,
+          "color": 4,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "color-limit",
+          "required": 0,
+          "selected": false,
+          "variants": 0
+        },
+        {
+          "available": 0,
+          "color": 5,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "color-limit",
+          "required": 0,
+          "selected": false,
+          "variants": 0
+        },
+        {
+          "available": 0,
+          "color": 1,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "color-limit",
+          "required": 0,
+          "selected": false,
+          "variants": 0
+        },
+        {
+          "available": 0,
+          "color": 3,
+          "colorShortage": 0,
+          "comboUpper": 8,
+          "goal": 0,
+          "inventoryKind": 0,
+          "reason": "color-limit",
+          "required": 0,
+          "selected": false,
+          "variants": 0
+        }
+      ],
+      "fishCell": 9,
+      "scope": "one-exchange-all-phases",
+      "selectedCount": 2
+    },
+    "fishing": false,
+    "fishingExchanges": [],
+    "timing": {
+      "fps": 30,
+      "remainingFrames": 480,
+      "spinnerCountdown": 5,
+      "spinnerCountdownKnown": true,
+      "spinnerPeriodFrames": 15
+    },
+    "playerState": {
+      "effects": null,
+      "hp": null,
+      "hpKnown": false,
+      "maximumHP": null,
+      "postPlayerHPKnown": false,
+      "statusKnown": false,
+      "survivalKnown": false
+    },
+    "allowPoisonWithHeartFour": true,
+    "thornComboPriority": true,
+    "multiplayerSearchBudgetShared": true
+  },
+  "multiplayer": {
+    "known": true,
+    "kind": 1,
+    "mode": "3 人協力",
+    "entryMode": 7,
+    "selector": 1,
+    "continuation": false,
+    "window": true,
+    "localReady": true,
+    "teamCount": 3,
+    "clockKnown": true,
+    "remainingSeconds": 35.41643714904785,
+    "networkRequired": true,
+    "networkReady": true,
+    "resolvePending": 0,
+    "timeSource": "multiplayer-clock"
+  },
+  "derived": {
+    "cell_numbering": "zero-based row-major, width6",
+    "spinner_cells": [
+      9
+    ],
+    "spinner_position_one_based": {
+      "row": 2,
+      "column": 4
+    },
+    "fixed_color_counts": {
+      "0": 3,
+      "1": 7,
+      "2": 4,
+      "3": 7,
+      "4": 4,
+      "5": 4
+    },
+    "thorn_cells": [],
+    "locked_cells": [],
+    "blind_cells": [
+      4,
+      8,
+      12,
+      15,
+      17,
+      23,
+      26,
+      27
+    ],
+    "native_move_seconds": 16,
+    "native_turn_seconds": 35.41643714904785,
+    "ordinary_search_budget_ms": 400,
+    "single_take_budgets_ms": [
+      133,
+      133
+    ],
+    "multi_take_budget_ms": 133,
+    "multi_take_wall_ms": 127,
+    "selected_attempt_index": 2,
+    "best_recorded_attack_color_count": 4,
+    "selected_recorded_attack_color_count": 3,
+    "legacy_selection_rule": "After safety and solved-result checks, candidate.matchedGoals >= selected.matchedGoals retained the later failed attempt. All ordinary/fire/wood attempts completed only the heart clause (matchedGoals1), so the later3/5 wood candidate replaced4/5.",
+    "source_fix_review": "Current unbuilt source compares capped normalized per-clause progress only when goal kind/mask/count/length/order and first-wave flags agree, retaining the later candidate only when progress remains tied. Every failed route stays non-executable.",
+    "search_limit": "Ordinary hit its400ms deadline atdepth40; each single-take hit133ms atdepth14. Multi-take searched5retained plans, each slice expired, explored atmostdepth9. Exhaustion is not proof of impossibility."
+  },
+  "independent_replay": {
+    "candidate_routes_checked": 4,
+    "shared_phases_per_route": 6,
+    "all_goal_hits_match_recorded": true,
+    "selected_predicted_board_matches_logged_metadata": true,
+    "checked_metadata": [
+      "types",
+      "flags",
+      "enhancementBits",
+      "blindTurns",
+      "thornPercent"
+    ],
+    "phase_model": "Captured single-take source is assigned its requested color only at entry, then all six possible terminal source colors are checked after full metadata swaps. No native waiting/animation and no random skyfall.",
+    "candidates": [
+      {
+        "attempt_index": 0,
+        "selected": false,
+        "steps": 19,
+        "goal_hits": [
+          4,
+          1
+        ],
+        "minimum_combos": 6,
+        "minimum_erased": 20,
+        "spinner_entries": [],
+        "full_identity_cycles": [],
+        "synthetic_held_identity": 28,
+        "synthetic_final_identity_order": [
+          1,
+          3,
+          4,
+          2,
+          5,
+          6,
+          16,
+          7,
+          8,
+          10,
+          11,
+          12,
+          9,
+          14,
+          13,
+          21,
+          17,
+          18,
+          19,
+          20,
+          28,
+          15,
+          22,
+          24,
+          25,
+          26,
+          27,
+          23,
+          29,
+          30
+        ],
+        "held_identity_preserved": true,
+        "predicted_board": {
+          "blindTurns": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "cloudMask": 0,
+          "enhancementBits": [
+            1031127695,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            0
+          ],
+          "fixedStart": 0,
+          "flags": [
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0
+          ],
+          "height": 5,
+          "minErase": 3,
+          "minMatch": 0,
+          "spinnerColors": 63,
+          "spinnerMask": 512,
+          "tapeMask": 0,
+          "thornPercent": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "types": [
+            1,
+            3,
+            1,
+            4,
+            4,
+            4,
+            5,
+            3,
+            0,
+            5,
+            1,
+            2,
+            5,
+            3,
+            2,
+            2,
+            2,
+            1,
+            5,
+            4,
+            0,
+            1,
+            1,
+            0,
+            5,
+            3,
+            3,
+            3,
+            3,
+            1
+          ],
+          "unmatchableColors": 0,
+          "width": 6
+        },
+        "phases": [
+          {
+            "shared_phase": 0,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 1,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 2,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 3,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 4,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 5,
+            "combos": 6,
+            "first_wave_combos": 5,
+            "erased": 20,
+            "matched_colors": 62,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 1,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      1,
+                      7,
+                      13
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  },
+                  {
+                    "color": 4,
+                    "cells": [
+                      3,
+                      4,
+                      5
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      6,
+                      12,
+                      18,
+                      24
+                    ]
+                  }
+                ],
+                "colors_mask": 60,
+                "erased": 17
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "attempt_index": 1,
+        "selected": false,
+        "steps": 13,
+        "goal_hits": [
+          4,
+          1
+        ],
+        "minimum_combos": 5,
+        "minimum_erased": 18,
+        "spinner_entries": [
+          {
+            "step": 8,
+            "cell": 9,
+            "take": 0
+          }
+        ],
+        "full_identity_cycles": [],
+        "synthetic_held_identity": 28,
+        "synthetic_final_identity_order": [
+          1,
+          2,
+          3,
+          28,
+          4,
+          6,
+          7,
+          8,
+          10,
+          11,
+          18,
+          5,
+          13,
+          9,
+          16,
+          21,
+          17,
+          12,
+          19,
+          20,
+          14,
+          15,
+          22,
+          24,
+          25,
+          26,
+          27,
+          23,
+          29,
+          30
+        ],
+        "held_identity_preserved": true,
+        "predicted_board": {
+          "blindTurns": [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "cloudMask": 0,
+          "enhancementBits": [
+            1031127695,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            1031127695,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            0
+          ],
+          "fixedStart": 0,
+          "flags": [
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4096,
+            4096,
+            4096,
+            4096,
+            4096,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0
+          ],
+          "height": 5,
+          "minErase": 3,
+          "minMatch": 0,
+          "spinnerColors": 63,
+          "spinnerMask": 512,
+          "tapeMask": 0,
+          "thornPercent": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "types": [
+            1,
+            4,
+            3,
+            0,
+            1,
+            4,
+            3,
+            0,
+            0,
+            1,
+            1,
+            4,
+            2,
+            5,
+            5,
+            2,
+            2,
+            2,
+            5,
+            4,
+            3,
+            1,
+            1,
+            0,
+            5,
+            3,
+            3,
+            3,
+            3,
+            1
+          ],
+          "unmatchableColors": 0,
+          "width": 6
+        },
+        "phases": [
+          {
+            "shared_phase": 0,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 18,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 7
+              },
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      13,
+                      14,
+                      15
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 35,
+                "erased": 11
+              }
+            ]
+          },
+          {
+            "shared_phase": 1,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 18,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 7
+              },
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      13,
+                      14,
+                      15
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 35,
+                "erased": 11
+              }
+            ]
+          },
+          {
+            "shared_phase": 2,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 18,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 7
+              },
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      13,
+                      14,
+                      15
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 35,
+                "erased": 11
+              }
+            ]
+          },
+          {
+            "shared_phase": 3,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 18,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 7
+              },
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      13,
+                      14,
+                      15
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 35,
+                "erased": 11
+              }
+            ]
+          },
+          {
+            "shared_phase": 4,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 19,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 7
+              },
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      13,
+                      14,
+                      15
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20,
+                      21
+                    ]
+                  }
+                ],
+                "colors_mask": 35,
+                "erased": 12
+              }
+            ]
+          },
+          {
+            "shared_phase": 5,
+            "combos": 5,
+            "first_wave_combos": 3,
+            "erased": 18,
+            "matched_colors": 47,
+            "attack_colors_matched": 4,
+            "heart_matched": true,
+            "missing_attack_colors": 16,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 0,
+                    "cells": [
+                      7,
+                      8,
+                      9
+                    ]
+                  },
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 13,
+                "erased": 10
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      16,
+                      22,
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 8
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "attempt_index": 2,
+        "selected": true,
+        "steps": 11,
+        "goal_hits": [
+          3,
+          1
+        ],
+        "minimum_combos": 5,
+        "minimum_erased": 15,
+        "spinner_entries": [],
+        "full_identity_cycles": [],
+        "synthetic_held_identity": 28,
+        "synthetic_final_identity_order": [
+          1,
+          2,
+          3,
+          11,
+          5,
+          6,
+          7,
+          8,
+          4,
+          10,
+          18,
+          28,
+          13,
+          9,
+          16,
+          21,
+          17,
+          12,
+          19,
+          20,
+          14,
+          15,
+          23,
+          24,
+          25,
+          26,
+          27,
+          29,
+          22,
+          30
+        ],
+        "held_identity_preserved": true,
+        "predicted_board": {
+          "blindTurns": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            3,
+            1,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "cloudMask": 0,
+          "enhancementBits": [
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            1031127695,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            1031127695,
+            0
+          ],
+          "fixedStart": 0,
+          "flags": [
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4096,
+            4096,
+            4096,
+            4096,
+            4096,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0
+          ],
+          "height": 5,
+          "minErase": 3,
+          "minMatch": 0,
+          "spinnerColors": 63,
+          "spinnerMask": 512,
+          "tapeMask": 0,
+          "thornPercent": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "types": [
+            1,
+            4,
+            3,
+            1,
+            4,
+            4,
+            3,
+            0,
+            1,
+            5,
+            1,
+            0,
+            2,
+            5,
+            5,
+            2,
+            2,
+            2,
+            5,
+            4,
+            3,
+            1,
+            3,
+            0,
+            5,
+            3,
+            3,
+            3,
+            1,
+            1
+          ],
+          "unmatchableColors": 0,
+          "width": 6
+        },
+        "phases": [
+          {
+            "shared_phase": 0,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 16,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20,
+                      21
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 10
+              }
+            ]
+          },
+          {
+            "shared_phase": 1,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 15,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 9
+              }
+            ]
+          },
+          {
+            "shared_phase": 2,
+            "combos": 5,
+            "first_wave_combos": 3,
+            "erased": 15,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      8,
+                      9,
+                      10
+                    ]
+                  },
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 14,
+                "erased": 9
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 6
+              }
+            ]
+          },
+          {
+            "shared_phase": 3,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 15,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 9
+              }
+            ]
+          },
+          {
+            "shared_phase": 4,
+            "combos": 6,
+            "first_wave_combos": 2,
+            "erased": 18,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 9
+              },
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 5,
+            "combos": 5,
+            "first_wave_combos": 2,
+            "erased": 15,
+            "matched_colors": 46,
+            "attack_colors_matched": 3,
+            "heart_matched": true,
+            "missing_attack_colors": 17,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 2,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 3,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 12,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      14,
+                      15,
+                      16
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  },
+                  {
+                    "color": 5,
+                    "cells": [
+                      18,
+                      19,
+                      20
+                    ]
+                  }
+                ],
+                "colors_mask": 34,
+                "erased": 9
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "attempt_index": 3,
+        "selected": false,
+        "steps": 8,
+        "goal_hits": [
+          2,
+          1
+        ],
+        "minimum_combos": 4,
+        "minimum_erased": 14,
+        "spinner_entries": [],
+        "full_identity_cycles": [],
+        "synthetic_held_identity": 28,
+        "synthetic_final_identity_order": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          21,
+          14,
+          16,
+          17,
+          18,
+          19,
+          28,
+          26,
+          15,
+          22,
+          24,
+          20,
+          25,
+          27,
+          23,
+          29,
+          30
+        ],
+        "held_identity_preserved": true,
+        "predicted_board": {
+          "blindTurns": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            1,
+            0,
+            3,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          "cloudMask": 0,
+          "enhancementBits": [
+            1031127695,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0,
+            0,
+            1031127695,
+            0,
+            1031127695,
+            1031127695,
+            0,
+            1031127695,
+            0,
+            0
+          ],
+          "fixedStart": 0,
+          "flags": [
+            0,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            4096,
+            0,
+            4096,
+            0,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            4096,
+            0,
+            0,
+            0
+          ],
+          "height": 5,
+          "minErase": 3,
+          "minMatch": 0,
+          "spinnerColors": 63,
+          "spinnerMask": 512,
+          "tapeMask": 0,
+          "thornPercent": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "types": [
+            1,
+            4,
+            3,
+            1,
+            4,
+            4,
+            3,
+            0,
+            5,
+            5,
+            1,
+            2,
+            2,
+            2,
+            3,
+            5,
+            2,
+            1,
+            5,
+            0,
+            3,
+            1,
+            1,
+            0,
+            4,
+            5,
+            3,
+            3,
+            3,
+            1
+          ],
+          "unmatchableColors": 0,
+          "width": 6
+        },
+        "phases": [
+          {
+            "shared_phase": 0,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      21,
+                      22,
+                      23
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 1,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      21,
+                      22,
+                      23
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 2,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      15,
+                      16,
+                      17
+                    ]
+                  },
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 6
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 3,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      21,
+                      22,
+                      23
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 4,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      21,
+                      22,
+                      23
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          },
+          {
+            "shared_phase": 5,
+            "combos": 4,
+            "first_wave_combos": 1,
+            "erased": 14,
+            "matched_colors": 42,
+            "attack_colors_matched": 2,
+            "heart_matched": true,
+            "missing_attack_colors": 21,
+            "waves": [
+              {
+                "groups": [
+                  {
+                    "color": 3,
+                    "cells": [
+                      14,
+                      20,
+                      26,
+                      27,
+                      28
+                    ]
+                  }
+                ],
+                "colors_mask": 8,
+                "erased": 5
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      27,
+                      28,
+                      29
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 5,
+                    "cells": [
+                      25,
+                      26,
+                      27
+                    ]
+                  }
+                ],
+                "colors_mask": 32,
+                "erased": 3
+              },
+              {
+                "groups": [
+                  {
+                    "color": 1,
+                    "cells": [
+                      21,
+                      22,
+                      23
+                    ]
+                  }
+                ],
+                "colors_mask": 2,
+                "erased": 3
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "pending": {
+    "new_source_compiled": false,
+    "test_suites_executed": false,
+    "new_solver_route_generated": false,
+    "improved_solution_proven": false,
+    "device_verified": false,
+    "scope": "Candidate retention and ordinary spinner-search work is source-only. Per-stage budgets were measured from old log, not rerun. No claim that the current source already solves this board."
+  }
+}

@@ -212,6 +212,8 @@ bool PHOrbSameMultiplayerTurn(const PHOrbMultiplayerState *a, const PHOrbMultipl
     return a->known && b->known && a->kind != PHOrbMultiplayerUnsupported &&
         a->turnSerial == b->turnSerial && a->teamCount == b->teamCount &&
         a->localSeat == b->localSeat && a->viewTeam == b->viewTeam &&
+        (a->kind != PHOrbMultiplayerThreeSolo || (a->recoverySource == b->recoverySource &&
+            a->continuationOwnerFlags == b->continuationOwnerFlags)) &&
         (a->kind == PHOrbMultiplayerThree || a->kind == PHOrbMultiplayerThreeSolo || a->clockStart == b->clockStart);
 }
 

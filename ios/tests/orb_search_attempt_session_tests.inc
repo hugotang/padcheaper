@@ -113,6 +113,27 @@ static void SearchAttemptPolicyTests() {
     PHOrbRoute less = partial; less.matchedGoals = 0;
     Check(!PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,less,PHOrbSolveStatus::GoalsUnmet,partial),
         "a longer retry with fewer completed goals does not discard the better retained candidate");
+
+    PHOrbGoalSet colors{}; colors.count = 2;
+    colors.items[0] = {PHOrbGoalColors,31,5,0}; colors.items[1] = {PHOrbGoalMatch,32,1,3};
+    auto four = partial; four.goalCount = 2; four.goalHits[0] = 4; four.goalHits[1] = 1;
+    auto three = four; three.goalHits[0] = 3;
+    Check(!PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,three,PHOrbSolveStatus::GoalsUnmet,four,&colors,&colors) &&
+        PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,four,PHOrbSolveStatus::GoalsUnmet,three,&colors,&colors),
+        "recorded single-spinner failure retains four colours plus heart ahead of later three colours plus heart");
+    Check(PHOrbPreferSearchCandidate(PHOrbSolveStatus::GoalsUnmet,four,PHOrbSolveStatus::GoalsUnmet,four,&colors,&colors),
+        "an actually equal-progress later attempt remains visible");
+    auto extra = four; extra.goalHits[1] = 20;
+    Check(PHOrbSearchGoalProgress(extra,colors) == PHOrbSearchGoalProgress(four,colors),
+        "overfilling an already complete heart clause cannot compensate for a missing attack colour");
+    auto different = colors; different.items[0].colors = 15; different.items[0].count = 4;
+    Check(!PHOrbComparableSearchGoals(colors,different),
+        "different goal masks and requirements have no comparable within-clause diagnostic progress");
+    different = colors; different.bonusFirstWave = true;
+    Check(!PHOrbComparableSearchGoals(colors,different),"first-removal policy differences prevent unlike progress comparison");
+    auto hazardous = four; hazardous.hazardsSafe = false;
+    Check(!PHOrbPreferSearchCandidate(PHOrbSolveStatus::Unsafe,hazardous,PHOrbSolveStatus::GoalsUnmet,three,&colors,&colors),
+        "within-goal progress never overrides hazard safety");
 }
 
 static void CheckSearchAttemptTrace(NSDictionary *trace) {

@@ -89,7 +89,7 @@ static void MultiplayerSoloModelTests() {
         const auto online = MultiplayerModelState(3, seat);
         auto s = online; s.identity.multiplayer = 2;
         auto &m = s.multiplayer; m.kind = PHOrbMultiplayerThreeSolo;
-        m.networkFlags = m.connectionState = 0; m.continuationOwnerKnown = true;
+        m.networkFlags = m.connectionState = 0; m.continuationOwnerKnown = true; m.continuationOwnerFlags = 1;
         m.clockKnown = false; m.remainingSeconds = 0; m.clockFlags = 3;
         m.turnSerial = (seat + 1) % 3;
         Check(PHOrbCanPreview(&s) && !PHOrbSameTurn(&online, &s) &&
@@ -99,6 +99,12 @@ static void MultiplayerSoloModelTests() {
         Check(PHOrbSameTurn(&s, &retiredClock), "retired co-op clock is not continuation turn identity");
         auto nextTurn = s; ++nextTurn.multiplayer.turnSerial;
         Check(!PHOrbSameTurn(&s, &nextTurn), "native turn changes still retire a continuation gesture");
+        auto sourceChanged = s; sourceChanged.multiplayer.recoverySource = 1;
+        Check(PHOrbCanPreview(&sourceChanged) && !PHOrbSameTurn(&s,&sourceChanged),
+            "another valid continuation recovery source needs a freshly bound manual gesture");
+        auto ownerChanged = s; ownerChanged.multiplayer.continuationOwnerFlags = 3;
+        Check(PHOrbCanPreview(&ownerChanged) && !PHOrbSameTurn(&s,&ownerChanged),
+            "changed continuation owner flags revoke an old gesture even when local ownership is still valid");
         if (seat < 2) {
             auto twoSeats = s; twoSeats.multiplayer.teamCount = 2; twoSeats.multiplayer.recoverySource = 1;
             Check(PHOrbCanPreview(&twoSeats), "mode 7 continuation accepts its retained two-seat local bank");

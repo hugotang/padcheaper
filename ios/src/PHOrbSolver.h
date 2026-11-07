@@ -112,6 +112,10 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // bounded discarded frontiers. Spinner cells stay closed; repair hints use
 // fixed orbs and aggregate exact shared phases before selecting missing colours.
 // The hints neither require optional colours nor satisfy exact release goals.
+// With an unknown thorn budget, colour recovery uses a separate legal-distance
+// graph per initially held thorn; all other thorns stay stationary. Exact
+// matching still counts stationary colours and deterministic cascades. Cached
+// colour-layout scores are independent of these route-specific hints.
 // Ordinary spinner-free shape recovery alternates supply-distance and hole
 // priorities within the existing pass budget; best candidates retain primary
 // scoring. Evaluation calls can exceed candidate counts when scores are checked

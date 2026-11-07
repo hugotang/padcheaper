@@ -17,9 +17,10 @@ static PHOrbGoalSet ColorHeartGoals() {
 static void ColorRecoveryPolicyTests() {
     auto board = ColorSpinnerGuidanceBoard(); PHOrbSolveOptions options;
     options.goals = ColorHeartGoals();
-    for (unsigned spinners : {0u,1u,3u}) {
+    for (unsigned spinners : {0u,1u,3u,4u}) {
         board.spinnerMask = spinners ? UINT64_C(1) << 28 : 0;
-        if (spinners == 3) board.spinnerMask |= (UINT64_C(1) << 2) | (UINT64_C(1) << 20);
+        if (spinners >= 3) board.spinnerMask |= (UINT64_C(1) << 2) | (UINT64_C(1) << 20);
+        if (spinners == 4) board.spinnerMask |= UINT64_C(1) << 9;
         board.spinnerColors = spinners ? 63 : 0;
         Check(!std::strcmp(PHOrbColorRecoveryEligibilityReason(board,options),"eligible") &&
             MakeContext(board,options.goals).colorRecovery,
@@ -71,14 +72,99 @@ static void CheckColorPhaseAggregation(const PHOrbBoard &board, const PHOrbGoalS
     Check(SameScore(score,other),"all colour progress, missing colours and chosen repair layouts are invariant under a shared phase shift");
 }
 
+static void ColorSpinnerCacheTests() {
+    // Anonymous four-spinner layout. The cache stores context-only colour
+    // evaluations; held-token restrictions and route damage belong to nodes.
+    const uint8_t types[] = {0,5,0,3,5,4, 3,4,2,4,2,3, 1,2,4,2,1,1,
+        2,1,5,2,3,4, 0,5,3,2,2,5};
+    auto board = ColorSpinnerGuidanceBoard();
+    std::copy(std::begin(types),std::end(types),board.types);
+    for (unsigned cell : {7u,10u,19u,22u}) board.spinnerMask |= UINT64_C(1) << cell;
+    board.spinnerColors = 63;
+    for (unsigned cell : {1u,5u,11u,13u,15u,17u,20u,23u}) {
+        board.flags[cell] = PHOrbFlagThorn; board.thornDamage[cell] = 4;
+    }
+    const auto primary = MakeContext(board,ColorHeartGoals(),true,false,true);
+    Check(primary.variants == 6 && !primary.shapeGoals && primary.colorRecovery,
+        "the four-spinner colour/heart fixture exercises caching without a shape goal");
+    const auto cells = BoardCells(board);
+    auto changed = cells; std::swap(changed[0],changed[1]);
+    Check(changed != cells,"the cache miss fixture moves two different fixed colours");
+    const auto exact = Evaluate(cells,primary);
+    Check(UseEvaluationCache(primary),"multiphase colour recovery uses the bounded evaluation cache");
+    EvaluationCache cache(UseEvaluationCache(primary));
+    for (unsigned pass = 0; pass < 4; ++pass) {
+        auto context = primary;
+        if (pass == 1 || pass == 2) context.colorGuidance = true;
+        if (pass == 2) context.colorFocus = 1;
+        const auto expected = Evaluate(cells,context), moved = Evaluate(changed,context);
+        Check(SameEvaluation(expected.result,exact.result),
+            "primary, balanced and water-focused guidance retain exact six-phase release fields");
+        const unsigned calls = cache.calls, hits = cache.hits;
+        cache.nextPass();
+        Check(SameScore(cache.score(cells,context),expected) && cache.calls == calls + 1,
+            "each colour search pass evaluates its own context instead of inheriting cached guidance");
+        Check(SameScore(cache.score(cells,context),expected) && cache.calls == calls + 1 && cache.hits == hits + 1,
+            "repeated four-spinner colour layouts reuse the complete score within the current pass");
+        Check(SameScore(cache.score(changed,context),moved) && cache.calls == calls + 2,
+            "a changed fixed-colour layout gets a new six-phase evaluation");
+        Check(SameScore(cache.score(changed,context),moved) && cache.calls == calls + 2 && cache.hits == hits + 2,
+            "the moved colour layout also reuses only its exact current-pass result");
+    }
+    Check(cache.calls == 8 && cache.hits == 8,
+        "colour-only multiphase caching performs real reuse across separately evaluated passes");
+    CheckColorPhaseAggregation(board,ColorHeartGoals());
+}
+
+static void SingleFishingColorCacheTests() {
+    auto board = ColorSpinnerGuidanceBoard();
+    board.spinnerMask = UINT64_C(1) << 28; board.spinnerColors = 63;
+    const auto goals = ColorHeartGoals();
+    auto ordinary = MakeContext(board,goals); ordinary.variants = 1;
+    Check(!UseEvaluationCache(ordinary),"single-phase colour search keeps its existing cache policy");
+    const auto single = MakeContext(board,goals,true,false,true,{},28,0);
+    Check(!single.colorRecovery && !single.shapeGoals && UseEvaluationCache(single),
+        "single-take multicolour search caches shared-phase scores without enabling ordinary recovery");
+    const auto combo = MakeContext(board,Goal(PHOrbGoalCombo,0,5),true,false,true,{},28,0);
+    const auto oneColor = MakeContext(board,Goal(PHOrbGoalColors,31,1),true,false,true,{},28,0);
+    Check(!UseEvaluationCache(combo) && !UseEvaluationCache(oneColor),
+        "the new single-take cache scope excludes Combo-only and one-colour requests");
+    EvaluationCache cache(UseEvaluationCache(single));
+    for (unsigned take = 0; take < PHOrbBasicTypes; ++take) {
+        const auto context = MakeContext(board,goals,true,false,true,{},28,take);
+        auto cells = BoardCells(board); cells[28] = uint8_t(take);
+        auto entered = cells; std::swap(entered[27],entered[28]);
+        const auto expected = Evaluate(cells,context), afterEntry = Evaluate(entered,context);
+        const unsigned calls = cache.calls, hits = cache.hits;
+        cache.nextPass();
+        Check(SameScore(cache.score(cells,context),expected) && cache.calls == calls + 1,
+            "a fresh single-take context evaluates its requested colour without inheriting another pass");
+        Check(SameScore(cache.score(cells,context),expected) && cache.calls == calls + 1 && cache.hits == hits + 1,
+            "single-take repeated colour layouts reuse all exact and guidance fields");
+        // With equal colours the entry leaves evaluator input unchanged;
+        // fished state still changes which successors the search may take.
+        const unsigned changed = entered != cells;
+        Check(SameScore(cache.score(entered,context),afterEntry) && cache.calls == calls + 1 + changed &&
+            cache.hits == hits + 2 - changed,
+            "single-take entry reuses a score only when its complete colour layout is equal");
+        Node pending; pending.cells = entered; pending.path[0] = 27;
+        Node taken = pending; taken.fished = true;
+        Check(Hash(pending,30) != Hash(taken,30),
+            "evaluation reuse cannot merge pending and consumed single-take movement states");
+    }
+}
+
 static void ColorSpinnerGuidanceTests() {
     ColorRecoveryPolicyTests();
+    ColorSpinnerCacheTests();
+    SingleFishingColorCacheTests();
     for (auto dimensions : {std::pair<unsigned,unsigned>{6,5},{7,6},{5,4}}) {
         auto board = ColorSpinnerGuidanceBoard(dimensions.first,dimensions.second);
-        for (unsigned count : {1u,3u}) for (unsigned table : {3u,37u,63u}) {
+        for (unsigned count : {1u,3u,4u}) for (unsigned table : {3u,37u,63u}) {
             board.spinnerMask = 1;
-            if (count == 3) board.spinnerMask |= (UINT64_C(1) << (board.width + 1)) |
+            if (count >= 3) board.spinnerMask |= (UINT64_C(1) << (board.width + 1)) |
                 (UINT64_C(1) << (board.width * board.height - 1));
+            if (count == 4) board.spinnerMask |= UINT64_C(1) << (2 * board.width + 2);
             board.spinnerColors = uint16_t(table);
             for (unsigned i = 0; i < board.width * board.height; ++i)
                 if (board.spinnerMask & (UINT64_C(1) << i)) board.types[i] = i ? 0 : uint8_t(table == 37 ? 5 : 1);

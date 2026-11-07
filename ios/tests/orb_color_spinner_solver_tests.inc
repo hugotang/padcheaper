@@ -21,32 +21,47 @@ static PHOrbGoalSet ColorSpinnerGoals() {
 
 static bool ColorSpinnerIndependentReplay(const PHOrbBoard &board, const PHOrbRoute &route, PHOrbBoard &released) {
     const unsigned width = board.width, cells = width * board.height;
-    if (route.count < 2 || route.count > PHOrbMaxSteps + 1 || route.fishing || route.fishingExchangeCount ||
+    if (route.count < 2 || route.count > PHOrbMaxSteps + 1 || route.fishingExchangeCount ||
         (board.fixedStart && unsigned(route.cells[0]) + 1 != board.fixedStart)) return false;
+    if (route.fishing && (route.fishCell >= cells || route.fishColor >= 6 ||
+        !(board.spinnerMask & (UINT64_C(1) << route.fishCell)) ||
+        (board.flags[route.fishCell] & PHOrbFlagLocked) || !(board.spinnerColors & (1u << route.fishColor)))) return false;
+    bool took = false;
     released = board;
     for (unsigned step = 0; step < route.count; ++step) {
         const unsigned target = route.cells[step];
-        if (target >= cells || ((board.spinnerMask | board.tapeMask) & (UINT64_C(1) << target))) return false;
-        if (!step) continue;
+        if (target >= cells || (board.tapeMask & (UINT64_C(1) << target))) return false;
+        if (!step) {
+            if (board.spinnerMask & (UINT64_C(1) << target)) return false;
+            continue;
+        }
         const unsigned previous = route.cells[step-1];
         const int dx = std::abs(int(previous % width) - int(target % width));
         const int dy = std::abs(int(previous / width) - int(target / width));
         if (route.diagonal ? (dx > 1 || dy > 1 || !(dx || dy)) : dx + dy != 1) return false;
+        if (board.spinnerMask & (UINT64_C(1) << target)) {
+            if (!route.fishing || took || target != route.fishCell ||
+                !(board.spinnerColors & (1u << released.types[previous]))) return false;
+            took = true; released.types[target] = route.fishColor;
+        } else if (route.fishing && previous == route.fishCell &&
+            !(board.spinnerColors & (1u << released.types[target]))) return false;
         std::swap(released.types[previous],released.types[target]);
         std::swap(released.tokens[previous],released.tokens[target]);
         std::swap(released.flags[previous],released.flags[target]);
         std::swap(released.enhancement[previous],released.enhancement[target]);
         std::swap(released.blindTurns[previous],released.blindTurns[target]);
         std::swap(released.thornDamage[previous],released.thornDamage[target]);
+        released.flags[previous] &= ~PHOrbFlagBlindTouch;
+        released.flags[target] &= ~PHOrbFlagBlindTouch;
     }
-    return true;
+    return took == route.fishing;
 }
 
 static void CheckColorSpinnerRoute(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     PHOrbSolveStatus status, const PHOrbRoute &route) {
     PHOrbBoard released{};
     const bool valid = ColorSpinnerIndependentReplay(board,route,released);
-    Check(valid,"multi-colour recovery obeys independent fixed-start, adjacency and closed-spinner replay");
+    Check(valid,"multi-colour routes obey independent fixed-start, adjacency and declared single-take replay");
     if (!valid) return;
     PHOrbBoard productionReplay{};
     Check(PHOrbReplay(&board,&route,route.count-1,&productionReplay) &&
