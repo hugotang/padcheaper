@@ -72,10 +72,12 @@ static void BundledDataCompatibilityTests(void) {
     }
 }
 #include "orb_assist_profiles_tests.inc"
+#include "orb_himmel_plan_tests.inc"
 int main(void) {
     @autoreleasepool {
         PlanTests();
         AssistProfileTests();
+        HimmelPlanTests();
         SharingTests();
         BundledDataCompatibilityTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");

@@ -1,0 +1,390 @@
+{
+  "format": "padcheaper-template-reference",
+  "schemaVersion": 1,
+  "status": "reference-not-executable",
+  "id": "himmel-gw545672-recommended",
+  "name": "Himmel × 試煉闇迦梨｜開場＋六色循環",
+  "source": {
+    "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/545672#basic",
+    "section": "first recommended team",
+    "retrievedDate": "2026-11-07",
+    "articleUpdated": "2026-11-06 11:46",
+    "snapshotSHA256": "26aa5011fa30bb3c18aad79ea956bb986b003b7673a7715613590a035f0b8cef",
+    "catalogSource": "https://github.com/Mapaler/PADDashFormation",
+    "catalogRevision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+    "cardSHA256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
+    "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7"
+  },
+  "files": {
+    "formation": "formation.json",
+    "plan": "team-plan.json",
+    "manualOpening": "post-opening.json"
+  },
+  "members": [
+    {
+      "slot": 1,
+      "body": {
+        "number": 13412,
+        "name": "ヒンメル",
+        "skillId": 60246,
+        "skillType": 116,
+        "skillName": "最後まで楽しむよ",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 30,
+        "minimumCooldown": 26,
+        "description": "99ターンの間、[強化ドロップ目覚め]が少し落ちやすくなる。\n自分以外のスキルが3ターン溜まる。最終段階に変身。"
+      },
+      "assist": {
+        "number": 14031,
+        "name": "ユーハバッハのマント",
+        "skillId": 65010,
+        "skillType": 116,
+        "skillName": "滅却師の始祖",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 19,
+        "minimumCooldown": 19,
+        "description": "5ターンの間、ダメージ吸収と属性吸収を無効化。\n^qs^【9ターン後に発動】2ターンの間、受けるダメージを無効化。^p"
+      },
+      "transformedBody": {
+        "number": 13413,
+        "name": "勇者・ヒンメル",
+        "skillId": 60253,
+        "skillType": 116,
+        "skillName": "世界の平和を取り戻す",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 10,
+        "minimumCooldown": 10,
+        "description": "8ターンの間、自分のダメージ上限値が260億。3ターンの間、\nダメージ吸収と属性吸収を無効化、ダメージ無効を貫通。"
+      }
+    },
+    {
+      "slot": 2,
+      "body": {
+        "number": 14084,
+        "name": "ジェラルド・ヴァルキリー",
+        "skillId": 64941,
+        "skillType": 232,
+        "skillName": "希望の剣",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 16,
+        "minimumCooldown": 12,
+        "description": "6ターンの間、最大HPと自分の攻撃力が1.4倍、\nダメージ上限値が150億。スキルが進化。"
+      },
+      "assist": {
+        "number": 13402,
+        "name": "クールに射止める銃士・リズレットのショコラ",
+        "skillId": 60172,
+        "skillType": 116,
+        "skillName": "クールラブシューティング",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 6,
+        "minimumCooldown": 6,
+        "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[副属性変更・木][コンボ強化+][木ドロップ強化+][水ドロップ強化+][自動回復+][自動回復+][部位破壊ボーナス]を付与。自分以外のスキルが2ターン溜まる。"
+      }
+    },
+    {
+      "slot": 3,
+      "body": {
+        "number": 13919,
+        "name": "雷霆の超越神・インドラ",
+        "skillId": 65361,
+        "skillType": 116,
+        "skillName": "天覇の雷霆剣",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 9,
+        "minimumCooldown": 5,
+        "description": "1ターンの間、ダメージを80％軽減、ルーレットを1個生成。\n8ターンの間、回復力が3倍。シールドを2つ破壊。"
+      },
+      "assist": {
+        "number": 13391,
+        "name": "友愛の獣姫・ルカ＆ミツキのショコラ",
+        "skillId": 60147,
+        "skillType": 116,
+        "skillName": "蒼紅の真心",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 5,
+        "minimumCooldown": 5,
+        "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[副属性変更・火][暗闇耐性+][火ドロップ強化+][回復ドロップ強化+][スキル遅延耐性]を付与。敵の行動を4ターン遅らせる。"
+      }
+    },
+    {
+      "slot": 4,
+      "body": {
+        "number": 13922,
+        "name": "暴威の超越神・カーリー",
+        "skillId": 65369,
+        "skillType": 116,
+        "skillName": "暴乱の六滅掌",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 7,
+        "minimumCooldown": 3,
+        "description": "消せないドロップと覚醒無効を全回復。3ターンの間、自分の\nダメージ上限値が300億。[ロック]を解除し、盤面を[火][水][木][光][闇]|5属性|[回復]に変化。"
+      },
+      "assist": {
+        "number": 13853,
+        "name": "イルミナのお手製クッキー",
+        "skillId": 63375,
+        "skillType": 116,
+        "skillName": "グリモワールクッキー",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 6,
+        "minimumCooldown": 6,
+        "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[アフタヌーンティー][雲耐性][十字消し攻撃+][火ドロップ強化+][光ドロップ強化+][操作時間延長+]を付与。自分以外のスキルが3ターン溜まる。"
+      }
+    },
+    {
+      "slot": 5,
+      "body": {
+        "number": 13922,
+        "name": "暴威の超越神・カーリー",
+        "skillId": 65369,
+        "skillType": 116,
+        "skillName": "暴乱の六滅掌",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 7,
+        "minimumCooldown": 3,
+        "description": "消せないドロップと覚醒無効を全回復。3ターンの間、自分の\nダメージ上限値が300億。[ロック]を解除し、盤面を[火][水][木][光][闇]|5属性|[回復]に変化。"
+      },
+      "assist": {
+        "number": 13617,
+        "name": "科学部の怪異・ユラの弁当箱",
+        "skillId": 61750,
+        "skillType": 116,
+        "skillName": "揺煙な昼食",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 7,
+        "minimumCooldown": 7,
+        "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[悪魔タイプ追加][浮遊][操作不可耐性][火ドロップ強化+][水ドロップ強化+][部位破壊ボーナス]を付与。自分以外のスキルが3ターン溜まる。"
+      }
+    },
+    {
+      "slot": 6,
+      "body": {
+        "number": 13922,
+        "name": "暴威の超越神・カーリー",
+        "skillId": 65369,
+        "skillType": 116,
+        "skillName": "暴乱の六滅掌",
+        "maximumSkillLevel": 5,
+        "initialCooldown": 7,
+        "minimumCooldown": 3,
+        "description": "消せないドロップと覚醒無効を全回復。3ターンの間、自分の\nダメージ上限値が300億。[ロック]を解除し、盤面を[火][水][木][光][闇]|5属性|[回復]に変化。"
+      },
+      "assist": {
+        "number": 13437,
+        "name": "脱出用ゴーレム",
+        "skillId": 60592,
+        "skillType": 116,
+        "skillName": "迷宮の外まで運び出す",
+        "maximumSkillLevel": 1,
+        "initialCooldown": 6,
+        "minimumCooldown": 6,
+        "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[体力タイプ追加][回復タイプ追加][スキル遅延耐性][チームHP強化][チームHP強化][チームHP強化]を付与。自分以外のスキルが2ターン溜まる。"
+      }
+    }
+  ],
+  "articleFacts": {
+    "bodyNumbers": [
+      13412,
+      14084,
+      13919,
+      13922,
+      13922,
+      13922
+    ],
+    "assistNumbers": [
+      14031,
+      13402,
+      13391,
+      13853,
+      13617,
+      13437
+    ],
+    "bodyLevels": [
+      99,
+      120,
+      120,
+      120,
+      120,
+      120
+    ],
+    "assistSkillLevels": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "superAwakeningIds": [
+      142,
+      139,
+      139,
+      139,
+      139,
+      139
+    ],
+    "badge": 89,
+    "unspecified": [
+      "body plus",
+      "assist plus",
+      "latents",
+      "body skill levels",
+      "assist levels",
+      "normal awakening counts",
+      "which Kali casts at opening step 6"
+    ]
+  },
+  "assumptions": {
+    "bodyPlus": [
+      297,
+      297,
+      297
+    ],
+    "assistPlus": [
+      99,
+      99,
+      99
+    ],
+    "bodySkillLevel": "maximum",
+    "normalAwakenings": "all enabled",
+    "assistLevel": "catalog maximum",
+    "latents": "leave empty because not stated",
+    "badge": "saved selection only; choose badge 89 in the native game"
+  },
+  "opening": {
+    "steps": [
+      {
+        "slot": 3,
+        "source": "assist",
+        "monster": 13919,
+        "assist": 13391,
+        "skill": 60147,
+        "afterMonster": 0,
+        "consumeAssist": true
+      },
+      {
+        "slot": 2,
+        "source": "assist",
+        "monster": 14084,
+        "assist": 13402,
+        "skill": 60172,
+        "afterMonster": 0,
+        "consumeAssist": true
+      },
+      {
+        "slot": 1,
+        "source": "body",
+        "monster": 13412,
+        "assist": 14031,
+        "skill": 60246,
+        "afterMonster": 13413
+      },
+      {
+        "slot": 4,
+        "source": "assist",
+        "monster": 13922,
+        "assist": 13853,
+        "skill": 63375,
+        "afterMonster": 0,
+        "consumeAssist": true
+      },
+      {
+        "slot": 5,
+        "source": "assist",
+        "monster": 13922,
+        "assist": 13617,
+        "skill": 61750,
+        "afterMonster": 0,
+        "consumeAssist": true
+      },
+      {
+        "slot": 4,
+        "source": "body",
+        "monster": 13922,
+        "assist": 0,
+        "skill": 65369,
+        "afterMonster": 0
+      },
+      {
+        "slot": 6,
+        "source": "assist",
+        "monster": 13922,
+        "assist": 13437,
+        "skill": 60592,
+        "afterMonster": 0,
+        "consumeAssist": true
+      }
+    ],
+    "chosenKaliSlot": 4,
+    "chosenKaliReason": "After step 5, slot 4 has recharged to CD3; slot 5 just reset and slot 6 must retain its charged assist for step 7.",
+    "puzzleAfter": false,
+    "firstPuzzle": "Use the board supplied in step 6; do not consume a second Kali. Other ready body rules still run.",
+    "initialSkillBoosts": 25,
+    "uncappedChargeAfterSevenSteps": [
+      8,
+      11,
+      13,
+      2,
+      2,
+      0
+    ],
+    "chargeModel": "Uncapped static arithmetic: accepted skill resets its slot, each haste charges other slots, no enemy delay or extra skills and no elapsed puzzle turns. Native storage may cap a ready body (for example Indra at CD5); these values are scheduling evidence, not predicted native readings or a runtime simulation.",
+    "nextKaliSlots": [
+      5,
+      4,
+      6
+    ],
+    "manualOpeningProfile": "Only after the same seven steps while the first puzzle is still pending; arbitrary mid-run entry must not reuse startAfter=1."
+  },
+  "rotation": {
+    "himmel": "Three required enemy counters plus one optional ready body rule share group 2. Skill charge relies on actual five-color attacks and native cooldown; 8-turn self cap is not 8-turn bypass.",
+    "gerard": "body source, exact monster 14084, skill 0 deliberately follows evolving stages 64942/64943/64944/64945; root 64941 is not the chosen stage.",
+    "indra": "Optional native-ready body skill; 8-turn recovery boost, only 1-turn 80% shield and spinner. Not a continuous shield.",
+    "kali": "Three required alternatives, group 1, order 5/4/6, accepted every 1, startAfter 1. One confirmed member satisfies the group; no available member stops movement."
+  },
+  "board": {
+    "quality": "thorough",
+    "mode": "manual",
+    "goals": [
+      {
+        "kind": "colors",
+        "colors": 31,
+        "count": 5,
+        "length": 0
+      },
+      {
+        "kind": "match",
+        "colors": 32,
+        "count": 1,
+        "length": 3
+      }
+    ],
+    "recovery": {
+      "hpAtMost": 0,
+      "groups": 1,
+      "shape": "match"
+    },
+    "thornComboPriority": false,
+    "allowPoisonWithHeartFour": false,
+    "diagonal": true,
+    "assistRecoveryL": false
+  },
+  "limitations": [
+    "No fixed-floor or dungeon-specific clear plan",
+    "No damage, HP survival or attack-badge effectiveness guarantee",
+    "Five-color attack/skill-charge needs actual native attacks and effective awakenings",
+    "Himmel damage/attribute absorb and void coverage lasts 3 turns; CD10 with skill charge is roughly 5 puzzle turns, leaving gaps",
+    "Indra creates a spinner instead of removing all spinners; normal full-phase planning gates remain",
+    "No poison allowance, no automatic latent assignment, no recovery-L providers assumed",
+    "Post-opening portable profile binds current body numbers only; the player must complete and confirm consumed assists and opening manually"
+  ],
+  "verification": {
+    "sourceReviewed": true,
+    "configurationJSONChecked": true,
+    "nativeParserExecuted": false,
+    "sessionTestsExecuted": false,
+    "productBuilt": false,
+    "deviceVerified": false
+  }
+}

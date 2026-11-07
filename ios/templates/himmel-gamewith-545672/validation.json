@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "checkedOn": "2026-11-07",
+  "status": "source-and-configuration-reviewed-runtime-pending",
+  "method": "Independent Python JSON and saved-article/catalog inspection only; no production parser, model, solver, test suite or compiler was executed. Haste totals are uncapped arithmetic, not native readings.",
+  "checks": [
+    "UTF-8 JSON without duplicate keys; exact executable keys, identifiers, names, current target and import byte limit",
+    "Article first recommended team: six body/assist IDs, body levels, assist skill levels, super/sync awakening mapping and five-colour badge",
+    "Pinned card/skill revision and SHA values; levels, skill levels, awakening counts, assist eligibility and explicit plus/latent assumptions",
+    "Article seven opening source icons and exact skill IDs, transformation, five consumed assists and preserved final sources",
+    "Catalog-derived initial skill boosts and listed haste effects; independent uncapped post-opening charge arithmetic",
+    "Nine rule order, required alternatives, separate enemy predicates, group sharing, accepted timing and first-puzzle supply deferral",
+    "Post-opening transformed bodies and settings equal the complete plan; no opening or formation in portable profile"
+  ],
+  "results": {
+    "configurationChecksPassed": true,
+    "files": [
+      {
+        "file": "formation.json",
+        "bytes": 3023,
+        "sha256": "fcbb97b41ee525368dfbe6e92fed35a9855520b22b77867321eea43221d214fe"
+      },
+      {
+        "file": "team-plan.json",
+        "bytes": 10077,
+        "sha256": "bb11ad15425b38e52eddc22b78cc595afc700064b15fee6b61a6b9c7ff5ea060"
+      },
+      {
+        "file": "post-opening.json",
+        "bytes": 6171,
+        "sha256": "41c8c755886f7d91fb6c3aeeadc2e7b006040a2f063596a714759cb9104f4fa3"
+      },
+      {
+        "file": "strategy.reference.json",
+        "bytes": 13521,
+        "sha256": "3079d066f9ac9f07fce8b49942f212ea7414c276e16252bba6e7fd26ca47494d"
+      },
+      {
+        "file": "README.md",
+        "bytes": 12158,
+        "sha256": "e177c862fdacf2fe755e5c465bcda589cc6b20ae40c51f58e6602a1df547cfe0"
+      }
+    ],
+    "initialSkillBoostsBySlot": [
+      4,
+      4,
+      5,
+      4,
+      4,
+      4
+    ],
+    "openingSteps": 7,
+    "consumedAssistSlots": [
+      3,
+      2,
+      4,
+      5,
+      6
+    ],
+    "finalBodies": [
+      13413,
+      14084,
+      13919,
+      13922,
+      13922,
+      13922
+    ],
+    "finalAssists": [
+      14031,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "uncappedChargeAfterSevenSteps": [
+      8,
+      11,
+      13,
+      2,
+      2,
+      0
+    ],
+    "rotationRules": 9,
+    "kaliOrderAfterFirstPuzzle": [
+      5,
+      4,
+      6
+    ]
+  },
+  "pendingVerification": [
+    "Native formation/plan/profile import and export test suites",
+    "Session seven-step confirmations, consumed sources, first-puzzle handoff, skill evolution, required rescue, stop/resume and cooldown scheduling cases",
+    "Six-colour search and spinner behavior under actual board constraints",
+    "iPhoneOS compilation, packaging and device verification of native cooldown, effects and consumption"
+  ],
+  "nativeParserExecuted": false,
+  "sessionTestsExecuted": false,
+  "runtimeSuitesRun": false,
+  "compiled": false,
+  "productBuilt": false,
+  "deviceVerified": false,
+  "sourceOnlyChecks": {
+    "buildShellSyntaxChecked": true,
+    "objectiveCSourceDelimiterFiles": 4,
+    "localIncludesResolved": 51,
+    "localDocumentationLinksResolved": 15,
+    "newJSONFilesParsed": 5,
+    "objectiveCCompiled": false
+  }
+}

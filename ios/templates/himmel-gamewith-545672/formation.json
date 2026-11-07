@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "title": "Himmel × 試煉闇迦梨｜GameWith 推薦隊",
+  "badge": 89,
+  "slots": [
+    {
+      "body": {
+        "id": 13412,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 7,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 142,
+        "latents": []
+      },
+      "assist": {
+        "id": 14031,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 7,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14084,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 139,
+        "latents": []
+      },
+      "assist": {
+        "id": 13402,
+        "level": 1,
+        "skill": 1,
+        "awakenings": 5,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 13919,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 139,
+        "latents": []
+      },
+      "assist": {
+        "id": 13391,
+        "level": 1,
+        "skill": 1,
+        "awakenings": 6,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 13922,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 139,
+        "latents": []
+      },
+      "assist": {
+        "id": 13853,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 4,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 13922,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 139,
+        "latents": []
+      },
+      "assist": {
+        "id": 13617,
+        "level": 1,
+        "skill": 1,
+        "awakenings": 6,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 13922,
+        "level": 120,
+        "skill": 5,
+        "awakenings": 9,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 139,
+        "latents": []
+      },
+      "assist": {
+        "id": 13437,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 6,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    }
+  ]
+}
