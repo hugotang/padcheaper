@@ -241,7 +241,8 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
         !PHOrbSameTurn(&live, expected) || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (hold && !PHOrbSameLeaders(&live, expected)) ||
         (hold && !PHInputIsQuiet(&live.input)) || target >= live.board.width * live.board.height ||
-        (hold && (PHOrbBlockedCells(&live.board) & ~(PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ?
+        (hold && (PHOrbBlockedCells(&live.board) & ~((PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+            (live.multiplayer.kind == PHOrbMultiplayerThree && multiplayerArmed && !eightArmed)) ?
             allowedSpinnerCell & live.board.spinnerMask : 0) & (UINT64_C(1) << target))) ||
         (hold && !PHOrbCanEnterThorn(&live,unsigned(target))) ||
         (hold && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(target)))) return NO;
@@ -520,12 +521,16 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_enemy_combo_session_tests.inc"
 #include "orb_dungeon_session_tests.inc"
 #include "orb_multi_fishing_session_tests.inc"
+#include "orb_three_fishing_session_tests.inc"
+#include "orb_color_phase_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         ReadinessStopSessionTests();
         if (failures) return 1;
         MultiFishingSessionTests();
+        ThreeFishingSessionTests();
+        ColorPhaseDiagnosticSessionTests();
         if (failures) return 1;
         AssistSessionTests();
         EnemyComboSessionTests();

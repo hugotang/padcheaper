@@ -194,6 +194,8 @@ static void ShapeTests() {
 #include "orb_alternate_shape_solver_tests.inc"
 #include "orb_search_recovery_tests.inc"
 #include "orb_color_solver_tests.inc"
+#include "orb_color_spinner_solver_tests.inc"
+#include "orb_native_rule_matrix_tests.inc"
 #include "orb_recorded_thorn_solver_tests.inc"
 #include "orb_recorded_spinner_solver_tests.inc"
 #include "orb_shape_space_tests.inc"
@@ -236,6 +238,8 @@ int main() {
     ExactLengthSolverTests();
     SearchRecoveryTests();
     ColorSolverTests();
+    ColorSpinnerSolverTests();
+    NativeRuleMatrixTests();
     RecordedThornSolverTests();
     RecordedSpinnerSolverTests();
     ShapeSpaceTests();

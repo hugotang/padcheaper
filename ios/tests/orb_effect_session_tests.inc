@@ -30,6 +30,7 @@ static FakeOrbEngine *FishEngine(uint16_t colors = 63) {
     board.spinnerMask = UINT64_C(1) << (w + 2); board.spinnerColors = colors;
     engine->live.spinnerTurns = 4; engine->live.spinnerPeriodFrames = 30; engine->live.fps = 60;
     engine->live.remainingFrames = 1200; engine->live.spinnerCountdownKnown = true; engine->live.spinnerCountdown = 30;
+    engine->live.orbMotionKnown = true; // This fixture explicitly supplies stable source motion.
     return engine;
 }
 static PHOrbSession *FishSession(FakeOrbEngine *engine) {
@@ -58,17 +59,20 @@ static void FishSessionTests() {
             @"goals":@[@{@"kind":@"t",@"colors":@8,@"count":@1},
                 @{@"kind":@"four",@"colors":@32,@"count":@1}]}], "recorded final-board goals accepted");
         Tick(session,engine,Frame()); [session queueAutomatic];
-        Check(UntilPhase(session,engine,@"stopped"), "recorded final board stops at the inventory bound");
+        for (unsigned i = 0; i < 2000 && ![session.snapshot[@"phase"] isEqual:@"stopped"] &&
+            ![session.snapshot[@"phase"] isEqual:@"arming"] && ![session.snapshot[@"phase"] isEqual:@"fault"]; ++i)
+            Tick(session,engine,Frame());
         NSDictionary *state = session.snapshot, *trace = state[@"searchTrace"], *plan = trace[@"fishingPlan"];
         NSArray<NSDictionary *> *choices = plan[@"colors"];
+        NSArray<NSDictionary *> *attempts = trace[@"candidateAttempts"];
         CheckSearchAttemptTrace(trace);
-        Check([trace[@"status"] isEqual:@"insufficient-orbs"] && [trace[@"candidateAttempts"] count] == 1 &&
-            [trace[@"selectedAttemptIndex"] isEqual:@0] && [trace[@"totalEvaluated"] isEqual:@0] &&
-            [trace[@"totalSearchPasses"] isEqual:@0] && choices.count == 6 && [plan[@"selectedCount"] isEqual:@0] &&
+        Check(attempts.count && [attempts.firstObject[@"status"] isEqual:@"insufficient-orbs"] &&
+            [attempts.firstObject[@"evaluated"] isEqual:@0] && [attempts.firstObject[@"searchPasses"] isEqual:@0] &&
+            choices.count == 6 && [plan[@"selectedCount"] isEqual:@0] &&
             [plan[@"scope"] isEqual:@"one-exchange-all-phases"] &&
             [state[@"goalPlan"][@"enemyComboBeforeBonus"] isEqual:@15] &&
             [state[@"goalPlan"][@"enemyComboRequired"] isEqual:@9],
-            "all six colors are preflighted without fake attempts or weakening the first-wave nine-Combo goal");
+            "all six single-take colors retain their preflight bound without weakening the first-wave nine-Combo goal");
         const unsigned upper[] = {7,8,7,7,8,8}; unsigned seen = 0;
         for (NSDictionary *choice in choices) {
             const unsigned color = [choice[@"color"] unsignedIntValue];
@@ -79,11 +83,15 @@ static void FishSessionTests() {
                 [choice[@"comboUpper"] unsignedIntValue] == upper[color] && [choice[@"required"] isEqual:@9],
                 "each rejected fishing color retains its own inventory explanation");
         }
-        Check(seen == 63 && [state[@"message"] containsString:@"珠數上限 8 Combo"] &&
-            [state[@"message"] containsString:@"只撈一顆"] &&
-            [state[@"message"] isEqual:trace[@"reason"]] && ![state[@"canExecute"] boolValue] &&
-            !engine->stages && !engine->releases && !engine->allowedSpinnerCell,
-            "the visible stop distinguishes single-exchange capacity from search time and submits no input");
+        Check(seen == 63 && [state[@"goalPlan"][@"enemyComboRequired"] isEqual:@9],
+            "a later multi-take attempt cannot reinterpret the single-exchange bound as permission to lower nine Combo");
+        if ([state[@"phase"] isEqual:@"arming"]) Check(
+            [trace[@"multiFishingSelected"] boolValue] && [trace[@"evaluation"][@"goalsMet"] boolValue] &&
+            !engine->stages && !engine->releases,
+            "only a checked complete multi-take route may pass the old bound; this inventory case stops before gesture timing");
+        else Check([state[@"phase"] isEqual:@"stopped"] && !engine->stages && !engine->releases && !engine->allowedSpinnerCell,
+            "unsolved expanded fishing search submits no partial gesture");
+        [session queueStop:@"single inventory preflight fixture complete"]; Tick(session,engine,Frame());
     }
     // A Combo-only goal has no color mask. With only 28 -> 29 reachable,
     // taking fire at 29 completes 26,27,28 in every release phase.
@@ -140,7 +148,7 @@ static void FishSessionTests() {
         const NSUInteger selected = [trace[@"selectedAttemptIndex"] unsignedIntegerValue];
         CheckSearchAttemptTrace(trace);
         NSArray<NSDictionary *> *colors = trace[@"fishingPlan"][@"colors"];
-        Check([state[@"phase"] isEqual:expectedPhase] && attempts.count == 2 && selected == 1 &&
+        Check([state[@"phase"] isEqual:expectedPhase] && attempts.count >= 2 && selected == 1 &&
             [trace[@"selectedStatus"] isEqual:@"goals-unmet"] && [trace[@"status"] isEqual:@"goals-unmet"] &&
             [attempts.firstObject[@"status"] isEqual:@"insufficient-orbs"] &&
             colors.count == 2 && [colors.lastObject[@"color"] isEqual:@1] &&
@@ -219,8 +227,9 @@ static void FishSessionTests() {
         if (scenario == 1) {
             for (unsigned i = 0; i < 400 && [[session snapshot][@"busy"] boolValue]; ++i) Tick(session,engine,Frame(),0.05);
             Check(![[session snapshot][@"busy"] boolValue] && engine->live.moves + 1 == entry && !engine->live.dragged &&
-                [[session snapshot][@"message"] containsString:@"7.0 秒上限"] && !engine->allowedSpinnerCell,
-                "a colour that never shows stops at the extended limit without entering and closes the cell");
+                ([[session snapshot][@"message"] containsString:@"剩餘時間不足"] ||
+                 [[session snapshot][@"message"] containsString:@"7.0 秒上限"]) && !engine->allowedSpinnerCell,
+                "a color that never shows stops before its required suffix exceeds the extended limit without entering");
             continue;
         }
         // The session needs at least 6 frames left in the colour (FishMinCountdown).

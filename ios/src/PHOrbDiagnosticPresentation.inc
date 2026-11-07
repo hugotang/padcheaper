@@ -180,6 +180,63 @@ NSArray *RouteCells(const PHOrbRoute &route) {
     for (unsigned i = 0; i < route.count; ++i) [cells addObject:@(route.cells[i])];
     return cells;
 }
+NSDictionary *ColorPhaseTrace(const PHOrbBoard &released, const PHOrbSolveOptions &options, int independentSpinner = -1) {
+    // Diagnose colour-presence clauses on the released candidate only. This
+    // does not search, read native state or supply permission to execute.
+    if (!PHOrbBoardValid(&released) || !PHOrbGoalsValid(&options.goals)) return @{ @"valid":@NO };
+    const unsigned size = released.width * released.height;
+    if (independentSpinner >= int(size)) return @{ @"valid":@NO };
+    std::vector<unsigned> clauses;
+    const unsigned minimum = released.minErase ? released.minErase : 3;
+    for (unsigned g = 0; g < options.goals.count; ++g) {
+        const auto &goal = options.goals.items[g];
+        if (goal.kind == PHOrbGoalColors || (goal.kind == PHOrbGoalMatch && goal.count == 1 &&
+            goal.colors && !(goal.colors & (goal.colors - 1)) && goal.length <= minimum)) clauses.push_back(g);
+    }
+    if (clauses.empty()) return @{ @"valid":@YES,@"applicable":@NO,@"phases":@[] };
+    PHOrbGoalSet probe{}; probe.count = 6;
+    probe.bonusFirstWave = options.goals.bonusFirstWave || options.activity.firstWaveOnly;
+    for (unsigned c = 0; c < 6; ++c) probe.items[c] = {PHOrbGoalColors,uint8_t(1u << c),1,0};
+    const unsigned variants = PHOrbSpinnerVariants(&released);
+    const bool independent = independentSpinner >= 0 &&
+        (released.spinnerMask & (UINT64_C(1) << independentSpinner)) &&
+        !(released.flags[independentSpinner] & PHOrbFlagLocked);
+    NSArray *names = @[@"火",@"水",@"木",@"光",@"闇",@"心"];
+    NSMutableArray *phases = [NSMutableArray array];
+    unsigned failedUnion = 0;
+    for (unsigned shared = 0; shared < variants; ++shared)
+        for (unsigned target = 0; target < (independent ? variants : 1); ++target) {
+            auto board = released;
+            for (unsigned i = 0; i < size; ++i) if ((released.spinnerMask & (UINT64_C(1) << i)) &&
+                !(released.flags[i] & PHOrbFlagLocked))
+                board.types[i] = PHOrbSpinnerType(&released,i,independent && i == unsigned(independentSpinner) ? target : shared);
+            board.spinnerMask = 0; board.spinnerColors = 0;
+            PHOrbEvaluation evaluation{};
+            if (!PHOrbEvaluate(board,probe,evaluation)) return @{ @"valid":@NO };
+            unsigned matched = 0;
+            for (unsigned c = 0; c < 6; ++c) if (evaluation.goalHits[c]) matched |= 1u << c;
+            NSMutableArray *deficits = [NSMutableArray array];
+            for (unsigned g : clauses) {
+                const auto &goal = options.goals.items[g];
+                const unsigned hits = unsigned(__builtin_popcount(matched & goal.colors));
+                if (hits >= goal.count) continue;
+                const unsigned missing = goal.colors & ~matched;
+                failedUnion |= missing;
+                NSMutableArray *missingNames = [NSMutableArray array];
+                for (unsigned c = 0; c < 6; ++c) if (missing & (1u << c)) [missingNames addObject:names[c]];
+                [deficits addObject:@{@"goalIndex":@(g),@"matchedColorCount":@(hits),@"requiredColorCount":@(goal.count),
+                    @"additionalColorsNeeded":@(goal.count - hits),@"absentAllowedColors":@(missing),@"absentAllowedColorNames":missingNames}];
+            }
+            [phases addObject:@{@"sharedPhase":@(shared),@"independentPhase":independent ? @(target) : @(-1),
+                @"matchedColors":@(matched),@"deficits":deficits}];
+        }
+    NSMutableArray *missingNames = [NSMutableArray array];
+    for (unsigned c = 0; c < 6; ++c) if (failedUnion & (1u << c)) [missingNames addObject:names[c]];
+    return @{@"valid":@YES,@"applicable":@YES,@"scope":independent ? @"target-independent-other-shared-phases" : @"all-shared-spinner-phases",
+        @"firstWaveOnly":@(probe.bonusFirstWave),@"phases":phases,@"phaseCount":@(phases.count),
+        @"missingInAnyFailedPhase":@(failedUnion),@"missingInAnyFailedPhaseNames":[missingNames componentsJoinedByString:@"／"],
+        @"missingSemantics":@"absent allowed alternatives in unmet colour clauses; only additionalColorsNeeded is required"};
+}
 NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &goals) {
     NSMutableArray *hits = [NSMutableArray array], *retained = [NSMutableArray array];
     for (unsigned g = 0; g < goals.count; ++g) [hits addObject:@(value.goalHits[g])];

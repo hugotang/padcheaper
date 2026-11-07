@@ -72,7 +72,14 @@ double RouteExecutionLimit(const PHOrbSnapshot &state, const PHOrbRoute &route) 
 }
 PHOrbTimedFishingTiming MultiFishingTiming(const PHOrbSnapshot &state) {
     PHOrbTimedFishingTiming timing;
-    timing.remainingFrames = state.remainingFrames;
+    // Co-op has both the move timer and the native local-turn clock. Neither
+    // source may grant time the other does not have, including while holding.
+    timing.remainingFrames = state.fps >= 15 && state.fps <= 120 && state.remainingFrames <= 30000 ? state.remainingFrames : 0;
+    if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer)) {
+        if (!PHOrbMultiplayerWindow(&state)) timing.remainingFrames = 0;
+        else if (state.multiplayer.kind != PHOrbMultiplayerThreeSolo) timing.remainingFrames = std::min(timing.remainingFrames,
+            unsigned(std::floor(state.multiplayer.remainingSeconds * state.fps)));
+    }
     timing.framesPerMove = unsigned(std::ceil(StepSeconds * state.fps));
     // Wait for a displaced token to settle before watching a complete cycle.
     timing.settleFramesPerWait = std::max(2u,unsigned(std::ceil(0.20 * state.fps)));
@@ -80,14 +87,28 @@ PHOrbTimedFishingTiming MultiFishingTiming(const PHOrbSnapshot &state) {
     timing.spinnerPeriodFrames = state.spinnerPeriodFrames;
     return timing;
 }
-bool MultiFishingEligible(const PHOrbSnapshot &state) {
-    if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer) || state.multiplayerDisabled ||
-        !PHOrbBoardValid(&state.board) || PHOrbSpinnerVariants(&state.board) < 2 ||
-        !state.spinnerCountdownKnown || state.spinnerPeriodFrames < FishMinPeriod ||
-        state.fps < 15 || state.fps > 120 || (state.board.spinnerColors & ~63u)) return false;
+NSString *FishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualOnce, bool automatic) {
+    if (state.multiplayerDisabled || !state.present || !state.valid) return @"state-unavailable";
+    if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer)) {
+        if (state.multiplayer.kind != PHOrbMultiplayerThree) return @"mode-not-supported";
+        if (automatic || !boundManualOnce) return @"three-player-manual-once-required";
+        if (!PHOrbMultiplayerWindow(&state)) return @"local-window-closed";
+    }
+    if (!PHOrbBoardValid(&state.board)) return @"invalid-board";
+    if (PHOrbSpinnerVariants(&state.board) < 2) return @"no-cycling-spinner";
+    if (state.board.spinnerColors & ~63u) return @"unsupported-color-table";
+    if (!state.spinnerCountdownKnown || state.spinnerCountdown > state.spinnerPeriodFrames ||
+        state.spinnerPeriodFrames < FishMinPeriod || state.fps < 15 || state.fps > 120) return @"timing-unavailable";
+    if (!state.orbMotionKnown) return @"motion-unavailable";
+    if (TimeAvailable(state) <= FishWaitSeconds(state) + TimeMargin + 2 * StepDuration(state)) return @"insufficient-time";
+    return @"eligible";
+}
+NSString *MultiFishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualOnce, bool automatic) {
+    NSString *reason = FishingEligibilityReason(state,boundManualOnce,automatic);
+    if (![reason isEqual:@"eligible"]) return reason;
     for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
-        if (state.board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return false;
-    return state.orbMotionKnown && TimeAvailable(state) > FishWaitSeconds(state) + TimeMargin + 2 * StepDuration(state);
+        if (state.board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return @"locked-or-thorn-token";
+    return @"eligible";
 }
 bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route, double delay = 0) {
     if (route.count < 2) return false;
@@ -133,29 +154,52 @@ bool MultiFishingReadyToRelease(const PHOrbSnapshot &state) {
 }
 bool HasRemainingFishingTime(const PHOrbSnapshot &state, const PHOrbRoute &route, unsigned confirmed,
     double elapsed, double executionLimit) {
-    if (confirmed + 1 >= route.count) return false;
-    const int index = FishingExchangeAt(route,confirmed + 1,false);
-    if (index < 0 || !state.orbMotionKnown || !state.spinnerCountdownKnown ||
-        state.fps < 15 || state.fps > 120 || state.spinnerCountdown > state.spinnerPeriodFrames) return false;
+    if (!route.fishing || confirmed >= route.count || !state.orbMotionKnown || !state.spinnerCountdownKnown ||
+        state.fps < 15 || state.fps > 120 || state.spinnerPeriodFrames < FishMinPeriod ||
+        state.spinnerCountdown > state.spinnerPeriodFrames) return false;
     const auto timing = MultiFishingTiming(state);
-    const unsigned future = route.fishingExchangeCount - unsigned(index) - 1;
+    if (!route.fishingExchangeCount) {
+        bool takePending = false;
+        for (unsigned step = confirmed + 1; step < route.count; ++step) takePending |= route.cells[step] == route.fishCell;
+        double wait = takePending ? FishWaitSeconds(state) : 0;
+        if (takePending && route.cells[confirmed + 1] == route.fishCell) {
+            if (state.orbMotion[route.fishCell]) wait += double(timing.settleFramesPerWait) / state.fps;
+            else if (state.board.types[route.fishCell] == route.fishColor && state.spinnerCountdown >= FishMinCountdown) wait = 0;
+            else {
+                unsigned ticks = 1, variants = PHOrbSpinnerVariants(&state.board);
+                for (; ticks <= variants; ++ticks)
+                    if (PHOrbSpinnerType(&state.board,route.fishCell,ticks) == route.fishColor) break;
+                if (ticks > variants) return false;
+                wait = double(state.spinnerCountdown + 1 + (ticks - 1) * state.spinnerPeriodFrames) / state.fps;
+            }
+        }
+        const double required = (route.count - 1 - confirmed) * StepDuration(state) +
+            wait + TimeMargin;
+        return required <= std::min(TimeAvailable(state),std::max(0.0,executionLimit - elapsed));
+    }
+    if (!state.orbMotionKnown) return false;
+    unsigned first = 0;
+    while (first < route.fishingExchangeCount && route.fishingExchanges[first].entry <= confirmed) ++first;
+    const bool nextIsTake = first < route.fishingExchangeCount && route.fishingExchanges[first].entry == confirmed + 1;
+    const unsigned future = route.fishingExchangeCount - first - unsigned(nextIsTake);
     double wait = 0;
-    if (!MultiFishingReadyToEnter(state,route,confirmed + 1)) {
+    if (nextIsTake && !MultiFishingReadyToEnter(state,route,confirmed + 1)) {
         if (state.orbMotion[route.fishCell] != 0) {
             wait = FishWaitSeconds(state) + double(timing.settleFramesPerWait) / state.fps;
         } else {
             const unsigned variants = PHOrbSpinnerVariants(&state.board);
             unsigned ticks = 1;
             for (; ticks <= variants; ++ticks)
-                if (PHOrbSpinnerType(&state.board,route.fishCell,ticks) == route.fishingExchanges[index].take) break;
+                if (PHOrbSpinnerType(&state.board,route.fishCell,ticks) == route.fishingExchanges[first].take) break;
             if (ticks > variants) return false;
             // Use the observed phase while waiting, rather than reserving a
             // new full cycle on every frame. One frame covers the tick edge.
             wait = double(state.spinnerCountdown + 1 + (ticks - 1) * state.spinnerPeriodFrames) / state.fps;
         }
     }
+    const unsigned settleWaits = confirmed + 1 == route.count && MultiFishingReadyToRelease(state) ? 0 : future + 1;
     const double required = (route.count - 1 - confirmed) * StepDuration(state) + wait +
-        future * FishWaitSeconds(state) + double((future + 1) * timing.settleFramesPerWait) / state.fps + TimeMargin;
+        future * FishWaitSeconds(state) + double(settleWaits * timing.settleFramesPerWait) / state.fps + TimeMargin;
     return required <= std::min(TimeAvailable(state),std::max(0.0,executionLimit - elapsed));
 }
 PHOrbSolveOptions OptionsForQuality(NSString *quality) {
@@ -587,8 +631,12 @@ struct EightPreparationState {
         if (_oneShot || _auto.active()) [self queueStop:_message];
         return;
     }
-    if (_route.fishingExchangeCount && !FishingTimingUnchanged(_live,_preview)) {
+    if (_route.fishing && !FishingTimingUnchanged(_live,_preview)) {
         [self queueStop:@"連續撈珠的轉轉色表或時間資料已改變，請重新讀盤"]; return;
+    }
+    if (_route.fishing && ![FishingEligibilityReason(_live,
+        _oneShot && _oneShotBound && PHOrbSameTurn(&_oneShotOrigin,&_live),_auto.active()) isEqual:@"eligible"]) {
+        [self queueStop:@"撈珠的模式、操作窗口或剩餘時間已改變，請重新讀盤"]; return;
     }
     if (![self hasThornBudget:&_live]) {
         [self queueStop:@"荊棘路徑的 HP 或待結算傷害已改變，請重新求路"]; return;
@@ -705,8 +753,10 @@ struct EightPreparationState {
     _recoveryTurn = _auto.active() ? _auto.turn : 0;
     // Fixed-inventory recovery shortages may be filled by real exchanges.
     // All other mechanism and goal blockers retain their stop behavior.
+    const bool boundFishingOnce = _oneShot && _oneShotBound && PHOrbSameTurn(&_oneShotOrigin,&_preview);
     const bool assistFishingOnly = _auto.active() && !_auto.eight() && _assistRecoveryL &&
-        [_goalPlan[@"assistRecoveryBlocker"] isEqual:@"insufficient-inventory"] && MultiFishingEligible(_preview);
+        [_goalPlan[@"assistRecoveryBlocker"] isEqual:@"insufficient-inventory"] &&
+        [MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active()) isEqual:@"eligible"];
     if ((![_goalPlan[@"available"] boolValue] && !assistFishingOnly) ||
         !PHOrbReadGoals(assistFishingOnly ? _goalPlan[@"assistRecoveryBaseGoals"] : _goalPlan[@"goals"], &options.goals)) {
         _phase = PHOrbSessionPhase::Blocked; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
@@ -768,13 +818,19 @@ struct EightPreparationState {
         multiBaseOptions.goals.comboFirstWave = options.goals.comboFirstWave;
         multiBaseOptions.goals.bonusFirstWave = options.goals.bonusFirstWave;
     }
-    const bool multiEligible = solo && multiGoalsValid && MultiFishingEligible(_preview);
-    const PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
-    // Fishing is a solo fallback for one unlocked spinner. Its colour must be in
-    // the spinner's own table: some spinners cycle only some colours.
+    NSString *const fishingEligibility = FishingEligibilityReason(_preview,boundFishingOnce,_auto.active());
+    NSString *const multiEligibility = multiGoalsValid ?
+        MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active()) : @"invalid-goals";
+    const bool multiEligible = [multiEligibility isEqual:@"eligible"];
+    PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
+    if (!solo) multiTiming.remainingFrames = std::min(multiTiming.remainingFrames,
+        unsigned(std::floor(std::max(0.0,remaining) * _preview.fps)));
+    // One-take fallback uses one unlocked source. Its color must be in the
+    // actual table. Co-op additionally requires this explicitly bound once.
     int fishCell = -1; unsigned fishSteps = 0;
-    if (solo && !multiNeedsRecovery && !assistCandidates.count && PHOrbSpinnerVariants(&board) > 1 && _preview.spinnerCountdownKnown &&
-        _preview.spinnerPeriodFrames >= FishMinPeriod && _preview.fps >= 15 && _preview.fps <= 120 && !(board.spinnerColors & ~63u)) {
+    NSString *singleEligibility = fishingEligibility;
+    if ([singleEligibility isEqual:@"eligible"] && (multiNeedsRecovery || assistCandidates.count)) singleEligibility = @"assist-multi-plan-required";
+    if ([singleEligibility isEqual:@"eligible"]) {
         unsigned dynamic = 0; bool thorns = false;
         for (unsigned i = 0; i < unsigned(board.width) * board.height; ++i) {
             thorns |= (board.flags[i] & PHOrbFlagThorn) != 0;
@@ -783,8 +839,14 @@ struct EightPreparationState {
         const double wait = FishWaitSeconds(_preview);
         const double moving = std::min(TimeAvailable(_preview), ExecutionLimit + wait) - wait - TimeMargin;
         if (moving > 0) fishSteps = std::min(options.steps, unsigned(moving / StepDuration(_preview)));
-        if (dynamic != 1 || thorns || fishSteps < 2) fishCell = -1;
+        if (dynamic != 1 || thorns || fishSteps < 2) {
+            fishCell = -1; singleEligibility = dynamic != 1 ? @"requires-one-unlocked-spinner" :
+                thorns ? @"thorn-token" : @"insufficient-move-time";
+        }
     }
+    NSString *const singleFishingEligibility = singleEligibility;
+    const unsigned ordinaryStageMS = !solo && (multiEligible || fishCell >= 0) ?
+        std::max(1u,options.milliseconds / 2) : options.milliseconds;
     const NSUInteger generation = _generation;
     __weak PHOrbSession *weakSelf = self;
     _phase = PHOrbSessionPhase::Solving; _message = @"正在求路…";
@@ -796,13 +858,15 @@ struct EightPreparationState {
         NSDictionary *selectedAssist = @{};
         NSMutableArray<NSMutableDictionary *> *attempts = [NSMutableArray array];
         NSInteger selectedAttemptIndex = -1;
-        NSString *soloRetrySkipped = @"";
+        NSString *soloRetrySkipped = solo ? @"not-required" : @"not-single-player";
+        NSString *singleNotAttempted = [singleFishingEligibility isEqual:@"eligible"] ?
+            @"ordinary-route-satisfied" : singleFishingEligibility;
         unsigned fishingRetries = 0;
         PHOrbFishingPlan fishingPlan;
         PHOrbMultiFishingResult multiResult;
         bool selectedMulti = false;
         NSMutableArray *multiAttempts = [NSMutableArray array];
-        NSDictionary *multiCoverage = @{@"started":@NO};
+        NSDictionary *multiCoverage = @{@"started":@NO,@"reason":multiEligible ? @"ordinary-route-satisfied" : multiEligibility};
         const auto start = std::chrono::steady_clock::now();
         const auto solveAttempt = [&](const PHOrbSolveOptions &trial, PHOrbRoute &candidate, NSDictionary *details) {
             const auto attemptStart = std::chrono::steady_clock::now();
@@ -818,6 +882,9 @@ struct EightPreparationState {
             const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
             if (cancel->load(std::memory_order_relaxed) || (assistCandidates.count && spent >= options.milliseconds)) break;
             PHOrbSolveOptions trial = options;
+            // Leave part of this one native-window deadline for real takes.
+            // An ordinary timeout must not consume the entire fishing stage.
+            trial.milliseconds = ordinaryStageMS;
             if (assistCandidates.count && !PHOrbReadGoals(assistCandidates[choice][@"goals"], &trial.goals)) continue;
             trial.goals.comboFirstWave = options.goals.comboFirstWave;
             trial.goals.bonusFirstWave = options.goals.bonusFirstWave;
@@ -837,7 +904,13 @@ struct EightPreparationState {
             cancel->load(std::memory_order_relaxed), options.milliseconds, result, route);
         if (retryDecision == PHOrbSoloRetryDecision::SearchCompleted)
             soloRetrySkipped = @"search-completed-without-deadline";
+        else if (retryDecision == PHOrbSoloRetryDecision::Ineligible && solo)
+            soloRetrySkipped = assistCandidates.count ? @"assist-shared-budget" :
+                cancel->load(std::memory_order_relaxed) ? @"cancelled" :
+                options.milliseconds >= PHOrbSoloRetryMilliseconds ? @"initial-budget-already-extended" :
+                result == PHOrbSolveStatus::Solved ? @"ordinary-route-satisfied" : @"no-retryable-candidate";
         if (retryDecision == PHOrbSoloRetryDecision::Retry) {
+            soloRetrySkipped = @"retry-performed";
             PHOrbSolveOptions trial = selectedOptions; trial.milliseconds = PHOrbSoloRetryMilliseconds;
             PHOrbRoute candidate{};
             const auto status = solveAttempt(trial, candidate, @{@"soloRetry":@YES});
@@ -853,14 +926,22 @@ struct EightPreparationState {
             !(result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) {
             auto trial = options; trial.fishCell = fishCell;
             fishingPlan = PHOrbPlanFishing(board, trial);
+            singleNotAttempted = fishingPlan.selectedCount ? @"shared-search-budget-exhausted" : @"no-feasible-color";
         }
         for (unsigned choice = 0; choice < fishingPlan.selectedCount; ++choice) {
             if (cancel->load(std::memory_order_relaxed) ||
                 (result == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe)) break;
             PHOrbSolveOptions trial = options;
             trial.fishCell = fishCell; trial.fishColor = fishingPlan.candidates[choice].color; trial.steps = fishSteps;
+            if (!solo) {
+                const auto spent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+                if (spent >= options.milliseconds) break;
+                trial.milliseconds = unsigned(options.milliseconds - spent) / (fishingPlan.selectedCount - choice + unsigned(multiEligible));
+                if (!trial.milliseconds) break;
+            }
             PHOrbSearchWithSoloRetry(trial, solo, assistCandidates.count != 0, *cancel,
                 [&](const PHOrbSolveOptions &fishOptions, PHOrbRoute &candidate, bool retry) {
+                    singleNotAttempted = @"";
                     if (retry) ++fishingRetries;
                     const auto status = solveAttempt(fishOptions, candidate, retry ? @{@"soloRetry":@YES} : @{});
                     if (PHOrbPreferSearchCandidate(status, candidate, result, route)) {
@@ -870,6 +951,9 @@ struct EightPreparationState {
                     return status;
                 });
         }
+        if (multiEligible) multiCoverage = @{@"started":@NO,@"reason":
+            cancel->load(std::memory_order_relaxed) ? @"cancelled" :
+            route.fishing ? @"single-take-route-satisfied" : @"ordinary-route-satisfied"};
         // All multi-take target cells, inventory plans and final checks share
         // one fallback budget. Never grant one whole budget per color/cell.
         if (multiEligible && !cancel->load(std::memory_order_relaxed) &&
@@ -878,7 +962,7 @@ struct EightPreparationState {
             for (unsigned i = 0; i < board.width * board.height; ++i)
                 if ((board.spinnerMask & (UINT64_C(1) << i)) && !(board.tapeMask & (UINT64_C(1) << i))) cells.push_back(i);
             const auto multiStarted = std::chrono::steady_clock::now();
-            const auto multiDeadline = multiStarted + std::chrono::milliseconds(options.milliseconds);
+            const auto multiDeadline = (solo ? multiStarted : start) + std::chrono::milliseconds(options.milliseconds);
             NSString *endReason = cells.empty() ? @"no-eligible-cell" : @"all-attempted";
             for (size_t index = 0; index < cells.size(); ++index) {
                 const auto now = std::chrono::steady_clock::now();
@@ -930,7 +1014,8 @@ struct EightPreparationState {
         NSDictionary *selectedAttempt = selectedAttemptIndex >= 0 ? attempts[NSUInteger(selectedAttemptIndex)] : @{};
         uint64_t totalEvaluated = 0, totalEvaluationCalls = 0, totalEvaluationCacheHits = 0;
         unsigned totalSearchPasses = 0, totalBacktracks = 0, maximumExploredDepth = 0;
-        bool anyAttemptDeadlineReached = false, totalStatisticsComplete = true;
+        unsigned ordinarySearchPasses = 0, ordinaryBacktracks = 0;
+        bool anyAttemptDeadlineReached = false, totalStatisticsComplete = true, anyFishingAttempt = false;
         for (NSDictionary *attempt in attempts) {
             totalEvaluated += [attempt[@"evaluated"] unsignedLongLongValue];
             totalEvaluationCalls += [attempt[@"evaluationCalls"] unsignedLongLongValue];
@@ -939,6 +1024,11 @@ struct EightPreparationState {
             totalBacktracks += [attempt[@"backtracks"] unsignedIntValue];
             maximumExploredDepth = std::max(maximumExploredDepth, [attempt[@"exploredDepth"] unsignedIntValue]);
             anyAttemptDeadlineReached |= [attempt[@"deadline"] boolValue];
+            anyFishingAttempt |= [attempt[@"fishingRequested"] boolValue];
+            if (![attempt[@"fishingRequested"] boolValue]) {
+                ordinarySearchPasses += [attempt[@"searchPasses"] unsignedIntValue];
+                ordinaryBacktracks += [attempt[@"backtracks"] unsignedIntValue];
+            }
             totalStatisticsComplete &= [attempt[@"statisticsAvailable"] boolValue] && [attempt[@"evaluationBreakdownKnown"] boolValue];
         }
         const auto searchElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
@@ -951,6 +1041,21 @@ struct EightPreparationState {
             trace[@"selectedAttemptIndex"] = @(selectedAttemptIndex);
             trace[@"selectedStatus"] = selectedAttempt[@"status"] ?: @"none";
             trace[@"soloRetrySkipped"] = soloRetrySkipped;
+            trace[@"fishingEligibilityReason"] = fishingEligibility;
+            trace[@"singleFishingEligibilityReason"] = singleFishingEligibility;
+            trace[@"multiFishingEligibilityReason"] = multiEligibility;
+            trace[@"singleFishingNotAttemptedReason"] = singleNotAttempted;
+            trace[@"multiplayerSearchBudgetShared"] = @(!solo);
+            trace[@"ordinaryStageBudgetMS"] = @(ordinaryStageMS);
+            trace[@"fishingReservedBudgetMS"] = @(!solo ? options.milliseconds - ordinaryStageMS : 0);
+            trace[@"fishingNotAttemptedReason"] = anyFishingAttempt ? @"" : ![fishingEligibility isEqual:@"eligible"] ? fishingEligibility :
+                result == PHOrbSolveStatus::Solved ? @"ordinary-route-satisfied" :
+                !solo ? @"shared-search-budget-or-no-feasible-plan" : @"no-feasible-plan";
+            trace[@"colorRecoveryEligibilityReason"] = @(PHOrbColorRecoveryEligibilityReason(board,options));
+            trace[@"colorRecoveryConfiguredPasses"] = @(options.recoveryPasses);
+            trace[@"colorRecoveryOrdinarySearchPasses"] = @(ordinarySearchPasses);
+            trace[@"colorRecoveryOrdinaryBacktracks"] = @(ordinaryBacktracks);
+            trace[@"colorRecoveryStatisticsScope"] = @"ordinary-attempt-totals-not-recovery-only";
             trace[@"fishingRetries"] = @(fishingRetries);
             trace[@"fishingPlan"] = FishingPlanTrace(fishingPlan, fishCell);
             trace[@"multiFishingAttempts"] = [multiAttempts copy];
@@ -1038,6 +1143,7 @@ struct EightPreparationState {
                 return;
             }
             trace[@"predictedBoard"] = BoardTrace(replay);
+            trace[@"colorPhases"] = ColorPhaseTrace(replay,checkedOptions,selectedMulti ? int(route.fishCell) : -1);
             trace[@"evaluation"] = FishingEvaluationTrace(evaluation,checkedOptions.goals,selectedMulti);
             session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = PHOrbSessionPhase::Preview; session->_previewAt = session->_now;
@@ -1093,6 +1199,8 @@ struct EightPreparationState {
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];
                 if (checkedOptions.activity.preparation) [missing addObject:
                     @"未找到只消一組三珠、無後續連鎖且保留轉色珠量足夠的路徑"];
+                NSString *phaseMissing = trace[@"colorPhases"][@"missingInAnyFailedPhaseNames"];
+                if (phaseMissing.length) [missing addObject:[NSString stringWithFormat:@"未達標候選的顏色缺口：%@",phaseMissing]];
                 for (unsigned g = 0; g < checkedOptions.goals.count; ++g) if (route.goalHits[g] < checkedOptions.goals.items[g].count)
                     [missing addObject:[NSString stringWithFormat:@"未達成：%@（%u／%u）",
                         PHOrbGoalDescription(goals[g]), route.goalHits[g], checkedOptions.goals.items[g].count]];
@@ -1186,7 +1294,7 @@ struct EightPreparationState {
         if (![self hasThornBudget:&current]) {
             [self queueStop:@"執行前荊棘傷害預算已不符合，已停止"]; return;
         }
-        if (_route.fishingExchangeCount && !FishingTimingUnchanged(current,_preview)) {
+        if (_route.fishing && !FishingTimingUnchanged(current,_preview)) {
             [self queueStop:@"連續撈珠的轉轉色表或時間資料已改變，未開始轉珠"]; return;
         }
         if (time - _requestedAt < ArmDelay) return;
@@ -1203,8 +1311,11 @@ struct EightPreparationState {
         NSString *stopReason = !frame.enabled ? @"總開關或前景狀態已改變，已停止" :
             !PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" :
             !current.ordinary ? @"盤面操作限制已改變，已停止" :
-            _route.fishingExchangeCount && !FishingTimingUnchanged(current,_preview) ? @"轉轉色表、速度或讀取狀態已改變，已停止連續撈珠" :
-            _route.fishingExchangeCount && TimeAvailable(current) <= TimeMargin ? @"連續撈珠剩餘時間不足，已停止並放開" :
+            _route.fishing && multiplayer && (current.multiplayer.kind != PHOrbMultiplayerThree || _auto.active() ||
+                !_oneShot || !_oneShotBound || !PHOrbSameTurn(&_oneShotOrigin,&current)) ? @"本次 3 人手動撈珠授權已改變，已停止" :
+            _route.fishing && !FishingTimingUnchanged(current,_preview) ? @"轉轉色表、速度或讀取狀態已改變，已停止撈珠" :
+            _route.fishing && (!_awaitingStart && !HasRemainingFishingTime(current,_route,unsigned(_confirmed),
+                _executionElapsed,executionLimit)) ? @"剩餘時間不足以完成後續取色與路徑，已停止並放開" :
             multiplayer && TimeAvailable(current) <= TimeMargin ? @"多人剩餘時間不足，已停止並放開" :
             time < _startedAt ? @"執行時鐘異常，已停止" :
             time - _startedAt > executionLimit ? [NSString stringWithFormat:@"轉珠執行超過 %.1f 秒上限（已確認 %lu／%u 步），已停止",
@@ -1253,7 +1364,8 @@ struct EightPreparationState {
                 !MultiFishingReadyToEnter(current,_route,unsigned(_confirmed + 1))) {
                 _message = @"等待轉轉穩定並轉出下一次需要的顏色…";
             } else if (!_route.fishingExchangeCount && _route.fishing && !_fishEntered && _route.cells[_confirmed + 1] == _route.fishCell &&
-                !(current.spinnerCountdownKnown && current.spinnerCountdown >= FishMinCountdown &&
+                !(current.orbMotionKnown && current.orbMotion[_route.fishCell] == 0 &&
+                  current.spinnerCountdownKnown && current.spinnerCountdown >= FishMinCountdown &&
                   current.board.types[_route.fishCell] == _route.fishColor)) {
                 _message = @"等待轉轉轉出路徑需要的顏色…"; // Keep holding the orb next to the cell.
             } else {
@@ -1271,6 +1383,9 @@ struct EightPreparationState {
                         entry[@"exchange"] = @(FishingExchangeAt(_route,unsigned(_confirmed + 1),false));
                         entry[@"spinnerBoard"] = BoardTrace(current.board); entry[@"confirmed"] = @NO;
                         entry[@"remainingFrames"] = @(current.remainingFrames);
+                        entry[@"availableFrames"] = @(MultiFishingTiming(current).remainingFrames);
+                        entry[@"multiplayerClockKnown"] = @(current.multiplayer.clockKnown);
+                        entry[@"multiplayerRemainingSeconds"] = @(current.multiplayer.remainingSeconds);
                         entry[@"sourceMotionKnown"] = @(current.orbMotionKnown);
                         entry[@"sourceMotion"] = @(current.orbMotion[_route.fishCell]);
                         [entries addObject:entry]; record[@"fishEntries"] = entries;
@@ -1454,6 +1569,14 @@ struct EightPreparationState {
                 PHInputIsQuiet(&current.input) && SamePosition(current, _preview))
                 _ownedOrb = current.dragged;
             _expected = current;
+            return;
+        }
+        if (_route.fishing && (current.phase != 2 ||
+            (current.multiplayer.kind != PHOrbMultiplayerNone && !PHOrbMultiplayerWindow(&current)) ||
+            TimeAvailable(current) <= TimeMargin)) {
+            if (!_ownedOrb && _awaitingStart && current.dragged == _preview.board.tokens[_route.cells[0]] &&
+                PHInputIsQuiet(&current.input) && SamePosition(current,_preview)) _ownedOrb = current.dragged;
+            [self queueStop:@"原生交換後撈珠操作窗口或剩餘時間已不足，已停止"];
             return;
         }
         // The game may replace a leader inside the original native frame.

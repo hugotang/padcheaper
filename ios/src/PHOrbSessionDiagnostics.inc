@@ -46,6 +46,15 @@
     trace[@"reason"] = reason ?: @""; trace[@"planAvailable"] = _goalPlan[@"available"] ?: @NO;
     trace[@"goalsKnown"] = @(goalsKnown); trace[@"goals"] = PHOrbGoalsJSON(&goals);
     trace[@"goalCount"] = @(goals.count);
+    const bool fishingOnce = _oneShot && _oneShotBound && PHOrbSameTurn(&_oneShotOrigin,&_preview);
+    trace[@"fishingEligibilityReason"] = FishingEligibilityReason(_preview,fishingOnce,_auto.active());
+    trace[@"multiFishingEligibilityReason"] = MultiFishingEligibilityReason(_preview,fishingOnce,_auto.active());
+    trace[@"fishingNotAttemptedReason"] = [status isEqual:@"searching"] ? @"search-pending" : @"planning-blocked";
+    trace[@"soloRetrySkipped"] = PHBattleIsSinglePlayer(_preview.identity.entryMode,_preview.identity.multiplayer) ?
+        @"search-not-completed" : @"not-single-player";
+    PHOrbSolveOptions colorOptions = _solveOptions; colorOptions.goals = goals;
+    trace[@"colorRecoveryEligibilityReason"] = @(PHOrbColorRecoveryEligibilityReason(_preview.board,colorOptions));
+    trace[@"colorRecoveryConfiguredPasses"] = @(colorOptions.recoveryPasses);
     trace[@"baseGoals"] = _goalPlan[@"enemyCounterBaseGoals"] ?: _goalPlan[@"assistRecoveryBaseGoals"] ?: trace[@"goals"];
     trace[@"enemyCountermeasure"] = @{@"comboActive":_goalPlan[@"enemyComboActive"] ?: @NO,
         @"minimumCombo":_goalPlan[@"enemyComboRequired"] ?: @0,

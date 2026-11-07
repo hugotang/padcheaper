@@ -32,9 +32,28 @@ bool ActivityValid(const PHOrbBoard &board, const PHOrbActivityObjective &a) {
     return true;
 }
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
+const char *ColorRecoveryReason(const PHOrbBoard &board, const PHOrbGoalSet &goals,
+    const PHOrbActivityObjective &activity, int fishCell) {
+    if (fishCell >= 0) return "fishing";
+    if (activity.firstWaveOnly || activity.preparation || activity.comboPriority || activity.colors) return "activity";
+    const unsigned run = board.minErase ? board.minErase : 3;
+    if (board.minMatch > run) return "match-rule";
+    bool multipleColors = false;
+    for (unsigned g = 0; g < goals.count; ++g) {
+        const auto &goal = goals.items[g];
+        if (goal.kind == PHOrbGoalColors) multipleColors |= goal.count > 1;
+        else if (goal.kind == PHOrbGoalMatch) {
+            // Only a single ordinary minimum run is equivalent to requiring
+            // this colour. Larger/multiple groups keep their original search.
+            if (!goal.colors || (goal.colors & ~63u) || Count(goal.colors) != 1 ||
+                goal.count != 1 || goal.length < 3 || goal.length > run) return "unsupported-goal";
+        } else if (goal.kind != PHOrbGoalCombo) return "unsupported-goal";
+    }
+    return multipleColors ? "eligible" : "no-multicolor-goal";
+}
 bool ShapeGoal(unsigned kind) { return kind >= PHOrbGoalL && kind <= PHOrbGoalFour; }
-// PAD 23.6.0 0x1005F7954 classifies four, T, L, cross (removed count 4/5)
-// and square (9) from the actual removed group: only the template's marked
+// PAD 23.6.1 0x1005F7CD8 classifies T/L/cross (removed count 5) and square
+// (9); its caller checks count 4. Only the template's actually removed
 // same-colour cells are checked. Unmarked same-colour neighbours do not matter.
 bool RemovedGroupShape(unsigned kind) {
     return kind == PHOrbGoalFour || kind == PHOrbGoalT || kind == PHOrbGoalL ||
@@ -50,8 +69,8 @@ struct Context {
     Bits dynamicSpinners = 0;
     std::array<Cells, PHOrbTypes> spinnerStates{};
     unsigned shapeGoals = 0;
-    // Ordinary multi-colour recovery is separate from exact-shape/spinner
-    // guidance. The primary pass retains its original objective and beam.
+    // Ordinary multi-colour recovery may avoid spinner cells. It never opens
+    // a spinner or changes exact goals; the primary objective/beam is retained.
     bool colorRecovery = false, colorGuidance = false;
     uint8_t wantedColors = 0, colorFocus = PHOrbBasicTypes;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
@@ -215,17 +234,12 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
     for (unsigned g = 0; g < goals.count; ++g)
         for (const auto &pattern : context.patterns[g])
             context.hasStableLayouts[g] |= (pattern.stableColors & goals.items[g].colors & ~context.unmatchable) != 0;
-    bool ordinaryColors = !board.spinnerMask && fishCell < 0 && !activity.firstWaveOnly && context.minMatch <= context.minErase;
-    bool multipleColors = false;
+    context.colorRecovery = !std::strcmp(ColorRecoveryReason(board,goals,activity,fishCell),"eligible");
     for (unsigned g = 0; g < goals.count; ++g) {
         const auto &goal = goals.items[g];
-        ordinaryColors &= goal.kind == PHOrbGoalColors || goal.kind == PHOrbGoalCombo;
-        if (goal.kind == PHOrbGoalColors) {
+        if (goal.kind == PHOrbGoalColors || (context.colorRecovery && goal.kind == PHOrbGoalMatch))
             context.wantedColors |= goal.colors & ~context.unmatchable;
-            multipleColors |= goal.count > 1;
-        }
     }
-    context.colorRecovery = ordinaryColors && multipleColors;
     if (context.guidance && (context.shapeGoals || context.colorRecovery)) for (unsigned i = 0; i < w * h; ++i) {
         Bits frontier = Bits(1) << i, seen = frontier;
         if (frontier & context.blocked) continue;
@@ -376,6 +390,9 @@ ColorHint RepairColor(Bits color, const std::vector<Pattern> &patterns, unsigned
     ColorHint best;
     for (unsigned p = 0; p < patterns.size(); ++p) {
         const auto &pattern = patterns[p];
+        // A fixed-colour repair cannot rely on a spinner's current phase,
+        // even when that phase already fills this template's cell.
+        if (pattern.cells & context.dynamicSpinners) continue;
         Bits holes = pattern.cells & ~color;
         if (holes & context.blocked) continue;
         const unsigned size = Count(pattern.cells), missing = Count(holes);
@@ -403,6 +420,8 @@ ColorHint RepairColor(Bits color, const std::vector<Pattern> &patterns, unsigned
 
 void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, const Context &context) {
     if (!context.colorGuidance) return;
+    score.colorProgress.fill(0); score.colorGuidedProgress = 0;
+    score.missingColors = 0; score.weakestColor = PHOrbBasicTypes;
     unsigned patternGoal = 0;
     while (patternGoal < context.goals.count && context.goals.items[patternGoal].kind != PHOrbGoalColors) ++patternGoal;
     if (patternGoal == context.goals.count) return;
@@ -410,14 +429,16 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
     for (unsigned c = 0; c < PHOrbBasicTypes; ++c) if (context.wantedColors & (1u << c)) {
         if (score.matchedColors & (1u << c)) score.colorProgress[c] = 4096;
         else {
-            hints[c] = RepairColor(colors[c], context.patterns[patternGoal], c, context);
+            hints[c] = RepairColor(colors[c] & ~context.dynamicSpinners, context.patterns[patternGoal], c, context);
             score.colorProgress[c] = hints[c].value;
         }
     }
     unsigned weakest = 4096;
     for (unsigned g = 0; g < context.goals.count; ++g) {
         const auto &goal = context.goals.items[g];
-        if (goal.kind != PHOrbGoalColors || score.result.goalHits[g] >= goal.count) {
+        const bool colorGoal = goal.kind == PHOrbGoalColors || (context.colorRecovery && goal.kind == PHOrbGoalMatch);
+        if (colorGoal) score.layouts[g] = 0;
+        if (!colorGoal || score.result.goalHits[g] >= goal.count) {
             score.colorGuidedProgress += score.goalProgress[g]; continue;
         }
         std::array<unsigned, PHOrbBasicTypes> order{{0,1,2,3,4,5}};
@@ -734,7 +755,9 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     if (context.guidance && context.shapeGoals > 1) JointGuidance(score, hints, context);
     FinishProgress(score, context);
     score.matchedColors = uint8_t(context.goals.bonusFirstWave ? firstColors : matchedColors);
-    ColorGuidance(score, colors, context);
+    // Multi-phase hints are computed once, after exact hits and colour masks
+    // have been aggregated. A first-phase colour is not a guaranteed match.
+    if (context.variants == 1) ColorGuidance(score, colors, context);
     result.goalsMet = result.matchedGoals == context.goals.count;
     if (context.activity.firstWaveOnly) {
         result.activityValue = result.firstWaveCombos * context.activity.comboWeight;
@@ -814,6 +837,7 @@ Score Evaluate(Cells cells, const Context &context) {
         }
         worst.jointPenalty = std::max(worst.jointPenalty, variant.jointPenalty);
         worst.potential = std::min(worst.potential, variant.potential);
+        worst.matchedColors &= variant.matchedColors;
     }
     worst.result.matchedGoals = 0;
     for (unsigned g = 0; g < context.goals.count; ++g)
@@ -824,6 +848,14 @@ Score Evaluate(Cells cells, const Context &context) {
     // every phase, including those that would not clear poison themselves.
     worst.result.hazardsSafe = ReleaseHazardsSafe(worst.result, context.allowPoisonWithHeartFour);
     FinishProgress(worst, context);
+    if (context.colorGuidance) {
+        std::array<Bits, PHOrbTypes> colors{};
+        for (unsigned i = 0; i < context.width * context.height; ++i) colors[cells[i]] |= Bits(1) << i;
+        // goalHits remain per-goal minima: a subset may be satisfied in all
+        // phases by different colours. The intersection only guides unmet
+        // clauses, never adds mandatory colours or changes release results.
+        ColorGuidance(worst,colors,context);
+    }
     return worst;
 }
 
@@ -1130,6 +1162,11 @@ PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
         case PHOrbSearchQuality::Balanced: return {};
     }
     return {};
+}
+
+const char *PHOrbColorRecoveryEligibilityReason(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept {
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals)) return "invalid-input";
+    return ColorRecoveryReason(board,options.goals,options.activity,options.fishCell);
 }
 
 PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGoalSet &goals) noexcept {

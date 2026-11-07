@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "date": "2026-11-07",
+  "timezone": "Asia/Hong_Kong",
+  "game": "Puzzle & Dragons JP",
+  "game_version": "23.6.1",
+  "input_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+  "input_bytes": 21574784,
+  "database_relative_path": "build/ios-address-23.6.1/23.6.1/pad.i64",
+  "method": "Read-only IDA pseudocode, exact instruction and call-site review; comparison with shared solver source and test intentions. No binary execution or whole-app equivalence claim.",
+  "database_mutated": false,
+  "database_explicitly_saved": false,
+  "build_run": false,
+  "test_suites_run": false,
+  "solver_run": false,
+  "device_verified": false,
+  "raw_pseudocode_committed": false,
+  "address_convention": "Unslid virtual addresses for the exact input SHA256 above.",
+  "identity_review": {
+    "ida_input_path_verified": true,
+    "ida_input_sha256_and_size_verified": true,
+    "full_function_ranges_and_hashes_verified": 12,
+    "target_guard_file": "ios/targets/orbs-23.6.1.json",
+    "guard_bytes_and_hashes_verified": [
+      {"name":"PHOrbShapeMatchRVA","address":"0x1005F7CD8","length":64,"sha256":"23a3c4a31b3412b9d75b1aa01bf676d769b61e042fcca5a7bc46021cb8d70ac9"},
+      {"name":"PHOrbLineMatchRVA","address":"0x1005F8E28","length":64,"sha256":"d53b5420d156ac0e101ab6080c93fac846db1658aab27c77568407def252e422"},
+      {"name":"PHOrbMatchRVA","alias":"PHOrbComboBonusMatchRVA","address":"0x1005FC954","length":64,"sha256":"648dc67dc418a531d6961d94f99a922a5b44e43cb0bafc228087b842615248a1"}
+    ],
+    "metadata_provenance": "ios/research/address-update-23.6.1.json input record with matching SHA256; not freshly extracted metadata this turn",
+    "recorded_build":"107553",
+    "recorded_bundle_id":"jp.gungho.pad",
+    "recorded_uuid":"38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "info_plist_rechecked":false,
+    "mach_o_uuid_rechecked":false,
+    "all_target_guards_rechecked":false,
+    "device_loaded_image_rechecked":false
+  },
+  "functions": [
+    {"address":"0x1005F4048","end":"0x1005F40D4","role":"working color and marker initialization","bytes_sha256":"21b11deaf536a3c246580473fe59d7450873d7e6cae8c9a141b6b92cab400ae5"},
+    {"address":"0x1005F780C","end":"0x1005F79B8","role":"preliminary orthogonal same-color flood","bytes_sha256":"bbba9c64baba94e2a717db09187c21a103b29c6c7d688b28e5fb06ddd87a2819"},
+    {"address":"0x1005F7B38","end":"0x1005F7CD8","role":"marked-neighbour traversal and selected run-cell count","bytes_sha256":"90eb98c55177747bf80f5a4b28a9ccc224a314d22510854d36237e41e8d297d0"},
+    {"address":"0x1005F7CD8","end":"0x1005F8D18","role":"actual removal and per-group shape classifier","bytes_sha256":"7052b85cff038caaa5e3d20907e2f549b7bc2493d041689652f3622247b785c2"},
+    {"address":"0x1005F8D80","end":"0x1005F8E28","role":"working marker restore/discard helper","bytes_sha256":"801031d381aa380202ba0f5180da7f0d13ac5d9560adff8da81edcde769a9a38"},
+    {"address":"0x1005F8E28","end":"0x1005F92D4","role":"horizontal and vertical run marking then selected component count","bytes_sha256":"08bcfc675b479dbbb11c21b6ce60291c51bb8df905cf6e0445a878246ac6eb89"},
+    {"address":"0x1005FB1D4","end":"0x1005FBA18","role":"special prepass; only partially reviewed","bytes_sha256":"440fa89996906fb29d444226e0f3bb969ac05b096fc2570f1b6a3b5b11effe26"},
+    {"address":"0x1005FC954","end":"0x100602258","role":"match pipeline and effect consumers; targeted branches reviewed","bytes_sha256":"840fb55aa687924e7ec96c6ab69a57251ccf7865eb7a3010d30b6f82ac83b431"},
+    {"address":"0x100603DF4","end":"0x100604810","role":"movement gate, repeated match/drop dispatch and progression","bytes_sha256":"241b8370ff70f6288076d27c01105f04a89fafd47afcad088f2502e5cdae650b"},
+    {"address":"0x100603360","end":"0x100603A08","role":"column compaction and replacement drop preparation","bytes_sha256":"61bbea4aab748ad58c8f0ac306e5e2e7ec535da8e3522369495f33c3ee7d8fab"},
+    {"address":"0x10054835C","end":"0x1005483F0","role":"replacement drop suppression predicate; sources only partly followed","bytes_sha256":"3daf2be58bf32b3297c64d540c2bf90b822833c957ceffbbbf7b643628bcccc2"},
+    {"address":"0x100560278","end":"0x1005602E4","role":"set removal animation state 5","bytes_sha256":"029c793e0b852357766f44c48de194500dece81b213d43a323251879f8bd1963"}
+  ],
+  "claims": [
+    {
+      "id":"R1",
+      "status":"confirmed_normal_match_pipeline",
+      "claim":"Normal matching first floods same-color orthogonal connectivity, marks horizontal and vertical runs meeting minErase, then counts marked connected neighbours before actual removal.",
+      "evidence":["0x1005FD85C","0x1005FD890","0x1005F8F18","0x1005F8F50","0x1005F909C","0x1005F7B88","0x1005F7B94","0x1005F7BC8","0x1005F7BD0","0x1005F9234","0x1005FD8D8"],
+      "offsets":{"width":"game+0x58","height":"game+0x59","minErase":"game+0x5C","orb_pointer_table":"impl+0xA34C0","orb_pointer_row_stride":128,"temporary_flags":"orb+0x10","working_color":"orb+0x14"},
+      "solver_symbols":["MarkedRuns","Neighbours","EvaluateStatic"],
+      "qualification":"The traversal marks its seed visited even when unmarked, follows only neighbours with flags&3==2, and the classifier rechecks actual runs. Do not equate a preliminary counter or special transient state with an arbitrary pure marked-set oracle."
+    },
+    {
+      "id":"R2",
+      "status":"confirmed_gate_conservative_reader_difference",
+      "claim":"The marked count must reach max(impl signed16+0xB6264, signed16+0xB626C) when that maximum is positive. minErase and minMatch are distinct.",
+      "evidence":["0x1005FD89C","0x1005FD8A0","0x1005FD8A8","0x1005FD8B0","0x1005FD8B4","0x1005FD8B8"],
+      "solver_symbols":["EvaluateStatic","PHOrbBoardValid"],
+      "qualification":"The native reader accepts nonnegative values at most board size and rejects other unsigned representations. This is stricter than the native signed-value gate; no negative live value was observed or used to justify relaxing validation."
+    },
+    {
+      "id":"R3",
+      "status":"confirmed_shape_geometry",
+      "claim":"T, cross and L use actual removed count exactly 5; square uses exactly 9. L and T have four directional checks. Unmarked same-color boundary neighbours are not universally forbidden.",
+      "evidence":["0x1005F8430","0x1005F854C","0x1005F8910","0x1005F89C4","0x1005F89D0","0x1005F8A10","0x1005F8B04","0x1005F8C84"],
+      "shape_flags":{"cross":"impl+0x92E14","square":"impl+0x92E15","L":"impl+0x92E16","T":"impl+0x92E17"},
+      "solver_symbols":["ShapeMatches","RemovedGroupShape","MakeContext"],
+      "qualification":"Confirmed stable normal-group geometry; special excluded flags, removal animation states and every downstream awakening effect are not fully modeled by this claim."
+    },
+    {
+      "id":"R4",
+      "status":"confirmed_count_rule_derived_geometry",
+      "claim":"Four-orb consumers test actual removed count==4, including a separate heart-color branch. Under supported minErase>=3 a connected removable size-four group can only be a straight four.",
+      "evidence":["0x1006008EC","0x1005FEC38","0x1005FEC44"],
+      "solver_symbols":["ShapeMatches","EvaluateStatic heartFours"],
+      "qualification":"Straight-four equivalence is a deduction from supported run marking plus size four, not evidence of a dedicated native four-shape flag. Heart recovery amount and all latent/awakening qualifications are outside this claim."
+    },
+    {
+      "id":"R5",
+      "status":"confirmed_native_rule_product_goal_difference",
+      "claim":"A row flag allows a removed group containing a full-width row. A native column flag requires minX==maxX and count>=height. Ordinary product Column deliberately also accepts removed side branches; bonusFirstWave Column is strict.",
+      "evidence":["0x1005F7FD0","0x1005F7FD8","0x1005F7FF0","0x1005F8CAC","0x1005F8CB8","0x1005F8CC4","0x100600990","0x1006009A0"],
+      "shape_flags":{"row":"impl+0x92E12","column":"impl+0x92E13"},
+      "solver_symbols":["ShapeMatches","EvaluateStatic bonusFirstWave column count"],
+      "qualification":"Do not silently change saved ordinary Column goal semantics to match the awakening flag."
+    },
+    {
+      "id":"R6",
+      "status":"confirmed_drop_control_partial_effect_scoping",
+      "claim":"The motion gate invokes matching; drop preparation compacts remaining orbs and prepares new colors, with a suppression branch setting new orbs to state6. Settled boards can re-enter matching. The shape classifier is not intrinsically first-wave-only.",
+      "evidence":["0x100603EA0","0x100604044","0x100604060","0x10060349C","0x100603750","0x100603884","0x100603890"],
+      "solver_symbols":["EvaluateStatic wave loop","comboFirstWave","bonusFirstWave","PHOrbActivityObjective.firstWaveOnly"],
+      "qualification":"Only existing-orb deterministic cascades are simulated. Random/fixed generated skyfalls, all no-skyfall predicate sources and downstream per-awakening wave-scoping were not fully audited. Product first-wave goal restrictions are conservative policy, not universal native awakening rules."
+    },
+    {
+      "id":"R7",
+      "status":"confirmed_skip_gate",
+      "claim":"A currently active unmatchable-color table is checked before same-color flooding.",
+      "evidence":["0x1005FD80C","0x1005FD818","0x1005FD824","0x1005FD830","0x1005FD834"],
+      "solver_symbols":["PHOrbNative ReadBoardEffects","EvaluateStatic unmatchable"],
+      "qualification":"The reader validates durations and masks before allowing planning; this audit does not relax invalid encodings."
+    },
+    {
+      "id":"R8",
+      "status":"reuse_same_input_native_audit",
+      "claim":"Multiple spinners are native-supported and each cell obeys state/lock eligibility under the shared clock; movement can make their phase histories diverge. Desired colors come from current goals and the actual shared allowed-color table.",
+      "related_research":"orb-multifishing-native-20261107.json",
+      "related_claims":["N1","N2","N3","N4","N5","N6","N7","N8"],
+      "qualification":"No new device timing evidence or broader special-color support is asserted here."
+    }
+  ],
+  "source_coverage": [
+    {"path":"ios/tests/orb_t_boundary_solver_tests.inc","coverage":"L/T/cross/square; three board sizes; four rotations; every fitting translation; each adjacent same-color extra and boundary spinner","limitation":"Existing matrix uses fire and minErase3; source review only this turn."},
+    {"path":"ios/tests/orb_native_rule_matrix_tests.inc","coverage":"New all-basic-color matrix over 5x4/6x5/7x6, all shape families, minErase0/3..7, minMatch0/size/size+1, unmatchable, strict column versus ordinary column","limitation":"Written concurrently; not compiled or executed."},
+    {"path":"ios/tests/orb_effect_solver_tests.inc","coverage":"Independent marking, connected size filtering, gravity and restrictive-rule fixtures","limitation":"Source coverage is not current passing validation or native binary execution."},
+    {"path":"ios/tests/orb_enemy_combo_solver_tests.inc","coverage":"First-wave versus deterministic cascade goals and strict bonus column","limitation":"Product semantics are tested, not every native effect."},
+    {"path":"ios/tests/orb_shape_solver_tests.inc","coverage":"Independent FourOracle, heart fours, cascades and spinners","limitation":"Does not establish complete native recovery or survival calculation."}
+  ],
+  "findings": {
+    "confirmed_standard_stable_board_evaluator_counterexamples": [],
+    "do_not_change_silently":["ordinary Column side-branch semantics","first-wave policy","rejection of invalid or negative live minMatch encodings","unsupported transient/special-color states"],
+    "not_a_completeness_claim":["all combat awakenings or latent effects","all new-drop distributions or suppression sources","special prepass/bomb/poison/thorn settlement","search completeness under finite budgets","iPhone frame timing and multiplayer synchronization"],
+    "next_validation":"On explicit build/test request, compile and run new geometry/minimum/color matrices alongside existing independent oracles and broaden multi-goal/multi-spinner search benchmarks. Do not report an unrun matrix as passed."
+  }
+}

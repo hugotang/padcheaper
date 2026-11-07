@@ -13,6 +13,7 @@ static bool replaceHashDuringResizeRead;
 static bool changeTurnDuringMultiRead, changeHashDuringBoardRead;
 static bool changeHashDuringEntryRead;
 static bool changeTurnDuringCoordinateRead;
+static unsigned changeFishingDuringCoordinateRead;
 static unsigned changePeerDuringMultiRead;
 static bool changePeerDuringCoordinateRead;
 static bool changeLeaderDuringPairRead, changeLeaderDuringCoordinateRead;
@@ -180,6 +181,15 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         changeTurnDuringCoordinateRead = false;
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHBattleTurnSerialOffset), 3);
     }
+    if (changeFishingDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        const unsigned mutation = changeFishingDuringCoordinateRead; changeFishingDuringCoordinateRead = 0;
+        if (mutation == 1) Store<float>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiTurnClockOffset + 20), 0.2f);
+        if (mutation == 2) Store<uint16_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbRemainingOffset), 12);
+        if (mutation == 3) {
+            const uintptr_t token = Load<uintptr_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbTableOffset + 4 * 16 * 8));
+            *reinterpret_cast<uint8_t *>(token) = uint8_t((*reinterpret_cast<uint8_t *>(token) + 1) % 6);
+        }
+    }
     if (changePeerDuringMultiRead == 1 && address == Impl + PHOrbMultiDisconnectSeatOffset) {
         changePeerDuringMultiRead = 0;
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbMultiDisconnectSeatOffset), 1);
@@ -259,6 +269,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     changeTurnDuringMultiRead = changeHashDuringBoardRead = false;
     changeHashDuringEntryRead = false;
     changeTurnDuringCoordinateRead = false;
+    changeFishingDuringCoordinateRead = 0;
     changePeerDuringMultiRead = 0; changePeerDuringCoordinateRead = false;
     changeLeaderDuringPairRead = changeLeaderDuringCoordinateRead = false;
     changeLeaderCatalogDuringPairRead = false;

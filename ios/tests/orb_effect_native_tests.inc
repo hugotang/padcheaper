@@ -6,6 +6,7 @@ static void SpinnerFixture(unsigned width, unsigned height, std::initializer_lis
     Put<uint16_t>(Impl + PHOrbSpinnerDurationOffset, 0x404);
     Protected(Impl + PHOrbSpinnerCountOffset, uint32_t(cells.size()), 0x6a875a8b);
     Protected(Impl + PHOrbSpinnerPeriodOffset, 30, 0x6a875a8b);
+    Protected(Impl + PHOrbSpinnerPeriodOffset + 16, 30, 0x6a875a8b);
     Protected(Impl + PHOrbSpinnerColorsOffset, colors, 0x6a875a8b);
     for (unsigned row = 0; row < 6; ++row) {
         unsigned mask = 0;

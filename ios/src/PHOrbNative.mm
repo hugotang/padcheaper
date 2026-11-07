@@ -426,7 +426,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     _multiplayerOwnedOrb = _multiplayerStartOrb = 0;
     _multiplayerStartCell = 0; _multiplayerGesture = {};
 }
-// The session opens one spinner cell for a solo fishing route; -1 closes it.
+// The session opens one spinner cell for a solo or explicitly armed 3P route.
+// A cell flag alone never grants a multiplayer gesture; -1 closes the cell.
 // stageCell: still requires the cell to be a spinner on the live board.
 - (void)allowSpinnerEntry:(NSInteger)cell {
     _allowedSpinnerCell = cell >= 0 && cell < NSInteger(PHOrbMaxCells) ? UINT64_C(1) << cell : 0;
@@ -873,15 +874,37 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             return NO;
         }
     }
-    // Fishing is solo only: multiplayer input never enters a spinner cell.
-    const uint64_t spinnerEntry = multiplayer ? 0 : _allowedSpinnerCell & live.board.spinnerMask;
+    const bool fishingLease = !multiplayer ||
+        (live.multiplayer.kind == PHOrbMultiplayerThree && _multiplayerOnce && !_eightAuto &&
+            PHOrbSameTurn(&_multiplayerGesture,&live));
+    const uint64_t spinnerEntry = fishingLease ? _allowedSpinnerCell & live.board.spinnerMask : 0;
+    // These checks apply to holds as well as swaps: waiting must not retain a
+    // private touch after either native clock, phase evidence or table changes.
+    // Releases keep their existing owned-token rules after the cell is revoked.
+    const auto fishingInputReady = [&](const PHOrbSnapshot &state) {
+        if (!down || !_allowedSpinnerCell) return true;
+        if (!fishingLease || state.fps < 15 || state.fps > 120 || state.remainingFrames > 30000 ||
+            double(state.remainingFrames) / state.fps <= 0.40 || !state.spinnerCountdownKnown ||
+            state.spinnerPeriodFrames < 10 || state.spinnerCountdown > state.spinnerPeriodFrames ||
+            state.spinnerPeriodFrames != expected->spinnerPeriodFrames || state.fps != expected->fps ||
+            state.board.spinnerMask != expected->board.spinnerMask || state.board.spinnerColors != expected->board.spinnerColors ||
+            !(state.board.spinnerMask & _allowedSpinnerCell) || (state.board.spinnerColors & ~63u)) return false;
+        if (multiplayer && (!PHOrbMultiplayerWindow(&state) || !state.multiplayer.clockKnown ||
+            state.multiplayer.remainingSeconds <= 0.40)) return false;
+        const bool taking = (_allowedSpinnerCell & (UINT64_C(1) << cell)) &&
+            state.dragged && state.board.tokens[cell] != state.dragged;
+        return !taking || (state.orbMotionKnown && state.orbMotion[cell] == 0 && state.spinnerCountdown >= 6 &&
+            state.board.types[cell] == expected->board.types[cell] && state.board.types[cell] < 6 &&
+            (state.board.spinnerColors & (1u << state.board.types[cell])));
+    };
     if (!PHOrbSameTurn(expected, &live) || live.boardTransition || live.phase != 2 || live.moves != expected->moves ||
         cell >= live.board.width * live.board.height || !PHOrbSamePlanBoard(&live.board, &expected->board) ||
         (down && (PHOrbBlockedCells(&live.board) & ~spinnerEntry & (UINT64_C(1) << cell))) ||
         (down && !live.dragged && !PHOrbCanStartAt(&live.board, unsigned(cell))) ||
         (down && !PHOrbSameLeaders(expected, &live)) ||
         (down && (!live.ordinary || !PHOrbBoardValid(&live.board) || !PHInputIsQuiet(&live.input))) ||
-        (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged)) {
+        (beginning && (live.dragged || !live.settled)) || (!beginning && live.dragged != expected->dragged) ||
+        !fishingInputReady(live)) {
         if (reason) *reason = @"輸入前盤面或操作條件已改變";
         return NO;
     }
@@ -906,15 +929,15 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     // Coordinate conversion is a native call. Recheck multiplayer ownership
     // after it and immediately before leasing the global input pointer.
-    if (multiplayer) {
+    if (multiplayer || (down && _allowedSpinnerCell)) {
         PHOrbSnapshot final{};
         if (![self read:&final frame:frame reason:reason] || !final.valid || final.multiplayerDisabled ||
             !PHOrbSameTurn(&live, &final) || final.phase != 2 || final.dragged != live.dragged ||
             final.moves != live.moves || !PHOrbSamePlanBoard(&live.board, &final.board) ||
-            !PHOrbMultiplayerWindow(&final) ||
+            (multiplayer && !PHOrbMultiplayerWindow(&final)) || !fishingInputReady(final) ||
             (down && !PHOrbSameLeaders(&live, &final)) ||
-            (down && (!_multiplayerOnce || !final.ordinary || !PHInputIsQuiet(&final.input))) ||
-            (!down && (!_multiplayerOwnedOrb || final.dragged != _multiplayerOwnedOrb))) return NO;
+            (down && ((multiplayer && !_multiplayerOnce) || !final.ordinary || !PHInputIsQuiet(&final.input))) ||
+            (!down && multiplayer && (!_multiplayerOwnedOrb || final.dragged != _multiplayerOwnedOrb))) return NO;
         live = final;
     }
     // Revalidate the policy evidence after coordinate conversion, at the
@@ -951,6 +974,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         }
         live = final;
     }
+    if (!fishingInputReady(live)) return NO;
     if (beginning) {
         _manager.fill(0);
         // Only immutable timing settings are copied. No real touch is copied.

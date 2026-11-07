@@ -36,6 +36,11 @@ struct PHOrbSolveOptions {
 
 enum class PHOrbSearchQuality { Fast, Balanced, Thorough };
 PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept;
+// Structural eligibility for colour-guided recovery, not evidence that a
+// recovery pass ran or a route exists. Pass/frontier settings and the remaining
+// original deadline still apply. Returns eligible, invalid-input, fishing,
+// activity, match-rule, unsupported-goal or no-multicolor-goal.
+const char *PHOrbColorRecoveryEligibilityReason(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept;
 
 enum class PHOrbSolveStatus { Solved, GoalsUnmet, Unsafe, InsufficientOrbs, Cancelled, Invalid, NoRoute, Failed, IncompatibleGoals };
 // Explains the necessary inventory check used by search. None does not prove
@@ -102,13 +107,16 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // Ordinary quality budgets stay at or below 800 ms. Solo boards may retry a
 // timed-out failed search with a longer budget: the solo move timer starts at
 // the grab. Completed deterministic passes are not retried just for more time.
-// Ordinary spinner-free multi-colour goals keep the baseline beam, then use
-// remaining time for distance-guided recovery and bounded discarded frontiers.
+// Ordinary multi-colour goals, optionally with single-colour minimum-run Match
+// clauses, keep the baseline beam and use only remaining time for recovery and
+// bounded discarded frontiers. Spinner cells stay closed; repair hints use
+// fixed orbs and aggregate exact shared phases before selecting missing colours.
 // The hints neither require optional colours nor satisfy exact release goals.
 // Ordinary spinner-free shape recovery alternates supply-distance and hole
 // priorities within the existing pass budget; best candidates retain primary
 // scoring. Evaluation calls can exceed candidate counts when scores are checked
-// under both guidance policies. Spinner/fishing/activity passes are unchanged.
+// under both guidance policies. Shape-specific spinner, fishing and activity
+// policies remain separate from ordinary colour recovery.
 constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

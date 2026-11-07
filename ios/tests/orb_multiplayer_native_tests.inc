@@ -36,8 +36,10 @@ static void StartNativeMultiplayer(id<PHOrbEngine> engine, PHOrbSnapshot &state)
 #include "orb_multiplayer_peer_native_tests.inc"
 #include "orb_multiplayer_entry_native_tests.inc"
 #include "orb_multiplayer_solo_native_tests.inc"
+#include "orb_three_fishing_native_tests.inc"
 
 static void MultiplayerNativeTests() {
+    ThreeFishingNativeTests();
     MultiplayerSoloNativeTests();
     MultiplayerEntryNativeTests();
     MultiplayerPeerNativeTests();

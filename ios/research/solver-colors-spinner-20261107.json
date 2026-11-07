@@ -1,0 +1,920 @@
+{
+  "schema": 1,
+  "reviewed_source_commit": "a6f09b58707ec6e9801b7cf59f59b05f9b115e36",
+  "input_sha256": "c7afbb115b1ae1b8ab73e2e4f08e3d2af767dcf8880d1f9889272a03ae23580e",
+  "input_bytes": 76896,
+  "method": "Read-only JSON extraction and independent arithmetic replay/group scan of existing recorded routes; no product solver, compiled code, test suite, device, CI, or package execution.",
+  "failure": {
+    "board": {
+      "blindTurns": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cloudMask": 0,
+      "enhancementBits": [
+        0,
+        0,
+        1031127695,
+        1031127695,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1031127695,
+        1031127695,
+        0,
+        1031127695,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        1031127695,
+        1031127695,
+        1031127695,
+        0,
+        0,
+        1031127695,
+        0,
+        0,
+        0,
+        1031127695,
+        1031127695,
+        0
+      ],
+      "fixedStart": 0,
+      "flags": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        32768,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 5,
+      "minErase": 3,
+      "minMatch": 0,
+      "spinnerColors": 63,
+      "spinnerMask": 268435456,
+      "tapeMask": 0,
+      "thornPercent": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "types": [
+        4,
+        3,
+        0,
+        2,
+        3,
+        3,
+        1,
+        2,
+        3,
+        0,
+        0,
+        3,
+        2,
+        1,
+        0,
+        1,
+        0,
+        4,
+        0,
+        5,
+        4,
+        1,
+        5,
+        0,
+        3,
+        5,
+        1,
+        3,
+        2,
+        2
+      ],
+      "unmatchableColors": 0,
+      "width": 6
+    },
+    "path": [
+      26,
+      19,
+      20,
+      27,
+      22,
+      15,
+      9,
+      2,
+      7,
+      12,
+      19,
+      20,
+      13,
+      14,
+      9,
+      16,
+      23,
+      17,
+      11,
+      4,
+      9,
+      8,
+      1,
+      7,
+      6,
+      12,
+      7,
+      13,
+      19,
+      12,
+      7,
+      13,
+      18,
+      19,
+      20,
+      21,
+      22,
+      15,
+      9
+    ],
+    "steps": 38,
+    "spinner_cells": [
+      28
+    ],
+    "counts_all": [
+      7,
+      5,
+      5,
+      7,
+      3,
+      3,
+      0,
+      0,
+      0,
+      0
+    ],
+    "counts_without_spinners": [
+      7,
+      5,
+      4,
+      7,
+      3,
+      3,
+      0,
+      0,
+      0,
+      0
+    ],
+    "accessible_components": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29
+      ]
+    ],
+    "nonzero_flags": {
+      "16": 32768
+    },
+    "fixed_dark_identity_trace": [
+      {
+        "initial_cell": 0,
+        "final_cell": 0,
+        "initial_cell_visited": false
+      },
+      {
+        "initial_cell": 17,
+        "final_cell": 23,
+        "initial_cell_visited": true
+      },
+      {
+        "initial_cell": 20,
+        "final_cell": 6,
+        "initial_cell_visited": true
+      }
+    ],
+    "phases": [
+      {
+        "phase": 0,
+        "spinner_types": {
+          "28": 2
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 24,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      },
+      {
+        "phase": 1,
+        "spinner_types": {
+          "28": 3
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27,
+                28
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 25,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      },
+      {
+        "phase": 2,
+        "spinner_types": {
+          "28": 4
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 24,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      },
+      {
+        "phase": 3,
+        "spinner_types": {
+          "28": 5
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27,
+                28
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 25,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      },
+      {
+        "phase": 4,
+        "spinner_types": {
+          "28": 0
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22,
+                28
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 25,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      },
+      {
+        "phase": 5,
+        "spinner_types": {
+          "28": 1
+        },
+        "waves": [
+          [
+            {
+              "color": 2,
+              "cells": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                4,
+                10,
+                16,
+                22
+              ]
+            },
+            {
+              "color": 3,
+              "cells": [
+                5,
+                11,
+                17
+              ]
+            },
+            {
+              "color": 0,
+              "cells": [
+                12,
+                13,
+                14
+              ]
+            },
+            {
+              "color": 1,
+              "cells": [
+                18,
+                19,
+                20,
+                21
+              ]
+            },
+            {
+              "color": 5,
+              "cells": [
+                25,
+                26,
+                27
+              ]
+            }
+          ],
+          [
+            {
+              "color": 3,
+              "cells": [
+                24,
+                25,
+                26,
+                27
+              ]
+            }
+          ]
+        ],
+        "combos": 7,
+        "erased": 24,
+        "first_wave_combos": 6,
+        "matched_colors": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "missing_attack_colors": [
+          4
+        ],
+        "heart_matched": true
+      }
+    ],
+    "identity_cycles": [],
+    "independent_replay_matches_predicted": true
+  },
+  "search": {
+    "scope": "once",
+    "status": "goals-unmet",
+    "quality": "thorough",
+    "budgetMS": 800,
+    "elapsedMS": 454,
+    "exploredDepth": 48,
+    "searchPasses": 1,
+    "backtracks": 0,
+    "evaluated": 102619,
+    "goals": [
+      {
+        "colors": 31,
+        "count": 5,
+        "kind": "colors",
+        "length": 0
+      },
+      {
+        "colors": 32,
+        "count": 1,
+        "kind": "match",
+        "length": 3
+      }
+    ],
+    "evaluation": {
+      "activityHeuristic": 0,
+      "bonusTriggersFirstWaveRequired": false,
+      "comboFirstWaveRequired": false,
+      "combos": 7,
+      "firstWaveCombos": 6,
+      "goalHits": [
+        4,
+        1
+      ],
+      "goalsMet": false,
+      "hazardsSafe": true,
+      "heartFours": 0,
+      "linkGroups": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "mortalPoisonErased": 0,
+      "nativeScoreKnown": false,
+      "poisonErased": 0,
+      "preparationReady": false,
+      "retainedAfterConversion": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rowGroups": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "scope": "all-shared-spinner-phases",
+      "unmatchedBombs": 0,
+      "valid": true
+    },
+    "timing": {
+      "fps": 30,
+      "remainingFrames": 480,
+      "spinnerCountdown": 5,
+      "spinnerCountdownKnown": true,
+      "spinnerPeriodFrames": 30
+    },
+    "multiFishingCoverage": {
+      "started": false
+    }
+  },
+  "mode": {
+    "name": "3-player cooperative",
+    "entryMode": 7,
+    "turnSerial": 15,
+    "window": true,
+    "multiplayer_clock_seconds": 33.980716705322266
+  },
+  "limits": {
+    "new_solver_route_found": false,
+    "product_modified": false,
+    "solver_executed_this_review": false,
+    "compiled_this_review": false,
+    "multiplayer_fishing_enabled": false
+  },
+  "findings": [
+    "All six terminal colors omit dark while fixed inventory contains at least three of every required color.",
+    "Color recovery excludes both spinner boards and Match subgoals.",
+    "Multiplayer independently disables fishing; one-shot alone is not the reason.",
+    "No exact identity cycle exists in the retained failure or three successful paths."
+  ]
+}

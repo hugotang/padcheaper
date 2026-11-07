@@ -257,7 +257,7 @@ static void AssistSessionTests() {
         [choice[@"counts"][4] unsignedIntValue] == 0 && [trace[@"goals"] isEqual:choice[@"goals"]] &&
         [session.snapshot[@"goalHits"][0] unsignedIntValue] == 1,
         "the second color candidate supplies the final goals, replay checks and actual release evaluation");
-    Check([trace[@"selectedAttemptIndex"] isEqual:@1] && ![trace[@"soloRetrySkipped"] length],
+    Check([trace[@"selectedAttemptIndex"] isEqual:@1] && [trace[@"soloRetrySkipped"] isEqual:@"assist-shared-budget"],
         "assist selection stays in its shared budget and does not enter the solo retry policy");
     const NSUInteger sharedBudget = [trace[@"budgetMS"] unsignedIntegerValue];
     for (NSDictionary *attempt in trace[@"candidateAttempts"])
