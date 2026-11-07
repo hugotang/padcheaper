@@ -1,0 +1,2464 @@
+{
+  "schema": 1,
+  "version": "0.5.39-orbs",
+  "date": "2026-11-07",
+  "source_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+  "status": "built-tested-delivered",
+  "game_target": "jp.gungho.pad-ios-23.6.1-107553",
+  "device_verified": false,
+  "ci": {
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/42337957516",
+    "number": 148,
+    "conclusion": "success",
+    "job_elapsed_seconds": 1338.0,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Show iOS SDK toolchain",
+        "conclusion": "success"
+      },
+      {
+        "name": "Validate target and run protocol tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Compile arm64 iPhoneOS dylib",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify editor save and mobile interactions",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload editor browser diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect Mach-O and signature",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload dylib and installation notes",
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify floating GUI in iOS Simulator",
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload GUI probe diagnostics",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build summary",
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "superseded_attempts": [
+    {
+      "run": "https://github.com/hugotang/padcheaper/actions/runs/42337460119",
+      "number": 147,
+      "source_commit": "6eacc7a428e87eeb2b24a9733f97f80804852d21",
+      "conclusion": "cancelled",
+      "reason": "Cancelled by this task while protocol tests were running after the local turn11 probe exposed over-fragmented per-plan search slices; superseded by the weighted-baseline fix.",
+      "complete_product_test_result": false,
+      "dylib_built": false,
+      "record": "run-147/ci-run.json",
+      "log": "run-147/ci-run.log"
+    }
+  ],
+  "failed_attempts": [],
+  "binary": {
+    "dylib_bytes": 10829504,
+    "dylib_sha256": "e4f66de7e3da63cf34aba7d81ea949675df7afd10eaef068382081c4999778b5",
+    "dylib_uuid": "acc19257-d884-3a14-9a87-dd7d5cb49846"
+  },
+  "target": {
+    "guards": 456,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "executable_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "runtime_verified": false
+  },
+  "local": {
+    "source_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+    "version": "0.5.39-orbs",
+    "phases": {
+      "core": {
+        "record": "core/attempt2/result.json",
+        "record_sha256": "902a47b680767c517bc9ed06188034cb859804f15d5750a915306751cc274587",
+        "log_sha256": "7c988fa7f5fdf45d0a6a3f70681508efafccbb35286eea67fa83822a410a3dc3",
+        "head_at_start": "6eacc7a428e87eeb2b24a9733f97f80804852d21",
+        "started_utc": "2026-11-07T04:18:38.911745+00:00",
+        "finished_utc": "2026-11-07T04:19:00.476974+00:00",
+        "local_only_inputs": [],
+        "excluded_inputs": [
+          {
+            "file": "build/verify-0.5.39/core/run_core.py",
+            "reason": "local harness, not a committed compiler input"
+          }
+        ],
+        "fresh_browser_outputs_verified": 0,
+        "command_count": 11,
+        "matched_tracked_inputs": 214,
+        "passed": true,
+        "binary_inputs_raw_sha256": [],
+        "tracked_input_files": [
+          "ios/src/PHBadgeModel.c",
+          "ios/src/PHBadgeModel.h",
+          "ios/src/PHBadges.h",
+          "ios/src/PHBattleEntry.inc",
+          "ios/src/PHBattleMemberReader.h",
+          "ios/src/PHBattleMemberState.h",
+          "ios/src/PHBattleModel.c",
+          "ios/src/PHBattleModel.h",
+          "ios/src/PHBattlePolicy.h",
+          "ios/src/PHBattlePreset.c",
+          "ios/src/PHBattlePreset.h",
+          "ios/src/PHBattleProvider.inc",
+          "ios/src/PHBattleSession.h",
+          "ios/src/PHBattleTeams.inc",
+          "ios/src/PHCodec.h",
+          "ios/src/PHConfiguration.h",
+          "ios/src/PHDataTarget.h",
+          "ios/src/PHDeckPersistence.h",
+          "ios/src/PHEnemyActions.h",
+          "ios/src/PHEnemyDamage.h",
+          "ios/src/PHEnemyDispatch.h",
+          "ios/src/PHEnemySelector.h",
+          "ios/src/PHEnemyThreat.h",
+          "ios/src/PHFormationController.h",
+          "ios/src/PHFormationModel.h",
+          "ios/src/PHIdentity.h",
+          "ios/src/PHInput.h",
+          "ios/src/PHInputModel.c",
+          "ios/src/PHInputModel.h",
+          "ios/src/PHMemory.h",
+          "ios/src/PHMusic.h",
+          "ios/src/PHOrbAssistFishing.h",
+          "ios/src/PHOrbAssistFishing.inc",
+          "ios/src/PHOrbAssistPlanning.inc",
+          "ios/src/PHOrbAssistRecovery.inc",
+          "ios/src/PHOrbAssistSession.inc",
+          "ios/src/PHOrbAutoLifecycle.inc",
+          "ios/src/PHOrbAutomationSession.inc",
+          "ios/src/PHOrbComboBonus.inc",
+          "ios/src/PHOrbComboBonusModel.inc",
+          "ios/src/PHOrbController.h",
+          "ios/src/PHOrbDiagnosticPresentation.inc",
+          "ios/src/PHOrbDungeonDump.inc",
+          "ios/src/PHOrbDungeonReport.h",
+          "ios/src/PHOrbDungeonSession.inc",
+          "ios/src/PHOrbEditorUI.h",
+          "ios/src/PHOrbEight.h",
+          "ios/src/PHOrbEightModel.h",
+          "ios/src/PHOrbEightNative.inc",
+          "ios/src/PHOrbEightSession.inc",
+          "ios/src/PHOrbEnemyActions.inc",
+          "ios/src/PHOrbEnemyCombo.inc",
+          "ios/src/PHOrbEnemyComboPlanning.inc",
+          "ios/src/PHOrbEnemyComboSession.inc",
+          "ios/src/PHOrbEnemyDamage.inc",
+          "ios/src/PHOrbEnemyDispatch.inc",
+          "ios/src/PHOrbEnemyParts.inc",
+          "ios/src/PHOrbEnemySelector.inc",
+          "ios/src/PHOrbEnemyThreat.inc",
+          "ios/src/PHOrbFailurePresentation.inc",
+          "ios/src/PHOrbLeaders.inc",
+          "ios/src/PHOrbModel.c",
+          "ios/src/PHOrbModel.h",
+          "ios/src/PHOrbMultiFishing.h",
+          "ios/src/PHOrbMultiplayer.inc",
+          "ios/src/PHOrbObservation.inc",
+          "ios/src/PHOrbObservationPresentation.inc",
+          "ios/src/PHOrbPlanning.h",
+          "ios/src/PHOrbProfileEditor.h",
+          "ios/src/PHOrbProfiles.h",
+          "ios/src/PHOrbRecovery.inc",
+          "ios/src/PHOrbRecoveryEditor.h",
+          "ios/src/PHOrbRuleEditor.h",
+          "ios/src/PHOrbRules.h",
+          "ios/src/PHOrbSearchAttempt.h",
+          "ios/src/PHOrbSession.h",
+          "ios/src/PHOrbSessionDiagnostics.inc",
+          "ios/src/PHOrbSessionState.h",
+          "ios/src/PHOrbSkillChoice.inc",
+          "ios/src/PHOrbSkillDiagnostics.inc",
+          "ios/src/PHOrbSkillWindow.h",
+          "ios/src/PHOrbSkills.inc",
+          "ios/src/PHOrbSolver.cpp",
+          "ios/src/PHOrbSolver.h",
+          "ios/src/PHOrbSurvival.inc",
+          "ios/src/PHOrbTimedFishing.h",
+          "ios/src/PHOrbTimedFishing.inc",
+          "ios/src/PHOverlay.h",
+          "ios/src/PHSaveState.h",
+          "ios/src/PHTarget.h",
+          "ios/src/PHTimer.h",
+          "ios/src/PHTimerModel.c",
+          "ios/src/PHTimerModel.h",
+          "ios/src/PHUnlockRestoration.h",
+          "ios/tests/badge_model_tests.c",
+          "ios/tests/battle_assist_disabled_tests.inc",
+          "ios/tests/battle_member_model_tests.inc",
+          "ios/tests/battle_member_reader_tests.inc",
+          "ios/tests/battle_model_tests.c",
+          "ios/tests/battle_multiplayer_session_tests.inc",
+          "ios/tests/battle_multiplayer_tests.inc",
+          "ios/tests/battle_preset_tests.c",
+          "ios/tests/battle_restore_native_tests.inc",
+          "ios/tests/battle_restore_session_tests.inc",
+          "ios/tests/battle_script_model_tests.inc",
+          "ios/tests/battle_script_native_tests.inc",
+          "ios/tests/enemy_action_model_tests.inc",
+          "ios/tests/enemy_damage_model_tests.inc",
+          "ios/tests/enemy_dispatch_model_tests.inc",
+          "ios/tests/enemy_selector_model_tests.inc",
+          "ios/tests/enemy_threat_model_tests.inc",
+          "ios/tests/formation_profile_configuration_tests.inc",
+          "ios/tests/input_model_tests.c",
+          "ios/tests/orb_alternate_shape_solver_tests.inc",
+          "ios/tests/orb_assist_fishing_tests.inc",
+          "ios/tests/orb_assist_native_tests.inc",
+          "ios/tests/orb_assist_planning_tests.inc",
+          "ios/tests/orb_assist_profiles_tests.inc",
+          "ios/tests/orb_assist_session_tests.inc",
+          "ios/tests/orb_assist_solver_tests.inc",
+          "ios/tests/orb_auto_lifecycle_session_tests.inc",
+          "ios/tests/orb_automation_session_tests.inc",
+          "ios/tests/orb_color_condition_session_tests.inc",
+          "ios/tests/orb_color_solver_tests.inc",
+          "ios/tests/orb_diagnostics_session_tests.inc",
+          "ios/tests/orb_diagonal_native_tests.inc",
+          "ios/tests/orb_diagonal_session_tests.inc",
+          "ios/tests/orb_diagonal_solver_tests.inc",
+          "ios/tests/orb_dungeon_native_tests.inc",
+          "ios/tests/orb_dungeon_session_tests.inc",
+          "ios/tests/orb_effect_native_tests.inc",
+          "ios/tests/orb_effect_rules_tests.inc",
+          "ios/tests/orb_effect_session_tests.inc",
+          "ios/tests/orb_effect_solver_tests.inc",
+          "ios/tests/orb_eight_fixture.h",
+          "ios/tests/orb_eight_model_tests.c",
+          "ios/tests/orb_eight_native_tests.inc",
+          "ios/tests/orb_eight_profiles_tests.inc",
+          "ios/tests/orb_eight_session_tests.inc",
+          "ios/tests/orb_eight_solver_tests.inc",
+          "ios/tests/orb_enemy_action_native_tests.inc",
+          "ios/tests/orb_enemy_action_session_tests.inc",
+          "ios/tests/orb_enemy_combo_native_tests.inc",
+          "ios/tests/orb_enemy_combo_planning_tests.inc",
+          "ios/tests/orb_enemy_combo_session_tests.inc",
+          "ios/tests/orb_enemy_combo_solver_tests.inc",
+          "ios/tests/orb_enemy_damage_native_tests.inc",
+          "ios/tests/orb_enemy_damage_session_tests.inc",
+          "ios/tests/orb_enemy_dispatch_native_tests.inc",
+          "ios/tests/orb_enemy_dispatch_session_tests.inc",
+          "ios/tests/orb_enemy_parts_native_tests.inc",
+          "ios/tests/orb_enemy_selector_native_tests.inc",
+          "ios/tests/orb_enemy_selector_session_tests.inc",
+          "ios/tests/orb_enemy_threat_native_tests.inc",
+          "ios/tests/orb_exact_solver_tests.inc",
+          "ios/tests/orb_failure_session_tests.inc",
+          "ios/tests/orb_fishing_budget_tests.inc",
+          "ios/tests/orb_fishing_geometry_tests.inc",
+          "ios/tests/orb_fishing_model_tests.inc",
+          "ios/tests/orb_fixed_leader_probe.inc",
+          "ios/tests/orb_inventory_solver_tests.inc",
+          "ios/tests/orb_leader_fixture.h",
+          "ios/tests/orb_lifecycle_session_tests.inc",
+          "ios/tests/orb_member_state_native_tests.inc",
+          "ios/tests/orb_multi_fishing_session_tests.inc",
+          "ios/tests/orb_multi_fishing_tests.inc",
+          "ios/tests/orb_multiplayer_entry_native_tests.inc",
+          "ios/tests/orb_multiplayer_entry_session_tests.inc",
+          "ios/tests/orb_multiplayer_leader_native_tests.inc",
+          "ios/tests/orb_multiplayer_model_tests.inc",
+          "ios/tests/orb_multiplayer_native_tests.inc",
+          "ios/tests/orb_multiplayer_peer_native_tests.inc",
+          "ios/tests/orb_multiplayer_peer_session_tests.inc",
+          "ios/tests/orb_multiplayer_session_tests.inc",
+          "ios/tests/orb_multiplayer_solo_native_tests.inc",
+          "ios/tests/orb_multiplayer_solo_session_tests.inc",
+          "ios/tests/orb_observation_native_tests.inc",
+          "ios/tests/orb_observation_session_tests.inc",
+          "ios/tests/orb_plan_session_tests.inc",
+          "ios/tests/orb_plan_storage_probe.inc",
+          "ios/tests/orb_plan_tests.inc",
+          "ios/tests/orb_poison_session_tests.inc",
+          "ios/tests/orb_poison_solver_tests.inc",
+          "ios/tests/orb_readiness_probe.inc",
+          "ios/tests/orb_readiness_stop_session_tests.inc",
+          "ios/tests/orb_recorded_spinner_solver_tests.inc",
+          "ios/tests/orb_recorded_thorn_solver_tests.inc",
+          "ios/tests/orb_recovery_planning_tests.inc",
+          "ios/tests/orb_recovery_session_tests.inc",
+          "ios/tests/orb_route_simplification_tests.inc",
+          "ios/tests/orb_search_attempt_session_tests.inc",
+          "ios/tests/orb_search_recovery_tests.inc",
+          "ios/tests/orb_session_state_model_tests.inc",
+          "ios/tests/orb_shape_guidance_tests.cpp",
+          "ios/tests/orb_shape_solver_tests.inc",
+          "ios/tests/orb_shape_space_tests.inc",
+          "ios/tests/orb_shortcut_session_tests.inc",
+          "ios/tests/orb_skill_choice_tests.inc",
+          "ios/tests/orb_skill_native_tests.inc",
+          "ios/tests/orb_skill_window_native_tests.inc",
+          "ios/tests/orb_skill_window_session_tests.inc",
+          "ios/tests/orb_solver_tests.cpp",
+          "ios/tests/orb_strategy_session_tests.inc",
+          "ios/tests/orb_survival_session_tests.inc",
+          "ios/tests/orb_t_boundary_solver_tests.inc",
+          "ios/tests/orb_thorn_native_tests.inc",
+          "ios/tests/orb_thorn_session_tests.inc",
+          "ios/tests/orb_thorn_solver_tests.inc",
+          "ios/tests/orb_timed_fishing_tests.inc",
+          "ios/tests/orb_timing_rules_tests.inc",
+          "ios/tests/orb_timing_session_tests.inc",
+          "ios/tests/orb_uryu_startup_session_tests.inc",
+          "ios/tests/timer_model_tests.c",
+          "ios/tools/windows-tests.sh"
+        ],
+        "release_metadata_tested": false,
+        "new_source_and_case_hashes_verified": [
+          "ios/src/PHOrbMultiFishing.h",
+          "ios/tests/orb_fishing_budget_tests.inc",
+          "ios/tests/orb_fishing_geometry_tests.inc",
+          "ios/tests/orb_fishing_model_tests.inc",
+          "ios/tests/orb_multi_fishing_session_tests.inc",
+          "ios/tests/orb_multi_fishing_tests.inc",
+          "ios/tests/orb_route_simplification_tests.inc"
+        ],
+        "execution_scope": "portable solver/shape/eight-player and C model suites; no Objective-C++ Session/native execution"
+      },
+      "assets": {
+        "record": "assets/attempt1/result.json",
+        "record_sha256": "639be6a010b3bd323d20584095dcad4e6d6bc56133521ce7ca2033e1c90d9919",
+        "log_sha256": "0d3745a161df1fd80b49c88d8e4c8d29b91dbf9f515715604e123cfb65578006",
+        "head_at_start": "6eacc7a428e87eeb2b24a9733f97f80804852d21",
+        "started_utc": "2026-11-07T04:13:07.590158+00:00",
+        "finished_utc": "2026-11-07T04:13:11.201098+00:00",
+        "local_only_inputs": [],
+        "excluded_inputs": [
+          {
+            "file": "ios/build.sh",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/battle-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/orbs-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/pad-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/eight-player-thanks-2026/activity-profile.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/strategy.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/validation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/formation-share.txt",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/post-opening.orbProfiles.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/startup-validation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/strategy.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/team-plan-heart-l.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/badge_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/badge_runtime_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_assist_disabled_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_member_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_member_reader_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_multiplayer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_multiplayer_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_native_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_preset_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_restore_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_restore_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_script_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_script_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_session_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/codec_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/configuration_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/deck_persistence_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/editor_ui_tests.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_action_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_damage_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_dispatch_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_selector_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_threat_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/formation_model_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/formation_profile_configuration_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/input_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/input_runtime_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/music_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_alternate_shape_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_profiles_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_auto_lifecycle_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_automation_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_color_condition_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_color_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagnostics_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_dungeon_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_dungeon_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_rules_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_fixture.h",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_profiles_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_action_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_action_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_damage_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_damage_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_dispatch_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_dispatch_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_parts_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_selector_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_selector_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_threat_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_exact_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_failure_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fishing_geometry_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fishing_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fixed_leader_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_inventory_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_leader_fixture.h",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_lifecycle_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_member_state_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multi_fishing_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multi_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_entry_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_entry_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_leader_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_peer_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_peer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_solo_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_solo_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_native_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_observation_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_observation_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_storage_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_planning_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_poison_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_poison_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_profiles_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_readiness_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_readiness_stop_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recorded_spinner_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recorded_thorn_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recovery_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recovery_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_route_simplification_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_rules_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_search_attempt_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_search_recovery_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_session_state_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_session_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_guidance_tests.cpp",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_space_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shortcut_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_choice_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_window_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_window_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_solver_tests.cpp",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_strategy_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_survival_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_t_boundary_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timed_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timing_rules_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timing_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_uryu_startup_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/overlay_probe.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/save_state_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/timer_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/unlock_restoration_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/compare_team_dungeon.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/package_delivery.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/update_editor_catalog.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/update_team_catalog.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/windows-tests.sh",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          }
+        ],
+        "fresh_browser_outputs_verified": 0,
+        "command_count": 11,
+        "matched_tracked_inputs": 32,
+        "passed": true,
+        "binary_inputs_raw_sha256": [
+          "ios/editor/assets/awoken.png",
+          "ios/editor/assets/latent.png"
+        ],
+        "tracked_input_files": [
+          "ios/data/fixed-leader-skills.json",
+          "ios/data/leader-orbs.json",
+          "ios/editor/assets/awoken.png",
+          "ios/editor/assets/latent.png",
+          "ios/editor/catalog.json",
+          "ios/editor/dungeon-guides.json",
+          "ios/editor/editor.html",
+          "ios/editor/editor.js",
+          "ios/editor/formation.js",
+          "ios/editor/team-catalog.json",
+          "ios/editor/team-dungeon-view.js",
+          "ios/editor/team-dungeon.js",
+          "ios/editor/team-model.js",
+          "ios/editor/team-skills.js",
+          "ios/editor/team-view.js",
+          "ios/release.json",
+          "ios/targets/battle-23.6.1.json",
+          "ios/targets/orbs-23.6.1.json",
+          "ios/targets/pad-23.6.1.json",
+          "ios/templates/ishida-uryu-gamewith-574233/formation.json",
+          "ios/tests/formation_tests.js",
+          "ios/tests/leader_catalog_tests.py",
+          "ios/tests/release_metadata_tests.py",
+          "ios/tests/team_dungeon_tests.js",
+          "ios/tests/team_model_tests.js",
+          "ios/tools/generate_battle.py",
+          "ios/tools/generate_editor.py",
+          "ios/tools/generate_leaders.py",
+          "ios/tools/generate_orbs.py",
+          "ios/tools/generate_target.py",
+          "ios/tools/release_metadata.py",
+          "ios/tools/update_leader_catalog.py"
+        ],
+        "release_metadata_tested": true,
+        "execution_scope": "release/target/editor/leader generators, metadata/leader and JavaScript model tests"
+      },
+      "browser": {
+        "record": "browser/attempt1/result.json",
+        "record_sha256": "2d91452505c21d5cb61d51ec2c9f78c01c31ff4764c6da6c2913d090b863817a",
+        "log_sha256": "b82b0837e6a2ae6b6f0dea9c76b53f6c1d0b72449525700b01205f5f67c0fa0c",
+        "head_at_start": "6eacc7a428e87eeb2b24a9733f97f80804852d21",
+        "started_utc": "2026-11-07T04:13:18.436185+00:00",
+        "finished_utc": "2026-11-07T04:13:25.233486+00:00",
+        "local_only_inputs": [
+          {
+            "file": "build/editor-preview.html",
+            "sha256": "4f736e9e7bcdaaf3950e3759e50f4c8639538cc035b18e95cf2c4eb758fc77e0",
+            "scope": "generated local input; no Git blob"
+          }
+        ],
+        "excluded_inputs": [
+          {
+            "file": "ios/build.sh",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/data/fixed-leader-skills.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/data/leader-orbs.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/release.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/battle-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/battle-23.6.1.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/orbs-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/orbs-23.6.1.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/pad-23.6.0.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/targets/pad-23.6.1.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/eight-player-thanks-2026/activity-profile.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-1.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/kenpachi-2.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.formation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.post-opening.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/recommended.team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/strategy.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/halloween-ciel-gamewith-579537/validation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/formation-share.txt",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/post-opening.orbProfiles.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/startup-validation.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/strategy.reference.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/team-plan-heart-l.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/templates/ishida-uryu-gamewith-574233/team-plan.json",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/badge_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/badge_runtime_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_assist_disabled_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_member_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_member_reader_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_multiplayer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_multiplayer_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_native_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_preset_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_restore_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_restore_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_script_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_script_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/battle_session_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/codec_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/configuration_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/deck_persistence_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_action_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_damage_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_dispatch_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_selector_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/enemy_threat_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/formation_model_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/formation_profile_configuration_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/formation_tests.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/input_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/input_runtime_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/leader_catalog_tests.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/music_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_alternate_shape_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_profiles_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_assist_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_auto_lifecycle_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_automation_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_color_condition_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_color_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagnostics_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_diagonal_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_dungeon_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_dungeon_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_rules_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_effect_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_fixture.h",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_profiles_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_eight_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_action_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_action_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_combo_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_damage_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_damage_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_dispatch_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_dispatch_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_parts_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_selector_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_selector_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_enemy_threat_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_exact_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_failure_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fishing_geometry_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fishing_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_fixed_leader_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_inventory_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_leader_fixture.h",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_lifecycle_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_member_state_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multi_fishing_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multi_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_entry_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_entry_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_leader_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_peer_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_peer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_solo_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_multiplayer_solo_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_native_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_observation_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_observation_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_storage_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_plan_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_planning_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_poison_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_poison_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_profiles_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_readiness_probe.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_readiness_stop_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recorded_spinner_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recorded_thorn_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recovery_planning_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_recovery_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_route_simplification_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_rules_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_search_attempt_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_search_recovery_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_session_state_model_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_session_tests.mm",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_guidance_tests.cpp",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shape_space_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_shortcut_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_choice_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_window_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_skill_window_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_solver_tests.cpp",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_strategy_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_survival_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_t_boundary_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_native_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_thorn_solver_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timed_fishing_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timing_rules_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_timing_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/orb_uryu_startup_session_tests.inc",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/overlay_probe.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/release_metadata_tests.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/save_state_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/team_dungeon_tests.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/team_model_tests.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/timer_model_tests.c",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tests/unlock_restoration_tests.m",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/compare_team_dungeon.js",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/generate_battle.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/generate_leaders.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/generate_orbs.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/generate_target.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/package_delivery.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/release_metadata.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/update_editor_catalog.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/update_leader_catalog.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/update_team_catalog.py",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          },
+          {
+            "file": "ios/tools/windows-tests.sh",
+            "reason": "broad recorder snapshot only; not an input to this phase commands or editor generation"
+          }
+        ],
+        "fresh_browser_outputs_verified": 14,
+        "command_count": 1,
+        "matched_tracked_inputs": 16,
+        "passed": true,
+        "binary_inputs_raw_sha256": [
+          "ios/editor/assets/awoken.png",
+          "ios/editor/assets/latent.png"
+        ],
+        "tracked_input_files": [
+          "ios/editor/assets/awoken.png",
+          "ios/editor/assets/latent.png",
+          "ios/editor/catalog.json",
+          "ios/editor/dungeon-guides.json",
+          "ios/editor/editor.html",
+          "ios/editor/editor.js",
+          "ios/editor/formation.js",
+          "ios/editor/team-catalog.json",
+          "ios/editor/team-dungeon-view.js",
+          "ios/editor/team-dungeon.js",
+          "ios/editor/team-model.js",
+          "ios/editor/team-skills.js",
+          "ios/editor/team-view.js",
+          "ios/templates/ishida-uryu-gamewith-574233/formation.json",
+          "ios/tests/editor_ui_tests.js",
+          "ios/tools/generate_editor.py"
+        ],
+        "execution_scope": "Playwright editor browser regression; captured source snapshot does not imply C++ execution"
+      }
+    },
+    "hash_policy": "known text extensions use recorded sha256_lf; binary inputs use recorded raw sha256; output hashes are exact Git blob hashes",
+    "device_verified": false,
+    "objective_cxx_local_execution": false,
+    "scope_note": "Core source snapshots cover portable C/C++ inputs and named included cases; matching extra case hashes is not Objective-C++ execution. Assets/browser comparison uses explicit command dependencies, excluding unrelated C++ captured by their broad recorder. Prior assets/browser attempts are retained unchanged; release metadata was generated/tested in assets, not core.",
+    "inputs_verified": 247,
+    "solver_log": "core/attempt2/win/solver.log",
+    "solver_log_sha256": "24cb8142e4ee8deb15adcb9a5aa49c25169f355bdc3bf36165a751762cb6aa33"
+  },
+  "fishing": {
+    "schema": 1,
+    "before_commit": "6eacc7a428e87eeb2b24a9733f97f80804852d21",
+    "after_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+    "method": "Optimized local Windows MinGW C/C++ build and fixed 19-call shared-solver experiment per attempt; final source commit association separately verified.",
+    "input": "ios/research/solver-fishing-gap-20261107.json",
+    "before_source_identity": "The first attempt source-hashes.json matched its worktree; original raw results and timing remain unchanged.",
+    "after_source_identity": "72 committed source/data files compared with compiled byte manifest; CRLF-to-LF normalization only; no mismatches.",
+    "bounds": {
+      "max_exchanges": 6,
+      "extra_geometry": 2,
+      "retained_plan_cap": 12,
+      "total_inventory_state_cap": 8192,
+      "geometry_plan_cap": 4,
+      "geometry_state_cap": 512,
+      "balanced": {
+        "steps": 32,
+        "beam": 256,
+        "milliseconds": 350
+      },
+      "thorough": {
+        "steps": 48,
+        "beam": 512,
+        "milliseconds": 800
+      },
+      "extended_diagnostic": {
+        "steps": 48,
+        "beam": 512,
+        "milliseconds": 2000
+      },
+      "timing": {
+        "fps": 30,
+        "remaining_frames": 390,
+        "move_frames": 2,
+        "period_frames": 15,
+        "settle_frames_each": 6,
+        "input_margin_frames": 12
+      },
+      "source_change": "For >=4 baseline plans of one L allocation, first plan weight N-1 and every later plan weight 1. Same overall deadline/beam, retained inventories, and geometry one-third stage."
+    },
+    "comparison": [
+      {
+        "case": "recorded-turn11",
+        "budget_ms": 350,
+        "mode": "direct",
+        "before": {
+          "runs": 3,
+          "statuses": [
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet"
+          ],
+          "budget_ms": [
+            350,
+            350,
+            350
+          ],
+          "measured_wall_ms": [
+            333.104,
+            333.093,
+            333.173
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            5,
+            5,
+            5
+          ]
+        },
+        "after": {
+          "runs": 3,
+          "statuses": [
+            "Solved",
+            "Solved",
+            "Solved"
+          ],
+          "budget_ms": [
+            350,
+            350,
+            350
+          ],
+          "measured_wall_ms": [
+            89.3638,
+            76.3295,
+            75.5879
+          ],
+          "plans_searched": [
+            1,
+            1,
+            1
+          ],
+          "deepest_move": [
+            11,
+            11,
+            11
+          ]
+        }
+      },
+      {
+        "case": "recorded-turn11",
+        "budget_ms": 800,
+        "mode": "direct",
+        "before": {
+          "runs": 3,
+          "statuses": [
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet"
+          ],
+          "budget_ms": [
+            800,
+            800,
+            800
+          ],
+          "measured_wall_ms": [
+            775.092,
+            775.148,
+            775.091
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            6,
+            6,
+            6
+          ]
+        },
+        "after": {
+          "runs": 3,
+          "statuses": [
+            "Solved",
+            "Solved",
+            "Solved"
+          ],
+          "budget_ms": [
+            800,
+            800,
+            800
+          ],
+          "measured_wall_ms": [
+            150.019,
+            146.178,
+            149.325
+          ],
+          "plans_searched": [
+            1,
+            1,
+            1
+          ],
+          "deepest_move": [
+            11,
+            11,
+            11
+          ]
+        }
+      },
+      {
+        "case": "recorded-turn11",
+        "budget_ms": 2000,
+        "mode": "extended-diagnostic",
+        "before": {
+          "runs": 1,
+          "statuses": [
+            "Solved"
+          ],
+          "budget_ms": [
+            2000
+          ],
+          "measured_wall_ms": [
+            143.488
+          ],
+          "plans_searched": [
+            1
+          ],
+          "deepest_move": [
+            11
+          ]
+        },
+        "after": {
+          "runs": 1,
+          "statuses": [
+            "Solved"
+          ],
+          "budget_ms": [
+            2000
+          ],
+          "measured_wall_ms": [
+            149.484
+          ],
+          "plans_searched": [
+            1
+          ],
+          "deepest_move": [
+            11
+          ]
+        }
+      },
+      {
+        "case": "synthetic-three-spinner",
+        "mode": "per-cell-diagnostic",
+        "before": {
+          "runs": 6,
+          "statuses": [
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute"
+          ],
+          "budget_ms": [
+            350,
+            350,
+            350,
+            800,
+            800,
+            800
+          ],
+          "measured_wall_ms": [
+            333.101,
+            333.087,
+            333.102,
+            775.093,
+            775.048,
+            775.092
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12,
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "after": {
+          "runs": 6,
+          "statuses": [
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet"
+          ],
+          "budget_ms": [
+            350,
+            350,
+            350,
+            800,
+            800,
+            800
+          ],
+          "measured_wall_ms": [
+            333.115,
+            333.158,
+            333.095,
+            775.164,
+            775.119,
+            775.181
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12,
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            6,
+            6,
+            6,
+            7,
+            7,
+            7
+          ]
+        }
+      },
+      {
+        "case": "synthetic-three-spinner",
+        "mode": "session-shared-budget",
+        "before": {
+          "runs": 6,
+          "statuses": [
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "NoRoute"
+          ],
+          "budget_ms": [
+            116,
+            119,
+            124,
+            266,
+            273,
+            286
+          ],
+          "measured_wall_ms": [
+            111.083,
+            114.069,
+            118.076,
+            253.054,
+            260.064,
+            272.08
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12,
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ]
+        },
+        "after": {
+          "runs": 6,
+          "statuses": [
+            "NoRoute",
+            "NoRoute",
+            "NoRoute",
+            "GoalsUnmet",
+            "GoalsUnmet",
+            "GoalsUnmet"
+          ],
+          "budget_ms": [
+            116,
+            119,
+            124,
+            266,
+            273,
+            286
+          ],
+          "measured_wall_ms": [
+            111.065,
+            114.073,
+            118.055,
+            253.112,
+            260.132,
+            272.059
+          ],
+          "plans_searched": [
+            12,
+            12,
+            12,
+            12,
+            12,
+            12
+          ],
+          "deepest_move": [
+            3,
+            3,
+            3,
+            4,
+            4,
+            4
+          ]
+        }
+      }
+    ],
+    "successful_witness": {
+      "route_zero_based": [
+        10,
+        5,
+        11,
+        5,
+        4,
+        9,
+        14,
+        8,
+        15,
+        22,
+        23,
+        28
+      ],
+      "exchanges": [
+        {
+          "entry": 1,
+          "exit": 2,
+          "take": 5,
+          "leave": 4
+        },
+        {
+          "entry": 3,
+          "exit": 4,
+          "take": 5,
+          "leave": 3
+        }
+      ],
+      "all_7_successes_same_route": true,
+      "geometry_extra_exchanges": 0,
+      "independent_all_phase_verification": {
+        "combos": 2,
+        "erased": 9,
+        "firstWaveCombos": 2,
+        "heartFours": 1,
+        "poisonErased": 0,
+        "mortalPoisonErased": 0,
+        "unmatchedBombs": 0,
+        "goalsMet": true,
+        "hazardsSafe": true,
+        "goalHits": [
+          1,
+          1
+        ]
+      },
+      "light_T_zero_based": [
+        16,
+        22,
+        27,
+        28,
+        29
+      ],
+      "heart_four_zero_based": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "required_frames": 232,
+      "required_seconds": 7.733333333333333,
+      "remaining_margin_frames": 158,
+      "remaining_margin_seconds": 5.266666666666667
+    },
+    "verification": {
+      "before_total_calls": 19,
+      "before_routes": 7,
+      "before_solved": 1,
+      "after_total_calls": 19,
+      "after_routes": 16,
+      "after_solved": 7,
+      "new_successes": 6,
+      "lost_successes": 0,
+      "independent_oracle_failures": 0,
+      "checks": [
+        "Independent per-step token and all-metadata swaps",
+        "Held token invariant",
+        "Actual take and donor colors",
+        "C and C++ every-prefix agreement",
+        "All six selected source colors, or 36 target/shared combinations with untouched sources",
+        "Independent full-run marking, same-color marked-group flood-fill, exact T/four detection",
+        "Deterministic cascades, poison/mortal-poison/bomb policy",
+        "Independent frame reservation"
+      ]
+    },
+    "limitations": [
+      "Three-spinner cells 2/5/29 are a synthetic variant; the original second-layer spinner locations were not retained.",
+      "All 12 synthetic three-spinner calls remain unsolved. Deeper partial routes are not executable success.",
+      "The successful route meets the retained light-T and heart-four goals; no claim about unrecorded enemy conditions or kill damage.",
+      "13 seconds is from the retained game log; settling/input margins are existing planner assumptions, not measured device timing.",
+      "Local wall times depend on this host and test conditions; this is not an iPhone benchmark or on-device gesture verification.",
+      "Token identities and coordinates are synthetic; original board colors and orb metadata were copied exactly.",
+      "This finite comparison does not prove general success rate, globally optimal routes, or no regression on unseen boards."
+    ],
+    "evidence": [
+      {
+        "path": "build/verify-0.5.39/fishing/source-hashes.json",
+        "sha256": "2a517dce523da38daae0e9d2d9a17728a7de7330521f1bce10b15bd42c75a9a4"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/turn11-results.jsonl",
+        "sha256": "181974c22b9cba75faf113bc652c825d670616a3e4a2a207991c1213730b2cc4"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/turn11-verification.json",
+        "sha256": "0f6fb7bb5c9bc0d8fea977ced7bb140ef8d0b485950c3b40d169d23c57b2b053"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/turn11_probe.cpp",
+        "sha256": "4ec9717759be872ff362f9a11f5b08c1ffce31439bea57c6abd30fc16373de12"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/fixture.h",
+        "sha256": "cc94bd1a7e3630da5a6d4ba85144b6cc7e96893e9b1665e5458cac8fea604128"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/prepare.py",
+        "sha256": "41e3de47b03a75dcdaece544f34a4da057888be3226c5fe8c39987158a782448"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/verify_oracle.py",
+        "sha256": "abc9bd561a1e78f34361eef3b055ac4bc338ae390b674e4b15b283cbdbb9664a"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/source-hashes.json",
+        "sha256": "f52829e38b6d00d8961c7c412564ab0fdea20501b0e4429c52df42a1882f47bd"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/turn11-results.jsonl",
+        "sha256": "9fa59cb8ccb9709306fd18d8be4bc332ebad99f874402141351f6d526dcea0f3"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/turn11-verification.json",
+        "sha256": "1a4c3eee5539dff74701e876a64b828071c4a001543214d62cc8725241deca90"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/comparison.json",
+        "sha256": "9c84073b241bdb327d85bbc5318aaf5e324093fe86b3f93850eee24662724429"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/commit-association.json",
+        "sha256": "0e5a212dfa83131cb991dfe5277b084800ca3c33543737514e47f005615e3201"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/turn11_probe.cpp",
+        "sha256": "4ec9717759be872ff362f9a11f5b08c1ffce31439bea57c6abd30fc16373de12"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/fixture.h",
+        "sha256": "cc94bd1a7e3630da5a6d4ba85144b6cc7e96893e9b1665e5458cac8fea604128"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/prepare.py",
+        "sha256": "d3afa3fd40a7286efe3f02f0163ebff99826bb62220d3535168006003ff4bedb"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/verify_oracle.py",
+        "sha256": "64d4b26a6727bb9b4444ea348c60d2102a434b43e9e5df4f766534059058136a"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/compare.py",
+        "sha256": "b7367a7dd085aade009f7ff73024807d2d5c30a6676ddeda95b4ee94ba0ca54d"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/associate_commit.py",
+        "sha256": "cb8c40a33635b59cab2d2d416f08a525356a1ed17b1b18d7a1e7c62bead9b0a1"
+      },
+      {
+        "path": "build/verify-0.5.39/fishing/attempt2/write_receipt.py",
+        "sha256": "cd8e88a35edb5ea433bebdbf9a53cb7c5a117ab2f38fabf210ed60ea7dcacd06"
+      }
+    ]
+  },
+  "visual": {
+    "source_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42337957516",
+    "reviewed_screenshots": [
+      {
+        "path": "browser/attempt1/captures/team-lab-320.png",
+        "sha256": "577d86678680395358602b3711b58710376fa32068552d1f3118522b59c475aa",
+        "observations": "Local narrow-page screenshot inspected at reduced preview size; section flow fits width. Fine text not exhaustively inspected."
+      },
+      {
+        "path": "browser/attempt1/captures/save-failure-390.png",
+        "sha256": "5cf7d3b91f8066ba875c7fcd8d57548fb989d54ae661d03c9519f5a6676bdf0c",
+        "observations": "Local failure message and retained-draft state visible; save action remains visible."
+      },
+      {
+        "path": "run-148/artifacts/PADCheaper-Editor-browser-148/editor-browser/overview-390.png",
+        "sha256": "f1b13278f49c994b0e9b97abca47fa71504fcfe3608979fb520ed7fe35fc32eb",
+        "observations": "CI team selection, saved state, six slots and fixed save controls readable with no material overlap of actions."
+      },
+      {
+        "path": "run-148/artifacts/PADCheaper-Editor-browser-148/editor-browser/save-failure-390.png",
+        "sha256": "d3b71e153d62ed0fc6a70ce80633a9d68b2fbe938b3d4c0ad8c728a82b09c8e1",
+        "observations": "CI write-failure and retained-draft text visible above team editor; save control remains available."
+      },
+      {
+        "path": "run-148/artifacts/PADCheaper-GUI-probe-148/overlay-orbs-team-plan-summary.png",
+        "sha256": "d470584c44cb69217e8190dd18f2617099ab8676dfb7b41f27a3d6bde6850277",
+        "observations": "Simulator summary readable, scroll area and fixed save action visible; expected full-library validation error stays above action."
+      },
+      {
+        "path": "run-148/artifacts/PADCheaper-GUI-probe-148/legacy-formation-restart.png",
+        "sha256": "5104480a92b7199bce1095f2c8c7cb523907e008b5c25f6977334eabd6212f16",
+        "observations": "Legacy simulator restart displays saved Team B with six native portraits and equipment; save control visible."
+      },
+      {
+        "path": "run-148/artifacts/PADCheaper-GUI-probe-148/overlay-orbs-preview.png",
+        "sha256": "3f624b803da44ebd540387f2980ff0170af15c3d4eac2d8a5e7ef014b237feec",
+        "observations": "Simulator route overlay, current step, board and execution controls render clearly."
+      }
+    ],
+    "device_verified": false,
+    "scope": "Visual inspection of selected browser and iOS Simulator screenshots only; all four GUI runs passed automated reports. Screenshots do not verify actual PAD fishing or touch timing."
+  },
+  "delivery": {
+    "delivery": "E:\\ipa\\PADCheaper-0.5.39-orbs",
+    "source_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+    "verified_files": 425,
+    "zip_entries": 426,
+    "zip_size": 58676977,
+    "zip_sha256": "e97ddabe476f35555da9c32c307f1ae1a52d5796f71683cbd0d828695d74bac7",
+    "dylib_size": 10829504,
+    "dylib_sha256": "e4f66de7e3da63cf34aba7d81ea949675df7afd10eaef068382081c4999778b5",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/42337957516",
+    "device_verified": false,
+    "original_artifact_files_unchanged": true,
+    "extra_evidence_files_verified": 75,
+    "gui_and_browser_files_match_reviewed_artifacts": true,
+    "all_extra_evidence_source_paths_and_hashes_verified": true,
+    "completion_matches_actual_verified_data": true,
+    "fishing_source_commit": "4adb2cd1537f49bdb90e4acfe32419740f5883b2",
+    "fishing_independent_oracle_failures": 0,
+    "superseded_ci_cancellations_preserved": [
+      147
+    ]
+  },
+  "scope": {
+    "native_multi_exchange_executor": "compiled; model, native snapshot and fake-engine Session tests passed; actual device pending",
+    "recorded_turn11": "shared solver solved 3/3 balanced and 3/3 thorough; independent replay and all-phase oracle passed",
+    "three_spinner_variant": "synthetic cells 2/5/29 remain unsolved in the tested budgets; missing real second-layer board not reconstructed",
+    "survival_fallback": false,
+    "multiplayer_fishing": false,
+    "device_verified": false
+  }
+}

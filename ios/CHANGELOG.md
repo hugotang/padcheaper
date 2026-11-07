@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.38-orbs](docs/release-0.5.38.md) 已通過 [CI 146](https://github.com/hugotang/padcheaper/actions/runs/42260667556) 完整回歸、arm64 編譯／簽章、瀏覽器及四份 iPhone GUI，交付 E:/ipa/PADCheaper-0.5.38-orbs 及同名 ZIP。修正潛覺／完整策略配裝同步與同名選隊，保留最近失敗證據；六次回復 fishing 仍是離線模型，手機連續交換與三光三心耐久未接入，真機未驗證。見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.38.json)。
+[0.5.39-orbs](docs/release-0.5.39.md) 已通過 [CI 148](https://github.com/hugotang/padcheaper/actions/runs/42337957516) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，交付 E:/ipa/PADCheaper-0.5.39-orbs 及同名 ZIP。連續多色取珠與多轉轉逐次確認已接入，原缺心盤在本機兩種預算各三次成功；人工三轉轉變體仍未解，真機時序未驗證。詳見 [開發紀錄](docs/development.md) 與 [驗證收據](research/verification-0.5.39.json)。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.39-orbs](docs/release-0.5.39.md) | 2026-11-07 | 單人連續多色取珠、多轉轉逐次確認、額外取色改善位置、去循環與成功證據；編譯測試進行中，尚未交付 |
+| [0.5.39-orbs](docs/release-0.5.39.md) | 2026-11-07 | 單人連續多色取珠、多轉轉逐次確認、額外取色改善位置、去循環與成功證據；已驗證交付 |
 | [0.5.38-orbs](docs/release-0.5.38.md) | 2026-11-07 | 隊伍／策略配裝同步、失敗紀錄保留、六次回復撈珠離線模型；已驗證交付 |
 | [0.5.37-orbs](docs/release-0.5.37.md) | 2026-11-06 | 單次撈珠選色／重試與診斷，雙次取色離線模型；原盤九 Combo 尚未解出 |
 | [0.5.36-orbs](docs/release-0.5.36.md) | 2026-11-06 | PAD 23.6.1 位址遷移、舊資料相容、五色與形狀補搜及逐次統計 |

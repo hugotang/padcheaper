@@ -1,5 +1,7 @@
 # 0.5.38 通關紀錄與路徑優化調查
 
+2026-11-07 後續驗證：本頁改動已隨 [0.5.39-orbs](release-0.5.39.md) 通過 [CI 148](https://github.com/hugotang/padcheaper/actions/runs/42337957516) 並交付。原 turn 11 在本機 350／800 ms 各三次解出；三轉轉人工變體仍未解，iPhone 實際時序仍未驗證。下列「尚未執行」段落保留調查當時狀態，最新完成紀錄見 [驗證收據](../research/verification-0.5.39.json)。
+
 2026-11-07，使用者提供 0.5.38-orbs 真機紀錄，要求判斷是否已完善並找出可優化處。這次正常通關，但第 6 回合有可確定移除的六步繞圈。本文只分析既有盤面與路徑，沒有修改產品、執行求路器／測試套件、編譯或操作裝置。
 
 產品來源為 `5e3921d55bdc4700e608f9dd0eb96565c5779f0b`；調查時 HEAD `37565c359cee6d5c6ed78ba6db1b9ec037c45bba` 的相關 solver／Session 來源相同。原始私人 log 不加入版本控制，56,552 bytes，SHA-256 `949f1b579e42df20dd4fb47e571f6a6ca9578c870a85ee1f0d44ac2bc6048b5c`。只保存[盤面、路徑及算式證據](../research/solver-route-review-20261107.json)。
