@@ -131,9 +131,15 @@ static void CheckSearchAttemptTrace(NSDictionary *trace) {
             Check([attempt[key] isKindOfClass:NSNumber.class], "each attempt retains its own limits and search statistics");
         const bool fishingRequested = [attempt[@"fishingRequested"] boolValue];
         fishingRetries += fishingRequested && [attempt[@"soloRetry"] boolValue];
+        const bool multiFishing = [attempt[@"multiFishing"] boolValue];
+        NSArray<NSDictionary *> *exchanges = attempt[@"exchanges"];
+        const bool hasSingleColor = !multiFishing || exchanges.count;
         Check(fishingRequested ? [attempt[@"fishCell"] isKindOfClass:NSNumber.class] &&
-            [attempt[@"fishColor"] isKindOfClass:NSNumber.class] : !attempt[@"fishCell"] && !attempt[@"fishColor"],
-            "requested spinner cell and colour are recorded independently of whether the route actually fished");
+            (hasSingleColor ? [attempt[@"fishColor"] isKindOfClass:NSNumber.class] : !attempt[@"fishColor"]) :
+            !attempt[@"fishCell"] && !attempt[@"fishColor"],
+            "single-take requests retain their chosen colour; multi-take inventories name no colour without a retained exchange");
+        if (multiFishing && exchanges.count) Check([attempt[@"fishColor"] isEqual:exchanges.firstObject[@"take"]],
+            "a retained multi-take colour is the first actual exchange, not an unrequested default");
         if ([attempt[@"statisticsAvailable"] boolValue]) {
             Check([attempt[@"path"] isKindOfClass:NSArray.class] && [attempt[@"path"] count] >= 2 &&
                 [attempt[@"goalHits"] isKindOfClass:NSArray.class] &&
