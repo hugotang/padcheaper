@@ -4,6 +4,13 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-08：0.5.42-orbs 編譯測試與交付完成
+
+- [CI 155](https://github.com/hugotang/padcheaper/actions/runs/42460893938) 在來源 `38342e45966f49d684d393798e6b868ac80c457f` 完整通過 macOS 全部回歸（`Codec tests: 0 failures`、Session 測試、sanitizer 版 `PHOrbSolve` 0 失敗）、iPhoneOS arm64 建置／嚴格簽章、瀏覽器編輯器測試及四份 iPhone GUI。11/07 三批與 11/08 六項一併驗證；本批先前標為「尚未執行」的案例以此為準。
+- Windows `windows-tests.sh` 在同一來源通過；資料／JS／發版中繼資料測試於 `fde4cae` 通過；Android arm64-v8a／x86_64 共用核心於 `58bb11d` 編譯通過，之後未改共用求路來源。
+- 已交付 `E:/ipa/PADCheaper-0.5.42-orbs` 及同名 ZIP；379 份校驗清單、ZIP CRC／380 項重新核對通過，含 CI 154 失敗 log。dylib 11,957,440 bytes，SHA-256 `b700485fdcde5d573d1da998b5e27d714cb3e0859fce1ef0737fcb1c866d70bf`；ZIP SHA-256 `f3ff0f148ee858c7a2764ced6e0f424a4eb66a6a59ca7049e240c951a9ba9dcb`。
+- `device_verified=false`。待真機確認：關閉 Skin／BGM 後實際送出的內容與隊伍 BGM ID 對應、8 人倒數期間是否持續讀到 `countdownReady=0`、多人同步。既有版本未更動，CI 保持手動。
+
 ## 2026-11-08：0.5.42-orbs 編譯測試過程
 
 - 使用者要求 commit 並編譯測試，涵蓋 11/07 三批與下列 11/08 六項。來源提交 `fde4cae` 的本機資料／JS／發版中繼資料測試、`windows-tests.sh` 及 Edge 瀏覽器編輯器測試（含新增載入鎖定案例）通過。升版 0.5.42-orbs 後派發手動 CI；結果完成後補記。
