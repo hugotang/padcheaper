@@ -23,7 +23,8 @@ static inline PHOrbSoloRetryDecision PHOrbDecideSoloRetry(bool solo, bool assist
 // reaches full depth (2026-11-08 Himmel log: 400 ms per cell failed, the same
 // board solved in ~250 ms once a plan had the time). A solo board, whose move
 // timer starts only at the grab, reruns all cells once with the existing solo
-// retry budget when any attempt was cut by time. Completed searches, cancelled
+// retry budget when any attempt was cut by time; the retry searches baseline
+// inventories only, without the geometry reserve. Completed searches, cancelled
 // or multiplayer searches and an already extended budget never retry.
 static inline bool PHOrbShouldRetryMultiFishing(bool solo, bool cancelled, unsigned initialBudgetMS,
     bool solved, bool timeLimited) {

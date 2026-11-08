@@ -1025,8 +1025,11 @@ struct EightPreparationState {
                     trial.milliseconds = unsigned(remainingMS / (cells.size() - index));
                     if (!trial.milliseconds) { endReason = @"insufficient-slice"; timeLimited = true; break; }
                     PHOrbMultiFishingResult candidate;
+                    // The retry drops layout alternatives, which the first pass
+                    // already tried: their one-third reserve would otherwise
+                    // halve the best baseline plan's slice again.
                     const auto status = PHOrbSolveMultiFishing(board,trial,multiNeedsRecovery ? &multiRecovery : nullptr,
-                        multiTiming,PHOrbMultiFishingMaxExchanges,*cancel,candidate,PHOrbMultiFishingMaxGeometryExtra);
+                        multiTiming,PHOrbMultiFishingMaxExchanges,*cancel,candidate,pass ? 0u : PHOrbMultiFishingMaxGeometryExtra);
                     const auto candidateRoute = ExecutableMultiFishing(candidate);
                     const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - now).count();
                     auto described = trial; described.goals = candidate.route.count ? candidate.route.plan.goals : trial.goals;
