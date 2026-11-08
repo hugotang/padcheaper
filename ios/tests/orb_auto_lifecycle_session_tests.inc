@@ -7,12 +7,21 @@ static void AutoLifecycleSessionTests() {
             return [session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
                 @"eightAutoStart":@(enabled),@"profiles":@[profile]}];
         };
+        // Countdown Auto needs a native countdown observed with the setting on.
+        auto nativeCountdown = [&] {
+            engine->live.multiplayer.countdownReady = 0;
+            for (unsigned i = 0; i < 10; ++i) Tick(session, engine, Frame());
+            engine->live.multiplayer.countdownReady = 1;
+        };
         Check(setting(!manual), "countdown failure fixture saves its initial setting");
         engine->rejectEightArm = YES;
         if (manual) {
             Tick(session, engine, Frame());
             [session queueAutomatic];
-        } else for (unsigned i = 0; i < 50 && !engine->eightArmAttempts; ++i) Tick(session, engine, Frame());
+        } else {
+            nativeCountdown();
+            for (unsigned i = 0; i < 50 && !engine->eightArmAttempts; ++i) Tick(session, engine, Frame());
+        }
         Check(engine->eightArmAttempts == 1 && !engine->eightArmed && ![session.snapshot[@"automatic"] boolValue] &&
             [session.snapshot[@"phase"] isEqual:@"stopped"], "failed native arming never publishes an active Auto run");
         NSDictionary *stopped = session.snapshot;
@@ -26,7 +35,7 @@ static void AutoLifecycleSessionTests() {
         Check(engine->eightArmAttempts == 1 && !engine->stages && !engine->skillAttempts &&
             ![session.snapshot[@"automatic"] boolValue],
             "a consumed manual or countdown attempt stays consumed after settings toggle and arming recovery");
-        ++engine->live.multiplayer.clockStart;
+        nativeCountdown(); ++engine->live.multiplayer.clockStart;
         for (unsigned i = 0; i < 50 && ![session.snapshot[@"automatic"] boolValue]; ++i) Tick(session, engine, Frame());
         Check(engine->eightArmAttempts == 2 && engine->eightArmed && [session.snapshot[@"automatic"] boolValue] &&
             [session.snapshot[@"eightAutomatic"] boolValue] && [session.snapshot[@"autoTurn"] isEqual:@1],

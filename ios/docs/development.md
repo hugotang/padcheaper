@@ -7,6 +7,7 @@
 ## 2026-11-08：0.5.42-orbs 編譯測試過程
 
 - 使用者要求 commit 並編譯測試，涵蓋 11/07 三批與下列 11/08 六項。來源提交 `fde4cae` 的本機資料／JS／發版中繼資料測試、`windows-tests.sh` 及 Edge 瀏覽器編輯器測試（含新增載入鎖定案例）通過。升版 0.5.42-orbs 後派發手動 CI；結果完成後補記。
+- 第一輪 [CI 154](https://github.com/hugotang/padcheaper/actions/runs/42459189569)（來源 `58bb11dc590d889ea98babe0a1e80197a1bbc171`）在 Session 測試失敗，未建置 dylib。sanitizer 版 `PHOrbSolve` 0 失敗，前面的套件通過。失敗的 4 條斷言全在 `AutoLifecycleSessionTests`：`manual=false` 三條、`manual=true` 一條。該固定資料一開始就已過倒數，下一場也只增加 `clockStart`，沒有經過倒數，依 11/08 新語意不應自動開始。改為讓固定資料經過原生倒數，原斷言內容未放寬；產品來源未改。修正仍待新一輪 CI。
 
 ## 2026-11-08：唯讀審查六項修正（帳號安全、資料保全、8P 自動開始），待編譯測試
 
