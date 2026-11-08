@@ -23,22 +23,22 @@
       {
         "file": "team-plan.json",
         "bytes": 10077,
-        "sha256": "bb11ad15425b38e52eddc22b78cc595afc700064b15fee6b61a6b9c7ff5ea060"
+        "sha256": "ccd9badbce03c60b3ddcf81c6ecdcf3164fa37876bf4e7dbd41241ed42cbe196"
       },
       {
         "file": "post-opening.json",
         "bytes": 6171,
-        "sha256": "41c8c755886f7d91fb6c3aeeadc2e7b006040a2f063596a714759cb9104f4fa3"
+        "sha256": "fa2cdb085ecf4a703a47e95d630019a82fcf8cb1cac50a6ebac573dab6672b01"
       },
       {
         "file": "strategy.reference.json",
         "bytes": 13521,
-        "sha256": "3079d066f9ac9f07fce8b49942f212ea7414c276e16252bba6e7fd26ca47494d"
+        "sha256": "a6d7a3cf89820ab45577c1137f6cb9616c8a2c4fbcfba5d4cf387ecf520f2e5a"
       },
       {
         "file": "README.md",
         "bytes": 12158,
-        "sha256": "e177c862fdacf2fe755e5c465bcda589cc6b20ae40c51f58e6602a1df547cfe0"
+        "sha256": "dc6dc8c78977437b89eb4e43d1e0cc63e362077d94f569995e3f30fdb89247ae"
       }
     ],
     "initialSkillBoostsBySlot": [

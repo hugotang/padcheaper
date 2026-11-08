@@ -341,7 +341,7 @@
     "himmel": "Three required enemy counters plus one optional ready body rule share group 2. Skill charge relies on actual five-color attacks and native cooldown; 8-turn self cap is not 8-turn bypass.",
     "gerard": "body source, exact monster 14084, skill 0 deliberately follows evolving stages 64942/64943/64944/64945; root 64941 is not the chosen stage.",
     "indra": "Optional native-ready body skill; 8-turn recovery boost, only 1-turn 80% shield and spinner. Not a continuous shield.",
-    "kali": "Three required alternatives, group 1, order 5/4/6, accepted every 1, startAfter 1. One confirmed member satisfies the group; no available member stops movement."
+    "kali": "Three optional alternatives, group 1, order 5/4/6, accepted every 1, startAfter 1. One confirmed member satisfies the group; when no member is ready (skill delay, manual cast, mid-run start) the puzzle continues under the unchanged six-colour goal. Changed 2026-11-08 after a device log stopped Auto on a desynced rotation."
   },
   "board": {
     "quality": "thorough",

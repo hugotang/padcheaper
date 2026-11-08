@@ -148,10 +148,13 @@ static void HimmelSessionTests() {
         const NSUInteger stages = engine->stages, releases = engine->releases;
         for (unsigned slot = 3; slot < 6; ++slot) engine->unavailableSkills[slot] = YES;
         AdvanceHimmelCharge(engine);
-        Check(!NextOrbTurn(session,engine) && ![session.snapshot[@"automatic"] boolValue] &&
-            [session.snapshot[@"message"] containsString:@"必要規則"] && HimmelKaliUses(engine).empty() &&
-            engine->stages == stages && engine->releases == releases,
-            "all unavailable required Kali alternatives stop the second puzzle before any new orb input");
+        // 2026-11-08 device log: a desynced rotation (skill delay, manual cast,
+        // mid-run start) left every Kali unready. Supply is optional, so the
+        // puzzle continues under the unchanged six-colour goal.
+        Check(NextOrbTurn(session,engine) && [session.snapshot[@"automatic"] boolValue] &&
+            HimmelKaliUses(engine).empty() && engine->stages > stages && engine->releases == releases + 1,
+            "unready optional Kali alternatives are skipped and the second puzzle still runs");
+        [session queueStop:@"end unavailable Kali fixture"];
     }
 
     for (unsigned effect : {unsigned(PHOrbEnemyDamageAbsorb),unsigned(PHOrbEnemyAttributeAbsorb),unsigned(PHOrbEnemyDamageVoid)})

@@ -91,8 +91,8 @@ static void HimmelRotationTests(NSDictionary *profile) {
             const unsigned order[] = {5,4,6};
             Check([rule[@"slot"] unsignedIntValue] == order[i - 6] && [rule[@"monster"] isEqual:@13922] &&
                 [rule[@"skill"] isEqual:@65369] && [rule[@"group"] isEqual:@1] &&
-                [rule[@"required"] boolValue] && [rule[@"startAfter"] isEqual:@1],
-                "Kali supply starts after the opening puzzle and rotates slots five, four, then helper");
+                ![rule[@"required"] boolValue] && [rule[@"startAfter"] isEqual:@1],
+                "optional Kali supply starts after the opening puzzle and rotates slots five, four, then helper");
         }
     }
     PHOrbSnapshot state = {0}; state.valid = state.automation.valid = state.automation.enemiesKnown = true;
