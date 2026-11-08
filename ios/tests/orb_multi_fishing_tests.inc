@@ -17,7 +17,47 @@ static PHOrbSolveOptions MultiFishingHeartOptions() {
     options.allowPoisonWithHeartFour = true;
     return options;
 }
+// 2026-11-08 Himmel device log, wave 3: two water/dark/heart spinners (cells
+// 13 and 16), two fixed hearts, five colours plus a heart three. On device
+// each cell received 400 ms and every plan slice expired; offline the same
+// board solves with one heart take once a plan has enough time. The solo
+// Session retry (PHOrbShouldRetryMultiFishing) supplies the 2000 ms budget.
+static void MultiFishingRecordedDoubleSpinnerTests() {
+    PHOrbBoard board{}; board.width = 6; board.height = 5;
+    const uint8_t types[] = {0,1,2,1,4,0, 3,3,4,4,4,2, 0,1,1,4,5,0, 1,5,0,3,2,4, 3,3,3,5,1,3};
+    for (unsigned i = 0; i < 30; ++i) {
+        board.types[i] = types[i]; board.tokens[i] = i + 1;
+        board.x[i] = int16_t(50 + i % 6 * 100); board.y[i] = int16_t(300 + i / 6 * 100);
+    }
+    board.spinnerMask = (UINT64_C(1) << 13) | (UINT64_C(1) << 16); board.spinnerColors = 0x32;
+    auto options = PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.diagonal = true; options.goals.count = 2;
+    options.goals.items[0] = {PHOrbGoalColors,31,5,0}; options.goals.items[1] = {PHOrbGoalMatch,32,1,3};
+    Check(PHOrbInspectInventory(board,options).kind == PHOrbInventoryKind::GoalCapacity,
+        "recorded double-spinner board lacks a fixed heart three without a take");
+    const PHOrbTimedFishingTiming timing{480,2,6,12,30};
+    for (int cell : {13,16}) {
+        auto trial = options; trial.fishCell = cell; trial.milliseconds = PHOrbSoloRetryMilliseconds / 2;
+        std::atomic_bool cancel{false}; PHOrbMultiFishingResult result{};
+        const auto status = PHOrbSolveMultiFishing(board,trial,nullptr,timing,PHOrbMultiFishingMaxExchanges,cancel,result,
+            PHOrbMultiFishingMaxGeometryExtra);
+        PHOrbBoard replay{}; PHOrbEvaluation evaluation{};
+        Check(status == PHOrbSolveStatus::Solved && result.evaluation.goalsMet && result.evaluation.hazardsSafe &&
+            result.route.exchangeCount >= 1 && result.reservation.fits &&
+            PHOrbReplayMultiFishing(board,result.route,result.route.count - 1,replay) &&
+            PHOrbEvaluateMultiFishing(board,result.route,trial,nullptr,evaluation) && evaluation.goalsMet,
+            "each recorded spinner entry solves within half of the solo retry budget and replays");
+    }
+    Check(PHOrbShouldRetryMultiFishing(true,false,800,false,true) &&
+        !PHOrbShouldRetryMultiFishing(false,false,800,false,true) &&
+        !PHOrbShouldRetryMultiFishing(true,true,800,false,true) &&
+        !PHOrbShouldRetryMultiFishing(true,false,PHOrbSoloRetryMilliseconds,false,true) &&
+        !PHOrbShouldRetryMultiFishing(true,false,800,true,true) &&
+        !PHOrbShouldRetryMultiFishing(true,false,800,false,false),
+        "multi-take retries once only for an unsolved, time-limited, uncancelled solo search below the retry budget");
+}
 static void MultiFishingTests() {
+    MultiFishingRecordedDoubleSpinnerTests();
     auto board = MultiFishingRecordedHeartBoard(); auto options = MultiFishingHeartOptions();
     const auto one = PHOrbPlanMultiFishing(board,options,nullptr,1);
     const auto two = PHOrbPlanMultiFishing(board,options,nullptr,2);

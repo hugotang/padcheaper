@@ -2,6 +2,7 @@
 #include "PHOrbTimedFishing.h"
 #include "PHOrbAssistFishing.h"
 #include "PHOrbMultiFishing.h"
+#include "PHOrbSearchAttempt.h"
 #include "PHEnemyActions.h"
 #include "PHEnemySelector.h"
 #include "PHEnemyDispatch.h"

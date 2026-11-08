@@ -1005,54 +1005,70 @@ struct EightPreparationState {
             for (unsigned i = 0; i < board.width * board.height; ++i)
                 if ((board.spinnerMask & (UINT64_C(1) << i)) && !(board.tapeMask & (UINT64_C(1) << i))) cells.push_back(i);
             const auto multiStarted = std::chrono::steady_clock::now();
-            const auto multiDeadline = (solo ? multiStarted : start) + std::chrono::milliseconds(options.milliseconds);
             NSString *endReason = cells.empty() ? @"no-eligible-cell" : @"all-attempted";
-            for (size_t index = 0; index < cells.size(); ++index) {
-                const auto now = std::chrono::steady_clock::now();
-                if (cancel->load(std::memory_order_relaxed) || now >= multiDeadline) {
-                    endReason = cancel->load(std::memory_order_relaxed) ? @"cancelled" : @"deadline"; break;
-                }
-                auto trial = multiBaseOptions; trial.fishCell = int(cells[index]);
-                const auto remainingMS = std::chrono::duration_cast<std::chrono::milliseconds>(multiDeadline - now).count();
-                trial.milliseconds = unsigned(remainingMS / (cells.size() - index));
-                if (!trial.milliseconds) { endReason = @"insufficient-slice"; break; }
-                PHOrbMultiFishingResult candidate;
-                const auto status = PHOrbSolveMultiFishing(board,trial,multiNeedsRecovery ? &multiRecovery : nullptr,
-                    multiTiming,PHOrbMultiFishingMaxExchanges,*cancel,candidate,PHOrbMultiFishingMaxGeometryExtra);
-                const auto candidateRoute = ExecutableMultiFishing(candidate);
-                const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - now).count();
-                auto described = trial; described.goals = candidate.route.count ? candidate.route.plan.goals : trial.goals;
-                described.fishColor = candidateRoute.fishColor;
-                NSMutableDictionary *attempt = SearchAttemptTrace(described,status,candidateRoute,uint64_t(wallMS));
-                [attempt addEntriesFromDictionary:MultiFishingAttemptDetails(candidate,trial.fishCell)];
-                attempt[@"exchanges"] = FishingExchangesTrace(candidateRoute);
-                // Multi-take planning requests an inventory, not the default
-                // single-take colour zero. Name a colour only after a real
-                // exchange has been retained in the returned candidate.
-                if (!candidateRoute.fishingExchangeCount) [attempt removeObjectForKey:@"fishColor"];
-                attempt[@"evaluationBreakdownKnown"] = @NO;
-                [attempts addObject:attempt]; [multiAttempts addObject:attempt];
-                if (status == PHOrbSolveStatus::Solved && candidate.evaluation.goalsMet && candidate.evaluation.hazardsSafe) {
-                    multiResult = candidate; selectedMulti = true; route = candidateRoute; result = status;
-                    selectedOptions = described; selectedAttemptIndex = NSInteger(attempts.count) - 1;
-                    if (multiNeedsRecovery) {
-                        const auto &plan = candidate.route.plan;
-                        selectedAssist = @{@"goals":PHOrbGoalsJSON(&plan.goals),
-                            @"counts":@[@(plan.lCounts[0]),@(plan.lCounts[1]),@(plan.lCounts[2]),@(plan.lCounts[3]),@(plan.lCounts[4])],
-                            @"predictedTurns":@(plan.predictedTurns), @"providers":@(plan.providers), @"multiFishing":@YES};
+            unsigned passBudgetMS = options.milliseconds;
+            NSUInteger passAttempts = 0;
+            bool multiRetried = false;
+            for (unsigned pass = 0; pass < 2; ++pass) {
+                const auto passStarted = std::chrono::steady_clock::now();
+                const auto multiDeadline = (solo ? passStarted : start) + std::chrono::milliseconds(passBudgetMS);
+                bool timeLimited = false;
+                passAttempts = 0; endReason = cells.empty() ? @"no-eligible-cell" : @"all-attempted";
+                for (size_t index = 0; index < cells.size(); ++index) {
+                    const auto now = std::chrono::steady_clock::now();
+                    if (cancel->load(std::memory_order_relaxed) || now >= multiDeadline) {
+                        endReason = cancel->load(std::memory_order_relaxed) ? @"cancelled" : @"deadline";
+                        timeLimited |= now >= multiDeadline; break;
                     }
-                    endReason = @"solved"; break;
+                    auto trial = multiBaseOptions; trial.fishCell = int(cells[index]);
+                    const auto remainingMS = std::chrono::duration_cast<std::chrono::milliseconds>(multiDeadline - now).count();
+                    trial.milliseconds = unsigned(remainingMS / (cells.size() - index));
+                    if (!trial.milliseconds) { endReason = @"insufficient-slice"; timeLimited = true; break; }
+                    PHOrbMultiFishingResult candidate;
+                    const auto status = PHOrbSolveMultiFishing(board,trial,multiNeedsRecovery ? &multiRecovery : nullptr,
+                        multiTiming,PHOrbMultiFishingMaxExchanges,*cancel,candidate,PHOrbMultiFishingMaxGeometryExtra);
+                    const auto candidateRoute = ExecutableMultiFishing(candidate);
+                    const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - now).count();
+                    auto described = trial; described.goals = candidate.route.count ? candidate.route.plan.goals : trial.goals;
+                    described.fishColor = candidateRoute.fishColor;
+                    NSMutableDictionary *attempt = SearchAttemptTrace(described,status,candidateRoute,uint64_t(wallMS));
+                    [attempt addEntriesFromDictionary:MultiFishingAttemptDetails(candidate,trial.fishCell)];
+                    attempt[@"exchanges"] = FishingExchangesTrace(candidateRoute);
+                    // Multi-take planning requests an inventory, not the default
+                    // single-take colour zero. Name a colour only after a real
+                    // exchange has been retained in the returned candidate.
+                    if (!candidateRoute.fishingExchangeCount) [attempt removeObjectForKey:@"fishColor"];
+                    attempt[@"evaluationBreakdownKnown"] = @NO;
+                    if (pass) attempt[@"soloRetry"] = @YES;
+                    timeLimited |= candidate.searchBudgetExhausted || candidate.deadlineReached ||
+                        candidate.planSlicesExpired || candidate.plansBudgetSkipped || candidate.inventory.deadlineReached;
+                    [attempts addObject:attempt]; [multiAttempts addObject:attempt]; ++passAttempts;
+                    if (status == PHOrbSolveStatus::Solved && candidate.evaluation.goalsMet && candidate.evaluation.hazardsSafe) {
+                        multiResult = candidate; selectedMulti = true; route = candidateRoute; result = status;
+                        selectedOptions = described; selectedAttemptIndex = NSInteger(attempts.count) - 1;
+                        if (multiNeedsRecovery) {
+                            const auto &plan = candidate.route.plan;
+                            selectedAssist = @{@"goals":PHOrbGoalsJSON(&plan.goals),
+                                @"counts":@[@(plan.lCounts[0]),@(plan.lCounts[1]),@(plan.lCounts[2]),@(plan.lCounts[3]),@(plan.lCounts[4])],
+                                @"predictedTurns":@(plan.predictedTurns), @"providers":@(plan.providers), @"multiFishing":@YES};
+                        }
+                        endReason = @"solved"; break;
+                    }
                 }
+                if (!PHOrbShouldRetryMultiFishing(solo, cancel->load(std::memory_order_relaxed), passBudgetMS,
+                        [endReason isEqual:@"solved"], timeLimited)) break;
+                passBudgetMS = PHOrbSoloRetryMilliseconds; multiRetried = true;
             }
             NSMutableArray *eligibleCells = [NSMutableArray array], *unsearchedCells = [NSMutableArray array];
             for (size_t index = 0; index < cells.size(); ++index) {
                 [eligibleCells addObject:@(cells[index])];
-                if (index >= multiAttempts.count) [unsearchedCells addObject:@(cells[index])];
+                if (index >= passAttempts) [unsearchedCells addObject:@(cells[index])];
             }
             const auto wallMS = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - multiStarted).count();
-            multiCoverage = @{@"started":@YES,@"eligibleCells":eligibleCells,@"attemptedCells":@(multiAttempts.count),
-                @"unsearchedCells":unsearchedCells,@"endReason":endReason,@"budgetMS":@(options.milliseconds),@"wallElapsedMS":@(wallMS)};
+            multiCoverage = @{@"started":@YES,@"eligibleCells":eligibleCells,@"attemptedCells":@(passAttempts),
+                @"unsearchedCells":unsearchedCells,@"endReason":endReason,@"budgetMS":@(options.milliseconds),
+                @"soloRetry":@(multiRetried),@"finalPassBudgetMS":@(passBudgetMS),@"wallElapsedMS":@(wallMS)};
         }
         // Retain the original configured/shared budget for existing callers.
         // The selected attempt separately records its actual slice/retry budget.

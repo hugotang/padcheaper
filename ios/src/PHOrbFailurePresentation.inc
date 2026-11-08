@@ -169,8 +169,11 @@ NSString *MultiFishingFailureMessage(NSString *base, const PHOrbBoard &board,
     NSUInteger geometryRequested = 0, geometrySearched = 0, geometrySelected = 0, geometryTimeRejected = 0;
     NSUInteger geometryBudgetSkipped = 0;
     BOOL limited = NO, inventoryIncomplete = NO, anyValidInventory = NO, invalid = NO;
-    BOOL geometryLimited = NO, geometryTruncated = NO, geometrySlotsFull = NO;
+    BOOL geometryLimited = NO, geometryTruncated = NO, geometrySlotsFull = NO, retried = NO;
+    NSMutableSet *entryCells = [NSMutableSet set];
     for (NSDictionary *attempt in multiAttempts) {
+        if (attempt[@"fishCell"]) [entryCells addObject:attempt[@"fishCell"]];
+        retried |= [attempt[@"soloRetry"] boolValue];
         searched += [attempt[@"plansSearched"] unsignedIntegerValue];
         timeRejected += [attempt[@"plansTimeRejected"] unsignedIntegerValue];
         evaluated += [attempt[@"evaluated"] unsignedIntegerValue];
@@ -196,7 +199,8 @@ NSString *MultiFishingFailureMessage(NSString *base, const PHOrbBoard &board,
     // neither a capped inventory enumeration nor beam failure proves no route.
     NSMutableString *message = [[NSString stringWithFormat:
         @"已按完整目標嘗試連續撈珠（最多 %u 次），檢查 %lu 個轉轉入口，搜尋 %lu 個方案、評估 %lu 個候選；尚未取得同時符合形狀、取色與妨礙處理條件的可執行路徑。",
-        PHOrbMultiFishingMaxExchanges,(unsigned long)multiAttempts.count,(unsigned long)searched,(unsigned long)evaluated] mutableCopy];
+        PHOrbMultiFishingMaxExchanges,(unsigned long)(entryCells.count ?: multiAttempts.count),(unsigned long)searched,(unsigned long)evaluated] mutableCopy];
+    if (retried) [message appendFormat:@"單人盤已因時間不足，以延長的 %u ms 重試全部入口一次；方案與候選數含兩輪。",PHOrbSoloRetryMilliseconds];
     if (!searched && anyValidInventory) [message appendString:@"珠量／可用色表或時間預檢尚未留下可搜尋的方案。"];
     if (timeRejected) [message appendFormat:@"有 %lu 個方案的移動、逐次等待及放手預留超出操作時間。",(unsigned long)timeRejected];
     if (limited) [message appendString:@"本次搜尋／規劃時間額度已用盡。"];
