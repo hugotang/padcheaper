@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "dylib_version": "0.5.41-orbs",
+  "dylib_version": "0.5.42-orbs",
   "minimum_ios": "15.0",
   "architecture": "arm64",
   "platform": "iPhoneOS",
@@ -8,6 +8,11 @@
   "mode": "diagnostic by default; experimental writes opt in",
   "summary_features": {
     "遊戲版本": "game_target",
+    "求路閃退修正": "solver_beam_bucket",
+    "同色單轉轉下界": "monochrome_lower_bound",
+    "Skin／BGM 上傳保護": "cosmetic_upload_guard",
+    "隊伍庫與設定保全": "library_config_preservation",
+    "8 人倒數自動開始": "eight_player_countdown_start",
     "隊伍與策略保存": "formation_profile_binding",
     "每隊徽章保存": "formation_badges",
     "3 人／續玩手動取色": "three_player_fishing",
@@ -26,6 +31,11 @@
     "8 人同場接續": "eight_player_resume"
   },
   "features": {
+    "solver_beam_bucket": "completed-color candidates keep the reserved no-missing color inside separately sized target and color beam buckets; ranking, retention and search limits unchanged; the two reported 0.5.41 crashes have no original board or runtime index, so reproduction of the original event is not claimed",
+    "monochrome_lower_bound": "strict ordinary or shared-fishing 29-same-color plus one-spinner T and Four pattern reports the proven seven-take lower bound before search; other sizes, extra goals, locks, thorns and multiplayer permissions unchanged; seven takes are necessary, not shown sufficient",
+    "cosmetic_upload_guard": "Skin/BGM IDs left in deck memory by a feature active earlier in this process are defaulted on every save_decks path unless natively owned; native ownership excludes dylib-added bits, unreadable ownership fails closed, features never active stay byte-for-byte; deck BGM ID mapping and device behavior pending verification",
+    "library_config_preservation": "an unreadable formation library locks editor saves and team management; saves dropping stored teams first write formations.previous.json; an existing invalid config.json is copied byte-for-byte before the first rewrite; rejected settings no longer disable storage; both backups require manual recovery",
+    "eight_player_countdown_start": "optional countdown Auto starts only for a local-seat native countdown observed with the setting on, including failed board reads; a match first seen running or whose first board was moved is consumed without starting; once per match, Stop never rearms, no queueing or rematching; continued countdown observation pending device verification",
     "game_target": "PAD JP iOS 23.6.1/107553 arm64; exact bundle/version/build/UUID and 456 applicable fingerprints; object-relative layouts individually mapped; device verification pending",
     "formation_profile_binding": "full solo plans keep a local formation ID; atomic formation/profile transactions synchronize compatible loadouts and preserve edited latents on strategy reselection; stale editor revision and per-request write receipts; explicit duplicate-team selection, independent copies and portable exports without local IDs; ambiguous legacy or broken links never silently restore an imported loadout",
     "assist_fishing_offline": "legacy recovery-only entry points retain strict input validation and default to no optional geometry expansion; shared six-exchange planning preserves current per-color L providers, original goals and full predicted recovery; twelve retained plans, 8192 inventory states and complete replay share one deadline; native integration is described by multi_take_fishing; no survival fallback",

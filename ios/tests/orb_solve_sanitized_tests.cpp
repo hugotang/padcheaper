@@ -5,9 +5,12 @@
 // stays in orb_solver_tests.cpp at normal optimisation.
 #include "PHOrbSolver.h"
 #include <atomic>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <initializer_list>
 #include <random>
+#include <utility>
 
 static unsigned failures;
 static void Check(bool condition, const char *message) {
