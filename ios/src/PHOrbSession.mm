@@ -566,6 +566,11 @@ struct EightPreparationState {
     // reloads can restore common settings after an automatically chosen
     // profile stops; they must not erase the reason the run stopped.
     _recoveryTurn = 0;
+    [self refreshPlayerStateWatch];
+}
+// Derived from the loaded rules only. 8-player Auto clears it for its own run;
+// every solo start recomputes it so that clearing never outlives the match.
+- (void)refreshPlayerStateWatch {
     _watchPlayerState = [_recovery[@"hpAtMost"] unsignedIntegerValue] > 0;
     for (NSDictionary *rule in _skillRules) if ([rule[@"enabled"] boolValue])
         _watchPlayerState |= [rule[@"hpAtMost"] unsignedIntegerValue] > 0 || [rule[@"required"] boolValue] ||

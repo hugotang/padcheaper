@@ -82,6 +82,40 @@ int main(void) {
         observed = @{@"decksb": @[@[@9,@2,@3,@4,@5,@0,@42,@0,@0]]};
         merged = PHMergeBanks(previous, observed, PHFeatureSkin)[@"decksb"][0];
         Check([merged[5] isEqual:@0] && [merged[7] isEqual:@0], "changed team does not inherit old selections");
+        // Disabled Skin/BGM: only unowned selections left in native memory are
+        // defaulted; owned native choices and other fields stay byte-identical.
+        NSData *cosmetic = Body(@"a=1&decksb={\"fmt\":1,\"decks\":[[1,2,3,4,5,7,42,1001310012,9],"
+                                 "[1,2,3,4,5,7,42,10011,3]]}&z=2");
+        NSSet *ownedSkins = [NSSet setWithArray:@[@3]], *ownedMusic = [NSSet setWithArray:@[@10011, @10012]];
+        PHCosmeticOwnership native = ^BOOL(PHFeatureMask feature, uint16_t identifier) {
+            return [(feature == PHFeatureSkin ? ownedSkins : ownedMusic) containsObject:@(identifier)];
+        };
+        PHRewriteResult *guardedSkin = PHRewriteDeckBodyGuarded(cosmetic, 0, PHFeatureSkin, native, NULL);
+        NSArray *guardedDecks = DecodeBank(guardedSkin.body, @"decksb")[@"decks"];
+        Check(guardedSkin.changed && [guardedDecks[0] isEqual:@[@1,@2,@3,@4,@5,@7,@42,@1001310012,@0]] &&
+              [guardedDecks[1] isEqual:@[@1,@2,@3,@4,@5,@7,@42,@10011,@3]],
+              "guard defaults unowned skin and keeps owned skin");
+        Check([guardedSkin.banks[@"decksb"][0][8] isEqual:@9], "guard keeps observed selection for local merge");
+        PHRewriteResult *guardedMusic = PHRewriteDeckBodyGuarded(cosmetic, 0, PHFeatureBGM, native, NULL);
+        guardedDecks = DecodeBank(guardedMusic.body, @"decksb")[@"decks"];
+        Check([guardedDecks[0][7] isEqual:@0] && [guardedDecks[0][8] isEqual:@9] &&
+              [guardedDecks[1][7] isEqual:@10011], "packed BGM defaults when either half is unowned");
+        NSData *ownedOnly = Body(@"decksb={\"fmt\":1,\"decks\":[[1,2,3,4,5,7,42,1001210011,3]]}");
+        PHRewriteResult *untouched = PHRewriteDeckBodyGuarded(ownedOnly, 0, PHFeatureSkin | PHFeatureBGM, native, NULL);
+        Check(!untouched.changed && [untouched.body isEqualToData:ownedOnly], "owned selections pass byte-for-byte");
+        PHRewriteResult *unknown = PHRewriteDeckBodyGuarded(ownedOnly, 0, PHFeatureSkin | PHFeatureBGM, nil, NULL);
+        Check([DecodeBank(unknown.body, @"decksb")[@"decks"][0] isEqual:@[@1,@2,@3,@4,@5,@7,@42,@0,@0]],
+              "unreadable ownership fails closed");
+        PHRewriteResult *badgeOnly = PHRewriteDeckBodyGuarded(ownedOnly, 0, PHFeatureBadge, nil, NULL);
+        Check(!badgeOnly.changed, "guard ignores badge");
+        PHRewriteResult *activeSkin = PHRewriteDeckBodyGuarded(cosmetic, PHFeatureSkin, PHFeatureSkin | PHFeatureBGM, native, NULL);
+        guardedDecks = DecodeBank(activeSkin.body, @"decksb")[@"decks"];
+        Check([guardedDecks[1][8] isEqual:@0] && [guardedDecks[0][7] isEqual:@0] && [guardedDecks[1][7] isEqual:@10011],
+              "active mask still defaults owned values while guard covers the other feature");
+        NSData *wrongBank = Body(@"decksb={\"fmt\":1,\"decks\":[[1,2,3,4,5,7,42,3,10011]]}");
+        Check([DecodeBank(PHRewriteDeckBodyGuarded(wrongBank, 0, PHFeatureSkin | PHFeatureBGM,
+                ^BOOL(PHFeatureMask f, uint16_t i) { (void)f; (void)i; return YES; }, NULL).body, @"decksb")[@"decks"][0]
+                isEqual:@[@1,@2,@3,@4,@5,@7,@42,@3,@10011]], "ownership callback decides each identifier");
         printf("Codec tests: %lu failures\n", (unsigned long)failures);
     }
     return failures ? 1 : 0;

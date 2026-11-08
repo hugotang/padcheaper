@@ -44,7 +44,24 @@ NSArray<NSNumber *> *PHDeckIdentity(NSArray<NSNumber *> *record) {
     return @[record[0], record[1], record[2], record[3], record[4], record[6]];
 }
 
+static BOOL PHGuardedOwned(PHCosmeticOwnership owned, PHFeatureMask feature, uint64_t value) {
+    if (value == 0) return YES;
+    if (feature == PHFeatureSkin) return value <= UINT16_MAX && owned && owned(feature, (uint16_t)value);
+    const uint64_t halves[] = {value % 100000u, value / 100000u};
+    for (NSUInteger i = 0; i < 2; ++i) {
+        if (!halves[i]) continue;
+        if (halves[i] > UINT16_MAX || !owned || !owned(feature, (uint16_t)halves[i])) return NO;
+    }
+    return YES;
+}
+
 PHRewriteResult *PHRewriteDeckBody(NSData *body, PHFeatureMask mask, NSError **error) {
+    return PHRewriteDeckBodyGuarded(body, mask, 0, nil, error);
+}
+
+PHRewriteResult *PHRewriteDeckBodyGuarded(NSData *body, PHFeatureMask mask, PHFeatureMask guarded,
+                                          PHCosmeticOwnership owned, NSError **error) {
+    guarded &= (PHFeatureSkin | PHFeatureBGM) & ~mask;
     if (body.length == 0 || body.length > 16384 || (mask & ~(PHFeatureMask)7u) != 0) {
         PHCodecError(error, @"Unsupported body size or feature mask");
         return nil;
@@ -97,7 +114,10 @@ PHRewriteResult *PHRewriteDeckBody(NSData *body, PHFeatureMask mask, NSError **e
             NSUInteger fields[] = {8, 7, 5};
             PHFeatureMask features[] = {PHFeatureSkin, PHFeatureBGM, PHFeatureBadge};
             for (NSUInteger i = 0; i < 3; i++) {
-                if ((mask & features[i]) && [record[fields[i]] unsignedLongLongValue] != 0) {
+                const uint64_t value = [record[fields[i]] unsignedLongLongValue];
+                if (value == 0) continue;
+                if ((mask & features[i]) ||
+                    ((guarded & features[i]) && !PHGuardedOwned(owned, features[i], value))) {
                     record[fields[i]] = @0;
                     bankChanged = YES;
                 }

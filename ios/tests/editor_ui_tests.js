@@ -368,6 +368,22 @@ const {pathToFileURL}=require('node:url');
  assert.match(await page.locator('#calc-warning').innerText(),/僅計算已設定位置/);
  await page.selectOption('#calc-forms select','8615');assert.equal(await page.evaluate(()=>PHFormationUI.getTeamCalculation().members[0].id),8615);
  assert.equal(await page.evaluate(()=>PHFormationUI.getTeamCalculation().survivalAuthorized),false);
+ // A library the bundled catalog cannot read must never be replaced by the
+ // empty placeholder: saving, team management and apply stay blocked.
+ await page.locator('#tab-formation').click();
+ const blockedStart=await page.evaluate(()=>({requests:__requests.length,dismiss:__dismiss}));
+ await page.evaluate(()=>{const f=PHFormation.createModel(PH_CATALOG);const lib=f.createLibrary(f.selectCard(f.empty(),0,'body',8614));
+  lib.teams[0].team.slots[1].body.id=65000;PHFormationUI.receive({library:lib,stored:true,battle:{present:false}});});
+ assert.match(await page.locator('#error').innerText(),/隊伍庫無法載入.*65000/);
+ assert.match(await page.locator('#save-status').innerText(),/已停用儲存/);
+ for(const id of ['#save','#team-new','#team-copy','#team-delete','#team-choice','#delete-yes','#apply-all','#apply-one'])
+  assert.equal(await page.locator(id).isDisabled(),true,'blocked '+id);
+ await page.evaluate(()=>PHFormationUI.importText(JSON.stringify(PHFormationUI.getTeam())));
+ assert.match(await page.locator('#error').innerText(),/隊伍庫無法載入/);
+ await page.locator('#close').click();
+ assert.deepEqual(await page.evaluate(()=>({requests:__requests.length,dismiss:__dismiss})),{requests:blockedStart.requests,dismiss:blockedStart.dismiss+1});
+ await page.evaluate(()=>{const f=PHFormation.createModel(PH_CATALOG);PHFormationUI.receive({library:f.createLibrary(f.selectCard(f.empty(),0,'body',8614)),stored:true,battle:{present:false}});});
+ assert.equal(await page.locator('#error').isHidden(),true);assert.equal(await page.locator('#save').isDisabled(),false);
  assert.equal(await page.evaluate(()=>[...document.querySelectorAll('input,select')].every(e=>parseFloat(getComputedStyle(e).fontSize)>=16)),true);
  assert.doesNotMatch(await page.locator('meta[name=viewport]').getAttribute('content'),/user-scalable\s*=\s*no|maximum-scale/);
  assert.deepEqual(errors,[]);await context.close();await browser.close();console.log('Editor browser checks passed: mobile sizes, full recipes, edits, history, recent cards, pending/stale/failed saves, entry toggles, multiplayer gate; offline team stats, final forms, shield/recovery scenarios, awakening icons and resistance, invalid input and no native writes.');

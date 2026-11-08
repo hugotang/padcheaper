@@ -83,6 +83,7 @@
     _skillWindowWaitAt = 0;
     _boardTransitionFrames = 0; _lastReadIssue = @{};
     _activeProfile = @{};
+    [self refreshPlayerStateWatch]; // A preceding 8-player run may have cleared it.
     [_automationLog removeAllObjects];
     [_ruleDecisions removeAllObjects]; [_unavailableReasons removeAllObjects];
     [_skillAttemptContexts removeAllObjects];
@@ -102,8 +103,12 @@
 - (BOOL)tryCountdownAutomatic:(const PHOrbSnapshot *)state read:(BOOL)read active:(BOOL)active {
     // User setting (2026-11-04): start 8P Auto by itself once the countdown
     // finishes. At most once per match (clock identity); a manual stop is not
-    // undone in the same match, and nothing ever queues or rematches.
-    if ([_profileLibrary[@"eightAutoStart"] boolValue] && read && !active && !_auto.active() && !_oneShot &&
+    // undone in the same match, and nothing ever queues or rematches. The
+    // countdown itself must be observed with the setting on (see
+    // PHOrbEightAutoStartState); failed reads still carry the countdown state.
+    const bool enabled = [_profileLibrary[@"eightAutoStart"] boolValue];
+    _eightAutoStart.observe(*state, enabled);
+    if (enabled && read && !active && !_auto.active() && !_oneShot &&
         !_inputFault && _frame.ready && _frame.enabled && _eightAutoStart.claimCountdown(*state)) {
         [self logAutomation:@"8 人倒數完成：依設定自動開始本場 Auto"];
         [self queueAutomatic]; return YES;

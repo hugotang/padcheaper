@@ -21,6 +21,16 @@ FOUNDATION_EXPORT NSString *const PHCodecErrorDomain;
 // rejects the whole rewrite, so no bank is partially defaulted.
 FOUNDATION_EXPORT PHRewriteResult *_Nullable PHRewriteDeckBody(
     NSData *body, PHFeatureMask mask, NSError *_Nullable *_Nullable error);
+// Returns whether the native account owns one cosmetic identifier. Skin uses
+// field 8; BGM checks both nonzero halves of packed field 7.
+typedef BOOL (^PHCosmeticOwnership)(PHFeatureMask feature, uint16_t identifier);
+// `mask` fields are always defaulted. `guarded` Skin/BGM fields are defaulted
+// only when nonzero and not natively owned, so a selection restored into
+// memory while a feature was active never reaches the server after it is
+// disabled. A nil ownership block treats every guarded nonzero as unowned.
+FOUNDATION_EXPORT PHRewriteResult *_Nullable PHRewriteDeckBodyGuarded(
+    NSData *body, PHFeatureMask mask, PHFeatureMask guarded,
+    PHCosmeticOwnership _Nullable owned, NSError *_Nullable *_Nullable error);
 FOUNDATION_EXPORT BOOL PHValidateDeckRecord(id record);
 FOUNDATION_EXPORT NSArray<NSNumber *> *PHDeckIdentity(NSArray<NSNumber *> *record);
 FOUNDATION_EXPORT NSDictionary *PHMergeBanks(

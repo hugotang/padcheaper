@@ -55,7 +55,7 @@
 
 編隊頁上方「正在編輯」的隊伍清單可選取最多 64 個隊伍。切換或新增前會儲存目前編輯；「另存新隊」複製目前編輯為獨立隊伍，保留原隊伍先前的儲存內容。「刪除隊伍」需在頁內確認，至少保留一隊。改名使用隊伍名稱欄位。
 
-隊伍庫與目前選取項目保存在 guest 容器的 `Library/Application Support/PADHelper/formations.json`。首次更新會把有效的舊 formation.json 轉入隊伍庫，並繼續把目前選取隊伍寫入 formation.json 作備份。重新啟動會載入整個隊伍庫及選取項目。儲存隊伍只更新設定，戰鬥還原紀錄則只保留於目前程序／地下城。
+隊伍庫與目前選取項目保存在 guest 容器的 `Library/Application Support/PADHelper/formations.json`。首次更新會把有效的舊 formation.json 轉入隊伍庫，並繼續把目前選取隊伍寫入 formation.json 作備份。重新啟動會載入整個隊伍庫及選取項目。儲存隊伍只更新設定，戰鬥還原紀錄則只保留於目前程序／地下城。會移除既有隊伍的儲存，先把整份舊隊伍庫寫入 `formations.previous.json`。編輯器無法以內建圖鑑載入隊伍庫時，會停用儲存與隊伍管理，避免空白預設值覆蓋。
 
 ## 入場自動套隊與 SB
 

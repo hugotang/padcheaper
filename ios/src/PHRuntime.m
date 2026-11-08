@@ -78,6 +78,9 @@ static NSDictionary *PHLastBanks;
 static NSMutableArray<NSDictionary *> *PHFlagPatches;
 static uint8_t PHSkinAdded[128];
 static uint8_t PHBGMAdded[128];
+// Skin/BGM features that were requested at any point in this process. Their
+// selections may remain in native deck memory after the feature is disabled.
+static PHFeatureMask PHCosmeticEverActive;
 static CFAbsoluteTime PHLastMaintenance;
 static CFAbsoluteTime PHLastStatus;
 static NSUInteger PHFrameCount;
@@ -212,6 +215,35 @@ static void PHReloadConfig(void) {
     [PHOrbTracker configureSettings:PHConfigurationOrbSettings(PHConfig)];
 }
 
+// Writes start from the last valid in-memory configuration. When the file on
+// disk failed validation (corruption, or a newer format read by an older
+// build), keep its exact bytes beside it before the first replacement so a
+// later write never silently discards teams or strategies. Returns NO when an
+// existing file cannot be read or preserved; callers must not write then.
+static NSString *PHPreservedConfigName;
+static BOOL PHPreserveInvalidConfig(void) {
+    if (PHConfigValid || !PHFolder.length) return YES;
+    NSString *path = [PHFolder stringByAppendingPathComponent:@"config.json"];
+    if (![NSFileManager.defaultManager fileExistsAtPath:path]) return YES;
+    NSData *raw = [NSData dataWithContentsOfFile:path options:0 error:NULL];
+    if (!raw) return NO;
+    static NSData *preserved;
+    if ([preserved isEqualToData:raw]) return YES;
+    NSString *name = [NSString stringWithFormat:@"config.invalid-%lld.json",
+        (long long)NSDate.date.timeIntervalSince1970];
+    NSString *copy = [PHFolder stringByAppendingPathComponent:name];
+    if ([NSFileManager.defaultManager fileExistsAtPath:copy] ||
+        ![raw writeToFile:copy options:NSDataWritingAtomic error:NULL]) return NO;
+    [NSFileManager.defaultManager setAttributes:@{NSFilePosixPermissions: @0600} ofItemAtPath:copy error:NULL];
+    preserved = raw; PHPreservedConfigName = name;
+    PHLog([NSString stringWithFormat:@"Preserved unreadable config.json as %@ before rewriting", name]);
+    return YES;
+}
+
+static NSString *PHPreservedConfigNotice(void) {
+    return PHPreservedConfigName ? [NSString stringWithFormat:@"；原本無法讀取的設定已另存為 %@", PHPreservedConfigName] : @"";
+}
+
 static BOOL PHSaveFormationLibrary(NSDictionary *library) {
     NSDictionary *selected = nil;
     NSString *reason = nil;
@@ -221,6 +253,23 @@ static BOOL PHSaveFormationLibrary(NSDictionary *library) {
     if (!current[@"formations"]) current[@"formations"] = PHFormationLibrary;
     NSDictionary *next = PHConfigurationSavingFormations(current, library, &reason);
     if (!next) { PHFeedback = reason; return NO; }
+    if (!PHPreserveInvalidConfig()) {
+        PHFeedback = @"config.json 無法讀取或備份；本次未儲存，草稿仍在編輯器。";
+        return NO;
+    }
+    // A save that drops any stored team first keeps the whole previous library
+    // as a separate recovery copy; formations.json alone follows the new save.
+    NSDictionary *previous = current[@"formations"];
+    if (PHFormationReadLibrary(previous, NULL, NULL)) {
+        NSMutableSet *kept = [NSMutableSet set];
+        for (NSDictionary *record in library[@"teams"]) if (record[@"id"]) [kept addObject:record[@"id"]];
+        BOOL drops = NO;
+        for (NSDictionary *record in previous[@"teams"]) drops |= ![kept containsObject:record[@"id"]];
+        if (drops && (!PHStorageReady || !PHWriteJSON(previous, @"formations.previous.json"))) {
+            PHFeedback = @"無法先備份刪除前的隊伍庫；本次未儲存，草稿仍在編輯器。";
+            return NO;
+        }
+    }
     if (!PHStorageReady || !PHWriteJSON(next, @"config.json")) {
         PHFeedback = @"儲存失敗；草稿仍在編輯器，下次入場隊伍未變更。請檢查可用空間後重試。";
         return NO;
@@ -234,7 +283,8 @@ static BOOL PHSaveFormationLibrary(NSDictionary *library) {
     // library and profiles, so a partial backup cannot split a plan import.
     PHWriteJSON(library, @"formations.json");
     PHWriteJSON(selected, @"formation.json");
-    PHFeedback = @"隊伍庫與目前選取隊伍已儲存";
+    PHFeedback = [@"隊伍庫與目前選取隊伍已儲存" stringByAppendingString:PHPreservedConfigNotice()];
+    PHPreservedConfigName = nil;
     return YES;
 }
 
@@ -331,7 +381,12 @@ static void PHResetAccount(uint32_t player, BOOL loginSuccess) {
     }
 }
 
+static void PHNoteCosmeticMask(PHFeatureMask mask) {
+    PHCosmeticEverActive |= mask & (PHFeatureSkin | PHFeatureBGM);
+}
+
 static void PHDrainDeckRestore(void) {
+    PHNoteCosmeticMask(PHRequestedMask());
     NSDictionary *result = [PHDeckRestoreTracker drainHeader:(uintptr_t)PHGuest epoch:PHAccountEpoch
         enabled:PHConfiguredMask() allowed:PHRequestedMask() badgeReady:PHBadgeTracker.ready
         canUseBadge:^BOOL(uint8_t badge) { return [PHBadgeTracker canUse:badge]; }];
@@ -457,6 +512,7 @@ static void PHMaintenance(void) {
     if (PHCurrentPlayer(&player) && player != PHPlayer) PHResetAccount(player, NO);
     PHReloadConfig();
     PHFeatureMask mask = PHRequestedMask();
+    PHNoteCosmeticMask(mask);
     PHOwnershipWriteFault = NO;
     PHRevertDisabled(mask);
     PHApplyUnlocks(mask & (PHFeatureSkin | PHFeatureBGM));
@@ -530,6 +586,43 @@ static BOOL PHQueryMatches(NSURL *url, NSString *key, NSString *expected) {
     return count == 1;
 }
 
+// Native ownership excludes every bit this dylib added and has not yet
+// reverted. Nil means the bitmaps are unreadable; callers then fail closed.
+static PHCosmeticOwnership PHNativeCosmeticOwnership(void) {
+    uint8_t bitmaps[256];
+    if (!PHReadMemory(PHSave() + PHSkinOwnedOffset, bitmaps, 128) ||
+        !PHReadMemory(PHSave() + PHBGMOwnedOffset, bitmaps + 128, 128)) return nil;
+    for (NSUInteger j = 0; j < 128; ++j) {
+        bitmaps[j] &= (uint8_t)~PHSkinAdded[j];
+        bitmaps[128 + j] &= (uint8_t)~PHBGMAdded[j];
+    }
+    NSData *snapshot = [NSData dataWithBytes:bitmaps length:sizeof(bitmaps)];
+    return ^BOOL(PHFeatureMask feature, uint16_t identifier) {
+        const uint8_t *bytes = snapshot.bytes;
+        const BOOL music = feature == PHFeatureBGM;
+        if (music != (identifier >= 10000)) return NO;
+        const NSUInteger index = music ? identifier - 10000u : identifier;
+        if (index >= 1024) return NO;
+        return (bytes[(music ? 128 : 0) + index / 8] >> (index % 8)) & 1u;
+    };
+}
+
+// A passthrough must still not upload a Skin/BGM ID restored into memory while
+// that feature was active. Defaults only nonzero values the account does not
+// natively own; owned native choices and unknown form bytes stay unchanged.
+static NSURLRequest *PHGuardCosmetics(NSURLRequest *request, PHFeatureMask covered) {
+    const PHFeatureMask guarded = PHCosmeticEverActive & ~covered;
+    if (!guarded) return request;
+    PHRewriteResult *safe = PHRewriteDeckBodyGuarded(request.HTTPBody, 0, guarded,
+                                                     PHNativeCosmeticOwnership(), NULL);
+    if (!safe.changed) return request;
+    NSMutableURLRequest *copy = [request mutableCopy]; copy.HTTPBody = safe.body;
+    [copy setValue:[NSString stringWithFormat:@"%lu", (unsigned long)safe.body.length]
+        forHTTPHeaderField:@"Content-Length"];
+    PHLog(@"Defaulted unowned Skin/BGM left in deck memory by a disabled feature");
+    return copy;
+}
+
 static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *request,
                                       void (^completion)(NSData *, NSURLResponse *, NSError *)) {
     if (!NSThread.isMainThread || !PHValidated || ![request.HTTPMethod isEqualToString:@"POST"] ||
@@ -566,10 +659,14 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         ![PHConfig[@"apiHosts"] containsObject:request.URL.host.lowercaseString] ||
         ![PHConfig[@"apiPaths"] containsObject:request.URL.path] ||
         !PHQueryMatches(request.URL, @"pid", [NSString stringWithFormat:@"%u", player])) {
-        [PHSaveStateTracker recordPassthrough:@"功能未啟用或請求未匹配設定；請求保持原樣"];
-        return PHOriginalDataTask(self, command, request, completion);
+        NSURLRequest *guarded = PHGuardCosmetics(request, 0);
+        [PHSaveStateTracker recordPassthrough:guarded == request ? @"功能未啟用或請求未匹配設定；請求保持原樣" :
+            @"功能未啟用；已將記憶體中未擁有的 Skin／BGM 改回預設後送出"];
+        return PHOriginalDataTask(self, command, guarded, completion);
     }
-    PHRewriteResult *result = PHRewriteDeckBody(request.HTTPBody, mask, NULL);
+    const PHFeatureMask guardedFeatures = PHCosmeticEverActive & ~mask;
+    PHCosmeticOwnership owned = guardedFeatures ? PHNativeCosmeticOwnership() : nil;
+    PHRewriteResult *result = PHRewriteDeckBodyGuarded(request.HTTPBody, mask, guardedFeatures, owned, NULL);
     if (!result) {
         [PHSaveStateTracker recordPassthrough:@"隊伍格式未通過校驗；請求保持原樣"];
         return PHOriginalDataTask(self, command, request, completion);
@@ -586,7 +683,7 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
             // badge. Preserve the previous selection unless this exact native
             // request and the current badge table both validate it.
             mask &= ~PHFeatureBadge;
-            result = PHRewriteDeckBody(request.HTTPBody, mask, NULL);
+            result = PHRewriteDeckBodyGuarded(request.HTTPBody, mask, guardedFeatures, owned, NULL);
         }
     }
     BOOL recoveredBadge = NO;
@@ -600,7 +697,7 @@ static NSURLSessionDataTask *PHDataTask(id self, SEL command, NSURLRequest *requ
         PHStorageFault = YES;
         [PHSaveStateTracker recordStorageFailure];
         PHLog(@"Local snapshot write failed; feature writes disabled");
-        return PHOriginalDataTask(self, command, request, completion);
+        return PHOriginalDataTask(self, command, PHGuardCosmetics(request, 0), completion);
     }
     PHLastBanks = banks;
     [PHSaveStateTracker recordLocalBanks:banks];
@@ -678,7 +775,7 @@ static BOOL PHInstallNetwork(void) {
 static NSString *PHUnlockBlockReason(void) {
     if (!PHValidated) return PHValidationMessage ?: @"等待遊戲校驗";
     if (!PHStorageReady) return PHStorageMessage ?: @"設定目錄無法寫入";
-    if (!PHConfigValid) return @"config.json 格式無效；切換開關可重新儲存設定。";
+    if (!PHConfigValid) return @"config.json 格式無效；下次儲存設定前會先另存原檔，再以目前設定重寫。";
     if (PHStorageFault) return @"本地選擇寫入失敗；請按「重新檢查」。";
     if (!PHFrameInstalled) return @"drawFrame hook 未安裝；請按「重新檢查」。";
     if (!PHNetworkInstalled) return @"網路 hook 未安裝；請按「重新檢查」。";
@@ -1044,6 +1141,19 @@ static NSDictionary *PHRuntimeSnapshot(void) {
     return snapshot;
 }
 
+static void PHSetActionNotice(NSString *action, NSString *notice) {
+    if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = notice;
+    if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = notice;
+    if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = notice;
+    if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = notice;
+    if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = notice;
+    if ([action isEqual:@"orbsGoals"]) PHOrbGoalNotice = notice;
+    if ([action isEqual:@"orbsRules"]) PHOrbRuleNotice = notice;
+    if ([action isEqual:@"orbsRecovery"]) PHOrbRecoveryNotice = notice;
+    if ([action isEqual:@"orbsProfiles"]) PHOrbProfileNotice = notice;
+    if ([action isEqual:@"orbsEightAutoStart"]) PHOrbAutoStartNotice = notice;
+}
+
 static void PHHandleOverlayAction(NSString *action, id value) {
     if ([action isEqual:@"orbsProfiles"]) {
         NSString *requestID = [value isKindOfClass:NSDictionary.class] && [value[@"requestID"] isKindOfClass:NSString.class] ? value[@"requestID"] : @"";
@@ -1301,7 +1411,21 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     } else {
         return;
     }
-    if (PHConfigurationIsValid(next) && PHWriteJSON(next, @"config.json")) {
+    // Invalid input is a rejected setting, not a storage failure: it must not
+    // disable every feature. Only an actual write failure clears storage.
+    if (!PHConfigurationIsValid(next)) {
+        PHFeedback = @"設定值無效，未儲存；原設定保持不變。";
+        PHSetActionNotice(action, PHFeedback);
+        PHLastStatus = 0;
+        return;
+    }
+    if (!PHPreserveInvalidConfig()) {
+        PHFeedback = @"現有 config.json 無法讀取或備份，未儲存；請按「重新檢查」。";
+        PHSetActionNotice(action, PHFeedback);
+        PHLastStatus = 0;
+        return;
+    }
+    if (PHWriteJSON(next, @"config.json")) {
         PHConfig = next;
         PHConfigValid = YES;
         if (next[@"formations"]) PHPublishFormationLibrary(next[@"formations"]);
@@ -1317,7 +1441,9 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHOrbDiagonalNotice = nil;
         PHOrbAssistRecoveryNotice = nil;
         PHUnlockDataReady = NO;
-        PHFeedback = [action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存";
+        PHFeedback = [([action isEqualToString:@"adoptEndpoint"] ? @"API 已套用並儲存" : @"設定已儲存")
+            stringByAppendingString:PHPreservedConfigNotice()];
+        PHPreservedConfigName = nil;
     } else {
         PHStorageReady = NO;
         PHStorageMessage = @"config.json 寫入失敗；請按「重新檢查」。";

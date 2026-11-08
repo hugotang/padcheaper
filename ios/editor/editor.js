@@ -8,6 +8,10 @@
   let library = model.createLibrary(), team = model.selectedTeam(library), savedLibrary = null;
   let selected = {slot:0,kind:'body'}, battle = {}, recent = [], savedJSON = '', pending = null;
   let latentChoice = 11;
+  // Set when the native library cannot be loaded (for example a card newer
+  // than the bundled catalog). Every library write is refused so the empty
+  // placeholder can never replace the stored library or its backup.
+  let loadBlocked = '';
   let sequence = 0, saveTimer, toastTimer, lastSaveError = '', savePromise = Promise.resolve({ok:true}), resolveSave;
   const teamView = PHTeamView.create(model,()=>team,portrait,()=>{
     showWorkspace('calculator');
@@ -32,7 +36,7 @@
     if(focus)$('tab-'+name).focus({preventScroll:true});
   }
   function message(id,value) { $(id).textContent=value; $(id).hidden=!value; }
-  function error(value) { message('error',value); message('editor-error',value); }
+  function error(value) { value=value||loadBlocked; message('error',value); message('editor-error',value); }
   function toast(value) {
     message('toast',value); message('editor-notice',value); clearTimeout(toastTimer);
     toastTimer=setTimeout(()=>{message('toast','');message('editor-notice','');},4500);
@@ -196,8 +200,8 @@
   }
   function renderState() {
     const unsaved=dirty(),configured=battle.automaticConfigured??battle.automaticEnabled;
-    $('save-status-row').dataset.tone=lastSaveError?'error':unsaved?'dirty':'saved';
-    $('save-status').textContent=pending?'正在儲存，等待確認…':lastSaveError?'儲存未完成 · 草稿仍保留':unsaved?'有未儲存的變更':'已儲存目前隊伍';
+    $('save-status-row').dataset.tone=loadBlocked||lastSaveError?'error':unsaved?'dirty':'saved';
+    $('save-status').textContent=pending?'正在儲存，等待確認…':loadBlocked?'隊伍庫未載入 · 已停用儲存':lastSaveError?'儲存未完成 · 草稿仍保留':unsaved?'有未儲存的變更':'已儲存目前隊伍';
     const storedTeam=savedLibrary?.teams.find(record=>record.id===library.selected)?.team;
     const badgeStored=Boolean(storedTeam)&&storedTeam.badge===team.badge;
     const submittedTeam=pending?.library.teams.find(record=>record.id===library.selected)?.team;
@@ -221,15 +225,16 @@
     $('connection').textContent=[battle.message,battle.gate].filter(Boolean).join(' · ')||'等待戰鬥檢查；現在可以編輯隊伍。';
     $('entry-sb').textContent=battle.entryApplied?String(battle.initialBoost??'—'):'—';
     $('current-hp').textContent=battle.present&&battle.hpKnown?Number(battle.currentHP).toLocaleString():'—';
-    $('apply-all').disabled=Boolean(pending)||!battle.canApply||!filled||Boolean(battle.activeCount);
-    $('apply-one').disabled=Boolean(pending)||!battle.canApply||!team.slots[selected.slot].body.id||!battle.members?.[selected.slot]?.replaceable;
+    $('apply-all').disabled=Boolean(pending||loadBlocked)||!battle.canApply||!filled||Boolean(battle.activeCount);
+    $('apply-one').disabled=Boolean(pending||loadBlocked)||!battle.canApply||!team.slots[selected.slot].body.id||!battle.members?.[selected.slot]?.replaceable;
     $('restore-one').disabled=Boolean(pending)||!battle.canRestore||!battle.members?.[selected.slot]?.leased;
     $('restore-all').disabled=Boolean(pending)||!battle.canRestore;
-    $('save').disabled=$('close').disabled=$('team-choice').disabled=Boolean(pending);
-    $('save').textContent=pending?'儲存中…':'儲存隊伍';
-    $('team-new').disabled=$('team-copy').disabled=Boolean(pending)||library.teams.length>=model.libraryCapacity;
-    $('team-delete').disabled=Boolean(pending)||library.teams.length===1;
-    $('delete-yes').disabled=$('discard-close').disabled=Boolean(pending);
+    $('close').disabled=Boolean(pending);
+    $('save').disabled=$('team-choice').disabled=Boolean(pending||loadBlocked);
+    $('save').textContent=pending?'儲存中…':loadBlocked?'無法儲存':'儲存隊伍';
+    $('team-new').disabled=$('team-copy').disabled=Boolean(pending||loadBlocked)||library.teams.length>=model.libraryCapacity;
+    $('team-delete').disabled=Boolean(pending||loadBlocked)||library.teams.length===1;
+    $('delete-yes').disabled=Boolean(pending||loadBlocked);$('discard-close').disabled=Boolean(pending);
     $('apply-hint').textContent=battle.multiplayerDisabled?'多人期間僅提供編輯與儲存':battle.activeCount?'修改本場隊伍前，請先還原要替換的位置':
       battle.canApply?'手動套用會先儲存，並保留目前技能充能':'立即套用須等待單人操作階段';
     $('slot-state').textContent=matching(selected.slot)?'本場已套用此格的本體、武裝與設定。':battle.members?.[selected.slot]?.leased?'本場此位置正在使用另一份配方，請先還原。':battle.gate||'可先編輯，等單人操作階段再套用。';
@@ -269,6 +274,7 @@
   }
   function persist(successMessage='已儲存目前隊伍',intent={}) {
     if(pending)return;
+    if(loadBlocked){error(loadBlocked);renderState();return;}
     readFields();library=model.updateLibraryTeam(library,team);
     const requestID=String(++sequence),submitted=model.normalizeLibrary(library);
     pending={requestID,library:submitted,successMessage,intent};lastSaveError='';
@@ -294,6 +300,7 @@
   }
   function useLibrary(value,notice) {
     if(pending)return;
+    if(loadBlocked){error(loadBlocked);renderLibrary();renderState();return;}
     library=model.normalizeLibrary(value);team=model.selectedTeam(library);selected={slot:0,kind:'body'};
     resetFields();$('management').open=false;$('delete-confirm').hidden=true;render();persist(notice);
   }
@@ -303,9 +310,14 @@
     receive(value) {
       guarded(()=>{
         if(value.library||value.team) {
-          library=value.library?model.normalizeLibrary(value.library):model.createLibrary(value.team);team=model.selectedTeam(library);
+          let loaded=null;
+          try {loaded=value.library?model.normalizeLibrary(value.library):model.createLibrary(value.team);loadBlocked='';}
+          catch(e) {loadBlocked='隊伍庫無法載入（'+e.message+'）。為避免覆蓋已儲存的隊伍庫與備份，儲存、隊伍管理與套隊已停用；請更新圖鑑資料後重新開啟。';}
+          library=loaded||model.createLibrary();team=model.selectedTeam(library);
           selected={slot:0,kind:'body'};histories.clear();resetFields();
-          if(value.library){savedLibrary=value.stored===false?null:model.normalizeLibrary(library);savedJSON=savedLibrary?JSON.stringify(savedLibrary):'';}
+          if(!loaded){savedLibrary=null;savedJSON='';}
+          else if(value.library){savedLibrary=value.stored===false?null:model.normalizeLibrary(library);savedJSON=savedLibrary?JSON.stringify(savedLibrary):'';}
+          error('');
         }
         if(value.recent)recent=[...new Set(value.recent)].filter(id=>model.cards.has(id)).slice(0,24);
         battle=value.battle||battle;render();
@@ -386,7 +398,7 @@
     toast('位置 '+(source+1)+(copy?' 已複製到 ':' 已交換至 ')+(destination+1)+'，包含本體與武裝。可撤銷上一步。');
   });
   $('import').onclick=()=>bridge('paste');$('export').onclick=()=>guarded(()=>bridge('copy',model.exportLink(readFields())));$('reference').onclick=()=>bridge('reference');
-  $('save').onclick=()=>guarded(()=>persist());$('close').onclick=()=>guarded(()=>persist('已儲存目前隊伍',{close:true}));
+  $('save').onclick=()=>guarded(()=>persist());$('close').onclick=()=>guarded(()=>loadBlocked?bridge('dismiss'):persist('已儲存目前隊伍',{close:true}));
   $('apply-one').onclick=()=>apply(selected.slot);$('apply-all').onclick=()=>apply(-1);
   $('restore-one').onclick=()=>bridge('restore',selected.slot);$('restore-all').onclick=()=>bridge('restore',6);
   document.addEventListener('keydown',event=>{

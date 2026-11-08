@@ -80,15 +80,35 @@ private:
 // This latch outlives an Auto run and configuration reloads. Both a countdown
 // attempt and a manual start consume the match, including failed arming.
 // Keeping it outside PHOrbAutoRunState prevents Stop from rearming a match.
+//
+// Edge-triggered (2026-11-08): only a match whose native countdown was seen
+// while the setting was on may start by itself. The countdown has no match
+// clock yet and no readable board (device log: known 8P seat, countdownReady
+// 0, clockStart 0, board-not-ready), so arming uses every observation, read or
+// not. A running match first seen without that countdown (setting enabled or
+// app attached mid-match), or one whose first board was already moved, is
+// consumed without starting.
 class PHOrbEightAutoStartState {
 public:
+    void observe(const PHOrbSnapshot &state, bool enabled) {
+        const PHOrbMultiplayerState &m = state.multiplayer;
+        if (!enabled || (state.present && m.kind != PHOrbMultiplayerEight)) { armed = false; return; }
+        if (m.known && m.kind == PHOrbMultiplayerEight && m.teamCount == 8 && m.localSeat < 8 &&
+            m.countdownReady != 1 && !m.finished) {
+            armed = true; armedSeat = m.localSeat;
+        }
+    }
     bool claimCountdown(const PHOrbSnapshot &state) {
-        if (!PHOrbEightMatchReady(&state) || !PHOrbCanPreview(&state) || state.moves ||
-            PHOrbSameEightMatch(&consumedMatch, &state)) return false;
+        if (!PHOrbEightMatchReady(&state) || PHOrbSameEightMatch(&consumedMatch, &state)) return false;
+        if (!armed || armedSeat != state.multiplayer.localSeat || state.moves) { consume(state); return false; }
+        if (!PHOrbCanPreview(&state)) return false; // Keep the arm until the first board settles.
         consume(state); return true;
     }
-    void consume(const PHOrbSnapshot &state) { consumedMatch = state; }
+    void consume(const PHOrbSnapshot &state) { consumedMatch = state; armed = false; }
+    bool isArmed() const { return armed; }
 
 private:
     PHOrbSnapshot consumedMatch{};
+    bool armed = false;
+    uint32_t armedSeat = 0;
 };

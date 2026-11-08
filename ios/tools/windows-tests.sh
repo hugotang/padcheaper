@@ -37,6 +37,13 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src ios/tests/orb_shape_guidance_
     "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -o "$build_dir/shape-guidance-tests.exe"
 "$build_dir/shape-guidance-tests.exe"
 
+# Public PHOrbSolve API-validity smoke test; macOS ios/test.sh runs the same
+# file under ASan/UBSan. MinGW has no sanitizer runtime, so this is plain -O2.
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src ios/tests/orb_solve_sanitized_tests.cpp "$build_dir/solver.o" \
+    "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -o "$build_dir/solve-smoke-tests.exe"
+"$build_dir/solve-smoke-tests.exe" > "$build_dir/solve-smoke-tests.log" 2>&1 || { cat "$build_dir/solve-smoke-tests.log"; exit 1; }
+tail -1 "$build_dir/solve-smoke-tests.log"
+
 if [ -n "${BASELINE:-}" ]; then
     git show "$BASELINE:ios/src/PHOrbSolver.cpp" > "$build_dir/PHOrbSolver.baseline.cpp"
     solver_tests "$build_dir/PHOrbSolver.baseline.cpp" "$build_dir/solver-baseline"

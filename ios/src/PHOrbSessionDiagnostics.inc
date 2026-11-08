@@ -285,6 +285,7 @@
         @"eightAutoAvailable":@(PHOrbEightMatchReady(&_live)),
         @"battleEnded":@(battleEnded),
         @"eightAutomatic":@(_auto.eight()), @"eightSkillPending":@(_eightSkillPending),
+        @"watchPlayerState":@(_watchPlayerState),
         @"eightTeam":EightTeamTrace(_live.eight.valid ? _live : _eightLastObserved),
         @"eightProgress":[self eightProgressTrace],
         @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),

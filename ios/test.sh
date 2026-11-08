@@ -83,6 +83,15 @@ done
     "$build_dir/PHOrbModel.sanitized.o" "$build_dir/PHBattleModel.sanitized.o" \
     "$build_dir/PHInputModel.sanitized.o" -lc++ -o "$build_dir/orb-shape-guidance-sanitized-tests"
 "$build_dir/orb-shape-guidance-sanitized-tests"
+# Public PHOrbSolve entry under the same sanitizers: API validity only,
+# because sanitizer slowdown changes time-budgeted search quality.
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -Wall -Wextra -Werror -Iios/src \
+    "${sanitizer_flags[@]}" -c ios/src/PHOrbSolver.cpp -o "$build_dir/PHOrbSolver.sanitized.o"
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -Wall -Wextra -Werror -Iios/src \
+    "${sanitizer_flags[@]}" ios/tests/orb_solve_sanitized_tests.cpp "$build_dir/PHOrbSolver.sanitized.o" \
+    "$build_dir/PHOrbModel.sanitized.o" "$build_dir/PHBattleModel.sanitized.o" \
+    "$build_dir/PHInputModel.sanitized.o" -lc++ -o "$build_dir/orb-solve-sanitized-tests"
+"$build_dir/orb-solve-sanitized-tests"
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
     ios/research/orb_timed_fishing_probe.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
     "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/orb-timed-fishing-probe"

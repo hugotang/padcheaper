@@ -63,8 +63,13 @@ static void EightCountdownAutoStartSessionTests() {
     for (unsigned i = 0; i < 60; ++i) Tick(session,engine,Frame());
     Check(![session.snapshot[@"automatic"] boolValue], "a manual stop is not undone within the same match");
     ++engine->live.multiplayer.clockStart;
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue], "a next match first seen without its countdown does not start");
+    engine->live.multiplayer.countdownReady = 0;
+    for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
+    ++engine->live.multiplayer.clockStart; engine->live.multiplayer.countdownReady = 1;
     for (unsigned i = 0; i < 30 && ![session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
-    Check([session.snapshot[@"automatic"] boolValue], "the next match starts automatically again");
+    Check([session.snapshot[@"automatic"] boolValue], "the next match starts automatically again after its countdown");
     [session queueStop:@"stop next match"];
     ++engine->live.multiplayer.clockStart;
     Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
@@ -76,6 +81,31 @@ static void EightCountdownAutoStartSessionTests() {
     for (unsigned i = 0; i < 60; ++i) Tick(session,engine,Frame());
     Check(![session.snapshot[@"automatic"] boolValue], "a match started manually is not auto-restarted after a manual stop");
     [session queueStop:@"end countdown auto-start fixture"];
+
+    // Setting enabled mid-match: the running match never starts by itself,
+    // even when a later board has zero moves.
+    engine = EightEngineFixture(); session = [[PHOrbSession alloc] initWithEngine:engine];
+    for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
+    Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
+        @"eightAutoStart":@YES,@"profiles":@[profile]}], "setting enabled after the countdown");
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    EightNextBoard(engine,true);
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue] && !engine->stages,
+        "enabling the setting mid-match never starts that match");
+
+    // A first board already moved by hand consumes the match.
+    engine = EightEngineFixture(); session = [[PHOrbSession alloc] initWithEngine:engine];
+    Check([session configureProfiles:@{@"schema":@1,@"selected":profile[@"id"],@"autoSelect":@NO,
+        @"eightAutoStart":@YES,@"profiles":@[profile]}], "setting enabled before the countdown");
+    engine->live.multiplayer.countdownReady = 0;
+    for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
+    engine->live.multiplayer.countdownReady = 1; engine->live.moves = 1;
+    for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());
+    EightNextBoard(engine,false);
+    for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue] && !engine->stages,
+        "a match whose first board was moved by hand does not start on a later board");
     Check(!PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"eightAutoStart":@2,@"profiles":@[]}),
         "countdown auto-start must be a boolean");
 }
@@ -486,7 +516,31 @@ static void EightChangedInventoryRecoveryTests() {
         [session queueStop:@"fixture done"];
     }
 }
+// Generic 8P Auto suspends the solo HP/status watch for its own run only; the
+// next solo Auto must recompute it from the unchanged rules.
+static void EightPlayerWatchRestoreTests() {
+    const PHOrbSnapshot solo = [FakeOrbEngine new]->live;
+    FakeOrbEngine *engine = EightEngineFixture(); PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+    NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy]; rescue[@"hpAtMost"] = @40; rescue[@"required"] = @YES;
+    Check([session configureSettings:@{@"quality":@"fast",@"mode":@"combo",@"goals":@[],@"rules":@[rescue]}],
+        "solo rescue rule accepted before an 8P match");
+    Check([session.snapshot[@"watchPlayerState"] boolValue],"rescue rule enables the player-state watch");
+    Tick(session,engine,Frame()); [session queueAutomatic];
+    for (unsigned i = 0; i < 20 && ![session.snapshot[@"eightAutomatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"eightAutomatic"] boolValue] && ![session.snapshot[@"watchPlayerState"] boolValue],
+        "generic 8P Auto suspends the solo player-state watch");
+    [session queueStop:@"leave 8P fixture"];
+    for (unsigned i = 0; i < 5; ++i) Tick(session,engine,Frame());
+    Check(![session.snapshot[@"automatic"] boolValue],"8P fixture stopped before the solo run");
+    engine->live = solo; Tick(session,engine,Frame()); [session queueAutomatic];
+    for (unsigned i = 0; i < 20 && ![session.snapshot[@"automatic"] boolValue]; ++i) Tick(session,engine,Frame());
+    Check([session.snapshot[@"automatic"] boolValue] && ![session.snapshot[@"eightAutomatic"] boolValue] &&
+        [session.snapshot[@"watchPlayerState"] boolValue],
+        "solo Auto after generic 8P restores HP/status protection without a settings change");
+    [session queueStop:@"end watch fixture"];
+}
 static void EightSessionTests() {
+    EightPlayerWatchRestoreTests();
     EightCountdownAutoStartSessionTests();
     EightPreparationSessionTests();
     EightPreferredPreparationSessionTests();
