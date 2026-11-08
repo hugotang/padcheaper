@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.42-orbs](docs/release-0.5.42.md) 已通過 [CI 155](https://github.com/hugotang/padcheaper/actions/runs/42460893938) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。修正求路閃退、Skin／BGM 上傳保護、隊伍庫與設定保全，8 人倒數自動開始改為只看觀察到倒數的場次；`device_verified=false`。
+[0.5.43-orbs](docs/release-0.5.43.md) 已通過 [CI 156](https://github.com/hugotang/padcheaper/actions/runs/42472664547) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。Himmel 模板的三體迦梨供珠改為非必要；執行程式未變更；`device_verified=false`。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.43-orbs](docs/release-0.5.43.md) | 2026-11-08 | Himmel 模板迦梨輪替改為非必要；編譯測試中 |
+| [0.5.43-orbs](docs/release-0.5.43.md) | 2026-11-08 | Himmel 模板迦梨輪替改為非必要；已驗證交付 |
 | [0.5.42-orbs](docs/release-0.5.42.md) | 2026-11-08 | 求路閃退修正、Skin／BGM 上傳保護、隊伍庫與設定保全、8 人倒數自動開始改為看倒數；已驗證交付 |
 | [0.5.41-orbs](docs/release-0.5.41.md) | 2026-11-07 | 轉轉候選保留、荊棘補搜與單人續玩手動取色；已驗證交付，四轉轉五色仍未解 |
 | [0.5.40-orbs](docs/release-0.5.40.md) | 2026-11-07 | 五色＋心／轉轉補搜、3 人手動取色與每隊徽章保存；已驗證交付 |
