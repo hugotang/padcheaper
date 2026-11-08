@@ -4,6 +4,11 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-08：0.5.44-orbs 編譯測試與交付完成
+
+- [CI 158](https://github.com/hugotang/padcheaper/actions/runs/42490096263) 在來源 `6cafc28b58814b0e7f2f2a6262d00721664a4205` 完整通過 macOS 全部回歸（含錄製雙轉轉盤及重試條件案例）、iPhoneOS arm64 建置／嚴格簽章、瀏覽器編輯器及四份 iPhone GUI。Windows `windows-tests.sh` 在同一來源通過。
+- 已交付 `E:/ipa/PADCheaper-0.5.44-orbs` 及同名 ZIP，含 CI 157 失敗 log。381 份校驗清單、ZIP CRC／382 項重新核對通過。dylib SHA-256 `d260cf1d7d110366a4cc64403b77274b2e4b11791d6da6b14cd4e796d4b1571a`；ZIP SHA-256 `ca8b30f18f93eb8e46719a56d4c5d3ee3002cf6f4e8506620e433e5ff1e25c40`。`device_verified=false`；真機上的重試等待時間與成功率仍待確認。
+
 ## 2026-11-08：0.5.44-orbs 編譯測試過程
 
 - 使用者決定保留 Himmel 規則 4（辛美爾就緒即用），模板不改，並要求編譯測試單人連續取色重試。升版 0.5.44-orbs 後派發手動 CI；結果完成後補記。
