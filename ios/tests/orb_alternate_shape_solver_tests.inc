@@ -50,7 +50,8 @@ static void AlternateShapeSolverTests() {
         Check(status == PHOrbSolveStatus::Solved && route.goalsMet && route.hazardsSafe,
             "alternate shape recovery solves the recorded narrow-beam miss");
         Check(std::memcmp(&board,&original,sizeof(board)) == 0 && route.count <= options.steps+1 &&
-            route.backtracks <= options.backtrackLimit && route.searchPasses <= 1+options.recoveryPasses+route.backtracks &&
+            route.backtracks <= options.backtrackLimit && route.squareRecoveryPasses <= 2 &&
+            route.searchPasses <= 1+options.recoveryPasses+route.backtracks+route.squareRecoveryPasses &&
             route.exploredDepth <= options.steps && !route.diagonal,
             "alternate shape recovery preserves source, movement and search bounds");
         if (route.count >= 2 && PHOrbReplay(&board,&route,route.count-1,&replay)) {
@@ -74,7 +75,8 @@ static void AlternateShapeSolverTests() {
     const auto start = std::chrono::steady_clock::now();
     const auto status = PHOrbSolve(board,options,cancel,route);
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count();
-    Check(elapsed < 500 && route.count <= options.steps+1 && route.searchPasses <= 4 &&
+    Check(elapsed < 500 && route.count <= options.steps+1 && route.squareRecoveryPasses <= 2 &&
+        route.searchPasses <= 4+route.squareRecoveryPasses &&
         (status == PHOrbSolveStatus::NoRoute || status == PHOrbSolveStatus::GoalsUnmet || status == PHOrbSolveStatus::Solved),
         "alternate shape scoring respects a short deadline and retains bounded output");
     cancel = true;

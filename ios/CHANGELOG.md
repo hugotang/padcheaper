@@ -2,6 +2,10 @@
 
 每版的完整說明在 `docs/release-*.md`；建置、測試與交付證據（包括失敗的 CI）記錄在 [開發紀錄](docs/development.md)。交付檔位於 `E:/ipa/PADCheaper-<版本>` 與同名 ZIP，已交付的版本不覆寫。所有版本的 `device_verified` 均為 false，除非開發紀錄另有使用者真機回報。
 
+## 目前來源
+
+[0.5.45-orbs](docs/release-0.5.45.md)：九宮格補搜、同 Combo 較短路徑及連續取色快取；Windows 回歸已通過，已獲授權執行 iOS 全套編譯測試，結果待補。
+
 ## 最新交付
 
 [0.5.44-orbs](docs/release-0.5.44.md) 已通過 [CI 158](https://github.com/hugotang/padcheaper/actions/runs/42490096263) 完整回歸、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，已交付新資料夾與 ZIP。單人連續取色在時間不足時以 2000 ms 重試一次；`device_verified=false`。
@@ -10,6 +14,7 @@
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
+| [0.5.45-orbs](docs/release-0.5.45.md) | 2026-11-11 | 九宮格補搜、較短路徑、連續取色快取；iOS 驗證中 |
 | [0.5.44-orbs](docs/release-0.5.44.md) | 2026-11-08 | 單人連續取色逾時重試；已驗證交付 |
 | [0.5.43-orbs](docs/release-0.5.43.md) | 2026-11-08 | Himmel 模板迦梨輪替改為非必要；已驗證交付 |
 | [0.5.42-orbs](docs/release-0.5.42.md) | 2026-11-08 | 求路閃退修正、Skin／BGM 上傳保護、隊伍庫與設定保全、8 人倒數自動開始改為看倒數；已驗證交付 |

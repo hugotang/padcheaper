@@ -37,6 +37,11 @@ static bool MultiFishingSessionPreview(PHOrbSession *session, FakeOrbEngine *eng
     Check(ready,"two-heart small graph produces an executable multi-take preview through normal public requests");
     if (!ready) { [session queueStop:@"multi-take fixture failed to preview"]; Tick(session,engine,Frame()); return false; }
     NSDictionary *state = session.snapshot, *trace = state[@"searchTrace"];
+    CheckSearchAttemptTrace(trace);
+    Check([trace[@"evaluationBreakdownKnown"] boolValue] && [trace[@"evaluationCalls"] unsignedLongLongValue] > 0 &&
+        [trace[@"evaluated"] unsignedLongLongValue] == [trace[@"evaluationCalls"] unsignedLongLongValue] +
+            [trace[@"evaluationCacheHits"] unsignedLongLongValue],
+        "selected multi-take preview preserves cache counts in its public search trace");
     NSArray<NSDictionary *> *changes = trace[@"fishingExchanges"];
     Check([trace[@"multiFishingSelected"] boolValue] && [trace[@"fishCell"] isEqual:@14] && changes.count == 2 &&
         [state[@"path"][0] isEqual:@7] && !engine->stages && !engine->releases,

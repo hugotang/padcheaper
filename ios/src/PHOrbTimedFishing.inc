@@ -368,7 +368,7 @@ PHOrbSolveStatus PHOrbSolveTimedFishing(const PHOrbBoard &board, const PHOrbSolv
                         // An attractive layout before the prescribed exchanges
                         // is guidance only; it must not masquerade as Solved.
                         child.drag.score.result.goalsMet &= complete;
-                        if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{}))) {
+                        if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{},true))) {
                             best = child; bestPlan = plan; found = true;
                         }
                         next.push_back(std::move(child));

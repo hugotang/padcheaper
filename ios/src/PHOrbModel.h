@@ -383,6 +383,7 @@ typedef struct {
     // in the complete list, even when only a prefix is replayed.
     uint8_t fishingExchangeCount;
     PHOrbFishingExchange fishingExchanges[PHOrbRouteMaxFishingExchanges];
+    uint8_t squareRecoveryPasses; // Subset of searchPasses, at most two; same deadline.
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);

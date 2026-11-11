@@ -230,6 +230,7 @@ NSMutableDictionary *SearchAttemptTrace(const PHOrbSolveOptions &options, PHOrbS
         @"evaluationCalls":@(route.evaluationCalls), @"evaluationCacheHits":@(route.evaluationCacheHits),
         @"fishingRequested":@(options.fishCell >= 0), @"fishing":@(route.fishing),
         @"searchPasses":@(route.searchPasses), @"backtracks":@(route.backtracks),
+        @"squareRecoveryPasses":@(route.squareRecoveryPasses),
         @"exploredDepth":@(route.exploredDepth), @"stepLimit":@(options.steps), @"beam":@(options.beam)} mutableCopy];
     if (options.fishCell >= 0) {
         trace[@"fishCell"] = @(options.fishCell); trace[@"fishColor"] = @(options.fishColor);
@@ -285,6 +286,7 @@ PHOrbRoute ExecutableMultiFishing(const PHOrbMultiFishingResult &result) {
     route.poisonErased = value.poisonErased; route.mortalPoisonErased = value.mortalPoisonErased;
     route.unmatchedBombs = value.unmatchedBombs; route.heartFours = value.heartFours;
     route.evaluated = result.evaluated; route.elapsedMS = result.elapsedMS;
+    route.evaluationCalls = result.evaluationCalls; route.evaluationCacheHits = result.evaluationCacheHits;
     route.searchPasses = result.plansSearched; route.exploredDepth = result.exploredDepth;
     route.deadlineReached = result.deadlineReached;
     return route;
@@ -1041,7 +1043,10 @@ struct EightPreparationState {
                     // single-take colour zero. Name a colour only after a real
                     // exchange has been retained in the returned candidate.
                     if (!candidateRoute.fishingExchangeCount) [attempt removeObjectForKey:@"fishColor"];
-                    attempt[@"evaluationBreakdownKnown"] = @NO;
+                    // The multi-take result retains counts even when no route
+                    // survived. Invalid/failed calls do not promise a breakdown.
+                    attempt[@"evaluationBreakdownKnown"] = @(status != PHOrbSolveStatus::Invalid &&
+                        status != PHOrbSolveStatus::Failed);
                     if (pass) attempt[@"soloRetry"] = @YES;
                     timeLimited |= candidate.searchBudgetExhausted || candidate.deadlineReached ||
                         candidate.planSlicesExpired || candidate.plansBudgetSkipped || candidate.inventory.deadlineReached;
@@ -1173,6 +1178,7 @@ struct EightPreparationState {
             trace[@"evaluated"] = @(route.evaluated); trace[@"deadline"] = @(route.deadlineReached);
             trace[@"evaluationCalls"] = @(route.evaluationCalls); trace[@"evaluationCacheHits"] = @(route.evaluationCacheHits);
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
+            trace[@"squareRecoveryPasses"] = @(route.squareRecoveryPasses);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result);
             NSString *failureMessage = MultiFishingFailureMessage(SolveFailureMessage(result, board,

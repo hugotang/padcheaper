@@ -48,6 +48,12 @@ static void MultiFishingRecordedDoubleSpinnerTests() {
             PHOrbReplayMultiFishing(board,result.route,result.route.count - 1,replay) &&
             PHOrbEvaluateMultiFishing(board,result.route,trial,nullptr,evaluation) && evaluation.goalsMet,
             "each recorded spinner entry solves with one baseline take plan and replays");
+        Check(result.evaluated == result.evaluationCalls + result.evaluationCacheHits &&
+            result.evaluationCalls > 0 && result.evaluationCacheHits > 0,
+            "recorded multi-take solve accounts for cached and fresh layout evaluations");
+        std::printf("Recorded multi-take cache cell=%d status=%u steps=%u evaluated=%u calls=%u hits=%u ms=%u\n",
+            cell,unsigned(status),result.route.count ? result.route.count - 1 : 0,result.evaluated,
+            result.evaluationCalls,result.evaluationCacheHits,result.elapsedMS);
     }
     Check(PHOrbShouldRetryMultiFishing(true,false,800,false,true) &&
         !PHOrbShouldRetryMultiFishing(false,false,800,false,true) &&

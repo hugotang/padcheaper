@@ -84,10 +84,17 @@ static void AllMetScores() {
                 Check(expected.result.goalsMet, "hand-constructed L/T/square and color/combo conjunctions satisfy all goals");
                 Check(expected.result.hazardsSafe == (!hazard || (hazard < 3 && allowPoison)),
                     "all goals met is separate from poison, mortal poison and unmatched-bomb safety");
-                for (unsigned variant = 0; variant < 2; ++variant) {
-                    const auto actual = Evaluate(cells, Alternate(primary, variant));
+                for (unsigned variant = 0; variant < 4; ++variant) {
+                    auto policy = Alternate(primary, variant);
+                    if (variant >= 2) {
+                        policy.squareUniqueSupply = variant == 2;
+                        policy.shapeHoleWeight = variant == 2 ? 4 : 8;
+                        policy.shapeDistanceWeight = variant == 2 ? 2 : 1;
+                        policy.borderRepairWeight = variant == 2 ? 1 : 0;
+                    }
+                    const auto actual = Evaluate(cells, policy);
                     Check(SameScore(expected, actual),
-                        "all-met scores including focus/layouts are identical under both ordinary shape policies");
+                        "all-met scores including focus/layouts are identical under ordinary and square recovery policies");
                 }
             }
         }
@@ -238,6 +245,7 @@ static void FishingTransitionKeys() {
 #include "orb_color_spinner_guidance_tests.inc"
 #include "orb_thorn_color_guidance_tests.inc"
 #include "orb_beam_bucket_tests.inc"
+#include "orb_score_policy_tests.inc"
 
 int main() {
     AllMetScores();
@@ -251,6 +259,9 @@ int main() {
     ColorSpinnerGuidanceTests();
     ThornColorGuidanceTests();
     BeamBucketTests();
+    RouteOrderTests();
+    MultiFishingCacheTests();
+    SquareHintPolicyTests();
     std::printf("Private shape guidance tests: %s\n", failures ? "FAILED" : "passed");
     return failures ? 1 : 0;
 }

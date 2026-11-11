@@ -2,7 +2,9 @@
 
 來源版本與功能描述以 [release.json](release.json) 為準；各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，待驗證的改動見 [開發紀錄](docs/development.md)。
 
-目前交付 **0.5.44-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。單人連續取色逾時重試，其餘同 0.5.43；已通過 [CI 158](https://github.com/hugotang/padcheaper/actions/runs/42490096263) 完整回歸、iPhoneOS 建置／簽章、瀏覽器及四份 iPhone GUI；真機行為及多人同步尚未驗證。詳見[0.5.44 更新](docs/release-0.5.44.md)及[開發紀錄](docs/development.md)。
+目前來源 **0.5.45-orbs**：九宮格補搜、同 Combo 較短路徑及連續取色快取，已收到編譯測試指示，iOS 全套驗證進行中，詳見 [0.5.45 更新](docs/release-0.5.45.md)。
+
+上一版交付 **0.5.44-orbs**，目標 jp.gungho.pad **23.6.1／107553**，arm64。單人連續取色逾時重試，其餘同 0.5.43；已通過 [CI 158](https://github.com/hugotang/padcheaper/actions/runs/42490096263) 完整回歸、iPhoneOS 建置／簽章、瀏覽器及四份 iPhone GUI；真機行為及多人同步尚未驗證。詳見[0.5.44 更新](docs/release-0.5.44.md)及[開發紀錄](docs/development.md)。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 

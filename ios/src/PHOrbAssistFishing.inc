@@ -605,10 +605,16 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
         const auto started = Clock::now(), deadline = started + std::chrono::milliseconds(options.milliseconds);
         const auto reserve = std::chrono::milliseconds(std::min(25u,std::max(1u,options.milliseconds / 20)));
         const auto searchDeadline = deadline - reserve;
+        // A score depends on the color layout and the plan's goals, not on the
+        // drag endpoint, remaining takes or path. Each candidate costs one
+        // evaluation per selected color and shared phase, so reuse it within a
+        // plan. Complete-route gating is applied to a copy by the caller.
+        EvaluationCache scoreCache(true);
         const auto stamp = [&]() {
             const auto now = Clock::now();
             out.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(now - started).count());
             out.deadlineReached = now >= deadline;
+            out.evaluationCalls = scoreCache.calls; out.evaluationCacheHits = scoreCache.hits;
         };
         const auto cancelled = [&]() {
             if (!cancel.load(std::memory_order_relaxed)) return false;
@@ -667,6 +673,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
             const auto planDeadline = planStart + (stageDeadline - planStart) * searchWeights[p] / remainingWeight;
             auto trial = options; trial.goals = plan.goals;
             auto context = MakeContext(board,trial.goals,true,trial.allowPoisonWithHeartFour,trial.diagonal,{},trial.fishCell);
+            scoreCache.nextPass(); // Plans differ in goals; never share their scores.
             std::vector<AssistFishingNode> beam, next;
             beam.reserve(std::max(options.beam,size)); next.reserve(options.beam * (options.diagonal ? 8 : 4) * PHOrbBasicTypes);
             for (unsigned cell = 0; cell < size; ++cell) if (PHOrbCanStartAt(&board,cell) &&
@@ -714,11 +721,12 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                             std::swap(child.drag.cells[current],child.drag.cells[target]);
                             const unsigned stillNeeded = 2u * (plan.exchangeCount - child.entries) + unsigned(entry);
                             if (depth + 1 + stillNeeded > steps || !visited.insert(AssistFishingHash(child,size))) continue;
-                            child.drag.score = MultiFishingScore(child.drag.cells,context,fish,board.spinnerColors);
+                            child.drag.score = scoreCache.score(child.drag.cells,size,[&]() {
+                                return MultiFishingScore(child.drag.cells,context,fish,board.spinnerColors); });
                             ++out.evaluated; out.exploredDepth = uint8_t(std::max(unsigned(out.exploredDepth),depth + 1));
                             const bool complete = child.entries == plan.exchangeCount && !entry;
                             child.drag.score.result.goalsMet &= complete;
-                            if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{}))) {
+                            if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{},true))) {
                                 best = child; bestPlan = plan; found = true;
                                 solved = child.drag.score.result.goalsMet && child.drag.score.result.hazardsSafe;
                             }

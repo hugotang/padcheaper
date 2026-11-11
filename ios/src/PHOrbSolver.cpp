@@ -77,6 +77,7 @@ struct Context {
     // Alternate ordinary-shape passes change exploration only. Retained
     // candidates are compared using the primary context's scoring scale.
     bool alternateShapeHints = false;
+    bool squareUniqueSupply = false;
     unsigned borderRepairWeight = 2;
     unsigned shapeHoleWeight = 2, shapeDistanceWeight = 1;
     std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
@@ -555,7 +556,30 @@ ShapeHints FindShapeHints(const std::array<Bits, PHOrbTypes> &colors, Bits used,
             const Bits supply = color & ~pattern.cells & ~used & ~context.blocked;
             if (Count(supply) < missing) continue;
             bool reachable = true;
-            while (holes) {
+            if (context.squareUniqueSupply && goal.kind == PHOrbGoalSquare) {
+                // Nine cells amplify the usual optimistic reuse of one donor
+                // for several holes. The square-only fallback assigns distinct
+                // donors, hardest-to-reach hole first, to guide another beam.
+                // This greedy cost is neither a lower bound nor feasibility
+                // proof; exact matching and the original search are unchanged.
+                Bits available = supply;
+                while (holes) {
+                    unsigned hardest = 0, farthest = 0;
+                    for (Bits todo = holes; todo; todo &= todo - 1) {
+                        const unsigned cell = unsigned(__builtin_ctzll(todo));
+                        unsigned distance = 1;
+                        while (distance <= context.distanceDepth[cell] &&
+                            !(context.distanceMasks[cell][distance] & available)) ++distance;
+                        if (distance > farthest) { farthest = distance; hardest = cell; }
+                    }
+                    if (farthest > context.distanceDepth[hardest]) { reachable = false; break; }
+                    const Bits nearest = context.distanceMasks[hardest][farthest] & available;
+                    available &= ~(nearest & (~nearest + 1));
+                    holes &= ~(Bits(1) << hardest);
+                    cost += context.shapeDistanceWeight * (farthest - 1);
+                }
+            }
+            while (holes && reachable) {
                 const unsigned cell = unsigned(__builtin_ctzll(holes)); holes &= holes - 1;
                 unsigned distance = 1;
                 while (distance <= context.distanceDepth[cell] && !(context.distanceMasks[cell][distance] & supply)) ++distance;
@@ -989,20 +1013,30 @@ public:
     unsigned calls = 0, hits = 0;
     explicit EvaluationCache(bool enabled) : _entries(enabled ? 4096 : 0) {}
     void nextPass() { ++_pass; }
-    Score score(const Cells &cells, const Context &context) {
-        if (_entries.empty()) { ++calls; return Evaluate(cells, context); }
+    // evaluate() must depend only on the color layout for the current pass.
+    // Call nextPass() before the first lookup and whenever that changes.
+    template <typename Evaluator> Score score(const Cells &cells, unsigned size, Evaluator &&evaluate) {
+        if (_entries.empty()) { ++calls; return evaluate(); }
         uint64_t hash = 14695981039346656037ULL;
-        for (unsigned i = 0; i < context.width * context.height; ++i) { hash ^= cells[i]; hash *= 1099511628211ULL; }
+        for (unsigned i = 0; i < size; ++i) { hash ^= cells[i]; hash *= 1099511628211ULL; }
         Entry &entry = _entries[hash & (_entries.size() - 1)];
         if (entry.pass == _pass && entry.cells == cells) { ++hits; return entry.score; }
         ++calls;
-        entry.cells = cells; entry.score = Evaluate(cells, context); entry.pass = _pass;
+        entry.cells = cells; entry.score = evaluate(); entry.pass = _pass;
         return entry.score;
+    }
+    Score score(const Cells &cells, const Context &context) {
+        return score(cells, context.width * context.height, [&]() { return Evaluate(cells, context); });
     }
 };
 
+// routeOrder selects the route to return; the default orders beam candidates.
+// The two differ only after Combo ties: a returned ordinary route prefers the
+// shorter gesture, while the beam keeps exploring layouts that clear more.
+// Keep this policy explicit even though candidates in a beam layer normally
+// have equal lengths. Recovery may also retain candidates from earlier layers.
 bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour,
-            const PHOrbActivityObjective &activity) {
+            const PHOrbActivityObjective &activity, bool routeOrder = false) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
@@ -1022,6 +1056,9 @@ bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoi
     if (ar.combos != br.combos) return ar.combos > br.combos;
     if (thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
     if (allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
+    // Erased orbs then only break ties between equal lengths. Activity
+    // profiles price steps with their own stepCost and keep erased first.
+    if (routeOrder && !activity.firstWaveOnly && a.length != b.length) return a.length < b.length;
     if (ar.erased != br.erased) return ar.erased > br.erased;
     if (a.length != b.length) return a.length < b.length;
     if (a.score.potential != b.score.potential) return a.score.potential > b.score.potential;
@@ -1381,7 +1418,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         std::vector<Frontier> saved;
         Node best;
         bool found = false, timedOut = false, hadContactCandidates = false;
-        unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0;
+        unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0, squarePasses = 0;
         EvaluationCache evaluationCache(UseEvaluationCache(context));
         // A beam holds at most max(beam, starts, saved frontier) parents.
         VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
@@ -1413,15 +1450,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             ColorGuidance(hints, colors, scoring, movementFor(best,scoring));
             return hints.missingColors ? unsigned(hints.weakestColor) : unsigned(PHOrbBasicTypes);
         };
-        // Upper bounds for an exact stop: no skyfall, so each colour yields at
-        // most count/group combos and erases at most its own orbs.
-        unsigned erasedUpper = 0;
-        for (unsigned c = 0; c < PHOrbTypes; ++c) if (comboCounts[c] >= comboGroup) erasedUpper += comboCounts[c];
-        if (context.variants > 1) erasedUpper = size;
         bool contactsPossible = false;
         for (unsigned i = 0; i < size; ++i) contactsPossible |= budgetKnown && initialThorns[i] != 0;
         // Deeper candidates are longer than best. When best already holds the
-        // maximum of every Better() key ranked above length, they can only lose.
+        // maximum of every route-order Better() key ranked above length, they
+        // can only lose. Erased orbs rank below length for a returned ordinary
+        // route, so the Combo bound (no skyfall: at most count/group per colour)
+        // is the last such key.
         // Activity scores have no known bound and are excluded. Requiring
         // contact candidates to have been seen keeps the later contact pass
         // gated exactly as before.
@@ -1429,7 +1464,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             if (!found || context.activity.firstWaveOnly || depth + 2 <= best.length) return false;
             const auto &r = best.score.result;
             return r.hazardsSafe && r.goalsMet && !r.unmatchedBombs && !r.poisonErased && !best.thornDamage &&
-                r.combos >= comboUpper && r.erased >= erasedUpper && (hadContactCandidates || !contactsPossible);
+                r.combos >= comboUpper && (hadContactCandidates || !contactsPossible);
         };
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
                           Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false, bool activityRows = false) {
@@ -1516,7 +1551,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         const bool heartPending = !child.score.result.heartFours && (child.thornContacts ||
                             (options.allowPoisonWithHeartFour && child.score.result.poisonErased));
                         if (heartPending) child.score.result.hazardsSafe = false;
-                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity)) {
+                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity, true)) {
                             if (scoring.alternateShapeHints && !canonicalScore) {
                                 child.score = Evaluate(child.cells,context); ++evaluationCache.calls;
                                 if (heartPending) child.score.result.hazardsSafe = false;
@@ -1630,6 +1665,30 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             if (stableShapeRecovery && saved.empty()) revisit.stableHints = false;
             search(revisit, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
         }
+        // Keep every earlier opportunity and result. Only an unsuccessful
+        // ordinary, thorn-free square search may spend its remaining deadline
+        // on at most two complementary full-depth beams. No extra wall budget.
+        if (!met() && ordinaryShapeRecovery && options.recoveryPasses && !thornCells && !timedOut) {
+            unsigned squareGoal = PHOrbMaxGoals;
+            for (unsigned g = 0; g < options.goals.count; ++g)
+                if (options.goals.items[g].kind == PHOrbGoalSquare && options.goals.items[g].count == 1) {
+                    squareGoal = g; break;
+                }
+            for (unsigned pass = 0; pass < 2 && squareGoal < PHOrbMaxGoals && !met() && !timedOut &&
+                    !cancel.load(std::memory_order_relaxed); ++pass) {
+                const auto now = Clock::now();
+                if (now >= deadline) break;
+                Context attempt = context; attempt.alternateShapeHints = true;
+                attempt.squareUniqueSupply = pass == 0;
+                attempt.shapeHoleWeight = pass ? 8 : 4; attempt.shapeDistanceWeight = pass ? 1 : 2;
+                // The second pass temporarily tolerates bordering donors;
+                // they can be moved away later. The actual removed group
+                // must still be an isolated nine-cell square in evaluation.
+                attempt.borderRepairWeight = pass ? 0 : 1;
+                beam = starts; ++squarePasses;
+                search(attempt,0,squareGoal,now + (deadline - now) / (2 - pass),false);
+            }
+        }
         // A feasible link/Combo route can crowd out incomplete, stronger row
         // layouts. Keep that route and use only the remaining original time
         // for at most two missing attack-color rows. Extra goals guide the
@@ -1697,6 +1756,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         route.evaluationCalls = evaluationCache.calls; route.evaluationCacheHits = evaluationCache.hits;
         route.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(finished - start).count());
         route.searchPasses = uint8_t(passes); route.backtracks = uint8_t(backtracks); route.exploredDepth = uint8_t(exploredDepth);
+        route.squareRecoveryPasses = uint8_t(squarePasses);
         PHOrbBoard replay{};
         const bool replayed = PHOrbReplay(&board, &route, route.count - 1, &replay);
         // A route that never entered keeps the board colour in the spinner.

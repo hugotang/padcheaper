@@ -45,6 +45,9 @@ struct PHOrbAssistFishingResult {
     PHOrbTimedFishingReservation reservation{};
     PHOrbAssistFishingInventory inventory{};
     uint32_t evaluated = 0, elapsedMS = 0;
+    // evaluated == evaluationCalls + evaluationCacheHits. A hit reuses this
+    // plan's score for an identical color layout reached by another path.
+    uint32_t evaluationCalls = 0, evaluationCacheHits = 0;
     uint8_t plansSearched = 0, plansTimeRejected = 0, exploredDepth = 0, planSlicesExpired = 0;
     bool searchBudgetExhausted = false, deadlineReached = false;
     uint8_t geometryPlansSearched = 0, geometryPlansTimeRejected = 0, geometryPlanSlicesExpired = 0;

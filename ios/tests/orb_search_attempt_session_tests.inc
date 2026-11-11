@@ -153,6 +153,18 @@ static void CheckSearchAttemptTrace(NSDictionary *trace) {
         const bool fishingRequested = [attempt[@"fishingRequested"] boolValue];
         fishingRetries += fishingRequested && [attempt[@"soloRetry"] boolValue];
         const bool multiFishing = [attempt[@"multiFishing"] boolValue];
+        if ([attempt[@"evaluationBreakdownKnown"] boolValue]) {
+            const auto counted = [attempt[@"evaluationCalls"] unsignedLongLongValue] +
+                [attempt[@"evaluationCacheHits"] unsignedLongLongValue];
+            const auto evaluatedCount = [attempt[@"evaluated"] unsignedLongLongValue];
+            // Ordinary alternate guidance may evaluate a candidate again in
+            // the canonical scale; multi-take does one lookup per candidate.
+            Check(multiFishing ? counted == evaluatedCount : counted >= evaluatedCount,
+                "known counts include cache hits and any extra canonical score evaluations");
+        }
+        if (multiFishing && ![attempt[@"status"] isEqual:@"invalid"] && ![attempt[@"status"] isEqual:@"failed"])
+            Check([attempt[@"evaluationBreakdownKnown"] boolValue],
+                "multi-take attempts report the layout cache breakdown even without a retained route");
         NSArray<NSDictionary *> *exchanges = attempt[@"exchanges"];
         const bool hasSingleColor = !multiFishing || exchanges.count;
         Check(fishingRequested ? [attempt[@"fishCell"] isKindOfClass:NSNumber.class] &&
@@ -182,7 +194,7 @@ static void CheckSearchAttemptTrace(NSDictionary *trace) {
         backtracks += [attempt[@"backtracks"] unsignedIntValue];
         deepest = std::max(deepest,[attempt[@"exploredDepth"] unsignedIntValue]);
         deadline |= [attempt[@"deadline"] boolValue];
-        complete &= [attempt[@"statisticsAvailable"] boolValue];
+        complete &= [attempt[@"statisticsAvailable"] boolValue] && [attempt[@"evaluationBreakdownKnown"] boolValue];
     }
     NSDictionary *chosen = attempts[NSUInteger(selected)];
     for (NSString *key in @[@"elapsedMS", @"deadline", @"deadlineKnown", @"statisticsAvailable", @"evaluated",

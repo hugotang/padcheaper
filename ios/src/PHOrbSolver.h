@@ -121,6 +121,9 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // scoring. Evaluation calls can exceed candidate counts when scores are checked
 // under both guidance policies. Shape-specific spinner, fishing and activity
 // policies remain separate from ordinary colour recovery.
+// After ordinary thorn-free single-square goals fail, up to two extra beams
+// use distinct-donor and filled-template guidance in the original remaining
+// deadline. squareRecoveryPasses is included in searchPasses, not backtracks.
 constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;
