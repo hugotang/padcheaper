@@ -1,12 +1,13 @@
 {
   "schema": 1,
-  "dylib_version": "0.5.45-orbs",
+  "dylib_version": "0.5.46-orbs",
   "minimum_ios": "15.0",
   "architecture": "arm64",
   "platform": "iPhoneOS",
   "signing": "ad-hoc; use the existing Dopamine rootless injection setup, or re-sign in LiveContainer",
   "mode": "diagnostic by default; experimental writes opt in",
   "summary_features": {
+    "武裝失效後 Auto": "assist_charge_copy",
     "九宮格補搜": "square_recovery",
     "同 Combo 較短路徑": "ordinary_shorter_routes",
     "連續取色快取": "multi_take_cache",
@@ -36,6 +37,7 @@
     "8 人同場接續": "eight_player_resume"
   },
   "features": {
+    "assist_charge_copy": "single-player automation accepts the unanimous protected charge when a stale decoded native bookkeeping copy is higher but no greater than 9999; JP 23.6.1 assist-loss clamp updates only protected charge and the gap may survive restoration; the copy never supplies readiness or source selection; native can-use, identity and operation-window checks remain required; 8P and team-replacement equality checks unchanged; read failures identify member and field; device verification pending",
     "square_recovery": "after the existing ordinary square search and backtracks fail, at most two complementary full-depth beams use the original remaining deadline: distinct-donor supply and filled-template emphasis; exact isolated-nine matching and final primary scoring unchanged; only recovery-enabled spinner-free, thorn-free non-activity search with a single-copy square clause; squareRecoveryPasses distinguishes the added work; desktop holdout and limits documented, device performance pending",
     "ordinary_shorter_routes": "returned ordinary, single-take, offline timed and multi-take candidates prefer fewer moves before erased count at equal Combo after the existing goals, hazard and thorn/poison priorities; beam guidance and activity ranking unchanged; Combo upper-bound stop follows the same final ranking; bounded search does not guarantee global shortest routes",
     "multi_take_cache": "multi-take fishing reuses up to 4096 full-color-layout evaluations per inventory plan with full-cell collision checks; completion gating affects only a returned score copy; evaluationCalls and evaluationCacheHits propagate through Session attempts and selected routes; desktop cache A/B paths and exchanges match, native phase and release checks remain uncached",
