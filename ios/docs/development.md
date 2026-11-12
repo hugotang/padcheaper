@@ -4,7 +4,13 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-11：0.5.45：solver 排序、連續取色快取與九宮格補搜，iOS 編譯測試中
+## 2026-11-12：0.5.45-orbs 編譯測試與交付完成
+
+- [CI 159](https://github.com/hugotang/padcheaper/actions/runs/43010616337) 在來源 `c656b969430a490c79d21f527706467952e35c02` 完整通過 macOS 回歸（含九宮格補搜、快取及 Session）、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone GUI；2026-11-11 完成，一輪通過。Windows 本批及完整基準 5d4448f 皆通過，保留不同來源各自的 model/header 版型。
+- 2026-11-12 打包到 `E:/ipa/PADCheaper-0.5.45-orbs` 及同名 ZIP。389 份檔案雜湊、ZIP CRC／390 項獨立核對通過；dylib SHA-256 `a438d3cbddbb2c8bd221260bb21798f222facf5a1269c0361b7717ca1ba57479`，ZIP SHA-256 `e0293b4213629d86096cc26fd3950b200d9b7fab05560d4c8c4a7768b09fcb2a`。
+- 九宮格獨立 800 ms 樣本共補回 41 盤、原成功的 185 條路徑完全相同；不是所有盤面可解或真機速度保證。交付附同來源 Windows／CI 日誌及逐盤證據；`device_verified=false`，真機時序與多人同步待驗證。既有 0.5.44 交付不變。
+
+## 2026-11-11：0.5.45：solver 排序、連續取色快取與九宮格補搜，來源與測試準備
 
 - 接續使用者「全都要，除了 T 之外的其他形狀呢？」：普通求路在安全、必要目標、Combo、荊棘／毒政策同等時，先選步數少的路線，再比較清珠數。Beam 引導保留原排序；8P activity 仍按既有分數及 stepCost。提早停止同步改為所有排在步數前的條件已達上限時停止，完整處理同層候選。這不是最短路徑保證。
 - 連續取色共用既有 4096 格評分快取；完整比較色盤防止 hash 碰撞誤用，每個 inventory plan 重置有效世代，取色完成與否只標記候選副本，不污染快取。取色交換、供珠、原生時序及最後完整重播驗收沿用原規則。Session 轉接與診斷補上 evaluationCalls／evaluationCacheHits，包含沒有留下路徑的嘗試；失敗或非法輸入不宣称有完整計數。
@@ -13,7 +19,7 @@
 - 本批 Windows `BASELINE=HEAD bash ios/tools/windows-tests.sh` 通過當前來源及舊版回歸；新增早停案例後再跑 private guidance 套件通過。新增測試覆蓋排序、安全優先、快取碰撞與方案隔離、取色完成標記、錄製盤計數。Windows baseline 工具改為各自取完整來源／測試／model，避免舊 cpp 混新 inc 或 C struct 版型；摘要不同不再誤報為測試失敗，也不稱摘要相同為完整路徑相同。
 - 使用者要求九宮格也最佳化後再測試：保留原 beam／recovery／回溯，只在仍未解出時以剩餘期限追加最多兩輪九宮格供珠／填格引導；精確九顆、目標與安全驗收不變。只用於無轉轉／荊棘、非 activity 的普通單組九宮格條件。
 - 獨立 800 ms／48 步／beam 512 樣本每情境 96 盤：6×5 九宮格 88→94、九宮格＋心四連 53→71、7×6 九宮格 44→61。41 盤新解，原成功 185 條路徑逐條相同；正式来源 226 條成功路徑通過獨立 oracle，三版均未逾時。耗時增加但未加預算，桌機資料不等於真機表現，詳見 [九宮格證據](../research/solver-square-recovery-20261111.json)。
-- 使用者已明確授權「編譯測試」，來源升為 0.5.45-orbs。Windows 核心回歸已通過；正執行 Objective-C++ Session、macOS ASan/UBSan、iPhoneOS arm64、簽章、瀏覽器及四份 iPhone GUI。最終 CI／交付結果完成後補記；現有 0.5.44 交付不覆寫，真機驗證待完成。
+- 使用者已明確授權「編譯測試」，來源升為 0.5.45-orbs。Windows 核心回歸已通過；當時安排 Objective-C++ Session、macOS ASan/UBSan、iPhoneOS arm64、簽章、瀏覽器及四份 iPhone GUI；最終通過及交付見上方 2026-11-12 收據。現有 0.5.44 交付不覆寫，真機驗證待完成。
 
 ## 2026-11-08：0.5.44-orbs 編譯測試與交付完成
 

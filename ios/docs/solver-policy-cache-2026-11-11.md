@@ -1,6 +1,6 @@
 # Solver 排序、取色快取與各形狀比較
 
-2026-11-11。接續 Claude 中斷的審查與使用者核准的兩項實作。基準 commit `5d4448f`（0.5.44 交付紀錄）；本批包含稍後完成的九宮格優化，已獲授權進行 iOS 編譯測試。原始數據與來源雜湊見 [測量資料](../research/solver-policy-cache-20261111.json)。
+2026-11-11。接續 Claude 中斷的審查與使用者核准的兩項實作。基準 commit `5d4448f`（0.5.44 交付紀錄）；本批包含稍後完成的九宮格優化，已由 [CI 159](https://github.com/hugotang/padcheaper/actions/runs/43010616337) 通過完整 iOS 編譯測試，2026-11-12 交付。原始數據與來源雜湊見 [測量資料](../research/solver-policy-cache-20261111.json)。
 
 ## 已完成的來源變更
 
@@ -104,4 +104,4 @@ Session 將實際評估次數與快取命中帶入所選路線、各次嘗試及
 
 更正先前敘述：133 ms 的單次取色案例連舊版也會隨負載改變是否解出，不能据此歸因於 beam 排序。保存的無逾時形狀比較中，「只改最終排序」與「同時改 beam 排序」彙總一致；保留分開的政策是維護上的明確選擇。
 
-本批合併九宮格後，Windows regression 與 private contract tests 通過。新增案例涵蓋安全／Combo／步數排序、activity 分數、Combo 上界早停、快取 hash 碰撞、跨方案隔離及取色完成標记。Windows 無 ASan/UBSan runtime，日誌裡的 `Sanitized solve tests` 在此只代表一般 smoke 執行。新增三個九宮格漏解回歸、獨立 oracle、禁用 recovery／取消與 spinner／thorn／activity 排除檢查。已收到「編譯測試」指示，Objective-C++ Session、macOS sanitizer、iPhoneOS 建置與 GUI 的最終結果見 [0.5.45 發布紀錄](release-0.5.45.md)；真機時序仍待裝置驗證。
+本批合併九宮格後，Windows regression 與 private contract tests 通過。新增案例涵蓋安全／Combo／步數排序、activity 分數、Combo 上界早停、快取 hash 碰撞、跨方案隔離及取色完成標记。Windows 無 ASan/UBSan runtime，日誌裡的 `Sanitized solve tests` 在此只代表一般 smoke 執行。新增三個九宮格漏解回歸、獨立 oracle、禁用 recovery／取消與 spinner／thorn／activity 排除檢查。[CI 159](https://github.com/hugotang/padcheaper/actions/runs/43010616337) 已通過 Objective-C++ Session、macOS sanitizer、iPhoneOS 建置與四份 iPhone GUI，交付結果見 [0.5.45 發布紀錄](release-0.5.45.md)；真機時序仍待裝置驗證。
