@@ -4,7 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
-## 2026-11-12：0.5.46-orbs 編譯測試進行中
+## 2026-11-12：0.5.46-orbs 編譯測試與交付完成
+
+- [CI 160](https://github.com/hugotang/padcheaper/actions/runs/43170341092) 在來源 `2e7c4c3608fcb7d204010c243a5018f678fa3d1c` 完整通過 macOS 原生／Session 等全部回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone 首次／重啟 GUI。一輪通過，沒有產品測試失敗或編譯 warning／error。原生蓄技副本案例及 phase 8→補 L→恢復後下一回合案例均已執行通過。
+- Windows 同一來源的 8P 模型、solver/model、private guidance 與 public solver smoke 通過；Windows smoke 不含 sanitizer runtime。303 份相關來源逐份與提交核對一致。已檢視本輪瀏覽器窄螢幕及兩張原生介面圖，詳見[完整收據](../research/verification-0.5.46.json)。
+- 新交付為 `E:/ipa/PADCheaper-0.5.46-orbs` 及同名 ZIP。394 份檔案雜湊、ZIP CRC／395 項及逐份內容獨立核對通過。dylib 11,957,856 bytes，SHA-256 `31172ac4ea352c751daabd763ef284d129e239ca171dda5f640f9c7384590e90`；ZIP SHA-256 `ab7ffb33fb9d52f7bfbd58c61840de2916c859e18ff28e55ccd99571e95938c4`。
+- `device_verified=false`：原 log 未保存失敗蓄技原值，不能宣稱精確重播裝置事故；真機武裝失效、恢復後繼續 Auto 與多人同步仍待驗收。包內來源文件保留建置快照，完成狀態見 `verification.json` 及 `verification/ci-run.json`；本次收尾只補文件，不重建或改寫交付。下列「待測」段落為來源準備時的歷史紀錄。
+
+## 2026-11-12：0.5.46-orbs 編譯測試開始紀錄
 
 - 使用者明確要求「編譯測試」，以 `1e498fe` 的武裝失效修正準備 0.5.46-orbs。開始 Windows 共用核心、macOS 完整原生／Session 回歸及 ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器和四份 iPhone GUI；結果待完成後追加。
 - 成功後才建立新的 `E:/ipa/PADCheaper-0.5.46-orbs` 與 ZIP。既有交付及私人 log 不改，CI 仍僅手動派發；真機結果不以替身引擎回歸代替。

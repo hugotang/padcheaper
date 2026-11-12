@@ -1,6 +1,6 @@
 {
   "date": "2026-11-12",
-  "status": "source-only; regression cases written, not compiled or executed",
+  "status": "compiled and regressions passed in CI 160; delivered in 0.5.46-orbs; device verification pending",
   "binary": {
     "version": "23.6.1",
     "build": "107553",
@@ -331,10 +331,12 @@
     }
   ],
   "pending": [
-    "macOS native regression suite",
-    "Session assist lifecycle suite",
-    "existing full regression suites",
-    "iPhoneOS build",
     "device assist loss/recovery and later-turn verification"
-  ]
+  ],
+  "verification": {
+    "commit": "2e7c4c3608fcb7d204010c243a5018f678fa3d1c",
+    "ci": "https://github.com/hugotang/padcheaper/actions/runs/43170341092",
+    "receipt": "verification-0.5.46.json",
+    "device_verified": false
+  }
 }

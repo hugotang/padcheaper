@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.45-orbs](docs/release-0.5.45.md) 已通過 [CI 159](https://github.com/hugotang/padcheaper/actions/runs/43010616337) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-12 交付新資料夾與 ZIP。包含九宮格補搜、同 Combo 較短路徑及連續取色快取；`device_verified=false`。
+[0.5.46-orbs](docs/release-0.5.46.md) 已通過 [CI 160](https://github.com/hugotang/padcheaper/actions/runs/43170341092) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-12 交付新資料夾與 ZIP。修正武裝失效後 Auto 讀取誤停，包含恢復後接續案例；`device_verified=false`。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.46-orbs](docs/release-0.5.46.md) | 2026-11-12 | 武裝失效後 Auto 讀取誤停修正；編譯測試中 |
+| [0.5.46-orbs](docs/release-0.5.46.md) | 2026-11-12 | 武裝失效後 Auto 讀取誤停修正；已驗證交付 |
 | [0.5.45-orbs](docs/release-0.5.45.md) | 2026-11-11 | 九宮格補搜、較短路徑、連續取色快取；已驗證交付 |
 | [0.5.44-orbs](docs/release-0.5.44.md) | 2026-11-08 | 單人連續取色逾時重試；已驗證交付 |
 | [0.5.43-orbs](docs/release-0.5.43.md) | 2026-11-08 | Himmel 模板迦梨輪替改為非必要；已驗證交付 |
