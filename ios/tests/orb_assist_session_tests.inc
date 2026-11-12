@@ -115,6 +115,28 @@ static void AssistPlanningTraceTests() {
 }
 static void AssistSessionTests() {
     AssistPlanningTraceTests();
+    {
+        // Native byte validation is covered by AssistChargeNativeTests. This
+        // fixture checks the session's phase-8 -> L -> next-turn lifecycle.
+        FakeOrbEngine *clamped = [FakeOrbEngine new]; SetAssistBoard(clamped,2);
+        auto &member = clamped->live.automation.members[0];
+        member.sourceCatalogIDs[1] = 300; member.assistState = 172;
+        member.assistCatalogID = 0; member.charge = 5;
+        clamped->live.phase = 8; clamped->live.settled = false; clamped->live.automation.window = false;
+        PHOrbSession *recovery = AssistSession(clamped);
+        for (unsigned i = 0; i < 8; ++i) Tick(recovery,clamped,Frame());
+        Check([recovery.snapshot[@"automatic"] boolValue] && !clamped->stages && !clamped->skillAttempts && !clamped->assistReads,
+            "Auto started during assist-loss animation waits for a settled local window without stopping or acting");
+        clamped->live.phase = 2; clamped->live.settled = clamped->live.automation.window = true;
+        Check(UntilPhase(recovery,clamped,@"turnWaiting") && clamped->releases == 1 &&
+            [recovery.snapshot[@"goalPlan"][@"assistRecoveryActive"] boolValue],
+            "the first stable clamped snapshot supplies fresh L evidence and completes its route");
+        member.assistCatalogID = 300; member.charge = 6; clamped->live.assistRecovery.turns = 0;
+        Check(NextOrbTurn(recovery,clamped) && [recovery.snapshot[@"automatic"] boolValue] && clamped->releases == 2 &&
+            ![recovery.snapshot[@"goalPlan"][@"assistRecoveryActive"] boolValue],
+            "restored assist and newly accumulated charge continue Auto on the following turn");
+        [recovery queueStop:@"assist clamp lifecycle complete"];
+    }
     FakeOrbEngine *engine = [FakeOrbEngine new]; SetAssistBoard(engine); engine->failObservation = YES;
     NSArray *heart = @[@{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
     PHOrbSession *session = AssistSession(engine,AssistSettings(YES,heart));

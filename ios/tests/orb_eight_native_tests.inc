@@ -32,6 +32,15 @@ static void EightNativeFixture(unsigned seat) {
     Put<uint8_t>(Impl + PHOrbSkillSelectedSourceOffset,1); // Stale source without a receipt is not a cast.
 }
 static void EightNativeTests() {
+    {
+        EightNativeFixture(7); FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{};
+        Check([engine read:&state frame:Frame() reason:nil] && [engine armEightPlayerAuto:&state] &&
+            [engine readAutomation:&state frame:Frame() reason:nil], "8P charge-copy regression starts with a verified match");
+        Put<uint32_t>(Impl + PHBattleMemberOffset + PHBattleChargeShadowOffset, 21u ^ 0x68fb65ceu);
+        Check(![engine readAutomation:&state frame:Frame() reason:nil] && !state.automation.valid &&
+            !writes && !canUseCalls && !skillStartCalls,
+            "single-player assist-clamp tolerance does not relax the 8P fixed-team charge check");
+    }
     for (bool eight : {false,true}) for (uint32_t terminal : {28u,29u,30u,31u,67u,68u}) {
         if (eight) EightNativeFixture(7); else SkillFixture();
         FixtureSkillEngine *engine = [FixtureSkillEngine new]; PHOrbSnapshot state{};

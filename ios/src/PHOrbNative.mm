@@ -575,8 +575,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (reason) *reason = @"多人僅支援轉一次；連續轉珠、開場及技能規則仍限單人";
         return YES;
     }
-    if (!ReadAutomationFields(*state)) {
-        if (reason) *reason = @"技能／敵人資料未通過讀取校驗，已停止";
+    if (!ReadAutomationFields(*state, false, reason)) {
         return NO;
     }
     return YES;

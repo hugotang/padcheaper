@@ -3,7 +3,7 @@ static bool skillAvailable, switchMultiInCanUse, changeSelectionInCanUse, change
 static bool switchMultiInReadiness, readinessKnown, checkOrbCountInCanUse;
 static bool choiceAvailable, bodyAvailable, switchMultiInChoice, changeFamilyInChoice;
 static bool changeSourceCardsInChoice, changeBodySkillInReadiness, invalidSourceInBody, changeAssistRulesInBody;
-static bool changePartInCanUse;
+static bool changePartInCanUse, changeChargeInCanUse;
 static NativeSkillReadiness readinessFixture;
 static uint32_t selectionAtCanUse, selectionAtStart, effectiveStartedSkill;
 static uint32_t effectsStartedSkill;
@@ -33,6 +33,7 @@ static void SetSurvivalOptions(const char *options) {
     if (changeSelectionInCanUse) Put<uint32_t>(member + PHOrbSkillOverrideOffset, selectionAtCanUse + 1);
     if (changeStageInCanUse) Protected(member + 344, 1, 0x6a875a8b);
     if (changePartInCanUse) Protected(Impl + PHOrbEnemyOffset + PHOrbEnemyStride + 2704, 1, 0x6a875a8b);
+    if (changeChargeInCanUse) Protected(member + PHBattleChargeOffset, 4, 0x6a875a8b);
     const unsigned charge = Load<uint32_t>(reinterpret_cast<uint8_t *>(member + PHBattleChargeOffset + 12));
     const bool chargedAssist = Load<int16_t>(reinterpret_cast<uint8_t *>(member + 1438)) > 0 &&
         !(Load<uint8_t>(reinterpret_cast<uint8_t *>(SurvivalDungeon + 33)) & 8) &&
@@ -101,7 +102,7 @@ static void SkillFixture() {
     checkOrbCountInCanUse = false;
     switchMultiInChoice = changeFamilyInChoice = changeSourceCardsInChoice = changeBodySkillInReadiness = false;
     invalidSourceInBody = changeAssistRulesInBody = false;
-    changePartInCanUse = false;
+    changePartInCanUse = changeChargeInCanUse = false;
     readinessFixture = {CurrentFixtureSkill, 0, 4, 4};
     selectionAtCanUse = selectionAtStart = UINT32_MAX; effectiveStartedSkill = effectsStartedSkill = 0; sourceAtStart = 255;
     Protected(Impl + PHOrbSkillUsesOffset, 0, 0x6a875a8b);
@@ -405,6 +406,7 @@ static void TemporarySkillNativeTests() {
 }
 #include "orb_skill_choice_tests.inc"
 #include "orb_observation_native_tests.inc"
+#include "orb_assist_charge_native_tests.inc"
 #include "orb_enemy_action_native_tests.inc"
 #include "orb_enemy_selector_native_tests.inc"
 #include "orb_enemy_dispatch_native_tests.inc"
@@ -417,6 +419,7 @@ static void SkillNativeTests() {
     EnemyDispatchNativeTests();
     EnemyDamageNativeTests();
     ConsumedAssistReadTests();
+    AssistChargeNativeTests();
     for (unsigned phase : {2u, 22u}) {
         SkillFixture(); FixtureSkillEngine *openingEngine = [FixtureSkillEngine new];
         implMappedBytes = PHOrbDialogOffset + sizeof(uintptr_t);

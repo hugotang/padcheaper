@@ -12,8 +12,14 @@ bool PositiveDuration(uint16_t value) {
 #include "PHOrbSurvival.inc"
 #include "PHOrbEnemyParts.inc"
 
-bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
+bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false, NSString **reason = nullptr) {
     auto &out = state.automation;
+    out.valid = false;
+    auto fail = [&](NSString *field, int slot = -1) {
+        if (reason) *reason = slot < 0 ? [NSString stringWithFormat:@"%@未通過讀取校驗，已停止", field] :
+            [NSString stringWithFormat:@"第 %d 格%@未通過讀取校驗，已停止", slot + 1, field];
+        return false;
+    };
     const uintptr_t header = state.identity.header, impl = state.identity.impl, save = header + PHSaveRVA;
     uint32_t key1 = 0, key2 = 0, skillUses = 0, enemies = 0, catalogCount = 0, hp = 0;
     uintptr_t catalog = 0;
@@ -24,10 +30,10 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
         !Decode(impl + PHBattleHPOffset, key1, key2, 0x766cfc6du, hp) ||
         !PHReadU32(save + PHBattleCatalogCountOffset, &catalogCount) || !catalogCount || catalogCount > 65536 ||
         !PHReadPointer(save + PHBattleCatalogPointerOffset, &catalog) || !catalog ||
-        catalog > UINTPTR_MAX - catalogCount * PHBattleCatalogStride) return false;
+        catalog > UINTPTR_MAX - catalogCount * PHBattleCatalogStride) return fail(@"技能次數／敵人數／HP／圖鑑資料");
     records = catalogCount;
     if (eight && (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &records) || records < catalogCount ||
-        records > 0x20000 || catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride)) return false;
+        records > 0x20000 || catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride)) return fail(@"8 人圖鑑資料");
     out.skillUses = uint16_t(skillUses);
     out.window &= hp > 0;
     if (!hp) out.windowBlocks |= PHOrbSkillWindowHP;
@@ -36,24 +42,37 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
         auto &m = out.members[i];
         uint8_t flags = 0; uint32_t nativeState = 0, record = 0, bind = 0, charge = 0, shadow = 0, overrideID = 0, assistState = 0;
         uintptr_t parameter = 0;
-        if (!PHReadU8(member, &flags) || !PHReadU32(member + PHOrbSkillMemberStateOffset, &nativeState) || nativeState > 7) return false;
+        if (!PHReadU8(member, &flags) || !PHReadU32(member + PHOrbSkillMemberStateOffset, &nativeState) || nativeState > 7)
+            return fail(@"隊員動作狀態", i);
         m.state = uint8_t(nativeState); out.busy |= nativeState != 0;
         m.active = (flags & 1u) != 0;
         if (!m.active) continue;
         PHOrbLeaderReadDiagnostics diagnostic{};
         PHBattleMemberIdentity identity{};
-        if (!PHReadBattleMemberIdentity(member, key1, key2, identity)) return false;
+        if (!PHReadBattleMemberIdentity(member, key1, key2, identity)) return fail(@"本體／武裝身分", i);
         const uint32_t id = identity.currentCatalogID;
         if (!id || id > INT32_MAX || (!eight && id >= catalogCount) ||
             !PHBattleNumberForCatalogID(eight ? id % 1000000u : id, &m.number) ||
             !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
             (eight ? !LeaderParameterMatches(catalog, catalogCount, records, id, parameter, diagnostic) :
-                parameter != catalog + id * PHBattleCatalogStride) || !PHReadU32(parameter, &record) || record != id ||
-            !SmallProtected(member + PHOrbSkillBindOffset, key1, key2, UINT8_MAX, bind) ||
-            !SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
-            !PHReadU32(member + PHBattleChargeShadowOffset, &shadow) || (shadow ^ charge) != 0x68fb65ceu ||
+                parameter != catalog + id * PHBattleCatalogStride) || !PHReadU32(parameter, &record) || record != id)
+            return fail(@"本體圖鑑資料", i);
+        if (!SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
+            !PHReadU32(member + PHBattleChargeShadowOffset, &shadow)) return fail(@"蓄技受保護資料", i);
+        const uint32_t recordedCharge = shadow ^ 0x68fb65ceu;
+        // JP 23.6.1: 0x10056A118 caps +456 at body CD after assist loss,
+        // without changing +1512. Rebuild (0x1005A1588) and later assist
+        // restoration do not repair that bookkeeping copy. 0x100569F9C
+        // increments both independently, saturating at 9999. It can remain
+        // above the unanimous protected charge until a native reset/delay.
+        // Use only +456 for readiness. Never restore charge from the copy,
+        // invoke a getter to normalize it, or weaken the separate 8P gate.
+        if (recordedCharge != charge && (eight || recordedCharge < charge || recordedCharge > 9999))
+            return fail([NSString stringWithFormat:@"蓄技資料（目前 %u，副本 %u）", charge, recordedCharge], i);
+        if (!SmallProtected(member + PHOrbSkillBindOffset, key1, key2, UINT8_MAX, bind) ||
             !PHReadU32(member + PHOrbSkillOverrideOffset, &overrideID) ||
-            !SmallProtected(member + PHBattleAssistStateOffset, key1, key2, UINT16_MAX, assistState)) return false;
+            !SmallProtected(member + PHBattleAssistStateOffset, key1, key2, UINT16_MAX, assistState))
+            return fail(@"封鎖／技能選擇／武裝保留狀態", i);
         m.bound = int8_t(uint8_t(bind)) > 0; m.charge = uint16_t(charge);
         m.assistState = uint16_t(assistState);
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
@@ -70,7 +89,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
             if (!PHReadBattleMemberIdentity(member, key1, key2, current) || !PHBattleSameMemberIdentity(&identity, &current) ||
                 !PHBattlePlanningIdentity(&identity, &underlying, &assist) || underlying >= catalogCount ||
                 !PHBattleNumberForCatalogID(underlying, &m.identityNumber) ||
-                (assist && (assist >= catalogCount || !PHBattleNumberForCatalogID(assist, &ignored)))) return false;
+                (assist && (assist >= catalogCount || !PHBattleNumberForCatalogID(assist, &ignored))))
+                return fail(@"暫時變身身分", i);
             m.identityAssist = assist;
         }
         m.temporaryKnown = true;
@@ -82,12 +102,12 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
                 !SmallProtected(member + 488 + 16 * skill, key1, key2, UINT16_MAX, uses) ||
                 !PHReadU8(member + 1290 + skill, &m.cachedSkillStage[skill]) ||
                 !PHReadU16(member + (skill ? PHBattleEffectiveAssistOffset + PHBattleAssistSkillLevelByte : 1298),
-                           &m.skillLevel[skill])) return false;
+                           &m.skillLevel[skill])) return fail(skill ? @"武裝技能階段／次數／等級" : @"本體技能階段／次數／等級", i);
             m.skillStage[skill] = uint8_t(stage); m.skillUses[skill] = uint16_t(uses);
         }
         float motion = 0, target = 0;
         if (!PHReadMemory(member + 1116, &motion, sizeof(motion)) || !PHReadMemory(member + 1120, &target, sizeof(target)) ||
-            !std::isfinite(motion) || !std::isfinite(target)) return false;
+            !std::isfinite(motion) || !std::isfinite(target)) return fail(@"隊員動畫資料", i);
         // Native preparation clears an old choice when starting a new use.
         // Keep its exact value for race checks; state, not this retained ID,
         // tells us whether a selection dialog or skill is still in progress.
@@ -110,7 +130,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
         !PHReadMemory(impl + PHOrbSkillAnimationOffset, &animation, sizeof(animation)) ||
         !PHReadMemory(impl + PHOrbSkillAnimationTargetOffset, &animationTarget, sizeof(animationTarget)) ||
         !std::isfinite(animation) || !std::isfinite(animationTarget) ||
-        !PHReadPointer(impl + PHOrbSkillDungeonRulesOffset, &dungeonRules)) return false;
+        !PHReadPointer(impl + PHOrbSkillDungeonRulesOffset, &dungeonRules)) return fail(@"技能操作窗口資料");
     out.window &= !PositiveDuration(bindTurns) && !PositiveDuration(sealTurns) && int16_t(special) < 0 &&
         !(movement & 1u) && !enemyTurn && !inputMode && specialMode != 0x12345678 &&
         (int32_t(skillLimit) < 0 || int16_t(limitRemaining) > 0) && (int16_t(timed) < 1 || animation == animationTarget);
@@ -125,15 +145,15 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     out.busy |= int16_t(special) >= 0 || (movement & 1u) || enemyTurn || inputMode || specialMode == 0x12345678 ||
         (int16_t(timed) >= 1 && animation != animationTarget);
     uint8_t tutorial = 0, tutorialStep = 0;
-    if (!PHReadU8(header + PHOrbTutorialIndexRVA, &tutorial)) return false;
+    if (!PHReadU8(header + PHOrbTutorialIndexRVA, &tutorial)) return fail(@"教學狀態");
     if (int8_t(tutorial) >= 0) {
-        if (!PHReadU8(header + PHOrbTutorialTableRVA + 8u * tutorial + 2, &tutorialStep)) return false;
+        if (!PHReadU8(header + PHOrbTutorialTableRVA + 8u * tutorial + 2, &tutorialStep)) return fail(@"教學步驟");
         out.window &= tutorialStep != 75; // Native tap handler restricts this tutorial step to its leader.
         if (tutorialStep == 75) out.windowBlocks |= PHOrbSkillWindowTutorial;
     }
     if (dungeonRules) {
         uint8_t rules = 0;
-        if (dungeonRules > UINTPTR_MAX - 33 || !PHReadU8(dungeonRules + 32, &rules)) return false;
+        if (dungeonRules > UINTPTR_MAX - 33 || !PHReadU8(dungeonRules + 32, &rules)) return fail(@"地下城技能限制");
         out.window &= !(rules & 0x40u);
         if (rules & 0x40u) out.windowBlocks |= PHOrbSkillWindowDungeon;
     }
@@ -152,7 +172,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     for (unsigned i = 0; i < enemies; ++i) {
         uintptr_t enemy = impl + PHOrbEnemyOffset + i * PHOrbEnemyStride;
         uint16_t flags = 0; uint32_t low = 0, high = 0; uint8_t action = 0;
-        if (!PHReadU16(enemy + 532, &flags)) return false;
+        if (!PHReadU16(enemy + 532, &flags)) return fail(@"敵人旗標");
         if (flags & 0x100u) {
             out.partsMask |= uint8_t(1u << i);
             if (eight || (!partsCodeChecked && !CheckEnemyPartsCode(header)) ||
@@ -165,23 +185,23 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
             if (!out.parts[i].hp || out.parts[i].hp > INT64_MAX) continue;
         } else {
             if (!Decode(enemy + 64, key1, key2, 0x766cfc6du, low) ||
-                !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return false;
+                !Decode(enemy + 80, key1, key2, 0x766cfc6du, high)) return fail(@"敵人 HP");
             if (int64_t((uint64_t(high) << 32) | low) <= 0) continue;
         }
         ++out.activeEnemies;
         // 0x1005B0268 checks action only for living ordinary enemies.
         if (!(flags & 0x100u)) {
-            if (!PHReadU8(enemy + 23, &action)) return false;
+            if (!PHReadU8(enemy + 23, &action)) return fail(@"敵人動作狀態");
             out.window &= int8_t(action) < 0;
             if (int8_t(action) >= 0) out.windowBlocks |= PHOrbSkillWindowEnemyAction;
             out.busy |= int8_t(action) >= 0;
         }
         for (unsigned effect = 0; effect < 4; ++effect) {
             uint32_t duration = 0, mask = 0;
-            if (!SmallProtected(enemy + durationOffsets[effect], key1, key2, UINT16_MAX, duration)) return false;
+            if (!SmallProtected(enemy + durationOffsets[effect], key1, key2, UINT16_MAX, duration)) return fail(@"敵人效果回合數");
             if (int16_t(duration) < 1) continue;
             if (effect == 1 || effect == 2) {
-                if (!SmallProtected(enemy + (effect == 1 ? 2176 : 2240), key1, key2, UINT16_MAX, mask)) return false;
+                if (!SmallProtected(enemy + (effect == 1 ? 2176 : 2240), key1, key2, UINT16_MAX, mask)) return fail(@"敵人效果屬性");
                 if (!(mask & 31u)) continue;
             }
             out.enemyEffects |= 1u << effect;
@@ -192,7 +212,8 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     out.busy |= !out.activeEnemies || !hp;
     for (unsigned effect = 0; effect < 4; ++effect) {
         uint16_t turns = 0, delay = 0;
-        if (!PHReadU16(impl + bypassOffsets[effect], &turns) || !PHReadU16(impl + bypassOffsets[effect] + 2, &delay)) return false;
+        if (!PHReadU16(impl + bypassOffsets[effect], &turns) || !PHReadU16(impl + bypassOffsets[effect] + 2, &delay))
+            return fail(@"玩家對策效果回合數");
         if (PositiveDuration(turns) && !PositiveDuration(delay)) out.playerBypass |= 1u << effect;
     }
     out.boardKnown = state.phase == 2 && !state.boardTransition && PHOrbDimensionsSupported(state.board.width, state.board.height);
@@ -201,7 +222,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false) {
     uint32_t lastKey1 = 0, lastKey2 = 0; uintptr_t lastImpl = 0;
     if (!PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2 ||
-        !PHReadPointer(state.identity.game + 0x70, &lastImpl) || lastImpl != impl) return false;
+        !PHReadPointer(state.identity.game + 0x70, &lastImpl) || lastImpl != impl) return fail(@"讀取期間金鑰／戰鬥物件一致性");
     out.valid = true;
     out.windowBlocksKnown = true;
     return true;
