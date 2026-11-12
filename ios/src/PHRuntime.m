@@ -1025,6 +1025,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null"];
     }
     diagnostics = [diagnostics stringByAppendingFormat:@"\nThorn Combo priority: %@", orbs[@"thornComboPriority"]];
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nThorn first-wave heart match policy: %@ (no healing credited to HP budget)", orbs[@"allowThornsWithHeartMatch"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nPoison and mortal poison with first-wave heart four: %@ (team recovery policy)", orbs[@"allowPoisonWithHeartFour"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nDiagonal gesture moves: %@ · captured route: %@ (matches remain orthogonal)", orbs[@"diagonal"], orbs[@"routeDiagonal"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nAssist recovery L: %@\nAssist recovery decision: %@",
@@ -1043,11 +1044,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         orbs[@"blockedMask"], orbs[@"tapeMask"], orbs[@"cloudMask"], orbs[@"fixedStart"], orbs[@"unmatchableColors"],
         orbs[@"minErase"], orbs[@"minMatch"]];
     diagnostics = [diagnostics stringByAppendingFormat:
-        @"\nSpinner read: %@ / stored count %@ / cells %@ / raw period %@ / raw colors %@ / rows %@\nUnmatchable known: %@\nThorns: HP known %@ / HP %@ / maximum %@ / pending damage %@ / route contacts %@ / damage upper bound %@ / first-wave heart fours %@ (healing and resistance not credited)",
+        @"\nSpinner read: %@ / stored count %@ / cells %@ / raw period %@ / raw colors %@ / rows %@\nUnmatchable known: %@\nLive thorn budget: HP known %@ / HP %@ / maximum %@ / pending damage %@\nRoute thorns: contacts %@ / damage upper bound %@ / first-wave heart fours %@ / heart matches %@ (healing and resistance not credited; search-time HP is in searchTrace.thorns)",
         orbs[@"spinnerReadStatus"], orbs[@"spinnerRawCount"], orbs[@"spinnerStoredCells"], orbs[@"spinnerRawPeriod"],
         orbs[@"spinnerRawColors"], orbs[@"spinnerRawRows"], orbs[@"unmatchableKnown"],
         orbs[@"thornHPKnown"], orbs[@"thornHP"], orbs[@"thornMaximumHP"], orbs[@"pendingOrbDamage"],
-        orbs[@"thornContacts"], orbs[@"thornDamage"], orbs[@"heartFours"]];
+        orbs[@"thornContacts"], orbs[@"thornDamage"], orbs[@"heartFours"], orbs[@"heartMatches"]];
     diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb goals: %@ / met %@ of %@ / all %@\nOrb leaders: %@ / valid %@\nOrb goal plan: %@",
         orbs[@"goalMode"], orbs[@"matchedGoals"], orbs[@"goalCount"], orbs[@"goalsMet"],
         orbs[@"leaderNumbers"], orbs[@"leadersValid"], orbs[@"goalPlan"]];
@@ -1088,6 +1089,8 @@ static NSDictionary *PHRuntimeSnapshot(void) {
             @" / skill stages %@ / cached stages %@ / levels %@ / use counts %@ / assist catalog %@",
             decision[@"skillStages"], decision[@"cachedSkillStages"], decision[@"skillLevels"],
             decision[@"memberSkillUses"], decision[@"assistCatalogID"]];
+        if ([decision[@"assistFallback"] boolValue]) diagnostics = [diagnostics stringByAppendingFormat:
+            @"\n  Assist fallback: %@", decision[@"skillStartReason"]];
         if ([decision[@"temporaryTurns"] unsignedIntValue]) diagnostics = [diagnostics stringByAppendingFormat:
             @" / temporary %@ / original #%@ / original assist %@ / native duration %@",
             decision[@"temporaryKnown"], decision[@"identityNumber"], decision[@"identityAssist"], decision[@"temporaryTurns"]];
@@ -1143,7 +1146,7 @@ static NSDictionary *PHRuntimeSnapshot(void) {
 
 static void PHSetActionNotice(NSString *action, NSString *notice) {
     if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = notice;
-    if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = notice;
+    if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) PHOrbThornNotice = notice;
     if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = notice;
     if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = notice;
     if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = notice;
@@ -1290,7 +1293,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
     if (!PHStorageReady) {
         PHFeedback = @"設定無法儲存，請按「重新檢查」。";
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = PHFeedback;
-        if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = PHFeedback;
+        if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) PHOrbThornNotice = PHFeedback;
         if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = PHFeedback;
         if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = PHFeedback;
         if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = PHFeedback;
@@ -1327,7 +1330,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if (!saved) { PHOrbProfileNotice = reason; return; }
         next = [saved mutableCopy];
     } else if ([action isEqual:@"orbsQuality"] || [action isEqual:@"orbsGoals"] || [action isEqual:@"orbsRules"] ||
-        [action isEqual:@"orbsRecovery"] || [action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsPoisonWithHeartFour"] ||
+        [action isEqual:@"orbsRecovery"] || ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) || [action isEqual:@"orbsPoisonWithHeartFour"] ||
         [action isEqual:@"orbsDiagonal"] || [action isEqual:@"orbsAssistRecoveryL"]) {
         NSDictionary *orbState = [PHOrbTracker snapshot];
         if ([orbState[@"busy"] boolValue] || [orbState[@"inputFault"] boolValue]) return;
@@ -1335,9 +1338,9 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         if ([action isEqual:@"orbsQuality"]) {
             if (![value isKindOfClass:NSString.class] || ![@[@"fast", @"balanced", @"thorough"] containsObject:value]) return;
             settings[@"quality"] = value;
-        } else if ([action isEqual:@"orbsThornPriority"]) {
+        } else if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) {
             if (!value) return;
-            settings[@"thornComboPriority"] = value;
+            settings[[action isEqual:@"orbsThornsWithHeartMatch"] ? @"allowThornsWithHeartMatch" : @"thornComboPriority"] = value;
         } else if ([action isEqual:@"orbsPoisonWithHeartFour"]) {
             if (!value) return;
             settings[@"allowPoisonWithHeartFour"] = value;
@@ -1360,7 +1363,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         next[@"orbs"] = settings;
         NSDictionary *profiles = PHOrbProfilesUpdatingSettings(PHConfigurationOrbProfiles(next), settings);
         if (!profiles) {
-            if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定或目前策略無效，未儲存。";
+            if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) PHOrbThornNotice = @"荊棘設定或目前策略無效，未儲存。";
             else if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = @"消毒設定或目前策略無效，未儲存。";
             else if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = @"斜向轉珠設定或目前策略無效，未儲存。";
             else if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = @"武裝回復 L 設定或目前策略無效，未儲存。";
@@ -1371,7 +1374,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         }
         next[@"orbProfiles"] = profiles;
         if (!PHConfigurationIsValid(next)) {
-            if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定與目前策略無法一致儲存，請重新檢查。";
+            if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) PHOrbThornNotice = @"荊棘設定與目前策略無法一致儲存，請重新檢查。";
             else if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = @"消毒設定與目前策略無法一致儲存，請重新檢查。";
             else if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = @"斜向轉珠設定與目前策略無法一致儲存，請重新檢查。";
             else if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = @"武裝回復 L 與目前策略無法一致儲存，請重新檢查。";
@@ -1449,7 +1452,7 @@ static void PHHandleOverlayAction(NSString *action, id value) {
         PHStorageMessage = @"config.json 寫入失敗；請按「重新檢查」。";
         PHFeedback = PHStorageMessage;
         if ([action isEqual:@"orbsQuality"]) PHOrbQualityNotice = @"品質未能儲存，仍保留原設定；請返回 PC 面板重新檢查。";
-        if ([action isEqual:@"orbsThornPriority"]) PHOrbThornNotice = @"荊棘設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
+        if ([action isEqual:@"orbsThornPriority"] || [action isEqual:@"orbsThornsWithHeartMatch"]) PHOrbThornNotice = @"荊棘設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
         if ([action isEqual:@"orbsPoisonWithHeartFour"]) PHOrbPoisonNotice = @"消毒設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
         if ([action isEqual:@"orbsDiagonal"]) PHOrbDiagonalNotice = @"斜向轉珠設定未能儲存，仍保留原設定；請重新檢查儲存空間。";
         if ([action isEqual:@"orbsAssistRecoveryL"]) PHOrbAssistRecoveryNotice = @"武裝回復 L 未能儲存，仍保留原設定；請重新檢查儲存空間。";

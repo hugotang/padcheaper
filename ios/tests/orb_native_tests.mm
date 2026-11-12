@@ -257,7 +257,8 @@ BOOL PHWriteData(uintptr_t address, const void *input, size_t length) {
     if (selectionWrite && switchMultiInSelectionWrite)
         Store<uint32_t>(reinterpret_cast<uint8_t *>(Header + PHBattleMultiplayerRVA), 1);
     if (selectionWrite && changeSourceInSelectionWrite)
-        Store<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbSkillSelectedSourceOffset), 1);
+        Store<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbSkillSelectedSourceOffset),
+            Load<uint8_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbSkillSelectedSourceOffset)) ^ 1u);
     return YES;
 }
 BOOL PHValidateGuest(const mach_header_64 *header, NSString **reason) { ++guardChecks; return codeValid; }

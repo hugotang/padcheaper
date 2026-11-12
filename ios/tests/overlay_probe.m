@@ -594,6 +594,14 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             @"Thorn Combo switch follows the acknowledged real configuration write");
     }
     PHProbeRender(self.window, orbWindow, @"orbs-thorn-priority");
+    UISwitch *thornRecovery = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsThornsWithHeartMatch");
+    PHProbeCheck(thornRecovery.enabled && !thornRecovery.on, @"Thorn heart-match option is configurable and defaults off");
+    for (NSNumber *enabled in @[@YES,@NO]) {
+        thornRecovery.on = enabled.boolValue; [thornRecovery sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowThornsWithHeartMatch"] isEqual:enabled] &&
+            thornRecovery.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
+            @"Thorn recovery switch follows the saved configuration without bypassing game validation");
+    }
     UISwitch *poisonWithHeart = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsPoisonWithHeartFour");
     PHProbeCheck(poisonWithHeart.enabled, @"Poison and mortal poison with heart four are configurable without enabling game input");
     for (NSNumber *enabled in @[@YES, @NO]) {

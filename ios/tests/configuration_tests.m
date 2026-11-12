@@ -54,6 +54,8 @@ int main(void) {
         Check([PHConfigurationOrbSettings(defaults)[@"quality"] isEqual:@"balanced"], "orb quality defaults to the proven balanced profile");
         Check([PHConfigurationOrbSettings(defaults)[@"thornComboPriority"] isEqual:@NO],
             "new and legacy configurations default to lower thorn damage");
+        Check([PHConfigurationOrbSettings(defaults)[@"allowThornsWithHeartMatch"] isEqual:@NO],
+            "new and legacy configurations require first-wave heart four for thorn contact");
         Check([PHConfigurationOrbSettings(defaults)[@"allowPoisonWithHeartFour"] isEqual:@NO],
             "new and legacy configurations keep normal poison consumption opt-in");
         Check([PHConfigurationOrbSettings(defaults)[@"diagonal"] isEqual:@NO], "diagonal movement defaults off in new and legacy settings");
@@ -64,6 +66,10 @@ int main(void) {
             NSDictionary *readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
             const BOOL valid = [value isKindOfClass:NSNumber.class] && CFGetTypeID((__bridge CFTypeRef)value) == CFBooleanGetTypeID();
             Check(PHConfigurationIsValid(readback) == valid, "saved thorn setting accepts only true JSON booleans");
+            thornConfig[@"orbs"] = @{@"allowThornsWithHeartMatch":value};
+            json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
+            readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
+            Check(PHConfigurationIsValid(readback) == valid, "saved thorn recovery permission requires a true JSON Boolean");
             thornConfig[@"orbs"] = @{@"allowPoisonWithHeartFour":value};
             json = [NSJSONSerialization dataWithJSONObject:thornConfig options:0 error:NULL];
             readback = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];

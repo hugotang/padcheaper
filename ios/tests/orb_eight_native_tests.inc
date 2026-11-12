@@ -65,6 +65,9 @@ static void EightNativeTests() {
             state.eight.valid && state.automation.valid && state.automation.window && state.enemyCombo.valid,
             "8P explicit match reader verifies all six fixed variant records and local bank");
         if (!state.eight.valid) std::fprintf(stderr,"8P native read: %s\n",reason.UTF8String);
+        Check([engine useSkill:1 request:PHOrbSkillRequest{PHOrbSkillBodyOrAssist,1001} expected:&state frame:Frame() reason:&reason] ==
+            PHOrbSkillRejected && !canUseCalls && !readinessCalls && !skillStartCalls && !writes,
+            "single-player assist fallback never replaces the fixed-source 8P skill request");
         Check(state.eight.members[0].generate[0] == 6 && state.eight.members[0].generate[4] == 6 &&
             state.eight.members[1].activeSkill == 1001 && state.eight.members[1].catalogID == 1001726 &&
             state.eight.members[1].convert[5] == 4 && state.eight.members[3].boardColors == 49 &&

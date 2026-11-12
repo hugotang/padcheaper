@@ -285,6 +285,7 @@ PHOrbRoute ExecutableMultiFishing(const PHOrbMultiFishingResult &result) {
     route.goalsMet = value.goalsMet; route.hazardsSafe = value.hazardsSafe;
     route.poisonErased = value.poisonErased; route.mortalPoisonErased = value.mortalPoisonErased;
     route.unmatchedBombs = value.unmatchedBombs; route.heartFours = value.heartFours;
+    route.heartMatches = value.heartMatches;
     route.evaluated = result.evaluated; route.elapsedMS = result.elapsedMS;
     route.evaluationCalls = result.evaluationCalls; route.evaluationCacheHits = result.evaluationCacheHits;
     route.searchPasses = result.plansSearched; route.exploredDepth = result.exploredDepth;
@@ -368,7 +369,7 @@ struct EightPreparationState {
     PHOrbRoute _route;
     PHOrbSessionPhase _phase;
     NSString *_message, *_quality, *_goalMode;
-    bool _thornComboPriority, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
+    bool _thornComboPriority, _allowThornsWithHeartMatch, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
     bool _assistAwaitingResult;
     double _assistCheckedAt, _enemyComboCheckedAt;
     PHOrbSnapshot _assistReleased;
@@ -426,6 +427,7 @@ struct EightPreparationState {
     NSUInteger _ruleLastUseTurns[PHOrbMaxSkillRules], _groupLastUseTurns[PHOrbMaxSkillGroups];
     NSDictionary *_historyTimingProfile;
     uint16_t _usedRules, _unavailableRules, _confirmedRules;
+    uint16_t _assistFallbackRules, _confirmedAssistFallbackRules;
     uint8_t _usedSlots, _usedGroups, _confirmedGroups, _groupNext[PHOrbMaxSkillGroups];
     NSMutableSet<NSDictionary *> *_onceRules;
     PHBattleIdentity _historyIdentity;
@@ -534,6 +536,7 @@ struct EightPreparationState {
     if (!quality) return NO;
     return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
         @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority),
+        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour), @"diagonal":@(_diagonal),
         @"assistRecoveryL":@(_assistRecoveryL)}];
 }
@@ -543,6 +546,7 @@ struct EightPreparationState {
     if ([_quality isEqual:canonical[@"quality"]] && [_goalMode isEqual:canonical[@"mode"]] &&
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
         [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue] &&
+        _allowThornsWithHeartMatch == [canonical[@"allowThornsWithHeartMatch"] boolValue] &&
         _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue] &&
         _diagonal == [canonical[@"diagonal"] boolValue] && _assistRecoveryL == [canonical[@"assistRecoveryL"] boolValue]) return YES;
     [self cancelWorker];
@@ -557,6 +561,8 @@ struct EightPreparationState {
     _solveOptions = OptionsForQuality(_quality);
     _thornComboPriority = [settings[@"thornComboPriority"] boolValue];
     _solveOptions.thornComboPriority = _thornComboPriority;
+    _allowThornsWithHeartMatch = [settings[@"allowThornsWithHeartMatch"] boolValue];
+    _solveOptions.allowThornsWithHeartMatch = _allowThornsWithHeartMatch;
     _allowPoisonWithHeartFour = [settings[@"allowPoisonWithHeartFour"] boolValue];
     _solveOptions.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     _diagonal = [settings[@"diagonal"] boolValue];
@@ -689,8 +695,12 @@ struct EightPreparationState {
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
+    options.allowThornsWithHeartMatch = _allowThornsWithHeartMatch;
     options.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     options.diagonal = _diagonal;
+    // Capture the effective budget even for one-shot searches. Automation HP
+    // may be unavailable, and live HP after leaving the dungeon is unrelated.
+    if (!PHBattleIsSinglePlayer(_preview.identity.entryMode,_preview.identity.multiplayer)) options.thorns = {};
     _solveOptions = options;
     _traceOrigin = _preview;
     _searchTrace = @{@"schema":@2, @"generation":@(_generation), @"status":@"planning", @"solverStarted":@NO,
@@ -712,6 +722,7 @@ struct EightPreparationState {
             @"effects":_preview.automation.valid && _preview.automation.statusKnown ? @(_preview.automation.playerEffects) : NSNull.null,
             @"postPlayerHPKnown":@NO, @"survivalKnown":@NO},
         @"thornComboPriority":@(options.thornComboPriority),
+        @"allowThornsWithHeartMatch":@(options.allowThornsWithHeartMatch), @"thorns":ThornBudgetTrace(options),
         @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
     _skillWindowWaitAt = 0;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
@@ -1213,6 +1224,7 @@ struct EightPreparationState {
             if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
                 !evaluationValid ||
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
+                route.heartMatches != evaluation.heartMatches ||
                 evaluation.goalsMet != route.goalsMet || evaluation.combos != route.combos ||
                 evaluation.hazardsSafe != route.hazardsSafe || evaluation.poisonErased != route.poisonErased ||
                 evaluation.mortalPoisonErased != route.mortalPoisonErased ||
@@ -1265,8 +1277,9 @@ struct EightPreparationState {
                 @"\n路徑避開轉轉；Combo 與目標按全部 %u 種可能色序的最低結果顯示。", PHOrbSpinnerVariants(&board)];
             if (board.tapeMask) summary = [summary stringByAppendingString:@"\n已繞開封條。"];
             if (route.thornContacts) summary = [summary stringByAppendingFormat:
-                @"\n荊棘碰觸 %u 次 · 傷害上限 %u · 首批心四連 %u 組；未把回血與抗性計入可承受傷害。",
-                route.thornContacts, route.thornDamage, route.heartFours];
+                @"\n荊棘碰觸 %u 次 · 傷害上限 %u · 首批%@ %u 組；未把回血與抗性計入可承受傷害。",
+                route.thornContacts, route.thornDamage, options.allowThornsWithHeartMatch ? @"心珠消除" : @"心四連",
+                options.allowThornsWithHeartMatch ? route.heartMatches : route.heartFours];
             if (options.allowPoisonWithHeartFour && route.poisonErased && route.heartFours)
                 summary = [summary stringByAppendingFormat:@"\n首消心四連已達成；按隊伍設定允許消毒／猛毒，合計最多 %u 顆。", route.poisonErased];
             summary = [summary stringByAppendingFormat:@"\n求路耗時 %u ms（全部候選）\n選中候選 %u ms／預算 %u ms · %@ · 步數上限 %u",
@@ -1291,7 +1304,8 @@ struct EightPreparationState {
             session->_message = !route.hazardsSafe ? [NSString stringWithFormat:
                 @"未找到符合妨礙處理條件的路徑：毒／猛毒消除最多 %u 顆（猛毒最多 %u 顆）、首批未消爆彈最多 %u 顆%@。未開放執行；可先用技能改盤。\n%@",
                 route.poisonErased, route.mortalPoisonErased, route.unmatchedBombs,
-                route.thornContacts && !route.heartFours ? @"、荊棘路徑未消出心四連" : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
+                route.thornContacts && !PHOrbThornRecoverySatisfied(evaluation,options) ?
+                    (options.allowThornsWithHeartMatch ? @"、荊棘路徑缺少首消有效心珠組" : @"、荊棘路徑未消出心四連") : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
                 route.matchedGoals, route.goalCount, summary] : route.goalCount ?
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
             if (!route.hazardsSafe)
@@ -1432,11 +1446,11 @@ struct EightPreparationState {
                 [self recordExecution:@"release-check" state:&current evaluation:valid ?
                     FishingEvaluationTrace(evaluation,_solveOptions.goals,_route.fishingExchangeCount != 0) : @{@"valid":@NO}];
                 if (!valid || !evaluation.goalsMet || !evaluation.hazardsSafe ||
-                    (_route.thornContacts && !evaluation.heartFours)) {
+                    (_route.thornContacts && !PHOrbThornRecoverySatisfied(evaluation,_solveOptions))) {
                     NSString *failure = !valid ? @"放手前無法核對實際盤面" :
                         !evaluation.goalsMet ? @"放手前實際盤面未達成全部目標" :
                         !evaluation.hazardsSafe ? @"放手前實際盤面未通過毒／爆彈處理條件" :
-                        @"放手前荊棘路徑缺少首消心四連";
+                        _solveOptions.allowThornsWithHeartMatch ? @"放手前荊棘路徑缺少首消有效心珠組" : @"放手前荊棘路徑缺少首消心四連";
                     [self queueStop:[failure stringByAppendingString:@"；已停止並放開"]];
                 } else {
                     if (_auto.eight() && _eightPrep.active) {

@@ -17,7 +17,7 @@ NSDictionary *PHDefaultConfiguration(void) {
              @"features": @{@"skin": @NO, @"bgm": @NO, @"bgmUncleared": @NO, @"badge": @NO, @"timerFix": @NO, @"battleSwap": @NO},
              @"apiHosts": @[], @"apiPaths": @[], @"battle": PHDefaultBattleFilters(),
              @"orbs": @{@"quality": @"balanced", @"mode": @"combo", @"goals": @[], @"rules": @[],
-                 @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO, @"diagonal":@NO},
+                 @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowThornsWithHeartMatch":@NO, @"allowPoisonWithHeartFour":@NO, @"diagonal":@NO},
              @"orbProfiles":PHOrbDefaultProfiles()};
 }
 
@@ -48,7 +48,7 @@ NSDictionary *PHConfigurationBattleFilters(NSDictionary *configuration) {
 
 NSDictionary *PHConfigurationOrbSettings(NSDictionary *configuration) {
     NSMutableDictionary *settings = [@{@"quality":@"balanced", @"mode":@"combo", @"goals":@[], @"rules":@[],
-        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowPoisonWithHeartFour":@NO,
+        @"recovery":PHOrbDefaultRecovery(), @"thornComboPriority":@NO, @"allowThornsWithHeartMatch":@NO, @"allowPoisonWithHeartFour":@NO,
         @"diagonal":@NO, @"assistRecoveryL":@NO} mutableCopy];
     if ([configuration[@"orbs"] isKindOfClass:NSDictionary.class])
         for (NSString *key in settings.allKeys) if (configuration[@"orbs"][key]) settings[key] = configuration[@"orbs"][key];
@@ -240,6 +240,7 @@ BOOL PHConfigurationIsValid(NSDictionary *configuration) {
         !PHOrbReadGoals(orbs[@"goals"], NULL) || ([mode isEqual:@"manual"] && ![orbs[@"goals"] count]) ||
         !PHOrbSkillRulesValid(orbs[@"rules"]) || !PHOrbRecoveryValid(orbs[@"recovery"]) ||
         !PHIsBoolean(orbs[@"thornComboPriority"]) || !PHIsBoolean(orbs[@"allowPoisonWithHeartFour"]) ||
+        !PHIsBoolean(orbs[@"allowThornsWithHeartMatch"]) ||
         !PHIsBoolean(orbs[@"diagonal"]) || !PHIsBoolean(orbs[@"assistRecoveryL"])) return NO;
     NSDictionary *profiles = PHConfigurationOrbProfiles(configuration);
     NSDictionary *selectedProfile = PHOrbProfileNamed(profiles, profiles[@"selected"]);

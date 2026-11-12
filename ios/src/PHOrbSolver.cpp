@@ -721,6 +721,7 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             }
             if (color == PHOrbPoison || color == PHOrbMortalPoison) result.poisonErased += uint8_t(count);
             if (color == PHOrbMortalPoison) result.mortalPoisonErased += uint8_t(count);
+            if (!wave && color == 5) ++result.heartMatches;
             if (!wave && color == 5 && count == 4) {
                 bool horizontal = true, vertical = true; Bits rest = group & ~(Bits(1) << start);
                 while (rest) {
@@ -882,6 +883,7 @@ Score Evaluate(Cells cells, const Context &context) {
         a.mortalPoisonErased = std::max(a.mortalPoisonErased, b.mortalPoisonErased);
         a.unmatchedBombs = std::max(a.unmatchedBombs, b.unmatchedBombs);
         a.heartFours = std::min(a.heartFours, b.heartFours);
+        a.heartMatches = std::min(a.heartMatches, b.heartMatches);
         a.hazardsSafe &= b.hazardsSafe;
         for (unsigned g = 0; g < context.goals.count; ++g) {
             a.goalHits[g] = std::min(a.goalHits[g], b.goalHits[g]);
@@ -927,7 +929,7 @@ bool SameCycleEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
         same(a.rowGroups,b.rowGroups) && same(a.linkGroups,b.linkGroups) && same(a.largestGroups,b.largestGroups) &&
         a.activityValue == b.activityValue && same(a.retainedAfterConversion,b.retainedAfterConversion) &&
         a.preparationReady == b.preparationReady && a.poisonErased == b.poisonErased &&
-        a.unmatchedBombs == b.unmatchedBombs && a.heartFours == b.heartFours &&
+        a.unmatchedBombs == b.unmatchedBombs && a.heartFours == b.heartFours && a.heartMatches == b.heartMatches &&
         a.goalsMet == b.goalsMet && a.hazardsSafe == b.hazardsSafe && a.mortalPoisonErased == b.mortalPoisonErased;
 }
 
@@ -1353,7 +1355,7 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
     if (thornContacts) {
         const auto &t = options.thorns;
         result.hazardsSafe &= t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX &&
-            uint64_t(t.pendingDamage) + damage < t.hp && result.heartFours > 0;
+            uint64_t(t.pendingDamage) + damage < t.hp && PHOrbThornRecoverySatisfied(result,options);
     }
     return true;
 }
@@ -1545,11 +1547,11 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         if (canonicalScore) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
                         hadContactCandidates |= child.thornContacts != 0;
                         ++evaluated; exploredDepth = std::max(exploredDepth, depth + 1);
-                        // A branch can finish its heart four later. Keep the
+                        // A branch can finish its required heart group later. Keep the
                         // exact poison/heart and thorn gates on released candidates,
                         // without using it to discard intermediate repairs.
-                        const bool heartPending = !child.score.result.heartFours && (child.thornContacts ||
-                            (options.allowPoisonWithHeartFour && child.score.result.poisonErased));
+                        const bool heartPending = (child.thornContacts && !PHOrbThornRecoverySatisfied(child.score.result,options)) ||
+                            (options.allowPoisonWithHeartFour && child.score.result.poisonErased && !child.score.result.heartFours);
                         if (heartPending) child.score.result.hazardsSafe = false;
                         if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity, true)) {
                             if (scoring.alternateShapeHints && !canonicalScore) {
@@ -1750,6 +1752,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         route.mortalPoisonErased = best.score.result.mortalPoisonErased;
         route.thornDamage = best.thornDamage; route.thornContacts = best.thornContacts;
         route.heartFours = best.score.result.heartFours;
+        route.heartMatches = best.score.result.heartMatches;
         std::copy(std::begin(best.score.result.goalHits), std::end(best.score.result.goalHits), route.goalHits);
         const auto finished = Clock::now();
         route.evaluated = evaluated; route.deadlineReached = timedOut || finished >= deadline;

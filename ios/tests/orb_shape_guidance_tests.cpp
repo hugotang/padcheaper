@@ -22,7 +22,7 @@ static bool SameEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
         SameArray(a.rowGroups, b.rowGroups) && SameArray(a.linkGroups, b.linkGroups) &&
         SameArray(a.largestGroups, b.largestGroups) && a.activityValue == b.activityValue &&
         SameArray(a.retainedAfterConversion, b.retainedAfterConversion) && a.preparationReady == b.preparationReady &&
-        a.poisonErased == b.poisonErased && a.unmatchedBombs == b.unmatchedBombs && a.heartFours == b.heartFours &&
+        a.poisonErased == b.poisonErased && a.unmatchedBombs == b.unmatchedBombs && a.heartFours == b.heartFours && a.heartMatches == b.heartMatches &&
         a.goalsMet == b.goalsMet && a.hazardsSafe == b.hazardsSafe && a.mortalPoisonErased == b.mortalPoisonErased;
 }
 

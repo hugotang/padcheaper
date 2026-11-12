@@ -88,7 +88,7 @@
       "damage_void",
       "combo_absorb"
     ],
-    "skill_groups": "round-robin-one-per-orb-turn",
+    "skill_groups": "round-robin-one-rule-completion-per-orb-turn",
     "once_rules": "current-battle-memory",
     "reserved_skills": true,
     "strategy_profiles": 64,
@@ -126,7 +126,7 @@
       "poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
       "mortal_poison": "default-no-deterministic-match-optional-first-wave-heart-four-all-shared-phases",
       "bomb": "all-first-wave",
-      "thorn": "bounded-contact-with-first-wave-heart-four"
+      "thorn": "bounded-contact-default-heart-four-optional-first-wave-heart-match-all-shared-phases"
     },
     "obstacle_conditions": [
       "unmatchable",
@@ -177,6 +177,7 @@
     },
     "unmatchable_color_condition": "any-selected-basic-color",
     "skill_source_choice": "native-same-family-body",
+    "skill_assist_fallback": "explicit-body-first-native-default-separate-receipt",
     "battle_observation": {
       "mode": "optional-read-only-single-player",
       "cooldown": "table-and-initialized-cache-authoritative-stage",

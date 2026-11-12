@@ -186,7 +186,8 @@
         }] forControlEvents:UIControlEventValueChanged];
         UIButton *disclosure = [self button:[NSString stringWithFormat:@"%lu · 位置 %@ · %@ · %@",
             (unsigned long)i + 1, rule[@"slot"], [rule[@"source"] isEqual:@"body"] ? @"本體" :
-            [rule[@"source"] isEqual:@"assist"] ? @"武裝" : @"目前技能", [rule[@"required"] boolValue] ? @"必要" : @"可略過"]];
+            [rule[@"source"] isEqual:@"assist"] ? @"武裝" : [rule[@"source"] isEqual:@"body_or_assist"] ? @"本體優先" :
+            @"目前技能", [rule[@"required"] boolValue] ? @"必要" : @"可略過"]];
         disclosure.accessibilityIdentifier = [NSString stringWithFormat:@"padcheaper.orbsRuleExpand%lu", (unsigned long)i];
         BOOL expanded = self.expandedRule == rule;
         disclosure.accessibilityValue = expanded ? @"已展開" : @"已收起";
@@ -212,8 +213,10 @@
         [card addArrangedSubview:[self menu:i field:@"slot" values:@[@1,@2,@3,@4,@5,@6]
             titles:@[@"位置 1 · 隊長", @"位置 2", @"位置 3", @"位置 4", @"位置 5", @"位置 6 · 助人"]]];
         [advanced addArrangedSubview:[self number:i field:@"monster" title:@"角色圖鑑編號（0 不限定）"]];
-        [card addArrangedSubview:[self menu:i field:@"source" values:@[@"auto", @"body", @"assist"]
-            titles:@[@"遊戲目前技能", @"僅本體技能", @"僅武裝技能"]]];
+        [card addArrangedSubview:[self menu:i field:@"source" values:@[@"auto", @"body", @"assist", @"body_or_assist"]
+            titles:@[@"遊戲目前技能", @"僅本體技能", @"僅武裝技能", @"本體優先，滿蓄改用武裝"]]];
+        if ([rule[@"source"] isEqual:@"body_or_assist"]) [card addArrangedSubview:[self label:
+            @"遊戲不能選本體時才用滿蓄武裝。指定 ID 核對本體；武裝不算完成本體規則，必要效果仍須解除，同組其他位置可接著使用。"]];
         [advanced addArrangedSubview:[self number:i field:@"skill" title:@"指定技能 ID（0 不限定）"]];
         [card addArrangedSubview:[self number:i field:@"every" title:@"回合間隔（1 每回合）"]];
         [advanced addArrangedSubview:[self menu:i field:@"intervalMode" values:@[@"run", @"accepted"]

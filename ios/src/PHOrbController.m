@@ -308,6 +308,8 @@
 @property(nonatomic, strong) UILabel *qualityDescription;
 @property(nonatomic, strong) UISwitch *thornPriority;
 @property(nonatomic, strong) UILabel *thornDescription;
+@property(nonatomic, strong) UISwitch *thornsWithHeartMatch;
+@property(nonatomic, strong) UILabel *thornRecoveryDescription;
 @property(nonatomic, strong) UISwitch *poisonWithHeartFour;
 @property(nonatomic, strong) UILabel *poisonDescription;
 @property(nonatomic, strong) UISwitch *diagonal;
@@ -484,6 +486,14 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     UIStackView *thornRow = PHOrbSwitchRow(thornTitle, self.thornPriority);
     self.thornDescription = [self label:13 weight:UIFontWeightRegular];
     self.thornDescription.accessibilityIdentifier = @"padcheaper.orbsThornDescription";
+    UILabel *thornRecoveryTitle = [self label:15 weight:UIFontWeightMedium]; thornRecoveryTitle.text = @"荊棘盤心三連即可";
+    self.thornsWithHeartMatch = [UISwitch new];
+    self.thornsWithHeartMatch.accessibilityIdentifier = @"padcheaper.orbsThornsWithHeartMatch";
+    self.thornsWithHeartMatch.accessibilityLabel = thornRecoveryTitle.text;
+    [self.thornsWithHeartMatch addTarget:self action:@selector(changeThornRecovery) forControlEvents:UIControlEventValueChanged];
+    UIStackView *thornRecoveryRow = PHOrbSwitchRow(thornRecoveryTitle, self.thornsWithHeartMatch);
+    self.thornRecoveryDescription = [self label:13 weight:UIFontWeightRegular];
+    self.thornRecoveryDescription.accessibilityIdentifier = @"padcheaper.orbsThornRecoveryDescription";
     UILabel *poisonTitle = [self label:15 weight:UIFontWeightMedium]; poisonTitle.text = @"心四連時允許消毒／猛毒";
     self.poisonWithHeartFour = [UISwitch new];
     self.poisonWithHeartFour.accessibilityIdentifier = @"padcheaper.orbsPoisonWithHeartFour";
@@ -536,7 +546,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     }];
     self.eightDescription = [self label:13 weight:UIFontWeightMedium];
     self.eightDescription.accessibilityIdentifier = @"padcheaper.orbsEightProgress"; self.eightDescription.hidden = YES;
-    note.text = @"單人 Auto 依技能規則處理；8 人 Auto 依選用的活動策略核對固定隊伍、開技及樓層目標，通用設定只轉珠。每次技能生效後重新讀盤。只處理目前這場，結算、離場或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸，上方開關決定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n一般預計 Combo 不含天降、隊長及 Combo 珠加算；8 人活動另列已核對的隊長加算。弱化珠照常判定消除，不估算傷害、回復量或精確總分。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援浮動「轉一次」，需在自己的操作窗口按下，完成後停止。8 人另可按 Auto 接續本場；3／4 人保持轉一次。多人避開有傷害的荊棘；單人技能規則、開場、低血補心與武裝 L 回復不套用至 8 人活動。";
+    note.text = @"單人 Auto 依技能規則處理；8 人 Auto 依選用的活動策略核對固定隊伍、開技及樓層目標，通用設定只轉珠。每次技能生效後重新讀盤。只處理目前這場，結算、離場或手動操作即停止。\n\n浮動按鈕在求路、技能動畫與等待回合時都可停止；已啟動的技能由遊戲完成。\n\n預覽顯示雲及暗闇下的真實珠色；路徑避開封條與轉轉。荊棘可在目前 HP 足以承受且首消有心四連時接觸；回復足夠的隊伍可開啟「心三連即可」。上方另可設定優先 Combo 或較少傷害。轉轉按全部可能色序核對目標；不可消及最少消珠限制按遊戲規則處理。毒／猛毒預設避開消除；可為回復足夠的隊伍開啟心四連消毒。邪魔可消，爆彈須首批全消。留在盤上的毒不會爆炸。\n\n一般預計 Combo 不含天降、隊長及 Combo 珠加算；8 人活動另列已核對的隊長加算。弱化珠照常判定消除，不估算傷害、回復量或精確總分。未知珠型或尚未核對的效果仍會停止。\n\n3／4／8 人與已確認的 3 人單人續玩支援浮動「轉一次」，需在自己的操作窗口按下，完成後停止。8 人另可按 Auto 接續本場；3／4 人保持轉一次。多人避開有傷害的荊棘；單人技能規則、開場、低血補心與武裝 L 回復不套用至 8 人活動。";
     UIButton *close = [self button:@"返回遊戲" selector:@selector(closePage) identifier:@"padcheaper.orbsClose"];
     PHOrbStyleButton(close, @"返回遊戲", NO);
     [close.widthAnchor constraintEqualToConstant:100].active = YES;
@@ -564,7 +574,8 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
         [self section:@"策略選用" views:@[self.editProfiles, self.profileDescription]],
         [self section:@"8 人自動開始 · 全域" views:@[autoStartRow, autoStartHelp, self.autoStartNotice]],
         [self section:@"盤面與求路" views:@[qualityTitle, self.qualityControl,
-            self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription, poisonRow,
+            self.qualityDescription, diagonalRow, self.diagonalDescription, thornRow, self.thornDescription,
+            thornRecoveryRow, self.thornRecoveryDescription, poisonRow,
             self.poisonDescription, self.goalMode, self.editGoals, self.goalDescription]],
         self.skillCard = [self section:@"技能與回復" views:@[self.editRules, self.ruleDescription, self.editRecovery, self.recoveryDescription,
             self.playerDescription, assistRow, self.assistRecoveryDescription]],
@@ -744,9 +755,15 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     self.thornPriority.enabled = [state[@"canSetThornPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *thornMessage = state[@"thornPolicyMessage"];
     self.thornDescription.text = thornMessage.length ? thornMessage : self.thornPriority.on ?
-        @"優先較高 Combo，同 Combo 再選較少傷害。只有首消心四連且目前 HP 撐得過整條路徑才會碰荊棘；不預支消心回血。" :
-        @"目前優先較少荊棘傷害。開啟後可用承受範圍內的接觸換取更多 Combo，適合心四連能充分回血的隊伍。";
+        @"優先較高 Combo，同 Combo 再選較少傷害。仍需符合下方回復條件，且目前 HP 撐得過整條路徑；不預支消心回血。" :
+        @"目前優先較少荊棘傷害。開啟後可用承受範圍內的接觸換取更多 Combo，適合能充分回血的隊伍。";
     self.thornDescription.textColor = thornMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
+    self.thornsWithHeartMatch.on = [state[@"allowThornsWithHeartMatch"] boolValue];
+    self.thornsWithHeartMatch.enabled = self.thornPriority.enabled;
+    self.thornRecoveryDescription.text = thornMessage.length ? thornMessage : self.thornsWithHeartMatch.on ?
+        @"全部轉轉相位都需首消有效心珠組（三顆以上，依遊戲最少消珠限制）。採用你確認的隊伍回復能力；整條路徑仍不可致死，消毒及指定心四連要求不變。" :
+        @"目前碰荊棘要求首消心四連。確認這隊心三連已能充分回血後開啟；設定會與目前策略一同儲存，不會自動估算回復量。";
+    self.thornRecoveryDescription.textColor = thornMessage.length ? UIColor.systemRedColor : UIColor.secondaryLabelColor;
     self.poisonWithHeartFour.on = [state[@"allowPoisonWithHeartFour"] boolValue];
     self.poisonWithHeartFour.enabled = [state[@"canSetPoisonPolicy"] boolValue] && ![state[@"busy"] boolValue] && ![state[@"inputFault"] boolValue];
     NSString *poisonMessage = state[@"poisonPolicyMessage"];
@@ -904,6 +921,10 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     if (self.thornPriority.enabled) self.action(@"orbsThornPriority", @(self.thornPriority.on));
     [self refresh];
 }
+- (void)changeThornRecovery {
+    if (self.thornsWithHeartMatch.enabled) self.action(@"orbsThornsWithHeartMatch", @(self.thornsWithHeartMatch.on));
+    [self refresh];
+}
 - (void)changeDiagonal {
     if (self.diagonal.enabled) self.action(@"orbsDiagonal", @(self.diagonal.on));
     [self refresh];
@@ -1023,6 +1044,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
     NSDictionary *settings = @{@"quality":state[@"quality"], @"mode":state[@"goalMode"],
         @"goals":state[@"goals"], @"rules":state[@"rules"], @"recovery":state[@"recovery"] ?: PHOrbDefaultRecovery(),
         @"thornComboPriority":state[@"thornComboPriority"] ?: @NO,
+        @"allowThornsWithHeartMatch":state[@"allowThornsWithHeartMatch"] ?: @NO,
         @"allowPoisonWithHeartFour":state[@"allowPoisonWithHeartFour"] ?: @NO,
         @"diagonal":state[@"diagonal"] ?: @NO, @"assistRecoveryL":state[@"assistRecoveryL"] ?: @NO};
     __weak PHOrbController *weakSelf = self;
@@ -1043,6 +1065,7 @@ static NSString *PHOrbEightProgressDescription(NSDictionary *state) {
             NSDictionary *actual = PHOrbCanonicalSettings(@{@"quality":saved[@"quality"] ?: @"", @"mode":saved[@"goalMode"] ?: @"",
                 @"goals":saved[@"goals"] ?: @[], @"rules":saved[@"rules"] ?: @[], @"recovery":saved[@"recovery"] ?: PHOrbDefaultRecovery(),
                 @"thornComboPriority":saved[@"thornComboPriority"] ?: @NO,
+                @"allowThornsWithHeartMatch":saved[@"allowThornsWithHeartMatch"] ?: @NO,
                 @"allowPoisonWithHeartFour":saved[@"allowPoisonWithHeartFour"] ?: @NO,
                 @"diagonal":saved[@"diagonal"] ?: @NO, @"assistRecoveryL":saved[@"assistRecoveryL"] ?: @NO});
             NSString *message = saved[@"profileMessage"];

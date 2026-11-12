@@ -53,6 +53,7 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
     BOOL resizeWithSkill, hangResize;
     PHOrbSkillSource chosenSource[6];
     uint32_t chosenSkill[6];
+    uint32_t fallbackBodySkill[6];
     uint16_t transformAfterSkill[6];
     BOOL consumeAssistAfterSkill[6];
     unsigned lightAfterByakuya;
@@ -226,12 +227,21 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (slot >= 6) return PHOrbSkillRejected;
-    if ((request.source != PHOrbSkillAutomatic && request.source != chosenSource[slot]) ||
-        (request.skill && request.skill != chosenSkill[slot])) {
+    const bool preferred = request.source == PHOrbSkillBodyOrAssist;
+    const bool fallback = preferred && chosenSource[slot] == PHOrbSkillAssist;
+    const PHOrbSkillSource wanted = preferred ? chosenSource[slot] : request.source;
+    const uint32_t expectedSkill = fallback ? fallbackBodySkill[slot] : chosenSkill[slot];
+    if ((wanted != PHOrbSkillAutomatic && wanted != chosenSource[slot]) ||
+        (fallback && !expectedSkill) || (request.skill && request.skill != expectedSkill)) {
         if (reason) *reason = @"fixture source or skill mismatch";
         return PHOrbSkillUnavailable;
     }
-    return [self useSkill:slot expected:expected frame:frame reason:reason];
+    PHOrbSkillResult result = [self useSkill:slot expected:expected frame:frame reason:reason];
+    if (fallback && result == PHOrbSkillStarted) {
+        if (reason) *reason = [NSString stringWithFormat:@"武裝滿蓄：已啟動武裝技能 %u", chosenSkill[slot]];
+        return PHOrbSkillAssistFallbackStarted;
+    }
+    return result;
 }
 - (BOOL)stageCell:(NSUInteger)target down:(BOOL)hold beginning:(BOOL)begin
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
@@ -315,6 +325,10 @@ static void Check(bool ok, const char *message) { if (!ok) { std::fprintf(stderr
             live.automation.members[activeSkill].assistCatalogID = 0;
             live.automation.members[activeSkill].assistState = 0;
             consumeAssistAfterSkill[activeSkill] = NO;
+        }
+        if (fallbackBodySkill[activeSkill] && chosenSource[activeSkill] == PHOrbSkillAssist) {
+            chosenSkill[activeSkill] = fallbackBodySkill[activeSkill];
+            live.automation.members[activeSkill].charge = 0;
         }
         chosenSource[activeSkill] = PHOrbSkillBody;
         if (!failSkillAck) ++live.automation.skillUses;
@@ -494,6 +508,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_automation_session_tests.inc"
 #include "orb_strategy_session_tests.inc"
 #include "orb_timing_session_tests.inc"
+#include "orb_assist_fallback_session_tests.inc"
 #include "orb_survival_session_tests.inc"
 #include "orb_recovery_session_tests.inc"
 #include "orb_effect_session_tests.inc"
@@ -842,6 +857,7 @@ int main() {
         AutomationSessionTests();
         StrategySessionTests();
         SkillTimingSessionTests();
+        AssistFallbackSessionTests();
         SurvivalSessionTests();
         RecoverySessionTests();
         OrbEffectSessionTests();

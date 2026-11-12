@@ -30,6 +30,7 @@
     "quality": "balanced",
     "diagonal": false,
     "thornComboPriority": false,
+    "allowThornsWithHeartMatch": false,
     "allowPoisonWithHeartFour": false,
     "mode": "combo",
     "goals": [],

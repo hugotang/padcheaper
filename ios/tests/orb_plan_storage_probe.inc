@@ -121,6 +121,33 @@ static void PHProbePlanStorage(UIWindow *overlay) {
             ![thornCommitted[@"orbState"][@"thornPolicyMessage"] length],
             @"Successful thorn preference save updates the selected full plan and published settings atomically");
     } else if (thornMoved) [files moveItemAtPath:thornBackup toPath:path error:NULL];
+    NSDictionary *beforeHeartMatch = PHProbeJSON(@"config.json");
+    NSString *heartBackup = [path stringByAppendingFormat:@".heart-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL heartMoved = [files moveItemAtPath:path toPath:heartBackup error:NULL];
+    BOOL heartBlocked = heartMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(heartBlocked, @"Thorn recovery test blocks the selected plan's configuration file");
+    if (heartBlocked) {
+        action(@"orbsThornsWithHeartMatch", @YES);
+        NSDictionary *failed = snapshot();
+        PHProbeCheck([failed[@"config"] isEqual:beforeHeartMatch] &&
+            [failed[@"orbState"][@"allowThornsWithHeartMatch"] isEqual:@NO] &&
+            [failed[@"orbState"][@"thornPolicyMessage"] length] > 0,
+            @"Failed thorn recovery save preserves the selected plan and active permission");
+        BOOL repaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:heartBackup toPath:path error:NULL];
+        PHProbeCheck(repaired, @"Thorn recovery fixture restores the configuration file");
+        if (!repaired) return;
+        action(@"retry", nil); action(@"orbsThornsWithHeartMatch", @YES);
+        NSDictionary *committed = snapshot(), *saved = PHProbeJSON(@"config.json");
+        NSDictionary *selected = profileNamed(configProfiles(saved), library[@"selected"]);
+        PHProbeCheck([saved[@"orbs"][@"allowThornsWithHeartMatch"] isEqual:@YES] &&
+            [selected[@"settings"][@"allowThornsWithHeartMatch"] isEqual:@YES] &&
+            [committed[@"orbState"][@"allowThornsWithHeartMatch"] isEqual:@YES] &&
+            ![committed[@"orbState"][@"thornPolicyMessage"] length],
+            @"Thorn recovery permission is saved atomically with the selected plan");
+        action(@"orbsQuality", @"fast"); action(@"orbsThornPriority", @NO);
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowThornsWithHeartMatch"] isEqual:@YES],
+            @"Changing quality or thorn ranking preserves the independent recovery permission");
+    } else if (heartMoved) [files moveItemAtPath:heartBackup toPath:path error:NULL];
     NSDictionary *beforePoison = PHProbeJSON(@"config.json");
     NSString *poisonBackup = [path stringByAppendingFormat:@".poison-probe-%@", NSUUID.UUID.UUIDString];
     BOOL poisonMoved = [files moveItemAtPath:path toPath:poisonBackup error:NULL];

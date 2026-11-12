@@ -50,7 +50,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64863
           },
           {
             "enabled": true,
@@ -68,7 +70,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64914
           },
           {
             "enabled": true,
@@ -86,7 +90,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64914
           },
           {
             "enabled": true,
@@ -104,7 +110,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64795
           },
           {
             "enabled": true,
@@ -122,7 +130,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "awoken_bind",
-            "required": true
+            "required": true,
+            "source": "body_or_assist",
+            "skill": 64720
           },
           {
             "enabled": true,
@@ -140,7 +150,9 @@
             "unmatchableColors": 40,
             "hpAtMost": 0,
             "status": "none",
-            "required": true
+            "required": true,
+            "source": "body_or_assist",
+            "skill": 64720
           },
           {
             "enabled": true,
@@ -158,7 +170,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64787
           }
         ],
         "recovery": {
@@ -216,7 +230,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64863
           },
           {
             "enabled": true,
@@ -234,7 +250,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64914
           },
           {
             "enabled": true,
@@ -252,7 +270,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64914
           },
           {
             "enabled": true,
@@ -270,7 +290,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64795
           },
           {
             "enabled": true,
@@ -288,7 +310,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "awoken_bind",
-            "required": true
+            "required": true,
+            "source": "body_or_assist",
+            "skill": 64720
           },
           {
             "enabled": true,
@@ -306,7 +330,9 @@
             "unmatchableColors": 40,
             "hpAtMost": 0,
             "status": "none",
-            "required": true
+            "required": true,
+            "source": "body_or_assist",
+            "skill": 64720
           },
           {
             "enabled": true,
@@ -324,7 +350,9 @@
             "unmatchableColors": 0,
             "hpAtMost": 0,
             "status": "none",
-            "required": false
+            "required": false,
+            "source": "body_or_assist",
+            "skill": 64787
           }
         ],
         "recovery": {

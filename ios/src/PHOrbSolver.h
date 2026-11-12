@@ -26,6 +26,7 @@ struct PHOrbSolveOptions {
     unsigned backtrackLimit = 0;
     bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
     bool allowPoisonWithHeartFour = false; // Team policy: poison and mortal poison may clear with a first-wave heart four in every phase.
+    bool allowThornsWithHeartMatch = false; // Team policy: any valid first-wave heart match suffices; never credits healing to the HP budget.
     bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
     PHOrbActivityObjective activity{}; // Heuristic weights, separate from native scoring.
     // May route through the board's only unlocked spinner once, taking out
@@ -83,12 +84,16 @@ PHOrbFishingPlan PHOrbPlanFishing(const PHOrbBoard &board, const PHOrbSolveOptio
 // every result to meet the goals and hazard policy. Native unmatchable colors,
 // minimum runs and minimum connected matches apply to every cascade.
 // Routes respect tape/fixed start and avoid spinners. Damaging thorn swaps
-// require verified HP, a strict damage budget and a first-wave heart four.
+// require verified HP, a strict damage budget and a first-wave heart four
+// (or a valid heart match in every phase under the explicit team policy).
 // The budget ignores healing and resistance; these may improve real outcomes.
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result) noexcept;
 bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEvaluation &result,
                    bool allowPoisonWithHeartFour) noexcept;
 bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept;
+inline bool PHOrbThornRecoverySatisfied(const PHOrbEvaluation &result, const PHOrbSolveOptions &options) noexcept {
+    return options.allowThornsWithHeartMatch ? result.heartMatches > 0 : result.heartFours > 0;
+}
 // Explicit multi-exchange routes enumerate the selected spinner independently
 // of the untouched cells' common phase; ordinary routes use the shared clock.
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,

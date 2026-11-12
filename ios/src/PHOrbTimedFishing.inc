@@ -149,6 +149,7 @@ void MergeTimedFishingEvaluation(PHOrbEvaluation &worst, const PHOrbEvaluation &
     worst.erased = std::min(worst.erased,value.erased);
     worst.firstWaveCombos = std::min(worst.firstWaveCombos,value.firstWaveCombos);
     worst.heartFours = std::min(worst.heartFours,value.heartFours);
+    worst.heartMatches = std::min(worst.heartMatches,value.heartMatches);
     worst.poisonErased = std::max(worst.poisonErased,value.poisonErased);
     worst.mortalPoisonErased = std::max(worst.mortalPoisonErased,value.mortalPoisonErased);
     worst.unmatchedBombs = std::max(worst.unmatchedBombs,value.unmatchedBombs);

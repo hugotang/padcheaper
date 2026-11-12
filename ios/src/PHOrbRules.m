@@ -15,6 +15,7 @@ PHOrbSkillRequest PHOrbRequestForRule(NSDictionary *rule) {
     PHOrbSkillRequest request = {PHOrbSkillAutomatic, [rule[@"skill"] unsignedIntValue]};
     if ([rule[@"source"] isEqual:@"body"]) request.source = PHOrbSkillBody;
     if ([rule[@"source"] isEqual:@"assist"]) request.source = PHOrbSkillAssist;
+    if ([rule[@"source"] isEqual:@"body_or_assist"]) request.source = PHOrbSkillBodyOrAssist;
     return request;
 }
 
@@ -156,7 +157,7 @@ BOOL PHOrbSkillRulesValid(id rules) {
             !Integer(rule[@"every"], 1, 999) || !Integer(rule[@"floor"], 0, 999) || !Integer(rule[@"color"], -1, 5) ||
             !Integer(rule[@"below"], 0, PHOrbMaxCells + 1) || ![rule[@"enemy"] isKindOfClass:NSString.class] ||
             !Integer(rule[@"atLeast"], 0, PHOrbMaxCells) || !Integer(rule[@"skill"], 0, 0x1ffff) ||
-            ![rule[@"source"] isKindOfClass:NSString.class] || ![@[@"auto", @"body", @"assist"] containsObject:rule[@"source"]] ||
+            ![rule[@"source"] isKindOfClass:NSString.class] || ![@[@"auto", @"body", @"assist", @"body_or_assist"] containsObject:rule[@"source"]] ||
             ![rule[@"intervalMode"] isKindOfClass:NSString.class] || ![@[@"run", @"accepted"] containsObject:rule[@"intervalMode"]] ||
             !Integer(rule[@"startAfter"], 0, 999) ||
             ![PHOrbEnemyConditions() containsObject:rule[@"enemy"]] || !Integer(rule[@"group"], 0, PHOrbMaxSkillGroups) ||
@@ -356,7 +357,8 @@ NSString *PHOrbSkillRuleDescription(NSDictionary *rule) {
     if ([rule[@"startAfter"] unsignedIntValue])
         [parts addObject:[NSString stringWithFormat:@"先轉 %@ 回合再啟用", rule[@"startAfter"]]];
     if ([rule[@"floor"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"第 %@ 層", rule[@"floor"]]];
-    if (![rule[@"source"] isEqual:@"auto"]) [parts addObject:[rule[@"source"] isEqual:@"body"] ? @"僅本體技能" : @"僅武裝技能"];
+    if (![rule[@"source"] isEqual:@"auto"]) [parts addObject:[rule[@"source"] isEqual:@"body_or_assist"] ?
+        @"本體優先，滿蓄改用武裝" : [rule[@"source"] isEqual:@"body"] ? @"僅本體技能" : @"僅武裝技能"];
     if ([rule[@"skill"] unsignedIntValue]) [parts addObject:[NSString stringWithFormat:@"技能 %@", rule[@"skill"]]];
     if ([rule[@"color"] integerValue] >= 0) [parts addObject:[NSString stringWithFormat:@"%@珠%@ %@ 顆",
         @[@"火", @"水", @"木", @"光", @"暗", @"心"][[rule[@"color"] unsignedIntegerValue]],

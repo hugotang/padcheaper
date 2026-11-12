@@ -3,7 +3,8 @@
 
 typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     PHOrbSkillRejected, PHOrbSkillUnavailable, PHOrbSkillStarted,
-    PHOrbSkillWindowClosed // No native call or selection/charge write has occurred.
+    PHOrbSkillWindowClosed, // No native call or selection/charge write has occurred.
+    PHOrbSkillAssistFallbackStarted // Clears overcharge; does not fulfill the body rule/group.
 };
 
 @protocol PHOrbEngine <NSObject>
@@ -20,6 +21,8 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Constraints on the game's current choice; never force an uncharged source.
+// BodyOrAssist may return AssistFallbackStarted. It starts an assist, not a
+// receipt for the requested body rule, its once flag or its rotation group.
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Scoped to one original native drawFrame. Must always pair with finishInput,

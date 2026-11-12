@@ -17,7 +17,101 @@ static void SameFamilySkillFixture(unsigned slot = 0, uint16_t weapon = 14039) {
     readinessFixture = {64787, 65021, 4, 18};
 }
 
+static void OverchargedAssistNativeTests() {
+    PHOrbSnapshot state{}; NSString *reason = nil;
+    const PHOrbSkillRequest request{PHOrbSkillBodyOrAssist, 64914};
+    auto setup = [&]() {
+        SameFamilySkillFixture(5, 13654); SetLeader(5, 14065);
+        const uintptr_t member = Impl + PHBattleMemberOffset + 5 * PHBattleMemberStride;
+        uint16_t body = 0; PHBattleCatalogIDForNumber(14065, &body);
+        Put<uint16_t>(member + PHBattleBaseIDOffset, body);
+        const uintptr_t record = reinterpret_cast<uintptr_t>(catalogBytes.data()) + body * PHBattleCatalogStride;
+        Put<uint32_t>(record, body); Put<uint32_t>(record + PHOrbSkillFamilyOffset, 14065);
+        Protected(member + PHBattleChargeOffset, 20, 0x6a875a8b);
+        Put<uint32_t>(member + PHBattleChargeShadowOffset, 20u ^ 0x68fb65ceu);
+        readinessFixture = {64914, 61891, 2, 20};
+        return member;
+    };
+    for (uint32_t retained : {UINT32_MAX, 64914u, 61891u}) {
+        const uintptr_t member = setup(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
+        Put<uint32_t>(member + PHOrbSkillOverrideOffset, retained);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        const auto before = implBytes;
+        Check([engine useSkill:5 request:request expected:&state frame:Frame() reason:&reason] == PHOrbSkillAssistFallbackStarted &&
+            skillStartCalls == 1 && !bodyCanUseCalls && sourceAtStart == 1 && selectionAtStart == UINT32_MAX &&
+            effectiveStartedSkill == 61891 && effectsStartedSkill == 61891 && [reason containsString:@"61891"] &&
+            [reason containsString:@"充能 20／合計 CD 20"],
+            "recorded Byakuya loadout uses its fully charged assist and reports a separate receipt");
+        const size_t offset = PHBattleMemberOffset + 5 * PHBattleMemberStride;
+        Check(!std::memcmp(before.data() + offset + PHBattleChargeOffset, implBytes.data() + offset + PHBattleChargeOffset, 20) &&
+            !std::memcmp(before.data() + offset + PHBattleChargeShadowOffset, implBytes.data() + offset + PHBattleChargeShadowOffset, 4),
+            "assist fallback does not write protected charge or its shadow");
+    }
+    for (unsigned charge : {1u, 2u, 19u}) {
+        const uintptr_t member = setup(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
+        Protected(member + PHBattleChargeOffset, charge, 0x6a875a8b);
+        Put<uint32_t>(member + PHBattleChargeShadowOffset, charge ^ 0x68fb65ceu);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check([engine useSkill:5 request:request expected:&state frame:Frame() reason:&reason] ==
+            (charge < 2 ? PHOrbSkillUnavailable : PHOrbSkillStarted) && !choiceCalls &&
+            (charge < 2 ? !skillStartCalls : effectiveStartedSkill == 64914 && sourceAtStart == 0),
+            "below assist cooldown the policy only uses the charged body, never an early assist");
+    }
+    for (unsigned fault = 0; fault < 9; ++fault) {
+        const uintptr_t member = setup(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        if (fault == 0) skillAvailable = false;
+        if (fault == 1) readinessFixture.baseSkill = 64787;
+        if (fault == 2) readinessFixture.assistSkill = 0;
+        if (fault == 3) changeFamilyInChoice = true;
+        if (fault == 4) changeSourceCardsInChoice = true;
+        if (fault == 5) switchMultiInReadiness = true;
+        if (fault == 6) changeBodySkillInReadiness = true;
+        if (fault == 7) changeChargeInCanUse = true;
+        if (fault == 8) Put<uint16_t>(member + 1438, 0);
+        const PHOrbSkillResult result = [engine useSkill:5 request:request expected:&state frame:Frame() reason:&reason];
+        Check(result != PHOrbSkillStarted && result != PHOrbSkillAssistFallbackStarted && !skillStartCalls && !writes,
+            "native refusal, missing skill/assist, stale body and source/charge/mode races block fallback");
+    }
+    for (bool available : {false,true}) {
+        SameFamilySkillFixture(); bodyAvailable = available;
+        FixtureSkillEngine *engine = [FixtureSkillEngine new]; [engine readAutomation:&state frame:Frame() reason:&reason];
+        Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBodyOrAssist,64787} expected:&state frame:Frame() reason:&reason] ==
+            (available ? PHOrbSkillStarted : PHOrbSkillUnavailable) && bodyCanUseCalls == 1 &&
+            (available ? sourceAtStart == 0 && effectiveStartedSkill == 64787 : !skillStartCalls),
+            "body-first keeps the native same-family body choice and does not evade a body effect refusal");
+    }
+    setup(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:5 request:PHOrbSkillRequest{PHOrbSkillBody,64914} expected:&state frame:Frame() reason:&reason] ==
+        PHOrbSkillUnavailable && [reason containsString:@"武裝技能 61891／合計 CD 20"] && !skillStartCalls && !writes,
+        "strict body rules stay strict and now retain the missing overcharge diagnostics");
+    SameFamilySkillFixture(); choiceAvailable = false; engine = [FixtureSkillEngine new];
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillBodyOrAssist,64787} expected:&state frame:Frame() reason:&reason] ==
+        PHOrbSkillAssistFallbackStarted && !bodyCanUseCalls && sourceAtStart == 1,
+        "the explicit policy may use the default assist when the native dialog offers no body choice");
+    setup(); engine = [FixtureSkillEngine new]; Put<uint8_t>(SurvivalDungeon + 33, 8);
+    [engine readAutomation:&state frame:Frame() reason:&reason];
+    Check([engine useSkill:5 request:request expected:&state frame:Frame() reason:&reason] == PHOrbSkillStarted &&
+        !choiceCalls && sourceAtStart == 0 && effectiveStartedSkill == 64914,
+        "a dungeon-disabled assist cannot trigger fallback even at twenty charge");
+    for (unsigned fault = 0; fault < 5; ++fault) {
+        const uintptr_t member = setup(); engine = [FixtureSkillEngine new];
+        Put<uint32_t>(member + PHOrbSkillOverrideOffset, 64914);
+        [engine readAutomation:&state frame:Frame() reason:&reason];
+        if (fault == 0) failWrite = 1;
+        if (fault == 1) ignoreSelectionWrite = true;
+        if (fault == 2) switchMultiInSelectionWrite = true;
+        if (fault == 3) changeSourceInSelectionWrite = true;
+        if (fault == 4) readinessKnown = false;
+        Check([engine useSkill:5 request:request expected:&state frame:Frame() reason:&reason] == PHOrbSkillRejected && !skillStartCalls,
+            "unknown readiness, stale-choice reset failure and final source/mode changes prevent fallback activation");
+    }
+}
+
 static void SkillChoiceNativeTests() {
+    OverchargedAssistNativeTests();
     PHOrbSnapshot state{}; NSString *reason = nil;
     const PHOrbSkillRequest bodyRequest{PHOrbSkillBody, 64787};
     for (unsigned slot : {0u, 5u}) for (bool defaultAvailable : {false, true}) {

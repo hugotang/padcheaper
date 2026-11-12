@@ -20,6 +20,12 @@ static void UryuFirstPuzzlePlanTests(void) {
         Check(rules.count == 11 && [profile[@"opening"] count] == 6 && ![[profile[@"opening"] lastObject][@"puzzleAfter"] boolValue],
             "Uryu retains all six opening steps and still evaluates skills/rescues on the first puzzle");
         if (rules.count != 11) continue;
+        for (NSDictionary *rule in rules) Check([rule[@"source"] isEqual:@"body_or_assist"] && [rule[@"skill"] unsignedIntValue],
+            "Uryu rotation explicitly permits native overcharged assists while binding each body skill ID");
+        NSMutableDictionary *bad = [plan mutableCopy]; NSMutableArray *badOpening = [plan[@"opening"] mutableCopy];
+        NSMutableDictionary *firstStep = [badOpening[0] mutableCopy]; firstStep[@"source"] = @"body_or_assist";
+        badOpening[0] = firstStep; bad[@"opening"] = badOpening;
+        Check(!PHOrbProfileFromPlan(bad,NULL), "opening never accepts body-to-assist fallback");
         Check([rules[0][@"slot"] isEqual:@2] && [rules[7][@"slot"] isEqual:@4] &&
             [rules[8][@"required"] boolValue] && [rules[9][@"required"] boolValue] && [rules[10][@"atLeast"] isEqual:@9],
             "Yoruichi remains before Uryu and both required Unohana rescues remain independent");
@@ -203,6 +209,14 @@ static void PlanTests(void) {
     Check(!PHOrbProfileFromPlan(thornPlan, NULL), "plan import rejects numeric or malformed thorn preference");
     thornPlan[@"board"][@"thornComboPriority"] = @NO; thornPlan[@"board"][@"unknown"] = @YES;
     Check(!PHOrbProfileFromPlan(thornPlan, NULL), "adding a known optional board key does not allow unknown settings");
+    NSMutableDictionary *heartPlan = ReadPlanFixture(); heartPlan[@"board"][@"allowThornsWithHeartMatch"] = @YES;
+    NSDictionary *heartProfile = PHOrbProfileFromPlan(heartPlan, &reason);
+    Check(heartProfile && [PHOrbPlanFromProfile(heartProfile)[@"board"][@"allowThornsWithHeartMatch"] isEqual:@YES] &&
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(heartProfile), NULL) isEqual:heartProfile] &&
+        [PHOrbPlanDescription(heartPlan) containsString:@"荊棘盤心三連即可：開啟"],
+        "full plans preserve and describe the explicit heart-match thorn policy");
+    heartPlan[@"board"][@"allowThornsWithHeartMatch"] = @1;
+    Check(!PHOrbProfileFromPlan(heartPlan, NULL), "plan import rejects numeric thorn recovery permission");
     NSMutableDictionary *poisonPlan = ReadPlanFixture(); poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @YES;
     NSDictionary *poisonProfile = PHOrbProfileFromPlan(poisonPlan, &reason);
     Check(poisonProfile && [PHOrbPlanFromProfile(poisonProfile)[@"board"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&

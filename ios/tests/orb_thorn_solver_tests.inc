@@ -1,4 +1,82 @@
+static void ThornHeartMatchTests() {
+    auto board = ShapeBoard(6,5,{});
+    for (unsigned i : {0u,1u,2u}) board.types[i] = 5;
+    board.flags[29] = PHOrbFlagThorn; board.thornDamage[29] = 4;
+    PHOrbRoute path{}; path.count = 2; path.cells[0] = 28; path.cells[1] = 29;
+    PHOrbSolveOptions options{}; options.thorns = {1000,1000,0,true};
+    PHOrbEvaluation value{}; uint32_t damage = 0; uint8_t contacts = 0;
+    Check(PHOrbEvaluateRoute(board,path,options,value,damage,contacts) && value.heartMatches == 1 &&
+        !value.heartFours && !value.hazardsSafe, "legacy thorn policy still requires an exact first-wave heart four");
+    options.allowThornsWithHeartMatch = true;
+    Check(PHOrbEvaluateRoute(board,path,options,value,damage,contacts) && value.hazardsSafe &&
+        value.heartMatches == 1 && !value.heartFours && damage == 40 && contacts == 1,
+        "opt-in accepts a real first-wave heart triple with an affordable thorn contact");
+    for (unsigned fault = 0; fault < 9; ++fault) {
+        auto changed = board; auto limits = options;
+        if (fault == 0) limits.thorns.known = false;
+        if (fault == 1) limits.thorns.hp = 40;
+        if (fault == 2) limits.thorns.pendingDamage = 960;
+        if (fault == 3) changed.types[2] = 1;
+        if (fault == 4) changed.unmatchableColors = 32;
+        if (fault == 5) { changed.spinnerMask = 1; changed.spinnerColors = 33; }
+        if (fault == 6) changed.minErase = 4;
+        if (fault == 7) changed.minMatch = 4;
+        if (fault == 8) limits.thorns.hp = 1001;
+        Check(PHOrbEvaluateRoute(changed,path,limits,value,damage,contacts) && !value.hazardsSafe,
+            "heart-match policy retains HP, pending damage, match-rule, unmatchable and worst-phase gates");
+    }
+    options.thorns.hp = 41;
+    Check(PHOrbEvaluateRoute(board,path,options,value,damage,contacts) && value.hazardsSafe,
+        "heart-match policy permits exactly one HP above the complete damage bound");
+    options.thorns.hp = 1000;
+    options.goals = Goals(PHOrbGoalFour,32);
+    Check(PHOrbEvaluateRoute(board,path,options,value,damage,contacts) && value.hazardsSafe && !value.goalsMet,
+        "thorn permission never downgrades an explicit heart-four goal to three hearts");
+    options.goals = {};
+    for (const auto &cells : std::vector<std::vector<unsigned>>{{0,1,2,3,4},{0,6,12,13,14}}) {
+        auto shaped = ShapeBoard(6,5,{});
+        for (unsigned cell : cells) shaped.types[cell] = 5;
+        shaped.flags[29] = PHOrbFlagThorn; shaped.thornDamage[29] = 4;
+        Check(PHOrbEvaluateRoute(shaped,path,options,value,damage,contacts) && value.hazardsSafe &&
+            value.heartMatches == 1 && !value.heartFours,
+            "valid five-heart lines and L groups satisfy opted-in thorn recovery");
+    }
+    for (unsigned poison : {unsigned(PHOrbPoison),unsigned(PHOrbMortalPoison)}) {
+        auto changed = board;
+        for (unsigned cell : {6u,7u,8u}) changed.types[cell] = uint8_t(poison);
+        options.allowPoisonWithHeartFour = true;
+        Check(PHOrbEvaluateRoute(changed,path,options,value,damage,contacts) && value.heartMatches == 1 &&
+            value.poisonErased == 3 && !value.hazardsSafe,
+            "heart triple cannot satisfy the independent poison or mortal-poison heart-four requirement");
+    }
+    options.allowPoisonWithHeartFour = false;
+    auto falling = ShapeBoard(6,5,{26,27,28});
+    for (unsigned cell : {24u,25u,20u}) falling.types[cell] = 5;
+    falling.flags[5] = PHOrbFlagThorn; falling.thornDamage[5] = 4;
+    path.cells[0] = 4; path.cells[1] = 5; options.goals = Goals(PHOrbGoalMatch,32,1,3);
+    Check(PHOrbEvaluateRoute(falling,path,options,value,damage,contacts) && value.goalsMet &&
+        !value.heartMatches && !value.hazardsSafe,
+        "a deterministic cascade heart triple may meet a match goal but cannot authorize thorn contact");
+    options.goals = {}; options.steps = 2;
+    std::atomic_bool cancel{false};
+    for (auto dimensions : {std::pair<unsigned,unsigned>{6,5},{7,6},{5,4}}) {
+        auto crossing = ShapeBoard(dimensions.first,dimensions.second,{});
+        for (unsigned cell : {0u,1u,2u}) crossing.types[cell] = 5;
+        unsigned n = crossing.width * crossing.height;
+        TapeExcept(crossing,{n-2,n-1}); crossing.fixedStart = uint8_t(n-1);
+        crossing.flags[n-1] |= PHOrbFlagThorn; crossing.thornDamage[n-1] = 4;
+        PHOrbRoute solved{};
+        Check(PHOrbSolve(crossing,options,cancel,solved) == PHOrbSolveStatus::Solved && solved.heartMatches == 1 &&
+            !solved.heartFours && solved.thornContacts == 1 && solved.thornDamage == 40 &&
+            PHOrbEvaluateRoute(crossing,solved,options,value,damage,contacts) && value.hazardsSafe,
+            "all board sizes can solve and independently replay a required crossing with only three hearts");
+        auto strict = options; strict.allowThornsWithHeartMatch = false;
+        Check(PHOrbSolve(crossing,strict,cancel,solved) == PHOrbSolveStatus::Unsafe,
+            "disabling heart-match permission makes the same forced crossing unsafe");
+    }
+}
 static void ThornSolverTests() {
+    ThornHeartMatchTests();
     PHOrbEvaluation evaluation{}; uint32_t damage = 0; uint8_t contacts = 0;
     PHOrbRoute route{}; route.count = 2; route.cells[0] = 28; route.cells[1] = 29;
     auto board = ShapeBoard(6,5,{});

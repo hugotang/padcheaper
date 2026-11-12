@@ -237,6 +237,16 @@ NSDictionary *ColorPhaseTrace(const PHOrbBoard &released, const PHOrbSolveOption
         @"missingInAnyFailedPhase":@(failedUnion),@"missingInAnyFailedPhaseNames":[missingNames componentsJoinedByString:@"／"],
         @"missingSemantics":@"absent allowed alternatives in unmet colour clauses; only additionalColorsNeeded is required"};
 }
+NSDictionary *ThornBudgetTrace(const PHOrbSolveOptions &options) {
+    const auto &t = options.thorns;
+    const bool valid = t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX && t.pendingDamage < t.hp;
+    return @{@"known":@(t.known), @"valid":@(valid),
+        @"hp":t.known ? @(t.hp) : NSNull.null, @"maximumHP":t.known ? @(t.maximumHP) : NSNull.null,
+        @"pendingDamage":t.known ? @(t.pendingDamage) : NSNull.null,
+        @"maximumAdditionalDamage":valid ? @(t.hp - t.pendingDamage - 1) : NSNull.null,
+        @"recoveryPolicy":options.allowThornsWithHeartMatch ? @"first-wave-heart-match" : @"first-wave-heart-four",
+        @"healingEstimated":@NO, @"healingCreditedToBudget":@NO};
+}
 NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &goals) {
     NSMutableArray *hits = [NSMutableArray array], *retained = [NSMutableArray array];
     for (unsigned g = 0; g < goals.count; ++g) [hits addObject:@(value.goalHits[g])];
@@ -250,7 +260,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
         @"linkGroups":@[@(value.linkGroups[0]),@(value.linkGroups[1]),@(value.linkGroups[2]),@(value.linkGroups[3]),@(value.linkGroups[4]),@(value.linkGroups[5])],
         @"hazardsSafe":@(value.hazardsSafe), @"poisonErased":@(value.poisonErased),
         @"mortalPoisonErased":@(value.mortalPoisonErased),
-        @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours)};
+        @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours), @"heartMatches":@(value.heartMatches)};
 }
 NSString *SolveStatusName(PHOrbSolveStatus status) {
     switch (status) {

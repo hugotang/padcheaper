@@ -153,6 +153,15 @@ int main(void) {
         rule[@"below"] = @0; rule[@"source"] = @"body"; rule[@"skill"] = @64787;
         Check(PHOrbSkillRulesValid(@[rule]) && PHOrbRequestForRule(rule).source == PHOrbSkillBody &&
             PHOrbRequestForRule(rule).skill == 64787, "skill source and ID preserve the specified request");
+        rule[@"source"] = @"body_or_assist";
+        Check(PHOrbSkillRulesValid(@[rule]) && PHOrbRequestForRule(rule).source == PHOrbSkillBodyOrAssist &&
+            PHOrbRequestForRule(rule).skill == 64787 &&
+            [PHOrbSkillRuleDescription(rule) containsString:@"滿蓄改用武裝"],
+            "explicit body-first policy preserves the body ID and explains assist fallback");
+        rule[@"required"] = @YES;
+        Check(PHOrbSkillRulesValid(@[rule]), "required fallback is valid but session must reevaluate the rescue effect");
+        rule[@"source"] = @"body_or_anything";
+        Check(!PHOrbSkillRulesValid(@[rule]), "unknown fallback policies cannot silently become automatic");
         printf("Orb rules tests: %s\n", failures ? "FAILED" : "passed");
     }
     return failures ? 1 : 0;

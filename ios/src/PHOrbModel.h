@@ -45,6 +45,7 @@ typedef struct {
     uint8_t retainedAfterConversion[6]; // Preparation only; excludes all existing-orb cascades and new drops.
     bool preparationReady;
     uint8_t poisonErased, unmatchedBombs, heartFours;
+    uint8_t heartMatches; // Valid first-removal heart groups, excluding cascades.
     bool goalsMet, hazardsSafe;
     uint8_t mortalPoisonErased; // Subset of poisonErased; maxima are independent across spinner phases.
 } PHOrbEvaluation;
@@ -100,7 +101,9 @@ typedef struct {
     bool active, bound, temporaryKnown;
 } PHOrbSkillMember;
 
-typedef enum { PHOrbSkillAutomatic, PHOrbSkillBody, PHOrbSkillAssist } PHOrbSkillSource;
+typedef enum { PHOrbSkillAutomatic, PHOrbSkillBody, PHOrbSkillAssist, PHOrbSkillBodyOrAssist } PHOrbSkillSource;
+// BodyOrAssist constrains the current body ID, but permits the charged assist
+// when the native dialog cannot select that body. Its receipt is distinct.
 typedef struct { PHOrbSkillSource source; uint32_t skill; } PHOrbSkillRequest;
 
 enum {
@@ -364,7 +367,7 @@ typedef struct {
     uint8_t combos, erased;
     uint8_t goalHits[PHOrbMaxGoals], goalCount, matchedGoals;
     uint8_t poisonErased, unmatchedBombs;
-    uint8_t thornContacts, heartFours;
+    uint8_t thornContacts, heartFours, heartMatches;
     uint32_t thornDamage;
     uint32_t evaluated, elapsedMS;
     uint8_t searchPasses, backtracks, exploredDepth;

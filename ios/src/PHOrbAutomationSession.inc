@@ -76,6 +76,7 @@
         _historyRules = nil; _historyTimingProfile = nil;
         [self resetRuleTiming];
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        _assistFallbackRules = _confirmedAssistFallbackRules = 0;
         [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
         return;
@@ -93,6 +94,7 @@
         [self resetRuleTiming]; _observedTurn = 1;
         [_onceRules removeAllObjects];
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        _assistFallbackRules = _confirmedAssistFallbackRules = 0;
         [_unavailableReasons removeAllObjects];
         std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
     }
@@ -109,6 +111,7 @@
         // elapsed time or a stop/start never advances the timing clock.
         if (_observedTurn && _observedTurn < NSUIntegerMax) ++_observedTurn;
         _usedRules = _unavailableRules = _confirmedRules = _usedSlots = _usedGroups = _confirmedGroups = 0;
+        _assistFallbackRules = _confirmedAssistFallbackRules = 0;
         _openingPuzzlePending = false;
         [_unavailableReasons removeAllObjects]; _historyResolve = false;
     }
@@ -205,6 +208,7 @@
         const bool timingChanged = rulesChanged || ![_historyTimingProfile isEqual:timingProfile];
         if (rulesChanged || (timingChanged && AcceptedSkillTiming(_skillRules))) {
             _usedRules = _unavailableRules = _confirmedRules = _confirmedGroups = 0;
+            _assistFallbackRules = _confirmedAssistFallbackRules = 0;
             [_unavailableReasons removeAllObjects];
             std::fill(std::begin(_groupNext), std::end(_groupNext), 0);
         }
@@ -356,6 +360,16 @@
     if (_phase == PHOrbSessionPhase::SkillWaiting) {
         ++_auto.skills; _unavailableRules = 0; // Haste may make a formerly unavailable member ready.
         [_unavailableReasons removeAllObjects];
+        if (_assistFallbackRules & (1u << _skillRule)) {
+            // The assist may have an entirely different effect. Reread and
+            // allow a grouped body substitute; never satisfy a required body
+            // rule, advance its rotation clock or consume its once receipt.
+            _confirmedAssistFallbackRules |= 1u << _skillRule;
+            _ruleDecisions[_skillRule] = @"武裝已確認完成，本體規則待重查";
+            [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu 武裝完成，重查盤面與本體規則",
+                (unsigned long)_auto.turn, (unsigned long)_skillRule + 1]];
+            [self waitForAutomationBoard]; return;
+        }
         _confirmedRules |= 1u << _skillRule;
         _ruleDecisions[_skillRule] = @"本回合已確認完成";
         NSUInteger group = [_skillRules[_skillRule][@"group"] unsignedIntegerValue];
@@ -415,12 +429,15 @@
         NSUInteger group = [rule[@"group"] unsignedIntegerValue];
         if (![rule[@"enabled"] boolValue]) { _ruleDecisions[i] = @"已停用"; continue; }
         if ((_confirmedRules & (1u << i)) || (group && (_confirmedGroups & (1u << (group - 1))))) {
-            _ruleDecisions[i] = group ? @"同組本回合已有技能確認完成" : @"本回合已確認完成";
+            _ruleDecisions[i] = (_confirmedAssistFallbackRules & (1u << i)) ? @"武裝已完成；同組本體規則已有技能確認完成" :
+                group ? @"同組本回合已有技能確認完成" : @"本回合已確認完成";
             continue;
         }
         const PHOrbSkillMember *member = &_live.automation.members[slot];
         NSString *unavailable = nil;
-        if (_usedRules & (1u << i)) unavailable = @"本回合已嘗試，但未確認完成";
+        if (_assistFallbackRules & (1u << i)) unavailable = (_confirmedAssistFallbackRules & (1u << i)) ?
+            @"武裝已確認完成；此位置本回合已使用，本體尚未施放" : @"武裝已啟動但未確認完成，不能重複施放";
+        else if (_usedRules & (1u << i)) unavailable = @"本回合已嘗試，但未確認完成";
         else if (_usedSlots & (1u << slot)) unavailable = @"此位置本回合已使用，不能重複施放";
         else if (group && (_usedGroups & (1u << (group - 1)))) unavailable = @"同組本回合已嘗試，但未確認完成";
         else if ([rule[@"once"] boolValue] && [_onceRules containsObject:rule]) unavailable = @"本場一次的使用紀錄已消耗";
@@ -576,15 +593,28 @@
             return;
         }
         _skillWindowWaitAt = 0;
+        const bool assistFallback = result == PHOrbSkillAssistFallbackStarted;
+        if (assistFallback) {
+            _assistFallbackRules |= 1u << _skillRule;
+            NSMutableDictionary *attempt = [_skillAttemptContexts[@(_skillRule)] mutableCopy];
+            attempt[@"assistFallback"] = @YES;
+            attempt[@"skillStartReason"] = reason ?: @"滿蓄改用武裝";
+            _skillAttemptContexts[@(_skillRule)] = [attempt copy];
+            _decisionContexts[_skillRule] = [attempt copy];
+            [self logAutomation:[NSString stringWithFormat:@"第 %lu 回合：規則 %lu %@",
+                (unsigned long)_auto.turn, (unsigned long)_skillRule + 1, attempt[@"skillStartReason"]]];
+        }
         // Rejection can include an uncertain native start. A once rule
         // must not be retried by stopping and immediately starting again.
-        if (result != PHOrbSkillUnavailable && [rule[@"once"] boolValue]) [_onceRules addObject:rule];
+        if (result != PHOrbSkillUnavailable && !assistFallback && [rule[@"once"] boolValue]) [_onceRules addObject:rule];
         NSUInteger group = [rule[@"group"] unsignedIntegerValue];
         if (result != PHOrbSkillUnavailable) {
             _usedRules |= 1u << _skillRule; _usedSlots |= 1u << slot;
-            _ruleLastUseTurns[_skillRule] = _observedTurn;
-            if (group) _groupLastUseTurns[group - 1] = _observedTurn;
-            if (group) _usedGroups |= 1u << (group - 1);
+            if (!assistFallback) {
+                _ruleLastUseTurns[_skillRule] = _observedTurn;
+                if (group) _groupLastUseTurns[group - 1] = _observedTurn;
+                if (group) _usedGroups |= 1u << (group - 1);
+            }
         }
         if (result == PHOrbSkillRejected) {
             _ruleDecisions[_skillRule] = [NSString stringWithFormat:@"停止 · %@", reason ?: @"技能啟動校驗失敗"];
@@ -598,8 +628,8 @@
                 (unsigned long)_auto.turn, (unsigned long)_skillRule + 1, reason ?: @"技能不可用"]];
             [self waitForAutomationBoard];
         } else {
-            _ruleDecisions[_skillRule] = @"技能已啟動，等待遊戲完成";
-            if (group) {
+            _ruleDecisions[_skillRule] = assistFallback ? @"武裝已啟動，等待遊戲完成" : @"技能已啟動，等待遊戲完成";
+            if (group && !assistFallback) {
                 NSUInteger next = (_skillRule + 1) % _skillRules.count;
                 BOOL timed = NO;
                 for (NSDictionary *candidate in _skillRules) if ([candidate[@"enabled"] boolValue] &&

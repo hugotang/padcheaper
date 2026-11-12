@@ -40,6 +40,7 @@
     // The capture is created before mechanism reads or plan validation. A
     // blocked attempt must not borrow a previous route, evaluation or board.
     NSMutableDictionary *trace = [_searchTrace mutableCopy];
+    trace[@"thorns"] = ThornBudgetTrace(_solveOptions);
     PHOrbGoalSet goals{};
     const BOOL goalsKnown = PHOrbReadGoals(_goalPlan[@"goals"], &goals);
     trace[@"status"] = status; trace[@"solverStarted"] = @([status isEqual:@"searching"]);
@@ -124,6 +125,7 @@
             @"executionLimitMS":@(unsigned(RouteExecutionLimit(_preview,_route) * 1000))},
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
+            @"allowThornsWithHeartMatch":@(_solveOptions.allowThornsWithHeartMatch), @"thorns":ThornBudgetTrace(_solveOptions),
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
             @"diagonal":@(_route.diagonal),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
@@ -325,6 +327,7 @@
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
         @"thornComboPriority":@(_thornComboPriority),
+        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
         @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
         @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace,
@@ -338,6 +341,7 @@
         @"hazardsSafe":@(_route.hazardsSafe), @"poisonErased":@(_route.poisonErased), @"unmatchedBombs":@(_route.unmatchedBombs),
         @"mortalPoisonErased":@(_route.mortalPoisonErased),
         @"thornContacts":@(_route.thornContacts), @"thornDamage":@(_route.thornDamage), @"heartFours":@(_route.heartFours),
+        @"heartMatches":@(_route.heartMatches),
         @"thornHPKnown":@(_live.thorns.known), @"thornHP":@(_live.thorns.hp), @"thornMaximumHP":@(_live.thorns.maximumHP),
         @"pendingOrbDamage":@(_live.thorns.pendingDamage),
         @"spinnerMask":@(_live.board.spinnerMask), @"spinnerColors":@(_live.board.spinnerColors),

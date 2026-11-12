@@ -323,6 +323,21 @@ static void MultiplayerSessionTests() {
     MultiplayerNextBoardSessionTests();
     MultiplayerLeaderSessionTests();
     MultiplayerStatusTests();
+    for (unsigned players : {3u,4u,8u}) {
+        FakeOrbEngine *engine = [FakeOrbEngine new]; SetThornRoute(engine); SetMultiplayer(engine,players);
+        engine->live.board.types[3] = 4;
+        // Even an accidentally supplied solo budget cannot enable multiplayer damage.
+        engine->live.thorns = {1000,1000,0,true};
+        PHOrbSession *session = [[PHOrbSession alloc] initWithEngine:engine];
+        Check([session configureSettings:@{@"quality":@"fast", @"mode":@"combo", @"goals":@[], @"rules":@[],
+            @"allowThornsWithHeartMatch":@YES}], "multiplayer thorn policy fixture");
+        Tick(session,engine,Frame()); [session queueOnce];
+        for (unsigned i = 0; i < 2000 && [session.snapshot[@"busy"] boolValue]; ++i) Tick(session,engine,Frame());
+        Check(!engine->stages && !engine->live.moves &&
+            [session.snapshot[@"searchTrace"][@"thorns"][@"known"] isEqual:@NO] &&
+            [session.snapshot[@"searchTrace"][@"thorns"][@"hp"] isEqual:NSNull.null],
+            "heart-match permission retains zero damaging contact in every supported multiplayer mode");
+    }
     for (unsigned players : {3u, 4u, 8u}) for (unsigned seat = 0; seat < players; ++seat) {
         FakeOrbEngine *engine = [FakeOrbEngine new]; SetMultiplayer(engine, players, seat);
         engine->requireHoldForStart = YES; engine->omitResolvingBoard = YES;

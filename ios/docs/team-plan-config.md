@@ -20,7 +20,7 @@
 | formation | 現有 schema 1 編隊格式，六格本體、武裝、等級、技能等級、覺醒、加值及潛覺 |
 | opening | 最多 24 個依序技能步驟；每步 slot、source（body / assist）、monster、assist、skill、afterMonster；0.5.12另接受可選 consumeAssist、puzzleAfter |
 | rotation | 現有最多 12 條循環規則，加上 source、skill、atLeast；0.5.12另支援 intervalMode、startAfter |
-| board | quality、mode、goals、recovery，以及可選 Boolean `thornComboPriority`、`allowPoisonWithHeartFour`；0.5.12另支援 `diagonal` |
+| board | quality、mode、goals、recovery，以及可選 Boolean `thornComboPriority`、`allowPoisonWithHeartFour`；0.5.12另支援 `diagonal`；待建置來源新增 `allowThornsWithHeartMatch` |
 | dungeon / floor | 地下城／子關卡，0 表示不限；不是樓層 wave |
 
 `afterMonster: 0` 表示施放後本體不變；變身步驟填預期圖鑑編號。之後若同一位置還有開場技能，`monster` 必須接續變身後編號。
@@ -31,6 +31,8 @@
 
 0.5.8 的 `thornComboPriority: true` 對應「荊棘盤優先 Combo」，缺省／false 保留較少傷害優先。開啟只調整路線排序，所有接觸仍要求首消心四連及目前 HP 大於完整拖珠傷害；不預支回血。可先選隊伍策略，再在轉珠頁切換；會一併保存於該策略與整包匯出。舊版可繼續匯入未加此欄位的範本；含新欄位的匯出檔需 0.5.8 以上。
 
+2026-11-12 待編譯來源新增 `allowThornsWithHeartMatch: true`，對應「荊棘盤心三連即可」。缺省／false 維持心四連；開啟後，荊棘路徑只需每個轉轉相位都有首批有效心珠消除組（三顆以上，仍遵守不可消／最少消珠規則）。接受使用者確認的隊伍回復能力，不自動估算回復倍率或回血量；目前 HP 必須嚴格大於待結算傷害加完整路徑傷害，不預支回血。指定心四連目標及消毒的心四連條件獨立保留。此選項與所選策略一起保存、匯入匯出，僅接受 JSON Boolean；0.5.46 及之前版本不支援此新欄位。多人仍禁止有傷害的荊棘接觸，取色搜尋的荊棘限制未放寬。建置與待驗證狀態見 [開發記錄](development.md)。
+
 0.5.11 的 `allowPoisonWithHeartFour: true` 對應「心四連時允許消一般毒」，預設／缺省為 false。全部轉轉相位均有首消直線心四連時，允許一般毒消除並優先目標與 Combo；採用使用者已確認的隊伍回復能力，不精算回血或毒傷害。猛毒仍不得消除，爆彈仍須首消全消。此欄位與所選策略原子保存，含欄位的分享檔需 0.5.11 以上；舊範本可照常匯入，再為目前隊伍打開選項。
 
 2026-10-30 0.5.12 新增 `diagonal: true` 對應「斜向轉珠」，缺省／false 仍只走上下左右。開啟可用相鄰八方向，消除與形狀保持橫直規則；與目前設定、所選策略及整包匯出一起保存。只接受 JSON Boolean，數字 1、字串或 null 均拒絕。已交付 0.5.11 不支援此欄位，含 `diagonal` 的普通策略／整包分享檔需 0.5.12 以上；舊版會拒絕新欄位，缺省的舊範本仍可由新源碼匯入。建置及真機狀態見 [開發記錄](development.md)。
@@ -38,6 +40,8 @@
 循環 `source` 預設 `auto`，可選 `body` 或 `assist`；`skill: 0` 表示不限定技能 ID。它們是原生目前技能的約束，不會強制施放未蓄好的武裝或繞過原生冷卻。0.5.8 起，武裝蓄滿而原生允許同進化鏈二選一時，`body` 可選目前本體，仍檢查原生冷卻、珠數與其他使用條件。非同進化鏈會略過本體規則，開場則停在當步；`auto` 保留遊戲預設選擇。需要手動選擇其他子技能的技能仍可能停止等待使用者處理。見 [原生二選一](orb-skill-selection.md)。
 
 循環的樓層保留、輪替組與本場一次條件只作用於 `rotation`，不會取消 `opening` 明列的技能。需要保留的武裝不要列入開場；開場與循環用不同時機，請在預覽時一併核對。
+
+2026-11-12 待建置新增循環來源 `body_or_assist`：「本體優先，滿蓄改用武裝」。`skill` 核對本體 ID；遊戲不能選本體且有效武裝滿蓄時才用武裝，仍須通過原生使用條件。同鏈可選本體但本體條件未滿時不替代。武裝不算本體規則／群組完成，不消耗本體間隔或本場一次；該位置本回合已用，同組其他位置可接續。必要效果未解除仍停止。開場不能使用此來源；既有保存策略不自動更改。詳見[滿蓄調查](orb-assist-overcharge-2026-11-12.md)。
 
 0.5.12 新增兩個循環欄位：`intervalMode` 為 `run`（預設，每次開始重新計算）或 `accepted`（距離同規則／同組上次原生啟動）；`startAfter` 為 0–999 的整數（預設 0）。例如 `every: 2, intervalMode: "accepted", startAfter: 2` 先等兩盤，第 3 盤才啟用，啟動後最早第 5 盤再次嘗試；若當時不可用，後續每盤重查，啟動後重新計算間隔。含這些欄位的檔案需要本批新版；0.5.11 不接受新鍵。
 

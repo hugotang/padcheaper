@@ -670,7 +670,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !expected || slot >= 6 || !frame.ready || !frame.enabled)
         return PHOrbSkillRejected;
-    if (request.source < PHOrbSkillAutomatic || request.source > PHOrbSkillAssist || request.skill >= 0x20000)
+    if (request.source < PHOrbSkillAutomatic || request.source > PHOrbSkillBodyOrAssist || request.skill >= 0x20000)
         return PHOrbSkillRejected;
     PHOrbSnapshot live{};
     if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
@@ -741,9 +741,16 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     bool chosenAssist = known && PHBattleEffectiveAssistAvailable(&source, member.assistCatalogID) &&
         readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown;
-    bool chooseBody = false;
+    const bool preferBody = request.source == PHOrbSkillBodyOrAssist;
+    // An overcharged assist must not hide a stale/mismatched body identity.
+    if (preferBody && (!readiness.baseSkill || readiness.baseSkill >= 0x20000 ||
+        (request.skill && request.skill != unsigned(readiness.baseSkill)))) {
+        if (reason) *reason = @"指定本體技能不符，未改用武裝";
+        return PHOrbSkillUnavailable;
+    }
+    bool chooseBody = false, assistFallback = false;
     SkillChoiceState choice;
-    if (request.source == PHOrbSkillBody && chosenAssist) {
+    if ((request.source == PHOrbSkillBody || preferBody) && chosenAssist) {
         if (!ReadSkillChoice(checked, unsigned(slot), choice)) {
             if (reason) *reason = @"無法確認本體／武裝二選一資格，未施放";
             return PHOrbSkillRejected;
@@ -756,17 +763,23 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             return PHOrbSkillRejected;
         }
         if (!allowed || choice.family[0] != choice.family[1]) {
-            if (reason) *reason = choice.family[0] != choice.family[1] ?
-                @"武裝已蓄滿且與本體不同進化鏈，只能使用武裝；本規則指定本體，已略過" :
-                @"遊戲未提供本體／武裝二選一；本規則指定本體，已略過";
-            return PHOrbSkillUnavailable;
+            if (!preferBody) {
+                if (reason) *reason = [NSString stringWithFormat:@"%@（充能 %u；本體技能 %d／CD %d，武裝技能 %d／合計 CD %d）",
+                    choice.family[0] != choice.family[1] ?
+                    @"武裝已蓄滿且與本體不同進化鏈，只能使用武裝；本規則指定本體，已略過" :
+                    @"遊戲未提供本體／武裝二選一；本規則指定本體，已略過",
+                    member.charge, readiness.baseSkill, readiness.baseCooldown, readiness.assistSkill, readiness.totalCooldown];
+                return PHOrbSkillUnavailable;
+            }
+            assistFallback = true;
+        } else {
+            chooseBody = true;
+            chosenAssist = false;
         }
-        chooseBody = true;
-        chosenAssist = false;
     }
     const uint32_t chosenSkill = chosenAssist ? readiness.assistSkill : readiness.baseSkill;
     if (constrained && (!chosenSkill || chosenSkill >= 0x20000 ||
-        (request.source == PHOrbSkillAssist && !chosenAssist) || (request.skill && request.skill != chosenSkill))) {
+        (request.source == PHOrbSkillAssist && !chosenAssist) || (!assistFallback && request.skill && request.skill != chosenSkill))) {
         if (reason) *reason = [NSString stringWithFormat:@"指定技能不符：目前為%@技能 %u；未施放其他技能",
             chosenAssist ? @"武裝" : @"本體", chosenSkill];
         return PHOrbSkillUnavailable;
@@ -776,6 +789,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         // still checks body cooldown, orb requirements and all native effects.
         available = [self nativeCanUseGame:live.identity.game member:address selector:0 header:frame.header];
         if (!recheck(@"選擇本體後狀態已改變，未啟動技能")) return PHOrbSkillRejected;
+    }
+    if (chooseBody || assistFallback) {
         NativeSkillReadiness current{}; SkillChoiceState currentChoice;
         const BOOL currentKnown = [self nativeSkillReadiness:&current member:address header:frame.header];
         if (!recheck(@"確認本體技能後狀態已改變，未啟動技能") || !currentKnown ||
@@ -830,7 +845,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     SkillChoiceState finalChoice;
     if (!PHReadBattleDungeonMemberRules(checked.identity.impl, finalRules) || !PHBattleSameDungeonMemberRules(&source, &finalRules) ||
         !PHReadU8(live.identity.impl + PHOrbSkillSelectedSourceOffset, &finalSource) || finalSource != selectedSource ||
-        (chooseBody && (!ReadSkillChoice(checked, unsigned(slot), finalChoice) || !(choice == finalChoice)))) {
+        ((chooseBody || assistFallback) && (!ReadSkillChoice(checked, unsigned(slot), finalChoice) || !(choice == finalChoice)))) {
         if (reason) *reason = @"啟動前本體／武裝選擇已改變，未啟動技能";
         return PHOrbSkillRejected;
     }
@@ -842,6 +857,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         accepted.automation.members[slot].state != 2) {
         if (reason) *reason = @"遊戲未確認技能啟動，已停止；請檢查遊戲畫面";
         return PHOrbSkillRejected;
+    }
+    if (assistFallback) {
+        if (reason) *reason = [NSString stringWithFormat:@"武裝滿蓄：已啟動武裝技能 %u（本體 %d；充能 %u／合計 CD %d），等待完成後重查本體規則",
+            chosenSkill, readiness.baseSkill, member.charge, readiness.totalCooldown];
+        return PHOrbSkillAssistFallbackStarted;
     }
     return PHOrbSkillStarted;
 }
