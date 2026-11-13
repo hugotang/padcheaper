@@ -4,6 +4,13 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-13：0.5.47-orbs 編譯測試與交付完成
+
+- [CI 161](https://github.com/hugotang/padcheaper/actions/runs/43249947290) 在來源 `263887d8cb804e6ee29ff50cc22f2e072ecec0b6` 全部通過：原生武裝滿蓄替代、Session 本體／武裝完成分離與後續回合、荊棘三心與傷害限制、策略保存／失敗保全及既有完整回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。一輪通過，產品測試失敗 0，編譯 warning／error 0；上傳工具另有 6 則 Node 廢棄 API 提示，未影響結果。
+- Windows 8P model、solver/model、private guidance 與 public solver smoke 通過，279 份相關來源逐份與 CI 提交核對一致；Windows 沒有 sanitizer runtime。版本 metadata 7 項測試通過。檢視瀏覽器窄螢幕、兩張原生轉珠頁及規則編輯器；轉珠頁截圖是頂部視窗，新荊棘開關以功能探針驗證，未宣稱截圖目視驗證該開關。詳見[完整收據](../research/verification-0.5.47.json)。
+- 新交付為 `E:/ipa/PADCheaper-0.5.47-orbs` 及同名 ZIP。394 份檔案雜湊、ZIP CRC／395 項及逐份內容獨立核對通過。dylib 11,975,344 bytes，SHA-256 `088cd0ef0b6cbed75b909c2c32aaa2ef8c2fa8c8af296673659c59ebcbbd93bb`；ZIP SHA-256 `f39102e2d441a118ae01c0ba3b8f1d8fc096fb0016d318f4b138a44e2f612949`。
+- `device_verified=false`：實際武裝效果、回復量、原荊棘盤可解性及多人同步仍待真機驗收。舊裝置策略須重匯入雨龍範本或手動選「本體優先，滿蓄改用武裝」；荊棘「心三連即可」預設關閉，需為回復足夠的隊伍開啟。包內來源文件是建置快照，完成結果見 `verification.json`；本次只補收據，不重建或改寫交付。
+
 ## 2026-11-12：0.5.47-orbs 編譯測試開始紀錄
 
 - 使用者明確要求「編譯測試」，本輪包含武裝滿蓄替代施放、荊棘心三連政策及診斷修正。Windows 8P model、solver/model、private guidance 與 public solver smoke 已通過；Windows 未使用 sanitizer runtime。準備手動派發 macOS 完整回歸／ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器及四份 iPhone GUI。

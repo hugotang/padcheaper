@@ -7,3 +7,11 @@
 - 手動轉一次也保存求路當時的 HP、待結算傷害和最多額外傷害；離場後的即時零值不會覆蓋當次證據。
 
 取色搜尋仍不支援荊棘盤，多人仍避免有傷害的荊棘接觸。原 log 缺少完整 HP 與實際回血資料，不能宣稱新選項必然解出原盤；真機武裝效果及回復能力仍待驗收。8P 固定技能來源、開場精確技能及多人操作範圍維持原設定。
+
+## 編譯測試與交付收據（2026-11-13）
+
+[CI 161](https://github.com/hugotang/padcheaper/actions/runs/43249947290) 的來源 `263887d8cb804e6ee29ff50cc22f2e072ecec0b6` 完整通過 macOS 原生／Session、ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器及四份 iPhone GUI；Windows 同來源共用核心亦通過。新增武裝替代、三心荊棘政策、儲存失敗保全及多人拒絕案例已實際執行，一輪通過。
+
+交付 `E:/ipa/PADCheaper-0.5.47-orbs` 及同名 ZIP，394 份檔案雜湊、ZIP CRC／395 項逐份核對通過。dylib SHA-256 `088cd0ef0b6cbed75b909c2c32aaa2ef8c2fa8c8af296673659c59ebcbbd93bb`；ZIP SHA-256 `f39102e2d441a118ae01c0ba3b8f1d8fc096fb0016d318f4b138a44e2f612949`。詳見[驗證收據](../research/verification-0.5.47.json)。
+
+包內文件保留建置快照；完成結果以 `verification.json` 為準。`device_verified=false`，上述離線及模擬器測試不代表真機效果已驗證。

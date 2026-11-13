@@ -1,0 +1,89 @@
+{
+  "version": "0.5.47-orbs",
+  "date": "2026-11-13",
+  "status": "verified and delivered",
+  "commit": "263887d8cb804e6ee29ff50cc22f2e072ecec0b6",
+  "ci": {
+    "run": "https://github.com/hugotang/padcheaper/actions/runs/43249947290",
+    "number": 161,
+    "conclusion": "success",
+    "all_steps_successful": true,
+    "product_test_failures": 0,
+    "compiler_warning_or_error_matches": 0,
+    "action_runtime_deprecation_notices": 6,
+    "toolchain": "Xcode 26.6",
+    "coverage": [
+      "macOS full native and Session regressions including overcharged assist fallback and thorn heart-match policy",
+      "ASan/UBSan private guidance and public solver smoke",
+      "iPhoneOS arm64 compile and strict signature",
+      "editor browser regression",
+      "four iPhone first-launch/restart probes including saved thorn policy and failed-save preservation"
+    ]
+  },
+  "windows": {
+    "commit": "263887d8cb804e6ee29ff50cc22f2e072ecec0b6",
+    "status": "passed",
+    "coverage": [
+      "8P model",
+      "orb solver/model",
+      "private shape guidance",
+      "public solver smoke"
+    ],
+    "sanitizer_runtime": false,
+    "source_inputs_compared": 279,
+    "evidence": "verification/windows-tests.log"
+  },
+  "delivery": {
+    "verified_manifest_files": 394,
+    "verified_zip_entries": 395,
+    "commit": "263887d8cb804e6ee29ff50cc22f2e072ecec0b6",
+    "dylib_bytes": 11975344,
+    "dylib_sha256": "088cd0ef0b6cbed75b909c2c32aaa2ef8c2fa8c8af296673659c59ebcbbd93bb",
+    "zip_sha256": "f39102e2d441a118ae01c0ba3b8f1d8fc096fb0016d318f4b138a44e2f612949",
+    "directory": "E:/ipa/PADCheaper-0.5.47-orbs",
+    "zip": "E:/ipa/PADCheaper-0.5.47-orbs.zip",
+    "device_verified": false
+  },
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "visual_review": [
+    "verification/browser/editor-browser/overview-390.png",
+    "verification/gui/overlay-orbs-poison-heart-four.png",
+    "verification/gui/legacy-orbs-poison-heart-four.png",
+    "verification/gui/overlay-orbs-skill-rules.png"
+  ],
+  "evidence_hashes": {
+    "verification/ci-run.log": "684a5aedf1345e8415e0f7036257c3ec638d60d6c03953681916c03a41cb992e",
+    "verification/ci-run.json": "7f605d4ff4361a6892b8ec8d945ce8906ed8988dbadfe2db6e0711e8f424e121",
+    "verification/windows-tests.log": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6",
+    "verification/local-source-manifest.json": "6c3bd2c687363eafdcd372ad8ad1e0a383ccbd71072234e8287130e3b8b3cbfe"
+  },
+  "limits": [
+    "Real-device assist effects, recovery amount and multiplayer synchronization remain unverified.",
+    "The original thorn log lacks its historical HP budget; exact replay or guaranteed solution is not claimed.",
+    "Windows public solver smoke has no sanitizer runtime.",
+    "Reviewed native screenshots show the initial viewport and rule editor; offscreen thorn controls are covered by functional probe assertions, not visual inspection.",
+    "Packaged source notes retain the build-time snapshot; final results are in verification.json and verification/ci-run.json."
+  ],
+  "device_verified": false
+}
