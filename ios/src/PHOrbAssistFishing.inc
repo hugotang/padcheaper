@@ -4,17 +4,17 @@
 #include "PHOrbMonochromeTemplate.h"
 namespace {
 using AssistCounts = std::array<uint8_t, PHOrbBasicTypes>;
-bool MultiFishingBoardValid(const PHOrbBoard &board, int fish) {
+bool MultiFishingBoardValid(const PHOrbBoard &board, int fish, bool allowThornFishing = false) {
     if (!PHOrbBoardValid(&board) || fish < 0 || unsigned(fish) >= unsigned(board.width) * board.height ||
         !(board.spinnerMask & (Bits(1) << fish)) || (board.spinnerColors & ~63u) ||
         PHOrbSpinnerVariants(&board) < 2 || (board.tapeMask & (Bits(1) << fish))) return false;
     for (unsigned i = 0; i < board.width * board.height; ++i)
-        if (board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return false;
+        if ((board.flags[i] & PHOrbFlagLocked) || (!allowThornFishing && (board.flags[i] & PHOrbFlagThorn))) return false;
     return true;
 }
 bool MultiFishingInputValid(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState *recovery, unsigned limit) {
-    if (!MultiFishingBoardValid(board,options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
+    if (!MultiFishingBoardValid(board,options.fishCell,options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
         !TimedFishingActivitySupported(options.activity) || limit > PHOrbAssistFishingMaxExchanges ||
         (board.minErase && board.minErase != 3) || board.minMatch > 5) return false;
     if (!recovery) return true;
@@ -468,7 +468,7 @@ void SelectAssistFishingBeam(std::vector<AssistFishingNode> &next, std::vector<A
     unsigned limit, unsigned fish, const PHOrbSolveOptions &options) {
     const size_t keep = std::min(size_t(limit),next.size());
     std::stable_sort(next.begin(),next.end(),[&](const auto &a, const auto &b) {
-        return Better(a.drag,b.drag,false,options.allowPoisonWithHeartFour,{});
+        return Better(a.drag,b.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{});
     });
     if (keep < 4 || keep == next.size()) { next.resize(keep); beam.swap(next); return; }
     beam.clear(); const size_t elite = keep / 2;
@@ -487,9 +487,11 @@ void SelectAssistFishingBeam(std::vector<AssistFishingNode> &next, std::vector<A
     }
 }
 PHOrbAssistFishingRoute AssistRoute(const AssistFishingNode &node, const PHOrbAssistFishingPlan &plan,
-    unsigned fish, bool diagonal) {
+    unsigned fish, const PHOrbSolveOptions &options) {
     PHOrbAssistFishingRoute route;
-    route.count = node.drag.length; route.fishCell = uint8_t(fish); route.diagonal = diagonal;
+    route.count = node.drag.length; route.fishCell = uint8_t(fish); route.diagonal = options.diagonal;
+    route.allowThornFishing = options.allowThornFishing;
+    route.thornDamage = node.drag.thornDamage; route.thornContacts = node.drag.thornContacts;
     route.exchangeCount = node.entries; route.plan = plan;
     std::copy(node.drag.path.begin(),node.drag.path.begin() + route.count,route.cells);
     std::copy(node.exchanges,node.exchanges + route.exchangeCount,route.exchanges);
@@ -513,7 +515,7 @@ PHOrbMultiFishingInventory PHOrbPlanMultiFishing(const PHOrbBoard &board, const 
 bool PHOrbReplayMultiFishing(const PHOrbBoard &board, const PHOrbMultiFishingRoute &route,
     unsigned through, PHOrbBoard &result) noexcept {
     const auto initial = board; result = {};
-    if (!MultiFishingBoardValid(initial,route.fishCell) || !PHOrbGoalsValid(&route.plan.goals) ||
+    if (!MultiFishingBoardValid(initial,route.fishCell,route.allowThornFishing) || !PHOrbGoalsValid(&route.plan.goals) ||
         route.count < 2 || route.count > PHOrbMaxSteps + 1 || through >= route.count ||
         route.exchangeCount > PHOrbAssistFishingMaxExchanges || !PHOrbCanStartAt(&initial,route.cells[0]) ||
         route.cells[route.count - 1] == route.fishCell || !AssistPlanInventoryValid(initial,route)) return false;
@@ -552,7 +554,8 @@ bool PHOrbEvaluateMultiFishing(const PHOrbBoard &board, const PHOrbMultiFishingR
     const PHOrbSolveOptions &options, const PHOrbAssistRecoveryState *recovery, PHOrbEvaluation &result) noexcept {
     result = {};
     if (!MultiFishingInputValid(board,options,recovery,PHOrbAssistFishingMaxExchanges) ||
-        options.fishCell != route.fishCell || options.diagonal != route.diagonal) return false;
+        options.fishCell != route.fishCell || options.diagonal != route.diagonal ||
+        (route.allowThornFishing && !options.allowThornFishing)) return false;
     PHOrbAssistFishingPlan expected; bool goalLimit = false;
     const PHOrbAssistRecoveryState ordinary{};
     if (!AssistBuildGoals(board,options.goals,recovery ? *recovery : ordinary,route.plan.lCounts,expected,goalLimit) ||
@@ -561,13 +564,19 @@ bool PHOrbEvaluateMultiFishing(const PHOrbBoard &board, const PHOrbMultiFishingR
     PHOrbBoard replay;
     if (!PHOrbReplayMultiFishing(board,route,route.count - 1,replay)) return false;
     auto finalOptions = options; finalOptions.goals = expected.goals;
-    return PHOrbEvaluateMultiFishingBoard(replay,route.fishCell,finalOptions,result);
+    if (!PHOrbEvaluateMultiFishingBoard(replay,route.fishCell,finalOptions,result)) return false;
+    PHOrbRoute path{}; path.count = route.count; path.diagonal = route.diagonal;
+    std::copy(route.cells,route.cells + route.count,path.cells);
+    uint32_t damage = 0; uint8_t contacts = 0;
+    result.hazardsSafe &= PHOrbRemainingThornBudget(&board,&path,0,&options.thorns,&damage,&contacts);
+    if (contacts) result.hazardsSafe &= PHOrbThornRecoverySatisfied(result,options);
+    return true;
 }
 
 bool PHOrbEvaluateMultiFishingBoard(const PHOrbBoard &board, unsigned fishCell,
     const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
-    if (!MultiFishingBoardValid(board,int(fishCell)) || !PHOrbGoalsValid(&options.goals) ||
+    if (!MultiFishingBoardValid(board,int(fishCell),options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
         !TimedFishingActivitySupported(options.activity)) return false;
     try {
         auto context = MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,{},int(fishCell));
@@ -630,6 +639,15 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
             out.searchBudgetExhausted = Clock::now() >= searchDeadline; stamp(); return PHOrbSolveStatus::NoRoute;
         }
         const unsigned size = board.width * board.height, fish = unsigned(options.fishCell);
+        Cells initialThorns{};
+        for (unsigned i = 0; i < size; ++i)
+            initialThorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
+        const auto &t = options.thorns;
+        const bool budgetKnown = t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX && t.pendingDamage < t.hp;
+        const uint32_t thornBudget = budgetKnown ? t.hp - t.pendingDamage - 1 : 0;
+        std::array<uint32_t,128> damageTable{};
+        for (unsigned percent = 1; percent < damageTable.size(); ++percent)
+            damageTable[percent] = PHOrbThornDamage(percent,t.maximumHP);
         const unsigned baselinePlans = out.inventory.count - out.inventory.geometrySelectedPlans;
         const auto searchWeights = FishingSearchWeights(out.inventory);
         bool geometryHasTime = false;
@@ -679,6 +697,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
             for (unsigned cell = 0; cell < size; ++cell) if (PHOrbCanStartAt(&board,cell) &&
                 (!plan.exchangeCount || (board.spinnerColors & (1u << board.types[cell])))) {
                 AssistFishingNode node; std::copy(board.types,board.types + size,node.drag.cells.begin());
+                node.drag.thorns = initialThorns;
                 std::copy(plan.take,plan.take + PHOrbBasicTypes,node.takeLeft.begin());
                 std::copy(plan.leave,plan.leave + PHOrbBasicTypes,node.leaveLeft.begin());
                 node.drag.path[0] = uint8_t(cell); beam.push_back(node);
@@ -709,6 +728,11 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                                 out.searchBudgetExhausted |= candidateTime >= searchDeadline; break;
                             }
                             AssistFishingNode child = parent;
+                            if (child.drag.thorns[target]) {
+                                const uint32_t damage = damageTable[child.drag.thorns[target]];
+                                if (!budgetKnown || uint64_t(child.drag.thornDamage) + damage > thornBudget) continue;
+                                child.drag.thornDamage += damage; ++child.drag.thornContacts;
+                            }
                             if (entry) {
                                 auto &exchange = child.exchanges[child.entries++];
                                 exchange.entry = child.drag.length; exchange.exit = child.drag.length + 1; exchange.take = uint8_t(take);
@@ -719,6 +743,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                             }
                             child.drag.path[child.drag.length++] = uint8_t(target);
                             std::swap(child.drag.cells[current],child.drag.cells[target]);
+                            std::swap(child.drag.thorns[current],child.drag.thorns[target]);
                             const unsigned stillNeeded = 2u * (plan.exchangeCount - child.entries) + unsigned(entry);
                             if (depth + 1 + stillNeeded > steps || !visited.insert(AssistFishingHash(child,size))) continue;
                             child.drag.score = scoreCache.score(child.drag.cells,size,[&]() {
@@ -726,10 +751,16 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                             ++out.evaluated; out.exploredDepth = uint8_t(std::max(unsigned(out.exploredDepth),depth + 1));
                             const bool complete = child.entries == plan.exchangeCount && !entry;
                             child.drag.score.result.goalsMet &= complete;
-                            if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{},true))) {
+                            const bool heartPending = child.drag.thornContacts && !PHOrbThornRecoverySatisfied(child.drag.score.result,options);
+                            if (heartPending) child.drag.score.result.hazardsSafe = false;
+                            if (complete && (!found || Better(child.drag,best.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{},true))) {
                                 best = child; bestPlan = plan; found = true;
                                 solved = child.drag.score.result.goalsMet && child.drag.score.result.hazardsSafe;
                             }
+                            // Intermediate layouts may repair their hearts later.
+                            // The cache holds only color/phase results, never this path's gate.
+                            if (heartPending) child.drag.score.result.hazardsSafe =
+                                ReleaseHazardsSafe(child.drag.score.result,options.allowPoisonWithHeartFour,false);
                             next.push_back(std::move(child));
                             if (solved) break;
                         }
@@ -744,11 +775,21 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
         if (cancelled()) return PHOrbSolveStatus::Cancelled;
         out.searchBudgetExhausted |= Clock::now() >= searchDeadline;
         if (!found || Clock::now() >= deadline) { stamp(); return PHOrbSolveStatus::NoRoute; }
-        const auto route = AssistRoute(best,bestPlan,fish,options.diagonal);
+        const auto route = AssistRoute(best,bestPlan,fish,options);
         PHOrbBoard replay; PHOrbEvaluation checked;
         if (!PHOrbReplayMultiFishing(board,route,route.count - 1,replay) ||
             std::memcmp(replay.types,best.drag.cells.data(),size) ||
             !PHOrbEvaluateMultiFishing(board,route,options,recovery,checked)) { stamp(); return PHOrbSolveStatus::Failed; }
+        PHOrbRoute path{}; path.count = route.count; path.diagonal = route.diagonal;
+        std::copy(route.cells,route.cells + route.count,path.cells);
+        uint32_t damage = 0; uint8_t contacts = 0;
+        const bool budget = PHOrbRemainingThornBudget(&board,&path,0,&options.thorns,&damage,&contacts);
+        if (damage != route.thornDamage || contacts != route.thornContacts ||
+            (checked.hazardsSafe && !budget)) { stamp(); return PHOrbSolveStatus::Failed; }
+        for (unsigned i = 0; i < size; ++i)
+            if ((replay.flags[i] & PHOrbFlagThorn ? replay.thornDamage[i] : 0) != best.drag.thorns[i]) {
+                stamp(); return PHOrbSolveStatus::Failed;
+            }
         const auto reservation = PHOrbReserveMultiFishing(board,route,timing);
         if (cancelled()) return PHOrbSolveStatus::Cancelled;
         stamp();

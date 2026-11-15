@@ -83,6 +83,7 @@ int main(void) {
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
         Check([PHOrbCanonicalSettings(Settings())[@"thornComboPriority"] isEqual:@NO],
             "legacy profile settings keep damage-first thorn ranking");
+        Check([PHOrbCanonicalSettings(Settings())[@"allowThornFishing"] isEqual:@NO], "legacy profile thorn fishing defaults off");
         Check([PHOrbCanonicalSettings(Settings())[@"allowThornsWithHeartMatch"] isEqual:@NO],
             "legacy profiles require heart four for thorn contact");
         Check([PHOrbCanonicalSettings(Settings())[@"allowPoisonWithHeartFour"] isEqual:@NO],
@@ -94,7 +95,9 @@ int main(void) {
             Check(!PHOrbCanonicalSettings(settings), "thorn priority requires a real JSON Boolean");
             [settings removeObjectForKey:@"thornComboPriority"]; settings[@"allowThornsWithHeartMatch"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "thorn recovery permission requires a real JSON Boolean");
-            [settings removeObjectForKey:@"allowThornsWithHeartMatch"]; settings[@"allowPoisonWithHeartFour"] = invalid;
+            [settings removeObjectForKey:@"allowThornsWithHeartMatch"]; settings[@"allowThornFishing"] = invalid;
+            Check(!PHOrbCanonicalSettings(settings), "thorn fishing requires JSON Boolean");
+            [settings removeObjectForKey:@"allowThornFishing"]; settings[@"allowPoisonWithHeartFour"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "poison permission requires a real JSON Boolean");
             [settings removeObjectForKey:@"allowPoisonWithHeartFour"]; settings[@"diagonal"] = invalid;
             Check(!PHOrbCanonicalSettings(settings), "diagonal permission requires a real JSON Boolean");
@@ -156,7 +159,7 @@ int main(void) {
         NSDictionary *original = Library(profiles,@"team",NO);
         NSMutableDictionary *settings = [Settings() mutableCopy]; settings[@"quality"] = @"thorough";
         settings[@"thornComboPriority"] = @YES;
-        settings[@"allowThornsWithHeartMatch"] = @YES;
+        settings[@"allowThornsWithHeartMatch"] = @YES; settings[@"allowThornFishing"] = @YES;
         settings[@"allowPoisonWithHeartFour"] = @YES;
         NSDictionary *updated = PHOrbProfilesUpdatingSettings(original,settings);
         Check(PHOrbProfilesValid(updated) && [PHOrbProfileNamed(updated,@"team")[@"settings"][@"quality"] isEqual:@"thorough"] &&
@@ -167,6 +170,7 @@ int main(void) {
         Check(PHOrbProfilesValid(restored) && [restored isEqual:updated] &&
             [PHOrbProfileNamed(restored,@"team")[@"settings"][@"thornComboPriority"] isEqual:@YES] &&
             [PHOrbProfileNamed(restored,@"team")[@"settings"][@"allowThornsWithHeartMatch"] isEqual:@YES] &&
+            [PHOrbProfileNamed(restored,@"team")[@"settings"][@"allowThornFishing"] isEqual:@YES] &&
             [PHOrbProfileNamed(restored,@"team")[@"settings"][@"allowPoisonWithHeartFour"] isEqual:@YES],
             "profiles, bindings, thorn priority, poison policy and Boolean rules survive JSON persistence");
         NSMutableDictionary *rescue = [PHOrbDefaultSkillRule() mutableCopy];

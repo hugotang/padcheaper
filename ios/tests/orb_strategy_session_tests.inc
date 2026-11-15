@@ -97,7 +97,7 @@ static void StrategySessionTests() {
     NSDictionary *common = @{@"quality":@"fast",@"mode":@"combo",@"goals":@[],@"rules":@[]};
     NSMutableDictionary *cycling = [profile mutableCopy];
     cycling[@"settings"] = @{@"quality":@"fast",@"mode":@"combo",@"goals":@[],@"rules":@[a,b],
-        @"thornComboPriority":@YES,@"allowThornsWithHeartMatch":@YES,@"allowPoisonWithHeartFour":@YES};
+        @"thornComboPriority":@YES,@"allowThornsWithHeartMatch":@YES,@"allowThornFishing":@YES,@"allowPoisonWithHeartFour":@YES};
     library = @{@"schema":@1,@"selected":@"",@"autoSelect":@YES,@"profiles":@[cycling]};
     engine = [FakeOrbEngine new]; session = [[PHOrbSession alloc] initWithEngine:engine];
     Check([session configureProfiles:library] && [session configureSettings:common], "automatic profile starts from different common rules");
@@ -106,12 +106,14 @@ static void StrategySessionTests() {
         "automatic matching starts the profile cycle at its first member");
     Check([session.snapshot[@"thornComboPriority"] isEqual:@YES], "automatic profile selection restores its thorn ranking preference");
     Check([session.snapshot[@"allowThornsWithHeartMatch"] isEqual:@YES], "automatic profile selection restores its thorn recovery policy");
+    Check([session.snapshot[@"allowThornFishing"] isEqual:@YES], "automatic profile selection restores solo thorn fishing preference");
     Check([session.snapshot[@"allowPoisonWithHeartFour"] isEqual:@YES], "automatic matching uses the selected team's poison policy");
     [session queueStop:@"pause matched profile before dragging"];
     for (unsigned i = 0; i < 30; ++i) Tick(session,engine,Frame());
     Check([session configureSettings:common], "idle runtime reload restores the persisted common settings");
     Check([session.snapshot[@"thornComboPriority"] isEqual:@NO], "common settings restore the default thorn priority after stopping");
     Check([session.snapshot[@"allowThornsWithHeartMatch"] isEqual:@NO], "common settings do not inherit the previous team's thorn permission");
+    Check([session.snapshot[@"allowThornFishing"] isEqual:@NO], "common settings do not inherit another team's thorn fishing permission");
     Check([session.snapshot[@"allowPoisonWithHeartFour"] isEqual:@NO], "returning to common settings does not retain another team's poison permission");
     [session queueAutomatic];
     Check(UntilPhase(session,engine,@"turnWaiting") && engine->skillOrder.size() == 1,

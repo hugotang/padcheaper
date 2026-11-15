@@ -148,6 +148,33 @@ static void PHProbePlanStorage(UIWindow *overlay) {
         PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowThornsWithHeartMatch"] isEqual:@YES],
             @"Changing quality or thorn ranking preserves the independent recovery permission");
     } else if (heartMoved) [files moveItemAtPath:heartBackup toPath:path error:NULL];
+    NSDictionary *beforeThornFishing = PHProbeJSON(@"config.json");
+    NSString *fishingBackup = [path stringByAppendingFormat:@".fishing-probe-%@", NSUUID.UUID.UUIDString];
+    BOOL fishingMoved = [files moveItemAtPath:path toPath:fishingBackup error:NULL];
+    BOOL fishingBlocked = fishingMoved && [files createDirectoryAtPath:path withIntermediateDirectories:NO attributes:nil error:NULL];
+    PHProbeCheck(fishingBlocked, @"Thorn fishing test blocks the selected plan's configuration file");
+    if (fishingBlocked) {
+        action(@"orbsThornFishing", @YES);
+        NSDictionary *failed = snapshot();
+        PHProbeCheck([failed[@"config"] isEqual:beforeThornFishing] &&
+            [failed[@"orbState"][@"allowThornFishing"] isEqual:@NO] &&
+            [failed[@"orbState"][@"thornPolicyMessage"] length] > 0,
+            @"Failed thorn fishing save preserves the selected plan and active permission");
+        BOOL repaired = [files removeItemAtPath:path error:NULL] && [files moveItemAtPath:fishingBackup toPath:path error:NULL];
+        PHProbeCheck(repaired, @"Thorn fishing fixture restores the configuration file");
+        if (!repaired) return;
+        action(@"retry", nil); action(@"orbsThornFishing", @YES);
+        NSDictionary *committed = snapshot(), *saved = PHProbeJSON(@"config.json");
+        NSDictionary *selected = profileNamed(configProfiles(saved), library[@"selected"]);
+        PHProbeCheck([saved[@"orbs"][@"allowThornFishing"] isEqual:@YES] &&
+            [selected[@"settings"][@"allowThornFishing"] isEqual:@YES] &&
+            [committed[@"orbState"][@"allowThornFishing"] isEqual:@YES] &&
+            ![committed[@"orbState"][@"thornPolicyMessage"] length],
+            @"Thorn fishing permission is saved atomically with the selected plan");
+        action(@"orbsQuality", @"fast"); action(@"orbsThornPriority", @NO);
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowThornFishing"] isEqual:@YES],
+            @"Changing quality or thorn ranking preserves the independent fishing permission");
+    } else if (fishingMoved) [files moveItemAtPath:fishingBackup toPath:path error:NULL];
     NSDictionary *beforePoison = PHProbeJSON(@"config.json");
     NSString *poisonBackup = [path stringByAppendingFormat:@".poison-probe-%@", NSUUID.UUID.UUIDString];
     BOOL poisonMoved = [files moveItemAtPath:path toPath:poisonBackup error:NULL];

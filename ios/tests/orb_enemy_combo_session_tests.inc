@@ -1,4 +1,38 @@
 static void EnemyComboSessionTests() {
+    // Use the captured route's final color arrangement and one harmless swap
+    // to isolate Auto acceptance from beam speed. Badge inputs are synthetic.
+    for (unsigned form = 0; form < 2; ++form) {
+        FakeOrbEngine *fixture = [FakeOrbEngine new]; SetAssistBoard(fixture,0);
+        auto &board = fixture->live.board;
+        const uint8_t settled[] = {5,0,5,3,3,3,5,5,5,2,3,5,3,3,3,2,3,5,1,1,1,2,5,5,0,4,4,4,5,5};
+        std::copy(settled,settled + 30,board.types);
+        board.tapeMask = ((UINT64_C(1) << 30) - 1) & ~((UINT64_C(1) << 22) | (UINT64_C(1) << 28));
+        for (unsigned i = 0; i < 30; ++i) board.flags[i] = board.tapeMask & (UINT64_C(1) << i) ? PHOrbFlagTape : 0;
+        board.fixedStart = 23;
+        fixture->live.enemyCombo.turns[0] = 3; fixture->live.enemyCombo.thresholds[0] = 14;
+        fixture->live.automation.enemyEffects = PHOrbEnemyComboAbsorb;
+        auto &bonus = fixture->live.enemyCombo.bonus;
+        bonus.valid = true; bonus.count = 5; bonus.attackColors = bonus.awakeningColors[4] = 8;
+        bonus.effects[0] = PHOrbComboEffect{16,2,PHOrbComboAwakenings,0,1,{}};
+        bonus.effects[1] = PHOrbComboEffect{1,4,PHOrbComboGroups,1,2,{3,5,255,255,255}};
+        bonus.effects[2] = PHOrbComboEffect{16,uint16_t(form ? 0 : 2),PHOrbComboAwakenings,2,1,{}};
+        bonus.effects[3] = PHOrbComboEffect{126,uint16_t(form ? 2 : 0),PHOrbComboAwakening,2,1,{}};
+        bonus.effects[4] = PHOrbComboEffect{0,0,PHOrbComboColumns,2,1,{}};
+        NSArray *goals = @[@{@"kind":@"t",@"colors":@8,@"count":@1},
+            @{@"kind":@"four",@"colors":@32,@"count":@1}];
+        PHOrbSession *test = AssistSession(fixture,AssistSettings(NO,goals));
+        Check(UntilPhase(test,fixture,@"turnWaiting") && fixture->releases == 1,
+            "Auto submits seven board Combos with light T, heart four, leader six and badge two");
+        NSDictionary *trace = test.snapshot[@"searchTrace"], *counter = trace[@"enemyCountermeasure"];
+        NSArray *effects = counter[@"bonusEvidence"][@"effects"];
+        Check([counter[@"beforeBonus"] isEqual:@15] && [counter[@"minimumCombo"] isEqual:@7] &&
+            [counter[@"bonusSources"] isEqual:@[@2,@4,@2,@0]] &&
+            [trace[@"evaluation"][@"firstWaveCombos"] isEqual:@7] && effects.count == 5 &&
+            [effects[2 + form][@"creditedCombos"] isEqual:@2] &&
+            [effects[4][@"reason"] isEqual:@"no-native-bonus"],
+            "the accepted seven-plus-eight threshold and native badge evidence survive the Session trace");
+        [test queueStop:@"seven Combo fixture complete"]; Tick(test,fixture,Frame());
+    }
     {
         FakeOrbEngine *fixture = [FakeOrbEngine new]; SetAssistBoard(fixture,0);
         for (unsigned i = 0; i < 30; ++i) if (fixture->live.board.types[i] == 3) fixture->live.board.types[i] = 2;

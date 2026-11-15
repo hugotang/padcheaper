@@ -602,6 +602,14 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
             thornRecovery.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
             @"Thorn recovery switch follows the saved configuration without bypassing game validation");
     }
+    UISwitch *thornFishing = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsThornFishing");
+    PHProbeCheck(thornFishing.enabled && !thornFishing.on, @"Thorn fishing option is configurable and defaults off");
+    for (NSNumber *enabled in @[@YES,@NO]) {
+        thornFishing.on = enabled.boolValue; [thornFishing sendActionsForControlEvents:UIControlEventValueChanged];
+        PHProbeCheck([PHProbeJSON(@"config.json")[@"orbs"][@"allowThornFishing"] isEqual:enabled] &&
+            thornFishing.on == enabled.boolValue && ![(UIButton *)PHProbeFind(orbWindow, @"padcheaper.orbsExecute") isEnabled],
+            @"Thorn fishing switch follows the saved configuration without bypassing game validation");
+    }
     UISwitch *poisonWithHeart = (UISwitch *)PHProbeFind(orbWindow, @"padcheaper.orbsPoisonWithHeartFour");
     PHProbeCheck(poisonWithHeart.enabled, @"Poison and mortal poison with heart four are configurable without enabling game input");
     for (NSNumber *enabled in @[@YES, @NO]) {

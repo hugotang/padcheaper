@@ -1342,21 +1342,9 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
     if (!route.count || route.diagonal != options.diagonal || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
         !(route.fishingExchangeCount ? PHOrbEvaluateMultiFishingBoard(replay,route.fishCell,options,result) :
             PHOrbEvaluateWithOptions(replay,options,result))) return false;
-    Cells thorns{};
-    for (unsigned i = 0; i < board.width * board.height; ++i)
-        thorns[i] = board.flags[i] & PHOrbFlagThorn ? board.thornDamage[i] : 0;
-    uint64_t damage = 0;
-    for (unsigned i = 1; i < route.count; ++i) {
-        const unsigned a = route.cells[i - 1], b = route.cells[i];
-        if (thorns[b]) { ++thornContacts; damage += PHOrbThornDamage(thorns[b], options.thorns.maximumHP); }
-        std::swap(thorns[a], thorns[b]);
-    }
-    thornDamage = uint32_t(std::min(damage, uint64_t(UINT32_MAX)));
-    if (thornContacts) {
-        const auto &t = options.thorns;
-        result.hazardsSafe &= t.known && t.hp > 0 && t.hp <= t.maximumHP && t.maximumHP <= INT32_MAX &&
-            uint64_t(t.pendingDamage) + damage < t.hp && PHOrbThornRecoverySatisfied(result,options);
-    }
+    if (route.allowThornFishing && !options.allowThornFishing) return false;
+    result.hazardsSafe &= PHOrbRemainingThornBudget(&board,&route,0,&options.thorns,&thornDamage,&thornContacts);
+    if (thornContacts) result.hazardsSafe &= PHOrbThornRecoverySatisfied(result,options);
     return true;
 }
 

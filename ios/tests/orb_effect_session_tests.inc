@@ -85,6 +85,10 @@ static void FishSessionTests() {
         }
         Check(seen == 63 && [state[@"goalPlan"][@"enemyComboRequired"] isEqual:@9],
             "a later multi-take attempt cannot reinterpret the single-exchange bound as permission to lower nine Combo");
+        for (NSDictionary *attempt in trace[@"multiFishingAttempts"])
+            if (![attempt[@"minimumFound"] boolValue]) Check(
+                attempt[@"minimumExchanges"] == NSNull.null && ![attempt[@"minimumKnown"] boolValue],
+                "an unsuccessful inventory enumeration exports null instead of the seven-exchange sentinel");
         if ([state[@"phase"] isEqual:@"arming"]) Check(
             [trace[@"multiFishingSelected"] boolValue] && [trace[@"evaluation"][@"goalsMet"] boolValue] &&
             !engine->stages && !engine->releases,

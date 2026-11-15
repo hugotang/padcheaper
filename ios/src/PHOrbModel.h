@@ -385,6 +385,7 @@ typedef struct {
     // legacy single-entry contract above; nonzero requires every entry/exit
     // in the complete list, even when only a prefix is replayed.
     uint8_t fishingExchangeCount;
+    bool allowThornFishing;
     PHOrbFishingExchange fishingExchanges[PHOrbRouteMaxFishingExchanges];
     uint8_t squareRecoveryPasses; // Subset of searchPasses, at most two; same deadline.
 } PHOrbRoute;
@@ -398,6 +399,10 @@ uint64_t PHOrbBlockedCells(const PHOrbBoard *board);
 bool PHOrbCanStartAt(const PHOrbBoard *board, unsigned cell);
 uint32_t PHOrbThornDamage(unsigned percent, uint32_t maximumHP);
 bool PHOrbCanEnterThorn(const PHOrbSnapshot *state, unsigned cell);
+// Current board is the confirmed prefix. Counts only subsequent target-token
+// contacts; holding/waiting and already pending damage are not counted twice.
+bool PHOrbRemainingThornBudget(const PHOrbBoard *board, const PHOrbRoute *route, unsigned confirmed,
+    const PHOrbThornState *thorns, uint32_t *damage, uint8_t *contacts);
 void PHOrbColorCountRange(const PHOrbBoard *board, unsigned color, unsigned *minimum, unsigned *maximum);
 bool PHOrbSameBoard(const PHOrbBoard *a, const PHOrbBoard *b);
 // Spinner colors may advance only by a shared phase. Tokens, gameplay flags,
@@ -439,6 +444,10 @@ bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *min
 // Guaranteed by existing goals only; never discounts the user's own Combo goal.
 unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *state, const PHOrbGoalSet *goals,
                                      unsigned width, unsigned height, unsigned perSource[3]);
+// Same calculation with per-effect credits. All outputs stay zero if the
+// evidence is invalid or the aggregate exceeds the supported bound.
+unsigned PHOrbGuaranteedComboBonusProof(const PHOrbComboBonusState *state, const PHOrbGoalSet *goals,
+    unsigned width, unsigned height, unsigned perSource[3], unsigned perEffect[PHOrbMaxComboEffects]);
 bool PHOrbAdjacent(unsigned a, unsigned b, unsigned width, unsigned height);
 bool PHOrbMoveAdjacent(unsigned a, unsigned b, unsigned width, unsigned height, bool diagonal);
 bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned through, PHOrbBoard *result);

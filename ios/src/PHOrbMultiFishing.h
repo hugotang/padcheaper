@@ -18,6 +18,10 @@ constexpr unsigned PHOrbMultiFishingMaxGeometryStates = 512;
 // valid and active, and adds only currently eligible recovery L allocations.
 // Nonbasic stationary/moved tokens are retained and evaluated under the normal
 // poison/bomb policy, never treated as donors or allowed to enter the spinner.
+// Thorns require options.allowThornFishing. Their metadata follows tokens,
+// including basic-color spinner changes. Every target contact consumes the
+// current HP budget; all terminal phases must satisfy the chosen heart policy.
+// Session authorizes this opt-in only in ordinary single-player.
 // Optional geometry expansion adds up to two exchanges per selected passing
 // inventory, within the original total cap. Baseline order/slots stay intact;
 // extras share the original state/time limits and use at most four free slots.

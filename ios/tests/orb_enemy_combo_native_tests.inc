@@ -130,12 +130,37 @@ static void ComboBonusNativeTests() {
         "effective leader/helper/badge descriptors supply the Uryu T plus light/heart bonuses");
     Check(guest == oldGuest && implBytes == oldImpl && catalogBytes == oldCatalog && !writes && !canUseCalls && !readinessCalls,
         "Combo bonus capture does not mutate guest memory or call native getters");
+    unsigned badgeRecords = 0, emptyBadgeRecords = 0;
+    for (unsigned i = 0; i < state.enemyCombo.bonus.count; ++i) {
+        const auto &effect = state.enemyCombo.bonus.effects[i];
+        if (effect.source != 2) continue;
+        ++badgeRecords;
+        emptyBadgeRecords += !effect.condition && !effect.combos;
+    }
+    Check(badgeRecords == 3 && emptyBadgeRecords == 2,
+        "capture retains inactive badge descriptors without cancelling the eight valid credits");
     // Last-turn activation flags reset at grab; this must not look like a new skill.
     Put<uint16_t>(leader + 288,25865); Put<uint8_t>(helper + 162,198); Put<uint16_t>(badge + 20,25865);
     auto next = CaptureEnemyCombo(engine);
     Check(PHOrbSameEnemyCombo(&state.enemyCombo,&next.enemyCombo),"consumption markers are not bonus-source identity");
     Put<uint16_t>(badge + 22,3); next = CaptureEnemyCombo(engine);
     Check(!PHOrbSameEnemyCombo(&state.enemyCombo,&next.enemyCombo),"changed effective badge amount revokes the previous proof");
+    // Both native badge encodings can request T. Neither may borrow the
+    // leader's amount when the effective badge descriptor is empty.
+    for (unsigned form = 0; form < 4; ++form) {
+        fixture(); engine = [FixtureSkillEngine new];
+        if (form == 1) {
+            Put<uint32_t>(badge,0); Put<uint16_t>(badge + 22,0);
+            Put<uint32_t>(badge + 28,126); Put<uint16_t>(badge + 50,2);
+        }
+        if (form == 2) Put<uint16_t>(badge + 22,0);
+        if (form == 3) Put<uint32_t>(badge,0);
+        state = CaptureEnemyCombo(engine);
+        Check(state.enemyCombo.bonus.valid &&
+            PHOrbGuaranteedComboBonuses(&state.enemyCombo.bonus,&goals,6,5,sources) == (form < 2 ? 8u : 6u) &&
+            sources[0] == 2 && sources[1] == 4 && sources[2] == (form < 2 ? 2u : 0u),
+            "native conjunction and repeated T badges credit independently; missing amount or condition never invents two Combos");
+    }
     for (unsigned provider = 0; provider < 5; ++provider) {
         fixture(); engine = [FixtureSkillEngine new];
         const uintptr_t member = Impl + PHBattleMemberOffset;

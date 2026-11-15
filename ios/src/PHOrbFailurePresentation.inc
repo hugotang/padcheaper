@@ -12,6 +12,7 @@ NSString *FishingSkipReasonMessage(NSString *reason) {
     if ([reason isEqual:@"insufficient-time"] || [reason isEqual:@"insufficient-move-time"]) return @"剩餘原生操作時間不足以保留取色等待及放手時間";
     if ([reason isEqual:@"requires-one-unlocked-spinner"]) return @"單次取色目前需要剛好一個未鎖定的轉轉";
     if ([reason isEqual:@"thorn-token"]) return @"單次取色目前不支援有荊棘的盤面";
+    if ([reason isEqual:@"thorn-use-multi-planner"]) return @"荊棘取色交由逐步計算傷害的連續取色搜尋處理";
     if ([reason isEqual:@"assist-multi-plan-required"]) return @"目前回復目標需要連續取色規劃";
     if ([reason isEqual:@"invalid-goals"]) return @"連續取色目標未通過解析";
     return @"";
@@ -30,8 +31,8 @@ NSString *FishingNotAttemptedMessage(const PHOrbBoard &board, NSString *eligibil
             locked |= (board.flags[i] & PHOrbFlagLocked) != 0;
             thorn |= (board.flags[i] & PHOrbFlagThorn) != 0;
         }
-        [reasons addObject:[NSString stringWithFormat:@"連續取色目前不支援有%@的盤面",
-            locked && thorn ? @"鎖珠及荊棘" : locked ? @"鎖珠" : @"荊棘"]];
+        if (locked) [reasons addObject:thorn ? @"鎖珠與荊棘同在；連續取色仍不支援鎖珠" : @"連續取色目前不支援有鎖珠的盤面"];
+        else [reasons addObject:@"荊棘取色未開啟或此模式不適用；僅單人可選「荊棘盤允許取色」"];
     } else {
         NSString *multi = FishingSkipReasonMessage(multiEligibility);
         if (multi.length && ![multi isEqual:single]) [reasons addObject:multi];

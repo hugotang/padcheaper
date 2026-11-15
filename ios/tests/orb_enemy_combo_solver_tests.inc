@@ -70,6 +70,40 @@ static void EnemyComboSolverTests() {
     bonus.effects[0] = PHOrbComboEffect{126,2,PHOrbComboAwakening,2,1,{}};
     t = Goals(PHOrbGoalT,8,2);
     Check(PHOrbGuaranteedComboBonuses(&bonus,&t,6,5,sources) == 2,"repeated-awakening bonuses credit only the proved first occurrence");
+    unsigned credits[PHOrbMaxComboEffects];
+    bonus.count = 3;
+    bonus.effects[1] = PHOrbComboEffect{16,0,PHOrbComboAwakenings,2,1,{}};
+    bonus.effects[2] = PHOrbComboEffect{0,0,PHOrbComboColumns,2,1,{}};
+    Check(PHOrbGuaranteedComboBonusProof(&bonus,&t,6,5,sources,credits) == 2 &&
+        credits[0] == 2 && !credits[1] && !credits[2],
+        "empty native badge descriptors remain diagnostic evidence without invalidating a supported bonus");
+    bonus.count = 6;
+    for (unsigned i = 0; i < bonus.count; ++i) bonus.effects[i] = PHOrbComboEffect{126,20,PHOrbComboAwakening,2,1,{}};
+    Check(!PHOrbGuaranteedComboBonusProof(&bonus,&t,6,5,sources,credits) &&
+        !sources[0] && !sources[1] && !sources[2] &&
+        std::all_of(credits,credits + PHOrbMaxComboEffects,[](unsigned value){ return value == 0; }),
+        "aggregate overflow clears every diagnostic credit, including earlier valid effects");
+    // Board/path captured from the 0.5.47 stop. The badge is explicit synthetic
+    // evidence: the old log recorded only its zero aggregate, not its inputs.
+    PHOrbBoard recorded{}; recorded.width = 6; recorded.height = 5; recorded.minErase = 3;
+    recorded.fixedStart = 9; recorded.spinnerMask = 1; recorded.spinnerColors = 63;
+    const uint8_t types[] = {5,0,3,2,3,3,5,5,2,3,3,5,3,5,0,1,5,5,3,4,1,3,4,5,1,5,2,5,5,4};
+    std::copy(types,types + 30,recorded.types);
+    PHOrbRoute recordedRoute{};
+    const uint8_t path[] = {8,2,3,8,13,14,9,16,21,26,25,19,13,18,24,19,20,15,21,22,29,28,27,21,26,27,22,21,15,9,2,8,15};
+    recordedRoute.count = sizeof(path); recordedRoute.diagonal = true;
+    std::copy(path,path + sizeof(path),recordedRoute.cells);
+    PHOrbBoard recordedEnd{};
+    auto recordedGoals = Goals(PHOrbGoalT,8,1);
+    recordedGoals.items[recordedGoals.count++] = PHOrbGoal{PHOrbGoalFour,32,1,0};
+    recordedGoals.items[recordedGoals.count++] = PHOrbGoal{PHOrbGoalCombo,0,7,0};
+    recordedGoals.comboFirstWave = recordedGoals.bonusFirstWave = true;
+    Check(PHOrbReplay(&recorded,&recordedRoute,recordedRoute.count - 1,&recordedEnd) &&
+        PHOrbEvaluate(recordedEnd,recordedGoals,result) && result.goalsMet && result.firstWaveCombos == 7,
+        "captured route has first-removal light T, heart four and seven Combos across the spinner phases");
+    recordedGoals.items[2].count = 9;
+    Check(PHOrbEvaluate(recordedEnd,recordedGoals,result) && !result.goalsMet && result.goalHits[2] == 7,
+        "the same recorded route correctly fails when only six bonus Combos are proved");
     goals.items[0].count = 1;
     for (unsigned seed = 1; seed <= 40; ++seed) {
         auto board = Board(6,5,seed);

@@ -108,11 +108,13 @@ NSString *FishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualO
     if (TimeAvailable(state) <= FishWaitSeconds(state) + TimeMargin + 2 * StepDuration(state)) return @"insufficient-time";
     return @"eligible";
 }
-NSString *MultiFishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualOnce, bool automatic) {
+NSString *MultiFishingEligibilityReason(const PHOrbSnapshot &state, bool boundManualOnce, bool automatic, bool allowThornFishing = false) {
     NSString *reason = FishingEligibilityReason(state,boundManualOnce,automatic);
     if (![reason isEqual:@"eligible"]) return reason;
     for (unsigned i = 0; i < state.board.width * state.board.height; ++i)
-        if (state.board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return @"locked-or-thorn-token";
+        if ((state.board.flags[i] & PHOrbFlagLocked) || ((state.board.flags[i] & PHOrbFlagThorn) &&
+            (!allowThornFishing || !PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer))))
+            return @"locked-or-thorn-token";
     return @"eligible";
 }
 bool HasRouteTime(const PHOrbSnapshot &state, const PHOrbRoute &route, double delay = 0) {
@@ -150,6 +152,18 @@ bool MultiFishingReadyToEnter(const PHOrbSnapshot &state, const PHOrbRoute &rout
     return state.orbMotionKnown && state.orbMotion[route.fishCell] == 0 && state.spinnerCountdownKnown &&
         state.spinnerCountdown >= FishMinCountdown && state.board.types[route.fishCell] == exchange.take &&
         (state.board.spinnerColors & (1u << exchange.take));
+}
+
+bool RemainingFishingThornBudget(const PHOrbSnapshot &state, const PHOrbRoute &route, unsigned confirmed) {
+    if (!route.fishing || !route.allowThornFishing) return true;
+    if (!PHBattleIsSinglePlayer(state.identity.entryMode,state.identity.multiplayer)) return false;
+    uint32_t damage = 0; uint8_t contacts = 0;
+    if (!PHOrbRemainingThornBudget(&state.board,&route,confirmed,&state.thorns,&damage,&contacts)) return false;
+    // Past contacts can still be pending at the final hold. Never re-add
+    // their planned cost, and never use the upcoming heart match as HP.
+    const auto &t = state.thorns;
+    return !route.thornContacts || (t.known && t.hp > 0 && t.hp <= t.maximumHP &&
+        t.maximumHP <= INT32_MAX && t.pendingDamage < t.hp);
 }
 bool MultiFishingReadyToRelease(const PHOrbSnapshot &state) {
     if (!state.orbMotionKnown) return false;
@@ -286,6 +300,8 @@ PHOrbRoute ExecutableMultiFishing(const PHOrbMultiFishingResult &result) {
     route.poisonErased = value.poisonErased; route.mortalPoisonErased = value.mortalPoisonErased;
     route.unmatchedBombs = value.unmatchedBombs; route.heartFours = value.heartFours;
     route.heartMatches = value.heartMatches;
+    route.allowThornFishing = path.allowThornFishing;
+    route.thornDamage = path.thornDamage; route.thornContacts = path.thornContacts;
     route.evaluated = result.evaluated; route.elapsedMS = result.elapsedMS;
     route.evaluationCalls = result.evaluationCalls; route.evaluationCacheHits = result.evaluationCacheHits;
     route.searchPasses = result.plansSearched; route.exploredDepth = result.exploredDepth;
@@ -298,7 +314,8 @@ NSDictionary *MultiFishingAttemptDetails(const PHOrbMultiFishingResult &result, 
         [take addObject:@(result.route.plan.take[c])]; [leave addObject:@(result.route.plan.leave[c])];
     }
     const auto &inventory = result.inventory;
-    const bool minimumFound = inventory.valid && inventory.minimumExchanges <= PHOrbMultiFishingMaxExchanges;
+    const bool minimumFound = inventory.valid && inventory.count &&
+        inventory.minimumExchanges <= PHOrbMultiFishingMaxExchanges;
     const bool minimumKnown = minimumFound && inventory.enumerationComplete && !inventory.goalLimit &&
         !inventory.stateLimitReached && !inventory.deadlineReached;
     return @{@"multiFishing":@YES, @"fishCell":@(cell), @"scope":@"target-independent-other-shared-phases",
@@ -313,7 +330,7 @@ NSDictionary *MultiFishingAttemptDetails(const PHOrbMultiFishingResult &result, 
         @"inventoryStates":@(result.inventory.visitedStates), @"inventoryStateLimit":@(result.inventory.stateLimitReached),
         @"inventoryDeadline":@(result.inventory.deadlineReached), @"inventoryPlans":@(result.inventory.feasiblePlans),
         @"selectedPlans":@(result.inventory.count), @"planSelectionTruncated":@(result.inventory.selectionTruncated),
-        @"minimumExchanges":@(result.inventory.minimumExchanges), @"minimumFound":@(minimumFound),
+        @"minimumExchanges":minimumFound ? @(inventory.minimumExchanges) : (id)NSNull.null, @"minimumFound":@(minimumFound),
         @"minimumKnown":@(minimumKnown), @"minimumScope":@"restricted-net-inventory",
         @"plansSearched":@(result.plansSearched), @"planSlicesExpired":@(result.planSlicesExpired),
         @"plansBudgetSkipped":@(result.plansBudgetSkipped),
@@ -369,7 +386,7 @@ struct EightPreparationState {
     PHOrbRoute _route;
     PHOrbSessionPhase _phase;
     NSString *_message, *_quality, *_goalMode;
-    bool _thornComboPriority, _allowThornsWithHeartMatch, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
+    bool _thornComboPriority, _allowThornsWithHeartMatch, _allowThornFishing, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
     bool _assistAwaitingResult;
     double _assistCheckedAt, _enemyComboCheckedAt;
     PHOrbSnapshot _assistReleased;
@@ -536,7 +553,7 @@ struct EightPreparationState {
     if (!quality) return NO;
     return [self configureSettings:@{@"quality":quality, @"mode":_goalMode, @"goals":_manualGoals, @"rules":_skillRules,
         @"recovery":_recovery, @"thornComboPriority":@(_thornComboPriority),
-        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch),
+        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch), @"allowThornFishing":@(_allowThornFishing),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour), @"diagonal":@(_diagonal),
         @"assistRecoveryL":@(_assistRecoveryL)}];
 }
@@ -547,6 +564,7 @@ struct EightPreparationState {
         [_manualGoals isEqual:canonical[@"goals"]] && [_skillRules isEqual:canonical[@"rules"]] &&
         [_recovery isEqual:canonical[@"recovery"]] && _thornComboPriority == [canonical[@"thornComboPriority"] boolValue] &&
         _allowThornsWithHeartMatch == [canonical[@"allowThornsWithHeartMatch"] boolValue] &&
+        _allowThornFishing == [canonical[@"allowThornFishing"] boolValue] &&
         _allowPoisonWithHeartFour == [canonical[@"allowPoisonWithHeartFour"] boolValue] &&
         _diagonal == [canonical[@"diagonal"] boolValue] && _assistRecoveryL == [canonical[@"assistRecoveryL"] boolValue]) return YES;
     [self cancelWorker];
@@ -563,6 +581,8 @@ struct EightPreparationState {
     _solveOptions.thornComboPriority = _thornComboPriority;
     _allowThornsWithHeartMatch = [settings[@"allowThornsWithHeartMatch"] boolValue];
     _solveOptions.allowThornsWithHeartMatch = _allowThornsWithHeartMatch;
+    _allowThornFishing = [settings[@"allowThornFishing"] boolValue];
+    _solveOptions.allowThornFishing = _allowThornFishing;
     _allowPoisonWithHeartFour = [settings[@"allowPoisonWithHeartFour"] boolValue];
     _solveOptions.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     _diagonal = [settings[@"diagonal"] boolValue];
@@ -696,6 +716,7 @@ struct EightPreparationState {
     options.thorns = _preview.thorns;
     options.thornComboPriority = _thornComboPriority;
     options.allowThornsWithHeartMatch = _allowThornsWithHeartMatch;
+    options.allowThornFishing = _allowThornFishing && PHBattleIsSinglePlayer(_preview.identity.entryMode,_preview.identity.multiplayer);
     options.allowPoisonWithHeartFour = _allowPoisonWithHeartFour;
     options.diagonal = _diagonal;
     // Capture the effective budget even for one-shot searches. Automation HP
@@ -722,7 +743,7 @@ struct EightPreparationState {
             @"effects":_preview.automation.valid && _preview.automation.statusKnown ? @(_preview.automation.playerEffects) : NSNull.null,
             @"postPlayerHPKnown":@NO, @"survivalKnown":@NO},
         @"thornComboPriority":@(options.thornComboPriority),
-        @"allowThornsWithHeartMatch":@(options.allowThornsWithHeartMatch), @"thorns":ThornBudgetTrace(options),
+        @"allowThornsWithHeartMatch":@(options.allowThornsWithHeartMatch), @"allowThornFishing":@(options.allowThornFishing), @"thorns":ThornBudgetTrace(options),
         @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
     _skillWindowWaitAt = 0;
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
@@ -782,7 +803,7 @@ struct EightPreparationState {
     const bool boundFishingOnce = _oneShot && _oneShotBound && PHOrbSameTurn(&_oneShotOrigin,&_preview);
     const bool assistFishingOnly = _auto.active() && !_auto.eight() && _assistRecoveryL &&
         [_goalPlan[@"assistRecoveryBlocker"] isEqual:@"insufficient-inventory"] &&
-        [MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active()) isEqual:@"eligible"];
+        [MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active(),options.allowThornFishing) isEqual:@"eligible"];
     if ((![_goalPlan[@"available"] boolValue] && !assistFishingOnly) ||
         !PHOrbReadGoals(assistFishingOnly ? _goalPlan[@"assistRecoveryBaseGoals"] : _goalPlan[@"goals"], &options.goals)) {
         _phase = PHOrbSessionPhase::Blocked; _message = _goalPlan[@"message"] ?: @"求路目標無法解析";
@@ -876,7 +897,7 @@ struct EightPreparationState {
     }
     NSString *const fishingEligibility = FishingEligibilityReason(_preview,boundFishingOnce,_auto.active());
     NSString *const multiEligibility = multiGoalsValid ?
-        MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active()) : @"invalid-goals";
+        MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active(),options.allowThornFishing) : @"invalid-goals";
     const bool multiEligible = [multiEligibility isEqual:@"eligible"];
     PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
     if (!solo) multiTiming.remainingFrames = std::min(multiTiming.remainingFrames,
@@ -897,7 +918,7 @@ struct EightPreparationState {
         if (moving > 0) fishSteps = std::min(options.steps, unsigned(moving / StepDuration(_preview)));
         if (dynamic != 1 || thorns || fishSteps < 2) {
             fishCell = -1; singleEligibility = dynamic != 1 ? @"requires-one-unlocked-spinner" :
-                thorns ? @"thorn-token" : @"insufficient-move-time";
+                thorns ? (options.allowThornFishing ? @"thorn-use-multi-planner" : @"thorn-token") : @"insufficient-move-time";
         }
     }
     NSString *const singleFishingEligibility = singleEligibility;
@@ -1221,6 +1242,10 @@ struct EightPreparationState {
             const bool evaluationValid = selectedMulti ?
                 PHOrbEvaluateMultiFishing(board,multiResult.route,multiCheckOptions,multiNeedsRecovery ? &multiRecovery : nullptr,evaluation) :
                 PHOrbEvaluateRoute(board,route,checkedOptions,evaluation,thornDamage,thornContacts);
+            // Preserve the multi planner's independent-source phase scope,
+            // including a zero-exchange candidate; replay damage separately.
+            if (selectedMulti && evaluationValid)
+                evaluation.hazardsSafe &= PHOrbRemainingThornBudget(&board,&route,0,&checkedOptions.thorns,&thornDamage,&thornContacts);
             if (!PHOrbReplay(&board, &route, route.count - 1, &replay) ||
                 !evaluationValid ||
                 route.thornDamage != thornDamage || route.thornContacts != thornContacts || route.heartFours != evaluation.heartFours ||
@@ -1433,6 +1458,8 @@ struct EightPreparationState {
             [self queueStop:@"拖珠已由遊戲接管，已停止"]; _ownedOrb = 0; _phase = PHOrbSessionPhase::Stopped; _recordingExecution = false; return;
         } else if (!SameFishingPosition(current, _expected, _route)) {
             [self queueStop:@"盤面與已確認步驟不同，已停止"];
+        } else if (!_awaitingStart && !RemainingFishingThornBudget(current,_route,unsigned(_confirmed))) {
+            [self queueStop:@"撈珠期間 HP 或待結算傷害已不夠完成剩餘路徑，已停止並放開"];
         } else if (!_awaitingStart && _target == _confirmed && time - _stepAt >= StepSeconds) {
             if (_route.fishingExchangeCount && _confirmed + 1 == _route.count && !MultiFishingReadyToRelease(current)) {
                 _message = @"路徑完成，等待珠子穩定後核對放手…";

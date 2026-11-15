@@ -42,6 +42,7 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
     NSArray *rules = settings[@"rules"] ?: @[];
     NSDictionary *recovery = settings[@"recovery"] ?: PHOrbDefaultRecovery();
     NSNumber *thornComboPriority = settings[@"thornComboPriority"] ?: @NO;
+    NSNumber *allowThornFishing = settings[@"allowThornFishing"] ?: @NO;
     NSNumber *allowThornsWithHeartMatch = settings[@"allowThornsWithHeartMatch"] ?: @NO;
     NSNumber *allowPoisonWithHeartFour = settings[@"allowPoisonWithHeartFour"] ?: @NO;
     NSNumber *diagonal = settings[@"diagonal"] ?: @NO;
@@ -50,14 +51,14 @@ NSDictionary *PHOrbCanonicalSettings(id settings) {
         ![mode isKindOfClass:NSString.class] || ![@[@"combo", @"manual", @"leaders"] containsObject:mode] ||
         !PHOrbReadGoals(settings[@"goals"], &goals) || ([mode isEqual:@"manual"] && !goals.count) ||
         !PHOrbSkillRulesValid(rules) || !PHOrbRecoveryValid(recovery) || !PHOrbProfileIsBoolean(thornComboPriority) ||
-        !PHOrbProfileIsBoolean(allowThornsWithHeartMatch) ||
+        !PHOrbProfileIsBoolean(allowThornsWithHeartMatch) || !PHOrbProfileIsBoolean(allowThornFishing) ||
         !PHOrbProfileIsBoolean(allowPoisonWithHeartFour) || !PHOrbProfileIsBoolean(diagonal) ||
         !PHOrbProfileIsBoolean(assistRecoveryL)) return nil;
     NSMutableArray *saved = [NSMutableArray array];
     for (NSDictionary *rule in rules) [saved addObject:PHOrbNormalizedSkillRule(rule)];
     return @{@"quality":quality, @"mode":mode, @"goals":PHOrbGoalsJSON(&goals), @"rules":[saved copy],
         @"recovery":[recovery copy], @"thornComboPriority":thornComboPriority,
-        @"allowThornsWithHeartMatch":allowThornsWithHeartMatch,
+        @"allowThornsWithHeartMatch":allowThornsWithHeartMatch, @"allowThornFishing":allowThornFishing,
         @"allowPoisonWithHeartFour":allowPoisonWithHeartFour, @"diagonal":diagonal, @"assistRecoveryL":assistRecoveryL};
 }
 
@@ -87,7 +88,7 @@ BOOL PHOrbProfilesValid(id library) {
             (![record[@"dungeon"] unsignedIntValue] && [record[@"floor"] unsignedIntValue]) ||
             !PHOrbCanonicalSettings(record[@"settings"]) ||
             !KeysWithOptional(record[@"settings"], @[@"quality", @"mode", @"goals", @"rules"],
-                @[@"recovery", @"thornComboPriority", @"allowThornsWithHeartMatch", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return NO;
+                @[@"recovery", @"thornComboPriority", @"allowThornsWithHeartMatch", @"allowThornFishing", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return NO;
         for (id number in record[@"team"]) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
@@ -259,7 +260,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
         !PHDataTargetIsSupported(plan[@"target"]) ||
         !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
         !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
-            @[@"thornComboPriority", @"allowThornsWithHeartMatch", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return nil;
+            @[@"thornComboPriority", @"allowThornsWithHeartMatch", @"allowThornFishing", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return nil;
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;
@@ -392,6 +393,9 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     [lines addObject:[profile[@"settings"][@"allowThornsWithHeartMatch"] boolValue] ?
         @"荊棘盤心三連即可：開啟；每個轉轉相位都需首消有效心珠組，且拖珠傷害低於目前 HP；回復量由使用者確認" :
         @"荊棘盤心三連即可：關閉；接觸荊棘仍要求首消心四連"];
+    [lines addObject:[profile[@"settings"][@"allowThornFishing"] boolValue] ?
+        @"荊棘盤允許取色：開啟；僅單人，仍需通過整條路徑 HP 與首消回復條件" :
+        @"荊棘盤允許取色：關閉"];
     [lines addObject:[profile[@"settings"][@"allowPoisonWithHeartFour"] boolValue] ?
         @"心四連時允許消毒／猛毒：開啟；採用已確認的隊伍回復能力，優先目標與 Combo；邪魔可消，爆彈須首消全消" :
         @"心四連時允許消毒／猛毒：關閉；避免毒／猛毒消除，爆彈須首消全消"];

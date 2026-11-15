@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "date": "2026-11-15",
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "status": "source-only; missing-badge device root cause unresolved",
+  "input": {
+    "path": "build/ios-address-23.6.1/23.6.1/pad",
+    "bytes": 21574784,
+    "sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "ida_metadata_rechecked": true,
+    "device_loaded_image_rechecked": false
+  },
+  "device_log": {
+    "version": "0.5.47-orbs",
+    "dungeon": 7819,
+    "floor": 2,
+    "wave": 1,
+    "auto_turn": 4,
+    "leaders": [
+      14038,
+      14065
+    ],
+    "base_goals": [
+      "light T",
+      "heart four"
+    ],
+    "before_bonus": 15,
+    "bonus_sources": [
+      2,
+      4,
+      0,
+      0
+    ],
+    "required_first_removal_combos": 9,
+    "found_first_removal_combos": 7,
+    "goals_hit": [
+      1,
+      1,
+      7
+    ],
+    "bonus_state_known": true,
+    "badge_effect_inputs_recorded": false
+  },
+  "user_confirmation": {
+    "badge": "T-triggered +2 Combo",
+    "arithmetic": "7 + 2 + 4 + 2 = 15"
+  },
+  "functions": [
+    {
+      "address": "0x10006fb6c",
+      "end_exclusive": "0x100070cd4",
+      "size": 4456,
+      "bytes_sha256": "9080a23486745caa7caa53ae0c07d6baf27bca3a4b557d90394a5f4a3c5435bf"
+    },
+    {
+      "address": "0x100070ee4",
+      "end_exclusive": "0x100071000",
+      "size": 284,
+      "bytes_sha256": "35c9d7b0dd4293f31230c78f1b4895ec643d0b86a1a6121f1d5505c792fa180b"
+    },
+    {
+      "address": "0x100603a08",
+      "end_exclusive": "0x100603b5c",
+      "size": 340,
+      "bytes_sha256": "6ab10beeec6c6dc8a53396a786ac741b257547bf792182a4bcf346c7375639b8"
+    },
+    {
+      "address": "0x100603cb0",
+      "end_exclusive": "0x100603df4",
+      "size": 324,
+      "bytes_sha256": "6948045b668b36126b8fcd06c1b74a5a2a77d8a07fb04558f3df59b54a0dbb62"
+    },
+    {
+      "address": "0x100603df4",
+      "end_exclusive": "0x100604810",
+      "size": 2588,
+      "bytes_sha256": "241b8370ff70f6288076d27c01105f04a89fafd47afcad088f2502e5cdae650b"
+    },
+    {
+      "address": "0x100065194",
+      "end_exclusive": "0x1000652b4",
+      "size": 288,
+      "bytes_sha256": "069a5dc1dcde8507f6a8129e51a52a8bb480dbd5fa2042de302003baecedceef"
+    },
+    {
+      "address": "0x1005a069c",
+      "end_exclusive": "0x1005a078c",
+      "size": 240,
+      "bytes_sha256": "d9f80b65b52ec881dd906f95dd280464cf39c3c63ffa9c1c77f4f159076b7485"
+    },
+    {
+      "address": "0x10056cccc",
+      "end_exclusive": "0x10056cd60",
+      "size": 148,
+      "bytes_sha256": "510b0173754ca578f05ea68b7f37cc71b2623d6ed42545de3acb670e75b0ac36"
+    }
+  ],
+  "guard_checks": [
+    {
+      "name": "PHOrbComboBonusResetRVA",
+      "va": "0x10006a370",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusApplyRVA",
+      "va": "0x10006fb6c",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusLeaderRVA",
+      "va": "0x10006b124",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusBadgeRVA",
+      "va": "0x100070ee4",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusResolveRVA",
+      "va": "0x100603df4",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusAwakeningRVA",
+      "va": "0x100603a08",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusColumnRVA",
+      "va": "0x100603b5c",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusRepeatRVA",
+      "va": "0x100603cb0",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusMatchRVA",
+      "va": "0x1005fc954",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusColorRVA",
+      "va": "0x1005fa450",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusProviderRVA",
+      "va": "0x1005a0194",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusAttackColorsRVA",
+      "va": "0x1005f9e00",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusGroupCreditRVA",
+      "va": "0x1006013c0",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusTCreditRVA",
+      "va": "0x1005ff9f8",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusTProviderRVA",
+      "va": "0x1005fd280",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusAwakeningCreditRVA",
+      "va": "0x1006044a8",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusEquipmentProviderRVA",
+      "va": "0x100481df0",
+      "matches": true
+    },
+    {
+      "name": "PHOrbComboBonusActivationCounterRVA",
+      "va": "0x100065194",
+      "matches": true
+    }
+  ],
+  "native_evidence": [
+    {
+      "address": "0x10006fb6c",
+      "claim": "Effective native badge kinds 27, 28 and 30 populate descriptors at impl+745476, +745504 and +745532. These match the current reader; no offset error was found."
+    },
+    {
+      "address": "0x100070ee4",
+      "claim": "Conjunction badge field2 becomes condition u32+0; field5 becomes bonus u16+22."
+    },
+    {
+      "address": "0x100603a08",
+      "claim": "Conjunction requires each requested activation bit. T is bit4, native awakening126."
+    },
+    {
+      "address": "0x100F184BE",
+      "bytes": "1b0030003c004e007e0016001700180019001a004f00500051002d00320049004a004b004c004d0014005200850086008700",
+      "claim": "25 uint16 activation IDs; element4=126."
+    },
+    {
+      "address": "0x100603cb0",
+      "claim": "Repeated-awakening descriptor condition directly indexes the activation counter. Existing model credits one guaranteed occurrence only."
+    },
+    {
+      "address": "0x100603df4",
+      "claim": "Both native T badge encodings add from descriptor+22 after activation; effective sources share the same activation counters as leaders."
+    },
+    {
+      "address": "0x1005a069c",
+      "claim": "Effective selection can be overridden or suppressed by dungeon/mode rules; selected saved badge is not sufficient action evidence."
+    },
+    {
+      "address": "0x10056cccc",
+      "claim": "Effective badge fields can use an owned prerequisite's record."
+    }
+  ],
+  "changes": [
+    "Retain all three effective badge conditions/amounts, including zero inputs, in bounded action evidence.",
+    "Expose per-effect native amount, credited amount, condition, kind and diagnostic reason, with provider color masks. Use the same model as planning.",
+    "Export null for an absent inventory minimum instead of the internal maxExchanges+1 sentinel."
+  ],
+  "limitations": [
+    "The current log cannot distinguish missing native badge amount from a different effective condition; do not claim the device stop is fixed.",
+    "No hardcoded two-Combo credit, saved-badge override, native getter or guest write was added.",
+    "Synthetic badge fixtures are not captured device badge descriptors.",
+    "No search budget increase, new fishing scope, multiplayer change, CI dispatch, build, version bump or package."
+  ],
+  "pending_tests": [
+    "native two T encodings and empty descriptors",
+    "planning 15 minus 8 equals 7 and stronger saved goal",
+    "captured board/path seven versus nine across spinner phases",
+    "Session accepts seven plus eight with one harmless swap",
+    "null fishing minimum",
+    "macOS Objective-C++ and full suites",
+    "device reproduction with new bonusEvidence"
+  ],
+  "validation": {
+    "source_syntax_only": [
+      "gcc -std=gnu11 -fsyntax-only -Wall -Wextra -Werror -Iios/src ios/src/PHOrbModel.c",
+      "g++ -std=c++17 -fsyntax-only -Wall -Wextra -Werror -Iios/src ios/tests/orb_solver_tests.cpp"
+    ],
+    "test_suites_run": false,
+    "compiled": false,
+    "ci_dispatched": false,
+    "device_verified": false
+  }
+}

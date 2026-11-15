@@ -49,6 +49,8 @@ IDA 資料庫 `E:\ipa\analysis\pad_23.6.0\pad.i64`。只讀原生已套用的有
 
 ## 診斷與待驗證
 
+2026-11-15 補充：0.5.47 停轉 log 的徽章 credit 為 0，但使用者確認消 T +2；原生格式與現有公式沒有找到偏移錯誤。本批保留空徽章描述及逐效果 `bonusEvidence`，已補 7＋6＋2 案例，尚未建置／執行；根因待新版真機明細，見[調查紀錄](orb-combo-badge-2026-11-15.md)。
+
 `goalPlan` 提供 `enemyComboBeforeBonus`、`enemyComboBonus`、`enemyComboBonusSources`（隊長、助人、徽章、技能）、`enemyComboBonusKnown`、`enemyComboBonusFirstWave`；搜尋紀錄有對應欄位，放手評估有 `bonusTriggersFirstWaveRequired`。
 
 雨龍 #14038 的 64794（type 271、T +2）與白哉 #14065 的 64922（type 206、光心 +4）已與卡表及上述原生分支核對。`uryu_t_lottery_test.txt` 不足以確認當次徽章；T +2 徽章只用作合成測試。案例執行情況及實機待驗收清單見 [開發紀錄](development.md)。

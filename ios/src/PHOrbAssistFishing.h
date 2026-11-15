@@ -36,6 +36,9 @@ struct PHOrbAssistFishingRoute {
     uint8_t count = 0, cells[PHOrbMaxSteps + 1]{};
     uint8_t fishCell = 0, exchangeCount = 0;
     bool diagonal = false;
+    bool allowThornFishing = false;
+    uint32_t thornDamage = 0;
+    uint8_t thornContacts = 0;
     PHOrbTimedFishingStep exchanges[PHOrbAssistFishingMaxExchanges]{};
     PHOrbAssistFishingPlan plan{};
 };

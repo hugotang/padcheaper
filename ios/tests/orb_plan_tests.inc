@@ -217,6 +217,14 @@ static void PlanTests(void) {
         "full plans preserve and describe the explicit heart-match thorn policy");
     heartPlan[@"board"][@"allowThornsWithHeartMatch"] = @1;
     Check(!PHOrbProfileFromPlan(heartPlan, NULL), "plan import rejects numeric thorn recovery permission");
+    NSMutableDictionary *fishingPlan = ReadPlanFixture(); fishingPlan[@"board"][@"allowThornFishing"] = @YES;
+    NSDictionary *fishingProfile = PHOrbProfileFromPlan(fishingPlan, &reason);
+    Check(fishingProfile && [PHOrbPlanFromProfile(fishingProfile)[@"board"][@"allowThornFishing"] isEqual:@YES] &&
+        [PHOrbProfileFromPlan(PHOrbPlanFromProfile(fishingProfile), NULL) isEqual:fishingProfile] &&
+        [PHOrbPlanDescription(fishingPlan) containsString:@"荊棘盤允許取色：開啟"],
+        "full plans preserve and describe the explicit thorn fishing policy");
+    fishingPlan[@"board"][@"allowThornFishing"] = @1;
+    Check(!PHOrbProfileFromPlan(fishingPlan, NULL), "plan import rejects numeric thorn fishing permission");
     NSMutableDictionary *poisonPlan = ReadPlanFixture(); poisonPlan[@"board"][@"allowPoisonWithHeartFour"] = @YES;
     NSDictionary *poisonProfile = PHOrbProfileFromPlan(poisonPlan, &reason);
     Check(poisonProfile && [PHOrbPlanFromProfile(poisonProfile)[@"board"][@"allowPoisonWithHeartFour"] isEqual:@YES] &&

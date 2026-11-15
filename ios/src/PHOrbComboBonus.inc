@@ -1,5 +1,5 @@
-// PAD 23.6.0: read the effective battle descriptors populated by 0x10006FB04
-// and 0x10006B0BC. This naturally follows leader swaps, forms, dungeon badge
+// PAD 23.6.1: read the effective battle descriptors populated by 0x10006FB6C
+// and 0x10006B124. This naturally follows leader swaps, forms, dungeon badge
 // overrides and badge upgrades. No saved badge ID or localized card text.
 bool CheckComboBonusCode(uintptr_t header) {
     if (!CheckObservationCode(header)) return false;
@@ -33,8 +33,8 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     mix(&tables.catalog,sizeof(tables.catalog)); mix(&tables.catalogCount,sizeof(tables.catalogCount));
     mix(&tables.skills,sizeof(tables.skills)); mix(&tables.skillCount,sizeof(tables.skillCount));
     auto add = [&](unsigned source, unsigned kind, unsigned condition, unsigned minimum, unsigned combos,
-                   const uint8_t *colors = nullptr) {
-        if (!combos || !condition) return true;
+                   const uint8_t *colors = nullptr, bool retainEmpty = false) {
+        if ((!combos || !condition) && !retainEmpty) return true;
         if (combos > 20 || minimum > PHOrbMaxCells || out.count >= PHOrbMaxComboEffects) return false;
         auto &e = out.effects[out.count++]; e.source = uint8_t(source); e.kind = uint8_t(kind);
         e.condition = condition; e.minimum = uint8_t(minimum); e.combos = uint16_t(combos);
@@ -81,10 +81,13 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
         }
     }
     for (unsigned k = 0; k < 3; ++k) {
+        // Keep all three effective badge descriptors, including zero amounts
+        // and conditions. Otherwise a log cannot distinguish an absent native
+        // bonus from an existing bonus whose trigger was not proved.
         uint8_t effect[28]{};
         if (!PHReadMemory(impl + PHOrbComboBonusBadgeOffset + k * 28,effect,sizeof(effect)) ||
             !add(2,k == 0 ? PHOrbComboAwakenings : k == 1 ? PHOrbComboAwakening : PHOrbComboColumns,
-                u32(effect),1,u16(effect + 22))) return false;
+                u32(effect),1,u16(effect + 22),nullptr,true)) return false;
         mix(effect,20); mix(effect + 22,2);
     }
     // Prove providers from current effective awakenings and attributes. An
@@ -95,6 +98,7 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     unsigned needed = 0;
     for (unsigned i = 0; i < out.count; ++i) {
         const auto &e = out.effects[i];
+        if (!e.combos) continue;
         if (e.kind == PHOrbComboAwakenings) needed |= e.condition & 31u;
         if (e.kind == PHOrbComboColumns) needed |= (e.condition & 31u) << 5;
         if (e.kind == PHOrbComboAwakening)

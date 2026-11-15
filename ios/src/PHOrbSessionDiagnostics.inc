@@ -62,6 +62,7 @@
         @"bonusCombo":_goalPlan[@"enemyComboBonus"] ?: @0,
         @"bonusSources":_goalPlan[@"enemyComboBonusSources"] ?: @[],
         @"bonusStateKnown":_goalPlan[@"enemyComboBonusKnown"] ?: @NO,
+        @"bonusEvidence":_goalPlan[@"enemyComboBonusEvidence"] ?: @{},
         @"beforeBonus":_goalPlan[@"enemyComboBeforeBonus"] ?: @0,
         @"bonusTriggersFirstRemovalOnly":_goalPlan[@"enemyComboBonusFirstWave"] ?: @NO,
         @"firstRemovalOnly":_goalPlan[@"enemyComboFirstWave"] ?: @NO,
@@ -97,6 +98,16 @@
         if (boardRead) {
             record[@"observedBoard"] = BoardTrace(state->board);
             record[@"observedBoardMoves"] = @(state->moves);
+            if (_route.fishing && _route.allowThornFishing) {
+                auto options = _solveOptions; options.thorns = state->thorns;
+                record[@"observedThorns"] = ThornBudgetTrace(options);
+                uint32_t damage = 0; uint8_t contacts = 0;
+                const bool budget = PHOrbRemainingThornBudget(&state->board,&_route,unsigned(_confirmed),
+                    &state->thorns,&damage,&contacts);
+                record[@"remainingThornDamage"] = state->thorns.known ? @(damage) : NSNull.null;
+                record[@"remainingThornContacts"] = @(contacts);
+                record[@"remainingThornBudgetFits"] = @(budget && RemainingFishingThornBudget(*state,_route,unsigned(_confirmed)));
+            }
         }
     }
     if (evaluation) record[@"releaseEvaluation"] = evaluation;
@@ -125,7 +136,7 @@
             @"executionLimitMS":@(unsigned(RouteExecutionLimit(_preview,_route) * 1000))},
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
-            @"allowThornsWithHeartMatch":@(_solveOptions.allowThornsWithHeartMatch), @"thorns":ThornBudgetTrace(_solveOptions),
+            @"allowThornsWithHeartMatch":@(_solveOptions.allowThornsWithHeartMatch), @"allowThornFishing":@(_solveOptions.allowThornFishing), @"thorns":ThornBudgetTrace(_solveOptions),
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),
             @"diagonal":@(_route.diagonal),
             @"evaluated":@(_route.evaluated), @"deadline":@(_route.deadlineReached), @"stepLimit":@(_solveOptions.steps),
@@ -327,7 +338,7 @@
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
         @"thornComboPriority":@(_thornComboPriority),
-        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch),
+        @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch), @"allowThornFishing":@(_allowThornFishing),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
         @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
         @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace,

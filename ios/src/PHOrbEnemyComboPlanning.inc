@@ -1,11 +1,39 @@
 // Included by PHOrbPlanning.m. Adds a current enemy countermeasure after
 // skills, before assist-L candidate expansion; never changes saved goals.
+static NSDictionary *ComboBonusEvidence(const PHOrbComboBonusState *bonus, const PHOrbGoalSet *goals,
+    unsigned width, unsigned height, const unsigned credits[PHOrbMaxComboEffects]) {
+    NSMutableArray *effects = [NSMutableArray array];
+    NSArray *kinds = @[@"link",@"colors",@"groups",@"heart-cross",@"l",@"awakenings",@"columns",@"awakening",@"all-links"];
+    if (bonus->valid && bonus->count <= PHOrbMaxComboEffects) for (unsigned i = 0; i < bonus->count; ++i) {
+        const PHOrbComboEffect *effect = &bonus->effects[i];
+        NSMutableArray *colors = [NSMutableArray array];
+        if (effect->kind == PHOrbComboGroups)
+            for (unsigned k = 0; k < 5; ++k) [colors addObject:@((int8_t)effect->colors[k])];
+        NSString *reason = credits[i] ? @"credited" : !effect->combos ? @"no-native-bonus" :
+            !effect->condition ? @"no-native-condition" : @"not-proven-by-base-goals";
+        PHOrbComboBonusState single = *bonus; single.count = 1; single.effects[0] = *effect;
+        if (!credits[i] && (effect->combos > 20 || effect->source > 2 ||
+            PHOrbGuaranteedComboBonuses(&single,goals,width,height,NULL))) reason = @"invalid-or-overflow";
+        [effects addObject:@{@"source":@(effect->source), @"kind":effect->kind < kinds.count ? kinds[effect->kind] : @"unknown",
+            @"condition":@(effect->condition), @"minimum":@(effect->minimum), @"colors":colors,
+            @"nativeCombos":@(effect->combos), @"creditedCombos":@(credits[i]), @"reason":reason}];
+    }
+    NSMutableArray *providers = [NSMutableArray array];
+    const unsigned awakenings[] = {27,48,60,78,126};
+    if (bonus->valid) for (unsigned i = 0; i < 5; ++i)
+        [providers addObject:@{@"awakening":@(awakenings[i]), @"colors":@(bonus->awakeningColors[i])}];
+    return @{@"known":@(bonus->valid), @"scope":@"effective-battle-descriptors",
+        @"effects":effects, @"awakeningProviders":providers,
+        @"attackColors":bonus->valid ? @(bonus->attackColors) : (id)NSNull.null,
+        @"columnColors":bonus->valid ? @(bonus->columnColors) : (id)NSNull.null};
+}
 NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *state, BOOL automatic) {
     NSMutableDictionary *result = [plan mutableCopy];
     result[@"enemyComboActive"] = @NO; result[@"enemyComboRequired"] = @0; result[@"enemyComboFirstWave"] = @NO;
     result[@"enemyCounterMessage"] = @""; result[@"enemyCounterBlocker"] = @"";
     result[@"enemyComboBonus"] = @0; result[@"enemyComboBonusSources"] = @[@0,@0,@0,@0];
     result[@"enemyComboBeforeBonus"] = @0; result[@"enemyComboBonusFirstWave"] = @NO; result[@"enemyComboBonusKnown"] = @NO;
+    result[@"enemyComboBonusEvidence"] = @{};
     if (!automatic || ![plan[@"available"] boolValue]) return [result copy];
     PHOrbGoalSet goals = {0}; unsigned minimum = 0;
     NSString *blocker = nil, *message = nil;
@@ -27,9 +55,11 @@ NSDictionary *PHOrbPlanWithEnemyCombo(NSDictionary *plan, const PHOrbSnapshot *s
         return [result copy];
     } else {
         const unsigned beforeBonus = minimum;
-        unsigned sources[3] = {0};
-        const unsigned leaderBadge = PHOrbGuaranteedComboBonuses(&state->enemyCombo.bonus,&goals,
-            state->board.width,state->board.height,sources);
+        unsigned sources[3] = {0}, credits[PHOrbMaxComboEffects] = {0};
+        const unsigned leaderBadge = PHOrbGuaranteedComboBonusProof(&state->enemyCombo.bonus,&goals,
+            state->board.width,state->board.height,sources,credits);
+        result[@"enemyComboBonusEvidence"] = ComboBonusEvidence(&state->enemyCombo.bonus,&goals,
+            state->board.width,state->board.height,credits);
         const unsigned active = (int16_t)(uint16_t)(state->enemyCombo.adjustmentTurns << 6) > 0 &&
             state->enemyCombo.adjustment > 0 ? (unsigned)state->enemyCombo.adjustment : 0;
         const unsigned bonus = leaderBadge + active;

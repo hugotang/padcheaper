@@ -47,16 +47,19 @@ static bool ComboAwakeningGoal(const PHOrbComboBonusState *s, const PHOrbGoalSet
             ComboGoalGroups(g,1u << (awakening - 149),3,PHOrbGoalColumn,w,h);
     return false; // Other awakenings need their own native activation proof.
 }
-unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *s, const PHOrbGoalSet *goals,
-                                     unsigned w, unsigned h, unsigned perSource[3]) {
+unsigned PHOrbGuaranteedComboBonusProof(const PHOrbComboBonusState *s, const PHOrbGoalSet *goals,
+    unsigned w, unsigned h, unsigned perSource[3], unsigned perEffect[PHOrbMaxComboEffects]) {
     if (perSource) memset(perSource,0,3 * sizeof(*perSource));
+    if (perEffect) memset(perEffect,0,PHOrbMaxComboEffects * sizeof(*perEffect));
     if (!s || !s->valid || s->count > PHOrbMaxComboEffects || !PHOrbGoalsValid(goals) ||
         !PHOrbDimensionsSupported(w,h)) return 0;
     unsigned sums[3] = {0};
+    unsigned credits[PHOrbMaxComboEffects] = {0};
     static const unsigned awakeningIDs[] = {27,48,60,78,126,22,23,24,25,26,79,80,81,45,50,73,74,75,76,77,20,82,133,134,135};
     for (unsigned i = 0; i < s->count; ++i) {
         const PHOrbComboEffect *e = &s->effects[i]; bool active = false;
-        if (e->source > 2 || !e->combos || e->combos > 20) return 0;
+        if (e->source > 2 || e->combos > 20) return 0;
+        if (!e->combos || !e->condition) continue;
         switch (e->kind) {
             case PHOrbComboAllLinks:
                 active = e->condition && e->condition <= 63 && e->minimum >= 3;
@@ -97,10 +100,16 @@ unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *s, const PHOrbG
             case PHOrbComboAwakening: active = ComboAwakeningGoal(s,goals,e->condition,w,h); break;
             default: break;
         }
-        if (active) sums[e->source] += e->combos;
+        if (active) { sums[e->source] += e->combos; credits[i] = e->combos; }
     }
     const unsigned total = sums[0] + sums[1] + sums[2];
     if (total > 100) return 0; // Do not model native byte-queue overflow.
     if (perSource) memcpy(perSource,sums,sizeof(sums));
+    if (perEffect) memcpy(perEffect,credits,sizeof(credits));
     return total;
+}
+
+unsigned PHOrbGuaranteedComboBonuses(const PHOrbComboBonusState *s, const PHOrbGoalSet *goals,
+                                     unsigned w, unsigned h, unsigned perSource[3]) {
+    return PHOrbGuaranteedComboBonusProof(s,goals,w,h,perSource,NULL);
 }

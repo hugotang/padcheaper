@@ -83,6 +83,29 @@ bool PHOrbCanEnterThorn(const PHOrbSnapshot *state, unsigned cell) {
         (uint64_t)t->pendingDamage + PHOrbThornDamage(state->board.thornDamage[cell], t->maximumHP) < t->hp;
 }
 
+bool PHOrbRemainingThornBudget(const PHOrbBoard *board, const PHOrbRoute *route, unsigned confirmed,
+    const PHOrbThornState *thorns, uint32_t *damage, uint8_t *contacts) {
+    if (damage) *damage = 0;
+    if (contacts) *contacts = 0;
+    if (!PHOrbBoardValid(board) || !route || !thorns || !damage || !contacts || !route->count ||
+        route->count > PHOrbMaxSteps + 1 || confirmed >= route->count ||
+        route->cells[confirmed] >= board->width * board->height) return false;
+    uint8_t percent[PHOrbMaxCells] = {0};
+    for (unsigned i = 0; i < board->width * board->height; ++i)
+        percent[i] = board->flags[i] & PHOrbFlagThorn ? board->thornDamage[i] : 0;
+    uint64_t sum = 0;
+    for (unsigned step = confirmed + 1; step < route->count; ++step) {
+        const unsigned a = route->cells[step - 1], b = route->cells[step];
+        if (!PHOrbMoveAdjacent(a,b,board->width,board->height,route->diagonal)) return false;
+        if (percent[b]) { ++*contacts; sum += PHOrbThornDamage(percent[b],thorns->maximumHP); }
+        const uint8_t held = percent[a]; percent[a] = percent[b]; percent[b] = held;
+    }
+    *damage = sum > UINT32_MAX ? UINT32_MAX : (uint32_t)sum;
+    if (!*contacts) return true;
+    return thorns->known && thorns->hp > 0 && thorns->hp <= thorns->maximumHP && thorns->maximumHP <= INT32_MAX &&
+        (uint64_t)thorns->pendingDamage + sum < thorns->hp;
+}
+
 bool PHOrbCanStartAt(const PHOrbBoard *board, unsigned cell) {
     return board && cell < board->width * board->height && cell < PHOrbMaxCells &&
         !(PHOrbBlockedCells(board) & (UINT64_C(1) << cell)) && (!board->fixedStart || cell + 1 == board->fixedStart);
@@ -623,7 +646,8 @@ static bool FishingListValid(const PHOrbBoard *board, const PHOrbRoute *route) {
         (board->tapeMask & (UINT64_C(1) << route->fishCell))) return false;
     const unsigned size = board->width * board->height;
     for (unsigned i = 0; i < size; ++i)
-        if (board->flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn)) return false;
+        if ((board->flags[i] & PHOrbFlagLocked) ||
+            (!route->allowThornFishing && (board->flags[i] & PHOrbFlagThorn))) return false;
     const uint64_t blocked = board->tapeMask | (board->spinnerMask & ~(UINT64_C(1) << route->fishCell));
     if (route->cells[0] >= size || route->cells[0] == route->fishCell ||
         (blocked & (UINT64_C(1) << route->cells[0]))) return false;

@@ -29,6 +29,34 @@ static void EnemyComboPlanningTests(void) {
     state.enemyCombo.bonus.effects[0] = (PHOrbComboEffect){16,2,PHOrbComboAwakenings,0,1,{0}};
     state.enemyCombo.bonus.effects[1] = (PHOrbComboEffect){1,4,PHOrbComboGroups,1,2,{3,5,255,255,255}};
     state.enemyCombo.bonus.effects[2] = (PHOrbComboEffect){16,2,PHOrbComboAwakenings,2,1,{0}};
+    state.enemyCombo.thresholds[1] = 14;
+    for (unsigned form = 0; form < 2; ++form) {
+        state.enemyCombo.bonus.effects[2] = (PHOrbComboEffect){form ? 126u : 16u,2,
+            form ? PHOrbComboAwakening : PHOrbComboAwakenings,2,1,{0}};
+        plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
+        NSArray *effects = plan[@"enemyComboBonusEvidence"][@"effects"];
+        Check([plan[@"available"] boolValue] && [plan[@"enemyComboBeforeBonus"] isEqual:@15] &&
+            [plan[@"enemyComboRequired"] isEqual:@7] && [plan[@"goals"] containsObject:Goal(@"combo",0,7,0)] &&
+            [plan[@"enemyComboBonusSources"] isEqual:@[@2,@4,@2,@0]] &&
+            [effects[2][@"creditedCombos"] isEqual:@2] && [effects[2][@"reason"] isEqual:@"credited"],
+            "15-Combo threshold needs seven board Combos after either native T-badge encoding and six leader credits");
+        NSDictionary *stronger = PHOrbPlanWithEnemyCombo(
+            RecoveryBase(@[Goal(@"t",8,1,0),Goal(@"four",32,1,0),Goal(@"combo",0,9,0)]),&state,YES);
+        Check([stronger[@"goals"] containsObject:Goal(@"combo",0,9,0)],
+            "badge credit lowers only the enemy requirement, never a saved nine-Combo goal");
+    }
+    state.enemyCombo.bonus.effects[2] = (PHOrbComboEffect){16,2,PHOrbComboAwakenings,2,1,{0}};
+    for (unsigned missing = 0; missing < 3; ++missing) {
+        PHOrbSnapshot absent = state;
+        if (missing == 0) absent.enemyCombo.bonus.effects[2].combos = 0;
+        if (missing == 1) absent.enemyCombo.bonus.effects[2].condition = 0;
+        if (missing == 2) absent.enemyCombo.bonus.effects[2].condition = 1; // Four awakening, not T.
+        NSDictionary *uncredited = PHOrbPlanWithEnemyCombo(base,&absent,YES);
+        NSDictionary *effect = uncredited[@"enemyComboBonusEvidence"][@"effects"][2];
+        Check([uncredited[@"enemyComboRequired"] isEqual:@9] &&
+            [effect[@"reason"] isEqual:@[@"no-native-bonus",@"no-native-condition",@"not-proven-by-base-goals"][missing]],
+            "badge diagnostics distinguish missing native amount, missing condition and unproved trigger");
+    }
     state.enemyCombo.thresholds[1] = 12;
     plan = PHOrbPlanWithEnemyCombo(base,&state,YES);
     Check([plan[@"available"] boolValue] && [plan[@"enemyComboRequired"] isEqual:@5] &&

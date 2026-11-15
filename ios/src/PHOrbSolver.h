@@ -27,6 +27,7 @@ struct PHOrbSolveOptions {
     bool thornComboPriority = false; // Rank Combo ahead of damage within the same strict survival gates.
     bool allowPoisonWithHeartFour = false; // Team policy: poison and mortal poison may clear with a first-wave heart four in every phase.
     bool allowThornsWithHeartMatch = false; // Team policy: any valid first-wave heart match suffices; never credits healing to the HP budget.
+    bool allowThornFishing = false; // Opt-in single-player multi-take planner; same HP/recovery gates.
     bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
     PHOrbActivityObjective activity{}; // Heuristic weights, separate from native scoring.
     // May route through the board's only unlocked spinner once, taking out
