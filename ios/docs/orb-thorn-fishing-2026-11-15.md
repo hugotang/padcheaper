@@ -1,5 +1,7 @@
 # 單人荊棘盤取色
 
+2026-11-15 更新：本批已通過 [CI 162](https://github.com/hugotang/padcheaper/actions/runs/43677924009) 的完整回歸、建置、簽章與四份 iPhone GUI，交付為 0.5.48-orbs。完整結果見[驗證收據](../research/verification-0.5.48.json)；下文原有未測狀態是編寫時紀錄。真機取色／回血與徽章歷史漏算根因仍未驗證。
+
 2026-11-15，使用者要求荊棘珠多、回復足夠時可以開啟 fishing。來源新增「荊棘盤允許取色」`allowThornFishing`，預設 false，與所選策略一起保存；只有普通單人的既有手動／Auto 可使用。已交付 0.5.47 不含本批改動，尚未建置或執行測試。
 
 ## 回復與路徑條件

@@ -1,0 +1,170 @@
+{
+  "version": "0.5.48-orbs",
+  "date": "2026-11-15",
+  "status": "verified and delivered",
+  "commit": "97190229160e69776a9ce34d488c27247e222e61",
+  "ci": {
+    "run": "https://github.com/hugotang/padcheaper/actions/runs/43677924009",
+    "number": 162,
+    "conclusion": "success",
+    "all_steps_successful": true,
+    "attempts": 1,
+    "product_test_failures": 0,
+    "compiler_warning_or_error_matches": 0,
+    "action_runtime_deprecation_notices": 6,
+    "action_node20_deprecation_annotations": 1,
+    "toolchain": "Xcode 26.6",
+    "log_review": "No product test failure, compiler warning/error, AddressSanitizer error or UBSan runtime error found. Six upload-tool deprecation notices and one Node 20 migration annotation are separate.",
+    "coverage": [
+      "macOS full native, model, planning, configuration and Session regressions, including thorn fishing and combo badge evidence",
+      "ASan/UBSan private guidance and public solver smoke",
+      "iPhoneOS arm64 compile and strict signature",
+      "editor browser regression",
+      "four iPhone first-launch/restart probes including thorn fishing persistence and failed-save preservation"
+    ]
+  },
+  "windows": {
+    "commit": "97190229160e69776a9ce34d488c27247e222e61",
+    "status": "passed",
+    "coverage": [
+      "8P model",
+      "orb solver/model, including thorn fishing and combo badge cases",
+      "private shape guidance",
+      "public PHOrbSolve smoke"
+    ],
+    "sanitizer_runtime": false,
+    "source_inputs_compared": 235,
+    "line_ending_comparison": "byte-identical after CRLF/LF normalization; actual input hashes retained",
+    "windows_log_sha256": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6"
+  },
+  "release_metadata_tests": {
+    "count": 7,
+    "status": "passed; also rerun in CI"
+  },
+  "original_thorn_board_probe": {
+    "commit": "97190229160e69776a9ce34d488c27247e222e61",
+    "test": "original thorn board offline diagnostic",
+    "cases": 12,
+    "solved": 8,
+    "goals_unmet": 4,
+    "independent_oracle": "All returned paths checked using independent adjacency, token swaps, thorn target contacts, six terminal spinner colors, match groups and gravity.",
+    "timing": {
+      "recorded_remaining_frames": 472,
+      "recorded_fps": 30,
+      "recorded_spinner_period_frames": 30,
+      "frames_per_move": 2,
+      "settle_frames_per_wait": 6,
+      "input_capture_frames": 12
+    },
+    "observations": [
+      "Unknown historical HP: ordinary search found a 29-step, 8-combo, zero-contact path in both heart policies; diagnostic multi search found a 20-step, one-take, 6-combo zero-contact path requiring 244 assumed frames.",
+      "Hypothetical maximumHP=1000 and HP=1000 or 81 with heart-triple policy: ordinary search found a 17-step, 8-combo path costing 80 HP. This is not evidence of historical HP or actual healing.",
+      "With hypothetical known HP and default heart-four policy, four bounded cases returned goals-unmet. Added legal paths can change beam selection; a failure is not proof of infeasibility.",
+      "Every ordinary search runs before its corresponding multi diagnostic; multi is deliberately invoked even when ordinary succeeds to inspect it, not to reproduce Session fallback selection.",
+      "Only the unknown-HP diagnostic multi cases actually take a spinner orb. Known-HP heart-triple multi cases returned zero-exchange paths; the separate repeated-thorn regression fixture covers damaging fishing."
+    ],
+    "limits": [
+      "No device/native input or timing was tested.",
+      "Timing assumptions use Session formulas on the recorded frame data; live countdown, input and token confirmation remain required.",
+      "Historical planning HP was absent; current HP 0 in the attachment was not reused.",
+      "Desktop timings are single measurements, not iPhone benchmarks.",
+      "All inputs are a sanitized board fixture; private original log is excluded."
+    ],
+    "files": {
+      "thorn-original-fixture.json": "ddd920a2b0217c86a972c5621eb147ebadef84fa52062a64b835a81af38e2d3a",
+      "thorn-original-board.inc": "349e37266eb2e8b12d0b57318e46f3ece86d33ff10a61f749a2ad1eee22e4bc4",
+      "thorn-original-probe.cpp": "dbf85a5e8cf087154bc38d4adecf07201a21a3bb6cadd8121a32ba2ce3ca5a4b",
+      "thorn-original-results.jsonl": "e58bb784221249809ba0637c85ba48263afee002651cd285661a8a9a7173f2e6",
+      "thorn-original-results-initial.jsonl": "aa486157b9e26ce87e78dedca3f8876aa0f2375753a131cc2795527108fdfb9e"
+    },
+    "device_verified": false,
+    "compiler": "g++.exe (Rev8, Built by MSYS2 project) 15.2.0",
+    "compile_flags": [
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Iios/src"
+    ],
+    "linked_objects": {
+      "solver.o": "8a2644300aadfedb820d7b748746ae14be5ace773c43aad50d44c25731a3dc08",
+      "PHOrbModel.o": "e85bc0a971365e5f016cab6c9e1465d3db32fdbf7b8a14425971b890f3fbae0d",
+      "PHBattleModel.o": "37bffe89eed692466f0457cd988b79b437bdea5089c23043374afd03d6a07271",
+      "PHInputModel.o": "ad39d41857c760655183d3d964d499b4cb5f95530e227dc340ebf912bf1beb94"
+    },
+    "execution_exit_code": 0,
+    "execution_context": "Standalone diagnostics call ordinary and multi separately, with 800 ms and 2000 ms budgets. Multi diagnostics include two extra geometry exchanges. This is not an exact Session retry sequence (which uses its initial budget and drops geometry on retry).",
+    "probe_output_revision": "Probe rerun once to retain entry/exit/take/leave for each exchange, allowing complete reproduction. Product sources and linked objects unchanged.",
+    "result_comparison_with_initial": {
+      "status_and_path_equal": true,
+      "changed_cases": []
+    }
+  },
+  "delivery": {
+    "verified_manifest_files": 410,
+    "verified_zip_entries": 411,
+    "commit": "97190229160e69776a9ce34d488c27247e222e61",
+    "dylib_bytes": 11992752,
+    "dylib_sha256": "a145c01732c2431d2e9f568859dd5aef7279a2a3c0e0768973090d0cbfd66104",
+    "zip_sha256": "3ddc6914409d3269f7a6733c4d57fd24f3608727bc60d600489ba11241733233",
+    "directory": "E:/ipa/PADCheaper-0.5.48-orbs",
+    "zip": "E:/ipa/PADCheaper-0.5.48-orbs.zip",
+    "device_verified": false
+  },
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "visual_review": {
+    "images": [
+      "verification/browser/editor-browser/overview-390.png",
+      "verification/browser/editor-browser/save-failure-390.png",
+      "verification/gui/overlay-orbs-poison-heart-four.png",
+      "verification/gui/legacy-orbs-poison-heart-four.png",
+      "verification/gui/overlay-orbs-skill-rules.png"
+    ],
+    "observations": [
+      "390px browser overview retains six-slot team layout and saved state; failed-save screenshot displays retained draft and write-failure feedback.",
+      "Both native windows show the orb panel and disabled input controls under unvalidated target conditions.",
+      "Native rule editor displays the test-induced save failure and preserves original settings.",
+      "Native orb screenshots show only the top viewport. Offscreen thorn switches are covered by executed functional probe assertions, not by visual inspection."
+    ],
+    "device_verified": false
+  },
+  "evidence_hashes": {
+    "verification/ci-run.log": "974307c2a5749b6603a654d44e920b2bfe100b8528028846626367e0fbc8fd78",
+    "verification/ci-run.json": "467bd8db5863ecd5e68537e4bafe0f6dcafad33dfaf387bbf7dee0eaf665702a",
+    "verification/windows-tests.log": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6",
+    "verification/local-source-manifest.json": "36e91e6a2d201bb49e48875321eaaa57e3001c6bb063d9bdca12fa2d03c54124",
+    "verification/windows-result.json": "a1a684118c6faa4968d97a6bc0aff6f6407735dc25f1eec50e64c8b1321789c7",
+    "verification/thorn-original-summary.json": "509f41e709848d82c083c96c4db55b4b3fee250c7a09b27aa40cbb4258871b79",
+    "verification/thorn-original-results.jsonl": "e58bb784221249809ba0637c85ba48263afee002651cd285661a8a9a7173f2e6"
+  },
+  "limits": [
+    "Live thorn fishing, native timing, actual damage/recovery and multiplayer synchronization remain device-unverified.",
+    "The historical T-badge bonus=0 root cause remains unresolved; this release adds native per-effect evidence, not a hardcoded +2.",
+    "The original thorn fixture lacks historical HP. Unknown-HP and hypothetical-HP diagnostics are labeled separately.",
+    "Windows public solver smoke has no sanitizer runtime.",
+    "Source notes in the immutable package retain their build-time status; verification.json records the completed run."
+  ],
+  "device_verified": false
+}

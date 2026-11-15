@@ -4,12 +4,14 @@
 
 ## 最新交付
 
-[0.5.46-orbs](docs/release-0.5.46.md) 已通過 [CI 160](https://github.com/hugotang/padcheaper/actions/runs/43170341092) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-12 交付新資料夾與 ZIP。修正武裝失效後 Auto 讀取誤停，包含恢復後接續案例；`device_verified=false`。
+[0.5.48-orbs](docs/release-0.5.48.md) 已通過 [CI 162](https://github.com/hugotang/padcheaper/actions/runs/43677924009) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-15 交付新資料夾與 ZIP。新增普通單人荊棘取色選項及消 T 徽章診斷；`device_verified=false`，歷史徽章漏算根因待真機明細。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
+| [0.5.48-orbs](docs/release-0.5.48.md) | 2026-11-15 | 普通單人荊棘取色與消 T 徽章診斷；已驗證交付 |
+| [0.5.47-orbs](docs/release-0.5.47.md) | 2026-11-12 | 武裝滿蓄替代與荊棘心三連政策；2026-11-13 已驗證交付 |
 | [0.5.46-orbs](docs/release-0.5.46.md) | 2026-11-12 | 武裝失效後 Auto 讀取誤停修正；已驗證交付 |
 | [0.5.45-orbs](docs/release-0.5.45.md) | 2026-11-11 | 九宮格補搜、較短路徑、連續取色快取；已驗證交付 |
 | [0.5.44-orbs](docs/release-0.5.44.md) | 2026-11-08 | 單人連續取色逾時重試；已驗證交付 |

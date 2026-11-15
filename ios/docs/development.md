@@ -4,6 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-15：0.5.48-orbs 編譯測試與交付完成
+
+- [CI 162](https://github.com/hugotang/padcheaper/actions/runs/43677924009) 在來源 `97190229160e69776a9ce34d488c27247e222e61` 一輪完整通過：荊棘取色與逐步撤銷、單人 Auto／多人排除、徽章加算證據、設定／策略／磁碟保存及既有原生與 Session 回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。產品測試失敗 0；編譯 warning／error 0。工具層提示另列於[收據](../research/verification-0.5.48.json)。
+- Windows 8P model、solver/model、private guidance 與 public solver smoke 通過；235 份 C／C++／header／inc 來源與 CI commit 經 CRLF／LF 正規化後一致，保留實際檔案雜湊。Windows 沒有 sanitizer runtime；metadata 7 項測試通過。
+- 原荊棘盤 12 組獨立逐珠／傷害／六相位消除重播全部一致，8 組求解成功、4 組預設心四連搜尋未達目標。未知歷史 HP 找到 29 步、8 Combo、零接觸普通路，取色診斷找到 20 步、一次取色、零接觸路；假設最大 HP 1000、當前 HP 1000 或 81 且心三連政策時，普通搜尋找到 17 步、8 Combo、傷害 80。假設 HP、離線取色診斷與真實 Session retry 分開標示，不宣稱歷史 HP、手機速度或實際回血已驗證。
+- 已建立新交付 `E:/ipa/PADCheaper-0.5.48-orbs` 及同名 ZIP；410 份檔案雜湊、ZIP CRC／411 項及逐份內容獨立核對通過。dylib 11,992,752 bytes，SHA-256 `a145c01732c2431d2e9f568859dd5aef7279a2a3c0e0768973090d0cbfd66104`；ZIP SHA-256 `3ddc6914409d3269f7a6733c4d57fd24f3608727bc60d600489ba11241733233`。
+- `device_verified=false`。荊棘開關與「心三連即可」依隊伍手動選擇，仍要求途中 HP 不致死；真機時序、傷害／回血與多人同步待驗證。消 T 徽章歷史加算讀為 0 的根因仍待新版 log。本段取代下方本批「待編譯」的狀態；包內來源說明保留建置快照，完成結果在 `verification.json`，舊交付與私人 log 不改。
+
 ## 2026-11-15：0.5.48-orbs 編譯測試開始
 
 - 使用者明確要求「編譯測試」，本輪包含單人荊棘取色、逐步 HP 預算與消 T 徽章加算診斷。Windows 8P model、solver/model、private guidance 及 public solver smoke 全部通過（Windows 無 sanitizer runtime）；接續手動派發 macOS 完整原生／Session、ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器與四份 iPhone GUI。結果待完成後追加。
