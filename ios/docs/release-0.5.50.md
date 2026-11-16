@@ -1,5 +1,7 @@
 # 0.5.50-orbs：固定隊伍版本讀取與 B1 技能診斷
 
+2026-11-17 完成：已通過 [CI 165](https://github.com/hugotang/padcheaper/actions/runs/43929572460) 完整 macOS 回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone GUI；Windows 核心回歸及 246 份來源與 CI commit 核對通過，新交付資料夾與 ZIP 已獨立驗證。詳見[驗證收據](../research/verification-0.5.50.json)。`device_verified=false`，B1 實際技能仍缺真機證據，不能宣稱原停轉已修復。
+
 目標為日服 PAD 23.6.1／107553，arm64、iOS 15.0 以上。使用者已於 2026-11-17 要求編譯測試；本文件為建置來源說明，結果以[開發紀錄](development.md)及交付內 `verification.json` 為準。
 
 - 單人固定隊伍的隊長讀取支援專用圖鑑版本，核對實際原生記錄、隊長技與來源位置，並在雙讀後重新確認表格、密鑰及身分。

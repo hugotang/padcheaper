@@ -4,6 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-17：0.5.50-orbs 編譯測試與交付完成
+
+- [CI 165](https://github.com/hugotang/padcheaper/actions/runs/43929572460) 於來源 `a2561ab038b092d0e47c6e72bb286b7d14f807e0` 完整通過：固定版本隊長／武裝技能／CD／覺醒、L 解武裝及 Combo 提供者、完整版本身分、技能拒絕明細與固定計畫進度、既有 macOS 原生／Session 回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。產品失敗、編譯 warning／error 與 sanitizer error 均為 0；工具提示詳見[驗證收據](../research/verification-0.5.50.json)。
+- Windows 8P model、solver/model、private guidance 與 public solver smoke 通過，測試期間來源未變；246 份來源以 LF 正規化 SHA-256 與 CI commit 逐份核對一致。Windows 未使用 sanitizer runtime；ASan/UBSan 結果來自本輪 macOS CI。獨立來源審查與本輪畫面檢視收據分別保留。
+- 已建立 `E:/ipa/PADCheaper-0.5.50-orbs` 與同名 ZIP；415 份檔案雜湊及 ZIP CRC／416 項內容獨立核對通過。dylib 12,063,680 bytes，SHA-256 `2ad0d8f24ad6992777da10a88264733fb69ee4f84f456c195b287533295964c7`；ZIP SHA-256 `bde7c068187173fa735b0a00a32acac8f94da463983f48c17fab1522b6d8293e`。
+- `device_verified=false`。0.5.49 B1 紀錄缺少實際原生技能 ID，這版改善專用版本讀取與拒絕診斷，不能宣稱原停轉已修好；固定技能來源、B1 實際差異、時序、傷害／回血、15 層通關及多人同步仍待真機確認。
+- 本段取代下方本批待編譯狀態。交付保留建置時文件快照，完成結果見包內 `verification.json`；私人 log 與所有舊版交付未改動，CI 維持手動觸發。本次收尾僅更新完成收據與文件，未重建 dylib。
+
 ## 2026-11-17：0.5.50-orbs 編譯測試開始
 
 - 使用者引用前一聊天並明確要求「編譯測試」。本輪包含固定隊伍專用版本的隊長／武裝／技能／CD／覺醒讀取、L 解武裝與 Combo 提供者、完整版本身分，以及 B1 技能不符與固定計畫進度診斷。

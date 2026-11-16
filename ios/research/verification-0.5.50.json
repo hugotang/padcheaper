@@ -1,0 +1,1834 @@
+{
+  "version": "0.5.50-orbs",
+  "commit": "a2561ab038b092d0e47c6e72bb286b7d14f807e0",
+  "verification_date": "2026-11-16T19:04:49.224041+00:00",
+  "sha256": "2ad0d8f24ad6992777da10a88264733fb69ee4f84f456c195b287533295964c7",
+  "size_bytes": 12063680,
+  "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/43929572460",
+  "ci_conclusion": "success",
+  "ci_required_steps": {
+    "Set up job": "success",
+    "Checkout": "success",
+    "Show iOS SDK toolchain": "success",
+    "Validate target and run protocol tests": "success",
+    "Compile arm64 iPhoneOS dylib": "success",
+    "Verify editor save and mobile interactions": "success",
+    "Upload editor browser diagnostics": "success",
+    "Inspect Mach-O and signature": "success",
+    "Upload dylib and installation notes": "success",
+    "Verify floating GUI in iOS Simulator": "success",
+    "Upload GUI probe diagnostics": "success",
+    "Build summary": "success",
+    "Post Checkout": "success",
+    "Complete job": "success"
+  },
+  "native_tests": "passed on the same macOS CI run",
+  "editor_browser_tests": "passed",
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "device_verified": false,
+  "windows_tests": "All Windows core suites passed; 246 captured source files match the CI commit after LF normalization; no Windows sanitizer runtime.",
+  "limitations": [
+    "The original 0.5.49 B1 rejection lacks the actual native skill ID. This release improves fixed-variant reading and diagnostics; it does not prove that the original B1 stop is fixed.",
+    "Windows runs model/solver/private-guidance/public-solver smoke tests without a sanitizer runtime. ASan/UBSan evidence is from the same successful macOS CI run.",
+    "Source review is read-only inspection, not native test execution or physical-device verification.",
+    "Native fixed-team skill sources, B1 actual skill IDs, timing, target coordinates, 15-floor completion, damage/healing and multiplayer synchronization still require device verification.",
+    "Private logs were excluded from the commit and delivery. Earlier delivered folders and archives remain immutable. The workflow remains manual-only."
+  ],
+  "date": "2026-11-17",
+  "status": "verified and delivered",
+  "ci": {
+    "run": "https://github.com/hugotang/padcheaper/actions/runs/43929572460",
+    "number": 165,
+    "conclusion": "success",
+    "all_steps_successful": true,
+    "log_review": {
+      "product_test_failures": 0,
+      "compiler_warning_or_error_matches": 0,
+      "sanitizer_error_matches": 0,
+      "toolchain": "Xcode 26.6",
+      "compiler_diagnostics": [],
+      "product_failures": [],
+      "sanitizer_diagnostics": [],
+      "tool_notices": [
+        "build\tUpload editor browser diagnostics\t2026-11-16T18:50:08.1732210Z (node:24582) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload editor browser diagnostics\t2026-11-16T18:50:09.1924500Z (node:24582) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tUpload dylib and installation notes\t2026-11-16T18:50:12.8733110Z (node:24850) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload dylib and installation notes\t2026-11-16T18:50:14.6715480Z (node:24850) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tUpload GUI probe diagnostics\t2026-11-16T19:02:10.9593580Z (node:37666) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload GUI probe diagnostics\t2026-11-16T19:02:11.8389040Z (node:37666) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tComplete job\t2026-11-16T19:02:28.5717870Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+      ],
+      "log_review": "Scanned the completed run for product failures, compiler warnings/errors and sanitizer errors; all tool notices retained separately."
+    },
+    "coverage": [
+      "macOS complete native/model/planning/configuration/Session regressions, including solo fixed variants, assist skills/CD/awakenings, L recovery and Combo providers, precise skill rejection and retained fixed-plan diagnostics",
+      "ASan/UBSan private guidance and public solver smoke",
+      "arm64 iPhoneOS compile and strict code signature verification",
+      "browser editor regressions",
+      "four iPhone first-launch/restart GUI probes, including copied fixedPlanProgress diagnostics"
+    ]
+  },
+  "windows": {
+    "schema": 1,
+    "started_at_utc": "2026-11-16T18:29:15.289460+00:00",
+    "finished_at_utc": "2026-11-16T18:29:46.207639+00:00",
+    "elapsed_seconds": 30.918179,
+    "exit_code": 0,
+    "source_files": 246,
+    "source_changes_during_test": [],
+    "sanitizer_runtime": false,
+    "log": "build/verify-0.5.50/windows/windows-tests.log",
+    "source_manifest": "build/verify-0.5.50/windows/source-inputs-before.json",
+    "coverage": [
+      "8P model",
+      "solver/model",
+      "private shape guidance",
+      "public solver smoke"
+    ],
+    "source_vs_ci": {
+      "schema": 1,
+      "checked_at_utc": "2026-11-16T18:31:50.781801+00:00",
+      "source_manifest": "build/verify-0.5.50/windows/source-inputs-before.json",
+      "source_manifest_sha256": "b0c8a6924eb0487d75d69f55f0eb3e1677f9944f8b9666b8d0786461ba423af8",
+      "ci_commit": "a2561ab038b092d0e47c6e72bb286b7d14f807e0",
+      "comparison": "SHA-256 after CRLF to LF normalization; no other transformations",
+      "file_count": 246,
+      "matched_count": 246,
+      "mismatch_count": 0,
+      "all_match": true,
+      "files": [
+        {
+          "path": "ios/src/PHBadgeModel.c",
+          "captured_lf_sha256": "3aa47fcf07edbad50f47966d508d00cae5a97713e6af28f96a1921bf76835e0a",
+          "ci_lf_sha256": "3aa47fcf07edbad50f47966d508d00cae5a97713e6af28f96a1921bf76835e0a",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBadgeModel.h",
+          "captured_lf_sha256": "293efbb4f4b3c5c2e7d2f54ba8ce98c4b2f973255f62389e6bcaacd27460d314",
+          "ci_lf_sha256": "293efbb4f4b3c5c2e7d2f54ba8ce98c4b2f973255f62389e6bcaacd27460d314",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBadges.h",
+          "captured_lf_sha256": "c8f69cf5061e95a91a0a6e8e5f87f28bc3c646f2e2127a4e1fa9f40c90de9837",
+          "ci_lf_sha256": "c8f69cf5061e95a91a0a6e8e5f87f28bc3c646f2e2127a4e1fa9f40c90de9837",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleEntry.inc",
+          "captured_lf_sha256": "7d138d6fcd25ccdb08d3df38d1a24510caa85a0928aace98e47abd4177dc6f75",
+          "ci_lf_sha256": "7d138d6fcd25ccdb08d3df38d1a24510caa85a0928aace98e47abd4177dc6f75",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleMemberReader.h",
+          "captured_lf_sha256": "b546227b692f037ad1b863cc37d33098ad16c0ee2706a830f4b2346e18027a16",
+          "ci_lf_sha256": "b546227b692f037ad1b863cc37d33098ad16c0ee2706a830f4b2346e18027a16",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleMemberState.h",
+          "captured_lf_sha256": "90652018a67f774305fb006fac22248dfe9515054937a889d30c9cc8ac9e1198",
+          "ci_lf_sha256": "90652018a67f774305fb006fac22248dfe9515054937a889d30c9cc8ac9e1198",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleModel.c",
+          "captured_lf_sha256": "2aaeaeecc9c13eabf9f919444b6b7d6a5ef7e6463fe662b2bb74be4a95a96dd3",
+          "ci_lf_sha256": "2aaeaeecc9c13eabf9f919444b6b7d6a5ef7e6463fe662b2bb74be4a95a96dd3",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleModel.h",
+          "captured_lf_sha256": "4c50e84fa7e4bc7a5486eefe4f1f478a921e67f3d34d9c3c3c13e98a2d6ac0e0",
+          "ci_lf_sha256": "4c50e84fa7e4bc7a5486eefe4f1f478a921e67f3d34d9c3c3c13e98a2d6ac0e0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattlePolicy.h",
+          "captured_lf_sha256": "c6b5f731fdcdb7d89f55231c79c31c94b7806db860cc385b8fefeca9c883733b",
+          "ci_lf_sha256": "c6b5f731fdcdb7d89f55231c79c31c94b7806db860cc385b8fefeca9c883733b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattlePreset.c",
+          "captured_lf_sha256": "7fb11b71f53e68b1db533a205fb8fa16d4c557e2d620fd07e77b7033e582c9a5",
+          "ci_lf_sha256": "7fb11b71f53e68b1db533a205fb8fa16d4c557e2d620fd07e77b7033e582c9a5",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattlePreset.h",
+          "captured_lf_sha256": "bebafa85b824f689fd67b9e7c82fdb44ea23010fb8bcb38a2b96e47326c49802",
+          "ci_lf_sha256": "bebafa85b824f689fd67b9e7c82fdb44ea23010fb8bcb38a2b96e47326c49802",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleProvider.inc",
+          "captured_lf_sha256": "91508dcb00ad941eefe15121afa39115003fab41cc4e852a875dbf2e4ab60f99",
+          "ci_lf_sha256": "91508dcb00ad941eefe15121afa39115003fab41cc4e852a875dbf2e4ab60f99",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleSession.h",
+          "captured_lf_sha256": "9877b04f8d50eeed2c918c12e7b945c3f350a2e3c89671592831f815190324b0",
+          "ci_lf_sha256": "9877b04f8d50eeed2c918c12e7b945c3f350a2e3c89671592831f815190324b0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHBattleTeams.inc",
+          "captured_lf_sha256": "b98faa09fdf1daf4fb9c0eccb6e242b2f010f84fe7056d3af21b6cfdad6d88cf",
+          "ci_lf_sha256": "b98faa09fdf1daf4fb9c0eccb6e242b2f010f84fe7056d3af21b6cfdad6d88cf",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHCodec.h",
+          "captured_lf_sha256": "a051f30b2771fa9d6f86bfd710d0c2de93c116b15607b90b119349776707271d",
+          "ci_lf_sha256": "a051f30b2771fa9d6f86bfd710d0c2de93c116b15607b90b119349776707271d",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHConfiguration.h",
+          "captured_lf_sha256": "53d57c2fd482b62c001476672f559616583be4c3b13ed98b6a6bcd12657b860e",
+          "ci_lf_sha256": "53d57c2fd482b62c001476672f559616583be4c3b13ed98b6a6bcd12657b860e",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHDataTarget.h",
+          "captured_lf_sha256": "6d7880365f27099d204e15d0d743cb9b109ce2603a69f6d990531b71c34fe505",
+          "ci_lf_sha256": "6d7880365f27099d204e15d0d743cb9b109ce2603a69f6d990531b71c34fe505",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHDeckPersistence.h",
+          "captured_lf_sha256": "0ff94734c47e6d1309d557e7d5aaeb9ba43024b2d1752a8bb3ff1e53e5964ea0",
+          "ci_lf_sha256": "0ff94734c47e6d1309d557e7d5aaeb9ba43024b2d1752a8bb3ff1e53e5964ea0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHEnemyActions.h",
+          "captured_lf_sha256": "5f628a042fde8f7bcd6d5ed0a7a4cfb5a7fa6455b39ca1951a148bce15517922",
+          "ci_lf_sha256": "5f628a042fde8f7bcd6d5ed0a7a4cfb5a7fa6455b39ca1951a148bce15517922",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHEnemyDamage.h",
+          "captured_lf_sha256": "458b3b570c28db7e4a870a754013bc2f0ed0fb651f11f15c120b6a278d956293",
+          "ci_lf_sha256": "458b3b570c28db7e4a870a754013bc2f0ed0fb651f11f15c120b6a278d956293",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHEnemyDispatch.h",
+          "captured_lf_sha256": "98c17a1b9ae34bd8c9a86ed2c2a0ee94e76e81cb0e606ef89b8ebfd5eb54c65a",
+          "ci_lf_sha256": "98c17a1b9ae34bd8c9a86ed2c2a0ee94e76e81cb0e606ef89b8ebfd5eb54c65a",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHEnemySelector.h",
+          "captured_lf_sha256": "547fda8b3ed57f40e2dac293f07640f9c5392aec9d75b70f81108fe1089371b0",
+          "ci_lf_sha256": "547fda8b3ed57f40e2dac293f07640f9c5392aec9d75b70f81108fe1089371b0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHEnemyThreat.h",
+          "captured_lf_sha256": "ac67a0312c1f680ac39bade5786f715ed7f5e4b98070596fc604b18e85bfe4e2",
+          "ci_lf_sha256": "ac67a0312c1f680ac39bade5786f715ed7f5e4b98070596fc604b18e85bfe4e2",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHFormationController.h",
+          "captured_lf_sha256": "02f5ccd41638e6787d967d7f5cf88924bf88dd04c9ef41dbcff7aa3382221950",
+          "ci_lf_sha256": "02f5ccd41638e6787d967d7f5cf88924bf88dd04c9ef41dbcff7aa3382221950",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHFormationModel.h",
+          "captured_lf_sha256": "1df397f3cbeea8632372dee4b17ff87efade094d30e607895014ca9945365e8a",
+          "ci_lf_sha256": "1df397f3cbeea8632372dee4b17ff87efade094d30e607895014ca9945365e8a",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHIdentity.h",
+          "captured_lf_sha256": "9dc52a59e0cc929170091653fec53de762e183e79e0602b61de2cf4ba0ab33fd",
+          "ci_lf_sha256": "9dc52a59e0cc929170091653fec53de762e183e79e0602b61de2cf4ba0ab33fd",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHInput.h",
+          "captured_lf_sha256": "79bcd01322dafa12410dcc05da71be2d50126e7f0c62fbece07034476ea92a2b",
+          "ci_lf_sha256": "79bcd01322dafa12410dcc05da71be2d50126e7f0c62fbece07034476ea92a2b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHInputModel.c",
+          "captured_lf_sha256": "6ba0977a59760da8da1395c07482a1983ebd1b7983a31f94753ddc6cefae794c",
+          "ci_lf_sha256": "6ba0977a59760da8da1395c07482a1983ebd1b7983a31f94753ddc6cefae794c",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHInputModel.h",
+          "captured_lf_sha256": "135c80358f0fc08e55153405575d788536c6add0eca6cd84df94b23f572e777b",
+          "ci_lf_sha256": "135c80358f0fc08e55153405575d788536c6add0eca6cd84df94b23f572e777b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHMemory.h",
+          "captured_lf_sha256": "80d3ed6fa57da7ce8c89757622f2c322e637a40eb0285e5cd1844e161391a5e2",
+          "ci_lf_sha256": "80d3ed6fa57da7ce8c89757622f2c322e637a40eb0285e5cd1844e161391a5e2",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHMusic.h",
+          "captured_lf_sha256": "2a876c01eef39fdb3c757952f9ba77a3582bb8123707e7448db8389b82433221",
+          "ci_lf_sha256": "2a876c01eef39fdb3c757952f9ba77a3582bb8123707e7448db8389b82433221",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAssistFishing.h",
+          "captured_lf_sha256": "3fdbb93cf8c896eaddaa5f60e4d58c8226171cdc1de1c8aae2a677edca238106",
+          "ci_lf_sha256": "3fdbb93cf8c896eaddaa5f60e4d58c8226171cdc1de1c8aae2a677edca238106",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAssistFishing.inc",
+          "captured_lf_sha256": "8741292a7f011bb4f87dfba75b8baa4e6d5b9c98351e11caea87ae731d3b5be9",
+          "ci_lf_sha256": "8741292a7f011bb4f87dfba75b8baa4e6d5b9c98351e11caea87ae731d3b5be9",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAssistPlanning.inc",
+          "captured_lf_sha256": "d3b0c65f54e601bc016e799cb7fdb0b38d720e4e0c90aab57222295a9e6da74c",
+          "ci_lf_sha256": "d3b0c65f54e601bc016e799cb7fdb0b38d720e4e0c90aab57222295a9e6da74c",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAssistRecovery.inc",
+          "captured_lf_sha256": "b8ef02636abef8806f7c213b08b59386e5384f3e1d57f93843bc93622c4724ef",
+          "ci_lf_sha256": "b8ef02636abef8806f7c213b08b59386e5384f3e1d57f93843bc93622c4724ef",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAssistSession.inc",
+          "captured_lf_sha256": "54d4a7d2e570c42a984ae76fbbd6427e1a529fc1bcc3c8e2ac1e078c9bfa75bc",
+          "ci_lf_sha256": "54d4a7d2e570c42a984ae76fbbd6427e1a529fc1bcc3c8e2ac1e078c9bfa75bc",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAutoLifecycle.inc",
+          "captured_lf_sha256": "f90773fea27c484b7d6882152dd766486cfc06bc3329ea8b11c35f703e794631",
+          "ci_lf_sha256": "f90773fea27c484b7d6882152dd766486cfc06bc3329ea8b11c35f703e794631",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbAutomationSession.inc",
+          "captured_lf_sha256": "68027526c9a52c3c8cc366990e1617863b58429470c4d876ad4c529bef3c700a",
+          "ci_lf_sha256": "68027526c9a52c3c8cc366990e1617863b58429470c4d876ad4c529bef3c700a",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbComboBonus.inc",
+          "captured_lf_sha256": "b573739c23813b7940a29b8cba9592a1796bd6bfad6f6969934e6e851d52ac40",
+          "ci_lf_sha256": "b573739c23813b7940a29b8cba9592a1796bd6bfad6f6969934e6e851d52ac40",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbComboBonusModel.inc",
+          "captured_lf_sha256": "327db4b492763a3b92dfeef006d5caf06de4de94cf388cca390dbbaff981641d",
+          "ci_lf_sha256": "327db4b492763a3b92dfeef006d5caf06de4de94cf388cca390dbbaff981641d",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbController.h",
+          "captured_lf_sha256": "d61e2e81711ffbee834adb2f77345d3eb8364ccb087226ecfac8c241fe4be990",
+          "ci_lf_sha256": "d61e2e81711ffbee834adb2f77345d3eb8364ccb087226ecfac8c241fe4be990",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbDiagnosticPresentation.inc",
+          "captured_lf_sha256": "45cb2518d4a420576ae4d72a1e92a48a7a3da4d22f629a486dd475046d5bdcf7",
+          "ci_lf_sha256": "45cb2518d4a420576ae4d72a1e92a48a7a3da4d22f629a486dd475046d5bdcf7",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbDungeonDump.inc",
+          "captured_lf_sha256": "d00ca5542c9e369bee9628d9804b829d83698b68275719273b64cc37c7efb095",
+          "ci_lf_sha256": "d00ca5542c9e369bee9628d9804b829d83698b68275719273b64cc37c7efb095",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbDungeonReport.h",
+          "captured_lf_sha256": "c60131a7f72ae8ee5742b7871786a6d93af4ef66895de04ee90c8a1fe4f65e29",
+          "ci_lf_sha256": "c60131a7f72ae8ee5742b7871786a6d93af4ef66895de04ee90c8a1fe4f65e29",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbDungeonSession.inc",
+          "captured_lf_sha256": "c4f77b8017b1cefe95a2dc0504c177f1d655b0a7127b14e5f5c7b229aa17766f",
+          "ci_lf_sha256": "c4f77b8017b1cefe95a2dc0504c177f1d655b0a7127b14e5f5c7b229aa17766f",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEditorUI.h",
+          "captured_lf_sha256": "2dfe3085a73fe85b3e6aaa753be619459769b68d75ab8c0f3948415033ead70d",
+          "ci_lf_sha256": "2dfe3085a73fe85b3e6aaa753be619459769b68d75ab8c0f3948415033ead70d",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEight.h",
+          "captured_lf_sha256": "80892e43ebba22425b7faf2794eb2f6abfa0d9af5b361a8617b2c4dcabba3451",
+          "ci_lf_sha256": "80892e43ebba22425b7faf2794eb2f6abfa0d9af5b361a8617b2c4dcabba3451",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEightModel.h",
+          "captured_lf_sha256": "59695cc92677cda5eaa7a42004a3eb66848beb2b7fc926e0f09f5d70732d3c31",
+          "ci_lf_sha256": "59695cc92677cda5eaa7a42004a3eb66848beb2b7fc926e0f09f5d70732d3c31",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEightNative.inc",
+          "captured_lf_sha256": "3a5a655def2a8f93dfa030f54bda699e4237eefa4cb878fb3b9d7a0925eae71f",
+          "ci_lf_sha256": "3a5a655def2a8f93dfa030f54bda699e4237eefa4cb878fb3b9d7a0925eae71f",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEightSession.inc",
+          "captured_lf_sha256": "6f00407b6c77e755918f8b1af7eee717b76b3f527c64379f2b2acc4ae522f1f0",
+          "ci_lf_sha256": "6f00407b6c77e755918f8b1af7eee717b76b3f527c64379f2b2acc4ae522f1f0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyActions.inc",
+          "captured_lf_sha256": "fe2dadb325f5aa464808a86833df7e468d004a5035d04ed44a38477df548f3e8",
+          "ci_lf_sha256": "fe2dadb325f5aa464808a86833df7e468d004a5035d04ed44a38477df548f3e8",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyCombo.inc",
+          "captured_lf_sha256": "674403e14e9672d4f4602d9b2cd295d47f010dcb6d7299b4f4ca983a9b415db1",
+          "ci_lf_sha256": "674403e14e9672d4f4602d9b2cd295d47f010dcb6d7299b4f4ca983a9b415db1",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyComboPlanning.inc",
+          "captured_lf_sha256": "4df1c50d6cd526d1e80f8c135c0486bedf6bfdcc0d95b62f65842cf9605c491f",
+          "ci_lf_sha256": "4df1c50d6cd526d1e80f8c135c0486bedf6bfdcc0d95b62f65842cf9605c491f",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyComboSession.inc",
+          "captured_lf_sha256": "b46ec59db4a1ca0a8d1737d8e84782f311da07c03238c8dff656884cde67ef28",
+          "ci_lf_sha256": "b46ec59db4a1ca0a8d1737d8e84782f311da07c03238c8dff656884cde67ef28",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyDamage.inc",
+          "captured_lf_sha256": "e2e09ddaac6a394d62c839dd06a000e4d6f205164a4533daec1582c7aceb7a9c",
+          "ci_lf_sha256": "e2e09ddaac6a394d62c839dd06a000e4d6f205164a4533daec1582c7aceb7a9c",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyDispatch.inc",
+          "captured_lf_sha256": "c5b819bedbc9f718e89c8744d1907e0214d7cd69f4eb41875594beabde33f0e8",
+          "ci_lf_sha256": "c5b819bedbc9f718e89c8744d1907e0214d7cd69f4eb41875594beabde33f0e8",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyParts.inc",
+          "captured_lf_sha256": "0a643d2b3fa209e24e354fcb00ca0cba37724149228378da6f0981e53c510f63",
+          "ci_lf_sha256": "0a643d2b3fa209e24e354fcb00ca0cba37724149228378da6f0981e53c510f63",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemySelector.inc",
+          "captured_lf_sha256": "62fa1df0f34cf5e3f7bf017cf2e23b598f34b8245fb4fc4eef04b217213e4884",
+          "ci_lf_sha256": "62fa1df0f34cf5e3f7bf017cf2e23b598f34b8245fb4fc4eef04b217213e4884",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbEnemyThreat.inc",
+          "captured_lf_sha256": "263736b9af646cde568f137cf2a3a6fc8552587b627ddd90d93e3745761f3282",
+          "ci_lf_sha256": "263736b9af646cde568f137cf2a3a6fc8552587b627ddd90d93e3745761f3282",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFailurePresentation.inc",
+          "captured_lf_sha256": "ecc7809fb785d74c67f48f3dda4a2aef62169658c407f7b9dc0ef04ae2152e3b",
+          "ci_lf_sha256": "ecc7809fb785d74c67f48f3dda4a2aef62169658c407f7b9dc0ef04ae2152e3b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedNative.inc",
+          "captured_lf_sha256": "ceb825ddc6a31b903ca210ba871efe873664970d4f156082e19da5da81d305e1",
+          "ci_lf_sha256": "ceb825ddc6a31b903ca210ba871efe873664970d4f156082e19da5da81d305e1",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedNativeGuards.h",
+          "captured_lf_sha256": "5eb42fa3dfb1006f9f2cd0978ab94e1f702e8c1eb62b4c9a68c5a51d2c7b22e3",
+          "ci_lf_sha256": "5eb42fa3dfb1006f9f2cd0978ab94e1f702e8c1eb62b4c9a68c5a51d2c7b22e3",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedNativeMethods.inc",
+          "captured_lf_sha256": "65723d7e6642f089d334697df1be98d45eada2b1849247df57f0eb87a08d4ea7",
+          "ci_lf_sha256": "65723d7e6642f089d334697df1be98d45eada2b1849247df57f0eb87a08d4ea7",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedPlan.h",
+          "captured_lf_sha256": "5c16153ed0b1d142f25902f90fb555258d89e5de1e555ab193bd5892cde8ee9b",
+          "ci_lf_sha256": "5c16153ed0b1d142f25902f90fb555258d89e5de1e555ab193bd5892cde8ee9b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedPlan.inc",
+          "captured_lf_sha256": "3622d8c5dffa9534e261c4023e9a61fddbf936e26bce425a740aba4576496ff4",
+          "ci_lf_sha256": "3622d8c5dffa9534e261c4023e9a61fddbf936e26bce425a740aba4576496ff4",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbFixedSession.inc",
+          "captured_lf_sha256": "ba26e33859f8966cad91b26adc1fd0d41d1e5ba67349fb2e13b32a92e6c1fb26",
+          "ci_lf_sha256": "ba26e33859f8966cad91b26adc1fd0d41d1e5ba67349fb2e13b32a92e6c1fb26",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbLeaders.inc",
+          "captured_lf_sha256": "4df5e78f89ae7864f1b1d2c3e53d929565b62dd28e1b92e55bd2c669bdd23931",
+          "ci_lf_sha256": "4df5e78f89ae7864f1b1d2c3e53d929565b62dd28e1b92e55bd2c669bdd23931",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbModel.c",
+          "captured_lf_sha256": "2d9cf33a134101aeb3c2c5898f2f3477fef5cf7223fe2c0996e347da896c08af",
+          "ci_lf_sha256": "2d9cf33a134101aeb3c2c5898f2f3477fef5cf7223fe2c0996e347da896c08af",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbModel.h",
+          "captured_lf_sha256": "f32b5b5670669dff575e12455d89578c8efa41e8d1d74a3723ddad969b291123",
+          "ci_lf_sha256": "f32b5b5670669dff575e12455d89578c8efa41e8d1d74a3723ddad969b291123",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbMonochromeTemplate.h",
+          "captured_lf_sha256": "937c0551c2b1d84ed21a6770a43b2f212631da535bb98ca46d9a94f10416b091",
+          "ci_lf_sha256": "937c0551c2b1d84ed21a6770a43b2f212631da535bb98ca46d9a94f10416b091",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbMonochromeTemplate.inc",
+          "captured_lf_sha256": "5c5f149122bd12cc5c451741443b142f23f0c428b3bb9d4464afa91839b32f7e",
+          "ci_lf_sha256": "5c5f149122bd12cc5c451741443b142f23f0c428b3bb9d4464afa91839b32f7e",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbMultiFishing.h",
+          "captured_lf_sha256": "ad672d0c57a018f19f9a46465f041765c6f8c5c12e560fd3169bb02cc1ff54cc",
+          "ci_lf_sha256": "ad672d0c57a018f19f9a46465f041765c6f8c5c12e560fd3169bb02cc1ff54cc",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbMultiplayer.inc",
+          "captured_lf_sha256": "9828a7b741240d5ba55607c848cbd1ecefd654c49d658d2f42f8d2bfa2739001",
+          "ci_lf_sha256": "9828a7b741240d5ba55607c848cbd1ecefd654c49d658d2f42f8d2bfa2739001",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbObservation.inc",
+          "captured_lf_sha256": "9b8c796431a7666cda55ed023052b029e76d526363954f13bf6907bb2a97a5c6",
+          "ci_lf_sha256": "9b8c796431a7666cda55ed023052b029e76d526363954f13bf6907bb2a97a5c6",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbObservationPresentation.inc",
+          "captured_lf_sha256": "71f1774cfe669e6ada21d185ea0352ee9d2428dc2093afcbdabe9a5879037b26",
+          "ci_lf_sha256": "71f1774cfe669e6ada21d185ea0352ee9d2428dc2093afcbdabe9a5879037b26",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbPlanning.h",
+          "captured_lf_sha256": "e49d0383c661cfe2604181d329463e51fce98f18bade33c5283357b5a459f434",
+          "ci_lf_sha256": "e49d0383c661cfe2604181d329463e51fce98f18bade33c5283357b5a459f434",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbProfileEditor.h",
+          "captured_lf_sha256": "2bd16f22b2dcfab940750bd1c1634ff53201cd68d6ebd93b36d9fc3d6d83546d",
+          "ci_lf_sha256": "2bd16f22b2dcfab940750bd1c1634ff53201cd68d6ebd93b36d9fc3d6d83546d",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbProfiles.h",
+          "captured_lf_sha256": "ffc2902b80984520cc1390c265f8fdc637dc6a7e449dc507d90157f65c800e17",
+          "ci_lf_sha256": "ffc2902b80984520cc1390c265f8fdc637dc6a7e449dc507d90157f65c800e17",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbRecovery.inc",
+          "captured_lf_sha256": "245524f279e92e681ae5a69f26408ef10e9140cc30c56e5a5702db55ddf55140",
+          "ci_lf_sha256": "245524f279e92e681ae5a69f26408ef10e9140cc30c56e5a5702db55ddf55140",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbRecoveryEditor.h",
+          "captured_lf_sha256": "815c57745d7c95a647bde1c131e3a67d09caf48394837008ee3bdf090e59a196",
+          "ci_lf_sha256": "815c57745d7c95a647bde1c131e3a67d09caf48394837008ee3bdf090e59a196",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbRuleEditor.h",
+          "captured_lf_sha256": "991279d246d60e0f73e2029a3d8774da835a30b3b930219e9aa800977d694aad",
+          "ci_lf_sha256": "991279d246d60e0f73e2029a3d8774da835a30b3b930219e9aa800977d694aad",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbRules.h",
+          "captured_lf_sha256": "83a6c4f263fc41dec8cc546106214eb7cbe8529610efb9701bac5a2cd0c304ec",
+          "ci_lf_sha256": "83a6c4f263fc41dec8cc546106214eb7cbe8529610efb9701bac5a2cd0c304ec",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSearchAttempt.h",
+          "captured_lf_sha256": "4f34f3dc772a910ee28ab24c143e824aa8f634fa32f457edbd13a581642912df",
+          "ci_lf_sha256": "4f34f3dc772a910ee28ab24c143e824aa8f634fa32f457edbd13a581642912df",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSession.h",
+          "captured_lf_sha256": "7303a5d4a73a7e068806a845c0a9f1b40385c8e1b20dae8c41d8a2c561e742ec",
+          "ci_lf_sha256": "7303a5d4a73a7e068806a845c0a9f1b40385c8e1b20dae8c41d8a2c561e742ec",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSessionDiagnostics.inc",
+          "captured_lf_sha256": "e6108f9c651c280056d1787abad99674c0ee88ba41737d641ee09ac1e0c63711",
+          "ci_lf_sha256": "e6108f9c651c280056d1787abad99674c0ee88ba41737d641ee09ac1e0c63711",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSessionState.h",
+          "captured_lf_sha256": "2e52638dc7717788b89d289a354eaa339829f054acf690d7e96a6343d34109c5",
+          "ci_lf_sha256": "2e52638dc7717788b89d289a354eaa339829f054acf690d7e96a6343d34109c5",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSkillChoice.inc",
+          "captured_lf_sha256": "b1eba3479f33b22679b159bb2c6a7feac7870f3a427800ee69b9363e5eb0f2be",
+          "ci_lf_sha256": "b1eba3479f33b22679b159bb2c6a7feac7870f3a427800ee69b9363e5eb0f2be",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSkillDiagnostics.inc",
+          "captured_lf_sha256": "814331c71d2d04e76caf348d6f08cd2ed95e0a0cae414c2b91ddb1b5c585c12b",
+          "ci_lf_sha256": "814331c71d2d04e76caf348d6f08cd2ed95e0a0cae414c2b91ddb1b5c585c12b",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSkillWindow.h",
+          "captured_lf_sha256": "33112a6bab460927c0062bb6c289cb586a238c209279ae992fa722f5f0d67f32",
+          "ci_lf_sha256": "33112a6bab460927c0062bb6c289cb586a238c209279ae992fa722f5f0d67f32",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSkills.inc",
+          "captured_lf_sha256": "8cc79c7c1c765318022a116f6d324bf476fe3889282b1b24930c075679b131fc",
+          "ci_lf_sha256": "8cc79c7c1c765318022a116f6d324bf476fe3889282b1b24930c075679b131fc",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSolver.cpp",
+          "captured_lf_sha256": "c2efb2becb84a0fa73f4f68ea1f440e4456048b849f2af95739e5da6d451c238",
+          "ci_lf_sha256": "c2efb2becb84a0fa73f4f68ea1f440e4456048b849f2af95739e5da6d451c238",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSolver.h",
+          "captured_lf_sha256": "98735775869e49d0fa927fde404c6389e96363f717519b4257c97a691e430859",
+          "ci_lf_sha256": "98735775869e49d0fa927fde404c6389e96363f717519b4257c97a691e430859",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbSurvival.inc",
+          "captured_lf_sha256": "40e37c7bb4bcf74aefa090d69f61f38699ef26d151aa1cd73225955e5fea3a41",
+          "ci_lf_sha256": "40e37c7bb4bcf74aefa090d69f61f38699ef26d151aa1cd73225955e5fea3a41",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbTimedFishing.h",
+          "captured_lf_sha256": "f2859503c6104c3462ddb1fa77222c0b24ef56dcac5703d3bac6a261835a3846",
+          "ci_lf_sha256": "f2859503c6104c3462ddb1fa77222c0b24ef56dcac5703d3bac6a261835a3846",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOrbTimedFishing.inc",
+          "captured_lf_sha256": "9187d18f704807f7f18110911494e00b742254b3c26ad3754ba900d1b53d1750",
+          "ci_lf_sha256": "9187d18f704807f7f18110911494e00b742254b3c26ad3754ba900d1b53d1750",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHOverlay.h",
+          "captured_lf_sha256": "5a8e0c2ace43d018acd6d0bb30338b1fb7b7cdc19bc254e615eaf90edfb58089",
+          "ci_lf_sha256": "5a8e0c2ace43d018acd6d0bb30338b1fb7b7cdc19bc254e615eaf90edfb58089",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHSaveState.h",
+          "captured_lf_sha256": "62af5083b1d785f0c6422ad088e15dc5cd46c0ddb072015be842281ad98f32bf",
+          "ci_lf_sha256": "62af5083b1d785f0c6422ad088e15dc5cd46c0ddb072015be842281ad98f32bf",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHTarget.h",
+          "captured_lf_sha256": "b461c7b3caba44e7e711777a2a2949dd068ab2933bc8ba0ed2bd71c5da1d9db0",
+          "ci_lf_sha256": "b461c7b3caba44e7e711777a2a2949dd068ab2933bc8ba0ed2bd71c5da1d9db0",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHTimer.h",
+          "captured_lf_sha256": "dfb9eed336ac1e96d8c6687dda03072628c5dda47a3002bc23ffe442f1d3fee8",
+          "ci_lf_sha256": "dfb9eed336ac1e96d8c6687dda03072628c5dda47a3002bc23ffe442f1d3fee8",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHTimerModel.c",
+          "captured_lf_sha256": "4bf1cd0689d99fc95ecf445b5819e6c59d4cd377f125875e26a979de26215738",
+          "ci_lf_sha256": "4bf1cd0689d99fc95ecf445b5819e6c59d4cd377f125875e26a979de26215738",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHTimerModel.h",
+          "captured_lf_sha256": "d8956acd32d4776244adccaf001fec699242082e2c5f3ce86e9f2f9f0bd03c7f",
+          "ci_lf_sha256": "d8956acd32d4776244adccaf001fec699242082e2c5f3ce86e9f2f9f0bd03c7f",
+          "match": true
+        },
+        {
+          "path": "ios/src/PHUnlockRestoration.h",
+          "captured_lf_sha256": "bd82dd19a182288b717c0bd917d44eaffded79476e8114b8fa758c1126db6e45",
+          "ci_lf_sha256": "bd82dd19a182288b717c0bd917d44eaffded79476e8114b8fa758c1126db6e45",
+          "match": true
+        },
+        {
+          "path": "ios/tests/badge_model_tests.c",
+          "captured_lf_sha256": "404c0f4e2322c3059085f87515f455e8e54f8904419df51a19c4de7a09496bfb",
+          "ci_lf_sha256": "404c0f4e2322c3059085f87515f455e8e54f8904419df51a19c4de7a09496bfb",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_assist_disabled_tests.inc",
+          "captured_lf_sha256": "97f32503e730388412280d402d85bad1ab635d99d0022b417a47ea6f65221e23",
+          "ci_lf_sha256": "97f32503e730388412280d402d85bad1ab635d99d0022b417a47ea6f65221e23",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_member_model_tests.inc",
+          "captured_lf_sha256": "c3a72d0aa00e246ea2ecccc58aad143b98c884a30e22126fed20de70cde7c97b",
+          "ci_lf_sha256": "c3a72d0aa00e246ea2ecccc58aad143b98c884a30e22126fed20de70cde7c97b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_member_reader_tests.inc",
+          "captured_lf_sha256": "61b5f443eb96e53ade0f32b3aa1924b1e5801628a21e988f06a3757a4f87105e",
+          "ci_lf_sha256": "61b5f443eb96e53ade0f32b3aa1924b1e5801628a21e988f06a3757a4f87105e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_model_tests.c",
+          "captured_lf_sha256": "c0379136196948633cc40aad5dfc5948dcccea785b285ff852eab8fe4fde85de",
+          "ci_lf_sha256": "c0379136196948633cc40aad5dfc5948dcccea785b285ff852eab8fe4fde85de",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_multiplayer_session_tests.inc",
+          "captured_lf_sha256": "ee19bc4ce049b2220d06085fd012ef698e21e3d38ff1238fa9402d0cc6bb89f8",
+          "ci_lf_sha256": "ee19bc4ce049b2220d06085fd012ef698e21e3d38ff1238fa9402d0cc6bb89f8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_multiplayer_tests.inc",
+          "captured_lf_sha256": "05c8bd178b5221dee5af3d2db2e2cc8935863d3f4865b1b9918ebc77af8d3d58",
+          "ci_lf_sha256": "05c8bd178b5221dee5af3d2db2e2cc8935863d3f4865b1b9918ebc77af8d3d58",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_preset_tests.c",
+          "captured_lf_sha256": "707e4fefb7799747dd1c75796a0e605f71359ec6002949d243d080fc3a2ad3dd",
+          "ci_lf_sha256": "707e4fefb7799747dd1c75796a0e605f71359ec6002949d243d080fc3a2ad3dd",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_restore_native_tests.inc",
+          "captured_lf_sha256": "0b9e0a0c8266ee5787d17844ae72089f964cafd9e13d0c9a77a34ae23b8c520b",
+          "ci_lf_sha256": "0b9e0a0c8266ee5787d17844ae72089f964cafd9e13d0c9a77a34ae23b8c520b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_restore_session_tests.inc",
+          "captured_lf_sha256": "399c7e1e94e55f322166c2063a43e101288a5d844251989b81c31edf249fc80b",
+          "ci_lf_sha256": "399c7e1e94e55f322166c2063a43e101288a5d844251989b81c31edf249fc80b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_script_model_tests.inc",
+          "captured_lf_sha256": "59d235fd348ee02813302f851191ca05ab4bebacc5340d4bf9fc5defb7287a80",
+          "ci_lf_sha256": "59d235fd348ee02813302f851191ca05ab4bebacc5340d4bf9fc5defb7287a80",
+          "match": true
+        },
+        {
+          "path": "ios/tests/battle_script_native_tests.inc",
+          "captured_lf_sha256": "6db7c0ad6c18d6885d8aec68364d05214e160888d71e19e4f123f129ad566920",
+          "ci_lf_sha256": "6db7c0ad6c18d6885d8aec68364d05214e160888d71e19e4f123f129ad566920",
+          "match": true
+        },
+        {
+          "path": "ios/tests/enemy_action_model_tests.inc",
+          "captured_lf_sha256": "ffedea03082877238453ca878ee188044c2e98ea1ebca4cb5e2e679467401732",
+          "ci_lf_sha256": "ffedea03082877238453ca878ee188044c2e98ea1ebca4cb5e2e679467401732",
+          "match": true
+        },
+        {
+          "path": "ios/tests/enemy_damage_model_tests.inc",
+          "captured_lf_sha256": "a6b3a6c72a9a310da58092dad5acc59239016d644ecc85b5c64daa443a8748a0",
+          "ci_lf_sha256": "a6b3a6c72a9a310da58092dad5acc59239016d644ecc85b5c64daa443a8748a0",
+          "match": true
+        },
+        {
+          "path": "ios/tests/enemy_dispatch_model_tests.inc",
+          "captured_lf_sha256": "2ee23a9bb32ca4951f5a5ca1dc47807443dd44af5d34d4908012e07d1d91604a",
+          "ci_lf_sha256": "2ee23a9bb32ca4951f5a5ca1dc47807443dd44af5d34d4908012e07d1d91604a",
+          "match": true
+        },
+        {
+          "path": "ios/tests/enemy_selector_model_tests.inc",
+          "captured_lf_sha256": "169be2c7e4b9f5826ccf0da1989de975077bc208d3595ba83ac20c0ae5a27154",
+          "ci_lf_sha256": "169be2c7e4b9f5826ccf0da1989de975077bc208d3595ba83ac20c0ae5a27154",
+          "match": true
+        },
+        {
+          "path": "ios/tests/enemy_threat_model_tests.inc",
+          "captured_lf_sha256": "2d55d1672a15dff99f00b4ecc5607d025bba254357ddeceb4da9dc5677b2f844",
+          "ci_lf_sha256": "2d55d1672a15dff99f00b4ecc5607d025bba254357ddeceb4da9dc5677b2f844",
+          "match": true
+        },
+        {
+          "path": "ios/tests/formation_profile_configuration_tests.inc",
+          "captured_lf_sha256": "708177b1ba3028d4ec50f327cc7fa65f78578ac12d939d3822f6465ecd3d47b9",
+          "ci_lf_sha256": "708177b1ba3028d4ec50f327cc7fa65f78578ac12d939d3822f6465ecd3d47b9",
+          "match": true
+        },
+        {
+          "path": "ios/tests/input_model_tests.c",
+          "captured_lf_sha256": "dbadd7fdea613cab872d4a3069b69387d1089870ceb3664e11cf4c5d6307b0a8",
+          "ci_lf_sha256": "dbadd7fdea613cab872d4a3069b69387d1089870ceb3664e11cf4c5d6307b0a8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_alternate_shape_solver_tests.inc",
+          "captured_lf_sha256": "215fb77b136b332294471c72237bac49df917aa766cd9df0697a723060e80f98",
+          "ci_lf_sha256": "215fb77b136b332294471c72237bac49df917aa766cd9df0697a723060e80f98",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_charge_native_tests.inc",
+          "captured_lf_sha256": "6c617abd08460aa007d7a8109c086dcfbae2e57eb855acfb2b23ac3861f2f735",
+          "ci_lf_sha256": "6c617abd08460aa007d7a8109c086dcfbae2e57eb855acfb2b23ac3861f2f735",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_fallback_session_tests.inc",
+          "captured_lf_sha256": "8133e5c4adb97d346c882903b9841ed586fa48cc413e60145290412a32f89c53",
+          "ci_lf_sha256": "8133e5c4adb97d346c882903b9841ed586fa48cc413e60145290412a32f89c53",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_fishing_tests.inc",
+          "captured_lf_sha256": "0251f4969efdfb6f83f448896bbae7471ff6a28f1714a7e5fcb2210d771746bc",
+          "ci_lf_sha256": "0251f4969efdfb6f83f448896bbae7471ff6a28f1714a7e5fcb2210d771746bc",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_native_tests.inc",
+          "captured_lf_sha256": "8db48db8071e8997f656a4afd5deb82e16a8a471804554ac428ad750cffb76e9",
+          "ci_lf_sha256": "8db48db8071e8997f656a4afd5deb82e16a8a471804554ac428ad750cffb76e9",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_planning_tests.inc",
+          "captured_lf_sha256": "b2772aa6031f5266d9474a495775f1b0ee01d50e3d90bad1968977465fbe9e1e",
+          "ci_lf_sha256": "b2772aa6031f5266d9474a495775f1b0ee01d50e3d90bad1968977465fbe9e1e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_profiles_tests.inc",
+          "captured_lf_sha256": "33e80c50ba53f7abe59b1433f19ed03835a2a37bc6be82aa63701e4bfd4d2b18",
+          "ci_lf_sha256": "33e80c50ba53f7abe59b1433f19ed03835a2a37bc6be82aa63701e4bfd4d2b18",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_session_tests.inc",
+          "captured_lf_sha256": "47ad0e0900a1010507c3f5c9fbd81394ccf1c87116cef35d0622e4a7b50464e8",
+          "ci_lf_sha256": "47ad0e0900a1010507c3f5c9fbd81394ccf1c87116cef35d0622e4a7b50464e8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_assist_solver_tests.inc",
+          "captured_lf_sha256": "1d7f6227081791442a2454a8b4577b7b2c542d24eb9e68b38045aeec5aeb9dbc",
+          "ci_lf_sha256": "1d7f6227081791442a2454a8b4577b7b2c542d24eb9e68b38045aeec5aeb9dbc",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_auto_lifecycle_session_tests.inc",
+          "captured_lf_sha256": "cd87202d1c27cdd28f9bde0deebb31b8ddd5a8f6a5d4b324bc62a47b99b53e30",
+          "ci_lf_sha256": "cd87202d1c27cdd28f9bde0deebb31b8ddd5a8f6a5d4b324bc62a47b99b53e30",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_automation_session_tests.inc",
+          "captured_lf_sha256": "c25d6e492e98b1e728d293285cc3ea51bdd831aea78958ac318fb310e7311075",
+          "ci_lf_sha256": "c25d6e492e98b1e728d293285cc3ea51bdd831aea78958ac318fb310e7311075",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_beam_bucket_tests.inc",
+          "captured_lf_sha256": "0d0bef535da1b84ca0e760772074a707eaefc3071bec4392b01fff584516d75b",
+          "ci_lf_sha256": "0d0bef535da1b84ca0e760772074a707eaefc3071bec4392b01fff584516d75b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_color_condition_session_tests.inc",
+          "captured_lf_sha256": "0496364d3ecec0b8d3fb52e02e1e96793c6610ad16252ac42cc7c2dcc2001693",
+          "ci_lf_sha256": "0496364d3ecec0b8d3fb52e02e1e96793c6610ad16252ac42cc7c2dcc2001693",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_color_phase_session_tests.inc",
+          "captured_lf_sha256": "25c9842722172315619809d883e34a09b3ae93cfae948041f3ff3bfd0b235d1c",
+          "ci_lf_sha256": "25c9842722172315619809d883e34a09b3ae93cfae948041f3ff3bfd0b235d1c",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_color_solver_tests.inc",
+          "captured_lf_sha256": "5bb95e04d025530b26d733d640a59eb770830f8949682350a833ded8716466ae",
+          "ci_lf_sha256": "5bb95e04d025530b26d733d640a59eb770830f8949682350a833ded8716466ae",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_color_spinner_guidance_tests.inc",
+          "captured_lf_sha256": "f8cd6632c63df40aa52d51809f3babde9d18a87103594a6e9d78c59f6165441f",
+          "ci_lf_sha256": "f8cd6632c63df40aa52d51809f3babde9d18a87103594a6e9d78c59f6165441f",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_color_spinner_solver_tests.inc",
+          "captured_lf_sha256": "18448d666be3b852325608ccc31f26a85e661b40bb2957d2d1e70f19d1389cb6",
+          "ci_lf_sha256": "18448d666be3b852325608ccc31f26a85e661b40bb2957d2d1e70f19d1389cb6",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_diagnostics_session_tests.inc",
+          "captured_lf_sha256": "b555e8c38f2cd340a5f2fd2baf30598586c13c6cdbb23096c4248011e950355d",
+          "ci_lf_sha256": "b555e8c38f2cd340a5f2fd2baf30598586c13c6cdbb23096c4248011e950355d",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_diagonal_native_tests.inc",
+          "captured_lf_sha256": "362b58059ae62a497dd85cf282d82e9fa73b8f38b3c6ac4e21274d57e958ef0b",
+          "ci_lf_sha256": "362b58059ae62a497dd85cf282d82e9fa73b8f38b3c6ac4e21274d57e958ef0b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_diagonal_session_tests.inc",
+          "captured_lf_sha256": "08b7f6ec117a2c806f07136ad3e81d95f25412545f144abe6246a5e0d78f29e6",
+          "ci_lf_sha256": "08b7f6ec117a2c806f07136ad3e81d95f25412545f144abe6246a5e0d78f29e6",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_diagonal_solver_tests.inc",
+          "captured_lf_sha256": "cee8da3297fa5e989ba5e46396b3c59ceff3907205f172576b5a49208c3b4003",
+          "ci_lf_sha256": "cee8da3297fa5e989ba5e46396b3c59ceff3907205f172576b5a49208c3b4003",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_dungeon_native_tests.inc",
+          "captured_lf_sha256": "9537d64af12bf46de72e459c81b2f505dac73be9c88872064a73c6a9591c30ef",
+          "ci_lf_sha256": "9537d64af12bf46de72e459c81b2f505dac73be9c88872064a73c6a9591c30ef",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_dungeon_session_tests.inc",
+          "captured_lf_sha256": "65a313684242db792d1ff0ec01e9cb12d7b2da38c604402898c6b8a17ae0f92e",
+          "ci_lf_sha256": "65a313684242db792d1ff0ec01e9cb12d7b2da38c604402898c6b8a17ae0f92e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_effect_native_tests.inc",
+          "captured_lf_sha256": "9bde003b0fb6549ddd771cc206442e97e55b37867b4774406358f8629fce7e2b",
+          "ci_lf_sha256": "9bde003b0fb6549ddd771cc206442e97e55b37867b4774406358f8629fce7e2b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_effect_rules_tests.inc",
+          "captured_lf_sha256": "15780ee89ab750fe67862d46f83a90eb5354a5c5e808c6182c715ef816692632",
+          "ci_lf_sha256": "15780ee89ab750fe67862d46f83a90eb5354a5c5e808c6182c715ef816692632",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_effect_session_tests.inc",
+          "captured_lf_sha256": "0283316f31e8e11ad82a13feb8796003e23d7cafeb76d71c2ae85b5f1f2fe350",
+          "ci_lf_sha256": "0283316f31e8e11ad82a13feb8796003e23d7cafeb76d71c2ae85b5f1f2fe350",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_effect_solver_tests.inc",
+          "captured_lf_sha256": "0aece1fedf601faf253754fae8e000bd80aabc35bd58cd61bdf1322eb5f880b1",
+          "ci_lf_sha256": "0aece1fedf601faf253754fae8e000bd80aabc35bd58cd61bdf1322eb5f880b1",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_fixture.h",
+          "captured_lf_sha256": "7d6a77b4f2a4a3781cf955cb24f4949c3a4978baedc9148fd6e813ba45dc855d",
+          "ci_lf_sha256": "7d6a77b4f2a4a3781cf955cb24f4949c3a4978baedc9148fd6e813ba45dc855d",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_model_tests.c",
+          "captured_lf_sha256": "39a89a1a322a599f044abb9183ff889fa16c1a0730cdbc9bce4a1cbee101a674",
+          "ci_lf_sha256": "39a89a1a322a599f044abb9183ff889fa16c1a0730cdbc9bce4a1cbee101a674",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_native_tests.inc",
+          "captured_lf_sha256": "4ece5fba8cd47e40fa84cd258b48190a327a547eac9a5d2d475788f2d906bced",
+          "ci_lf_sha256": "4ece5fba8cd47e40fa84cd258b48190a327a547eac9a5d2d475788f2d906bced",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_profiles_tests.inc",
+          "captured_lf_sha256": "be607a1ae3b016c6205da16bb383ce13c68cbc651b136e6bd04268b1cbcd7bad",
+          "ci_lf_sha256": "be607a1ae3b016c6205da16bb383ce13c68cbc651b136e6bd04268b1cbcd7bad",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_session_tests.inc",
+          "captured_lf_sha256": "78c85dd719f85e6877c55507207b389196b705b57d82834d83bdb2926f5338b6",
+          "ci_lf_sha256": "78c85dd719f85e6877c55507207b389196b705b57d82834d83bdb2926f5338b6",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_eight_solver_tests.inc",
+          "captured_lf_sha256": "c10fe4c30deb2be631344c90f40e1192451965032a0bc2ff1c6a5b21bbee9e33",
+          "ci_lf_sha256": "c10fe4c30deb2be631344c90f40e1192451965032a0bc2ff1c6a5b21bbee9e33",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_action_native_tests.inc",
+          "captured_lf_sha256": "7da8305f97dc001ce6125f9b139728826a72a32ab2aecea20c4cb6dbb9b904a7",
+          "ci_lf_sha256": "7da8305f97dc001ce6125f9b139728826a72a32ab2aecea20c4cb6dbb9b904a7",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_action_session_tests.inc",
+          "captured_lf_sha256": "b4cee2040b9b39d23290b2129425801b573c9e1f4bdc6bfb4c1214085225fd5b",
+          "ci_lf_sha256": "b4cee2040b9b39d23290b2129425801b573c9e1f4bdc6bfb4c1214085225fd5b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_combo_native_tests.inc",
+          "captured_lf_sha256": "c011bb30a3cc869cfbfa205358385f516313596e8c862602218142d254bf7741",
+          "ci_lf_sha256": "c011bb30a3cc869cfbfa205358385f516313596e8c862602218142d254bf7741",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_combo_planning_tests.inc",
+          "captured_lf_sha256": "ad2b8de63bf9f4b734905e337c6301dd603c2696872a882df91a4cd9e76f2214",
+          "ci_lf_sha256": "ad2b8de63bf9f4b734905e337c6301dd603c2696872a882df91a4cd9e76f2214",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_combo_session_tests.inc",
+          "captured_lf_sha256": "f31127be182d228a966331d61bb3156b0955ec1695d4db18d00f11fea849a49e",
+          "ci_lf_sha256": "f31127be182d228a966331d61bb3156b0955ec1695d4db18d00f11fea849a49e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_combo_solver_tests.inc",
+          "captured_lf_sha256": "e64cb306d2ee1d128a757d6fad4b01a224b7bef8b50d0895e428a95b7b99f1c4",
+          "ci_lf_sha256": "e64cb306d2ee1d128a757d6fad4b01a224b7bef8b50d0895e428a95b7b99f1c4",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_damage_native_tests.inc",
+          "captured_lf_sha256": "a64cd8b6dcc52e928b24fe469f9803d06a6a2b9ded05a656dcd3c43a4dd58ed0",
+          "ci_lf_sha256": "a64cd8b6dcc52e928b24fe469f9803d06a6a2b9ded05a656dcd3c43a4dd58ed0",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_damage_session_tests.inc",
+          "captured_lf_sha256": "82fad9ff765edf93c450397e158ef6c749ca935a56d60eec077b202350d929ee",
+          "ci_lf_sha256": "82fad9ff765edf93c450397e158ef6c749ca935a56d60eec077b202350d929ee",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_dispatch_native_tests.inc",
+          "captured_lf_sha256": "5f51606c54944e27d5fb13e5447a7bd75584715b8a39ab8f8375cf6cdc7e2e21",
+          "ci_lf_sha256": "5f51606c54944e27d5fb13e5447a7bd75584715b8a39ab8f8375cf6cdc7e2e21",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_dispatch_session_tests.inc",
+          "captured_lf_sha256": "f54579967827a6cbe2c966521a804c9a037882262da4457dd92bc699c8ae8ad8",
+          "ci_lf_sha256": "f54579967827a6cbe2c966521a804c9a037882262da4457dd92bc699c8ae8ad8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_parts_native_tests.inc",
+          "captured_lf_sha256": "7a55c65da426e59d298a71c3822cd090a3b419cdfd71df10245b9540e421e340",
+          "ci_lf_sha256": "7a55c65da426e59d298a71c3822cd090a3b419cdfd71df10245b9540e421e340",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_selector_native_tests.inc",
+          "captured_lf_sha256": "330afd519b0ed15bd3139e62815a1c9531584002bf43fdbd4d7ed4cbb011e604",
+          "ci_lf_sha256": "330afd519b0ed15bd3139e62815a1c9531584002bf43fdbd4d7ed4cbb011e604",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_selector_session_tests.inc",
+          "captured_lf_sha256": "268e4d8a6fb2c7dcb40a838cc94da617624e1c41c8dac065f457243641b996f3",
+          "ci_lf_sha256": "268e4d8a6fb2c7dcb40a838cc94da617624e1c41c8dac065f457243641b996f3",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_enemy_threat_native_tests.inc",
+          "captured_lf_sha256": "5c8ef946b4fb6da7fc36e274b0b43714de365554df25b67ed84522f4b3f30664",
+          "ci_lf_sha256": "5c8ef946b4fb6da7fc36e274b0b43714de365554df25b67ed84522f4b3f30664",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_exact_solver_tests.inc",
+          "captured_lf_sha256": "1037298c990a5d3e65b4f104b58dd293fe6d19871cfc3f53aaf81c9299f9e5be",
+          "ci_lf_sha256": "1037298c990a5d3e65b4f104b58dd293fe6d19871cfc3f53aaf81c9299f9e5be",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_failure_session_tests.inc",
+          "captured_lf_sha256": "ce17bea460cf70cad7e9723a052afc79062242de8b6a24929263fca3b44ebebf",
+          "ci_lf_sha256": "ce17bea460cf70cad7e9723a052afc79062242de8b6a24929263fca3b44ebebf",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fishing_budget_tests.inc",
+          "captured_lf_sha256": "d6fad462b98d9ed770b44b15c5a1bef9cc6ab3c1856b3630853abcbaba15b14a",
+          "ci_lf_sha256": "d6fad462b98d9ed770b44b15c5a1bef9cc6ab3c1856b3630853abcbaba15b14a",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fishing_geometry_tests.inc",
+          "captured_lf_sha256": "bd36391cb18e99e02661f7197f3bbe3ef48f7f3c97d8d6570a0b9cd4446ea047",
+          "ci_lf_sha256": "bd36391cb18e99e02661f7197f3bbe3ef48f7f3c97d8d6570a0b9cd4446ea047",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fishing_model_tests.inc",
+          "captured_lf_sha256": "daabef9184597773adc53b97ae65df73baa5a62f2a5f7fac806ae8dd766f5b58",
+          "ci_lf_sha256": "daabef9184597773adc53b97ae65df73baa5a62f2a5f7fac806ae8dd766f5b58",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_board_solver_tests.inc",
+          "captured_lf_sha256": "8136a2c95c362ba2ad0968983ff233d921e77e76b1e8f3f763151cdee6ddc5d5",
+          "ci_lf_sha256": "8136a2c95c362ba2ad0968983ff233d921e77e76b1e8f3f763151cdee6ddc5d5",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_leader_probe.inc",
+          "captured_lf_sha256": "b36df1abc5e6f1a750b70cd17c1878770018d3312c2f13749558431ed14770b7",
+          "ci_lf_sha256": "b36df1abc5e6f1a750b70cd17c1878770018d3312c2f13749558431ed14770b7",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_native_tests.inc",
+          "captured_lf_sha256": "784c7a371815937fc689bd1acb5be0abb1c14102e8535a964de103fd1642aec8",
+          "ci_lf_sha256": "784c7a371815937fc689bd1acb5be0abb1c14102e8535a964de103fd1642aec8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_plan_probe.inc",
+          "captured_lf_sha256": "3afe2053a3e4bd2fd39ffb9aefaa4726c4f3ed1db8194c7d511f589f8db606db",
+          "ci_lf_sha256": "3afe2053a3e4bd2fd39ffb9aefaa4726c4f3ed1db8194c7d511f589f8db606db",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_profiles_tests.inc",
+          "captured_lf_sha256": "696fe7bf8fea123d8d215742a4dc2b431b86c595068fcc76e129114e94c29108",
+          "ci_lf_sha256": "696fe7bf8fea123d8d215742a4dc2b431b86c595068fcc76e129114e94c29108",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_fixed_session_tests.inc",
+          "captured_lf_sha256": "ffca8cb30fae3c7720ab387e53d8ba4e790b2a3c7311af642edc35c5f67abbdd",
+          "ci_lf_sha256": "ffca8cb30fae3c7720ab387e53d8ba4e790b2a3c7311af642edc35c5f67abbdd",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_himmel_plan_tests.inc",
+          "captured_lf_sha256": "70a27959b5551400a7d1a1943715a972b6c5774711c22f38ac3386fee5a9b292",
+          "ci_lf_sha256": "70a27959b5551400a7d1a1943715a972b6c5774711c22f38ac3386fee5a9b292",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_himmel_session_tests.inc",
+          "captured_lf_sha256": "b153ef229f32fb0d51c7a8b28fd2601248883581ef5413a71c4b258baeaaf315",
+          "ci_lf_sha256": "b153ef229f32fb0d51c7a8b28fd2601248883581ef5413a71c4b258baeaaf315",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_inventory_solver_tests.inc",
+          "captured_lf_sha256": "6e56142b6b63b14a22ae3ea28a94465e15f92994c92dcebcfe6f79d27ae6449c",
+          "ci_lf_sha256": "6e56142b6b63b14a22ae3ea28a94465e15f92994c92dcebcfe6f79d27ae6449c",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_leader_fixture.h",
+          "captured_lf_sha256": "4a258bcfa18d2e5c1f915087783da03ee6cf89fcf5dba147c4541f6b0b284901",
+          "ci_lf_sha256": "4a258bcfa18d2e5c1f915087783da03ee6cf89fcf5dba147c4541f6b0b284901",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_lifecycle_session_tests.inc",
+          "captured_lf_sha256": "0344c4230a90cb4ccea778fdb42f82132aa265bc00ad5beddc6f52df243ca1dd",
+          "ci_lf_sha256": "0344c4230a90cb4ccea778fdb42f82132aa265bc00ad5beddc6f52df243ca1dd",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_member_state_native_tests.inc",
+          "captured_lf_sha256": "4b8f3be8cda27d66102c2a522b23f4b85ce816bc7162dafd2e226bf7f0005c17",
+          "ci_lf_sha256": "4b8f3be8cda27d66102c2a522b23f4b85ce816bc7162dafd2e226bf7f0005c17",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_monochrome_session_tests.inc",
+          "captured_lf_sha256": "583fee91517a9d18002dc21e522c917d3b4898b316257e7f3f119755ee4002f4",
+          "ci_lf_sha256": "583fee91517a9d18002dc21e522c917d3b4898b316257e7f3f119755ee4002f4",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_monochrome_template_tests.inc",
+          "captured_lf_sha256": "3ed01962de213ae741806aeae5d97938bc99821f651f3ab9b23e359ba617c0e5",
+          "ci_lf_sha256": "3ed01962de213ae741806aeae5d97938bc99821f651f3ab9b23e359ba617c0e5",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multi_fishing_session_tests.inc",
+          "captured_lf_sha256": "c9e35f9e04d46eaccb6be857147f7a237a2e0b9fe5d165afb761199059278b76",
+          "ci_lf_sha256": "c9e35f9e04d46eaccb6be857147f7a237a2e0b9fe5d165afb761199059278b76",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multi_fishing_tests.inc",
+          "captured_lf_sha256": "de3625860679e612e9e512d56b1c2d26beba4f7002eb20a81a6d7478d0ce7675",
+          "ci_lf_sha256": "de3625860679e612e9e512d56b1c2d26beba4f7002eb20a81a6d7478d0ce7675",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_entry_native_tests.inc",
+          "captured_lf_sha256": "cdffe687b21e41434299610cf23d5413693f8b003fb58d7e13e239c170c06bf2",
+          "ci_lf_sha256": "cdffe687b21e41434299610cf23d5413693f8b003fb58d7e13e239c170c06bf2",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_entry_session_tests.inc",
+          "captured_lf_sha256": "6fce5b4f9f19e04c269147a344adf779b358182fee1022a485038fd101bb9075",
+          "ci_lf_sha256": "6fce5b4f9f19e04c269147a344adf779b358182fee1022a485038fd101bb9075",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_leader_native_tests.inc",
+          "captured_lf_sha256": "667a46e01193e4eb241093da085d82a7d21504e06d43dfb1a570d1b0d4dc544d",
+          "ci_lf_sha256": "667a46e01193e4eb241093da085d82a7d21504e06d43dfb1a570d1b0d4dc544d",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_model_tests.inc",
+          "captured_lf_sha256": "a4e6f9241124d73cfa7620b58b7cf21a1e9bd640f382fd4ece61346d3358189e",
+          "ci_lf_sha256": "a4e6f9241124d73cfa7620b58b7cf21a1e9bd640f382fd4ece61346d3358189e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_native_tests.inc",
+          "captured_lf_sha256": "5aa44027110e83b6b1f1ab20147b02b32165cf7e229b8b45b659921c43336c92",
+          "ci_lf_sha256": "5aa44027110e83b6b1f1ab20147b02b32165cf7e229b8b45b659921c43336c92",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_peer_native_tests.inc",
+          "captured_lf_sha256": "e0e37d8f973e06ce2f9249b19c05f350b7ab4fba82b40ed44ba8fc042d06748f",
+          "ci_lf_sha256": "e0e37d8f973e06ce2f9249b19c05f350b7ab4fba82b40ed44ba8fc042d06748f",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_peer_session_tests.inc",
+          "captured_lf_sha256": "89e57cf2fd31aa8af4d623a142530a071e5626d3390744b56a0fb9f4fd645ac3",
+          "ci_lf_sha256": "89e57cf2fd31aa8af4d623a142530a071e5626d3390744b56a0fb9f4fd645ac3",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_session_tests.inc",
+          "captured_lf_sha256": "cc3b210a3671d195505bf163f6015139f647ee5360777719de39235ce6bc28af",
+          "ci_lf_sha256": "cc3b210a3671d195505bf163f6015139f647ee5360777719de39235ce6bc28af",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_solo_native_tests.inc",
+          "captured_lf_sha256": "960ba09ed13719ebf3001cd0f196e0c637b105c3f7794f7cff4aa3d4fb00e795",
+          "ci_lf_sha256": "960ba09ed13719ebf3001cd0f196e0c637b105c3f7794f7cff4aa3d4fb00e795",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_multiplayer_solo_session_tests.inc",
+          "captured_lf_sha256": "385351ec6e7a1dae9683d4b7e8fa795f8d94e6c5f3f06e19626f7c7bf3f23e02",
+          "ci_lf_sha256": "385351ec6e7a1dae9683d4b7e8fa795f8d94e6c5f3f06e19626f7c7bf3f23e02",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_native_rule_matrix_tests.inc",
+          "captured_lf_sha256": "a6519d52d031ec6f86e4f8b59a9b9cdbf82dbb2e03349cbee7e30b8262f2612a",
+          "ci_lf_sha256": "a6519d52d031ec6f86e4f8b59a9b9cdbf82dbb2e03349cbee7e30b8262f2612a",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_observation_native_tests.inc",
+          "captured_lf_sha256": "2f5d6d20ddaa528d983da154c0b23037f4ef9a2daec1a023a62372e522957979",
+          "ci_lf_sha256": "2f5d6d20ddaa528d983da154c0b23037f4ef9a2daec1a023a62372e522957979",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_observation_session_tests.inc",
+          "captured_lf_sha256": "f25952ee8bf7d7918da6ccc7adcdf4d5943bb00cd5ef7d8149d4bf5510fd2870",
+          "ci_lf_sha256": "f25952ee8bf7d7918da6ccc7adcdf4d5943bb00cd5ef7d8149d4bf5510fd2870",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_plan_session_tests.inc",
+          "captured_lf_sha256": "2474b96f556b6d0033db7dcde7815aa3e1b2745ef016e00bbd7f77ffe21b3e4b",
+          "ci_lf_sha256": "2474b96f556b6d0033db7dcde7815aa3e1b2745ef016e00bbd7f77ffe21b3e4b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_plan_storage_probe.inc",
+          "captured_lf_sha256": "664cf84e2fad4a4a74b2bb5df54948b61cabcc44285613a0ded12831911101bf",
+          "ci_lf_sha256": "664cf84e2fad4a4a74b2bb5df54948b61cabcc44285613a0ded12831911101bf",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_plan_tests.inc",
+          "captured_lf_sha256": "6ca54b4b238af4fbc78392df92550ba0588e2ae9e29a8ae2aa07509961d1e421",
+          "ci_lf_sha256": "6ca54b4b238af4fbc78392df92550ba0588e2ae9e29a8ae2aa07509961d1e421",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_poison_session_tests.inc",
+          "captured_lf_sha256": "a0bb73c4378191aff7e50dd4a0a0f013ec3578f087d4e418eca61c8a2cce20af",
+          "ci_lf_sha256": "a0bb73c4378191aff7e50dd4a0a0f013ec3578f087d4e418eca61c8a2cce20af",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_poison_solver_tests.inc",
+          "captured_lf_sha256": "d6eb610903cf96aae11dbdff93721fb354f3434aaa78edf3598b3db8dbcc50b0",
+          "ci_lf_sha256": "d6eb610903cf96aae11dbdff93721fb354f3434aaa78edf3598b3db8dbcc50b0",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_readiness_probe.inc",
+          "captured_lf_sha256": "93dd509b2d17be30dffca3b302366c65732315e2884213465b906ffdc71d486e",
+          "ci_lf_sha256": "93dd509b2d17be30dffca3b302366c65732315e2884213465b906ffdc71d486e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_readiness_stop_session_tests.inc",
+          "captured_lf_sha256": "a7535c89e4dd1057555314a10833f9cd35b4336840b534c7497be449ae8e4dd3",
+          "ci_lf_sha256": "a7535c89e4dd1057555314a10833f9cd35b4336840b534c7497be449ae8e4dd3",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_recorded_spinner_solver_tests.inc",
+          "captured_lf_sha256": "12fc84667329bb4f007464ab3f98511422502d5dc7e1d01e972996b75f24d6bb",
+          "ci_lf_sha256": "12fc84667329bb4f007464ab3f98511422502d5dc7e1d01e972996b75f24d6bb",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_recorded_thorn_solver_tests.inc",
+          "captured_lf_sha256": "a2dd344c5c354d9759b8e981d65affded1acc357404ac64367ba6422fef6e098",
+          "ci_lf_sha256": "a2dd344c5c354d9759b8e981d65affded1acc357404ac64367ba6422fef6e098",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_recovery_planning_tests.inc",
+          "captured_lf_sha256": "0143eb81914db231f429e915d1bf8a46152959bcee0b86895562ce3e987a70f8",
+          "ci_lf_sha256": "0143eb81914db231f429e915d1bf8a46152959bcee0b86895562ce3e987a70f8",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_recovery_session_tests.inc",
+          "captured_lf_sha256": "39c5c54b7423946cc25db50adb8f8ff0f1c09d6b8763b72df7ea9b9f81eeb43b",
+          "ci_lf_sha256": "39c5c54b7423946cc25db50adb8f8ff0f1c09d6b8763b72df7ea9b9f81eeb43b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_reported_color_spinner_tests.inc",
+          "captured_lf_sha256": "70f1e597bb71e5ce92687c8a5f9e0102db48321440598a901f274f95758dec37",
+          "ci_lf_sha256": "70f1e597bb71e5ce92687c8a5f9e0102db48321440598a901f274f95758dec37",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_route_simplification_tests.inc",
+          "captured_lf_sha256": "1b86e8c1d9780e5d8687e8728e4cc44b9ecc0a8f070aa04d4d2ca1124775abc3",
+          "ci_lf_sha256": "1b86e8c1d9780e5d8687e8728e4cc44b9ecc0a8f070aa04d4d2ca1124775abc3",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_score_policy_tests.inc",
+          "captured_lf_sha256": "a47a1d5ec4b456362150753c0c9f49b7b1d2bbcbea18c02357e03812b94ca1fa",
+          "ci_lf_sha256": "a47a1d5ec4b456362150753c0c9f49b7b1d2bbcbea18c02357e03812b94ca1fa",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_search_attempt_session_tests.inc",
+          "captured_lf_sha256": "2b6c4b4f3397454253b2e6a686e1eb014b8ed39b12220ee01fd7100887308c03",
+          "ci_lf_sha256": "2b6c4b4f3397454253b2e6a686e1eb014b8ed39b12220ee01fd7100887308c03",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_search_recovery_tests.inc",
+          "captured_lf_sha256": "89826a189038376da3af41e0dfdb27daa12ffa69220da1a9478ed83d19083618",
+          "ci_lf_sha256": "89826a189038376da3af41e0dfdb27daa12ffa69220da1a9478ed83d19083618",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_session_state_model_tests.inc",
+          "captured_lf_sha256": "168b8032c0e52e9e2113341e719fdb0337b4e77273f81948095272dc8bacd726",
+          "ci_lf_sha256": "168b8032c0e52e9e2113341e719fdb0337b4e77273f81948095272dc8bacd726",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_shape_guidance_tests.cpp",
+          "captured_lf_sha256": "657eaca74beed34f9cd0d19fe0cda377bebf4452500515d876e24aeb29102bc5",
+          "ci_lf_sha256": "657eaca74beed34f9cd0d19fe0cda377bebf4452500515d876e24aeb29102bc5",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_shape_solver_tests.inc",
+          "captured_lf_sha256": "2212e498688b2cc6eafe4e0e6f770d981115a711eaf34ea64378e4035ffc3946",
+          "ci_lf_sha256": "2212e498688b2cc6eafe4e0e6f770d981115a711eaf34ea64378e4035ffc3946",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_shape_space_tests.inc",
+          "captured_lf_sha256": "db86a3adb68fd7e4cecefcafda35da68faf65b1bd81163dbe50ec6657ccd9461",
+          "ci_lf_sha256": "db86a3adb68fd7e4cecefcafda35da68faf65b1bd81163dbe50ec6657ccd9461",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_shortcut_session_tests.inc",
+          "captured_lf_sha256": "40546fc9c7f65fd994db0a471f6d802e491d1df0a2f812d29a705a59416e22e2",
+          "ci_lf_sha256": "40546fc9c7f65fd994db0a471f6d802e491d1df0a2f812d29a705a59416e22e2",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_skill_choice_tests.inc",
+          "captured_lf_sha256": "9bc8bbcd0e1fc7c71ed0208530bba68966af05a491798272beb6f73ac2dad627",
+          "ci_lf_sha256": "9bc8bbcd0e1fc7c71ed0208530bba68966af05a491798272beb6f73ac2dad627",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_skill_native_tests.inc",
+          "captured_lf_sha256": "41618bdadab2e14aae65ead79fe02fb6cf4ffa2a89e003e87b32d68d66ca2d55",
+          "ci_lf_sha256": "41618bdadab2e14aae65ead79fe02fb6cf4ffa2a89e003e87b32d68d66ca2d55",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_skill_window_native_tests.inc",
+          "captured_lf_sha256": "bfeae548f2587de7bc5eccb8c6ac958aea6df9ada2f56e397684e77fad2c7cfc",
+          "ci_lf_sha256": "bfeae548f2587de7bc5eccb8c6ac958aea6df9ada2f56e397684e77fad2c7cfc",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_skill_window_session_tests.inc",
+          "captured_lf_sha256": "496bed073672fe2cdf1e17ce61dd68c7946f82d02071e08f7dba695c1fe7d9f1",
+          "ci_lf_sha256": "496bed073672fe2cdf1e17ce61dd68c7946f82d02071e08f7dba695c1fe7d9f1",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_solve_sanitized_tests.cpp",
+          "captured_lf_sha256": "513f67c87a390d9d420346cec88735ab0619c8756a2f90892d97ab238388844b",
+          "ci_lf_sha256": "513f67c87a390d9d420346cec88735ab0619c8756a2f90892d97ab238388844b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_solver_tests.cpp",
+          "captured_lf_sha256": "46026014fe63743a9ab34f0c1871a5298cc05455c67b8b57c3e02328c8ef1262",
+          "ci_lf_sha256": "46026014fe63743a9ab34f0c1871a5298cc05455c67b8b57c3e02328c8ef1262",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_square_recovery_tests.inc",
+          "captured_lf_sha256": "4bf0ce1b5b0689ed59be017454c9612dd24b0a54b748330c4c388c7ec457df0b",
+          "ci_lf_sha256": "4bf0ce1b5b0689ed59be017454c9612dd24b0a54b748330c4c388c7ec457df0b",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_strategy_session_tests.inc",
+          "captured_lf_sha256": "667822a314ed43947f20500eb864322f5071be9f7963530b74f96b84350b4609",
+          "ci_lf_sha256": "667822a314ed43947f20500eb864322f5071be9f7963530b74f96b84350b4609",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_survival_session_tests.inc",
+          "captured_lf_sha256": "c3814e9014e30e929e52a804a647dd40feba4d2c4d52c61e755ee537710ac28d",
+          "ci_lf_sha256": "c3814e9014e30e929e52a804a647dd40feba4d2c4d52c61e755ee537710ac28d",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_t_boundary_solver_tests.inc",
+          "captured_lf_sha256": "56302ede63bf7be615019dcfebd58c233a62c4a627d2eb2375e3d2d319affa8c",
+          "ci_lf_sha256": "56302ede63bf7be615019dcfebd58c233a62c4a627d2eb2375e3d2d319affa8c",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_color_guidance_tests.inc",
+          "captured_lf_sha256": "87ec52691169a472ed9a89f04b953987f1bd05d9dcc5e41688625f4ba0824580",
+          "ci_lf_sha256": "87ec52691169a472ed9a89f04b953987f1bd05d9dcc5e41688625f4ba0824580",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_fishing_session_tests.inc",
+          "captured_lf_sha256": "892ad5ecc456aae0f352cfcde1ed2555ce4450f0d09ca3a6a11e6e5dacabd08e",
+          "ci_lf_sha256": "892ad5ecc456aae0f352cfcde1ed2555ce4450f0d09ca3a6a11e6e5dacabd08e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_fishing_tests.inc",
+          "captured_lf_sha256": "fc1607f142ef8eee844a5972a1df06d2a7293e333cdf9f3bcdea157fc0c73917",
+          "ci_lf_sha256": "fc1607f142ef8eee844a5972a1df06d2a7293e333cdf9f3bcdea157fc0c73917",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_native_tests.inc",
+          "captured_lf_sha256": "4fce38e2898cb68e35cfe7f92953d788f8ea15aca6e02d45eb78ba6d6b001313",
+          "ci_lf_sha256": "4fce38e2898cb68e35cfe7f92953d788f8ea15aca6e02d45eb78ba6d6b001313",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_session_tests.inc",
+          "captured_lf_sha256": "387bb6cb92eeb7fff28e719872a75fd75e3ad1ac180e3367e3d54b382b4f4f6e",
+          "ci_lf_sha256": "387bb6cb92eeb7fff28e719872a75fd75e3ad1ac180e3367e3d54b382b4f4f6e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_thorn_solver_tests.inc",
+          "captured_lf_sha256": "29b1772bcca07d5d216c393b131c368efc92510b989ab00fafb8fc5fb122e082",
+          "ci_lf_sha256": "29b1772bcca07d5d216c393b131c368efc92510b989ab00fafb8fc5fb122e082",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_three_fishing_native_tests.inc",
+          "captured_lf_sha256": "ecb3eebf564a5973660cf3e2facac47faa092214ac650fe356e77d3df95f682e",
+          "ci_lf_sha256": "ecb3eebf564a5973660cf3e2facac47faa092214ac650fe356e77d3df95f682e",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_three_fishing_session_tests.inc",
+          "captured_lf_sha256": "e3ec9e2a970de3e8bc0e7681e770975a32c9e59a056633502e0390428692bafe",
+          "ci_lf_sha256": "e3ec9e2a970de3e8bc0e7681e770975a32c9e59a056633502e0390428692bafe",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_timed_fishing_tests.inc",
+          "captured_lf_sha256": "7db4402555a6f95b08d008756e46f8e9b81c0dcdb822af8b1eda77db031421e2",
+          "ci_lf_sha256": "7db4402555a6f95b08d008756e46f8e9b81c0dcdb822af8b1eda77db031421e2",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_timing_rules_tests.inc",
+          "captured_lf_sha256": "6abd637de1e541cf371b6cfeb6b015b0e45cf413ef8c377d77b35a6427b1aad2",
+          "ci_lf_sha256": "6abd637de1e541cf371b6cfeb6b015b0e45cf413ef8c377d77b35a6427b1aad2",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_timing_session_tests.inc",
+          "captured_lf_sha256": "4bfdade0e1dff41abe8adbf66f93f10a7cf42c79c452be9512f5b7bc3b29ac8f",
+          "ci_lf_sha256": "4bfdade0e1dff41abe8adbf66f93f10a7cf42c79c452be9512f5b7bc3b29ac8f",
+          "match": true
+        },
+        {
+          "path": "ios/tests/orb_uryu_startup_session_tests.inc",
+          "captured_lf_sha256": "fac3231a7223aafb936601e53bc5c295a1471c1477ee842568d3e6b8d1783f4c",
+          "ci_lf_sha256": "fac3231a7223aafb936601e53bc5c295a1471c1477ee842568d3e6b8d1783f4c",
+          "match": true
+        },
+        {
+          "path": "ios/tests/timer_model_tests.c",
+          "captured_lf_sha256": "63d92d33ed0b543e91727915f90fd0ce297e9485ede28eab30477de1c6f6426e",
+          "ci_lf_sha256": "63d92d33ed0b543e91727915f90fd0ce297e9485ede28eab30477de1c6f6426e",
+          "match": true
+        }
+      ],
+      "limitations": [
+        "Source identity comparison only; does not execute tests or prove runtime behavior."
+      ]
+    }
+  },
+  "source_review": {
+    "schema": 1,
+    "reviewed_at_utc": "2026-11-16T18:31:50.783868+00:00",
+    "reviewer": "source_review independent subagent",
+    "base_commit": "fd15480e3a231d4d3933190496d7d701ea9c2923",
+    "source_commit": "a2561ab038b092d0e47c6e72bb286b7d14f807e0",
+    "scope": "Product and regression-test source changes after 0.5.49, before release-metadata preparation: native fixed variants, leader/assist/observation readers, Combo providers, skill identity and diagnostics.",
+    "blocking_findings": [],
+    "conclusion": "No concrete release-blocking defect identified by source review.",
+    "checks": [
+      "Catalog lookup checks exact record ID, a 128-hop bound and allocated-record limits; no fallback to ordinary data for unresolved variants.",
+      "Solo fixed-variant leader reads preserve source/form identity, validate actual native leader skill and compare the complete pair across repeated reads.",
+      "Effective assist IDs use assist + variant * 1000000 consistently in diagnostic lookup and automation snapshot identity.",
+      "Assist recovery L awakenings and Combo providers use the same verified variant-specific catalog reader.",
+      "PHOrbSameAutomation compares full effective native body and assist IDs, invalidating same-number variant changes.",
+      "Exact configured skill-ID rejection and multiplayer scope restrictions remain in place.",
+      "New fixture source IDs, record capacities, skill tables and source slots were inspected for consistency."
+    ],
+    "native_tests_executed_by_reviewer": false,
+    "tests_executed_by_reviewer": false,
+    "tracked_files_modified_by_reviewer": false,
+    "device_verified": false,
+    "limitations": [
+      "This report is source review only. It is not Objective-C/Objective-C++ compilation, native test execution or runtime verification.",
+      "The 0.5.49 device log lacks the actual native skill ID returned at the first B1 readiness rejection. The changes improve fixed-variant reading and diagnostics but do not establish that the original B1 mismatch is fixed.",
+      "Fresh device diagnostics and actual Coral fixed-plan progress remain required to confirm native skill sources, timing and full completion; multiplayer synchronization is not device-verified."
+    ]
+  },
+  "visual_review": {
+    "images": [
+      "verification/browser/editor-browser/overview-390.png",
+      "verification/browser/editor-browser/save-failure-390.png",
+      "verification/gui/overlay-orbs-strategy-profiles.png",
+      "verification/gui/legacy-orbs-team-plan-import.png"
+    ],
+    "observations": [
+      "The 390px browser overview shows six body/assist slots and saved state. The intentional save failure retains the edited draft and visible failure feedback.",
+      "The native scene and legacy strategy screens display selection and team binding controls, with retained-setting feedback after an intentional save failure.",
+      "These screenshots do not show the new B1 skill-mismatch text. Its formatting and copied fixedPlanProgress are covered by the executed native and GUI assertions, not claimed as visually inspected."
+    ],
+    "device_verified": false
+  },
+  "delivery": {
+    "status": "passed",
+    "verified_at_utc": "2026-11-16T19:05:27.336441+00:00",
+    "version": "0.5.50-orbs",
+    "commit": "a2561ab038b092d0e47c6e72bb286b7d14f807e0",
+    "ci_number": 165,
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/43929572460",
+    "verified_manifest_files": 415,
+    "verified_zip_entries": 416,
+    "zip_crc": "passed",
+    "zip_contents": "byte-for-byte equal to delivery",
+    "ci_steps_checked": 14,
+    "gui_reports": {
+      "overlay-probe.json": {
+        "phase": "done",
+        "success": 1,
+        "failures": []
+      },
+      "overlay-restart-probe.json": {
+        "phase": "done",
+        "success": 1,
+        "failures": []
+      },
+      "legacy-probe.json": {
+        "phase": "done",
+        "success": 1,
+        "failures": []
+      },
+      "legacy-restart-probe.json": {
+        "phase": "done",
+        "success": 1,
+        "failures": []
+      }
+    },
+    "dylib_bytes": 12063680,
+    "dylib_sha256": "2ad0d8f24ad6992777da10a88264733fb69ee4f84f456c195b287533295964c7",
+    "zip_sha256": "bde7c068187173fa735b0a00a32acac8f94da463983f48c17fab1522b6d8293e",
+    "directory": "E:/ipa/PADCheaper-0.5.50-orbs",
+    "zip": "E:/ipa/PADCheaper-0.5.50-orbs.zip",
+    "device_verified": false
+  },
+  "evidence_hashes": {
+    "build/ci-run.json": "092d3e12a390a60e87178b5223d19babbce689b3184995d2805dccb47c603b3c",
+    "build/ci-run.log": "a55da84f108464c2a68e3eab0afdc7cb52ab4475341888edcd436078af70d370",
+    "build/ci-log-review.json": "625d655fbf4d890e6b7362b956b60cc261a33de1129e97cb8bb58a42e1f0681c",
+    "build/visual-review.json": "63ce7e7369c7d4b9ce500e466eab5683433c7faeee5a088aad20c0f171bd0a08",
+    "build/source-review.json": "4192945f5bc17dddc38a79945f8e8afdfbf7adb081f6aaf730b918ec4fb56c93",
+    "build/independent-delivery-verification.json": "5968e9908eef41f030eaccab49b42c8427f3db6f220984204255bd72598618a1",
+    "build/windows/result.json": "99024ad21c54c60679bff538ada6f9335a972336c7589aa493808f66653c56c8",
+    "build/windows/source-vs-ci.json": "1623fd4d7f15abaed67a34de8fe6f3e141432b7092d19036b96dbb644aeabcc4",
+    "build/windows/source-inputs-before.json": "b0c8a6924eb0487d75d69f55f0eb3e1677f9944f8b9666b8d0786461ba423af8",
+    "build/windows/source-inputs-after.json": "883caf7e00df84512a3cbebb39f8de272c98562bcc56f01955fa1182c350612a",
+    "build/windows/windows-tests.log": "85e94bd9c51fe40b6c9543ee9cbb3b04e5da4aec496f64588874e257394b3cec",
+    "build/windows/solver.log": "15769f2f664cf18c14df8fd739f17e91ae395f0f974fa8108fe1c2c7945952c4",
+    "build/windows/solve-smoke-tests.log": "13aea22fbf09c8a3307380d85e599f35057b688ca64343e207334ddc192aa68e",
+    "package/verification/artifact-review.json": "d0d29b39e363253a8551ed9e0523deecba087b2ae83f66858efd4c15e4dba77a",
+    "package/verification/browser/editor-browser/editor-390.png": "9b21257dd4bfe6aa8e82eed614ef0787cfdfab9092988413a22dc412be2ed534",
+    "package/verification/browser/editor-browser/editor-keyboard-390.png": "64fb914f6901415d2ad022ac3641725c4a307039e9511d0456f252b87a94cd01",
+    "package/verification/browser/editor-browser/overview-320.png": "0cf86c49a0b927744cfe671d1755cab40241aadb3e2f41c133ba9f352960bd95",
+    "package/verification/browser/editor-browser/overview-390.png": "b9b39476f86634a6e6cd25da4d0497f52f726764fcb494ae2bbc7f437a730361",
+    "package/verification/browser/editor-browser/overview-430.png": "02c8562b9c9b1a55de4e5e5cdf62e00246f380ff536ee109de50513dbdde8b88",
+    "package/verification/browser/editor-browser/overview-768.png": "a61fc6aa7f9bc7e99ec12dae3c97fe1e0e5b08e9a4fea9f90be932285cfb8242",
+    "package/verification/browser/editor-browser/overview-844.png": "30b19dad6eba2cb0f201401946d8491aecd9017aaf4c8eca70fe12e0391a9afa",
+    "package/verification/browser/editor-browser/save-failure-390.png": "e7c409cb07a435a7bbf7df0f0ab35983e7be1387fd4a4678aed61e7f7193a765",
+    "package/verification/browser/editor-browser/team-dungeon-390.png": "7cb34c4f889dc2e10e37962d7cb4fea852b3000849d38750a8f15c9aa2dcc439",
+    "package/verification/browser/editor-browser/team-lab-320.png": "bd9d96e8aa589134518f2bc7af3c5bf40dc9cbc18969c3a9ee4fdb61519bb36c",
+    "package/verification/browser/editor-browser/team-lab-390.png": "466f3c8037ba026286aa298ef5f19da1cd4c86584a2061e0263eb4c2bed593ad",
+    "package/verification/browser/editor-browser/team-lab-430.png": "2c897c9ba79bb587b345055edf10bb069b9889ef1a7d762fab86e1256f5e92f3",
+    "package/verification/browser/editor-browser/team-lab-768.png": "033c135de416c493d20e30c3dbc99a5eff088a168b8812ab712fe9d9a56266f3",
+    "package/verification/browser/editor-browser/team-lab-844.png": "d0cbaa12280f45981b46c97e3a8db0759a36dfa3a3a4d67d7cd8c3b319462681",
+    "package/verification/browser/team-model/dungeon-test-result.json": "5515a5a97f369e1107ee29b8aff1b5a559dd834eec9bf4973356c9a41aaa0cfe",
+    "package/verification/browser/team-model/test-result.json": "738308fdd6b8dd63fa8c939447bda65bcc653d87585e022a00cd44a5542bcc3d",
+    "package/verification/ci-log-review.json": "625d655fbf4d890e6b7362b956b60cc261a33de1129e97cb8bb58a42e1f0681c",
+    "package/verification/ci-run.json": "7cc60470b7ed54c67a3f470708677b53358287fcf6adf6e4eab06bb8eeffe7bc",
+    "package/verification/ci-run.log": "a55da84f108464c2a68e3eab0afdc7cb52ab4475341888edcd436078af70d370",
+    "package/verification/gui/gui-test.log": "e07c850c12ad2bdd4c02886dc64ca791be2af54783754bb4a9135574849aeda6",
+    "package/verification/gui/legacy-battle-restore-retry.png": "c1b58cd8b2ac5c27fb4f3982d79d60e7380c0f8ac6e00ad724da7771fda78b6b",
+    "package/verification/gui/legacy-bubble.png": "7e8c2070bca9c238eea2765efef1e7f096d543195b7364434ea2ed81a45f8cb7",
+    "package/verification/gui/legacy-features.png": "d28d229be4525611c44511ce51354323dbc2ef96516f4410cdbb79b39f6835ab",
+    "package/verification/gui/legacy-filters.png": "d13df510757ffb3be4b1708739f256266b6445f90039516d609a85deb77965f9",
+    "package/verification/gui/legacy-formation-focused.png": "342d67effd84af1244754ee57c3d2c941274c241f79ac92df70665365745fa61",
+    "package/verification/gui/legacy-formation-portrait.png": "0a4737d95d2dce39370b2b1b52520aa31c330acd9a2d2d8cc883f122ecdc52ab",
+    "package/verification/gui/legacy-formation-restart.png": "a779d10e621c844229248939a4adf5eaa485ab19b2751bc0de76572d804e1031",
+    "package/verification/gui/legacy-orb-shortcuts.png": "4351663425b495184a338c50836f7080236499b439f92abcea7a9d6f4189a8da",
+    "package/verification/gui/legacy-orbs-5x4-preview.png": "d5acab5ce28bdd9159ab43466c3423749012aa1374d07b425fb3e81f4635c3c5",
+    "package/verification/gui/legacy-orbs-7x6-preview.png": "4be48903ff2a4e70ef7342fc3c28818985603422abde20379a2f0fd92f9a9fa9",
+    "package/verification/gui/legacy-orbs-battle-observation.png": "518b845a023b25323d3084ff07a12f2bdfbde0fe468e51fa914318d0eaaa877f",
+    "package/verification/gui/legacy-orbs-dungeon-report.png": "86661e5141b5f9023a7cd45173f87237c3e3abd95bda2a084314bf07c883111b",
+    "package/verification/gui/legacy-orbs-dungeon-share.png": "a49e9cb8d2fa1fe068477de9146c258969563cc7063988f66832175057f41fe0",
+    "package/verification/gui/legacy-orbs-effects-5x4.png": "2f97340fa63b36e02af5e02ed94fefd1a7d62725bffe4f8ffb49a86db3db1c54",
+    "package/verification/gui/legacy-orbs-effects-6x5.png": "e99e8cad392c55bb9b190a9c7d4d4f9b1038e7b8978b6c2b4d9f6417dccbd5a6",
+    "package/verification/gui/legacy-orbs-effects-7x6.png": "c28e020f7412b058b4aa1f78fa3d57e39eebd1be3cedd72f885d2961ed0cdfd6",
+    "package/verification/gui/legacy-orbs-eight-auto-board.png": "2108556f85c8a32899c40275fd6a84f0a84ee961e6ef10083b0c89d54999b3f6",
+    "package/verification/gui/legacy-orbs-eight-auto.png": "225be2cd824adc42f5b34bc5ab9f06599f1f3a48be97c05ce53d9988dcf635de",
+    "package/verification/gui/legacy-orbs-eight-clear-stopped.png": "e1fe6fd4d6c2f35e683b349ea375d4a0e4ee0539390f11a285064a65cf97e4d9",
+    "package/verification/gui/legacy-orbs-eight-first-ready.png": "ed8e83748d6fc7817497bf6d1ca1d6e9d4ee1022d879a95e149600dca853eb18",
+    "package/verification/gui/legacy-orbs-eight-guide-legacy.png": "4ba3300caa7674169f9e04f2d1c86061a23316d8dfa8eda4c9a1ae4af22cdd9b",
+    "package/verification/gui/legacy-orbs-eight-guide-off.png": "b352b0d2ee43749213aa7217733cedf1a3669d69b50afa6e7fd67f61eef20805",
+    "package/verification/gui/legacy-orbs-eight-guide-on.png": "5ee38aa6f31499d98a528ae0e0d6a5e1d89d381bd4cff5d57997e08aadfd4ec7",
+    "package/verification/gui/legacy-orbs-eight-guide-save-failed.png": "ba691c35784243ba7c54b909e14489d63d6d1c98cdc227613604cd4483ca21fa",
+    "package/verification/gui/legacy-orbs-eight-skill-paused.png": "620926e337a5c1264fab94f2c89a60d9bd2d095a7effa88ca9cda894c809c367",
+    "package/verification/gui/legacy-orbs-eight-skill-resumed.png": "44da4e72c079198184a693002ea045312d99dafa0ba91d34d7a9547626d247a0",
+    "package/verification/gui/legacy-orbs-fixed-exact-draft.png": "1d58b44f7275903ac9072bcc17f51acb3f1e5e29b947a6e87bc2019ac21960e4",
+    "package/verification/gui/legacy-orbs-goals-failed-draft.png": "cee8e1c68536e47d608e96851a08b7b2453c85fff62703a6bd8420de5f068268",
+    "package/verification/gui/legacy-orbs-goals.png": "b09137cb29ad276c14aa7e78bb8c62adc656178d9c7f6a08c99e361342a4bafb",
+    "package/verification/gui/legacy-orbs-poison-heart-four.png": "62c4bdb3127dbcfcdee892654f066bd951514d1be3ea3be84f78aed5d576af02",
+    "package/verification/gui/legacy-orbs-preview.png": "c421492c58a7ec83ca402481ec0d1781422e0c80f17b1cf4bede466d45804d28",
+    "package/verification/gui/legacy-orbs-recovery-failed-draft.png": "6871d0811f49878b6466100f5bd524c3528256cac2e034dae0320f1ae6110204",
+    "package/verification/gui/legacy-orbs-recovery-saved.png": "bd615b6032c5036e114602ba544eb4262383eaea41b8cd044fd2ca9d0840334f",
+    "package/verification/gui/legacy-orbs-skill-position-decisions.png": "ec3789a633079b47bbc6149619a60ce404541f1c5103493d9e1f3b386cf10e88",
+    "package/verification/gui/legacy-orbs-skill-rules-collapsed.png": "43f76bad4922aa5d186834d1bff79439becf409dd46fe029b28a76b826327057",
+    "package/verification/gui/legacy-orbs-skill-rules.png": "dbd398d634e6c4253cd83cb63febef20a73f247ec2c978229f103d2cad936671",
+    "package/verification/gui/legacy-orbs-strategy-file-picker.png": "8abaaacea5b5ce50f1ed6d30d21c484676db2fa23fa5a415c64fbe6d83831724",
+    "package/verification/gui/legacy-orbs-strategy-profiles.png": "10499afcf3a9da6e881e65ca55929649475a5e6eca88e6b5304528338e9d0ff9",
+    "package/verification/gui/legacy-orbs-strategy-share.png": "00a52591cf1db2aa44197b4235313f792eb7bbe1582fba850b94623856256ec5",
+    "package/verification/gui/legacy-orbs-survival-decisions.png": "e6b9eb5cfa284ed055bd787788b40ef23772aef1d09c9e13cf0aa05b591cf89c",
+    "package/verification/gui/legacy-orbs-team-plan-import.png": "a42444249f8c0eff7d87859ccc9a6728eb322d6b728084b63d01ee3cd6a118c8",
+    "package/verification/gui/legacy-orbs-team-plan-summary.png": "59884f333c678a13354217699c87b0dd9f7fad2bda728dcf5bcad9e124314a1d",
+    "package/verification/gui/legacy-orbs-temporary-leader.png": "ae51e10fd1c48a1faf7433111daf8d99413c9c928ae6f133a2b6d752c9c2b47d",
+    "package/verification/gui/legacy-orbs-thorn-priority.png": "62c4bdb3127dbcfcdee892654f066bd951514d1be3ea3be84f78aed5d576af02",
+    "package/verification/gui/legacy-orbs-unmatchable-colors.png": "096685ecf1fc7039b6a51b957b9a554d32c1e776914446ab904efa293d391f0b",
+    "package/verification/gui/legacy-portrait.png": "e1517549f095b24d4b1c6548a9f099c1bdaf7582b709ae079dca2cad50dcb5aa",
+    "package/verification/gui/legacy-probe.json": "8dd48cef21ac3fc042da7ede78d898674bc512538542f033c8071951df610933",
+    "package/verification/gui/legacy-restart-probe.json": "088670a05e20fb3be0a233c52bb842fd339fda77c42b9349d3f567c465e44ff4",
+    "package/verification/gui/legacy-restart-status.json": "3141a26f38129e675bf0e083606939b8f860df13b134c12ab91f4a7e6d7c879a",
+    "package/verification/gui/legacy-status.json": "850a2384e2d343a3bec167cd6b759ab83b0f69ed96223834e4286acebb075380",
+    "package/verification/gui/overlay-battle-restore-retry.png": "c1b58cd8b2ac5c27fb4f3982d79d60e7380c0f8ac6e00ad724da7771fda78b6b",
+    "package/verification/gui/overlay-bubble.png": "7e8c2070bca9c238eea2765efef1e7f096d543195b7364434ea2ed81a45f8cb7",
+    "package/verification/gui/overlay-features.png": "d28d229be4525611c44511ce51354323dbc2ef96516f4410cdbb79b39f6835ab",
+    "package/verification/gui/overlay-filters.png": "d13df510757ffb3be4b1708739f256266b6445f90039516d609a85deb77965f9",
+    "package/verification/gui/overlay-formation-focused.png": "164e399e261d317bdc0eada37d5ad80f237c7ded73d479967b3ad8989fe12354",
+    "package/verification/gui/overlay-formation-portrait.png": "ef80d85d9cac5ccfbcb1123be23857f681f133f714870650ab66760ee9957ffa",
+    "package/verification/gui/overlay-formation-restart.png": "9b12d79560bc43e0ce8674a0539397921f56251152e301ba989544cc7fac3260",
+    "package/verification/gui/overlay-landscape.png": "2053c2c3a8f41c1043f0c834edd9c3d4f025e918116ee1e92a15bbc8933fca1b",
+    "package/verification/gui/overlay-orb-folded-landscape.png": "8a5c00312011bbb0626da764f8faace1040968e8ad6146b0e419d2e17ad1f9f3",
+    "package/verification/gui/overlay-orb-shortcuts-landscape.png": "bff30e93ce1d59eba9c3d3cddee0c7901b5ac3bfbccb4b587189623ac887f3d2",
+    "package/verification/gui/overlay-orb-shortcuts.png": "4351663425b495184a338c50836f7080236499b439f92abcea7a9d6f4189a8da",
+    "package/verification/gui/overlay-orbs-5x4-preview.png": "d5acab5ce28bdd9159ab43466c3423749012aa1374d07b425fb3e81f4635c3c5",
+    "package/verification/gui/overlay-orbs-7x6-preview.png": "4be48903ff2a4e70ef7342fc3c28818985603422abde20379a2f0fd92f9a9fa9",
+    "package/verification/gui/overlay-orbs-battle-observation.png": "518b845a023b25323d3084ff07a12f2bdfbde0fe468e51fa914318d0eaaa877f",
+    "package/verification/gui/overlay-orbs-dungeon-report.png": "86661e5141b5f9023a7cd45173f87237c3e3abd95bda2a084314bf07c883111b",
+    "package/verification/gui/overlay-orbs-dungeon-share.png": "480a6cd1078bac77fd21d0b8939b36865aa86f3829b89ca32c66beacb1e04c88",
+    "package/verification/gui/overlay-orbs-effects-5x4.png": "2f97340fa63b36e02af5e02ed94fefd1a7d62725bffe4f8ffb49a86db3db1c54",
+    "package/verification/gui/overlay-orbs-effects-6x5.png": "e99e8cad392c55bb9b190a9c7d4d4f9b1038e7b8978b6c2b4d9f6417dccbd5a6",
+    "package/verification/gui/overlay-orbs-effects-7x6.png": "c28e020f7412b058b4aa1f78fa3d57e39eebd1be3cedd72f885d2961ed0cdfd6",
+    "package/verification/gui/overlay-orbs-eight-auto-board.png": "2108556f85c8a32899c40275fd6a84f0a84ee961e6ef10083b0c89d54999b3f6",
+    "package/verification/gui/overlay-orbs-eight-auto.png": "225be2cd824adc42f5b34bc5ab9f06599f1f3a48be97c05ce53d9988dcf635de",
+    "package/verification/gui/overlay-orbs-eight-clear-stopped.png": "e1fe6fd4d6c2f35e683b349ea375d4a0e4ee0539390f11a285064a65cf97e4d9",
+    "package/verification/gui/overlay-orbs-eight-first-ready.png": "9bc39292854bf3b73aa31788afb805f1c24a038b3f76d2fe591da32c1e3db4d7",
+    "package/verification/gui/overlay-orbs-eight-guide-legacy.png": "4ba3300caa7674169f9e04f2d1c86061a23316d8dfa8eda4c9a1ae4af22cdd9b",
+    "package/verification/gui/overlay-orbs-eight-guide-off.png": "b352b0d2ee43749213aa7217733cedf1a3669d69b50afa6e7fd67f61eef20805",
+    "package/verification/gui/overlay-orbs-eight-guide-on.png": "5ee38aa6f31499d98a528ae0e0d6a5e1d89d381bd4cff5d57997e08aadfd4ec7",
+    "package/verification/gui/overlay-orbs-eight-guide-save-failed.png": "ba691c35784243ba7c54b909e14489d63d6d1c98cdc227613604cd4483ca21fa",
+    "package/verification/gui/overlay-orbs-eight-skill-paused.png": "ed8e83748d6fc7817497bf6d1ca1d6e9d4ee1022d879a95e149600dca853eb18",
+    "package/verification/gui/overlay-orbs-eight-skill-resumed.png": "44da4e72c079198184a693002ea045312d99dafa0ba91d34d7a9547626d247a0",
+    "package/verification/gui/overlay-orbs-fixed-exact-draft.png": "1d58b44f7275903ac9072bcc17f51acb3f1e5e29b947a6e87bc2019ac21960e4",
+    "package/verification/gui/overlay-orbs-goals-failed-draft.png": "cee8e1c68536e47d608e96851a08b7b2453c85fff62703a6bd8420de5f068268",
+    "package/verification/gui/overlay-orbs-goals.png": "b09137cb29ad276c14aa7e78bb8c62adc656178d9c7f6a08c99e361342a4bafb",
+    "package/verification/gui/overlay-orbs-poison-heart-four.png": "62c4bdb3127dbcfcdee892654f066bd951514d1be3ea3be84f78aed5d576af02",
+    "package/verification/gui/overlay-orbs-preview.png": "3669a1f120eca50bc0febd0a2f62a1097da073af467dd8da66016e1760ac4a7b",
+    "package/verification/gui/overlay-orbs-recovery-failed-draft.png": "748e9b33c56c76e4ef211f4af5a11106e9ac8074af786d0f7c9e2e5e103f919e",
+    "package/verification/gui/overlay-orbs-recovery-saved.png": "bd615b6032c5036e114602ba544eb4262383eaea41b8cd044fd2ca9d0840334f",
+    "package/verification/gui/overlay-orbs-skill-position-decisions.png": "ec3789a633079b47bbc6149619a60ce404541f1c5103493d9e1f3b386cf10e88",
+    "package/verification/gui/overlay-orbs-skill-rules-collapsed.png": "43f76bad4922aa5d186834d1bff79439becf409dd46fe029b28a76b826327057",
+    "package/verification/gui/overlay-orbs-skill-rules.png": "dbd398d634e6c4253cd83cb63febef20a73f247ec2c978229f103d2cad936671",
+    "package/verification/gui/overlay-orbs-strategy-file-picker.png": "d55b839b577a0a8f4a35d5b472d419413da5ababac9a1cea5871a460599fadf0",
+    "package/verification/gui/overlay-orbs-strategy-profiles.png": "10499afcf3a9da6e881e65ca55929649475a5e6eca88e6b5304528338e9d0ff9",
+    "package/verification/gui/overlay-orbs-strategy-share.png": "5d83b3dd21a7af30fee4ea8aa38a19157ad0f127d78d5ce46a9c9204f8c7a456",
+    "package/verification/gui/overlay-orbs-survival-decisions.png": "0957503bf09c3b0bc44de7c5963d988264087b4fb4149253a553efb5c6cfe2cb",
+    "package/verification/gui/overlay-orbs-team-plan-import.png": "a42444249f8c0eff7d87859ccc9a6728eb322d6b728084b63d01ee3cd6a118c8",
+    "package/verification/gui/overlay-orbs-team-plan-summary.png": "59884f333c678a13354217699c87b0dd9f7fad2bda728dcf5bcad9e124314a1d",
+    "package/verification/gui/overlay-orbs-temporary-leader.png": "ae51e10fd1c48a1faf7433111daf8d99413c9c928ae6f133a2b6d752c9c2b47d",
+    "package/verification/gui/overlay-orbs-thorn-priority.png": "62c4bdb3127dbcfcdee892654f066bd951514d1be3ea3be84f78aed5d576af02",
+    "package/verification/gui/overlay-orbs-unmatchable-colors.png": "096685ecf1fc7039b6a51b957b9a554d32c1e776914446ab904efa293d391f0b",
+    "package/verification/gui/overlay-portrait.png": "e1517549f095b24d4b1c6548a9f099c1bdaf7582b709ae079dca2cad50dcb5aa",
+    "package/verification/gui/overlay-probe.json": "0635d6cda4250ce2dcc1cc7fb6df7ca7c5a516609e0ed5e8fa63e14683ee5b6a",
+    "package/verification/gui/overlay-restart-probe.json": "088670a05e20fb3be0a233c52bb842fd339fda77c42b9349d3f567c465e44ff4",
+    "package/verification/gui/overlay-restart-status.json": "f794414e88d91b8350388d42cef8a10dd4754c160e494eca8703fe43e098124f",
+    "package/verification/gui/overlay-status.json": "29b4d479d113213ae8f64fbdb4237a0c371eba9a7f3e7d919d2e5dce5e438ffe",
+    "package/verification/solve-smoke-tests.log": "13aea22fbf09c8a3307380d85e599f35057b688ca64343e207334ddc192aa68e",
+    "package/verification/solver.log": "15769f2f664cf18c14df8fd739f17e91ae395f0f974fa8108fe1c2c7945952c4",
+    "package/verification/source-review.json": "4192945f5bc17dddc38a79945f8e8afdfbf7adb081f6aaf730b918ec4fb56c93",
+    "package/verification/visual-review.json": "63ce7e7369c7d4b9ce500e466eab5683433c7faeee5a088aad20c0f171bd0a08",
+    "package/verification/windows-result.json": "99024ad21c54c60679bff538ada6f9335a972336c7589aa493808f66653c56c8",
+    "package/verification/windows-source-inputs.json": "b0c8a6924eb0487d75d69f55f0eb3e1677f9944f8b9666b8d0786461ba423af8",
+    "package/verification/windows-source-vs-ci.json": "1623fd4d7f15abaed67a34de8fe6f3e141432b7092d19036b96dbb644aeabcc4",
+    "package/verification/windows-tests.log": "85e94bd9c51fe40b6c9543ee9cbb3b04e5da4aec496f64588874e257394b3cec",
+    "package/verification.json": "0126120da72b49a94c17dc2eba55abc17edae63852a151221af1a29fda356db4"
+  }
+}
