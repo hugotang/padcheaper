@@ -392,9 +392,10 @@ const char *PHOrbLeaderReadStatusName(PHOrbLeaderReadStatus status) {
 bool PHOrbLeaderContextReady(const PHOrbSnapshot *state) {
     if (!state || !state->present || !state->valid || state->multiplayerDisabled || !state->leadersValid ||
         !state->leaderNumbers[0] || !PHOrbInputContextReady(state)) return false;
-    if (state->multiplayer.kind == PHOrbMultiplayerNone) return state->leaderNumbers[1] != 0;
+    const bool solo = state->multiplayer.kind == PHOrbMultiplayerNone;
+    if (solo && !state->leaderContext.known) return state->leaderNumbers[1] != 0;
     const PHOrbLeaderContext *c = &state->leaderContext;
-    if (!c->known || !c->teamBank || !c->parameters[0] || !c->parameters[1] ||
+    if (!c->known || (!solo && !c->teamBank) || !c->parameters[0] || !c->parameters[1] ||
         !c->catalogIDs[0] || !c->catalogIDs[1] || c->sourceSlots[0] >= 6 || c->sourceSlots[1] >= 6 ||
         c->sourceSlots[0] == c->sourceSlots[1] || !c->sourceCatalogIDs[0] || !c->sourceCatalogIDs[1] ||
         c->activeFlags[0] != 1 || (c->extraFlags[0] & 2u)) return false;
@@ -411,10 +412,12 @@ bool PHOrbSameLeaders(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
     if (!a->leadersValid) return true;
     if (a->leaderNumbers[0] != b->leaderNumbers[0] || a->leaderNumbers[1] != b->leaderNumbers[1] ||
         a->multiplayer.kind != b->multiplayer.kind) return false;
-    if (a->multiplayer.kind == PHOrbMultiplayerNone) return true;
     const PHOrbLeaderContext *x = &a->leaderContext, *y = &b->leaderContext;
+    const bool solo = a->multiplayer.kind == PHOrbMultiplayerNone;
+    if (x->known != y->known) return false;
+    if (solo && !x->known) return true;
     return PHOrbLeaderContextReady(a) && PHOrbLeaderContextReady(b) &&
-        PHOrbSameMultiplayerTurn(&a->multiplayer, &b->multiplayer) && x->teamBank == y->teamBank &&
+        (solo || PHOrbSameMultiplayerTurn(&a->multiplayer, &b->multiplayer)) && x->teamBank == y->teamBank &&
         !memcmp(x->parameters, y->parameters, sizeof(x->parameters)) &&
         !memcmp(x->catalogIDs, y->catalogIDs, sizeof(x->catalogIDs)) &&
         !memcmp(x->skillIDs, y->skillIDs, sizeof(x->skillIDs)) &&
@@ -450,6 +453,7 @@ bool PHOrbSameAutomation(const PHOrbSnapshot *a, const PHOrbSnapshot *b) {
             m->state != n->state || m->bound != n->bound || m->selection != n->selection ||
             m->assistCatalogID != n->assistCatalogID || m->assistState != n->assistState ||
             memcmp(m->sourceCatalogIDs, n->sourceCatalogIDs, sizeof(m->sourceCatalogIDs)) ||
+            memcmp(m->nativeCatalogIDs, n->nativeCatalogIDs, sizeof(m->nativeCatalogIDs)) ||
             m->identityNumber != n->identityNumber || m->identityAssist != n->identityAssist ||
             m->temporaryID != n->temporaryID || m->temporaryTurns != n->temporaryTurns ||
             m->temporaryKnown != n->temporaryKnown ||

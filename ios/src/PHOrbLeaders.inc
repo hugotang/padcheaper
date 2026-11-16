@@ -16,22 +16,32 @@ bool ReadLeaderOwner(const PHOrbSnapshot &state, uintptr_t &bank, uint8_t &flags
     return d.ownerBankMatches && PHMemoryHasProtection(bank, 6 * PHBattleMemberStride, VM_PROT_READ, VM_PROT_EXECUTE);
 }
 
-bool LeaderParameterMatches(uintptr_t catalog, uint32_t count, uint32_t records, uint32_t id,
-                            uintptr_t parameter, PHOrbLeaderReadDiagnostics &d) {
-    // 0x10052FC4C follows catalog+828 links for fixed-team variant records.
-    // count (save+0x5ef158) ends ordinary IDs; records (+0x5ef15c) bounds
-    // the allocation. 0x10052F558 appends variants at indices >= count.
+bool FindCatalogParameter(uintptr_t catalog, uint32_t count, uint32_t records, uint32_t id,
+                          uintptr_t &parameter, PHOrbLeaderReadDiagnostics &d) {
+    // 0x10052FE6C follows catalog+828 links for fixed-team variant records.
+    // count (save+0x5ef160) ends ordinary IDs; records (+0x5ef164) bounds
+    // the allocation. 0x10052F5BC appends variants at indices >= count.
     // A variant's public number is only a display label; use its own skill ID.
+    parameter = 0;
+    if (!id || id > INT32_MAX || (id >= count && id <= 100000u) || id == 10000000u) return false;
     uint32_t index = id < count ? id : id % 100000u;
     for (unsigned hop = 0; hop < 128; ++hop) {
         d.catalogIndex = index;
         if (!index || index >= records) return false;
         const uintptr_t record = catalog + index * PHBattleCatalogStride;
         if (!PHReadU32(record, &d.parameterID)) return false;
-        if (d.parameterID == id) { d.parameterMatches = parameter == record; return d.parameterMatches; }
+        if (d.parameterID == id) { parameter = record; return true; }
         if (id < count || !PHReadU32(record + PHOrbLeaderCatalogNextOffset, &index)) return false;
     }
     return false;
+}
+
+bool LeaderParameterMatches(uintptr_t catalog, uint32_t count, uint32_t records, uint32_t id,
+                            uintptr_t parameter, PHOrbLeaderReadDiagnostics &d) {
+    uintptr_t actual = 0;
+    if (!FindCatalogParameter(catalog, count, records, id, actual, d)) return false;
+    d.parameterMatches = parameter == actual;
+    return d.parameterMatches;
 }
 
 bool ReadExtraHelper(PHOrbSnapshot &out, uintptr_t save, uintptr_t parameter, uint32_t skillCount,
@@ -70,7 +80,7 @@ bool ReadExtraHelper(PHOrbSnapshot &out, uintptr_t save, uintptr_t parameter, ui
 }
 
 bool ReadLeaderPair(PHOrbSnapshot &out, uintptr_t save, uintptr_t impl, uintptr_t catalog, uint32_t count,
-                    uint32_t records, bool multiplayer, uint32_t skillCount, uint32_t key1, uint32_t key2,
+                    uint32_t records, bool detailed, uint32_t skillCount, uint32_t key1, uint32_t key2,
                     PHOrbLeaderReadDiagnostics &d) {
     auto &c = out.leaderContext;
     for (unsigned i = 0; i < 2; ++i) {
@@ -84,7 +94,7 @@ bool ReadLeaderPair(PHOrbSnapshot &out, uintptr_t save, uintptr_t impl, uintptr_
         d.status = PHOrbLeaderReadMember;
         if (!PHReadU8(member, &active) || !PHReadU32(member + PHBattleCatalogIDOffset, &id) || !id || id > INT32_MAX ||
             !PHReadPointer(member + PHBattleCardParamOffset, &parameter) || !parameter) return false;
-        if (!multiplayer) {
+        if (!detailed) {
             d.status = PHOrbLeaderReadParameter;
             if (!(active & 1u) || id >= count || !PHBattleNumberForCatalogID(id, &out.leaderNumbers[i]) ||
                 parameter != catalog + id * PHBattleCatalogStride || !PHReadU32(parameter, &d.parameterID) || d.parameterID != id) return false;
@@ -132,7 +142,7 @@ bool ReadLeaderPair(PHOrbSnapshot &out, uintptr_t save, uintptr_t impl, uintptr_
         c.temporaryIDs[i] = uint16_t(temporary); c.temporaryTurns[i] = uint16_t(turns);
         c.activeFlags[i] = active; c.extraFlags[i] = extra;
     }
-    if (multiplayer && c.sourceSlots[0] == c.sourceSlots[1]) { d.status = PHOrbLeaderReadDuplicateSource; return false; }
+    if (detailed && c.sourceSlots[0] == c.sourceSlots[1]) { d.status = PHOrbLeaderReadDuplicateSource; return false; }
     return true;
 }
 
@@ -152,15 +162,24 @@ bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
         !PHReadPointer(save + PHBattleCatalogPointerOffset, &catalog) || !catalog ||
         catalog > UINTPTR_MAX - size_t(count) * PHBattleCatalogStride) return false;
     records = count;
-    if (multiplayer) {
+    bool detailed = multiplayer;
+    if (!multiplayer) for (unsigned slot : {0u, 5u}) {
+        uint32_t id = 0;
+        d.status = PHOrbLeaderReadMember;
+        if (!PHReadU32(impl + PHBattleMemberOffset + slot * PHBattleMemberStride + PHBattleCatalogIDOffset, &id)) return false;
+        detailed |= id >= 1000000u;
+    }
+    if (detailed) {
         // Native allocation and linking distinguish normal-card count from
         // total records. Never use the former as the variant-chain bound.
         d.status = PHOrbLeaderReadCatalogCapacity;
         if (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &records) || records < count || records > 0x20000 ||
             catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride ||
             !PHMemoryHasProtection(catalog, size_t(records) * PHBattleCatalogStride, VM_PROT_READ, VM_PROT_EXECUTE)) return false;
-        d.status = PHOrbLeaderReadOwner;
-        if (!ReadLeaderOwner(first, first.leaderContext.teamBank, ownerFlags, d)) return false;
+        if (multiplayer) {
+            d.status = PHOrbLeaderReadOwner;
+            if (!ReadLeaderOwner(first, first.leaderContext.teamBank, ownerFlags, d)) return false;
+        }
         d.status = PHOrbLeaderReadSkillTable;
         if (!PHReadU32(save + PHOrbSkillCountOffset, &skillCount) || !skillCount || skillCount > 0x20000) return false;
         d.status = PHOrbLeaderReadKeys;
@@ -169,13 +188,13 @@ bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
         first.leaderContext.known = true;
     }
     d.pass = 1;
-    if (!ReadLeaderPair(first, save, impl, catalog, count, records, multiplayer, skillCount, key1, key2, d)) return false;
+    if (!ReadLeaderPair(first, save, impl, catalog, count, records, detailed, skillCount, key1, key2, d)) return false;
     // Re-read the whole pair. Replacing the leader while reading the helper
     // must invalidate both, even when the visible encyclopedia IDs match.
     PHOrbSnapshot second = first; second.leaderContext = {};
     second.leaderContext.known = first.leaderContext.known; second.leaderContext.teamBank = first.leaderContext.teamBank;
     d.pass = 2;
-    if (!ReadLeaderPair(second, save, impl, catalog, count, records, multiplayer, skillCount, key1, key2, d)) return false;
+    if (!ReadLeaderPair(second, save, impl, catalog, count, records, detailed, skillCount, key1, key2, d)) return false;
     d.status = PHOrbLeaderReadPairChanged;
     if (!PHOrbSameLeaders(&first, &second)) return false;
     d.pass = 3; d.visibleSlot = UINT8_MAX;
@@ -183,12 +202,14 @@ bool ReadLeaders(PHOrbSnapshot &state, uintptr_t save, uintptr_t impl) {
     d.status = PHOrbLeaderReadCatalogChanged;
     if (!PHReadU32(save + PHBattleCatalogCountOffset, &lastCount) || count != lastCount ||
         !PHReadPointer(save + PHBattleCatalogPointerOffset, &lastCatalog) || catalog != lastCatalog) return false;
-    if (multiplayer) {
+    if (detailed) {
         uint32_t lastRecords = 0;
         if (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &lastRecords) || records != lastRecords) return false;
         uintptr_t bank = 0; uint8_t flags = 0; uint32_t lastKey1 = 0, lastKey2 = 0, lastSkills = 0;
-        d.status = PHOrbLeaderReadOwnerChanged;
-        if (!ReadLeaderOwner(first, bank, flags, d) || bank != first.leaderContext.teamBank || flags != ownerFlags) return false;
+        if (multiplayer) {
+            d.status = PHOrbLeaderReadOwnerChanged;
+            if (!ReadLeaderOwner(first, bank, flags, d) || bank != first.leaderContext.teamBank || flags != ownerFlags) return false;
+        }
         d.status = PHOrbLeaderReadSkillTableChanged;
         if (!PHReadU32(save + PHOrbSkillCountOffset, &lastSkills) || lastSkills != skillCount) return false;
         d.status = PHOrbLeaderReadKeysChanged;

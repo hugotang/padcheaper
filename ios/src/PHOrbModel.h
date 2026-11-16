@@ -94,6 +94,7 @@ typedef struct {
     // Compatibility view populated by the shared PHBattleMemberIdentity
     // decoder; source IDs are independent of the effective assistCatalogID.
     uint16_t sourceCatalogIDs[2];
+    uint32_t nativeCatalogIDs[2]; // Effective body and assist, including fixed variants.
     // Current usable form is number. During a validated native temporary
     // transformation, identityNumber/identityAssist retain the underlying
     // loadout for plan continuity only; never use them to activate a skill.
@@ -216,7 +217,7 @@ enum {
     PHOrbLUnknownRules = 1u << 11
 };
 typedef struct {
-    uint32_t skillIDs[2], rootSkillIDs[2];
+    uint32_t skillIDs[2], rootSkillIDs[2], catalogIDs[2];
     uint16_t number, sourceAssist, activeAssist, charge, catalogCooldown[2];
     uint16_t bodyCooldown, totalCooldown, chargeToBody, chargeToAssist, lBlockers;
     uint8_t stage[2], cachedStage[2], lAwakenings, lColors, assistRecoveryLatents;

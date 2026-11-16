@@ -494,6 +494,8 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
     UIButton *copy = (UIButton *)PHProbeFind(overlay, @"padcheaper.copy");
     [copy sendActionsForControlEvents:UIControlEventTouchUpInside];
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Loaded: YES"], @"Copy diagnostics must work");
+    PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Orb fixedPlanProgress:"],
+                 @"Copied diagnostics must include retained fixed-plan progress");
     PHProbeCheck([UIPasteboard.generalPasteboard.string containsString:@"Battle input:"] &&
                  [UIPasteboard.generalPasteboard.string containsString:@"Timer input:"] &&
                  [UIPasteboard.generalPasteboard.string containsString:@"Battle drag active:"],

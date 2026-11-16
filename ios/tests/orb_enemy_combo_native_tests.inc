@@ -102,6 +102,17 @@ static void EnemyComboNativeTests() {
 }
 
 static void ComboBonusNativeTests() {
+    ObservationVariantFixture(); auto variantEngine=[FixtureSkillEngine new];
+    Put<uint32_t>(Impl+PHOrbComboBonusBadgeOffset,4); Put<uint16_t>(Impl+PHOrbComboBonusBadgeOffset+22,2);
+    PHOrbGoalSet variantGoals{}; variantGoals.count=1; variantGoals.items[0]=PHOrbGoal{PHOrbGoalL,8,1,0};
+    auto variantState=CaptureEnemyCombo(variantEngine);
+    Check(variantState.enemyCombo.bonus.valid &&
+        PHOrbGuaranteedComboBonuses(&variantState.enemyCombo.bonus,&variantGoals,6,5,nullptr)==2 && !writes && !readinessCalls,
+        "fixed body records and variant assist awakenings can prove an effective native badge trigger");
+    Put<uint32_t>(reinterpret_cast<uintptr_t>(catalogBytes.data())+14601*PHBattleCatalogStride,10000300);
+    variantState=CaptureEnemyCombo(variantEngine);
+    Check(PHOrbGuaranteedComboBonuses(&variantState.enemyCombo.bonus,&variantGoals,6,5,nullptr)==0,
+        "an unresolved private assist cannot grant a shape bonus from its ordinary row");
     const uintptr_t leader = Impl + PHOrbComboBonusLeaderOffset;
     const uintptr_t helper = leader + 352, badge = Impl + PHOrbComboBonusBadgeOffset;
     auto fixture = [&]() {

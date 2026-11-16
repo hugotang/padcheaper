@@ -31,6 +31,7 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     auto u32 = [](const uint8_t *p) { uint32_t v; std::memcpy(&v,p,4); return v; };
     mix(&leaderFlags,1); mix(&dungeon.flags,1);
     mix(&tables.catalog,sizeof(tables.catalog)); mix(&tables.catalogCount,sizeof(tables.catalogCount));
+    mix(&tables.catalogRecords,sizeof(tables.catalogRecords));
     mix(&tables.skills,sizeof(tables.skills)); mix(&tables.skillCount,sizeof(tables.skillCount));
     auto add = [&](unsigned source, unsigned kind, unsigned condition, unsigned minimum, unsigned combos,
                    const uint8_t *colors = nullptr, bool retainEmpty = false) {
@@ -118,14 +119,13 @@ bool CollectComboBonus(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
         const auto &m = state.automation.members[slot];
         const uintptr_t address = impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
         if (!m.active || m.bound) continue;
-        uint32_t id = 0; uintptr_t parameter = 0, actual = 0, profile = 0; uint8_t colors = 0, variant = 0, active = 0;
+        uint32_t id = 0; uintptr_t parameter = 0, actual = 0, profile = 0; uint8_t colors = 0, active = 0;
         if (!PHReadU8(address,&active) || active != 1 ||
             !PHReadU32(address + PHBattleCatalogIDOffset,&id) || !ObservationCard(tables,id,parameter) ||
             !PHReadPointer(address + PHBattleCardParamOffset,&actual) || actual != parameter ||
             !ObservationAttributes(address,parameter,colors)) continue;
         out.attackColors |= colors;
-        if (!awakenings || !PHReadPointer(address + PHOrbObservationProfileOffset,&profile) ||
-            (m.assistCatalogID && (!PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte,&variant) || variant))) continue;
+        if (!awakenings || !PHReadPointer(address + PHOrbObservationProfileOffset,&profile)) continue;
         for (unsigned k = 0; k < 10; ++k) {
             if (!(needed & (1u << k))) continue;
             unsigned count = 0;

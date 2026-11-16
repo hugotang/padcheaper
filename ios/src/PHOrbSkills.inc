@@ -81,6 +81,11 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false, NSString **r
         m.assistState = uint16_t(assistState);
         if (m.bound) out.playerEffects |= PHOrbPlayerMemberBind;
         m.assistCatalogID = identity.effectiveAssistID;
+        uint8_t assistVariant = 0;
+        if (m.assistCatalogID && !PHReadU8(member + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &assistVariant))
+            return fail(@"武裝版本", i);
+        m.nativeCatalogIDs[0] = id;
+        m.nativeCatalogIDs[1] = m.assistCatalogID ? uint32_t(m.assistCatalogID) + uint32_t(assistVariant) * 1000000u : 0;
         m.sourceCatalogIDs[0] = identity.sourceBodyID; m.sourceCatalogIDs[1] = identity.sourceAssistID;
         m.temporaryID = identity.temporaryFormID; m.temporaryTurns = identity.temporaryTurns;
         m.identityNumber = m.number; m.identityAssist = m.assistCatalogID;

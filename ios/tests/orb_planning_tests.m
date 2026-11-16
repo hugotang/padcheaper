@@ -14,6 +14,17 @@ static NSDictionary *Profile(NSArray *goals) { return @{@"goals":goals, @"warnin
 #include "orb_leader_fixture.h"
 
 static void MultiplayerLeaderPlanningTests(void) {
+    PHOrbSnapshot solo = {0}; solo.present = solo.valid = true; solo.identity.entryMode = 1;
+    SetLeaderContextFixture(&solo,14242,54198,13834,0);
+    solo.leaderContext.teamBank = 0;
+    solo.leaderContext.catalogIDs[0] = solo.leaderContext.parameterIDs[0] = 90014342;
+    NSDictionary *soloPlan = PHOrbPlanForLeaders(&solo);
+    Check([soloPlan[@"available"] boolValue] && [soloPlan[@"goals"] isEqual:@[Goal(@"colors",31,4,0)]] &&
+        [soloPlan[@"leaders"][0] containsString:@"固定隊伍"],
+        "single-player variants use the actual leader skill and zero-skill helper without a multiplayer bank");
+    solo.leaderContext.skillIDs[0] = 120000;
+    Check(![PHOrbPlanForLeaders(&solo)[@"available"] boolValue],
+        "unknown solo variant leader skills never fall back to the ordinary card profile");
     const unsigned modes[] = {7,11,10}, players[] = {3,4,8};
     for (unsigned mode = 0; mode < 3; ++mode) for (unsigned seat = 0; seat < players[mode]; ++seat) {
         PHOrbSnapshot s = {0}; s.present = s.valid = true; s.phase = 2;

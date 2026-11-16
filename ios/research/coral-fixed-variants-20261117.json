@@ -1,0 +1,59 @@
+{
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "inputSHA256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+  "date": "2026-11-17",
+  "readOnly": true,
+  "observations": {
+    "logVersion": "0.5.49-orbs",
+    "dungeon": 7801,
+    "floor": 1,
+    "wave": 0,
+    "confirmedMoves": 0,
+    "confirmedSkills": 0,
+    "firstAction": {
+      "slot": 2,
+      "source": "assist",
+      "expectedSkill": 61754,
+      "actualSkill": null
+    },
+    "leaderCatalogID": 90013928,
+    "leadersValid": false,
+    "assistDiagnostics": "All six assist variants were reported unsupported; actual native getter IDs were not exported."
+  },
+  "native": {
+    "bodyGetter": "0x100482ECC reads the member's effective parameter +84 and applies its native evolution stage.",
+    "assistGetter": "0x100482FF4: signed effective assist at member+1438, variant byte at member+1444; MOV W10,#1000000 followed by MADD forms assist + variant*1000000 before lookup. Disassembly is authoritative: cached pseudocode incorrectly rendered this as variant<<6.",
+    "lookup": "0x10052FE6C: ordinary direct indexing or id%100000 followed by +0x33c record-index links; stride 0x348. ID 10000000 uses a separate registry and is excluded from generic lookup.",
+    "capacity": "save+0x5ef160 ordinary count; save+0x5ef164 total allocated records; save+0x5ef170 table pointer.",
+    "limits": "Captured instruction ranges below are research evidence, not new runtime guards. Existing target guards are unchanged."
+  },
+  "instructionRanges": [
+    {
+      "va": "0x100482ecc",
+      "size": 100,
+      "originalBytes": "f44fbea9fd7b01a9fd430091f30300aa080040f989b6009029410091085580b90a398c52ea18a07229696af88a06805200252a9b3ed30294e80300aa690240f9205540b9a800003461aa4039fd7b41a9f44fc2a804000014fd7b41a9f44fc2a8c0035fd6",
+      "sha256": "f2f48ccb91b7e287bd7404c8656690d787ee33785956f44cd8a72bf304223eee",
+      "unpatched": true
+    },
+    {
+      "va": "0x100482ff4",
+      "size": 156,
+      "originalBytes": "f657bda9f44f01a9fd7b02a9fd830091f30300aa087cc1791f0100710d030054691243390a488852ea01a07221210a1b75b600f0b542009108f09152a002088b8eb30294145480b908398c52e818a072a86a68f8890680528022299bead202948001003461ae4039e00314aafd7b42a9f44f41a9f657c3a8b1ffff17e00313aafd7b42a9f44f41a9f657c3a893ffff17e00314aafd7b42a9f44f41a9",
+      "sha256": "1ba96bda4ab84d16776402229f2bfc5201782adac2f47bc32c6f23c4ce3b6b94",
+      "unpatched": true
+    },
+    {
+      "va": "0x10052fe6c",
+      "size": 272,
+      "originalBytes": "ff8300d1fd7b01a9fd4300918107f83708d092520813a0723f00086ba101005408b100f00841009109409852890ba072016969b808dd719100610f916b60fe97082000911f0000f1e003889a2d00001408b100f008410091092c9e52c90ba072096969b83f01016bed000054092e9e52c90ba072086969f8096980522020a99b2000001429d490522900a0723f00096be3020054092e9e52c90ba072086969f8297c0553aa588b528a4fa172297daa9b29fd67d30ad490522a00a0722b850a1be90f80520a6980526021aa9b0b0040b97f01016b600100540b3c43b97f0100712419407a2905005101ffff54e10300f9c05200f0007c329172a6fb97000080d2fd7b41a9ff830091c0035fd6fc6fbaa9",
+      "sha256": "2c30b8b2a9a9eea69de0550b7a438b1535cf90af0a34b58b836f4fa1bec812b0",
+      "unpatched": true
+    }
+  ],
+  "conclusion": "Solo leader reading and passive body/assist diagnostics rejected private fixed-team rows. This is confirmed separately from the fixed action mismatch. The log does not contain the actual skill ID, so it cannot prove whether the plan ID or custom native skill differs. Exact action skill matching remains enforced.",
+  "verification": {
+    "compiled": false,
+    "testsRun": false,
+    "deviceVerified": false
+  }
+}

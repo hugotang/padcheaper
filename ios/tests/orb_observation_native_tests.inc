@@ -51,7 +51,55 @@ static PHOrbSnapshot CaptureObservation(FixtureSkillEngine *engine) {
     [engine observeBattle:&state];
     return state;
 }
+static void ObservationVariantFixture() {
+    ObservationFixture();
+    const uintptr_t catalog=reinterpret_cast<uintptr_t>(catalogBytes.data()), member=Impl+PHBattleMemberOffset;
+    Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14602);
+    for (unsigned i=0;i<2;++i) {
+        const unsigned base=i ? 300 : 100, index=14600+i;
+        const uintptr_t ordinary=catalog+base*PHBattleCatalogStride, variant=catalog+index*PHBattleCatalogStride;
+        std::memcpy(reinterpret_cast<void *>(variant),reinterpret_cast<void *>(ordinary),PHBattleCatalogStride);
+        Put<uint32_t>(ordinary+PHOrbLeaderCatalogNextOffset,index);
+        Put<uint32_t>(variant,90000000+base); Put<uint32_t>(variant+PHOrbLeaderCatalogNextOffset,0);
+        Put<uint32_t>(variant+84,1002+i);
+        SetSkillRecord(1002+i,0,{}); ObservationSetCooldown(1002+i,1,i ? 7 : 3,0);
+    }
+    Put<uint32_t>(member+PHBattleCatalogIDOffset,90000100);
+    Put<uintptr_t>(member+PHBattleCardParamOffset,catalog+14600*PHBattleCatalogStride);
+    Put<uint8_t>(member+PHBattleEffectiveAssistOffset+PHBattleAssistVariantByte,90);
+    // All effective L awakenings come from the variant assist, not its base.
+    Put<uint8_t>(member+1286,0); Put<uint8_t>(member+PHBattleEffectiveAssistOffset+PHBattleAssistAwakeningsByte,2);
+    Put<uint16_t>(catalog+14601*PHBattleCatalogStride+748,49);
+    Put<uint16_t>(catalog+14601*PHBattleCatalogStride+750,108);
+    Protected(member+PHBattleSourceSlotOffset,0,0x6a875a8b);
+    Protected(member+5*PHBattleMemberStride+PHBattleSourceSlotOffset,5,0x6a875a8b);
+}
 static void ObservationNativeTests() {
+    for (unsigned failure=0;failure<5;++failure) {
+        ObservationVariantFixture(); auto variantEngine=[FixtureSkillEngine new];
+        const uintptr_t catalog=reinterpret_cast<uintptr_t>(catalogBytes.data());
+        const uintptr_t equip=catalog+14601*PHBattleCatalogStride;
+        if (failure==1) Put<uint32_t>(equip,10000300);
+        if (failure==2) Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14601);
+        if (failure==3) { Put<uint32_t>(equip,10000300); Put<uint32_t>(equip+PHOrbLeaderCatalogNextOffset,14601); }
+        if (failure==4) Put<uint32_t>(equip+84,70000);
+        const auto savedGuest=guest, savedImpl=implBytes, savedCatalog=catalogBytes;
+        const auto observed=CaptureObservation(variantEngine); const auto &m=observed.observation.members[0];
+        Check(m.catalogIDs[0]==90000100 && m.catalogIDs[1]==90000300 && m.skillKnown[0] && m.skillIDs[0]==1002 &&
+            !writes && !readinessCalls && !canUseCalls && !skillStartCalls &&
+            guest==savedGuest && implBytes==savedImpl && catalogBytes==savedCatalog,
+            "variant-90 diagnostics preserve full native IDs and use only read-only catalog access");
+        if (!failure) {
+            Check(m.skillKnown[1] && m.skillIDs[1]==1003 && !m.assistVariantUnsupported && m.thresholdsKnown &&
+                m.bodyCooldown==3 && m.totalCooldown==10 && m.lAwakenings==2 && m.lEligibilityKnown,
+                "fixed body and assist use their own skills, cooldowns and effective equip awakenings");
+            PHOrbSnapshot changed=observed;
+            Put<uint8_t>(Impl+PHBattleMemberOffset+PHBattleEffectiveAssistOffset+PHBattleAssistVariantByte,89);
+            Check([variantEngine readAutomation:&changed frame:Frame() reason:nil] && !PHOrbSameAutomation(&observed,&changed),
+                "same-number assist variant change invalidates the captured skill source");
+        } else Check(!m.skillKnown[1] && !m.thresholdsKnown && (failure==4 || m.assistVariantUnsupported),
+            "missing, out-of-bound, cyclic or invalid-skill private assists never borrow ordinary assist data");
+    }
     ObservationFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
     const auto originalGuest = guest, originalImpl = implBytes, originalCatalog = catalogBytes;
     PHOrbSnapshot state = CaptureObservation(engine);

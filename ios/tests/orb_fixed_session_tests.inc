@@ -75,6 +75,13 @@ static void FixedSessionTests(void) {
             Tick(s,e,Frame(),0.02,0,false);
         Check(e->skillOrder.size()==((scenario==0 || scenario==4) ? 1u : 0u),"only confirmed fixed evidence permits the prescribed skill");
         if (!scenario) Check([s.snapshot[@"fixedPlanProgress"][@"action"] unsignedIntegerValue]==1,"fixed skill receipt advances exactly one action");
+        if (scenario==2) {
+            NSDictionary *progress=s.snapshot[@"fixedPlanProgress"];
+            Check([s.snapshot[@"phase"] isEqual:@"stopped"] && [progress[@"floor"] isEqual:@1] &&
+                [progress[@"action"] isEqual:@0] && [progress[@"pending"][@"skill"] isEqual:@700] &&
+                ![progress[@"consumed"] boolValue] && [NSJSONSerialization isValidJSONObject:progress],
+                "a rejected first readiness probe retains the exact pending fixed action for exported diagnostics");
+        }
         [s queueStop:@"test pause"]; [s queueAutomatic];
         for (unsigned i=0;i<30;++i) Tick(s,e,Frame(),0.02,0,false);
         if (!scenario || scenario==4) Check(e->skillOrder.size()==1,"stopped or unacknowledged fixed action cannot replay in this battle");

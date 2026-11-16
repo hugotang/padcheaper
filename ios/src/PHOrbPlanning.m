@@ -92,6 +92,7 @@ NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary
     }
     NSDictionary *cards = [catalog[@"cards"] isKindOfClass:NSDictionary.class] ? catalog[@"cards"] : @{};
     NSDictionary *skills = [catalog[@"skills"] isKindOfClass:NSDictionary.class] ? catalog[@"skills"] : @{};
+    const BOOL nativeSkills = state->leaderContext.known;
     for (unsigned slot = 0; slot < 2; ++slot) {
         if (multiplayer && slot == 1 && state->leaderContext.extraHelper) {
             [leaders addObject:@"助人 · 4 人額外技能（不提供助人隊長技）"];
@@ -101,14 +102,14 @@ NSDictionary *PHOrbPlanForLeaderCatalog(const PHOrbSnapshot *state, NSDictionary
         NSDictionary *card = [cards[number] isKindOfClass:NSDictionary.class] ? cards[number] : @{};
         // Fixed-team variants can share a displayed number while using a
         // different native leader skill. Never borrow the base card's skill.
-        NSString *skillKey = multiplayer ? [NSString stringWithFormat:@"%u", state->leaderContext.skillIDs[slot]] :
+        NSString *skillKey = nativeSkills ? [NSString stringWithFormat:@"%u", state->leaderContext.skillIDs[slot]] :
             [card[@"skill"] description];
         NSDictionary *profile = skills[skillKey ?: @""];
-        if (multiplayer && !state->leaderContext.skillIDs[slot])
+        if (nativeSkills && !state->leaderContext.skillIDs[slot])
             profile = @{@"goals":@[], @"warnings":@[], @"unsupported":@[]};
         NSString *title = [NSString stringWithFormat:@"%@ #%@ · %@", slot ? @"助人" : @"隊長", number,
             [card[@"name"] isKindOfClass:NSString.class] ? card[@"name"] : @"未收錄"];
-        if (multiplayer && state->leaderContext.catalogIDs[slot] >= 1000000u)
+        if (nativeSkills && state->leaderContext.catalogIDs[slot] >= 1000000u)
             title = [title stringByAppendingString:@"（固定隊伍版本）"];
         [leaders addObject:title];
         PHOrbGoalSet parsed = {0};

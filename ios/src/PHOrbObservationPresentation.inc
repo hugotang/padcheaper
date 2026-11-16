@@ -82,6 +82,7 @@ NSDictionary *BattleObservationTrace(const PHOrbSnapshot &captured, bool current
             @"assistRetained":@(member.assistRetained), @"assistVariantUnsupported":@(member.assistVariantUnsupported),
             @"skillIDs":@[ObservationValue(member.skillKnown[0], @(member.skillIDs[0])),
                 ObservationValue(member.skillKnown[1], @(member.skillIDs[1]))],
+            @"catalogIDs":@[@(member.catalogIDs[0]), @(member.catalogIDs[1])],
             @"rootSkillIDs":@[ObservationValue(member.skillKnown[0], @(member.rootSkillIDs[0])),
                 ObservationValue(member.skillKnown[1], @(member.rootSkillIDs[1]))],
             @"stage":@[@(member.stage[0]), @(member.stage[1])],

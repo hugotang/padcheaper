@@ -763,10 +763,21 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         // but unready source may be skipped; a different skill may not.
         const int32_t requestedSkill=request.source==PHOrbSkillAssist ? readiness.assistSkill : readiness.baseSkill;
         if (!known || requestedSkill<=0 || requestedSkill>=0x20000 || uint32_t(requestedSkill)!=request.skill) {
-            if (reason) *reason=@"固定計畫指定的原生技能階段不符";
+            const auto &current = checked.automation.members[slot];
+            if (reason) *reason=[NSString stringWithFormat:
+                @"固定計畫指定的原生技能階段不符：位置 %lu，預期%@ %u，實際 %d；本體 %d／武裝 %d，階段 %u／%u，快取 %u／%u，充能 %u，CD %d／%d，圖鑑 %u／%u",
+                (unsigned long)slot+1, request.source==PHOrbSkillAssist ? @"武裝" : @"本體", request.skill, requestedSkill,
+                readiness.baseSkill, readiness.assistSkill, current.skillStage[0], current.skillStage[1],
+                current.cachedSkillStage[0], current.cachedSkillStage[1], current.charge, readiness.baseCooldown, readiness.totalCooldown,
+                current.nativeCatalogIDs[0], current.nativeCatalogIDs[1]];
             return PHOrbSkillRejected;
         }
-        if (request.source==PHOrbSkillAssist && !chosenAssist) return PHOrbSkillUnavailable;
+        if (request.source==PHOrbSkillAssist && !chosenAssist) {
+            if (reason) *reason=[NSString stringWithFormat:@"固定計畫位置 %lu 武裝技能 %u 尚不可用（充能 %u／合計 CD %d；關卡允許 %d）",
+                (unsigned long)slot+1, request.skill, member.charge, readiness.totalCooldown,
+                int(PHBattleEffectiveAssistAvailable(&source,member.assistCatalogID))];
+            return PHOrbSkillUnavailable;
+        }
     }
     const bool preferBody = request.source == PHOrbSkillBodyOrAssist;
     // An overcharged assist must not hide a stale/mismatched body identity.

@@ -6,6 +6,11 @@ static PHOrbSnapshot CaptureAssist(FixtureSkillEngine *engine) {
     return state;
 }
 static void AssistNativeTests() {
+    ObservationVariantFixture(); FixtureSkillEngine *variantEngine=[FixtureSkillEngine new];
+    PHOrbSnapshot variantState=CaptureAssist(variantEngine);
+    Check(variantState.assistRecovery.perColor[3]==2 && variantState.assistRecovery.perColor[4]==2 &&
+        variantState.assistRecovery.providers[3]==1 && !writes && !readinessCalls,
+        "fixed variant assist supplies only its verified effective L awakenings for recovery");
     ObservationFixture(); FixtureSkillEngine *engine = [FixtureSkillEngine new];
     const auto originalGuest = guest, originalImpl = implBytes, originalCatalog = catalogBytes;
     PHOrbSnapshot state = CaptureAssist(engine);

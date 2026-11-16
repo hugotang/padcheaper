@@ -3,7 +3,7 @@
 // This file is included inside PHOrbNative's anonymous namespace.
 struct ObservationTables {
     uintptr_t catalog = 0, skills = 0;
-    uint32_t catalogCount = 0, skillCount = 0;
+    uint32_t catalogCount = 0, catalogRecords = 0, skillCount = 0;
 };
 
 bool CheckObservationCode(uintptr_t header) {
@@ -15,12 +15,25 @@ bool CheckObservationCode(uintptr_t header) {
     return true;
 }
 
-bool ReadObservationTables(uintptr_t header, ObservationTables &tables) {
+bool ReadObservationCatalog(uintptr_t header, ObservationTables &tables) {
     const uintptr_t save = header + PHSaveRVA;
-    return PHReadPointer(save + PHBattleCatalogPointerOffset, &tables.catalog) && tables.catalog &&
+    if (!(PHReadPointer(save + PHBattleCatalogPointerOffset, &tables.catalog) && tables.catalog &&
         PHReadU32(save + PHBattleCatalogCountOffset, &tables.catalogCount) &&
         tables.catalogCount && tables.catalogCount <= 65536 &&
-        tables.catalog <= UINTPTR_MAX - size_t(tables.catalogCount) * PHBattleCatalogStride &&
+        tables.catalog <= UINTPTR_MAX - size_t(tables.catalogCount) * PHBattleCatalogStride)) return false;
+    // Ordinary rows remain readable if optional variant capacity is unknown.
+    uint32_t records = 0;
+    tables.catalogRecords = 0;
+    if (PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &records) && records >= tables.catalogCount && records <= 0x20000 &&
+        tables.catalog <= UINTPTR_MAX - size_t(records) * PHBattleCatalogStride &&
+        PHMemoryHasProtection(tables.catalog, size_t(records) * PHBattleCatalogStride, VM_PROT_READ, VM_PROT_EXECUTE))
+        tables.catalogRecords = records;
+    return true;
+}
+
+bool ReadObservationTables(uintptr_t header, ObservationTables &tables) {
+    const uintptr_t save = header + PHSaveRVA;
+    return ReadObservationCatalog(header, tables) &&
         PHReadPointer(save + PHBattleSkillPointerOffset, &tables.skills) && tables.skills && !(tables.skills & 3u) &&
         PHReadU32(save + PHOrbSkillCountOffset, &tables.skillCount) &&
         tables.skillCount && tables.skillCount <= 0x20000 &&
@@ -28,10 +41,18 @@ bool ReadObservationTables(uintptr_t header, ObservationTables &tables) {
 }
 
 bool ObservationCard(const ObservationTables &tables, uint32_t id, uintptr_t &parameter) {
-    uint32_t actual = 0;
-    if (!id || id >= tables.catalogCount) return false;
-    parameter = tables.catalog + size_t(id) * PHBattleCatalogStride;
-    return PHReadU32(parameter, &actual) && actual == id;
+    PHOrbLeaderReadDiagnostics diagnostic{};
+    return FindCatalogParameter(tables.catalog, tables.catalogCount,
+        id < tables.catalogCount ? tables.catalogCount : tables.catalogRecords, id, parameter, diagnostic);
+}
+
+bool ObservationAssistCard(const ObservationTables &tables, uintptr_t member, uint16_t assist,
+                            uint32_t &id, uintptr_t &parameter) {
+    uint8_t variant = 0;
+    if (int16_t(assist) <= 0 || !PHReadU8(member + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &variant)) return false;
+    // 0x100482FF4 forms the effective assist ID with variant * 1,000,000.
+    id = uint32_t(assist) + uint32_t(variant) * 1000000u;
+    return ObservationCard(tables, id, parameter);
 }
 
 bool ObservationSkillRecord(const ObservationTables &tables, uint32_t id, SkillDiagnosticRecord &record) {
@@ -127,8 +148,8 @@ bool ObservationAwakenings(uintptr_t member, uintptr_t parameter, uintptr_t prof
         if (level >= 100 || (!superCount && sync && superAwakening == sync)) count += weight(superAwakening);
     }
     if (int16_t(skill.assistCatalogID) > 0) {
-        uintptr_t assist = 0; uint8_t available = 0;
-        if (!ObservationCard(tables, skill.assistCatalogID, assist) ||
+        uintptr_t assist = 0; uint8_t available = 0; uint32_t assistID = 0;
+        if (!ObservationAssistCard(tables, member, skill.assistCatalogID, assistID, assist) ||
             !PHReadU8(member + PHBattleEffectiveAssistOffset + PHBattleAssistAwakeningsByte, &available) ||
             !PHReadMemory(assist + 748, awakenings, sizeof(awakenings))) return false;
         bool equip = false;
@@ -188,19 +209,17 @@ void CollectObservation(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2
         if (!activeKnown) { member.lBlockers = PHOrbLUnknownAwakenings; continue; }
         if (active != 1) { member.active = false; member.lBlockers = PHOrbLInactive; member.lEligibilityKnown = true; continue; }
         uintptr_t parameter = 0, actual = 0, profile = 0;
-        uint32_t id = 0;
+        uint32_t &id = member.catalogIDs[0];
         const bool parameterKnown = tablesKnown && PHReadU32(address + PHBattleCatalogIDOffset, &id) &&
             ObservationCard(tables, id, parameter) && PHReadPointer(address + PHBattleCardParamOffset, &actual) && actual == parameter;
         if (parameterKnown) member.skillKnown[0] = ObservationSkill(tables, parameter, skill.skillStage[0], skill.skillLevel[0],
             member.rootSkillIDs[0], member.skillIDs[0], member.catalogCooldown[0], member.cooldownKnown[0]);
         if (!skill.assistCatalogID) { member.skillKnown[1] = member.cooldownKnown[1] = true; }
         else {
-            uint8_t variant = 0, level = 0; uintptr_t assist = 0;
-            const bool formKnown = PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &variant);
-            member.assistVariantUnsupported = !formKnown || variant != 0;
-            // Variant catalog lookup is not ordinary base-index addressing.
-            if (tablesKnown && !member.assistVariantUnsupported && int16_t(skill.assistCatalogID) > 0 &&
-                ObservationCard(tables, skill.assistCatalogID, assist) && PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistSkillLevelByte, &level))
+            uint8_t level = 0; uintptr_t assist = 0;
+            const bool assistKnown = tablesKnown && ObservationAssistCard(tables, address, skill.assistCatalogID, member.catalogIDs[1], assist);
+            member.assistVariantUnsupported = !assistKnown;
+            if (assistKnown && PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistSkillLevelByte, &level))
                 member.skillKnown[1] = ObservationSkill(tables, assist, skill.skillStage[1], level,
                     member.rootSkillIDs[1], member.skillIDs[1], member.catalogCooldown[1], member.cooldownKnown[1]);
         }
@@ -321,7 +340,8 @@ void ReadBattleObservation(PHOrbSnapshot &state) {
     CollectObservation(second, key1, key2, confirmation);
     const bool lastTablesKnown = ReadObservationTables(header, lastTables);
     if (firstTablesKnown != lastTablesKnown || firstTables.catalog != lastTables.catalog ||
-        firstTables.catalogCount != lastTables.catalogCount || firstTables.skills != lastTables.skills ||
+        firstTables.catalogCount != lastTables.catalogCount || firstTables.catalogRecords != lastTables.catalogRecords ||
+        firstTables.skills != lastTables.skills ||
         firstTables.skillCount != lastTables.skillCount ||
         !PHOrbSameAutomation(&first, &second) || std::memcmp(&observation, &confirmation, sizeof(observation)) ||
         !ConfirmOrbEntryIdentity(state.identity) ||

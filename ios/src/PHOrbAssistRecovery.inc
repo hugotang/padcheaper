@@ -12,16 +12,14 @@ bool CheckAssistRecoveryCode(uintptr_t header) {
 bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
     PHOrbAssistRecoveryState &out) {
     std::memset(&out, 0, sizeof(out));
-    const uintptr_t impl = state.identity.impl, save = state.identity.header + PHSaveRVA;
+    const uintptr_t impl = state.identity.impl;
     uint16_t duration = 0; uint32_t queueCount = 0, dispatchMode = 0; uintptr_t queue = 0;
     ObservationTables tables{}; PHBattleDungeonMemberRules rules{};
     if (!PHReadU16(impl + PHOrbObservationAssistVoidOffset, &duration) || !PHReadBattleDungeonMemberRules(state.identity.impl, rules) ||
         !PHReadU32(impl + PHOrbAssistRecoveryDispatchOffset, &dispatchMode) || dispatchMode == 525190 ||
         !PHReadU32(impl + PHOrbAssistRecoveryQueueCountOffset, &queueCount) || queueCount != 0 ||
         !PHReadPointer(impl + PHOrbAssistRecoveryQueueOffset, &queue) || queue ||
-        !PHReadU32(save + PHBattleCatalogCountOffset, &tables.catalogCount) || !tables.catalogCount || tables.catalogCount > 65536 ||
-        !PHReadPointer(save + PHBattleCatalogPointerOffset, &tables.catalog) || !tables.catalog ||
-        tables.catalog > UINTPTR_MAX - size_t(tables.catalogCount) * PHBattleCatalogStride || !state.automation.statusKnown) return false;
+        !ReadObservationCatalog(state.identity.header, tables) || !state.automation.statusKnown) return false;
     const int turns = int16_t(uint16_t(duration << 6)) / 64;
     if (turns < 0) return false;
     out.turns = uint16_t(turns); out.fresh = (duration & 0x400u) != 0; out.dungeonFlags = rules.flags;
@@ -52,9 +50,8 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
         if (!PHReadPointer(address + PHOrbObservationProfileOffset, &profile) || !ObservationLatents(profile, out.latents[slot]))
             block |= PHOrbLUnknownLatents;
         else if (!out.latents[slot]) block |= PHOrbLNoLatent;
-        unsigned count = 0; uint8_t variant = 0;
-        const bool variantKnown = !member.assistCatalogID || (PHReadU8(address + PHBattleEffectiveAssistOffset + PHBattleAssistVariantByte, &variant) && !variant);
-        if (!cardKnown || !variantKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
+        unsigned count = 0;
+        if (!cardKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
             block |= PHOrbLUnknownAwakenings;
         else if (dynamicL) block |= PHOrbLDynamicAwakenings;
         else if (!count) block |= PHOrbLNoAwakening;
@@ -83,18 +80,18 @@ bool ReadAssistRecoveryFields(PHOrbSnapshot &state) {
     first.automation.window = second.automation.window = true;
     const uintptr_t header = state.identity.header, impl = state.identity.impl;
     uint32_t key1 = 0, key2 = 0, lastKey1 = 0, lastKey2 = 0, phase = 0, wave = 0, moves = 0;
-    uintptr_t dragged = 0, catalog = 0, lastCatalog = 0; uint32_t count = 0, lastCount = 0;
+    uintptr_t dragged = 0;
+    ObservationTables tables{}, lastTables{};
     if (!ConfirmOrbEntryIdentity(state.identity) ||
         !PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
-        !PHReadPointer(header + PHSaveRVA + PHBattleCatalogPointerOffset, &catalog) ||
-        !PHReadU32(header + PHSaveRVA + PHBattleCatalogCountOffset, &count) ||
+        !ReadObservationCatalog(header, tables) ||
         !ReadAutomationFields(first) || first.automation.busy || !PHOrbSameAutomationExceptWindow(&state, &first) ||
         !CollectAssistRecovery(first, key1, key2, first.assistRecovery) ||
         !ReadAutomationFields(second) || second.automation.busy || !PHOrbSameAutomation(&first, &second) ||
         !CollectAssistRecovery(second, key1, key2, second.assistRecovery) ||
         !PHOrbSameAssistRecovery(&first.assistRecovery, &second.assistRecovery) ||
-        !PHReadPointer(header + PHSaveRVA + PHBattleCatalogPointerOffset, &lastCatalog) || lastCatalog != catalog ||
-        !PHReadU32(header + PHSaveRVA + PHBattleCatalogCountOffset, &lastCount) || lastCount != count ||
+        !ReadObservationCatalog(header, lastTables) || tables.catalog != lastTables.catalog ||
+        tables.catalogCount != lastTables.catalogCount || tables.catalogRecords != lastTables.catalogRecords ||
         !ConfirmOrbEntryIdentity(state.identity) ||
         !PHReadU32(header + PHBattleKey1RVA, &lastKey1) || lastKey1 != key1 ||
         !PHReadU32(header + PHBattleKey2RVA, &lastKey2) || lastKey2 != key2 ||

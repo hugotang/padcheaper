@@ -17,7 +17,48 @@ static void FixedNativeFixture() {
         Put<int16_t>(e+322,300); Put<int16_t>(e+324,80); Put<int16_t>(e+326,80);
     }
 }
+static void FixedSoloLeaderNativeTests() {
+    for (unsigned scenario=0;scenario<10;++scenario) {
+        SkillFixture();
+        SetNativeLeader(0,13828,50,0); SetNativeLeader(5,8476,51,5);
+        const uintptr_t catalog=reinterpret_cast<uintptr_t>(catalogBytes.data());
+        const uintptr_t member=Impl+PHBattleMemberOffset, variant=catalog+14600*PHBattleCatalogStride;
+        const uintptr_t ordinary=catalog+13928*PHBattleCatalogStride;
+        std::memcpy(reinterpret_cast<void *>(variant),reinterpret_cast<void *>(ordinary),PHBattleCatalogStride);
+        Put<uint32_t>(variant,90013928); Put<uint32_t>(variant+PHOrbLeaderSkillOffset,52);
+        Put<uint32_t>(ordinary+PHOrbLeaderCatalogNextOffset,14600);
+        Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14601);
+        Put<uint32_t>(member+PHBattleCatalogIDOffset,90013928); Put<uintptr_t>(member+PHBattleCardParamOffset,variant);
+        if (scenario==1) Put<uintptr_t>(member+PHBattleCardParamOffset,ordinary);
+        if (scenario==2) Put<uint16_t>(member+PHBattleBaseIDOffset,13929);
+        if (scenario==3) Protected(member+PHBattleTempTurnsOffset,1,0x6a875a8b);
+        if (scenario==4) Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14600);
+        if (scenario==5) changeLeaderDuringPairRead=true;
+        if (scenario==6) changeLeaderCatalogDuringPairRead=true;
+        if (scenario==7) Protected(member+PHBattleSourceSlotOffset,5,0x6a875a8b);
+        if (scenario==8) { Put<uint32_t>(variant,10013928); Put<uint32_t>(variant+PHOrbLeaderCatalogNextOffset,14600); }
+        if (scenario==9) Put<uint32_t>(variant+PHOrbLeaderSkillOffset,70000);
+        auto engine=PHCreateOrbEngine(); PHOrbSnapshot before{}, after{};
+        Check([engine read:&before frame:Frame() reason:nil] && PHOrbCanPreview(&before) &&
+            before.leadersValid==(scenario==0) && !writes,
+            "solo variant-90 leader requires exact source, record, skill, capacity and a stable pair without writes");
+        if (!scenario) {
+            Check(PHOrbLeaderContextReady(&before) && before.leaderNumbers[0]==13828 &&
+                before.leaderContext.known && !before.leaderContext.teamBank &&
+                before.leaderContext.catalogIDs[0]==90013928 && before.leaderContext.skillIDs[0]==52,
+                "solo fixed leader retains its private skill rather than the displayed ordinary card skill");
+            Put<uint32_t>(variant+PHOrbLeaderSkillOffset,53);
+            Check([engine read:&after frame:Frame() reason:nil] && after.leadersValid && !PHOrbSameLeaders(&before,&after),
+                "same-number solo variant skill changes invalidate captured leader decisions");
+            Put<uint32_t>(variant+PHOrbLeaderSkillOffset,52);
+            Protected(member+PHBattleSourceSlotOffset,2,0x6a875a8b);
+            Check([engine read:&after frame:Frame() reason:nil] && after.leadersValid && !PHOrbSameLeaders(&before,&after),
+                "same-number solo fixed leader swaps invalidate captured leader decisions");
+        }
+    }
+}
 static void FixedNativeTests() {
+    FixedSoloLeaderNativeTests();
     FixedNativeFixture(); auto engine=[FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason=nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] &&
         [engine readFixedPlan:&state frame:Frame() reason:&reason] && state.fixedPlan.targetAllowed &&
@@ -46,7 +87,8 @@ static void FixedNativeTests() {
         expected:&state frame:Frame() reason:nil]==PHOrbSkillStarted && !skillStartCalls && !writes,
         "fixed readiness query does not start or override a skill");
     Check([engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillBody,CurrentFixtureSkill+1}
-        expected:&state frame:Frame() reason:nil]==PHOrbSkillRejected && !skillStartCalls,
+        expected:&state frame:Frame() reason:&reason]==PHOrbSkillRejected && !skillStartCalls && !writes &&
+        [reason containsString:[NSString stringWithFormat:@"預期本體 %u，實際 %u",CurrentFixtureSkill+1,CurrentFixtureSkill]],
         "wrong fixed skill stage is unknown, never optional unavailability");
     readinessFixture.assistSkill=CurrentFixtureSkill+2; readinessFixture.totalCooldown=12;
     Put<uint16_t>(Impl+PHBattleMemberOffset+PHBattleAssistIDOffset,400);
@@ -56,6 +98,11 @@ static void FixedNativeTests() {
         [engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillAssist,CurrentFixtureSkill+2}
         expected:&state frame:Frame() reason:nil]==PHOrbSkillUnavailable && !skillStartCalls && !writes,
         "known uncharged fixed assist is unavailable without being misclassified as the current body skill");
+    Check([engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillAssist,61754}
+        expected:&state frame:Frame() reason:&reason]==PHOrbSkillRejected && !skillStartCalls && !writes &&
+        [reason containsString:[NSString stringWithFormat:@"預期武裝 61754，實際 %u",CurrentFixtureSkill+2]] &&
+        [reason containsString:@"階段 0／0"] && [reason containsString:@"CD 4／12"],
+        "fixed assist mismatch exposes expected and actual IDs, stages and cooldown without authorizing a replacement");
     auto held=state.fixedPlan; held.valid=true; auto idle=held; held.targetAllowed=false; idle.targetAllowed=true;
     Check(PHOrbSameFixedPlan(&held,&idle),"owned drag closes only tap permission, not fixed evidence identity");
     held.count=idle.count=1; held.enemies[0].targetX=40; idle.enemies[0].targetX=50;
