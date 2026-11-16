@@ -70,10 +70,14 @@ static void FixedNativeTests() {
         Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14601);
         Put<uint32_t>(catalog+100*PHBattleCatalogStride+PHOrbLeaderCatalogNextOffset,14600);
         Put<uint32_t>(parameter,1000100); Put<uint32_t>(Impl+PHBattleMemberOffset+PHBattleCatalogIDOffset,1000100);
+        Put<uint16_t>(Impl+PHBattleMemberOffset+PHBattleBaseIDOffset,100);
         Put<uintptr_t>(Impl+PHBattleMemberOffset+PHBattleCardParamOffset,
             scenario==1 ? catalog+100*PHBattleCatalogStride : parameter);
         if (scenario==2) Put<uint16_t>(Impl+PHBattleMemberOffset+PHBattleBaseIDOffset,101);
-        const BOOL read=[engine readAutomation:&state frame:Frame() reason:nil];
+        reason=nil;
+        const BOOL read=[engine readAutomation:&state frame:Frame() reason:&reason];
+        if (read!=(scenario==0)) std::fprintf(stderr,"Fixed variant scenario %u: read=%d reason=%s\n",
+            scenario,int(read),reason.UTF8String ?: "nil");
         Check(read==(scenario==0),"solo fixed variants require the exact native record and unchanged underlying source");
         if (read) Check(state.automation.members[0].number==100 && state.automation.members[0].sourceCatalogIDs[0]==100,
             "verified private variants preserve the public form and original fixed source separately");
