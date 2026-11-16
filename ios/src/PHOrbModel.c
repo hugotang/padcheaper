@@ -577,6 +577,21 @@ bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssis
         !memcmp(a->latents, b->latents, sizeof(a->latents));
 }
 
+bool PHOrbSameFixedPlan(const PHOrbFixedPlanState *a, const PHOrbFixedPlanState *b) {
+    if (!a || !b || !a->valid || !b->valid || a->count!=b->count || a->count>8 ||
+        a->aliveMask!=b->aliveMask || a->partsMask!=b->partsMask || a->targetKnown!=b->targetKnown ||
+        a->target!=b->target) return false;
+    // Sprite animation and closing the target tap window during our drag do
+    // not change the plan. Target taps separately compare their full capture.
+    for (unsigned i=0;i<a->count;++i) {
+        const PHOrbFixedPlanEnemy *x=&a->enemies[i], *y=&b->enemies[i];
+        if (x->hp!=y->hp || x->maximumHP!=y->maximumHP || x->parameter!=y->parameter ||
+            x->catalogID!=y->catalogID || x->hpKnown!=y->hpKnown || x->identityKnown!=y->identityKnown ||
+            x->flags!=y->flags || memcmp(&x->part,&y->part,sizeof(x->part))) return false;
+    }
+    return true;
+}
+
 bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboState *b) {
     return a && b && a->valid && b->valid && a->enemyCount == b->enemyCount && a->aliveMask == b->aliveMask &&
         a->bypassTurns == b->bypassTurns && a->bypassDelay == b->bypassDelay &&

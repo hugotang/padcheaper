@@ -31,6 +31,10 @@ bool ActivityValid(const PHOrbBoard &board, const PHOrbActivityObjective &a) {
         if (board.types[i] >= 6 || (board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn | PHOrbFlagCombo))) return false;
     return true;
 }
+bool FixedBoardValid(const PHOrbFixedBoardPolicy &policy) {
+    return unsigned(policy.mode) <= unsigned(PHOrbFixedBoardMode::LOnly) &&
+        policy.firstColors <= 63;
+}
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
 const char *ColorRecoveryReason(const PHOrbBoard &board, const PHOrbGoalSet &goals,
     const PHOrbActivityObjective &activity, int fishCell) {
@@ -83,6 +87,7 @@ struct Context {
     std::array<bool, PHOrbMaxGoals> hasStableLayouts{};
     bool diagonal = false;
     PHOrbActivityObjective activity{};
+    PHOrbFixedBoardPolicy fixedBoard{};
     Bits blocked = 0, boardMask = 0, leftEdge = 0, rightEdge = 0;
     int fishColor = -1;
     uint16_t fishColors = 0; // A displaced fixed orb must belong to this table.
@@ -102,7 +107,7 @@ struct ColorMovement {
 };
 struct Score {
     PHOrbEvaluation result{};
-    unsigned progress = 0, potential = 0, jointPenalty = 0;
+    unsigned progress = 0, potential = 0, jointPenalty = 0, fixedProgress = 0;
     std::array<unsigned, PHOrbMaxGoals> goalProgress{};
     std::array<uint16_t, PHOrbMaxGoals> layouts{};
     std::array<unsigned, PHOrbBasicTypes> colorProgress{};
@@ -174,12 +179,13 @@ void AddPattern(std::vector<Pattern> &patterns, Bits cells, unsigned w, unsigned
 
 Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool guidance = true,
                     bool allowPoisonWithHeartFour = false, bool diagonal = false, PHOrbActivityObjective activity = {},
-                    int fishCell = -1, unsigned fishColor = 0) {
+                    int fishCell = -1, unsigned fishColor = 0, PHOrbFixedBoardPolicy fixedBoard = {}) {
     const unsigned w = board.width, h = board.height;
     Context context{w, h, goals, {}};
     context.allowPoisonWithHeartFour = allowPoisonWithHeartFour;
     context.diagonal = diagonal;
     context.activity = activity;
+    context.fixedBoard = fixedBoard;
     context.minErase = board.minErase ? board.minErase : 3;
     context.minMatch = board.minMatch;
     context.unmatchable = board.unmatchableColors;
@@ -706,6 +712,10 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             pending &= ~group;
             const unsigned count = Count(group);
             ++resolvedCombos;
+            if (color < PHOrbBasicTypes && count == 4) {
+                ++result.resolvedFours;
+                if (!wave) ++result.firstWaveFours;
+            }
             if (!wave || !context.activity.firstWaveOnly) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             }
@@ -813,7 +823,29 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     // Multi-phase hints are computed once, after exact hits and colour masks
     // have been aggregated. A first-phase colour is not a guaranteed match.
     if (context.variants == 1) ColorGuidance(score, colors, context);
-    result.goalsMet = result.matchedGoals == context.goals.count;
+    result.firstWaveColors = uint8_t(firstColors & 63u);
+    result.fixedBoardSatisfied =
+        (result.firstWaveColors & context.fixedBoard.firstColors) == context.fixedBoard.firstColors &&
+        (!context.fixedBoard.requireHeartFour || result.heartFours > 0);
+    if (context.fixedBoard.mode == PHOrbFixedBoardMode::OneCombo)
+        result.fixedBoardSatisfied &= result.firstWaveCombos == 1 && resolvedCombos == 1 && result.erased == 3;
+    if (context.fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall)
+        result.fixedBoardSatisfied &= result.resolvedFours == 0;
+    if (context.fixedBoard.mode == PHOrbFixedBoardMode::LOnly)
+        result.fixedBoardSatisfied &= result.firstWaveCombos == 1 && resolvedCombos == 1 && result.erased == 5;
+    if (context.fixedBoard.mode == PHOrbFixedBoardMode::OneCombo || context.fixedBoard.mode == PHOrbFixedBoardMode::LOnly) {
+        const unsigned required = context.fixedBoard.mode == PHOrbFixedBoardMode::LOnly ? 5 : 3;
+        const unsigned excess = resolvedCombos > 1 ? resolvedCombos - 1 : 0;
+        const unsigned removedExcess = result.erased > required ? result.erased - required : required - result.erased;
+        score.fixedProgress = resolvedCombos ? 4096u / (1 + excess + removedExcess) : 0;
+    } else {
+        score.fixedProgress = 512u * Count(result.firstWaveColors & context.fixedBoard.firstColors) +
+            (context.fixedBoard.requireHeartFour && result.heartFours ? 512u : 0u);
+        if (context.fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall)
+            score.fixedProgress = score.fixedProgress > 256u * result.resolvedFours ?
+                score.fixedProgress - 256u * result.resolvedFours : 0;
+    }
+    result.goalsMet = result.matchedGoals == context.goals.count && result.fixedBoardSatisfied;
     if (context.activity.firstWaveOnly) {
         result.activityValue = result.firstWaveCombos * context.activity.comboWeight;
         unsigned links = 0;
@@ -869,6 +901,11 @@ Score Evaluate(Cells cells, const Context &context) {
         const auto &b = variant.result;
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
+        a.firstWaveColors &= b.firstWaveColors;
+        a.firstWaveFours = std::min(a.firstWaveFours,b.firstWaveFours);
+        a.resolvedFours = std::max(a.resolvedFours,b.resolvedFours);
+        a.fixedBoardSatisfied &= b.fixedBoardSatisfied;
+        worst.fixedProgress = std::min(worst.fixedProgress,variant.fixedProgress);
         if (context.activity.firstWaveOnly) {
             a.activityValue = std::min(a.activityValue,b.activityValue);
             a.preparationReady &= b.preparationReady;
@@ -898,7 +935,7 @@ Score Evaluate(Cells cells, const Context &context) {
     worst.result.matchedGoals = 0;
     for (unsigned g = 0; g < context.goals.count; ++g)
         worst.result.matchedGoals += worst.result.goalHits[g] >= context.goals.items[g].count;
-    worst.result.goalsMet = worst.result.matchedGoals == context.goals.count;
+    worst.result.goalsMet = worst.result.matchedGoals == context.goals.count && worst.result.fixedBoardSatisfied;
     if (context.activity.preparation) worst.result.goalsMet &= worst.result.preparationReady;
     // If any phase clears poison, the team policy requires a heart four in
     // every phase, including those that would not clear poison themselves.
@@ -926,6 +963,8 @@ bool SameCycleEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
     };
     return a.combos == b.combos && a.erased == b.erased && same(a.goalHits,b.goalHits) &&
         a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
+        a.firstWaveColors == b.firstWaveColors && a.firstWaveFours == b.firstWaveFours &&
+        a.resolvedFours == b.resolvedFours && a.fixedBoardSatisfied == b.fixedBoardSatisfied &&
         same(a.rowGroups,b.rowGroups) && same(a.linkGroups,b.linkGroups) && same(a.largestGroups,b.largestGroups) &&
         a.activityValue == b.activityValue && same(a.retainedAfterConversion,b.retainedAfterConversion) &&
         a.preparationReady == b.preparationReady && a.poisonErased == b.poisonErased &&
@@ -1038,14 +1077,20 @@ public:
 // Keep this policy explicit even though candidates in a beam layer normally
 // have equal lengths. Recovery may also retain candidates from earlier layers.
 bool Better(const Node &a, const Node &b, bool thornComboPriority, bool allowPoisonWithHeartFour,
-            const PHOrbActivityObjective &activity, bool routeOrder = false) {
+            const PHOrbActivityObjective &activity, bool routeOrder = false, PHOrbFixedBoardPolicy fixedBoard = {}) {
     const auto &ar = a.score.result, &br = b.score.result;
     if (ar.hazardsSafe != br.hazardsSafe) return ar.hazardsSafe;
     if (ar.unmatchedBombs != br.unmatchedBombs) return ar.unmatchedBombs < br.unmatchedBombs;
     if (!allowPoisonWithHeartFour && ar.poisonErased != br.poisonErased) return ar.poisonErased < br.poisonErased;
     if (ar.goalsMet != br.goalsMet) return ar.goalsMet;
+    if (!ar.goalsMet && fixedBoard.mode != PHOrbFixedBoardMode::Normal &&
+        a.score.fixedProgress != b.score.fixedProgress) return a.score.fixedProgress > b.score.fixedProgress;
     if (!ar.goalsMet && a.score.progress != b.score.progress) return a.score.progress > b.score.progress;
     if (!thornComboPriority && a.thornDamage != b.thornDamage) return a.thornDamage < b.thornDamage;
+    if (fixedBoard.mode == PHOrbFixedBoardMode::FourAttack && ar.firstWaveFours != br.firstWaveFours)
+        return ar.firstWaveFours > br.firstWaveFours;
+    if (fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall && ar.resolvedFours != br.resolvedFours)
+        return ar.resolvedFours < br.resolvedFours;
     if (activity.firstWaveOnly) {
         if (activity.comboPriority) {
             if (ar.firstWaveCombos != br.firstWaveCombos) return ar.firstWaveCombos > br.firstWaveCombos;
@@ -1157,7 +1202,7 @@ bool BetterForSearch(const Node &a, const Node &b, unsigned focus, bool thornCom
         const unsigned bv = b.score.progress + 3 * b.score.goalProgress[focus];
         if (av != bv) return av > bv;
     }
-    return Better(a, b, thornComboPriority, allowPoisonWithHeartFour, context.activity);
+    return Better(a, b, thornComboPriority, allowPoisonWithHeartFour, context.activity, false, context.fixedBoard);
 }
 
 void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit, unsigned depth,
@@ -1327,10 +1372,10 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
 
 bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
-    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !ActivityValid(board,options.activity)) return false;
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !ActivityValid(board,options.activity) || !FixedBoardValid(options.fixedBoard)) return false;
     try {
         Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());
-        result = Evaluate(cells,MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,options.activity)).result;
+        result = Evaluate(cells,MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,options.activity,-1,0,options.fixedBoard)).result;
         return true;
     } catch (...) { return false; }
 }
@@ -1353,7 +1398,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
-        options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity)) return PHOrbSolveStatus::Invalid;
+        options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity) || !FixedBoardValid(options.fixedBoard)) return PHOrbSolveStatus::Invalid;
     if (!FishingOptionsValid(board, options.fishCell, options.fishColor)) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
@@ -1371,7 +1416,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         std::array<uint32_t, 128> damageTable{};
         for (unsigned p = 1; p < damageTable.size(); ++p) damageTable[p] = PHOrbThornDamage(p, t.maximumHP);
         const Context context = MakeContext(board, options.goals, true, options.allowPoisonWithHeartFour, options.diagonal, options.activity,
-            options.fishCell, options.fishColor);
+            options.fishCell, options.fishColor, options.fixedBoard);
         const Bits blocked = PHOrbBlockedCells(&board);
         // Shape guidance and shared spinner phases cost more than combo-only
         // evaluation. Check the clock between each such candidate.
@@ -1451,7 +1496,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // contact candidates to have been seen keeps the later contact pass
         // gated exactly as before.
         const auto cannotImprove = [&](unsigned depth) {
-            if (!found || context.activity.firstWaveOnly || depth + 2 <= best.length) return false;
+            if (!found || context.activity.firstWaveOnly || context.fixedBoard.mode == PHOrbFixedBoardMode::FourAttack || depth + 2 <= best.length) return false;
             const auto &r = best.score.result;
             return r.hazardsSafe && r.goalsMet && !r.unmatchedBombs && !r.poisonErased && !best.thornDamage &&
                 r.combos >= comboUpper && (hadContactCandidates || !contactsPossible);
@@ -1541,7 +1586,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         const bool heartPending = (child.thornContacts && !PHOrbThornRecoverySatisfied(child.score.result,options)) ||
                             (options.allowPoisonWithHeartFour && child.score.result.poisonErased && !child.score.result.heartFours);
                         if (heartPending) child.score.result.hazardsSafe = false;
-                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity, true)) {
+                        if (!found || Better(child, best, options.thornComboPriority, options.allowPoisonWithHeartFour, options.activity, true, options.fixedBoard)) {
                             if (scoring.alternateShapeHints && !canonicalScore) {
                                 child.score = Evaluate(child.cells,context); ++evaluationCache.calls;
                                 if (heartPending) child.score.result.hazardsSafe = false;

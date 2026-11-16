@@ -18,6 +18,7 @@
     return PHOrbTriggerSkillRuleWithTiming(rule, state, _auto.turn, _observedTurn, last, reason);
 }
 - (BOOL)hasPendingSkillWindow:(const PHOrbSnapshot *)state {
+    if (_activeProfile[@"fixedPlan"]) return YES;
     if (_openingInFlight || [_activeProfile[@"opening"] count] > _openingStep) return YES;
     if (_openingPuzzlePending && _activeProfile[@"formation"]) return NO;
     for (NSUInteger i = 0; i < _skillRules.count; ++i) {
@@ -164,6 +165,7 @@
         }
         if (![resolved[@"ok"] boolValue]) { [self queueStop:resolved[@"message"]]; return NO; }
         _activeProfile = resolved[@"profile"];
+        if (_activeProfile[@"fixedPlan"] && ![self bindFixedPlan:state]) return NO;
         if (_activeProfile[@"formation"]) {
             if (!resume && _openingInFlight) {
                 [self queueStop:@"前一次開場技能尚未確認完成，不能切換流程或跳過此步"]; return NO;
@@ -225,6 +227,7 @@
     if (!PHInputIsQuiet(&state->input) || (state->dragged && ![self executing])) {
         [self queueStop:@"偵測到手動操作，已停止連續模式"]; return NO;
     }
+    if (_activeProfile[@"fixedPlan"] && ![self observeFixedPlan:state]) return NO;
     if (_watchPlayerState && state->phase == 2 &&
         ((_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview) || (_phase == PHOrbSessionPhase::Arming) || (_phase == PHOrbSessionPhase::Running)) &&
         !PHOrbSamePlayerState(&_preview, state)) {
@@ -308,6 +311,7 @@
 }
 - (void)advanceAutomation {
     if (_auto.eight()) { [self advanceEightAutomation]; return; }
+    if (_auto.bound && _activeProfile[@"fixedPlan"]) { [self advanceFixedPlan]; return; }
     if (!_auto.active() || !_auto.bound || [self executing] || (_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview) ||
         (_phase == PHOrbSessionPhase::SkillArming) || (_phase == PHOrbSessionPhase::OpeningArming) || _now - _auto.startedAt < 0.35) return;
     if ((_phase == PHOrbSessionPhase::AutoWaiting) && _live.phase == 2 && !_live.boardTransition &&
@@ -500,6 +504,10 @@
     _hasLive = read; _live = current;
     _liveReadReason = [reason copy] ?: @""; _lastReadUptime = NSProcessInfo.processInfo.systemUptime;
     if (![self observeAutomation:&current read:read reason:reason]) return;
+    if (_activeProfile[@"fixedPlan"]) {
+        if (_phase == PHOrbSessionPhase::FixedActionArming) [self castFixedAction:&current frame:frame];
+        return;
+    }
     if (_auto.eight() && (_phase == PHOrbSessionPhase::EightSkillArming)) {
         [self castEightSkill:&current frame:frame]; return;
     }

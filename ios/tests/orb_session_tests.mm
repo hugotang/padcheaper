@@ -542,9 +542,11 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_color_phase_session_tests.inc"
 #include "orb_monochrome_session_tests.inc"
 #include "orb_himmel_session_tests.inc"
+#include "orb_fixed_session_tests.inc"
 
 int main() {
     @autoreleasepool {
+        FixedSessionTests();
         ReadinessStopSessionTests();
         if (failures) return 1;
         MultiFishingSessionTests();

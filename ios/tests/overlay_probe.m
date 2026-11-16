@@ -5,6 +5,7 @@
 #import "PHOrbModel.h"
 #import "PHOrbPlanning.h"
 #import "PHOrbProfiles.h"
+#import "PHOrbProfileEditor.h"
 #import "PHOrbSession.h"
 #import "PHConfiguration.h"
 #import "PHFormationModel.h"
@@ -236,6 +237,7 @@ static void PHProbeRender(UIWindow *guest, UIWindow *overlay, NSString *name) {
 typedef BOOL (^PHProbeCondition)(void);
 
 #include "orb_readiness_probe.inc"
+#include "orb_fixed_plan_probe.inc"
 
 static NSDictionary *PHProbeStep(NSString *name, PHProbeCondition ready, dispatch_block_t action) {
     return @{@"name":name, @"ready":[ready copy], @"action":[action copy]};
@@ -2003,6 +2005,7 @@ static void PHProbeRunSteps(NSArray<NSDictionary *> *steps, NSUInteger index, NS
                 @"Execute passes the displayed preview generation and returns to game");
             if (PHProbeLegacy()) PHProbeLegacyOverlay = overlay;
             PHProbePlanStorage(overlay);
+            PHProbeFixedPlanStorage(overlay);
             // Exercise the real orb -> formation window transition with a
             // partial capture before the editor's asynchronous ready handshake.
             [overlay.rootViewController openOrbs];

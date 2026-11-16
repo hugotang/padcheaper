@@ -26,7 +26,7 @@ bool TimedFishingActivitySupported(const PHOrbActivityObjective &a) {
 Context TimedFishingContext(const PHOrbBoard &board, const PHOrbSolveOptions &options, bool guidance) {
     auto view = board; view.spinnerMask = 0; view.spinnerColors = 0;
     return MakeContext(view, options.goals, guidance, options.allowPoisonWithHeartFour,
-        options.diagonal, {}, options.fishCell);
+        options.diagonal, {}, options.fishCell, 0, options.fixedBoard);
 }
 
 unsigned TimedComboCapacity(const Inventory &inventory, const Context &context) {
@@ -148,6 +148,10 @@ void MergeTimedFishingEvaluation(PHOrbEvaluation &worst, const PHOrbEvaluation &
     worst.combos = std::min(worst.combos,value.combos);
     worst.erased = std::min(worst.erased,value.erased);
     worst.firstWaveCombos = std::min(worst.firstWaveCombos,value.firstWaveCombos);
+    worst.firstWaveColors &= value.firstWaveColors;
+    worst.firstWaveFours = std::min(worst.firstWaveFours,value.firstWaveFours);
+    worst.resolvedFours = std::max(worst.resolvedFours,value.resolvedFours);
+    worst.fixedBoardSatisfied &= value.fixedBoardSatisfied;
     worst.heartFours = std::min(worst.heartFours,value.heartFours);
     worst.heartMatches = std::min(worst.heartMatches,value.heartMatches);
     worst.poisonErased = std::max(worst.poisonErased,value.poisonErased);
@@ -159,7 +163,7 @@ void MergeTimedFishingEvaluation(PHOrbEvaluation &worst, const PHOrbEvaluation &
         worst.goalHits[g] = std::min(worst.goalHits[g],value.goalHits[g]);
         worst.matchedGoals += worst.goalHits[g] >= goals.items[g].count;
     }
-    worst.goalsMet = worst.matchedGoals == goals.count;
+    worst.goalsMet = worst.matchedGoals == goals.count && worst.fixedBoardSatisfied;
 }
 
 struct TimedFishingNode {
@@ -177,7 +181,7 @@ void SelectTimedFishingBeam(std::vector<TimedFishingNode> &next, std::vector<Tim
     unsigned limit, unsigned fish, const PHOrbSolveOptions &options) {
     const size_t keep = std::min(size_t(limit), next.size());
     std::stable_sort(next.begin(), next.end(), [&](const auto &a, const auto &b) {
-        return Better(a.drag, b.drag, false, options.allowPoisonWithHeartFour, {});
+        return Better(a.drag, b.drag, false, options.allowPoisonWithHeartFour, {},false,options.fixedBoard);
     });
     if (keep < 4 || keep == next.size()) { next.resize(keep); beam.swap(next); return; }
     beam.clear(); const size_t elite = keep / 2;
@@ -217,7 +221,7 @@ PHOrbTimedFishingRoute TimedRoute(const TimedFishingNode &node, const PHOrbTimed
 PHOrbTimedFishingInventory PHOrbInspectTimedFishing(const PHOrbBoard &board,
     const PHOrbSolveOptions &options, unsigned maxExchanges) noexcept {
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity)) return {};
+        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard)) return {};
     try { return TimedInventoryPlans(board, options, maxExchanges); }
     catch (...) { return {}; }
 }
@@ -265,7 +269,7 @@ bool PHOrbEvaluateTimedFishing(const PHOrbBoard &board, const PHOrbTimedFishingR
     result = {};
     PHOrbBoard replay;
     if (options.fishCell != route.fishCell || options.diagonal != route.diagonal || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || !PHOrbReplayTimedFishing(board,route,route.count - 1,replay)) return false;
+        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || !PHOrbReplayTimedFishing(board,route,route.count - 1,replay)) return false;
     try {
         auto context = TimedFishingContext(board,options,false);
         context.variants = 0; context.dynamicSpinners = Bits(1) << route.fishCell;
@@ -298,7 +302,7 @@ PHOrbSolveStatus PHOrbSolveTimedFishing(const PHOrbBoard &board, const PHOrbSolv
     unsigned maxExchanges, const std::atomic_bool &cancel, PHOrbTimedFishingRoute &route) noexcept {
     route = {};
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) ||
+        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) ||
         !options.steps || options.steps > PHOrbMaxSteps || !options.beam || options.beam > 512 ||
         !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
@@ -369,7 +373,7 @@ PHOrbSolveStatus PHOrbSolveTimedFishing(const PHOrbBoard &board, const PHOrbSolv
                         // An attractive layout before the prescribed exchanges
                         // is guidance only; it must not masquerade as Solved.
                         child.drag.score.result.goalsMet &= complete;
-                        if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{},true))) {
+                        if (complete && (!found || Better(child.drag,best.drag,false,options.allowPoisonWithHeartFour,{},true,options.fixedBoard))) {
                             best = child; bestPlan = plan; found = true;
                         }
                         next.push_back(std::move(child));

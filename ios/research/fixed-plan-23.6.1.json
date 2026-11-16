@@ -1,0 +1,109 @@
+{
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "inputSHA256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+  "guards": [
+    {
+      "va": "0x1005b06ac",
+      "rva": "0x5b06ac",
+      "bytes": "801a407af3079f1ad9ffff170a1b89526a01a0720a696a784a651a534a3d00135f050071ab02005408d1429100712391a502ff97683b40f9097581520920299b",
+      "sha256": "af1a08fcaa9721df765a61caf6bd79832c9a2832200abb8b228127a8ff16405e"
+    },
+    {
+      "va": "0x1005b07ec",
+      "rva": "0x5b07ec",
+      "bytes": "e82740a93c3940f99503198b002940bda886c2790101221e0020211ecc080054a00227915802ff971f040071cb0000548803198b00c126911502ff971f000071",
+      "sha256": "a9f503ef4bd3e811e0d7a8e80525118f867a2a9ddbb546675ce827b6d75757e9"
+    },
+    {
+      "va": "0x1005b0990",
+      "rva": "0x5b0990",
+      "bytes": "0ad78f526a01a0720a69aa785f0116eb01010054ea0340f94a5543392a0100362a0080522a0100391600801205000014800080526bf4fc97e80740f9083940f9",
+      "sha256": "3386a5947d91540fb8cf5da285b349a2b45ca97fab34518e7e8bd39ea4937e82"
+    },
+    {
+      "va": "0x100069794",
+      "rva": "0x69794",
+      "bytes": "085843391f05007121020054687c430b2804884b000c40bd0101221e0020211e640100540801030b0101221e0020211eec000054887c440b4804884b001040bd",
+      "sha256": "dfcd1025ec115ccae91afbc4914657d748bbd76fa204ebebea6208458e0d8161"
+    },
+    {
+      "va": "0x100069cd0",
+      "rva": "0x69cd0",
+      "bytes": "e85201d0082d44f90945a9393f0900f1eb00005400a114910a544339aa00003700200491290500f181ffff5400a11491c0035fd6e85201d0082d44f9004d2939",
+      "sha256": "c0f72a65bb6acdbf1cbf3cb72bd9b5260642dc0a17d5e8df4d6ae7556c2ec8fc"
+    },
+    {
+      "va": "0x100019acc",
+      "rva": "0x19acc",
+      "bytes": "0828447928024037f44fbea9fd7b01a9fd430091f30300aa00400191ab5c1594f40300aa60020191a85c1594e803002a088114aa1f0100f1e0d79f1afd7b41a9",
+      "sha256": "c00e2a3362438672abdf1adba08075e2fc41522953dfd7a90a78e7eeb6d0c1d1"
+    },
+    {
+      "va": "0x1004905a4",
+      "rva": "0x4905a4",
+      "bytes": "082844796800403700008052c0035fd6f44fbea9fd7b01a9fd430091f30300aa00402a91ac820394c000f83760c21f91d94eee971f0000f1e0d79f1a02000014",
+      "sha256": "722521ed56d105235005f1a5476ba95907d7c4d185bdec639be4136f66d20067"
+    },
+    {
+      "va": "0x1005b0618",
+      "rva": "0x5b0618",
+      "bytes": "09ca8d52c91ea072c96a69f80a099652ca1ea072ca6a6af83f0100f1441940fae9079f1a0ab286526a01a0720a696a38ca1c0037a91c0037094942912a7d2691",
+      "sha256": "f9fdc35e8d0514c300762be8c46d4023b1d272538f6df3f37dfcc040fbc4554e"
+    },
+    {
+      "va": "0x1005b0880",
+      "rva": "0x5b0880",
+      "bytes": "1f9d0f71ec040054da0400368803198b006941bd0100381e006d41bd0200381e0389c279048dc279e00340f9bae3ea9780030034d3010036000080523649fe97",
+      "sha256": "650648e8fa5cbf87e82e005bd6ddb895dd949094a9faf97ac3fa9826c7d286cb"
+    }
+  ],
+  "deviceVerified": false,
+  "reviewedDate": "2026-11-17",
+  "allGuardBytesComparedToIDAOriginal": true,
+  "guardIntegration": "Dedicated PHOrbFixedNativeGuards.h checked only by fixed-plan native operations; existing enemy/parts guards also required.",
+  "evidence": {
+    "ordinaryHP": {
+      "low": 64,
+      "high": 80,
+      "maximumLow": 592,
+      "maximumHigh": 608,
+      "salt": "0x766cfc6d"
+    },
+    "enemyIdentity": "Verify catalog allocation, bounded native record chain, record ID and current parameter pointer. Parts instead require protected mode/HP and a living ordinary owner.",
+    "partHP": {
+      "mode": 2704,
+      "high": 2672,
+      "low": 2688,
+      "salt": "0x6a875a8b",
+      "flags": 532,
+      "partFlag": "0x100"
+    },
+    "target": {
+      "selected": 753336,
+      "inputMode": 601584,
+      "forcedTurns": 739544,
+      "memberSelection": 603008,
+      "debounce": 600479,
+      "center": [
+        360,
+        364
+      ],
+      "size": [
+        324,
+        326
+      ],
+      "maximumY": 322,
+      "blockMode": 2480,
+      "blockTurns": 2496
+    },
+    "input": "Native hit testing scans backwards. Reject overlapping later candidates; stage a single private input frame, restore the manager and require selected-slot acknowledgement. Never write the selected target directly.",
+    "readiness": "Native can-use and readiness queries may refresh derived native caches; the fixed readiness probe performs no skill start or selection override. Source/readiness are checked again before use.",
+    "continuity": "Compare semantic enemy identity/HP/selection during planning and dragging; compare the complete fresh capture for target staging."
+  },
+  "pending": [
+    "Real fixed-team catalog/skill sources and leader-swap receipt",
+    "Target coordinates and native selection acknowledgement",
+    "Part-death observation before wave transition",
+    "B3 gesture timing, puzzle quality, damage and healing"
+  ]
+}

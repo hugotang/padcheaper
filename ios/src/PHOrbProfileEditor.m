@@ -220,6 +220,7 @@
             NSArray *teamBinding = [members copy];
             UIAction *choice = [UIAction actionWithTitle:PHFormationLibraryTeamLabel(self.formations, formation[@"id"]) image:nil identifier:nil handler:^(__kindof UIAction *sender) {
                 PHOrbProfileEditor *editor = weakSelf; if (!editor.selected) return;
+                if (editor.selected[@"fixedPlan"]) { editor.notice.text = @"固定隊伍計畫核對原生六格來源；請在計畫 JSON 一併修改。"; return; }
                 if (editor.selected[@"formation"]) {
                     NSDictionary *updated = PHOrbProfileUpdatingFormation(editor.selected, saved);
                     if (!updated) { editor.notice.text = @"這份隊伍的本體／武裝與開場不相容。"; return; }
@@ -233,7 +234,7 @@
             [teams addObject:choice];
         }
         team.menu = [UIMenu menuWithTitle:fullPlan ? @"選擇要保留的隊伍配裝" : @"使用開始時的角色形態核對" children:teams];
-        team.enabled = teams.count > 0 && !record[@"activity"];
+        team.enabled = teams.count > 0 && !record[@"activity"] && !record[@"fixedPlan"];
         [binding addArrangedSubview:team];
         if (fullPlan) {
             UILabel *loadoutHelp = [self label:@"選用後記住這份隊伍。日後在隊伍編成儲存的潛覺、等級與加值會同步到使用它的策略及匯出；本體與武裝必須符合原開場。有同名隊伍時，可在隊伍編成查看各份潛覺後選回修改版。"];
@@ -246,12 +247,14 @@
             }
         }
         [binding addArrangedSubview:[self action:@"不限定助人" identifier:@"padcheaper.orbsProfileAnyHelper" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"fixedPlan"]) { editor.notice.text = @"固定隊伍計畫需要核對完整六格及技能來源。"; return; }
             if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請在活動 JSON 一併更新。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包會核對六格本體與武裝；請在匯入 JSON 一併修改隊伍及開場。"; return; }
             NSMutableArray *members = [editor.selected[@"team"] mutableCopy]; members[5] = @0;
             editor.selected[@"team"] = members; [editor rebuild];
         }]];
         [binding addArrangedSubview:[self action:@"取消隊伍限制" identifier:@"padcheaper.orbsProfileAnyTeam" handler:^(PHOrbProfileEditor *editor) {
+            if (editor.selected[@"fixedPlan"]) { editor.notice.text = @"固定隊伍計畫需要原生來源核對；請另存通用策略。"; return; }
             if (editor.selected[@"activity"]) { editor.notice.text = @"8 人活動需核對完整固定隊伍；請另選通用設定。"; return; }
             if (editor.selected[@"formation"]) { editor.notice.text = @"整包開場需要固定隊伍；請另存通用策略。"; return; }
             editor.selected[@"team"] = [@[@0,@0,@0,@0,@0,@0] mutableCopy]; [editor rebuild];
@@ -293,14 +296,26 @@
             [lines addObject:@"開始時會核對六格固定版本技能；技能與吸收狀態變更後重新讀盤。"];
             [details addArrangedSubview:[self label:[lines componentsJoinedByString:@"\n"]]];
         }
-        [details addArrangedSubview:[self label:record[@"activity"] ?
+        if (record[@"fixedPlan"]) {
+            UILabel *summary = [self label:PHOrbFixedPlanDescription(record)];
+            summary.accessibilityIdentifier = @"padcheaper.orbsFixedPlanSummary";
+            [details addArrangedSubview:summary];
+            [management addArrangedSubview:[self action:@"複製固定隊伍 plan" identifier:@"padcheaper.orbsFixedPlanExport" handler:^(PHOrbProfileEditor *editor) {
+                NSData *data = PHOrbExportProfileData(editor.selected,NULL);
+                if (!data) { editor.notice.text = @"固定隊伍計畫無效，無法匯出。"; return; }
+                UIPasteboard.generalPasteboard.string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                editor.notice.text = @"已複製六格來源、樓層步驟及盤面政策。";
+            }]];
+        }
+        [details addArrangedSubview:[self label:record[@"fixedPlan"] ?
+            @"樓層步驟、技能來源及盤面政策請更新計畫 JSON；此計畫不選用或套用隊伍庫。" : record[@"activity"] ?
             @"活動技能及樓層目標請更新活動 JSON；轉珠頁可調整求路品質。" :
             [NSString stringWithFormat:@"已存技能規則 %lu 條、盤面目標 %lu 項。選用後可回轉珠頁修改，修改會一併儲存至這份策略。",
             (unsigned long)[settings[@"rules"] count], (unsigned long)[settings[@"goals"] count]]]];
         [management addArrangedSubview:[self action:@"用轉珠頁目前設定覆蓋這份策略" identifier:@"padcheaper.orbsProfileOverwrite" handler:^(PHOrbProfileEditor *editor) {
             NSMutableDictionary *updated = [editor.selected mutableCopy]; updated[@"settings"] = editor.workingSettings;
             if (!PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[updated]})) {
-                editor.notice.text = @"目前設定與這份策略不相容；8 人活動不使用單人技能、低血補心或武裝 L 規則。"; return;
+                editor.notice.text = @"目前設定與這份策略不相容；固定隊伍計畫使用其樓層步驟，8 人活動使用活動規則。"; return;
             }
             editor.selected[@"settings"] = editor.workingSettings; [editor rebuild];
         }]];

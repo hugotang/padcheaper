@@ -383,9 +383,11 @@ static void ReadIssueNativeTests() {
 #include "orb_skill_window_native_tests.inc"
 #include "orb_multiplayer_native_tests.inc"
 #include "orb_eight_native_tests.inc"
+#include "orb_fixed_native_tests.inc"
 
 int main() {
     @autoreleasepool {
+        FixedNativeTests();
         MultiplayerNativeTests();
         Reset(); id<PHOrbEngine> engine = PHCreateOrbEngine(); PHOrbSnapshot state{}; NSString *reason = nil;
         BOOL initialRead = [engine read:&state frame:Frame() reason:&reason];

@@ -31,6 +31,10 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
 @optional
+// Native readiness/source validation, without starting a skill. Started means
+// ready here; unavailable is definite, rejected is unknown and must stop.
+- (PHOrbSkillResult)fixedSkillReadiness:(NSUInteger)slot request:(PHOrbSkillRequest)request
+    expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Lets the gesture enter this one spinner cell for a fishing route; -1 closes it.
 - (void)allowSpinnerEntry:(NSInteger)cell;
 // Observe an already-started 8P match while paused. This does not arm skills
@@ -43,6 +47,14 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 // Required by single-player continuous enemy countermeasures, never borrowed
 // from observeEnemyActions or the optional battle observation cache.
 - (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
+// Required by a full fixed-team plan. Fresh protected facts only, including
+// during the current owned drag; optional observations grant no authority.
+- (BOOL)readFixedPlan:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
+// Stage one native enemy-target tap for the original drawFrame. Success is
+// staging, not a target receipt; confirm the fresh selected slot next frame.
+// Always pair with finishInput, just like a staged orb input.
+- (BOOL)stageFixedPlanTarget:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Enrich a stable snapshot with read-only diagnostics. Failure is optional
 // data unavailability, never a new automation or gesture blocker.
 - (void)observeBattle:(PHOrbSnapshot *)state;

@@ -9,7 +9,7 @@
     const bool wasAutomatic = _auto.active();
     const bool wasEightAutomatic = _auto.eight();
     const bool pendingStart = [self executing] && _awaitingStart && _startSent;
-    const bool skillRunning = (_phase == PHOrbSessionPhase::SkillWaiting) || _openingInFlight ||
+    const bool skillRunning = (_phase == PHOrbSessionPhase::SkillWaiting) || (_phase == PHOrbSessionPhase::FixedSkillWaiting) || _openingInFlight ||
         (_eightSkillPending && _eightSkillStarted && _hasLive && _live.phase == 22);
     const bool cancelledIntent = _auto.active() || PHOrbSessionPendingIntent(_phase, _readQueued, _releaseComplete);
     [self cancelWorker];

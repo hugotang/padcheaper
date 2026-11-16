@@ -181,6 +181,7 @@ static void ShapeTests() {
     Check(PHOrbReplay(&conflict, &route, route.count - 1, &replay), "an unmet route remains usable for explanatory preview only");
 }
 
+#include "orb_fixed_board_solver_tests.inc"
 #include "orb_effect_solver_tests.inc"
 #include "orb_inventory_solver_tests.inc"
 #include "orb_timed_fishing_tests.inc"
@@ -217,6 +218,7 @@ static void ShapeTests() {
 #include "enemy_threat_model_tests.inc"
 
 int main() {
+    FixedBoardSolverTests();
     SessionStateModelTests();
     InventoryDiagnosticTests();
     FishingInventoryTests();

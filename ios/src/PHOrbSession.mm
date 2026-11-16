@@ -401,6 +401,13 @@ struct EightPreparationState {
     NSDictionary *_goalPlan, *_recovery;
     NSDictionary *_profileLibrary, *_activeProfile;
     NSDictionary *_openingProfile;
+    NSDictionary *_fixedProfile, *_fixedStage, *_fixedPending;
+    NSString *_fixedVariant;
+    NSMutableArray<NSDictionary *> *_fixedLoops;
+    PHOrbSnapshot _fixedOrigin, _fixedTeam, _fixedBefore;
+    NSUInteger _fixedWave, _fixedStageIndex, _fixedAction, _fixedPuzzles, _fixedLoopCursor, _fixedSlot;
+    uint32_t _fixedOnce, _fixedGestureMS;
+    bool _fixedConsumed, _fixedAcknowledged, _fixedPendingLoop, _fixedPartsGone, _fixedStall;
     NSMutableArray<NSDictionary *> *_openingLog;
     NSUInteger _openingStep;
     uint8_t _temporaryMask;
@@ -490,6 +497,7 @@ struct EightPreparationState {
     return self;
 }
 #include "PHOrbDungeonSession.inc"
+#include "PHOrbFixedSession.inc"
 - (void)refreshBattleObservation:(BOOL)read active:(BOOL)active time:(NSTimeInterval)time {
     if (!read || !_frame.ready || !_frame.enabled || _live.identity.player != _frame.player ||
         _live.identity.epoch != _frame.epoch || !ObservationWindow(_live) || active || _oneShot ||
@@ -742,6 +750,7 @@ struct EightPreparationState {
             @"statusKnown":@(_preview.automation.valid && _preview.automation.statusKnown),
             @"effects":_preview.automation.valid && _preview.automation.statusKnown ? @(_preview.automation.playerEffects) : NSNull.null,
             @"postPlayerHPKnown":@NO, @"survivalKnown":@NO},
+        @"fixedPlan":_auto.active() && _activeProfile[@"fixedPlan"] ? [self fixedProgressTrace] : @{},
         @"thornComboPriority":@(options.thornComboPriority),
         @"allowThornsWithHeartMatch":@(options.allowThornsWithHeartMatch), @"allowThornFishing":@(options.allowThornFishing), @"thorns":ThornBudgetTrace(options),
         @"allowPoisonWithHeartFour":@(options.allowPoisonWithHeartFour), @"diagonal":@(options.diagonal)};
@@ -749,7 +758,9 @@ struct EightPreparationState {
     _goalPlan = [_goalMode isEqual:@"leaders"] ? PHOrbPlanForLeaders(&_preview) :
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
-    if (_auto.eight()) {
+    if (_auto.active() && _activeProfile[@"fixedPlan"]) {
+        _goalPlan = [self fixedBoardPlan:&options];
+    } else if (_auto.eight()) {
         _goalPlan = [self planEightBoard:&_preview options:&options];
     } else _goalPlan = PHOrbPlanWithRecovery(_goalPlan, _recovery, &_preview, _auto.active());
     if (!_auto.eight() && _preview.multiplayer.kind == PHOrbMultiplayerEight) {
@@ -759,7 +770,7 @@ struct EightPreparationState {
         NSMutableDictionary *plan = [_goalPlan mutableCopy]; plan[@"enemyComboFirstWave"] = @YES;
         _goalPlan = [plan copy];
     }
-    if (_auto.active() && !_auto.eight()) {
+    if (_auto.active() && !_auto.eight() && (!_activeProfile[@"fixedPlan"] || [self fixedAttackBoard])) {
         if (![self captureEnemyCombo:&_preview]) {
             NSMutableDictionary *plan = [_goalPlan mutableCopy];
             plan[@"available"] = @NO; plan[@"message"] = _message;
@@ -836,7 +847,10 @@ struct EightPreparationState {
     }
     // Quantize to native frames as well as the hard execution deadline. A
     // longer thorough route must remain feasible even at a lower frame rate.
-    const double budget = std::min(remaining > 0 ? remaining : multiplayer ? 0 : ExecutionLimit, ExecutionLimit);
+    const unsigned fixedMS = _auto.active() && _activeProfile[@"fixedPlan"] ? [_fixedStage[@"board"][@"maxGestureMS"] unsignedIntValue] : 0;
+    _fixedGestureMS=fixedMS;
+    const double budget = std::min(remaining > 0 ? remaining : multiplayer ? 0 : ExecutionLimit,
+        fixedMS ? std::min(ExecutionLimit,double(fixedMS)/1000) : ExecutionLimit);
     options.steps = budget > TimeMargin ? std::max(1u, std::min(options.steps,
         unsigned((budget - TimeMargin) / StepDuration(_live)))) : 1;
     if (_auto.eight() && !_eightPrep.active) {
@@ -900,6 +914,7 @@ struct EightPreparationState {
         MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active(),options.allowThornFishing) : @"invalid-goals";
     const bool multiEligible = [multiEligibility isEqual:@"eligible"];
     PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
+    if (fixedMS) multiTiming.remainingFrames = std::min(multiTiming.remainingFrames,unsigned(double(fixedMS)*_preview.fps/1000));
     if (!solo) multiTiming.remainingFrames = std::min(multiTiming.remainingFrames,
         unsigned(std::floor(std::max(0.0,remaining) * _preview.fps)));
     // One-take fallback uses one unlocked source. Its color must be in the
@@ -914,7 +929,7 @@ struct EightPreparationState {
             if ((board.spinnerMask & (UINT64_C(1) << i)) && !(board.flags[i] & PHOrbFlagLocked)) { ++dynamic; fishCell = int(i); }
         }
         const double wait = FishWaitSeconds(_preview);
-        const double moving = std::min(TimeAvailable(_preview), ExecutionLimit + wait) - wait - TimeMargin;
+        const double moving = std::min(TimeAvailable(_preview), fixedMS ? double(fixedMS)/1000 : ExecutionLimit + wait) - wait - TimeMargin;
         if (moving > 0) fishSteps = std::min(options.steps, unsigned(moving / StepDuration(_preview)));
         if (dynamic != 1 || thorns || fishSteps < 2) {
             fishCell = -1; singleEligibility = dynamic != 1 ? @"requires-one-unlocked-spinner" :
@@ -1319,6 +1334,8 @@ struct EightPreparationState {
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];
                 if (checkedOptions.activity.preparation) [missing addObject:
                     @"未找到只消一組三珠、無後續連鎖且保留轉色珠量足夠的路徑"];
+                if (!evaluation.fixedBoardSatisfied) [missing addObject:
+                    @"未達成此固定步驟的精確消除限制（組數／六色／四顆）；未開始轉珠"];
                 NSString *phaseMissing = trace[@"colorPhases"][@"missingInAnyFailedPhaseNames"];
                 if (phaseMissing.length) [missing addObject:[NSString stringWithFormat:@"未達標候選的顏色缺口：%@",phaseMissing]];
                 for (unsigned g = 0; g < checkedOptions.goals.count; ++g) if (route.goalHits[g] < checkedOptions.goals.items[g].count)
@@ -1432,12 +1449,19 @@ struct EightPreparationState {
                 @"剩餘操作時間不足以完成路徑及必要等待，未開始轉珠"]; return;
         }
         if (time - _requestedAt < ArmDelay) return;
+        if (_auto.active() && _activeProfile[@"fixedPlan"]) {
+            const unsigned ms=[_fixedStage[@"board"][@"maxGestureMS"] unsignedIntValue];
+            const double needed=(_route.count-1)*StepDuration(current)+FishingTakes(_route)*FishWaitSeconds(current)+TimeMargin;
+            if (ms && needed>double(ms)/1000) { [self queueStop:@"固定計畫路徑超過此步操作時間，未開始拖珠"]; return; }
+            _fixedConsumed=true;
+        }
         _phase = PHOrbSessionPhase::Running; _startedAt = _stepAt = _sentAt = time;
         _expected = current;
     }
     if (_phase == PHOrbSessionPhase::Running) {
         _executionElapsed = std::max(0.0, time - _startedAt);
-        const double executionLimit = RouteExecutionLimit(_preview,_route);
+        const unsigned fixedMS = _auto.active() && _activeProfile[@"fixedPlan"] ? [_fixedStage[@"board"][@"maxGestureMS"] unsignedIntValue] : 0;
+        const double executionLimit = fixedMS ? std::min(RouteExecutionLimit(_preview,_route),double(fixedMS)/1000) : RouteExecutionLimit(_preview,_route);
         NSString *stopReason = !frame.enabled ? @"總開關或前景狀態已改變，已停止" :
             !PHInputIsQuiet(&current.input) ? @"偵測到手動操作，已停止並放開" :
             !current.ordinary ? @"盤面操作限制已改變，已停止" :
@@ -1686,6 +1710,7 @@ struct EightPreparationState {
                             _eightBoardSubmitted = true;
                         }
                         _phase = PHOrbSessionPhase::TurnWaiting; _auto.phaseAt = time;
+                        if (_activeProfile[@"fixedPlan"]) _fixedConsumed = true;
                         _message = @"本回合已放開，等待消除、敵人行動與下一回合…";
                     }
                 }

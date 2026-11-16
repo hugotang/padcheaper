@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #include "PHOrbModel.h"
+#import "PHOrbFixedPlan.h"
 
 enum { PHOrbMaxProfiles = 64 };
 

@@ -360,6 +360,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbComboBonus.inc"
 #include "PHOrbEnemyCombo.inc"
 #include "PHOrbEightNative.inc"
+#include "PHOrbFixedNative.inc"
 
 void ReadThornBudget(PHOrbSnapshot &state) {
     if (!state.valid || state.boardTransition || state.multiplayerDisabled || state.phase != 2) return;
@@ -580,6 +581,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     return YES;
 }
+#include "PHOrbFixedNativeMethods.inc"
 - (BOOL)readEightProgress:(PHOrbSnapshot *)state expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (![self read:state frame:frame reason:reason]) return NO;
@@ -668,12 +670,24 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
 }
 - (PHOrbSkillResult)useSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    return [self fixedSkill:slot request:request expected:expected frame:frame probe:NO reason:reason];
+}
+- (PHOrbSkillResult)fixedSkillReadiness:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!expected || !PHBattleIsSinglePlayer(expected->identity.entryMode,expected->identity.multiplayer) ||
+        (request.source!=PHOrbSkillBody && request.source!=PHOrbSkillAssist) || !request.skill) return PHOrbSkillRejected;
+    return [self fixedSkill:slot request:request expected:expected frame:frame probe:YES reason:reason];
+}
+- (PHOrbSkillResult)fixedSkill:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
+    frame:(PHBattleFrame)frame probe:(BOOL)probe reason:(NSString **)reason {
     if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !expected || slot >= 6 || !frame.ready || !frame.enabled)
         return PHOrbSkillRejected;
     if (request.source < PHOrbSkillAutomatic || request.source > PHOrbSkillBodyOrAssist || request.skill >= 0x20000)
         return PHOrbSkillRejected;
     PHOrbSnapshot live{};
     if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || live.multiplayerDisabled) return PHOrbSkillRejected;
+    if (expected->fixedPlan.valid && (![self readFixedPlan:&live frame:frame reason:reason] ||
+        !PHOrbSameFixedPlan(&expected->fixedPlan,&live.fixedPlan))) return PHOrbSkillRejected;
     const bool eight = _eightAuto && live.multiplayer.kind == PHOrbMultiplayerEight &&
         PHOrbSameEightMatch(&_eightMatch,&live) && PHOrbEightMatchReady(&live) && live.eight.valid &&
         live.eight.members[slot].skillKnown && live.eight.members[slot].sourceSlot == slot &&
@@ -713,6 +727,8 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     auto recheck = [&](NSString *message) {
         PHOrbSnapshot next{}; PHBattleDungeonMemberRules current{};
         if (![self readAutomation:&next frame:frame reason:reason] || !next.valid || next.multiplayerDisabled ||
+            (expected->fixedPlan.valid && (![self readFixedPlan:&next frame:frame reason:reason] ||
+             !PHOrbSameFixedPlan(&expected->fixedPlan,&next.fixedPlan))) ||
             (eight && (!_eightAuto || !PHOrbSameEightMatch(&_eightMatch,&next) || !PHOrbEightMatchReady(&next))) ||
             (eight && !PHOrbSameEnemyCombo(&checked.enemyCombo,&next.enemyCombo)) ||
             !next.automation.window || next.automation.busy || next.dragged || !next.settled ||
@@ -741,6 +757,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     bool chosenAssist = known && PHBattleEffectiveAssistAvailable(&source, member.assistCatalogID) &&
         readiness.totalCooldown > 0 && member.charge >= readiness.totalCooldown;
+    if (probe) {
+        // Validate the requested source even if an overcharged assist hides
+        // the body or the requested assist is still charging. A known correct
+        // but unready source may be skipped; a different skill may not.
+        const int32_t requestedSkill=request.source==PHOrbSkillAssist ? readiness.assistSkill : readiness.baseSkill;
+        if (!known || requestedSkill<=0 || requestedSkill>=0x20000 || uint32_t(requestedSkill)!=request.skill) {
+            if (reason) *reason=@"固定計畫指定的原生技能階段不符";
+            return PHOrbSkillRejected;
+        }
+        if (request.source==PHOrbSkillAssist && !chosenAssist) return PHOrbSkillUnavailable;
+    }
     const bool preferBody = request.source == PHOrbSkillBodyOrAssist;
     // An overcharged assist must not hide a stale/mismatched body identity.
     if (preferBody && (!readiness.baseSkill || readiness.baseSkill >= 0x20000 ||
@@ -782,7 +809,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         (request.source == PHOrbSkillAssist && !chosenAssist) || (!assistFallback && request.skill && request.skill != chosenSkill))) {
         if (reason) *reason = [NSString stringWithFormat:@"指定技能不符：目前為%@技能 %u；未施放其他技能",
             chosenAssist ? @"武裝" : @"本體", chosenSkill];
-        return PHOrbSkillUnavailable;
+        return probe ? PHOrbSkillRejected : PHOrbSkillUnavailable;
     }
     if (chooseBody) {
         // Only the native same-family dialog offers this choice. Selector 0
@@ -818,6 +845,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
             observed.cachedSkillStage[0], observed.cachedSkillStage[1]];
         return PHOrbSkillUnavailable;
     }
+    if (probe) return PHOrbSkillStarted; // No selection override or native start.
     // can-use writes this source byte itself. Confirm it instead of forcing
     // it; effects use it independently of the retained skill ID.
     uint8_t selectedSource = 0;
@@ -964,7 +992,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     // Revalidate the policy evidence after coordinate conversion, at the
     // last boundary before input. Cleanup releases remain possible on failure.
-    if (down && (expected->assistRecovery.valid || expected->enemyCombo.valid)) {
+    if (down && (expected->assistRecovery.valid || expected->enemyCombo.valid || expected->fixedPlan.valid)) {
         PHOrbSnapshot final{};
         NSString *finalReason = nil;
         const bool eight = multiplayer && _eightAuto && expected->eight.valid && PHOrbSameEightMatch(&_eightMatch,expected);
@@ -992,6 +1020,11 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         }
         if (expected->enemyCombo.valid && !PHOrbSameEnemyCombo(&expected->enemyCombo, &final.enemyCombo)) {
             if (reason) *reason = @"Combo 吸收、解吸收或加減 Combo 來源已改變，未繼續輸入";
+            return NO;
+        }
+        if (expected->fixedPlan.valid && (![self readFixedPlan:&final frame:frame reason:&finalReason] ||
+            !PHOrbSameFixedPlan(&expected->fixedPlan,&final.fixedPlan))) {
+            if (reason) *reason=finalReason ?: @"固定計畫輸入前敵人／目標已改變";
             return NO;
         }
         live = final;

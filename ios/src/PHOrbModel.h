@@ -40,6 +40,8 @@ typedef struct {
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t firstWaveCombos;
+    uint8_t firstWaveColors, firstWaveFours, resolvedFours;
+    bool fixedBoardSatisfied; // All exact phase-specific fixed-stage constraints.
     uint8_t rowGroups[6], linkGroups[6], largestGroups[6]; // Activity-only first removal; not native score receipts.
     int32_t activityValue; // Configured search heuristic, never a predicted match score.
     uint8_t retainedAfterConversion[6]; // Preparation only; excludes all existing-orb cascades and new drops.
@@ -141,6 +143,30 @@ typedef struct {
     uint32_t windowBlocks; // Read-only reasons for the existing native window gates.
     bool windowBlocksKnown;
 } PHOrbAutomationState;
+
+// Fresh single-player plan evidence. Target geometry belongs to the native
+// enemy hitbox; part liveness uses its signed mode and living owner.
+typedef struct {
+    uint64_t hp, maximumHP;
+    uintptr_t parameter; // Verified ordinary-enemy catalog record; never exported.
+    PHOrbEnemyPartState part;
+    uint32_t catalogID;
+    int32_t countdown;
+    float targetX, targetY;
+    int16_t targetWidth, targetHeight, targetMaximumY, targetBlockMode;
+    uint16_t flags, targetBlockTurns;
+    uint8_t effects, active;
+    bool hpKnown, identityKnown, targetable;
+} PHOrbFixedPlanEnemy;
+typedef struct {
+    PHOrbFixedPlanEnemy enemies[8];
+    uint32_t targetInputMode;
+    uint16_t forcedTargetTurns;
+    int16_t memberSelection;
+    uint8_t count, aliveMask, partsMask, targetDebounce;
+    int8_t target;
+    bool valid, targetKnown, targetWindowKnown, targetAllowed;
+} PHOrbFixedPlanState;
 
 // Current 8P fixed records. Their encyclopedia numbers alone never grant a
 // skill intent. Unknown effect families remain readable but cannot be cast.
@@ -351,6 +377,7 @@ typedef struct {
     PHOrbBattleObservation observation;
     PHOrbAssistRecoveryState assistRecovery;
     PHOrbEnemyComboState enemyCombo;
+    PHOrbFixedPlanState fixedPlan;
     PHOrbEightState eight;
     PHOrbEightSkillReceipt eightReceipt;
     // Captured from the existing token-pool read. Motion is observation only;
@@ -439,6 +466,7 @@ unsigned PHOrbRequiredShapeOrbs(const PHOrbGoalSet *goals, unsigned color);
 bool PHOrbShapeInventoryAvailable(const PHOrbBoard *board, const PHOrbGoalSet *goals);
 bool PHOrbSameAssistRecovery(const PHOrbAssistRecoveryState *a, const PHOrbAssistRecoveryState *b);
 bool PHOrbSameEnemyCombo(const PHOrbEnemyComboState *a, const PHOrbEnemyComboState *b);
+bool PHOrbSameFixedPlan(const PHOrbFixedPlanState *a, const PHOrbFixedPlanState *b);
 // Zero means no additional Combo goal. False means evidence is unavailable.
 bool PHOrbEnemyComboRequirement(const PHOrbEnemyComboState *state, unsigned *minimum);
 // Guaranteed by existing goals only; never discounts the user's own Combo goal.

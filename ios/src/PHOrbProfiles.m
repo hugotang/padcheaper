@@ -31,6 +31,8 @@ static BOOL KeysWithOptional(NSDictionary *value, NSArray *required, NSArray *op
     return [[NSSet setWithArray:required] isSubsetOfSet:actual] && [actual isSubsetOfSet:allowed];
 }
 
+#include "PHOrbFixedPlan.inc"
+
 NSDictionary *PHOrbDefaultProfiles(void) {
     return @{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[]};
 }
@@ -79,6 +81,7 @@ BOOL PHOrbProfilesValid(id library) {
         if (![record isKindOfClass:NSDictionary.class] ||
             !(Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings"]) ||
               Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"activity"]) ||
+              Keys(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"fixedPlan", @"source"]) ||
               KeysWithOptional(record, @[@"id", @"name", @"team", @"dungeon", @"floor", @"settings", @"formation", @"opening", @"source"], @[@"formationID"])) ||
             !Identifier(record[@"id"], NO) || [ids containsObject:record[@"id"]] ||
             ![record[@"name"] isKindOfClass:NSString.class] || [record[@"name"] length] > 60 ||
@@ -93,6 +96,12 @@ BOOL PHOrbProfilesValid(id library) {
             uint16_t catalogID = 0;
             if (!Integer(number, UINT16_MAX) || ([number unsignedIntValue] &&
                 !PHBattleCatalogIDForNumber([number unsignedIntValue], &catalogID))) return NO;
+        }
+        if (record[@"fixedPlan"]) {
+            if (!PHOrbFixedPlanValid(record[@"fixedPlan"]) || [record[@"settings"][@"rules"] count] ||
+                ![record[@"source"] isKindOfClass:NSString.class] || [record[@"source"] length] > 2048) return NO;
+            for (unsigned i = 0; i < 6; ++i)
+                if (![record[@"team"][i] isEqual:record[@"fixedPlan"][@"members"][i][@"body"]]) return NO;
         }
         if (record[@"activity"]) {
             if (!PHOrbEightActivityValid(record[@"activity"]) || [record[@"settings"][@"rules"] count] ||
@@ -132,6 +141,7 @@ static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
     if (record[@"activity"]) return NO; // Explicit 8P selection has its own fixed-variant match.
     if ([record[@"dungeon"] unsignedIntValue] && [record[@"dungeon"] unsignedIntValue] != state->identity.dungeon) return NO;
     if ([record[@"floor"] unsignedIntValue] && [record[@"floor"] unsignedIntValue] != state->identity.floor) return NO;
+    if (record[@"fixedPlan"]) return PHOrbFixedPlanMatchesTeam(record[@"fixedPlan"],state);
     if (record[@"formation"]) return PHOrbProfileMatchesOpeningTeam(record, state, 0) ||
         PHOrbProfileManualOpeningProgress(record, state) > 0;
     for (NSUInteger i = 0; i < 6; ++i) {
@@ -337,6 +347,7 @@ NSData *PHOrbExportProfileData(NSDictionary *profile, NSString **reason) {
             @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
     NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);
     NSDictionary *package = profile[@"formation"] ? PHOrbPlanFromProfile(canonical) :
+        profile[@"fixedPlan"] ? PHOrbFixedPlanPackageFromProfile(canonical) :
         @{@"format":@"padcheaper-orb-profile", @"schema":@1, @"target":@(PHTargetID), @"profile":canonical};
     NSData *data = [NSJSONSerialization dataWithJSONObject:package options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys error:NULL];
     if (!data.length || data.length > 131072) { if (reason) *reason = @"分享檔案超過單份 128 KiB 上限"; return nil; }
@@ -350,12 +361,22 @@ NSDictionary *PHOrbProfilesImportingData(NSDictionary *library, NSData *data, NS
     id package = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
     if (![package isKindOfClass:NSDictionary.class]) return nil;
     if ([package[@"format"] isEqual:@"padcheaper-team-plan"]) return PHOrbProfilesImportingPlan(library,package,reason);
+    if ([package[@"format"] isEqual:@"padcheaper-fixed-plan"]) {
+        NSDictionary *profile = PHOrbFixedPlanFromPackage(package,reason);
+        if (!profile) return nil;
+        if (PHOrbProfileNamed(library,profile[@"id"])) { if (reason) *reason = @"相同 ID 的策略已存在；未覆蓋舊設定"; return nil; }
+        if ([library[@"profiles"] count] >= PHOrbMaxProfiles) { if (reason) *reason = @"策略庫已滿（64 份）"; return nil; }
+        NSMutableDictionary *result = [library mutableCopy];
+        result[@"profiles"] = [library[@"profiles"] arrayByAddingObject:profile];
+        result[@"selected"] = profile[@"id"]; result[@"autoSelect"] = @NO;
+        return [result copy];
+    }
     if (!Keys(package,@[@"format",@"schema",@"target",@"profile"]) ||
         ![package[@"format"] isEqual:@"padcheaper-orb-profile"] || !Integer(package[@"schema"],1) ||
         ![package[@"schema"] isEqual:@1] || !PHDataTargetIsSupported(package[@"target"]) ||
         ![package[@"profile"] isKindOfClass:NSDictionary.class]) return nil;
     NSDictionary *profile = package[@"profile"];
-    if (profile[@"formation"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
+    if (profile[@"formation"] || profile[@"fixedPlan"] || !PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
     if (PHOrbProfileNamed(library,profile[@"id"])) { if (reason) *reason = @"相同 ID 的策略已存在；未覆蓋舊設定"; return nil; }
     if ([library[@"profiles"] count] >= PHOrbMaxProfiles) { if (reason) *reason = @"策略庫已滿（64 份）"; return nil; }
     NSMutableDictionary *canonical = [profile mutableCopy]; canonical[@"settings"] = PHOrbCanonicalSettings(profile[@"settings"]);

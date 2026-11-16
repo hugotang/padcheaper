@@ -15,7 +15,7 @@ bool MultiFishingBoardValid(const PHOrbBoard &board, int fish, bool allowThornFi
 bool MultiFishingInputValid(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState *recovery, unsigned limit) {
     if (!MultiFishingBoardValid(board,options.fishCell,options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || limit > PHOrbAssistFishingMaxExchanges ||
+        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || limit > PHOrbAssistFishingMaxExchanges ||
         (board.minErase && board.minErase != 3) || board.minMatch > 5) return false;
     if (!recovery) return true;
     if (!recovery->valid || !recovery->turns || (recovery->dungeonFlags & 8u)) return false;
@@ -42,6 +42,7 @@ Score MultiFishingScore(const Cells &cells, Context &context, unsigned fish, uns
             if (value.goalProgress[g] < worst.goalProgress[g]) {
                 worst.goalProgress[g] = value.goalProgress[g]; worst.layouts[g] = value.layouts[g];
             }
+        worst.fixedProgress = std::min(worst.fixedProgress,value.fixedProgress);
         worst.jointPenalty = std::max(worst.jointPenalty,value.jointPenalty);
         worst.potential = std::min(worst.potential,value.potential);
     }
@@ -65,7 +66,7 @@ unsigned MultiMinimumSpinnerSupply(const PHOrbBoard &board, unsigned fish, unsig
 bool AssistFishingInputValid(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState &recovery, unsigned limit) {
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || limit > PHOrbAssistFishingMaxExchanges ||
+        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || limit > PHOrbAssistFishingMaxExchanges ||
         !recovery.valid || !recovery.turns || (recovery.dungeonFlags & 8u) ||
         (board.minErase && board.minErase != 3) || board.minMatch > 5) return false;
     for (unsigned c = 0; c < 5; ++c)
@@ -468,7 +469,7 @@ void SelectAssistFishingBeam(std::vector<AssistFishingNode> &next, std::vector<A
     unsigned limit, unsigned fish, const PHOrbSolveOptions &options) {
     const size_t keep = std::min(size_t(limit),next.size());
     std::stable_sort(next.begin(),next.end(),[&](const auto &a, const auto &b) {
-        return Better(a.drag,b.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{});
+        return Better(a.drag,b.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{},false,options.fixedBoard);
     });
     if (keep < 4 || keep == next.size()) { next.resize(keep); beam.swap(next); return; }
     beam.clear(); const size_t elite = keep / 2;
@@ -577,9 +578,9 @@ bool PHOrbEvaluateMultiFishingBoard(const PHOrbBoard &board, unsigned fishCell,
     const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
     if (!MultiFishingBoardValid(board,int(fishCell),options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity)) return false;
+        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard)) return false;
     try {
-        auto context = MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,{},int(fishCell));
+        auto context = MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,{},int(fishCell),0,options.fixedBoard);
         Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());
         result = MultiFishingScore(cells,context,fishCell,board.spinnerColors).result;
         return true;
@@ -690,7 +691,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                 remainingWeight += searchWeights[next];
             const auto planDeadline = planStart + (stageDeadline - planStart) * searchWeights[p] / remainingWeight;
             auto trial = options; trial.goals = plan.goals;
-            auto context = MakeContext(board,trial.goals,true,trial.allowPoisonWithHeartFour,trial.diagonal,{},trial.fishCell);
+            auto context = MakeContext(board,trial.goals,true,trial.allowPoisonWithHeartFour,trial.diagonal,{},trial.fishCell,0,trial.fixedBoard);
             scoreCache.nextPass(); // Plans differ in goals; never share their scores.
             std::vector<AssistFishingNode> beam, next;
             beam.reserve(std::max(options.beam,size)); next.reserve(options.beam * (options.diagonal ? 8 : 4) * PHOrbBasicTypes);
@@ -753,7 +754,7 @@ PHOrbSolveStatus PHOrbSolveMultiFishing(const PHOrbBoard &board, const PHOrbSolv
                             child.drag.score.result.goalsMet &= complete;
                             const bool heartPending = child.drag.thornContacts && !PHOrbThornRecoverySatisfied(child.drag.score.result,options);
                             if (heartPending) child.drag.score.result.hazardsSafe = false;
-                            if (complete && (!found || Better(child.drag,best.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{},true))) {
+                            if (complete && (!found || Better(child.drag,best.drag,options.thornComboPriority,options.allowPoisonWithHeartFour,{},true,options.fixedBoard))) {
                                 best = child; bestPlan = plan; found = true;
                                 solved = child.drag.score.result.goalsMet && child.drag.score.result.hazardsSafe;
                             }

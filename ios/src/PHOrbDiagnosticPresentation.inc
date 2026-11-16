@@ -253,6 +253,8 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
     for (unsigned c = 0; c < 6; ++c) [retained addObject:@(value.retainedAfterConversion[c])];
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
         @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
+        @"firstWaveColors":@(value.firstWaveColors),@"firstWaveFours":@(value.firstWaveFours),
+        @"resolvedFours":@(value.resolvedFours),@"fixedBoardSatisfied":@(value.fixedBoardSatisfied),
         @"bonusTriggersFirstWaveRequired":@(goals.bonusFirstWave),
         @"activityHeuristic":@(value.activityValue), @"nativeScoreKnown":@NO,
         @"preparationReady":@(value.preparationReady),@"retainedAfterConversion":retained,

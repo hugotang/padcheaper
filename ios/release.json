@@ -1,12 +1,13 @@
 {
   "schema": 1,
-  "dylib_version": "0.5.48-orbs",
+  "dylib_version": "0.5.49-orbs",
   "minimum_ios": "15.0",
   "architecture": "arm64",
   "platform": "iPhoneOS",
   "signing": "ad-hoc; use the existing Dopamine rootless injection setup, or re-sign in LiveContainer",
   "mode": "diagnostic by default; experimental writes opt in",
   "summary_features": {
+    "珊瑚固定隊伍逐層 Auto": "coral_fixed_plan",
     "單人荊棘取色": "thorn_fishing",
     "消 T 徽章診斷": "combo_badge_evidence",
     "武裝滿蓄替代施放": "assist_overcharge_fallback",
@@ -152,6 +153,7 @@
     "auto_session_state": "Typed session phases and one stopped/solo/8P run mode; lifecycle and solo decisions separated; same-match confirmed receipts survive Stop while countdown attempts remain consumed; owned-release cleanup and generation checks retained",
     "diagnostic_output": "Dedicated snapshot and trace assembly; common read-issue fields retain capture-time state, original phase strings and optional multiplayer detail; last failed planning/search/replay and latest successful fishing/confirmed assist recovery survive bounded recent-history eviction in the current Session only; multi-take exchanges, geometry provenance, inventory/search caps, plan-slice expiry and unsearched target-cell coverage remain distinct; minimum inventory claims have explicit found/known scope; post-player HP and survival remain unknown; presentation does not authorize actions or fetch native data; failed search distinguishes unavailable fishing modes, fresh manual-once requirements, locked/thorn exclusions and zero-contact thorn search with an allowed initially held thorn",
     "thorn_fishing": "saved opt-in allowThornFishing enables the bounded multi-take planner on ordinary single-player thorn boards; target-token contacts, repeated donors and cumulative HP bounds follow swaps; all terminal phases satisfy the existing heart-four or opted-in heart-match policy; waits and future healing add no HP credit; live remaining-route budget is refreshed through holds, movement and release; locked tokens, multiplayer thorn fishing and 4/8P fishing remain excluded; device verification pending",
-    "combo_badge_evidence": "retains all three effective native badge descriptors including empty values and exports per-effect credited or unproven evidence; both T encodings and 7 plus leader 6 plus badge 2 cases covered; the historical badge-zero stop still needs a new device log to establish the cause; no hardcoded badge bonus; unfound fishing minimum is null rather than sentinel seven"
+    "combo_badge_evidence": "retains all three effective native badge descriptors including empty values and exports per-effect credited or unproven evidence; both T encodings and 7 plus leader 6 plus badge 2 cases covered; the historical badge-zero stop still needs a new device log to establish the cause; no hardcoded badge bonus; unfound fishing minimum is null rather than sentinel seven",
+    "coral_fixed_plan": "single-player padcheaper-fixed-plan schema with the GameWith 585607 fifteen-floor Coral template; explicit native body/assist skill IDs, consumed assists, confirmed transforms/leader swap, readiness alternatives/loops, target taps and protected body HP thresholds; fixed board contracts propagate through ordinary/fishing search and replay; B3 complete gesture capped at 4500ms or the existing shorter limit; branch and receipt uncertainty stops, and an acted-on stopped run cannot replay in the same battle; no team replacement, entry or rematch; damage, healing and device clear unverified"
   }
 }

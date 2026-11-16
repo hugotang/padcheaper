@@ -16,6 +16,16 @@ struct PHOrbActivityObjective {
     uint8_t primaryColor = 0, primaryMinimum = 3;
 };
 
+// Stage-scoped fixed-team puzzle contracts, separate from positive orb goals.
+// Every contract applies to every validated spinner phase and is replayed
+// before native input. Counts never predict future skyfall drops or damage.
+enum class PHOrbFixedBoardMode { Normal, OneCombo, SixColorStall, FourAttack, LOnly };
+struct PHOrbFixedBoardPolicy {
+    PHOrbFixedBoardMode mode = PHOrbFixedBoardMode::Normal;
+    uint8_t firstColors = 0; // Required basic-color mask in the first removal.
+    bool requireHeartFour = false;
+};
+
 struct PHOrbSolveOptions {
     unsigned steps = 32;
     unsigned beam = 256;
@@ -30,6 +40,7 @@ struct PHOrbSolveOptions {
     bool allowThornFishing = false; // Opt-in single-player multi-take planner; same HP/recovery gates.
     bool diagonal = false; // Eight-way gesture moves; never diagonal matching.
     PHOrbActivityObjective activity{}; // Heuristic weights, separate from native scoring.
+    PHOrbFixedBoardPolicy fixedBoard{}; // Bound by the active fixed-team stage only.
     // May route through the board's only unlocked spinner once, taking out
     // fishColor. fishCell < 0 keeps every spinner cell closed.
     int fishCell = -1;

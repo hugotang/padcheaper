@@ -73,12 +73,14 @@ static void BundledDataCompatibilityTests(void) {
 }
 #include "orb_assist_profiles_tests.inc"
 #include "orb_himmel_plan_tests.inc"
+#include "orb_fixed_profiles_tests.inc"
 int main(void) {
     @autoreleasepool {
         PlanTests();
         AssistProfileTests();
         HimmelPlanTests();
         SharingTests();
+        FixedProfilesTests();
         BundledDataCompatibilityTests();
         Check(PHOrbProfilesValid(PHOrbDefaultProfiles()), "default has no saved start intent or automatic selection");
         Check([PHOrbCanonicalSettings(Settings())[@"thornComboPriority"] isEqual:@NO],

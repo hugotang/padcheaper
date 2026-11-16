@@ -1,0 +1,2218 @@
+{
+  "format": "padcheaper-fixed-plan",
+  "schema": 1,
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "profile": {
+    "id": "coral-fixed-585607",
+    "name": "珊瑚挑戰・固定 Atori・GameWith",
+    "team": [
+      13828,
+      13876,
+      13744,
+      13878,
+      8476,
+      8476
+    ],
+    "dungeon": 0,
+    "floor": 0,
+    "source": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
+    "settings": {
+      "quality": "thorough",
+      "mode": "combo",
+      "goals": [],
+      "rules": [],
+      "assistRecoveryL": false
+    },
+    "fixedPlan": {
+      "schema": 1,
+      "members": [
+        {
+          "body": 13828,
+          "assist": null,
+          "forms": [
+            {
+              "number": 13828,
+              "skills": [
+                63191,
+                63192
+              ]
+            }
+          ],
+          "assistSkills": []
+        },
+        {
+          "body": 13876,
+          "assist": 13619,
+          "forms": [
+            {
+              "number": 13876,
+              "skills": [
+                63220
+              ]
+            }
+          ],
+          "assistSkills": [
+            61754
+          ]
+        },
+        {
+          "body": 13744,
+          "assist": null,
+          "forms": [
+            {
+              "number": 13744,
+              "skills": [
+                62494
+              ]
+            },
+            {
+              "number": 13745,
+              "skills": [
+                62502
+              ]
+            }
+          ],
+          "assistSkills": []
+        },
+        {
+          "body": 13878,
+          "assist": 13879,
+          "forms": [
+            {
+              "number": 13878,
+              "skills": [
+                63241
+              ]
+            }
+          ],
+          "assistSkills": [
+            63251
+          ]
+        },
+        {
+          "body": 8476,
+          "assist": null,
+          "forms": [
+            {
+              "number": 8476,
+              "skills": [
+                27820
+              ]
+            },
+            {
+              "number": 8477,
+              "skills": [
+                27827
+              ]
+            }
+          ],
+          "assistSkills": []
+        },
+        {
+          "body": 8476,
+          "assist": null,
+          "forms": [
+            {
+              "number": 8476,
+              "skills": [
+                27820
+              ]
+            },
+            {
+              "number": 8477,
+              "skills": [
+                27827
+              ]
+            }
+          ],
+          "assistSkills": []
+        }
+      ],
+      "leaderSwap": 5,
+      "floors": [
+        {
+          "number": 1,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "delay-and-haste",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 2,
+                      "source": "assist",
+                      "monster": 13876,
+                      "skill": 61754,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always",
+                      "consumeAssist": true
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "assist",
+                      "monster": 13878,
+                      "skill": 63251,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always",
+                      "consumeAssist": true
+                    }
+                  ],
+                  "board": {
+                    "policy": "one_combo",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "charge",
+                  "actions": [],
+                  "board": {
+                    "policy": "one_combo",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "transform",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 8476,
+                      "skill": 27820,
+                      "afterMonster": 8477,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 6,
+                      "source": "body",
+                      "monster": 8476,
+                      "skill": 27820,
+                      "afterMonster": 8477,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13744,
+                      "skill": 62494,
+                      "afterMonster": 13745,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    }
+                  ],
+                  "board": {
+                    "policy": "one_combo",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "evolve-solomon",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63191,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "attack-2",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "attack-3",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "buff-and-finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 2,
+                      "source": "body",
+                      "monster": 13876,
+                      "skill": 63220,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13745,
+                      "skill": 62502,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "six-triples",
+                  "actions": [],
+                  "board": {
+                    "policy": "six_colors_no_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 3,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "survive-first-hit",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "expert-multicolor",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 4500
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 4,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "clear-absorption",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13745,
+                      "skill": 62502,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 5,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "delay-1",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "delay-2",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "buff-without-fours",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 2,
+                      "source": "body",
+                      "monster": 13876,
+                      "skill": 63220,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13745,
+                      "skill": 62502,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_no_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 6,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 7,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "target-clammy",
+                  "actions": [
+                    {
+                      "kind": "target",
+                      "target": "enemy",
+                      "monster": 10524,
+                      "optional": false,
+                      "frequency": "once"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 8,
+          "variants": [
+            {
+              "kind": "ordinary",
+              "stages": [
+                {
+                  "id": "marine-snow",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13745,
+                      "skill": 62502,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always",
+                      "loop": true
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "parts",
+              "stages": [
+                {
+                  "id": "target-and-recover",
+                  "actions": [
+                    {
+                      "kind": "target",
+                      "target": "part",
+                      "monster": 0,
+                      "optional": false,
+                      "frequency": "once"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": true,
+                    "maxGestureMS": 0,
+                    "lColors": 13
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "part-damage",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "break-part",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 9,
+          "variants": [
+            {
+              "kind": "ordinary",
+              "stages": [
+                {
+                  "id": "nimue",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 3,
+                      "source": "body",
+                      "monster": 13745,
+                      "skill": 62502,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always",
+                      "loop": true
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "parts",
+              "stages": [
+                {
+                  "id": "target-and-recover",
+                  "actions": [
+                    {
+                      "kind": "target",
+                      "target": "part",
+                      "monster": 0,
+                      "optional": false,
+                      "frequency": "once"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": true,
+                    "maxGestureMS": 0,
+                    "lColors": 13
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "part-damage-1",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "part-damage-2",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "break-part",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 10,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "haste-atori",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 2,
+                      "source": "body",
+                      "monster": 13876,
+                      "skill": 63220,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 11,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "super-resolve",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "cleanse",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 12,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "recover-assists",
+                  "actions": [],
+                  "board": {
+                    "policy": "l_only",
+                    "assistRecoveryL": true,
+                    "maxGestureMS": 0,
+                    "lColors": 13
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "break-shields",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "attack",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "super-resolve",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "cleanse-and-finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 2,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 13,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "wait-for-solomon",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_no_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 8,
+                    "until": {
+                      "kind": "skill_ready",
+                      "slot": 5,
+                      "monster": 13828,
+                      "skill": 63192
+                    }
+                  }
+                },
+                {
+                  "id": "hp-buff-and-finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 2,
+                      "source": "body",
+                      "monster": 13876,
+                      "skill": 63220,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always",
+                      "loop": true
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 14,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "attack",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "cleanse",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "finish",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 20,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": 15,
+          "variants": [
+            {
+              "kind": "any",
+              "stages": [
+                {
+                  "id": "survive-first-hit",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "reach-half",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "damage_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "attribute_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 24,
+                    "until": {
+                      "kind": "enemy_hp_at_most",
+                      "percent": 50
+                    }
+                  },
+                  "absorbStall": true
+                },
+                {
+                  "id": "recover-super-resolve",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": true,
+                    "maxGestureMS": 0,
+                    "lColors": 13
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 1,
+                    "until": {
+                      "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "reach-quarter",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "damage_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "attribute_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 24,
+                    "until": {
+                      "kind": "enemy_hp_at_most",
+                      "percent": 25
+                    }
+                  },
+                  "absorbStall": true
+                },
+                {
+                  "id": "finish-with-riku",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "damage_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 63192,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "attribute_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 63241,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "attack_ready"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 27827,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 1,
+                    "maximumPuzzles": 8,
+                    "until": {
+                      "kind": "floor_change"
+                    }
+                  },
+                  "absorbStall": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

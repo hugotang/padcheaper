@@ -1,0 +1,143 @@
+{
+  "format": "padcheaper-template-reference",
+  "schemaVersion": 1,
+  "id": "coral-fixed-585607",
+  "status": "source-only-unbuilt",
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "source": {
+    "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
+    "section": "珊瑚チャレンジ(固定チーム)の立ち回り / おすすめの立ち回り",
+    "articleUpdated": "2026-11-16 21:50",
+    "reviewedDate": "2026-11-17",
+    "snapshotSHA256": "de435568d54d5b3111b145772ac4a63265fba9f61a26961b7977009e7bdb070e",
+    "fixedSectionSHA256": "9cfff87a0e28489c66c8537dbf5f8b901a49c5b2306a89ad9d315de564e61024",
+    "catalogSource": "https://github.com/Mapaler/PADDashFormation",
+    "catalogRevision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+    "cardSHA256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
+    "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7"
+  },
+  "files": {
+    "plan": "fixed-plan.json",
+    "instructions": "README.md",
+    "validation": "validation.json"
+  },
+  "counts": {
+    "floors": 15,
+    "stagesIncludingBranches": 49,
+    "actionsIncludingBranches": 86
+  },
+  "members": [
+    {
+      "body": 13828,
+      "assist": null,
+      "forms": [
+        {
+          "number": 13828,
+          "skills": [
+            63191,
+            63192
+          ]
+        }
+      ],
+      "assistSkills": []
+    },
+    {
+      "body": 13876,
+      "assist": 13619,
+      "forms": [
+        {
+          "number": 13876,
+          "skills": [
+            63220
+          ]
+        }
+      ],
+      "assistSkills": [
+        61754
+      ]
+    },
+    {
+      "body": 13744,
+      "assist": null,
+      "forms": [
+        {
+          "number": 13744,
+          "skills": [
+            62494
+          ]
+        },
+        {
+          "number": 13745,
+          "skills": [
+            62502
+          ]
+        }
+      ],
+      "assistSkills": []
+    },
+    {
+      "body": 13878,
+      "assist": 13879,
+      "forms": [
+        {
+          "number": 13878,
+          "skills": [
+            63241
+          ]
+        }
+      ],
+      "assistSkills": [
+        63251
+      ]
+    },
+    {
+      "body": 8476,
+      "assist": null,
+      "forms": [
+        {
+          "number": 8476,
+          "skills": [
+            27820
+          ]
+        },
+        {
+          "number": 8477,
+          "skills": [
+            27827
+          ]
+        }
+      ],
+      "assistSkills": []
+    },
+    {
+      "body": 8476,
+      "assist": null,
+      "forms": [
+        {
+          "number": 8476,
+          "skills": [
+            27820
+          ]
+        },
+        {
+          "number": 8477,
+          "skills": [
+            27827
+          ]
+        }
+      ],
+      "assistSkills": []
+    }
+  ],
+  "decisions": [
+    "Unspecified uncast assists bind observed B1 native sources; no invented assist IDs.",
+    "Dungeon/floor IDs remain 0 because the guide does not provide native IDs; manual selection is required.",
+    "Leader swap: original slot 5 moves to slot 1; later Atori choices are positions 1 and 6.",
+    "B7 Clammy encyclopedia 10424 maps to ordinary native catalog 10524; an unrecognized private variant stops.",
+    "B8/B9 choose their part branch once; every original part must be observed broken before leaving.",
+    "B3 caps the complete gesture at 4500ms or the existing shorter limit.",
+    "B13 queries current Solomon readiness; B15 uses body HP thresholds and preserves final Riku during absorption stall.",
+    "A stopped fixed run that issued an action cannot resume in the same battle."
+  ],
+  "deviceVerified": false
+}

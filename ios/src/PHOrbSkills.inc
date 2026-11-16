@@ -33,7 +33,7 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false, NSString **r
         catalog > UINTPTR_MAX - catalogCount * PHBattleCatalogStride) return fail(@"技能次數／敵人數／HP／圖鑑資料");
     records = catalogCount;
     if (eight && (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset, &records) || records < catalogCount ||
-        records > 0x20000 || catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride)) return fail(@"8 人圖鑑資料");
+        records > 0x20000 || catalog > UINTPTR_MAX - size_t(records) * PHBattleCatalogStride)) return fail(@"原生圖鑑資料");
     out.skillUses = uint16_t(skillUses);
     out.window &= hp > 0;
     if (!hp) out.windowBlocks |= PHOrbSkillWindowHP;
@@ -51,11 +51,15 @@ bool ReadAutomationFields(PHOrbSnapshot &state, bool eight = false, NSString **r
         PHBattleMemberIdentity identity{};
         if (!PHReadBattleMemberIdentity(member, key1, key2, identity)) return fail(@"本體／武裝身分", i);
         const uint32_t id = identity.currentCatalogID;
-        if (!id || id > INT32_MAX || (!eight && id >= catalogCount) ||
-            !PHBattleNumberForCatalogID(eight ? id % 1000000u : id, &m.number) ||
+        if (id >= 1000000u && records == catalogCount &&
+            (!PHReadU32(save + PHOrbLeaderCatalogRecordsOffset,&records) || records<catalogCount || records>0x20000 ||
+             catalog>UINTPTR_MAX-size_t(records)*PHBattleCatalogStride)) return fail(@"固定版本圖鑑範圍",i);
+        if (!id || id > INT32_MAX ||
+            (!eight && id >= 1000000u && (identity.temporaryTurns || id % 1000000u != PHBattleUnderlyingBodyID(&identity))) ||
+            !PHBattleNumberForCatalogID(id % 1000000u, &m.number) ||
             !PHReadPointer(member + PHBattleCardParamOffset, &parameter) ||
-            (eight ? !LeaderParameterMatches(catalog, catalogCount, records, id, parameter, diagnostic) :
-                parameter != catalog + id * PHBattleCatalogStride) || !PHReadU32(parameter, &record) || record != id)
+            !LeaderParameterMatches(catalog, catalogCount, records, id, parameter, diagnostic) ||
+            !PHReadU32(parameter, &record) || record != id)
             return fail(@"本體圖鑑資料", i);
         if (!SmallProtected(member + PHBattleChargeOffset, key1, key2, UINT16_MAX, charge) ||
             !PHReadU32(member + PHBattleChargeShadowOffset, &shadow)) return fail(@"蓄技受保護資料", i);

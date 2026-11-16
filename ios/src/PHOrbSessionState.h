@@ -7,7 +7,8 @@
 enum class PHOrbSessionPhase {
     Idle, Reading, Solving, Preview, Arming, Running, Releasing, Complete,
     Stopped, Blocked, Fault, AutoWaiting, TurnWaiting, OpeningArming,
-    OpeningWaiting, SkillArming, SkillWaiting, EightSkillArming, EightSkillWaiting
+    OpeningWaiting, SkillArming, SkillWaiting, EightSkillArming, EightSkillWaiting,
+    FixedActionArming, FixedSkillWaiting, FixedTargetWaiting
 };
 
 static inline const char *PHOrbSessionPhaseName(PHOrbSessionPhase phase) {
@@ -31,6 +32,9 @@ static inline const char *PHOrbSessionPhaseName(PHOrbSessionPhase phase) {
         case PHOrbSessionPhase::SkillWaiting: return "skillWaiting";
         case PHOrbSessionPhase::EightSkillArming: return "eightSkillArming";
         case PHOrbSessionPhase::EightSkillWaiting: return "eightSkillWaiting";
+        case PHOrbSessionPhase::FixedActionArming: return "fixedActionArming";
+        case PHOrbSessionPhase::FixedSkillWaiting: return "fixedSkillWaiting";
+        case PHOrbSessionPhase::FixedTargetWaiting: return "fixedTargetWaiting";
     }
     return "fault";
 }

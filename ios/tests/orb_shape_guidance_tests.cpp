@@ -19,6 +19,8 @@ template<typename T, size_t N> static bool SameArray(const T (&a)[N], const T (&
 static bool SameEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
     return a.combos == b.combos && a.erased == b.erased && SameArray(a.goalHits, b.goalHits) &&
         a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
+        a.firstWaveColors == b.firstWaveColors && a.firstWaveFours == b.firstWaveFours &&
+        a.resolvedFours == b.resolvedFours && a.fixedBoardSatisfied == b.fixedBoardSatisfied &&
         SameArray(a.rowGroups, b.rowGroups) && SameArray(a.linkGroups, b.linkGroups) &&
         SameArray(a.largestGroups, b.largestGroups) && a.activityValue == b.activityValue &&
         SameArray(a.retainedAfterConversion, b.retainedAfterConversion) && a.preparationReady == b.preparationReady &&
@@ -28,7 +30,7 @@ static bool SameEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
 
 static bool SameScore(const Score &a, const Score &b) {
     return SameEvaluation(a.result, b.result) && a.progress == b.progress && a.potential == b.potential &&
-        a.jointPenalty == b.jointPenalty && a.goalProgress == b.goalProgress && a.layouts == b.layouts &&
+        a.jointPenalty == b.jointPenalty && a.fixedProgress == b.fixedProgress && a.goalProgress == b.goalProgress && a.layouts == b.layouts &&
         a.colorProgress == b.colorProgress && a.colorGuidedProgress == b.colorGuidedProgress &&
         a.matchedColors == b.matchedColors && a.missingColors == b.missingColors && a.weakestColor == b.weakestColor &&
         a.missing == b.missing && a.focus == b.focus;
@@ -247,7 +249,31 @@ static void FishingTransitionKeys() {
 #include "orb_beam_bucket_tests.inc"
 #include "orb_score_policy_tests.inc"
 
+static void FixedBoardScoreTests() {
+    auto context = MakeContext(ShapeFixture(PHOrbGoalT),{},false,false,false,{},-1,0,
+        {PHOrbFixedBoardMode::FourAttack,0,false});
+    Node fours, combos;
+    fours.score.result.hazardsSafe = combos.score.result.hazardsSafe = true;
+    fours.score.result.goalsMet = combos.score.result.goalsMet = true;
+    fours.score.result.firstWaveFours = 3; fours.score.result.combos = 6; fours.length = 8;
+    combos.score.result.firstWaveFours = 2; combos.score.result.combos = 8; combos.length = 4;
+    Check(Better(fours,combos,false,false,{},true,context.fixedBoard),
+        "fixed attack ranks another exact four ahead of more Combo and a shorter route");
+    Check(Better(combos,fours,false,false,{},true),
+        "default route ordering keeps existing Combo priority without a fixed policy");
+    EvaluationCache cache(true);
+    const auto cells = BoardCells(ShapeFixture(PHOrbGoalT));
+    const auto first = cache.score(cells,context);
+    context.fixedBoard = {PHOrbFixedBoardMode::SixColorStall,63,false};
+    cache.nextPass(); // Stage/plan policy changes never share retained scores.
+    const auto second = cache.score(cells,context);
+    Check(!first.result.fixedBoardSatisfied || !second.result.fixedBoardSatisfied ||
+        SameEvaluation(second.result,Evaluate(cells,context).result),
+        "policy changes invalidate the per-pass cache before comparing a released board");
+}
+
 int main() {
+    FixedBoardScoreTests();
     AllMetScores();
     PartialAndCacheScores();
     RankingAndThornSafety();
