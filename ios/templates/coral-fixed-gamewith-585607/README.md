@@ -1,5 +1,7 @@
 # 珊瑚チャレンジ【固定チーム】Atori plan
 
+2026-11-17 更新：0.5.49 已通過 [CI 164](https://github.com/hugotang/padcheaper/actions/runs/43917933225) 完整回歸、建置／簽章、瀏覽器與四份 iPhone GUI並完成交付；結果見[驗證收據](../../research/verification-0.5.49.json)。真機技能來源、時序及 15 層通關仍未驗證。
+
 [攻略來源](https://xn--0ck4aw2h.gamewith.jp/article/show/585607)，按 2026-11-16 的固定隊伍段落整理。
 
 匯入檔：[fixed-plan.json](fixed-plan.json)。此 `padcheaper-fixed-plan` 格式需要 **0.5.49 或之後版本，0.5.48 不支援**。編譯測試結果見交付附帶的 `verification.json`；實機通關仍未驗證。在策略庫匯入並選用，進入遊戲提供的固定隊伍 B1，尚未施放技能或轉珠時，手動開始 Auto。

@@ -1,0 +1,159 @@
+{
+  "version": "0.5.49-orbs",
+  "date": "2026-11-17",
+  "status": "verified and delivered",
+  "commit": "a5b16c603617dcc216e9aeefcb4765d3d217facf",
+  "ci": {
+    "run": "https://github.com/hugotang/padcheaper/actions/runs/43917933225",
+    "number": 164,
+    "conclusion": "success",
+    "all_steps_successful": true,
+    "attempts": [
+      {
+        "number": 163,
+        "run": "https://github.com/hugotang/padcheaper/actions/runs/43916689006",
+        "commit": "b1fc827c21391c939a688212d3c6c6df96b4c54a",
+        "conclusion": "failure",
+        "cause": "Successful native fixed-variant fixture omitted sourceBodyID=100; read correctly rejected zero underlying identity.",
+        "fix": "Initialized sourceBodyID and added per-scenario diagnostics; product identity checks unchanged.",
+        "passed_before_failure": [
+          "actual Coral parser",
+          "solver/model",
+          "ASan/UBSan"
+        ],
+        "fix_commit": "a5b16c603617dcc216e9aeefcb4765d3d217facf"
+      },
+      {
+        "number": 164,
+        "run": "https://github.com/hugotang/padcheaper/actions/runs/43917933225",
+        "commit": "a5b16c603617dcc216e9aeefcb4765d3d217facf",
+        "conclusion": "success",
+        "coverage": "Complete macOS regression, sanitizers, arm64 build/signature, browser and four iPhone GUI probes"
+      }
+    ],
+    "log_review": {
+      "product_test_failures": 0,
+      "compiler_warning_or_error_matches": 0,
+      "sanitizer_error_matches": 0,
+      "toolchain": "Xcode 26.6",
+      "compiler_diagnostics": [],
+      "product_failures": [],
+      "sanitizer_diagnostics": [],
+      "tool_notices": [
+        "build\tUpload editor browser diagnostics\t2026-11-16T17:42:38.5172080Z (node:26947) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload editor browser diagnostics\t2026-11-16T17:42:39.2471530Z (node:26947) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tUpload dylib and installation notes\t2026-11-16T17:42:42.0302610Z (node:26973) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload dylib and installation notes\t2026-11-16T17:42:43.3131570Z (node:26973) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tUpload GUI probe diagnostics\t2026-11-16T17:52:30.7072400Z (node:41035) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+        "build\tUpload GUI probe diagnostics\t2026-11-16T17:52:31.4716200Z (node:41035) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+        "build\tComplete job\t2026-11-16T17:52:43.0802720Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+      ],
+      "log_review": "Scanned the completed run for product failures, compiler warnings/errors and sanitizer errors; all tool notices retained separately."
+    },
+    "coverage": [
+      "macOS native/model/planning/configuration/Session regressions, including fixed-plan parsing and acknowledgement state machine",
+      "ASan/UBSan private guidance and public solver smoke",
+      "arm64 iPhoneOS compile and strict signature",
+      "browser editor regression",
+      "four iPhone GUI first/restart probes; actual Coral package storage/export/editor binding"
+    ]
+  },
+  "windows": {
+    "commit": "b1fc827c21391c939a688212d3c6c6df96b4c54a",
+    "status": "passed",
+    "exit_code": 0,
+    "source_inputs_compared": 245,
+    "sanitizer_runtime": false,
+    "coverage": [
+      "8P model",
+      "orb solver/model",
+      "private shape guidance",
+      "public PHOrbSolve smoke"
+    ],
+    "windows_log_sha256": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6",
+    "exact_windows_inputs_compared": 74,
+    "changed_non_windows_inputs": [
+      "ios/tests/orb_fixed_native_tests.inc"
+    ],
+    "verified_against_ci_commit": "a5b16c603617dcc216e9aeefcb4765d3d217facf"
+  },
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "visual_review": {
+    "images": [
+      "verification/browser/editor-browser/overview-390.png",
+      "verification/browser/editor-browser/save-failure-390.png",
+      "verification/gui/overlay-orbs-strategy-profiles.png",
+      "verification/gui/legacy-orbs-team-plan-import.png"
+    ],
+    "observations": [
+      "Browser 390px overview shows six body/assist slots and saved-state feedback; save-failure case retains the edited draft and visible failure notice.",
+      "Native scene and legacy strategy editors show selection/binding sections and retained-state feedback for intentional failed saves.",
+      "The Coral plan has no dedicated screenshot in this run. Its actual import/save/export, B15 summary presence and protected team binding are covered by executed functional GUI assertions, not claimed as visual inspection."
+    ],
+    "device_verified": false
+  },
+  "fixed_plan": {
+    "floors": 15,
+    "stages": 49,
+    "actions": 86,
+    "plan_sha256": "f89452845ed3c4b2c255134921b0d1a89a37d8eff5af92101385e61c18e74046"
+  },
+  "delivery": {
+    "verified_manifest_files": 417,
+    "verified_zip_entries": 418,
+    "commit": "a5b16c603617dcc216e9aeefcb4765d3d217facf",
+    "dylib_bytes": 12063600,
+    "dylib_sha256": "78471b1b34ab680882f94b7bf2ce6bf8ac7db85df189d3fc76dc00bec6c414eb",
+    "zip_sha256": "12dc99750debc81915390e1d2df52f14f9d59f6bfac32092d1a4994c338c67ac",
+    "directory": "E:/ipa/PADCheaper-0.5.49-orbs",
+    "zip": "E:/ipa/PADCheaper-0.5.49-orbs.zip",
+    "device_verified": false
+  },
+  "local_first_failure": {
+    "cause": "New one_combo cascade fixture did not contain the intended falling second combo.",
+    "fix": "Corrected the fixture; kept the assertion. Full Windows suite passed afterward."
+  },
+  "evidence_hashes": {
+    "verification/attempts.json": "9b1b4e3a9f9c391bac161bcc29267d94643683bdaedf3ea095c2921e6c65b7bf",
+    "verification/c-dependencies.txt": "5e8a67a59dabafa2f06cbdca092bed1722e9dfbf9ac4dca318fe71d0f7b430df",
+    "verification/ci-log-review.json": "4da5cda83b5ea793ca3b78fb22ea561ce7c4495b3a8657bee24e6ed6c612d0a2",
+    "verification/ci-run.json": "e98ecf6ce644adbb7eee822964561ebf378779030dcfaf5c98ce20a320a1ba5a",
+    "verification/ci-run.log": "ba6d8a7c03f101e015d999fface3d14485b9731adf5e899c44fbb721ffae8091",
+    "verification/cpp-dependencies.txt": "d0e066ccf3e37b1a23a3155e690297b5160ba3cf2b0ead0d509e6819e566a3cf",
+    "verification/local-source-manifest.json": "d3e9502081d8fec4ed3b6180529fb71ea5738db2b306e37cc59845c655c25d3b",
+    "verification/solve-smoke-tests.log": "3f2d72da0bb8c2f21e963ac9dda73706741eb9ae2d6865e195393d9f16383e0c",
+    "verification/solver-first-failure.log": "9568d6c519137922969e2402766e3db012e006c80309f0512c29fa12c430dbbc",
+    "verification/solver.log": "86fefeb1511c36c1ac58339da4d0d91b35e49a08355bd7600be1be34f4fdff04",
+    "verification/visual-review.json": "22db559d5b927559733badd3474e1f76ee5c5205c812d89659362f8634b5d8a0",
+    "verification/windows-result.json": "b83b03445e875c5678cc4bd5880f153c0aab0cd67b2391738d674667675dca26",
+    "verification/windows-tests-first-failure.log": "e009f0752513ae57f31225fe28b195e7feea392288bb161d234eafed1a1805b2",
+    "verification/windows-tests.log": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6"
+  },
+  "limits": [
+    "Device fixed-team skill sources, targeting, B3 clock, part destruction acknowledgements, damage/recovery and complete 15-floor clear remain unverified.",
+    "Windows solver smoke has no sanitizer runtime; sanitizers passed in macOS CI.",
+    "Source notes retain build-time status; this receipt records completed tests. Template validation.json is a historical static-only receipt with local source byte hashes."
+  ],
+  "device_verified": false
+}

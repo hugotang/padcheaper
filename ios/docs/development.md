@@ -4,6 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-17：0.5.49-orbs 編譯測試與交付完成
+
+- [CI 164](https://github.com/hugotang/padcheaper/actions/runs/43917933225) 於來源 `a5b16c603617dcc216e9aeefcb4765d3d217facf` 完整通過：實際珊瑚 JSON 解析／保存／匯出、固定盤面政策、原生 HP／目標／就緒、Session 回覆／防重播／隊長交換／備選技能、既有回歸、ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。最終成功 run 的產品失敗、編譯 warning／error、sanitizer error 均為 0；先前修正與工具提示詳見[收據](../research/verification-0.5.49.json)。
+- Windows 8P model、solver/model、private guidance 與 public solver smoke 通過；本機指紋與最終 CI 來源核對結果見收據。首輪新增連鎖案例的盤面擺法已修正，保留原斷言與失敗紀錄。Windows 沒有 sanitizer runtime，ASan/UBSan 結果來自 macOS。
+- 已建立 `E:/ipa/PADCheaper-0.5.49-orbs` 與同名 ZIP；417 份雜湊及 ZIP CRC／418 項內容獨立核對通過。dylib 12,063,600 bytes，SHA-256 `78471b1b34ab680882f94b7bf2ce6bf8ac7db85df189d3fc76dc00bec6c414eb`；ZIP SHA-256 `12dc99750debc81915390e1d2df52f14f9d59f6bfac32092d1a4994c338c67ac`。
+- 匯入包內 `templates/coral-fixed-gamewith-585607/fixed-plan.json`，選用後在普通單人固定隊伍 B1 尚未操作時手動開始 Auto。已發出行動的同場固定計畫停止後不可重播。`device_verified=false`；固定隊員來源、目標座標、部位破壞回覆、B3 時限、15 層傷害／回血及完整通關仍待實機核對。
+- 本段取代下方本批待編譯狀態。交付保留建置當時文件快照，完成結果以 `verification.json` 為準；私人 log 與所有舊版交付未改動。
+
 ## 2026-11-17：0.5.49-orbs 編譯測試開始
 
 - CI 163 的實際範本解析、solver 及 ASan/UBSan 通過；新增 native 固定版本成功案例漏填原始本體 ID，嚴格讀取正確拒絕了來源 0。已補上本體 100，保留錯指標／變更來源的拒絕斷言，並補失敗場景明細。這是案例初始化修正，產品來源核對未放寬；將重新手動執行完整 CI。

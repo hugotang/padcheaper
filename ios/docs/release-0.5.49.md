@@ -1,5 +1,7 @@
 # 0.5.49-orbs：珊瑚固定隊伍逐層 Auto
 
+2026-11-17 更新：0.5.49 已通過 [CI 164](https://github.com/hugotang/padcheaper/actions/runs/43917933225) 完整回歸、建置／簽章、瀏覽器與四份 iPhone GUI並完成交付；結果見[驗證收據](../research/verification-0.5.49.json)。真機技能來源、時序及 15 層通關仍未驗證。
+
 目標為日服 PAD 23.6.1／107553，arm64、iOS 15.0 以上。這是建置來源說明；實際編譯、測試及交付結果以 [開發紀錄](development.md)及交付附帶的 `verification.json` 為準，實機通關尚未驗證。
 
 - 新增 `padcheaper-fixed-plan` 格式及[珊瑚固定隊伍範本](../templates/coral-fixed-gamewith-585607/README.md)，共 15 層、49 個階段、86 個動作，涵蓋 B8／B9 亂入、指定部位、B13 原生就緒存技與 B15 HP 50%／25% 分段。

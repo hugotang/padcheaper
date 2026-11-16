@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.48-orbs](docs/release-0.5.48.md) 已通過 [CI 162](https://github.com/hugotang/padcheaper/actions/runs/43677924009) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-15 交付新資料夾與 ZIP。新增普通單人荊棘取色選項及消 T 徽章診斷；`device_verified=false`，歷史徽章漏算根因待真機明細。
+[0.5.49-orbs](docs/release-0.5.49.md) 已通過 [CI 164](https://github.com/hugotang/padcheaper/actions/runs/43917933225) 完整回歸、ASan/UBSan、arm64 建置／簽章、瀏覽器及四份 iPhone GUI，2026-11-17 交付新資料夾與 ZIP。新增珊瑚固定隊伍 15 層 plan 及執行引擎；`device_verified=false`，真機通關與傷害／回血待驗證。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.49-orbs](docs/release-0.5.49.md) | 2026-11-17 | 珊瑚固定隊伍逐層 Auto；編譯測試中 |
+| [0.5.49-orbs](docs/release-0.5.49.md) | 2026-11-17 | 珊瑚固定隊伍逐層 Auto；已編譯驗證交付，實機待驗證 |
 | [0.5.48-orbs](docs/release-0.5.48.md) | 2026-11-15 | 普通單人荊棘取色與消 T 徽章診斷；已驗證交付 |
 | [0.5.47-orbs](docs/release-0.5.47.md) | 2026-11-12 | 武裝滿蓄替代與荊棘心三連政策；2026-11-13 已驗證交付 |
 | [0.5.46-orbs](docs/release-0.5.46.md) | 2026-11-12 | 武裝失效後 Auto 讀取誤停修正；已驗證交付 |
