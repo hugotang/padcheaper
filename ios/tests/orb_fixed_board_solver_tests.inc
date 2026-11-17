@@ -127,4 +127,36 @@ static void FixedBoardSolverTests() {
     cancel=true;
     Check(PHOrbSolve(finish,options,cancel,ceiling)==PHOrbSolveStatus::Cancelled && !ceiling.count,
         "cancelled attack quality search publishes no retained or temporary-goal route");
+
+    // Actual B5 search input, not the frozen released board above. Under the
+    // former two-thirds primary slice this feasible route could be abandoned
+    // for first-colour recovery before it was discovered on a slower host.
+    // Use the existing solo ceiling for a host-independent regression; the
+    // separate recorded-budget probe checks the observed 800 ms configuration.
+    auto liveFinish=FixedBoardFixture(7,6,{
+        2,0,3,4,1,1,2, 4,5,4,2,4,2,3, 5,1,5,0,4,3,4,
+        2,4,3,2,3,2,0, 0,0,2,5,1,2,2, 2,1,1,5,3,0,3});
+    liveFinish.spinnerMask=UINT64_C(1)<<32; liveFinish.spinnerColors=63;
+    liveFinish.minErase=3;
+    options=PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.milliseconds=PHOrbSoloRetryMilliseconds;
+    options.diagonal=options.allowPoisonWithHeartFour=options.allowThornFishing=true;
+    options.allowThornsWithHeartMatch=options.thornComboPriority=true;
+    options.goals=Goals(PHOrbGoalColors,63,6,0); options.goals.items[options.goals.count++]={PHOrbGoalFour,32,1,0};
+    options.fixedBoard={PHOrbFixedBoardMode::FourAttack,63,true};
+    PHOrbRoute witness{}; witness.diagonal=true;
+    const uint8_t witnessCells[]={24,16,10,18,25,17,23,16,8,14,22,30,29,37,31,30,38,31,23,16,24,25,31,24,
+        25,26,33,27,26,25,24,31,39,33,41,34,26,25,24,16,22,15,16,8,7,15,14};
+    witness.count=uint8_t(sizeof(witnessCells));
+    std::copy(std::begin(witnessCells),std::end(witnessCells),witness.cells);
+    Check(PHOrbEvaluateRoute(liveFinish,witness,options,value,damage,contacts) && value.goalsMet &&
+        value.fixedBoardSatisfied && value.firstWaveFours==3 && value.firstWaveColors==63 && value.heartFours==1,
+        "the recorded B5 ordinary path is an independently retained feasible three-four witness");
+    cancel=false; PHOrbRoute retainedAttack{};
+    Check(PHOrbSolve(liveFinish,options,cancel,retainedAttack)==PHOrbSolveStatus::Solved &&
+        PHOrbEvaluateRoute(liveFinish,retainedAttack,options,value,damage,contacts) &&
+        value.goalsMet && value.hazardsSafe && value.fixedBoardSatisfied &&
+        value.firstWaveFours>=3 && value.firstWaveColors==63 && value.heartFours>=1 &&
+        retainedAttack.goalCount==2 && !retainedAttack.fishing && retainedAttack.count<=49,
+        "fixed attack refinement preserves a feasible baseline on the actual B5 board with the original release contract");
 }

@@ -1535,10 +1535,13 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         bool stableShapeRecovery = context.variants > 1 && context.shapeGoals > 1;
         for (unsigned g = 0; g < options.goals.count; ++g)
             if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
-        // Ordinary colours keep the baseline's full opportunity. A completed
+        // Ordinary colours and fixed attacks keep the baseline's full opportunity. A completed
         // beam often leaves most of its time unused (the five-colour log used
         // 113 of 800 ms); only that remainder is spent on different guidance.
-        const auto primaryDeadline = recover && !context.colorRecovery ? start + (deadline - start) * 2 / 3 : deadline;
+        // A fixed attack's first feasible six-colour route can arrive after
+        // the old two-thirds slice. Do not sacrifice it for optional quality.
+        const auto primaryDeadline = recover && !context.colorRecovery &&
+            context.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack ? start + (deadline - start) * 2 / 3 : deadline;
         const auto colorFocus = [&](const Context &scoring) {
             if (!found || !scoring.colorGuidance) return unsigned(PHOrbBasicTypes);
             Score hints = best.score;
