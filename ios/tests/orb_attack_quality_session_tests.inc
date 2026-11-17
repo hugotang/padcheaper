@@ -98,4 +98,34 @@ static void AttackQualitySessionTests() {
         "an already-solved fixed attack attempts quality fishing and keeps its complete ordinary route when no improvement exists");
     CheckSearchAttemptTrace(trace);
     [session queueStop:@"attack quality cleanup"];
+
+    // The same immovable matches without spinners exercise the ordinary
+    // fallback. Only one stronger attempt may spend the whole extra budget.
+    engine=[[FixedTestEngine alloc] initWithWidth:7 height:6];
+    profile=MutableFixedSessionProfile(engine);
+    stage=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+    stage[@"actions"]=@[]; stage[@"board"][@"policy"]=@"six_colors_fours";
+    profile[@"settings"][@"quality"]=@"thorough";
+    auto &plain=engine->live.board;
+    std::copy(std::begin(board.types),std::end(board.types),plain.types);
+    plain.fixedStart=1; plain.tapeMask=((UINT64_C(1)<<42)-1)&~UINT64_C(3);
+    for (unsigned i=0;i<42;++i) plain.flags[i]=(plain.tapeMask&(UINT64_C(1)<<i)) ? PHOrbFlagTape : 0;
+    session=StartFixedTest(engine,profile);
+    for (unsigned i=0;i<4000;++i) {
+        Tick(session,engine,Frame());
+        if ([session.snapshot[@"searchTrace"][@"fixedConstraints"][@"valid"] boolValue] ||
+            [session.snapshot[@"phase"] isEqual:@"fault"]) break;
+    }
+    trace=session.snapshot[@"searchTrace"]; quality=trace[@"attackQuality"];
+    Check([trace[@"status"] isEqual:@"solved"] && [quality[@"ordinary"] boolValue] &&
+        [quality[@"attempts"] isEqual:@1] && ![quality[@"selected"] boolValue] &&
+        [trace[@"selectedAttemptIndex"] isEqual:@0] && [trace[@"goalCount"] isEqual:@2] &&
+        [trace[@"evaluation"][@"goalsMet"] boolValue] && !engine->stages,
+        "ordinary quality runs once and retains the executable original route and goals when no improvement exists");
+    NSArray *attempts=trace[@"candidateAttempts"];
+    Check(attempts.count==2 && [attempts[1][@"ordinaryQuality"] boolValue] &&
+        [attempts[1][@"budgetMS"] unsignedIntValue]>[quality[@"budgetMS"] unsignedIntValue]/2,
+        "ordinary refinement receives the unsplit extra budget rather than two repeated half-depth searches");
+    CheckSearchAttemptTrace(trace);
+    [session queueStop:@"ordinary attack quality cleanup"];
 }

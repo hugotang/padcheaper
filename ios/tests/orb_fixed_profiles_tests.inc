@@ -29,7 +29,7 @@ static void FixedProfilesTests(void) {
         NSDictionary *assistSkills=@{@13876:@[@66752],@13878:@[@66755]};
         NSDictionary *ordinarySkills=@{@66716:@63191,@66718:@63192,@66724:@63220,@66735:@62494,
             @66740:@62502,@66729:@63241,@66700:@27820,@66706:@27827,@66752:@61754,@66755:@63251};
-        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r2"] &&
+        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r3"] &&
             [coral[@"dungeon"] isEqual:@7801] && [coral[@"floor"] isEqual:@1],
             "Coral guide-reviewed revision has a distinct ID and the observed native dungeon and sub-dungeon");
         NSDictionary *finisher=[coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject];
@@ -39,6 +39,20 @@ static void FixedProfilesTests(void) {
             [finisher[@"actions"][2][@"when"] isEqual:@"attack_ready"] &&
             [finisher[@"actions"][2][@"frequency"] isEqual:@"once"],
             "B15 preserves one ready-window Riku and permits no more than two final puzzles including absorption stalls");
+        NSDictionary *opener=[coral[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"] lastObject];
+        NSDictionary *plainExit=[coral[@"fixedPlan"][@"floors"][1][@"variants"][0][@"stages"] lastObject];
+        Check([opener[@"id"] isEqual:@"buff-and-finish"] && [opener[@"repeat"][@"maximumPuzzles"] isEqual:@2] &&
+            !opener[@"actions"][0][@"optionalAfterFirst"] && [opener[@"actions"][2][@"optionalAfterFirst"] isEqual:@YES] &&
+            ![opener[@"actions"][0][@"optional"] boolValue] && !opener[@"actions"][1][@"optionalAfterFirst"] &&
+            [opener[@"retryRequiresBypass"] isEqual:@YES] &&
+            [plainExit[@"repeat"][@"maximumPuzzles"] isEqual:@1] && !plainExit[@"actions"][0][@"optionalAfterFirst"],
+            "only B1 adds one guarded retry; its first Atori remains mandatory and only the duplicate can be skipped");
+        for (NSNumber *f in @[@4,@9,@12]) {
+            NSDictionary *exit=[coral[@"fixedPlan"][@"floors"][f.unsignedIntegerValue][@"variants"][0][@"stages"] lastObject];
+            Check([exit[@"repeat"][@"maximumPuzzles"] isEqual:@1],
+                "B5 expired absorption, B10 new absorption and B13 HP timing do not gain an unchecked turn");
+            for (NSDictionary *a in exit[@"actions"]) Check(!a[@"optionalAfterFirst"],"these floors keep required Atori actions");
+        }
         NSDictionary *b7Target=coral[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0];
         Check([b7Target[@"kind"] isEqual:@"target"] && [b7Target[@"target"] isEqual:@"enemy"] &&
             [b7Target[@"monster"] isEqual:@210524] && ![b7Target[@"optional"] boolValue] &&
@@ -131,10 +145,10 @@ static void FixedProfilesTests(void) {
         NSDictionary *both=PHOrbProfilesImportingData(b7Library,coralData,NULL);
         NSDictionary *reloaded=both ? [NSJSONSerialization JSONObjectWithData:
             [NSJSONSerialization dataWithJSONObject:both options:0 error:NULL] options:0 error:NULL] : nil;
-        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r2");
+        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r3");
         NSData *newExport=PHOrbExportProfileData(newRecord,NULL);
         Check(oldRecord && v90Export && b7Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==4 &&
-            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r2"] && ![reloaded[@"autoSelect"] boolValue] &&
+            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r3"] && ![reloaded[@"autoSelect"] boolValue] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607"),NULL) isEqual:oldExport] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90"),NULL) isEqual:v90Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-b7"),NULL) isEqual:b7Export] &&
@@ -169,6 +183,25 @@ static void FixedProfilesTests(void) {
     NSMutableDictionary *ordinary = [package mutableCopy]; ordinary[@"format"] = @"padcheaper-orb-profile";
     Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),[NSJSONSerialization dataWithJSONObject:ordinary options:0 error:NULL],NULL),
         "ordinary format cannot smuggle fixed execution stages");
+    for (unsigned mutation=0;mutation<11;++mutation) {
+        NSMutableDictionary *retry=FixedFixture();
+        NSMutableDictionary *stage=retry[@"profile"][@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+        NSMutableDictionary *action=[stage[@"actions"][0] mutableCopy];
+        action[@"afterMonster"]=@0; action[@"frequency"]=@"each";
+        NSMutableDictionary *required=[action mutableCopy];
+        action[@"frequency"]=mutation==1 ? @"once" : @"each"; action[@"optional"]=mutation==2 ? @YES : @NO;
+        action[@"optionalAfterFirst"]=mutation==3 ? (id)@1 : (id)@YES;
+        stage[@"retryRequiresBypass"]=@YES;
+        stage[@"actions"]=mutation==4 ? @[action] : @[required,action];
+        if (mutation==5) action[@"afterMonster"]=@101;
+        if (mutation==6) required[@"frequency"]=@"once";
+        if (mutation==7) action[@"slot"]=@2;
+        if (mutation==8) [stage removeObjectForKey:@"retryRequiresBypass"];
+        if (mutation==9) stage[@"retryRequiresBypass"]=@1;
+        if (mutation==10) stage[@"absorbStall"]=@YES;
+        Check(!PHOrbFixedPlanFromPackage(retry,NULL)==(mutation!=0),
+            "retry skips require an earlier identical mandatory body action and a guarded exit; invalid source, transform and guard forms fail");
+    }
     NSMutableDictionary *optionalTarget=FixedFixture();
     optionalTarget[@"profile"][@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0][@"actions"]=
         @[@{@"kind":@"target",@"target":@"part",@"monster":@0,@"optional":@YES,@"frequency":@"once"}];

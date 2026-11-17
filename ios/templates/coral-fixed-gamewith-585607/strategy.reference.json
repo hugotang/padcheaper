@@ -1,8 +1,8 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607-v90-r2",
-  "status": "template-correction-pending-parser-and-device-verification",
+  "id": "coral-fixed-585607-v90-r3",
+  "status": "template-revision-pending-build-and-device-verification",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -151,7 +151,9 @@
     "GameWith remains the complete skill/cooldown route; AppMedia is a cross-check, not interchangeable floor instructions. See guide-comparison.json.",
     "B15 finish-with-riku is bounded to two total puzzles including absorption stalls; this is not a damage or survival guarantee.",
     "Both guides lack an explicit first-removal-only six-color requirement. The existing conservative fixed policy is retained pending native cascade/effect evidence; source changes align search guidance and explain exact fixed-stage failures.",
-    "The latest v90-b7 run stopped at B2 after 8 puzzles and 15 skills; cumulative completed 26 includes the prior run and is not corrected B7 verification."
+    "The latest v90-b7 run stopped at B2 after 8 puzzles and 15 skills; cumulative completed 26 includes the prior run and is not corrected B7 verification.",
+    "v90-r3: only B1 buff-and-finish adds one retry. Fresh native absorption/void coverage is required after skills; the first Atori stays mandatory and only its duplicate may be omitted after a same-puzzle native acknowledgement. B5/B10/B13 stay at one exit puzzle. Requires 0.5.52 or later.",
+    "No B1 target was added: the log shows the untargeted GameWith order already killed the combo-absorb enemy and left the void enemy at 21% before the Solomon turn; AppMedia targeting belongs to its different timeline."
   ],
   "deviceVerified": false
 }

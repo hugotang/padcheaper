@@ -21,7 +21,10 @@
     _readQueued = false; _hasStable = false;
     _message = reason ?: @"已停止";
     if (skillRunning) _message = [_message stringByAppendingString:@"；已啟動的技能由遊戲完成"];
-    if (wasEightAutomatic) _eightLastStop = @{@"reason":_message,@"sessionPhase":SessionPhaseText(_phase),
+    // Every stop of a bound fixed run keeps its own reason: the consumed-run
+    // refusal of a later restart is issued before binding and cannot replace it.
+    if (wasAutomatic && _auto.bound && _fixedProfile && _activeProfile == _fixedProfile) [self recordFixedStop];
+    if (wasEightAutomatic) _eightLastStop =@{@"reason":_message,@"sessionPhase":SessionPhaseText(_phase),
         @"autoTurn":@(_auto.turn),@"autoMoves":@(_auto.moves),@"autoSkills":@(_auto.skills),
         @"wave":@(_live.wave),@"nativePhase":@(_live.phase),@"battleEnded":@(PHOrbBattleEnded(&_live)),
         @"connectionState":@(_live.multiplayer.connectionState),@"localStatus":@(_live.multiplayer.localStatus),

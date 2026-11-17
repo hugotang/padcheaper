@@ -22,6 +22,7 @@
     }
     _fixedProfile=_activeProfile; _fixedOrigin=_fixedTeam=*state; _fixedConsumed=false;
     _fixedWave=state->wave; _fixedStageIndex=_fixedAction=_fixedPuzzles=_fixedLoopCursor=_fixedOnce=0;
+    _fixedPuzzleSkills=0;
     _fixedStage=nil; _fixedVariant=nil; _fixedPending=nil; _fixedLastStop=nil; _fixedLoops=[NSMutableArray array];
     _fixedPartsGone=_fixedAcknowledged=_fixedStall=false;
     return YES;
@@ -158,6 +159,19 @@
         @"readySlots":@(evidence->readySlots),@"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime*1000))};
     return message;
 }
+- (void)recordFixedStop {
+    // The stage-cap stop already froze richer native evidence for this message.
+    NSString *known=_fixedLastStop[@"reason"];
+    if (known.length && [_message hasPrefix:known]) return;
+    _fixedLastStop=@{@"reason":_message ?: @"",@"code":@"stopped",@"scope":@"session-stop",
+        @"profile":_fixedProfile[@"id"] ?: @"",@"floor":@(_fixedWave+1),@"stage":_fixedStage[@"id"] ?: @"",
+        @"action":@(_fixedAction),@"confirmedPuzzles":@(_fixedPuzzles),@"pending":_fixedPending ?: @{},
+        @"sessionPhase":SessionPhaseText(_phase),@"autoTurn":@(_auto.turn),@"autoSkills":@(_auto.skills),
+        @"consumed":@(_fixedConsumed),@"nativeKnown":@(_hasLive),
+        @"nativePhase":_hasLive ? @(_live.phase) : (id)NSNull.null,@"wave":_hasLive ? @(_live.wave) : (id)NSNull.null,
+        @"continuationAllowed":@NO,@"survivalKnown":@NO,
+        @"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime*1000))};
+}
 - (void)advanceFixedPlan {
     if (!_auto.active() || [self executing] || _phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
         _phase==PHOrbSessionPhase::FixedActionArming || _now-_auto.startedAt<0.35) return;
@@ -192,6 +206,7 @@
         _fixedTeam=expected;
         if (![self fixedTeamMatches:&_live]) { [self queueStop:@"固定計畫技能完成後的形態／換位／武裝與預期不符"]; return; }
         _fixedTeam=_live;
+        if (!_fixedPendingLoop) _fixedPuzzleSkills|=1u<<_fixedAction;
         if ([_fixedPending[@"loop"] boolValue]) {
             NSMutableDictionary *loop=[_fixedPending mutableCopy]; loop[@"optional"]=@YES; loop[@"frequency"]=@"each";
             if (![_fixedLoops containsObject:loop]) [_fixedLoops addObject:[loop copy]];
@@ -212,7 +227,7 @@
     if (puzzle) {
         if (![self confirmAssistRecoveryResult:&_live]) return;
         _fixedTeam=_live;
-        ++_auto.turn; ++_fixedPuzzles; _fixedAction=_fixedLoopCursor=0;
+        ++_auto.turn; ++_fixedPuzzles; _fixedAction=_fixedLoopCursor=_fixedPuzzleSkills=0;
         [self waitForAutomationBoard]; return;
     }
     if (_live.wave!=_fixedWave || !_fixedStage) {
@@ -225,7 +240,7 @@
         NSDictionary *variant=PHOrbFixedPlanVariantForFloor(_fixedProfile[@"fixedPlan"],_live.wave,&_live);
         if (!variant) { [self queueStop:@"固定計畫樓層或亂入分支無法確認"]; return; }
         _fixedWave=_live.wave; _fixedVariant=variant[@"kind"]; _fixedStageIndex=0;
-        _fixedStage=variant[@"stages"][0]; _fixedAction=_fixedPuzzles=_fixedOnce=_fixedLoopCursor=0;
+        _fixedStage=variant[@"stages"][0]; _fixedAction=_fixedPuzzles=_fixedOnce=_fixedLoopCursor=_fixedPuzzleSkills=0;
         _fixedPartsGone=false; _fixedOrigin.automation.partsMask=_live.automation.partsMask;
     }
     // Capture predicates after selecting the stage, including its first tick.
@@ -251,7 +266,7 @@
     if (done==PHOrbFixedPlanYes) {
         NSDictionary *next=PHOrbFixedPlanStage(_fixedProfile[@"fixedPlan"],_fixedWave,_fixedVariant,++_fixedStageIndex);
         if (!next) { [self queueStop:@"固定計畫缺少下一步，已停止"]; return; }
-        _fixedStage=next; _fixedAction=_fixedPuzzles=_fixedOnce=_fixedLoopCursor=0;
+        _fixedStage=next; _fixedAction=_fixedPuzzles=_fixedOnce=_fixedLoopCursor=_fixedPuzzleSkills=0;
         [self waitForAutomationBoard]; return;
     }
     if (_fixedPuzzles>=[_fixedStage[@"repeat"][@"maximumPuzzles"] unsignedIntegerValue]) {
@@ -277,6 +292,17 @@
     }
     _fixedStall=[_fixedStage[@"absorbStall"] boolValue] &&
         (e.enemyEffects & ~e.playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb));
+    // This is evaluated after the current puzzle's skills have acknowledged.
+    // A previous turn's two-turn bypass, or a successful six-colour search,
+    // is not evidence that a retry can damage the remaining enemies.
+    if (_fixedPuzzles && [_fixedStage[@"retryRequiresBypass"] boolValue]) {
+        if (!e.enemiesKnown || !e.statusKnown) {
+            [self queueStop:@"固定計畫補盤的吸收／貫通效果未知，未繼續攻擊"]; return;
+        }
+        if (e.enemyEffects & ~e.playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid)) {
+            [self queueStop:@"固定計畫補盤仍有未覆蓋的傷害吸收／屬性吸收／傷害無效，未繼續攻擊"]; return;
+        }
+    }
     _assistRecoveryL=[_fixedStage[@"board"][@"assistRecoveryL"] boolValue];
     if (!PHOrbCanPreview(&_live)) { [self queueStop:PHOrbObstacleDescription(&_live)]; return; }
     [self beginSolve];
@@ -328,7 +354,16 @@
     BOOL loopActive=NO;
     if ([_fixedPending[@"loop"] boolValue]) for (NSDictionary *loop in _fixedLoops)
         if ([loop[@"slot"] isEqual:_fixedPending[@"slot"]] && [loop[@"skill"] isEqual:_fixedPending[@"skill"]]) loopActive=YES;
-    if ([_fixedPending[@"optional"] boolValue] || loopActive) { [self finishFixedAction]; return; }
+    // Only a duplicate can be omitted, after the same declared skill was
+    // actually acknowledged in this puzzle. Old turns and skipped actions
+    // never supply this receipt; the first required action cannot be skipped.
+    BOOL retrySkip=NO;
+    if ([_fixedPending[@"optionalAfterFirst"] boolValue] && _fixedPuzzles && !_fixedPendingLoop)
+        for (NSUInteger i=0;i<_fixedAction;++i)
+            if ((_fixedPuzzleSkills&(1u<<i)) && PHOrbFixedPlanSameSkill(_fixedStage[@"actions"][i],_fixedPending)) retrySkip=YES;
+    if (retrySkip) [self logAutomation:[NSString stringWithFormat:@"固定計畫 B%lu · %@：補盤時技能 %@ 未就緒，略過",
+        (unsigned long)_fixedWave+1,_fixedStage[@"id"],_fixedPending[@"skill"]]];
+    if ([_fixedPending[@"optional"] boolValue] || loopActive || retrySkip) { [self finishFixedAction]; return; }
     [self queueStop:reason ?: @"固定計畫必要技能尚未就緒，未轉珠"]; return;
 }
 - (NSDictionary *)fixedBoardPlan:(PHOrbSolveOptions *)options {

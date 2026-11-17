@@ -407,6 +407,7 @@ struct EightPreparationState {
     NSMutableArray<NSDictionary *> *_fixedLoops;
     PHOrbSnapshot _fixedOrigin, _fixedTeam, _fixedBefore;
     NSUInteger _fixedWave, _fixedStageIndex, _fixedAction, _fixedPuzzles, _fixedLoopCursor, _fixedSlot;
+    uint32_t _fixedPuzzleSkills;
     uint32_t _fixedOnce, _fixedGestureMS;
     bool _fixedConsumed, _fixedAcknowledged, _fixedPendingLoop, _fixedPartsGone, _fixedStall;
     NSMutableArray<NSDictionary *> *_openingLog;
@@ -1152,7 +1153,11 @@ struct EightPreparationState {
                 !canImprove ? @"four-bound-or-goal-capacity" : @"fishing-unavailable";
             attackQuality[@"baselineFirstWaveFours"]=@(retained.firstWaveFours);
             attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
-            if (canImprove && (fishCell>=0 || multiEligible)) {
+            // The primary solver already improves fours through recovery and
+            // backtracks. A stronger ordinary goal gets one full extra budget
+            // when no fishing choice exists; do not restart the same search in
+            // two shorter slices and discard its frontier halfway through.
+            if (canImprove) {
                 attackQuality[@"started"]=@YES; attackQuality[@"budgetMS"]=@(qualityBudget);
                 attackQuality[@"reason"]=@"no-improvement";
                 const auto qualityDeadline=qualityStart+std::chrono::milliseconds(qualityBudget);
@@ -1165,7 +1170,9 @@ struct EightPreparationState {
                 std::vector<unsigned> qualityCells;
                 if (multiEligible) for (unsigned i=0;i<board.width*board.height;++i)
                     if ((board.spinnerMask&(UINT64_C(1)<<i)) && !(board.tapeMask&(UINT64_C(1)<<i))) qualityCells.push_back(i);
-                const unsigned choices=qualityPlan.selectedCount+unsigned(qualityCells.size());
+                const unsigned fishingChoices=qualityPlan.selectedCount+unsigned(qualityCells.size());
+                const unsigned choices=fishingChoices ? fishingChoices : 1;
+                attackQuality[@"ordinary"]=@(!fishingChoices);
                 unsigned attempted=0, multiQualityAttempts=0;
                 for (unsigned choice=0;choice<choices;++choice) {
                     const auto now=std::chrono::steady_clock::now();
@@ -1176,11 +1183,16 @@ struct EightPreparationState {
                     if (!PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,trial.goals)) break;
                     trial.milliseconds=unsigned(std::chrono::duration_cast<std::chrono::milliseconds>(qualityDeadline-now).count())/(choices-choice);
                     if (!trial.milliseconds) { attackQuality[@"reason"]=@"insufficient-slice"; break; }
-                    const bool multi=choice>=qualityPlan.selectedCount;
+                    const bool multi=fishingChoices && choice>=qualityPlan.selectedCount;
                     PHOrbRoute candidate{}; PHOrbMultiFishingResult multiCandidate;
                     PHOrbSolveStatus status;
                     NSMutableDictionary *attempt;
-                    if (!multi) {
+                    if (!fishingChoices) {
+                        // One uninterrupted stronger search, with its own
+                        // recovery/backtracks inside the shared deadline.
+                        status=solveAttempt(trial,candidate,@{@"attackQuality":@YES,@"ordinaryQuality":@YES});
+                        attempt=attempts.lastObject;
+                    } else if (!multi) {
                         trial.fishCell=fishCell; trial.fishColor=qualityPlan.candidates[choice].color; trial.steps=fishSteps;
                         singleNotAttempted=@"";
                         status=solveAttempt(trial,candidate,@{@"attackQuality":@YES});

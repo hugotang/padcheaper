@@ -118,7 +118,8 @@
     "新增 v90-r2 版本，保留 GameWith 全程技能時間線。",
     "B15 最後 Riku 階段最大盤數由八改二；這是停止上限，不是傷害或通關保證。",
     "B8/B10 不直接增加攻擊次數，須另行核對吸收、技能冷卻及防護效果。",
-    "首消六色門檻本次保留；來源已調整補搜引導與固定條件診斷，尚待編譯測試。"
+    "首消六色門檻本次保留；來源已調整補搜引導與固定條件診斷，尚待編譯測試。",
+    "v90-r3：只在 B1 收尾增加有新鮮吸收／貫通檢查的第二盤，每盤第一個 Atori 必須成功；其他樓層上限保持 r2，未加入 B1 指定目標。"
   ],
   "buildVerified": false,
   "testSuitesExecuted": false,
@@ -128,7 +129,7 @@
     "最新 log 本場 moves=8、skills=15；completed=26 為累積數，不是本場進度。",
     "本審查沒有執行產品程式或測試；資料與來源改動不代表新版已編譯或真機通過。"
   ],
-  "profileID": "coral-fixed-585607-v90-r2",
+  "profileID": "coral-fixed-585607-v90-r3",
   "implementedTemplateChange": {
     "floor": 15,
     "stage": "finish-with-riku",

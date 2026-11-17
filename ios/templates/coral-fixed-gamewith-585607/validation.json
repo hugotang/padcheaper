@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "status": "build-and-regression-verified-device-pending",
+  "status": "source-reviewed-build-test-requested",
   "reviewedDate": "2026-11-17",
-  "profileID": "coral-fixed-585607-v90-r2",
-  "planSHA256": "801535fb1c38e83bf5298b19c04e938e7271fc5748bb6ca6fec3a7dd91405f69",
+  "profileID": "coral-fixed-585607-v90-r3",
+  "planSHA256": "009d3fa8e17ea249445277c0426a4d01567d76a5c458c654b9cb470ef7dd4c9e",
   "counts": {
     "floors": 15,
     "stagesIncludingBranches": 49,
@@ -13,109 +13,42 @@
   "staticChecks": {
     "jsonFilesWithoutDuplicateKeys": 8,
     "pythonAST": true,
-    "onlyReviewedSkillProfileB7TargetAndB15BoundChanges": true,
-    "declaredMembersMatchReference": true,
-    "pinnedEnemyRecordsMatchByExactID": true,
-    "targetIDs": [
-      210524,
-      0,
-      0
-    ],
-    "sourceLexicalBalanceFiles": 16,
-    "localDocumentLinks": 9,
-    "manualWorkflowOnly": true,
-    "gitDiffWhitespace": true
+    "onlyB1RetryAndProfileIdentityDifferFromR2": true
   },
   "sourceSHA256": {
-    "ios/docs/development.md": "969bf2147d2c668bcc38c545cb748344521478ce29bbb6d62dc00f40efa11053",
-    "ios/src/PHOrbAttackQuality.h": "1c4ab02c60114d45ad198e11a9d6d0c499be2a8475a6c475675af8e6922ac011",
-    "ios/src/PHOrbDiagnosticPresentation.inc": "c9039ea0bb27562483b791a218a3edc794965c118d0dd6ccc0543fa1726fae02",
-    "ios/src/PHOrbFailurePresentation.inc": "1d04fee31b54931da0bf7a17f9b1cd84c3d92b29a038f85c5a2599a0cc3d1d93",
-    "ios/src/PHOrbFixedSession.inc": "d613f2bfa78472b2c4b3c4e513dc1bf2db9f0da0930e58eb100eeb69e562fe6d",
-    "ios/src/PHOrbSession.mm": "53679435716ec26264c9aca6fc3b606f86fc49126cf98df6518a2606a0d6414e",
-    "ios/src/PHOrbSolver.cpp": "255292cacf95286a63d4b2bd253f6cf905002605eb5d86f0c54a33882c620102",
-    "ios/templates/coral-fixed-gamewith-585607/README.md": "a1321e7d8ae96c6ca2f121be836192f0683bfccd9c0b7e06c3649b238bca7539",
-    "ios/templates/coral-fixed-gamewith-585607/b2-search-reference.json": "7769ea5ca10c0a2f86f0f7d1d3717c3e26a3f2b789b16a81069253a802dd2b1a",
-    "ios/templates/coral-fixed-gamewith-585607/b5-search-reference.json": "8e38155c3516c6e4982f6ac9aca5af24a9da98bec1e4e7765086e27d496e85ff",
-    "ios/templates/coral-fixed-gamewith-585607/enemy-reference.json": "704dd57ccc2501e4740906ff12b07f71c1be4795cb520120e9e6f5100ef468eb",
-    "ios/templates/coral-fixed-gamewith-585607/fixed-plan.json": "801535fb1c38e83bf5298b19c04e938e7271fc5748bb6ca6fec3a7dd91405f69",
-    "ios/templates/coral-fixed-gamewith-585607/guide-comparison.json": "e7e80124586063e8ef7556a114aa121dadb42044e94bd0b3ae4f8a4cacfe79f8",
-    "ios/templates/coral-fixed-gamewith-585607/skill-reference.json": "82bf3ba3fbc37a8fd5d571e00c5e11a6a38314fe2a449a62a4b8d731319a6234",
-    "ios/templates/coral-fixed-gamewith-585607/strategy.reference.json": "bd0293f6cfcb5a037f5c598b47d5799d185af2d74b0c3a24a9ee7b16f80f9166",
-    "ios/tests/orb_attack_quality_session_tests.inc": "4e050c3a003d318fdea45c5645b2364e84a82700faed4269037240e25fab6480",
-    "ios/tests/orb_fixed_board_solver_tests.inc": "43f124c490204bf13724b7d95ffc34e5d6ee6e6fcd89dea0a62f2e4376cee878",
-    "ios/tests/orb_fixed_diagnostics_session_tests.inc": "6d236533df6a2f5f5b90cfbfd0bc52bca8158c5f6b4d24c2cf3abc635ca19e53",
-    "ios/tests/orb_fixed_limit_session_tests.inc": "88cb2efb4ea1410860a098e5adfaa5f8b2de52bcc62631a7d6d999b9b9d17a4d",
-    "ios/tests/orb_fixed_native_tests.inc": "7769dac10bc96498210ee36b16e0089460a16bc14ef51797ba8f142dcc76c31e",
-    "ios/tests/orb_fixed_plan_probe.inc": "ec939ccc907ac774c2447e185299b7a7937d3635deee50c3df3a49a54b360e61",
-    "ios/tests/orb_fixed_profiles_tests.inc": "bc582525ce671c6f7c0d1f570ea0a88ce9e9dda87487cb974f1eb9739c9dc906",
-    "ios/tests/orb_fixed_session_tests.inc": "f09c7f500c5c2ca64c64b621b498e1a89384fc9aa87081c21a0baed1455e1b1e",
-    "ios/tests/orb_session_tests.mm": "0bae6efc59a25315970dca12ea1d2bea2e298934225c8c7cb5bfb97c546a6c32",
-    "ios/tests/orb_shape_guidance_tests.cpp": "608be60988020ce531c83aac086ff957fc757cae65bb40773b10d807c2de20fd",
-    "ios/tools/generate_coral_fixed_plan.py": "79dd8b0500c71d0b88b4529c1c0a6543ed16092cb5e3f65084ffe93538f0b6b3"
+    "ios/CHANGELOG.md": "f973eb0ba03984b1f906e3818cd58611835579f9bbc50969a8e42fc4c407baa7",
+    "ios/README.md": "64d7de6628e598db16b4cb4415e6fe9c28238fbb988a286dd52291afda8fec83",
+    "ios/docs/development.md": "24b746e75e0808542263b083ce133102051b8582e12354ec38787c9e3ced6707",
+    "ios/release.json": "d95ebbaddefed57529e545daad8fca957d3abaa8df5bf69e1a1e48f2995c5b2d",
+    "ios/src/PHOrbAutoLifecycle.inc": "2c01f1eaadd8d7df0896f10beca29b1b9a550d9082acbcedf861781172f9fc52",
+    "ios/src/PHOrbFixedPlan.h": "9c93da8ba5fe8e61e4d13d756a4b847888faa77e0ea9f97acda2da65f9149d47",
+    "ios/src/PHOrbFixedPlan.inc": "dc9896bf355cd67c47dbc93c5f010882e8d992ec27b1b6e3f8af7166749b18ca",
+    "ios/src/PHOrbFixedSession.inc": "eedc1f22d6e44b9b4dfa2a954d862de618a18bd329dbb32af4fb548e2c15a2b9",
+    "ios/src/PHOrbSession.mm": "604ec823ff9353b2dba8e50c78626f0b7e888d7d796ed571617b31baeb4ed5d2",
+    "ios/templates/coral-fixed-gamewith-585607/README.md": "b02242da1dc47e9710d4f1b2b8eb8908338ea16eec7685bec9286eee918086eb",
+    "ios/templates/coral-fixed-gamewith-585607/fixed-plan.json": "009d3fa8e17ea249445277c0426a4d01567d76a5c458c654b9cb470ef7dd4c9e",
+    "ios/templates/coral-fixed-gamewith-585607/guide-comparison.json": "18c2d909cc44b96a1810e40180415e335fa22dce4c64145c669b12cca3d165ed",
+    "ios/templates/coral-fixed-gamewith-585607/strategy.reference.json": "0ad7f64da01ddbf0090df8faf9833946ba23a1e23cf8e1642e7d553f2932a2c1",
+    "ios/tests/orb_attack_quality_session_tests.inc": "b6f752d209aa1581855a706f8eff789ddd78ab361fe74ad75ba18a01b2e548fe",
+    "ios/tests/orb_fixed_limit_session_tests.inc": "6fced05048ddc5175fb3c81e439e06035b3ad6372f3bed3055a06afedbb274b3",
+    "ios/tests/orb_fixed_plan_probe.inc": "13f5589caca3a30e0b47d098f3f4af0c4a6be0e3940cd9fa77112b1c1e814444",
+    "ios/tests/orb_fixed_profiles_tests.inc": "47aa8d851228a7873a676069987e71869f963b1c22a35480ddb4742712b44c61",
+    "ios/tools/generate_coral_fixed_plan.py": "a197211e10425c25daeae3f799a71a9a0eaa69e1a55d11414bb93415daa9cf36",
+    "ios/docs/release-0.5.52.md": "c1a4235cf0d7f63589cdc73eb7e0bcbaf15efe47ed0d44c8973dc856368d6835"
   },
-  "notPerformed": [
-    "Physical-device B2/B5/B7 and full-clear validation",
-    "Native damage/healing/survival and fishing timing validation"
-  ],
-  "buildVerified": true,
-  "testSuitesExecuted": true,
+  "sourceSHA256Scope": "LF-normalized pre-build snapshot; completion documentation is separate.",
+  "buildVerified": false,
+  "testSuitesExecuted": false,
   "deviceVerified": false,
-  "historicalReceipt": "The previous static receipt is preserved in Git and immutable 0.5.49/0.5.50 deliveries. CI 165 did not execute this revised template or its new cases.",
-  "deviceEvidence": {
-    "observedProfileID": "coral-fixed-585607-v90",
-    "puzzlesCompleted": 18,
-    "skillsConfirmed": 30,
-    "reachedFloor": 7,
-    "stoppedBeforeTargetSelection": true,
-    "reference": "enemy-reference.json",
-    "correctedB7TemplateVerified": false
-  },
-  "latestDeviceEvidence": {
-    "observedProfileID": "coral-fixed-585607-v90",
-    "puzzlesCompleted": 17,
-    "skillsConfirmed": 29,
-    "reachedFloor": 5,
-    "stage": "finish",
-    "confirmedStagePuzzles": 1,
-    "maximumStagePuzzles": 1,
-    "reference": "b5-search-reference.json",
-    "newSolverExecuted": false,
-    "nativeDamageReceiptKnown": false
-  },
   "pendingVerification": [
-    "Real-device B2/B5/B7 and full clear",
-    "Actual B5 damage improvement; offline bounded search still returns three fours"
+    "Current-source parser/native/Session regression and sanitizers",
+    "iPhoneOS, signature, browser and four iPhone GUI probes",
+    "B1 native stop cause, retry damage/survival and full device clear"
   ],
-  "sourceReview": {
-    "fixedAttackQuality": true,
-    "originalGoalReplayAndMultiPhaseScope": true,
-    "stageCapEvidenceAndConsumedGuard": true,
-    "testSuitesExecuted": false,
-    "objcSessionCompilationPerformed": false,
-    "cppSyntaxOnly": {
-      "passed": true,
-      "arguments": "-std=c++17 -fsyntax-only -Wall -Wextra -Werror -Iios/src",
-      "translationUnits": [
-        "ios/src/PHOrbSolver.cpp",
-        "ios/tests/orb_solver_tests.cpp",
-        "ios/tests/orb_shape_guidance_tests.cpp"
-      ]
-    }
-  },
-  "sourceSHA256Scope": "Build-source static snapshot before completed CI167; subsequent completion documentation is outside this captured hash set.",
-  "verification": {
-    "commit": "e2d3f5e5f1470a497a748a6a3eebf689ade982a0",
-    "ciRun": "https://github.com/hugotang/padcheaper/actions/runs/44024491484",
-    "ciNumber": 167,
+  "previous": {
+    "profileID": "coral-fixed-585607-v90-r2",
     "version": "0.5.51-orbs",
     "receipt": "../../research/verification-0.5.51.json",
-    "fullRegression": true,
-    "asanUbsan": true,
-    "iPhoneOSArm64": true,
-    "strictSignature": true,
-    "browser": true,
-    "iPhoneGUIReports": 4,
-    "deviceVerified": false
+    "note": "Prior CI does not validate r3."
   }
 }

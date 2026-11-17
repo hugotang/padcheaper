@@ -28,7 +28,7 @@ static BOOL FixedActionValid(id action, NSArray *members) {
     if ([action[@"kind"] isEqual:@"target"]) return Keys(action,@[@"kind",@"target",@"monster",@"optional",@"frequency"]) &&
         ![action[@"optional"] boolValue] && [@[@"part",@"enemy"] containsObject:action[@"target"]] && Integer(action[@"monster"],INT32_MAX);
     if (![action[@"kind"] isEqual:@"skill"] ||
-        !KeysWithOptional(action,@[@"kind",@"slot",@"source",@"monster",@"skill",@"afterMonster",@"optional",@"frequency",@"when"],@[@"alternatives",@"consumeAssist",@"loop"]) ||
+        !KeysWithOptional(action,@[@"kind",@"slot",@"source",@"monster",@"skill",@"afterMonster",@"optional",@"frequency",@"when"],@[@"alternatives",@"consumeAssist",@"loop",@"optionalAfterFirst"]) ||
         !Integer(action[@"slot"],6) || ![action[@"slot"] unsignedIntValue] ||
         ![@[@"body",@"assist"] containsObject:action[@"source"]] ||
         !FixedNumber(action[@"monster"],NO) || !FixedNumber(action[@"afterMonster"],YES) ||
@@ -36,6 +36,13 @@ static BOOL FixedActionValid(id action, NSArray *members) {
         !([@[@"always",@"attack_ready"] containsObject:action[@"when"]] || [FixedEffects() containsObject:action[@"when"]])) return NO;
     if ((action[@"consumeAssist"] && (!PHOrbProfileIsBoolean(action[@"consumeAssist"]) || ![action[@"source"] isEqual:@"assist"])) ||
         (action[@"loop"] && (!PHOrbProfileIsBoolean(action[@"loop"]) || ![action[@"source"] isEqual:@"body"] || [action[@"afterMonster"] unsignedIntValue]))) return NO;
+    // Only duplicate, non-transforming body actions may declare a retry skip.
+    // The stage validator and runtime also require an earlier required action
+    // and a fresh native acknowledgement in this very puzzle.
+    if (action[@"optionalAfterFirst"] && (!PHOrbProfileIsBoolean(action[@"optionalAfterFirst"]) ||
+        ![action[@"frequency"] isEqual:@"each"] || [action[@"optional"] boolValue] ||
+        ![action[@"source"] isEqual:@"body"] || [action[@"afterMonster"] unsignedIntValue] ||
+        [action[@"loop"] boolValue])) return NO;
     // Runtime positions can change through the explicitly declared leader swap.
     NSDictionary *member = nil, *form = nil;
     for (NSDictionary *candidate in members) if ((form = FixedMemberForm(candidate,action[@"monster"]))) { member = candidate; break; }
@@ -74,6 +81,12 @@ static BOOL FixedRepeatValid(id repeat) {
         FixedUntilValid(repeat[@"until"]) &&
         (![[repeat[@"until"] objectForKey:@"kind"] isEqual:@"puzzles"] || [repeat[@"minimumPuzzles"] unsignedIntValue]);
 }
+BOOL PHOrbFixedPlanSameSkill(NSDictionary *a, NSDictionary *b) {
+    return [a[@"kind"] isEqual:@"skill"] && [b[@"kind"] isEqual:@"skill"] &&
+        [a[@"monster"] isEqual:b[@"monster"]] && [a[@"skill"] isEqual:b[@"skill"]] &&
+        [a[@"source"] isEqual:b[@"source"]] && [a[@"slot"] isEqual:b[@"slot"]] &&
+        [(a[@"alternatives"] ?: @[]) isEqual:(b[@"alternatives"] ?: @[])];
+}
 BOOL PHOrbFixedPlanValid(id plan) {
     if (![plan isKindOfClass:NSDictionary.class] || !KeysWithOptional(plan,@[@"schema",@"members",@"floors"],@[@"leaderSwap"]) ||
         !Integer(plan[@"schema"],1) || ![plan[@"schema"] isEqual:@1] ||
@@ -107,12 +120,16 @@ BOOL PHOrbFixedPlanValid(id plan) {
             NSUInteger stageIndex = 0;
             for (NSDictionary *stage in variant[@"stages"]) {
                 if (++totalStages > 256 || ![stage isKindOfClass:NSDictionary.class] ||
-                    !KeysWithOptional(stage,@[@"id",@"actions",@"board",@"repeat"],@[@"absorbStall"]) ||
+                    !KeysWithOptional(stage,@[@"id",@"actions",@"board",@"repeat"],@[@"absorbStall",@"retryRequiresBypass"]) ||
                     (stage[@"absorbStall"] && !PHOrbProfileIsBoolean(stage[@"absorbStall"])) || !Identifier(stage[@"id"],NO) ||
                     [stageIDs containsObject:stage[@"id"]] || ![stage[@"actions"] isKindOfClass:NSArray.class] ||
                     [stage[@"actions"] count] > 24 || !FixedRepeatValid(stage[@"repeat"])) return NO;
                 [stageIDs addObject:stage[@"id"]];
                 NSDictionary *until = stage[@"repeat"][@"until"];
+                if (stage[@"retryRequiresBypass"] && (!PHOrbProfileIsBoolean(stage[@"retryRequiresBypass"]) ||
+                    ![until[@"kind"] isEqual:@"floor_change"] ||
+                    [stage[@"repeat"][@"minimumPuzzles"] unsignedIntValue]<1 ||
+                    [stage[@"repeat"][@"maximumPuzzles"] unsignedIntValue]<2 || [stage[@"absorbStall"] boolValue])) return NO;
                 if ([until[@"kind"] isEqual:@"skill_ready"]) {
                     BOOL declared = NO;
                     for (NSDictionary *member in plan[@"members"]) {
@@ -128,7 +145,17 @@ BOOL PHOrbFixedPlanValid(id plan) {
                 if (([board[@"policy"] isEqual:@"l_only"] && !board[@"lColors"]) ||
                     (board[@"lColors"] && (!Integer(board[@"lColors"],31) || ![board[@"lColors"] unsignedIntValue])) ||
                     (board[@"lColors"] && [@[@"one_combo",@"six_colors_no_fours"] containsObject:board[@"policy"]])) return NO;
-                for (NSDictionary *action in stage[@"actions"]) if (++totalActions > 1024 || !FixedActionValid(action,plan[@"members"])) return NO;
+                NSMutableArray *required = [NSMutableArray array];
+                for (NSDictionary *action in stage[@"actions"]) {
+                    if (++totalActions > 1024 || !FixedActionValid(action,plan[@"members"])) return NO;
+                    if ([action[@"optionalAfterFirst"] boolValue]) {
+                        BOOL prior = NO;
+                        for (NSDictionary *a in required) prior |= PHOrbFixedPlanSameSkill(a,action);
+                        if (!prior || ![stage[@"retryRequiresBypass"] boolValue]) return NO;
+                    } else if ([action[@"kind"] isEqual:@"skill"] && ![action[@"optional"] boolValue] &&
+                        [action[@"frequency"] isEqual:@"each"] && ![action[@"afterMonster"] unsignedIntValue] &&
+                        [action[@"when"] isEqual:@"always"]) [required addObject:action];
+                }
                 if (++stageIndex == [variant[@"stages"] count] && ![stage[@"repeat"][@"until"][@"kind"] isEqual:@"floor_change"]) return NO;
             }
         }

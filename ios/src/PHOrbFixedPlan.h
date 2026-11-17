@@ -26,6 +26,8 @@ FOUNDATION_EXPORT NSDictionary *PHOrbFixedPlanStage(NSDictionary *plan, NSUInteg
     NSString *variant, NSUInteger index);
 FOUNDATION_EXPORT PHOrbSkillRequest PHOrbFixedPlanActionRequest(NSDictionary *action);
 FOUNDATION_EXPORT BOOL PHOrbFixedPlanActionMatchesTeam(NSDictionary *action, const PHOrbSnapshot *state);
+// Equality of the declared effect source, not permission to substitute a skill.
+FOUNDATION_EXPORT BOOL PHOrbFixedPlanSameSkill(NSDictionary *a, NSDictionary *b);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanActionCondition(NSDictionary *action,
     const PHOrbFixedPlanEvidence *evidence);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary *repeat,

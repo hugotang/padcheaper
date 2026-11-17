@@ -32,8 +32,13 @@ def skill(slot, monster, active, *, after=0, source='body', optional=False,
     return a
 
 
-def atori():
-    return skill(1, 8477, 66706, frequency='each', alternatives=(6,))
+def atori(retry_skip=False):
+    a = skill(1, 8477, 66706, frequency='each', alternatives=(6,))
+    if retry_skip:
+        # Only the second duplicate may be omitted on a retry, after this
+        # puzzle's first Atori has a fresh native acknowledgement.
+        a['optionalAfterFirst'] = True
+    return a
 
 
 def solomon(*, initial=False, optional=False, when='always'):
@@ -59,7 +64,7 @@ def target(part=False):
 
 
 def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
-          minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False):
+          minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False, retry_bypass=False):
     board = dict(policy=policy, assistRecoveryL=recovery, maxGestureMS=ms)
     if l:
         board['lColors'] = 13  # Fire, wood, light: verified guide and recovery carriers.
@@ -70,10 +75,14 @@ def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
                               maximumPuzzles=maximum or minimum or 1, until=until))
     if absorb:
         result['absorbStall'] = True
+    if retry_bypass:
+        result['retryRequiresBypass'] = True
     return result
 
 
 def exit_stage(name='finish', actions=None, **kw):
+    # Extra turns are floor-specific; expired bypass or new enemy effects can
+    # invalidate an otherwise identical attack (notably B5 and B10).
     return stage(name, [atori()] if actions is None else actions, until='floor_change', **kw)
 
 
@@ -94,7 +103,8 @@ def build():
                             skill(3, 13744, 66735, after=13745)], 'one_combo'),
         stage('evolve-solomon', [solomon(initial=True), atori()]),
         stage('attack-2', [atori()]), stage('attack-3', [atori()]),
-        exit_stage('buff-and-finish', [atori(), diena(), atori(), solomon(), keisy()]),
+        exit_stage('buff-and-finish', [atori(), diena(), atori(True), solomon(), keisy()],
+                   maximum=2, retry_bypass=True),
     ])
     floor([stage('six-triples', policy='six_colors_no_fours'), exit_stage()])
     floor([stage('survive-first-hit', [riku(), atori()]),
@@ -141,7 +151,7 @@ def build():
                member(8476, [(8476, [66700]), (8477, [66706])]),
                member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607-v90-r2', name='珊瑚挑戰・固定 Atori・v90 綜合修正',
+                profile=dict(id='coral-fixed-585607-v90-r3', name='珊瑚挑戰・固定 Atori・v90 受控補盤',
                              team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))

@@ -3,8 +3,8 @@
   "schema": 1,
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "profile": {
-    "id": "coral-fixed-585607-v90-r2",
-    "name": "珊瑚挑戰・固定 Atori・v90 綜合修正",
+    "id": "coral-fixed-585607-v90-r3",
+    "name": "珊瑚挑戰・固定 Atori・v90 受控補盤",
     "team": [
       13828,
       13876,
@@ -387,7 +387,8 @@
                       "when": "always",
                       "alternatives": [
                         6
-                      ]
+                      ],
+                      "optionalAfterFirst": true
                     },
                     {
                       "kind": "skill",
@@ -419,11 +420,12 @@
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
-                    "maximumPuzzles": 1,
+                    "maximumPuzzles": 2,
                     "until": {
                       "kind": "floor_change"
                     }
-                  }
+                  },
+                  "retryRequiresBypass": true
                 }
               ]
             }
