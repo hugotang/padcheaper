@@ -160,10 +160,15 @@ static void FixedLimitDiagnosticSessionTests() {
         if (scenario==0 || scenario==7) Check(engine->stages>stages &&engine->skillOrder.size()==3 && ![snapshot[@"phase"] isEqual:@"stopped"] &&
             [snapshot[@"fixedPlanProgress"][@"confirmedPuzzles"] isEqual:@1],
             "a retry skips only its unready duplicate after a fresh same-puzzle skill receipt and covered enemy effects");
-        else Check([snapshot[@"phase"] isEqual:@"stopped"] && engine->stages==stages &&
-            engine->skillOrder.size()==(scenario==2 ? 2u : 3u) && [stop[@"code"] isEqual:@"stopped"] &&
-            [stop[@"reason"] isEqual:snapshot[@"message"]] && [stop[@"confirmedPuzzles"] isEqual:@1],
-            "missing declaration, old/missing receipt, uncovered absorption/void or unknown effects stop before a retry gesture");
+        else {
+            const bool stopped=[snapshot[@"phase"] isEqual:@"stopped"] && engine->stages==stages &&
+                engine->skillOrder.size()==(scenario==2 ? 2u : 3u) && [stop[@"code"] isEqual:@"stopped"] &&
+                [stop[@"reason"] isEqual:snapshot[@"message"]] && [stop[@"confirmedPuzzles"] isEqual:@1];
+            if (!stopped) fprintf(stderr,"retry scenario=%u phase=%s skills=%zu stages=%lu/%lu reason=%s\n",scenario,
+                [snapshot[@"phase"] UTF8String],engine->skillOrder.size(),(unsigned long)engine->stages,
+                (unsigned long)stages,[snapshot[@"message"] UTF8String]);
+            Check(stopped,"missing declaration, old/missing receipt, uncovered absorption/void or unknown effects stop before a retry gesture");
+        }
         [session queueStop:@"fixed retry cleanup"];
     }
 }

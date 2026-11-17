@@ -62,7 +62,7 @@
     // Revoke a retry if coverage changes after planning, including while a
     // gesture is held. Once release has completed, effects may legitimately
     // expire as the game resolves the turn; that is not an input failure.
-    if (!_releaseComplete && (_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
+    if ((_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
         _phase==PHOrbSessionPhase::Arming || _phase==PHOrbSessionPhase::Running) &&
         ![self fixedRetryAttackAllowed:state]) return NO;
     if (_preview.fixedPlan.valid && (_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
