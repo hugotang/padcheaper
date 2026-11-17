@@ -5,6 +5,8 @@
 #import "PHOrbDungeonReport.h"
 #import "PHOrbEight.h"
 #include "PHOrbSearchAttempt.h"
+#include "PHOrbAttackQuality.h"
+#include "PHOrbMultiFishing.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -543,10 +545,16 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_monochrome_session_tests.inc"
 #include "orb_himmel_session_tests.inc"
 #include "orb_fixed_session_tests.inc"
+#include "orb_fixed_diagnostics_session_tests.inc"
+#include "orb_fixed_limit_session_tests.inc"
+#include "orb_attack_quality_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         FixedSessionTests();
+        FixedConstraintDiagnosticSessionTests();
+        FixedLimitDiagnosticSessionTests();
+        AttackQualitySessionTests();
         ReadinessStopSessionTests();
         if (failures) return 1;
         MultiFishingSessionTests();

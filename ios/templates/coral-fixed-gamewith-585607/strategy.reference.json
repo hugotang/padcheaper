@@ -1,8 +1,8 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607",
-  "status": "source-only-unbuilt",
+  "id": "coral-fixed-585607-v90-r2",
+  "status": "template-correction-pending-parser-and-device-verification",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -11,15 +11,22 @@
     "reviewedDate": "2026-11-17",
     "snapshotSHA256": "de435568d54d5b3111b145772ac4a63265fba9f61a26961b7977009e7bdb070e",
     "fixedSectionSHA256": "9cfff87a0e28489c66c8537dbf5f8b901a49c5b2306a89ad9d315de564e61024",
+    "snapshotNote": "Original template investigation snapshot; the later B7 evidence snapshot is recorded separately in enemy-reference.json.",
     "catalogSource": "https://github.com/Mapaler/PADDashFormation",
     "catalogRevision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
     "cardSHA256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
-    "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7"
+    "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7",
+    "privateSkillRevision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+    "privateSkillSHA256": "cb47e1c292eb9abd721986ee46f9ddf9a58d1606917b3cf275ad39d34cdc134c"
   },
   "files": {
     "plan": "fixed-plan.json",
     "instructions": "README.md",
-    "validation": "validation.json"
+    "validation": "validation.json",
+    "skillReference": "skill-reference.json",
+    "enemyReference": "enemy-reference.json",
+    "guideComparison": "guide-comparison.json",
+    "b2SearchReference": "b2-search-reference.json"
   },
   "counts": {
     "floors": 15,
@@ -34,8 +41,8 @@
         {
           "number": 13828,
           "skills": [
-            63191,
-            63192
+            66716,
+            66718
           ]
         }
       ],
@@ -48,12 +55,12 @@
         {
           "number": 13876,
           "skills": [
-            63220
+            66724
           ]
         }
       ],
       "assistSkills": [
-        61754
+        66752
       ]
     },
     {
@@ -63,13 +70,13 @@
         {
           "number": 13744,
           "skills": [
-            62494
+            66735
           ]
         },
         {
           "number": 13745,
           "skills": [
-            62502
+            66740
           ]
         }
       ],
@@ -82,12 +89,12 @@
         {
           "number": 13878,
           "skills": [
-            63241
+            66729
           ]
         }
       ],
       "assistSkills": [
-        63251
+        66755
       ]
     },
     {
@@ -97,13 +104,13 @@
         {
           "number": 8476,
           "skills": [
-            27820
+            66700
           ]
         },
         {
           "number": 8477,
           "skills": [
-            27827
+            66706
           ]
         }
       ],
@@ -116,13 +123,13 @@
         {
           "number": 8476,
           "skills": [
-            27820
+            66700
           ]
         },
         {
           "number": 8477,
           "skills": [
-            27827
+            66706
           ]
         }
       ],
@@ -131,13 +138,20 @@
   ],
   "decisions": [
     "Unspecified uncast assists bind observed B1 native sources; no invented assist IDs.",
-    "Dungeon/floor IDs remain 0 because the guide does not provide native IDs; manual selection is required.",
+    "Dungeon 7801 / subDungeon (profile floor) 1 are directly captured by the 0.5.50 battleObservation identity; this is separate from wave zero / B1.",
     "Leader swap: original slot 5 moves to slot 1; later Atori choices are positions 1 and 6.",
-    "B7 Clammy encyclopedia 10424 maps to ordinary native catalog 10524; an unrecognized private variant stops.",
+    "B7 Clammy uses exact native catalog 210524 observed at slot 2. Ordinary 10524 has the same public card name but is not accepted as an alias. See enemy-reference.json.",
     "B8/B9 choose their part branch once; every original part must be observed broken before leaving.",
     "B3 caps the complete gesture at 4500ms or the existing shorter limit.",
     "B13 queries current Solomon readiness; B15 uses body HP thresholds and preserves final Riku during absorption stall.",
-    "A stopped fixed run that issued an action cannot resume in the same battle."
+    "A stopped fixed run that issued an action cannot resume in the same battle.",
+    "All skill declarations, actions and B13 readiness use exact v90 IDs; no automatic alias or relaxed native gate.",
+    "New profile ID coral-fixed-585607-v90-r2 permits side-by-side import with the original, v90 and v90-b7 revisions; imported profiles are not updated automatically.",
+    "The v90 device run completed 18 puzzles and confirmed 30 skills through B1–B6, with transformed Atori/Keisy, evolved Solomon in slot 5 and both opening assists consumed. Corrected B7 selection and B7–B15 remain unverified.",
+    "GameWith remains the complete skill/cooldown route; AppMedia is a cross-check, not interchangeable floor instructions. See guide-comparison.json.",
+    "B15 finish-with-riku is bounded to two total puzzles including absorption stalls; this is not a damage or survival guarantee.",
+    "Both guides lack an explicit first-removal-only six-color requirement. The existing conservative fixed policy is retained pending native cascade/effect evidence; source changes align search guidance and explain exact fixed-stage failures.",
+    "The latest v90-b7 run stopped at B2 after 8 puzzles and 15 skills; cumulative completed 26 includes the prior run and is not corrected B7 verification."
   ],
   "deviceVerified": false
 }

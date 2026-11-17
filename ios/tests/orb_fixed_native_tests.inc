@@ -57,8 +57,82 @@ static void FixedSoloLeaderNativeTests() {
         }
     }
 }
+static void FixedPrivateSkillReadinessTests() {
+    SkillFixture(); SetLeader(0,13876);
+    const uintptr_t member=Impl+PHBattleMemberOffset, catalog=reinterpret_cast<uintptr_t>(catalogBytes.data());
+    const uintptr_t ordinary=catalog+13976*PHBattleCatalogStride, variant=catalog+14600*PHBattleCatalogStride;
+    std::memcpy(reinterpret_cast<void *>(variant),reinterpret_cast<void *>(ordinary),PHBattleCatalogStride);
+    Put<uint32_t>(variant,90013976); Put<uint32_t>(ordinary+PHOrbLeaderCatalogNextOffset,14600);
+    Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14601);
+    Put<uint32_t>(member+PHBattleCatalogIDOffset,90013976); Put<uintptr_t>(member+PHBattleCardParamOffset,variant);
+    Put<uint16_t>(member+PHBattleBaseIDOffset,13976); Put<uint16_t>(member+PHBattleAssistIDOffset,13719);
+    Put<uint16_t>(member+PHBattleEffectiveAssistOffset,13719);
+    Put<uint8_t>(member+PHBattleEffectiveAssistOffset+PHBattleAssistVariantByte,90);
+    Protected(member+PHBattleAssistStateOffset,172,0x6a875a8b);
+    Protected(member+PHBattleChargeOffset,14,0x6a875a8b);
+    Put<uint32_t>(member+PHBattleChargeShadowOffset,14u^0x68fb65ceu);
+    readinessFixture={66724,66752,9,14};
+    auto engine=[FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason=nil;
+    Check([engine readAutomation:&state frame:Frame() reason:nil] &&
+        state.automation.members[0].nativeCatalogIDs[0]==90013976 && state.automation.members[0].nativeCatalogIDs[1]==90013719,
+        "Coral B1 readiness fixture preserves the observed private body and assist identities");
+    Check([engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillAssist,61754}
+        expected:&state frame:Frame() reason:&reason]==PHOrbSkillRejected &&
+        [reason containsString:@"預期武裝 61754，實際 66752"] && !skillStartCalls && !writes,
+        "ordinary Chronos skill cannot authorize the observed private assist even when it is charged");
+    Check([engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillAssist,uint16_t(66752)}
+        expected:&state frame:Frame() reason:nil]==PHOrbSkillRejected && !skillStartCalls && !writes,
+        "a truncated private skill ID cannot match a native skill above UINT16_MAX");
+    Check([engine fixedSkillReadiness:0 request:PHOrbSkillRequest{PHOrbSkillAssist,66752}
+        expected:&state frame:Frame() reason:nil]==PHOrbSkillStarted && !skillStartCalls && !writes,
+        "the exact private assist passes readiness without starting a skill or overriding selection");
+    Check([engine useSkill:0 request:PHOrbSkillRequest{PHOrbSkillAssist,66752}
+        expected:&state frame:Frame() reason:nil]==PHOrbSkillStarted && skillStartCalls==1 && !writes &&
+        sourceAtStart==1 && effectiveStartedSkill==66752 && effectsStartedSkill==66752,
+        "the exact private assist ID survives request and native start as 32 bits with the native assist source");
+}
+static void FixedPrivateTargetNativeTests() {
+    for (unsigned scenario=0;scenario<5;++scenario) {
+        FixedNativeFixture();
+        const uintptr_t catalog=reinterpret_cast<uintptr_t>(catalogBytes.data());
+        const uint32_t ordinaryIDs[]={38,10524}, privateIDs[]={200038,210524};
+        // Synthetic linked records fit the fixture catalog; no private dump is required.
+        for (unsigned slot=0;slot<2;++slot) {
+            const uintptr_t ordinary=catalog+ordinaryIDs[slot]*PHBattleCatalogStride;
+            const uintptr_t variant=catalog+(14610+slot)*PHBattleCatalogStride;
+            std::memcpy(reinterpret_cast<void *>(ordinary),reinterpret_cast<void *>(catalog+(42+slot)*PHBattleCatalogStride),PHBattleCatalogStride);
+            Put<uint32_t>(ordinary,ordinaryIDs[slot]);
+            std::memcpy(reinterpret_cast<void *>(variant),reinterpret_cast<void *>(ordinary),PHBattleCatalogStride);
+            Put<uint32_t>(ordinary+PHOrbLeaderCatalogNextOffset,14610+slot);
+            Put<uint32_t>(variant,privateIDs[slot]); Put<uint32_t>(variant+PHOrbLeaderCatalogNextOffset,0);
+            const uintptr_t enemy=Impl+PHOrbEnemyOffset+slot*PHOrbEnemyStride;
+            Put<uint32_t>(enemy+580,privateIDs[slot]); Put<uintptr_t>(enemy+PHOrbEnemyActionsParameterOffset,variant);
+        }
+        Put<uint32_t>(Header+PHSaveRVA+PHOrbLeaderCatalogRecordsOffset,14612);
+        auto engine=[FixtureSkillEngine new]; PHOrbSnapshot state{};
+        Check([engine readAutomation:&state frame:Frame() reason:nil] && [engine readFixedPlan:&state frame:Frame() reason:nil] &&
+            state.fixedPlan.enemies[0].catalogID==200038 && state.fixedPlan.enemies[1].catalogID==210524 &&
+            state.fixedPlan.enemies[1].identityKnown && state.fixedPlan.enemies[1].hpKnown &&
+            state.fixedPlan.enemies[1].parameter==catalog+14611*PHBattleCatalogStride && !writes,
+            "fixed evidence preserves complete private enemy IDs and their verified linked native parameters");
+        const uintptr_t enemy=Impl+PHOrbEnemyOffset+PHOrbEnemyStride;
+        const uintptr_t ordinary=catalog+10524*PHBattleCatalogStride, variant=catalog+14611*PHBattleCatalogStride;
+        if (scenario==1) Put<uintptr_t>(enemy+PHOrbEnemyActionsParameterOffset,ordinary);
+        if (scenario==2) { Put<uint32_t>(enemy+580,110524); Put<uint32_t>(variant,110524); }
+        if (scenario==3) Put<uint32_t>(variant,110524);
+        if (scenario==4) Put<uint32_t>(ordinary+PHOrbLeaderCatalogNextOffset,10524);
+        const auto before=realInput;
+        const BOOL staged=[engine stageFixedPlanTarget:1 expected:&state frame:Frame() reason:nil];
+        Check(staged==(scenario==0),
+            "private target taps require the same full ID, exact parameter and a valid noncyclic native catalog chain");
+        if (staged) Check(GlobalInput()!=Input && [engine finishInput:nil],"verified private target uses and releases the leased input bank");
+        Check(GlobalInput()==Input && realInput==before,"private target staging and rejection preserve the real input manager");
+    }
+}
 static void FixedNativeTests() {
     FixedSoloLeaderNativeTests();
+    FixedPrivateSkillReadinessTests();
+    FixedPrivateTargetNativeTests();
     FixedNativeFixture(); auto engine=[FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason=nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] &&
         [engine readFixedPlan:&state frame:Frame() reason:&reason] && state.fixedPlan.targetAllowed &&

@@ -76,6 +76,9 @@ struct Context {
     // Ordinary multi-colour recovery may avoid spinner cells. It never opens
     // a spinner or changes exact goals; the primary objective/beam is retained.
     bool colorRecovery = false, colorGuidance = false, thornColorGuidance = false;
+    // Fixed plans may combine first-removal colours with shapes. Only their
+    // existing recovery passes use this hint; ordinary eligibility is unchanged.
+    bool fixedColorGuidance = false;
     uint8_t wantedColors = 0, colorFocus = PHOrbBasicTypes;
     bool guidance = true, stableHints = true, allowPoisonWithHeartFour = false;
     // Alternate ordinary-shape passes change exploration only. Retained
@@ -271,7 +274,17 @@ Context MakeContext(const PHOrbBoard &board, const PHOrbGoalSet &goals, bool gui
         const auto &goal = goals.items[g];
         if (goal.kind == PHOrbGoalColors || (context.colorRecovery && goal.kind == PHOrbGoalMatch))
             context.wantedColors |= goal.colors & ~context.unmatchable;
+        // The template explicitly requires every colour in this clause. Do
+        // not reinterpret ordinary subset/count goals or activity objectives.
+        if (guidance && fixedBoard.firstColors && fishCell < 0 && !activity.firstWaveOnly &&
+            !activity.preparation && !activity.comboPriority && !activity.colors &&
+            context.minMatch <= context.minErase &&
+            goal.kind == PHOrbGoalColors && Count(goal.colors & 63u) == goal.count &&
+            (goal.colors & fixedBoard.firstColors) == fixedBoard.firstColors)
+            context.fixedColorGuidance = true;
     }
+    for (unsigned i = 0; i < w * h; ++i)
+        if (board.flags[i] & PHOrbFlagThorn) context.fixedColorGuidance = false;
     if (context.guidance && (context.shapeGoals || context.colorRecovery)) for (unsigned i = 0; i < w * h; ++i) {
         Bits frontier = Bits(1) << i, seen = frontier;
         if (frontier & context.blocked) continue;
@@ -305,6 +318,43 @@ unsigned ComboCapacity(const Inventory &inventory, const Context &context) {
     for (unsigned c = 0; c < PHOrbTypes; ++c)
         if (!(context.unmatchable & (1u << c))) result += inventory[c] / minimum;
     return result;
+}
+
+// Optimistic inventory ceiling for the guaranteed first-removal four count.
+// It never promises a layout, damage or a kill. A real take changes inventory,
+// so use the wider cell-count ceiling for that search instead of undercounting.
+unsigned FixedFourUpperBound(const Cells &cells, const Context &context) {
+    if (std::max(context.minErase,context.minMatch) > 4) return 0;
+    unsigned upper = context.width * context.height / 4;
+    if (context.fishColor >= 0) return upper;
+    for (unsigned phase = 0; phase < context.variants; ++phase) {
+        Inventory inventory{};
+        for (unsigned i = 0; i < context.width * context.height; ++i) {
+            const unsigned color = context.dynamicSpinners & (Bits(1) << i) ? context.spinnerStates[phase][i] : cells[i];
+            if (color < PHOrbBasicTypes && !(context.unmatchable & (1u << color))) ++inventory[color];
+        }
+        unsigned count = 0;
+        for (unsigned color = 0; color < PHOrbBasicTypes; ++color) count += inventory[color] / 4;
+        upper = std::min(upper,count);
+    }
+    return upper;
+}
+
+// One stronger four-count clause gives an already feasible attack a new search
+// direction. This is a temporary exploration goal: candidates are normalized
+// against the original contract before they can replace the retained route.
+bool FixedFourQualityGoal(const Context &context, unsigned achieved, unsigned upper,
+    PHOrbGoalSet &goals, unsigned &focus) {
+    if (context.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack || achieved >= upper) return false;
+    goals = context.goals;
+    focus = goals.count;
+    for (unsigned g = 0; g < goals.count; ++g)
+        if (goals.items[g].kind == PHOrbGoalFour && goals.items[g].colors == 63) { focus = g; break; }
+    if (focus == goals.count) {
+        if (goals.count == PHOrbMaxGoals) return false;
+        goals.items[goals.count++] = {PHOrbGoalFour,63,uint8_t(achieved + 1),0};
+    } else goals.items[focus].count = uint8_t(std::max(unsigned(goals.items[focus].count),achieved + 1));
+    return true;
 }
 
 PHOrbInventoryIssue CheckInventory(const Inventory &inventory, const Context &context, unsigned phase) {
@@ -459,12 +509,18 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
     if (!context.colorGuidance) return;
     score.colorProgress.fill(0); score.colorGuidedProgress = 0;
     score.missingColors = 0; score.weakestColor = PHOrbBasicTypes;
+    // A guaranteed later cascade still satisfies an ordinary colour goal,
+    // but cannot fill a fixed plan's first-removal colour requirement. Keep
+    // the public hits and exact evaluator unchanged; adjust only these hints.
+    const unsigned firstRequired = context.fixedColorGuidance ? context.fixedBoard.firstColors : 0;
+    const unsigned matched = (score.matchedColors & ~firstRequired) |
+        (score.result.firstWaveColors & firstRequired);
     unsigned patternGoal = 0;
     while (patternGoal < context.goals.count && context.goals.items[patternGoal].kind != PHOrbGoalColors) ++patternGoal;
     if (patternGoal == context.goals.count) return;
     std::array<ColorHint, PHOrbBasicTypes> hints{};
     for (unsigned c = 0; c < PHOrbBasicTypes; ++c) if (context.wantedColors & (1u << c)) {
-        if (score.matchedColors & (1u << c)) score.colorProgress[c] = 4096;
+        if (matched & (1u << c)) score.colorProgress[c] = 4096;
         else {
             hints[c] = RepairColor(colors[c] & ~context.dynamicSpinners, context.patterns[patternGoal], c, context, movement);
             score.colorProgress[c] = hints[c].value;
@@ -474,12 +530,14 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
     for (unsigned g = 0; g < context.goals.count; ++g) {
         const auto &goal = context.goals.items[g];
         const bool colorGoal = goal.kind == PHOrbGoalColors || (context.colorRecovery && goal.kind == PHOrbGoalMatch);
+        const unsigned hits = goal.kind == PHOrbGoalColors && firstRequired ?
+            Count(matched & goal.colors) : score.result.goalHits[g];
         if (colorGoal) score.layouts[g] = 0;
-        if (!colorGoal || score.result.goalHits[g] >= goal.count) {
+        if (!colorGoal || hits >= goal.count) {
             score.colorGuidedProgress += score.goalProgress[g]; continue;
         }
         std::array<unsigned, PHOrbBasicTypes> order{{0,1,2,3,4,5}};
-        const unsigned missing = goal.colors & ~context.unmatchable & ~score.matchedColors;
+        const unsigned missing = goal.colors & ~context.unmatchable & ~matched;
         const auto value = [&](unsigned c) { return missing & (1u << c) ? hints[c].value : 0u; };
         std::sort(order.begin(), order.end(), [&](unsigned a, unsigned b) {
             if (value(a) != value(b)) return value(a) > value(b);
@@ -489,7 +547,7 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
         unsigned near = 0;
         // A subset/count goal needs only its best remaining colours, never
         // every colour named in the mask. No new mandatory goal is added.
-        for (unsigned i = 0; i < unsigned(goal.count - score.result.goalHits[g]); ++i) {
+        for (unsigned i = 0; i < unsigned(goal.count - hits); ++i) {
             const unsigned c = order[i];
             near += value(c);
             if ((missing & (1u << c)) && value(c) < weakest) {
@@ -498,7 +556,7 @@ void ColorGuidance(Score &score, const std::array<Bits, PHOrbTypes> &colors, con
             if (missing & (1u << c)) score.layouts[g] = hints[c].tag;
         }
         score.missingColors |= uint8_t(missing);
-        score.colorGuidedProgress += (score.result.goalHits[g] * 4096 + near) / goal.count;
+        score.colorGuidedProgress += (hits * 4096 + near) / goal.count;
     }
 }
 
@@ -820,10 +878,10 @@ Score EvaluateStatic(Cells cells, const Context &context) {
     if (context.guidance && context.shapeGoals > 1) JointGuidance(score, hints, context);
     FinishProgress(score, context);
     score.matchedColors = uint8_t(context.goals.bonusFirstWave ? firstColors : matchedColors);
+    result.firstWaveColors = uint8_t(firstColors & 63u);
     // Multi-phase hints are computed once, after exact hits and colour masks
     // have been aggregated. A first-phase colour is not a guaranteed match.
     if (context.variants == 1) ColorGuidance(score, colors, context);
-    result.firstWaveColors = uint8_t(firstColors & 63u);
     result.fixedBoardSatisfied =
         (result.firstWaveColors & context.fixedBoard.firstColors) == context.fixedBoard.firstColors &&
         (!context.fixedBoard.requireHeartFour || result.heartFours > 0);
@@ -1458,6 +1516,12 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // A beam holds at most max(beam, starts, saved frontier) parents.
         VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
         const auto met = [&]() { return found && best.score.result.goalsMet && best.score.result.hazardsSafe; };
+        const unsigned fourUpper = context.fixedBoard.mode == PHOrbFixedBoardMode::FourAttack ?
+            FixedFourUpperBound(initial,context) : 0;
+        const auto improveFours = [&]() {
+            return met() && context.fixedBoard.mode == PHOrbFixedBoardMode::FourAttack &&
+                best.score.result.firstWaveFours < fourUpper;
+        };
         const bool recover = (context.shapeGoals || context.colorRecovery) && options.recoveryPasses;
         const bool ordinaryShapeRecovery = context.shapeGoals && !board.spinnerMask &&
             options.fishCell < 0 && !context.activity.firstWaveOnly;
@@ -1502,7 +1566,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 r.combos >= comboUpper && (hadContactCandidates || !contactsPossible);
         };
         auto search = [&](const Context &scoring, unsigned firstDepth, unsigned focus,
-                          Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false, bool activityRows = false) {
+                          Clock::time_point passDeadline, bool saveFrontiers, bool noContacts = false,
+                          bool activityRows = false, bool qualityGoal = false) {
             ++passes;
             // Recovery changes hint policy/repair weights, so it must not
             // inherit another pass's scores. Exact validation is unchanged.
@@ -1531,7 +1596,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             // for a different score or a discarded frontier.
                             // Optional row passes run only after a feasible
                             // route exists, so they must honor their own share.
-                            if (now >= passDeadline && (!met() || activityRows)) { passEnded = true; break; }
+                            if (now >= passDeadline && (!met() || activityRows || qualityGoal)) { passEnded = true; break; }
                         }
                         if (cell < 0 || !PHOrbMoveAdjacent(current, unsigned(cell), board.width, board.height, options.diagonal) ||
                             (parent.length > 1 && unsigned(cell) == parent.path[parent.length - 2])) continue;
@@ -1575,7 +1640,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                         // Once a safe solution exists, an unmet candidate cannot
                         // beat it. With all goals met, hole/distance weights are
                         // unused; only a winning candidate needs normalization.
-                        const bool canonicalScore = activityRows || (scoring.alternateShapeHints &&
+                        const bool canonicalScore = activityRows || qualityGoal || (scoring.alternateShapeHints &&
                             !child.score.result.goalsMet && !met());
                         if (canonicalScore) { child.score = Evaluate(child.cells,context); ++evaluationCache.calls; }
                         hadContactCandidates |= child.thornContacts != 0;
@@ -1593,7 +1658,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                             }
                             best = child; found = true;
                         }
-                        if (activityRows || scoring.alternateShapeHints) child.score = guidedScore;
+                        if (activityRows || qualityGoal || scoring.alternateShapeHints) child.score = guidedScore;
                         if (heartPending) child.score.result.hazardsSafe =
                             ReleaseHazardsSafe(child.score.result, options.allowPoisonWithHeartFour, false);
                         next.push_back(child);
@@ -1604,7 +1669,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 // Keep at most two small frontiers from early and middle
                 // depths. These are genuinely discarded nodes, not copies
                 // of the beam that the first pass already expanded.
-                const bool checkpoint = saveFrontiers && (!met() || comboSearch) && saved.size() < options.backtrackLimit &&
+                const bool checkpoint = saveFrontiers && (!met() || comboSearch || improveFours()) && saved.size() < options.backtrackLimit &&
                     (depth + 1 == options.steps / 4 || depth + 1 == options.steps / 2);
                 if (checkpoint) {
                     Frontier frontier{depth + 1, {}};
@@ -1638,9 +1703,14 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         }
         beam = starts;
         search(context, 0, primaryFocus, primaryDeadline, retain);
-        if (recover && !met() && !timedOut && !cancel.load(std::memory_order_relaxed)) {
+        if (recover && (!met() || improveFours()) && !timedOut && !cancel.load(std::memory_order_relaxed)) {
             Context recovery = context;
-            recovery.colorGuidance = context.colorRecovery;
+            PHOrbGoalSet qualityGoals{}; unsigned qualityFocus = PHOrbMaxGoals;
+            const bool qualityGoal = improveFours() && FixedFourQualityGoal(context,
+                best.score.result.firstWaveFours,fourUpper,qualityGoals,qualityFocus);
+            if (qualityGoal) recovery = MakeContext(board,qualityGoals,true,options.allowPoisonWithHeartFour,
+                options.diagonal,options.activity,options.fishCell,options.fishColor,options.fixedBoard);
+            recovery.colorGuidance = context.colorRecovery || context.fixedColorGuidance;
             // Retain the original full recovery direction. First-removal
             // templates cannot represent every cascade around fixed thorns;
             // their stricter movement hints get separate existing backtracks.
@@ -1674,9 +1744,10 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // leave their unused time for the existing bounded backtracks.
             const auto recoveryDeadline = stableShapeRecovery || saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = starts;
-            search(recovery, 0, found ? best.score.focus : 0, recoveryDeadline, false);
+            search(recovery, 0, qualityGoal ? qualityFocus : found ? best.score.focus : 0,
+                recoveryDeadline, false, false, false, qualityGoal);
         }
-        while (!saved.empty() && (!met() || (comboSearch && best.score.result.firstWaveCombos < comboUpper)) &&
+        while (!saved.empty() && (!met() || improveFours() || (comboSearch && best.score.result.firstWaveCombos < comboUpper)) &&
                !timedOut && !cancel.load(std::memory_order_relaxed)) {
             auto frontier = std::move(saved.back()); saved.pop_back();
             const auto now = Clock::now();
@@ -1684,7 +1755,12 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             const auto passDeadline = saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = std::move(frontier.nodes); ++backtracks;
             Context revisit = context;
-            revisit.colorGuidance = context.colorRecovery;
+            PHOrbGoalSet qualityGoals{}; unsigned qualityFocus = PHOrbMaxGoals;
+            const bool qualityGoal = improveFours() && FixedFourQualityGoal(context,
+                best.score.result.firstWaveFours,fourUpper,qualityGoals,qualityFocus);
+            if (qualityGoal) revisit = MakeContext(board,qualityGoals,true,options.allowPoisonWithHeartFour,
+                options.diagonal,options.activity,options.fishCell,options.fishColor,options.fixedBoard);
+            revisit.colorGuidance = context.colorRecovery || context.fixedColorGuidance;
             revisit.thornColorGuidance = !colorMovements.empty();
             if (ordinaryShapeRecovery) {
                 revisit.alternateShapeHints = true;
@@ -1698,7 +1774,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // Keep a phase-specific alternative when the whole-board
             // recovery used stable templates. Do not add passes or time.
             if (stableShapeRecovery && saved.empty()) revisit.stableHints = false;
-            search(revisit, frontier.depth, found ? best.score.focus : 0, passDeadline, false);
+            search(revisit, frontier.depth, qualityGoal ? qualityFocus : found ? best.score.focus : 0,
+                passDeadline, false, false, false, qualityGoal);
         }
         // Keep every earlier opportunity and result. Only an unsuccessful
         // ordinary, thorn-free square search may spend its remaining deadline

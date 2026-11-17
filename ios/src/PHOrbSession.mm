@@ -8,6 +8,7 @@
 #include "PHOrbMultiFishing.h"
 #include "PHOrbMonochromeTemplate.h"
 #include "PHOrbSearchAttempt.h"
+#include "PHOrbAttackQuality.h"
 #include "PHOrbSessionState.h"
 #include "PHTargetGenerated.h"
 #include <algorithm>
@@ -401,7 +402,7 @@ struct EightPreparationState {
     NSDictionary *_goalPlan, *_recovery;
     NSDictionary *_profileLibrary, *_activeProfile;
     NSDictionary *_openingProfile;
-    NSDictionary *_fixedProfile, *_fixedStage, *_fixedPending;
+    NSDictionary *_fixedProfile, *_fixedStage, *_fixedPending, *_fixedLastStop;
     NSString *_fixedVariant;
     NSMutableArray<NSDictionary *> *_fixedLoops;
     PHOrbSnapshot _fixedOrigin, _fixedTeam, _fixedBefore;
@@ -1125,6 +1126,124 @@ struct EightPreparationState {
                 @"unsearchedCells":unsearchedCells,@"endReason":endReason,@"budgetMS":@(options.milliseconds),
                 @"soloRetry":@(multiRetried),@"finalPassBudgetMS":@(passBudgetMS),@"wallElapsedMS":@(wallMS)};
         }
+        // A feasible fixed attack is a baseline, not the end of optimization.
+        // Only ordinary solo solutions enter this optional stage; all existing
+        // timing, thorn, source and native execution gates remain authoritative.
+        NSMutableDictionary *attackQuality = [@{@"started":@NO,@"selected":@NO,
+            @"reason":@"not-eligible",@"attempts":@0} mutableCopy];
+        const auto qualityStart = std::chrono::steady_clock::now();
+        const auto beforeQualityMS = std::chrono::duration_cast<std::chrono::milliseconds>(qualityStart-start).count();
+        const unsigned qualityBudget = PHOrbAttackQualityBudget(solo,multiNeedsRecovery || assistCandidates.count,
+            cancel->load(std::memory_order_relaxed),options,result,route,uint64_t(beforeQualityMS));
+        if (!qualityBudget && solo && options.fixedBoard.mode==PHOrbFixedBoardMode::FourAttack &&
+            result==PHOrbSolveStatus::Solved && !route.fishing && !selectedMulti)
+            attackQuality[@"reason"]=cancel->load(std::memory_order_relaxed) ? @"cancelled" :
+                multiNeedsRecovery || assistCandidates.count ? @"recovery-plan" :
+                beforeQualityMS>=PHOrbSoloRetryMilliseconds ? @"shared-search-budget-exhausted" : @"not-eligible";
+        if (qualityBudget && !selectedMulti) {
+            PHOrbEvaluation retained{}; uint32_t damage=0; uint8_t contacts=0;
+            PHOrbGoalSet stronger{};
+            const unsigned upper=unsigned(board.width)*board.height/4;
+            const bool baselineValid=PHOrbEvaluateRoute(board,route,selectedOptions,retained,damage,contacts) &&
+                retained.goalsMet && retained.hazardsSafe && retained.fixedBoardSatisfied &&
+                damage==route.thornDamage && contacts==route.thornContacts;
+            const bool canImprove=baselineValid && PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,stronger);
+            attackQuality[@"reason"]=!baselineValid ? @"baseline-replay-failed" :
+                !canImprove ? @"four-bound-or-goal-capacity" : @"fishing-unavailable";
+            attackQuality[@"baselineFirstWaveFours"]=@(retained.firstWaveFours);
+            attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
+            if (canImprove && (fishCell>=0 || multiEligible)) {
+                attackQuality[@"started"]=@YES; attackQuality[@"budgetMS"]=@(qualityBudget);
+                attackQuality[@"reason"]=@"no-improvement";
+                const auto qualityDeadline=qualityStart+std::chrono::milliseconds(qualityBudget);
+                PHOrbFishingPlan qualityPlan;
+                if (fishCell>=0) {
+                    auto request=options; request.goals=stronger; request.fishCell=fishCell;
+                    qualityPlan=PHOrbPlanFishing(board,request);
+                    singleNotAttempted=qualityPlan.selectedCount ? @"quality-budget-exhausted" : @"no-quality-color";
+                }
+                std::vector<unsigned> qualityCells;
+                if (multiEligible) for (unsigned i=0;i<board.width*board.height;++i)
+                    if ((board.spinnerMask&(UINT64_C(1)<<i)) && !(board.tapeMask&(UINT64_C(1)<<i))) qualityCells.push_back(i);
+                const unsigned choices=qualityPlan.selectedCount+unsigned(qualityCells.size());
+                unsigned attempted=0, multiQualityAttempts=0;
+                for (unsigned choice=0;choice<choices;++choice) {
+                    const auto now=std::chrono::steady_clock::now();
+                    if (cancel->load(std::memory_order_relaxed) || now>=qualityDeadline) {
+                        attackQuality[@"reason"]=cancel->load(std::memory_order_relaxed) ? @"cancelled" : @"deadline"; break;
+                    }
+                    auto trial=options;
+                    if (!PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,trial.goals)) break;
+                    trial.milliseconds=unsigned(std::chrono::duration_cast<std::chrono::milliseconds>(qualityDeadline-now).count())/(choices-choice);
+                    if (!trial.milliseconds) { attackQuality[@"reason"]=@"insufficient-slice"; break; }
+                    const bool multi=choice>=qualityPlan.selectedCount;
+                    PHOrbRoute candidate{}; PHOrbMultiFishingResult multiCandidate;
+                    PHOrbSolveStatus status;
+                    NSMutableDictionary *attempt;
+                    if (!multi) {
+                        trial.fishCell=fishCell; trial.fishColor=qualityPlan.candidates[choice].color; trial.steps=fishSteps;
+                        singleNotAttempted=@"";
+                        status=solveAttempt(trial,candidate,@{@"attackQuality":@YES});
+                        attempt=attempts.lastObject;
+                    } else {
+                        ++multiQualityAttempts;
+                        trial.fishCell=int(qualityCells[choice-qualityPlan.selectedCount]);
+                        status=PHOrbSolveMultiFishing(board,trial,nullptr,multiTiming,PHOrbMultiFishingMaxExchanges,
+                            *cancel,multiCandidate,PHOrbMultiFishingMaxGeometryExtra);
+                        candidate=ExecutableMultiFishing(multiCandidate);
+                        auto described=trial; described.fishColor=candidate.fishColor;
+                        const auto wall=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-now).count();
+                        attempt=SearchAttemptTrace(described,status,candidate,uint64_t(wall));
+                        [attempt addEntriesFromDictionary:MultiFishingAttemptDetails(multiCandidate,trial.fishCell)];
+                        attempt[@"exchanges"]=FishingExchangesTrace(candidate); attempt[@"attackQuality"]=@YES;
+                        if (!candidate.fishingExchangeCount) [attempt removeObjectForKey:@"fishColor"];
+                        attempt[@"evaluationBreakdownKnown"]=@(status!=PHOrbSolveStatus::Invalid && status!=PHOrbSolveStatus::Failed);
+                        [attempts addObject:attempt]; [multiAttempts addObject:attempt];
+                    }
+                    ++attempted;
+                    attempt[@"qualityAccepted"]=@NO;
+                    // Normalize only after the stronger search has succeeded.
+                    // Multi zero-exchange routes retain their independent phase
+                    // scope and plan metadata during this original-goal replay.
+                    auto original=trial; original.goals=options.goals;
+                    PHOrbEvaluation checked{}; uint32_t checkedDamage=0; uint8_t checkedContacts=0;
+                    bool valid=false;
+                    if (status==PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
+                        if (multi) {
+                            multiCandidate.route.plan.goals=original.goals;
+                            valid=PHOrbEvaluateMultiFishing(board,multiCandidate.route,original,nullptr,checked);
+                        } else valid=PHOrbEvaluateRoute(board,candidate,original,checked,checkedDamage,checkedContacts) &&
+                            checkedDamage==candidate.thornDamage && checkedContacts==candidate.thornContacts;
+                    }
+                    if (valid) {
+                        attempt[@"originalFirstWaveFours"]=@(checked.firstWaveFours);
+                        attempt[@"originalEvaluation"]=FishingEvaluationTrace(checked,original.goals,multi);
+                    }
+                    if (cancel->load(std::memory_order_relaxed) || std::chrono::steady_clock::now()>=qualityDeadline ||
+                        !valid || candidate.thornDamage>route.thornDamage || !PHOrbPreferAttackQuality(checked,retained)) continue;
+                    // Attempt diagnostics retain the temporary search target;
+                    // execution and final replay use the original full contract.
+                    if (multi) {
+                        multiCandidate.evaluation=checked; candidate=ExecutableMultiFishing(multiCandidate);
+                        multiResult=multiCandidate;
+                    } else PHOrbApplyAttackQualityEvaluation(candidate,checked,original.goals);
+                    route=candidate; selectedOptions=original; selectedMulti=multi;
+                    selectedAttemptIndex=NSInteger(attempts.count)-1; retained=checked;
+                    attempt[@"qualityAccepted"]=@YES;
+                    attackQuality[@"selected"]=@YES; attackQuality[@"reason"]=@"improved";
+                    attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
+                }
+                attackQuality[@"attempts"]=@(attempted);
+                attackQuality[@"multiAttempts"]=@(multiQualityAttempts);
+                attackQuality[@"endReason"]=attackQuality[@"reason"];
+                if ([attackQuality[@"selected"] boolValue]) attackQuality[@"reason"]=@"improved";
+                if (multiQualityAttempts) multiCoverage=@{@"started":@YES,@"attackQuality":@YES,
+                    @"attemptedCells":@(multiQualityAttempts),@"budgetMS":@(qualityBudget),
+                    @"sharedWithSingleTake":@YES,@"soloRetry":@NO,@"endReason":attackQuality[@"endReason"]};
+                attackQuality[@"wallElapsedMS"]=@(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now()-qualityStart).count());
+            }
+        }
         // Retain the original configured/shared budget for existing callers.
         // The selected attempt separately records its actual slice/retry budget.
         selectedOptions.milliseconds = options.milliseconds;
@@ -1156,6 +1275,7 @@ struct EightPreparationState {
                 cancel->load(std::memory_order_relaxed)) return;
             NSMutableDictionary *trace = [session->_searchTrace mutableCopy];
             trace[@"candidateAttempts"] = [attempts copy];
+            trace[@"attackQuality"] = [attackQuality copy];
             trace[@"selectedAttemptIndex"] = @(selectedAttemptIndex);
             trace[@"selectedStatus"] = selectedAttempt[@"status"] ?: @"none";
             trace[@"soloRetrySkipped"] = soloRetrySkipped;
@@ -1167,6 +1287,7 @@ struct EightPreparationState {
             trace[@"ordinaryStageBudgetMS"] = @(ordinaryStageMS);
             trace[@"fishingReservedBudgetMS"] = @(!solo ? options.milliseconds - ordinaryStageMS : 0);
             trace[@"fishingNotAttemptedReason"] = anyFishingAttempt ? @"" : ![fishingEligibility isEqual:@"eligible"] ? fishingEligibility :
+                [attackQuality[@"started"] boolValue] ? attackQuality[@"reason"] :
                 result == PHOrbSolveStatus::Solved ? @"ordinary-route-satisfied" :
                 ![multiEligibility isEqual:@"eligible"] ? multiEligibility :
                 !solo ? @"shared-search-budget-or-no-feasible-plan" : @"no-feasible-plan";
@@ -1279,6 +1400,7 @@ struct EightPreparationState {
             trace[@"predictedBoard"] = BoardTrace(replay);
             trace[@"colorPhases"] = ColorPhaseTrace(replay,checkedOptions,selectedMulti ? int(route.fishCell) : -1);
             trace[@"evaluation"] = FishingEvaluationTrace(evaluation,checkedOptions.goals,selectedMulti);
+            trace[@"fixedConstraints"] = FixedConstraintTrace(evaluation,checkedOptions.fixedBoard,trace[@"evaluation"][@"scope"]);
             session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = PHOrbSessionPhase::Preview; session->_previewAt = session->_now;
             trace[@"fishing"] = @(route.fishing); trace[@"fishCell"] = @(route.fishCell); trace[@"fishColor"] = @(route.fishColor);
@@ -1334,8 +1456,8 @@ struct EightPreparationState {
                 NSMutableArray<NSString *> *missing = [NSMutableArray array];
                 if (checkedOptions.activity.preparation) [missing addObject:
                     @"未找到只消一組三珠、無後續連鎖且保留轉色珠量足夠的路徑"];
-                if (!evaluation.fixedBoardSatisfied) [missing addObject:
-                    @"未達成此固定步驟的精確消除限制（組數／六色／四顆）；未開始轉珠"];
+                NSString *fixedMissing=FixedConstraintFailureMessage(trace[@"fixedConstraints"]);
+                if (fixedMissing.length) [missing addObject:fixedMissing];
                 NSString *phaseMissing = trace[@"colorPhases"][@"missingInAnyFailedPhaseNames"];
                 if (phaseMissing.length) [missing addObject:[NSString stringWithFormat:@"未達標候選的顏色缺口：%@",phaseMissing]];
                 for (unsigned g = 0; g < checkedOptions.goals.count; ++g) if (route.goalHits[g] < checkedOptions.goals.items[g].count)
@@ -1347,8 +1469,8 @@ struct EightPreparationState {
                 @"未找到符合妨礙處理條件的路徑：毒／猛毒消除最多 %u 顆（猛毒最多 %u 顆）、首批未消爆彈最多 %u 顆%@。未開放執行；可先用技能改盤。\n%@",
                 route.poisonErased, route.mortalPoisonErased, route.unmatchedBombs,
                 route.thornContacts && !PHOrbThornRecoverySatisfied(evaluation,options) ?
-                    (options.allowThornsWithHeartMatch ? @"、荊棘路徑缺少首消有效心珠組" : @"、荊棘路徑未消出心四連") : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。\n%@",
-                route.matchedGoals, route.goalCount, summary] : route.goalCount ?
+                    (options.allowThornsWithHeartMatch ? @"、荊棘路徑缺少首消有效心珠組" : @"、荊棘路徑未消出心四連") : @"", summary] : !route.goalsMet ? [NSString stringWithFormat:@"%@\n%@",
+                GoalsUnmetHeadline(evaluation,checkedOptions.goals), summary] : route.goalCount ?
                 [NSString stringWithFormat:@"盤面目標已達成 %u／%u 項\n%@", route.matchedGoals, route.goalCount, summary] : summary;
             if (!route.hazardsSafe)
                 session->_message = [PoisonFailureContext(evaluation, options) stringByAppendingString:session->_message];

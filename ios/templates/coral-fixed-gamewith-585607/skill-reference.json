@@ -1,0 +1,2543 @@
+{
+  "schema": 1,
+  "status": "static-data-comparison; v90-device-progress-through-B6; B7-target-revision-pending",
+  "reviewedDate": "2026-11-17",
+  "source": {
+    "repository": "Mapaler/PADDashFormation",
+    "revision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+    "retrieved_date": "2026-11-17",
+    "files": {
+      "mon_ja.json": "bd7258e61670b6ec3d36e721c5877e034ff7c20eb207204d4028777ae47d4661",
+      "skill_ja.json": "cb47e1c292eb9abd721986ee46f9ddf9a58d1606917b3cf275ad39d34cdc134c"
+    },
+    "skillPath": "monsters-info/skill_ja.json",
+    "skillURL": "https://raw.githubusercontent.com/Mapaler/PADDashFormation/4b7f486ed3d98c4088e95c3ac64c4a29886db6b9/monsters-info/skill_ja.json",
+    "skillCount": 67423
+  },
+  "comparison": {
+    "upstream_revision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+    "method": "Compare type, maxLevel, initialCooldown, name, description, unk, and params recursively; replace child IDs with child objects only for known composite/evolution types 116,118,232,233,138 and delayed type248. Leaf scalar parameters stay exact. This is data comparison, not product tests or live later-stage observation.",
+    "pairs": [
+      {
+        "ordinary": 27820,
+        "variant": 66700,
+        "name": "幻画具象・アカレルフェアリー",
+        "native_read_stage": 66700,
+        "type": 116,
+        "initialCooldown": 28,
+        "maxLevel": 1,
+        "params": [
+          66701,
+          66702
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "d41ffa96eca64f925e56e9b9c710a1614742d71d99322b12056f79b81d5a3020"
+      },
+      {
+        "ordinary": 27827,
+        "variant": 66706,
+        "name": "フェアリーズフラプ",
+        "native_read_stage": null,
+        "type": 116,
+        "initialCooldown": 2,
+        "maxLevel": 1,
+        "params": [
+          66707,
+          66708,
+          66709,
+          130,
+          66710
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "e8e8dec93ab5e34ecad12d496feaf39adb7344af27e465fd5a67616b898a11a5"
+      },
+      {
+        "ordinary": 63190,
+        "variant": 66715,
+        "name": "ルナティックサービス",
+        "native_read_stage": null,
+        "type": 232,
+        "initialCooldown": 24,
+        "maxLevel": 5,
+        "params": [
+          66716,
+          66718
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "6c2c1f654bcb795780b9a36ace047dccc5080167dc29de3ad02239e7bbdb96d3"
+      },
+      {
+        "ordinary": 63191,
+        "variant": 66716,
+        "name": "ルナティックサービス",
+        "native_read_stage": 66716,
+        "type": 116,
+        "initialCooldown": 24,
+        "maxLevel": 5,
+        "params": [
+          66717,
+          90
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "82c3ce6990067074208525388369f3ae42c674d7b834272799e7654730d77679"
+      },
+      {
+        "ordinary": 63192,
+        "variant": 66718,
+        "name": "ウィズダムサービス",
+        "native_read_stage": null,
+        "type": 116,
+        "initialCooldown": 4,
+        "maxLevel": 1,
+        "params": [
+          66719,
+          66720,
+          66721,
+          66722,
+          66723
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "2d8f625595574bc45a61f97bcfae304cea32a9ef1797cfab49e8c932187e53a2"
+      },
+      {
+        "ordinary": 63220,
+        "variant": 66724,
+        "name": "アラウンドステップサービス",
+        "native_read_stage": 66724,
+        "type": 116,
+        "initialCooldown": 13,
+        "maxLevel": 5,
+        "params": [
+          66725,
+          66726,
+          66727,
+          66728
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "fec8b352e0bb0dabba8c4e918fac196d1a726019ac9f808fcbea0871bd738b3b"
+      },
+      {
+        "ordinary": 63241,
+        "variant": 66729,
+        "name": "慌ただしい接客",
+        "native_read_stage": 66729,
+        "type": 116,
+        "initialCooldown": 8,
+        "maxLevel": 5,
+        "params": [
+          130,
+          66730,
+          66731,
+          66732,
+          66733,
+          66734
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "b4c0edecdd43313708ef57c2207e839147ae3f784c59ce96d1ceef848cd31490"
+      },
+      {
+        "ordinary": 62494,
+        "variant": 66735,
+        "name": "月華咲乱・ポピー",
+        "native_read_stage": 66735,
+        "type": 116,
+        "initialCooldown": 32,
+        "maxLevel": 5,
+        "params": [
+          66736,
+          66737,
+          66738,
+          66739
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "92041c18acf3a1c21157022384d22c2faf2f4e4bff9c6561aee56cea1c480f46"
+      },
+      {
+        "ordinary": 62502,
+        "variant": 66740,
+        "name": "スピリチュアルソーレス",
+        "native_read_stage": null,
+        "type": 116,
+        "initialCooldown": 5,
+        "maxLevel": 1,
+        "params": [
+          66741,
+          66742,
+          66743,
+          66744
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "d0af4af12bec78a71dc9d8d77945ff07816894f40761a2a66cbd9b1ae1a92aba"
+      },
+      {
+        "ordinary": 61754,
+        "variant": 66752,
+        "name": "アローンランチ",
+        "native_read_stage": 66752,
+        "type": 116,
+        "initialCooldown": 5,
+        "maxLevel": 1,
+        "params": [
+          66753,
+          66754
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "0bd6e5fa76f61f5942e90b3f359a59ec22bbf5f7080c1cf4d76c39d2aedb8b63"
+      },
+      {
+        "ordinary": 63251,
+        "variant": 66755,
+        "name": "龍舌の一品",
+        "native_read_stage": 66755,
+        "type": 116,
+        "initialCooldown": 4,
+        "maxLevel": 1,
+        "params": [
+          66756,
+          66757
+        ],
+        "recursive_data_equal": true,
+        "old_pinned_ordinary_equals_current": true,
+        "canonical_sha256": "7a6d279f9db0d172087a5f376ba7bd4eb688f5257fd5c41c51aff0bd5387786f"
+      }
+    ],
+    "device_verified": false
+  },
+  "deviceObservation": {
+    "dylibVersion": "0.5.50-orbs",
+    "gameTarget": "jp.gungho.pad-ios-23.6.1-107553",
+    "dungeon": 7801,
+    "subDungeon": 1,
+    "wave": 0,
+    "skillsUsed": 0,
+    "puzzlesCompleted": 0,
+    "fixedPlanConsumed": false,
+    "rejected": {
+      "slot": 2,
+      "source": "assist",
+      "expected": 61754,
+      "actual": 66752,
+      "charge": 14,
+      "totalCooldown": 14
+    },
+    "members": [
+      {
+        "slot": 1,
+        "number": 13828,
+        "catalogIDs": [
+          90013928,
+          90013354
+        ],
+        "rootSkillIDs": [
+          66715,
+          66748
+        ],
+        "skillIDs": [
+          66716,
+          66748
+        ],
+        "catalogCooldown": [
+          20,
+          22
+        ],
+        "bodyCooldown": 20,
+        "totalCooldown": 42,
+        "charge": 24,
+        "stage": [
+          0,
+          0
+        ]
+      },
+      {
+        "slot": 2,
+        "number": 13876,
+        "catalogIDs": [
+          90013976,
+          90013719
+        ],
+        "rootSkillIDs": [
+          66724,
+          66752
+        ],
+        "skillIDs": [
+          66724,
+          66752
+        ],
+        "catalogCooldown": [
+          9,
+          5
+        ],
+        "bodyCooldown": 9,
+        "totalCooldown": 14,
+        "charge": 14,
+        "stage": [
+          0,
+          0
+        ]
+      },
+      {
+        "slot": 3,
+        "number": 13744,
+        "catalogIDs": [
+          90013844,
+          90012725
+        ],
+        "rootSkillIDs": [
+          66735,
+          66758
+        ],
+        "skillIDs": [
+          66735,
+          66758
+        ],
+        "catalogCooldown": [
+          28,
+          12
+        ],
+        "bodyCooldown": 28,
+        "totalCooldown": 40,
+        "charge": 24,
+        "stage": [
+          0,
+          0
+        ]
+      },
+      {
+        "slot": 4,
+        "number": 13878,
+        "catalogIDs": [
+          90013978,
+          90013979
+        ],
+        "rootSkillIDs": [
+          66729,
+          66755
+        ],
+        "skillIDs": [
+          66729,
+          66755
+        ],
+        "catalogCooldown": [
+          4,
+          4
+        ],
+        "bodyCooldown": 4,
+        "totalCooldown": 8,
+        "charge": 8,
+        "stage": [
+          0,
+          0
+        ]
+      },
+      {
+        "slot": 5,
+        "number": 8476,
+        "catalogIDs": [
+          90008476,
+          90014217
+        ],
+        "rootSkillIDs": [
+          66700,
+          66745
+        ],
+        "skillIDs": [
+          66700,
+          66745
+        ],
+        "catalogCooldown": [
+          28,
+          28
+        ],
+        "bodyCooldown": 28,
+        "totalCooldown": 56,
+        "charge": 24,
+        "stage": [
+          0,
+          0
+        ]
+      },
+      {
+        "slot": 6,
+        "number": 8476,
+        "catalogIDs": [
+          90008476,
+          90014217
+        ],
+        "rootSkillIDs": [
+          66700,
+          66745
+        ],
+        "skillIDs": [
+          66700,
+          66745
+        ],
+        "catalogCooldown": [
+          28,
+          28
+        ],
+        "bodyCooldown": 28,
+        "totalCooldown": 56,
+        "charge": 24,
+        "stage": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "skillRecords": [
+    {
+      "id": 90,
+      "name": "全ドロップ強化共通",
+      "description": "",
+      "type": 140,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        63,
+        6
+      ]
+    },
+    {
+      "id": 130,
+      "name": "",
+      "description": "",
+      "type": 172,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 27820,
+      "name": "幻画具象・アカレルフェアリー",
+      "description": "サブの時にリーダーと入れ替わる。\n最終段階に変身。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 28,
+      "unk": "",
+      "params": [
+        27821,
+        27822
+      ]
+    },
+    {
+      "id": 27821,
+      "name": "",
+      "description": "",
+      "type": 93,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 27822,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        8477
+      ]
+    },
+    {
+      "id": 27826,
+      "name": "",
+      "description": "",
+      "type": 230,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1,
+        500
+      ]
+    },
+    {
+      "id": 27827,
+      "name": "フェアリーズフラプ",
+      "description": "1ターンの間、自分の攻撃力が5倍、ダメージ上限値が600億、\nダメージ無効を貫通。[ロック]を解除し、[火][水][木][光][闇]|5属性|[回復]を4個ずつ生成。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 2,
+      "unk": "",
+      "params": [
+        27826,
+        27830,
+        27828,
+        130,
+        27829
+      ]
+    },
+    {
+      "id": 27828,
+      "name": "",
+      "description": "",
+      "type": 191,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1
+      ]
+    },
+    {
+      "id": 27829,
+      "name": "",
+      "description": "",
+      "type": 141,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        63
+      ]
+    },
+    {
+      "id": 27830,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        600,
+        1
+      ]
+    },
+    {
+      "id": 61754,
+      "name": "アローンランチ",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[神タイプ追加][5色ドロップ強化][全パラメータ強化]を付与。敵の行動を3ターン遅らせる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        61755,
+        61756
+      ]
+    },
+    {
+      "id": 61755,
+      "name": "",
+      "description": "",
+      "type": 18,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": 61756,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        84,
+        137,
+        127
+      ]
+    },
+    {
+      "id": 62494,
+      "name": "月華咲乱・ポピー",
+      "description": "3ターンの間、盤面が7×6マス、回復力が3倍。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 32,
+      "unk": "",
+      "params": [
+        62495,
+        62496,
+        62497,
+        62498
+      ]
+    },
+    {
+      "id": 62495,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        1
+      ]
+    },
+    {
+      "id": 62496,
+      "name": "",
+      "description": "",
+      "type": 50,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        5,
+        300
+      ]
+    },
+    {
+      "id": 62497,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 62498,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        13745
+      ]
+    },
+    {
+      "id": 62502,
+      "name": "スピリチュアルソーレス",
+      "description": "5ターンの間、ダメージを40％軽減、操作時間が2倍、\nルーレットを1個生成。1ターンの間、盤面が7×6マス。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        62503,
+        62504,
+        62505,
+        62506
+      ]
+    },
+    {
+      "id": 62503,
+      "name": "",
+      "description": "",
+      "type": 3,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        40
+      ]
+    },
+    {
+      "id": 62504,
+      "name": "",
+      "description": "",
+      "type": 132,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        0,
+        200
+      ]
+    },
+    {
+      "id": 62505,
+      "name": "",
+      "description": "",
+      "type": 207,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 62506,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": 63184,
+      "name": "",
+      "description": "",
+      "type": 260,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        7688
+      ]
+    },
+    {
+      "id": 63185,
+      "name": "",
+      "description": "",
+      "type": 278,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        10
+      ]
+    },
+    {
+      "id": 63190,
+      "name": "ルナティックサービス",
+      "description": "10ターンの間、超重力を無効化。\n全ドロップを強化。スキルが進化。",
+      "type": 232,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        63191,
+        63192
+      ]
+    },
+    {
+      "id": 63191,
+      "name": "ルナティックサービス",
+      "description": "10ターンの間、超重力を無効化。\n全ドロップを強化。スキルが進化。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        63185,
+        90
+      ]
+    },
+    {
+      "id": 63192,
+      "name": "ウィズダムサービス",
+      "description": "2ターンの間、ダメージ吸収と属性吸収を無効化、\n盤面が6×5マス。消せないドロップと覚醒無効を全回復。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 4,
+      "unk": "",
+      "params": [
+        63193,
+        63200,
+        63194,
+        63195,
+        63184
+      ]
+    },
+    {
+      "id": 63193,
+      "name": "",
+      "description": "",
+      "type": 173,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 63194,
+      "name": "",
+      "description": "",
+      "type": 196,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9999
+      ]
+    },
+    {
+      "id": 63195,
+      "name": "",
+      "description": "",
+      "type": 117,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        0,
+        0,
+        0,
+        9999
+      ]
+    },
+    {
+      "id": 63200,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": 63220,
+      "name": "アラウンドステップサービス",
+      "description": "9ターンの間、最大HPが1.5倍、[攻撃タイプ]の攻撃力が5倍、ダメージ\n上限値が220億。自分以外のスキルが1ターン溜まる。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 13,
+      "unk": "",
+      "params": [
+        63221,
+        63222,
+        63223,
+        63224
+      ]
+    },
+    {
+      "id": 63221,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        150
+      ]
+    },
+    {
+      "id": 63222,
+      "name": "",
+      "description": "",
+      "type": 88,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        6,
+        500
+      ]
+    },
+    {
+      "id": 63223,
+      "name": "",
+      "description": "",
+      "type": 263,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        220,
+        0,
+        64
+      ]
+    },
+    {
+      "id": 63224,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": 63241,
+      "name": "慌ただしい接客",
+      "description": "[ロック]を解除し、盤面を[火][水][木][光][闇]|5属性|[回復]に変化。1ターンの間、最大HPと\n回復力が3倍、自分のダメージ上限値が900億。シールドを2つ破壊。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 8,
+      "unk": "",
+      "params": [
+        130,
+        63245,
+        63242,
+        63243,
+        63244,
+        63246
+      ]
+    },
+    {
+      "id": 63242,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        300
+      ]
+    },
+    {
+      "id": 63243,
+      "name": "",
+      "description": "",
+      "type": 50,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        5,
+        300
+      ]
+    },
+    {
+      "id": 63244,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        900,
+        1
+      ]
+    },
+    {
+      "id": 63245,
+      "name": "",
+      "description": "",
+      "type": 71,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        -1
+      ]
+    },
+    {
+      "id": 63246,
+      "name": "",
+      "description": "",
+      "type": 272,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2
+      ]
+    },
+    {
+      "id": 63251,
+      "name": "龍舌の一品",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[アフタヌーンティー][5色ドロップ強化][5色攻撃強化][ガードブレイク]を付与。自分以外のスキルが2ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 4,
+      "unk": "",
+      "params": [
+        63252,
+        63253
+      ]
+    },
+    {
+      "id": 63252,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 63253,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        132,
+        137,
+        81,
+        44
+      ]
+    },
+    {
+      "id": 66700,
+      "name": "幻画具象・アカレルフェアリー",
+      "description": "サブの時にリーダーと入れ替わる。\n最終段階に変身。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 28,
+      "unk": "",
+      "params": [
+        66701,
+        66702
+      ]
+    },
+    {
+      "id": 66701,
+      "name": "",
+      "description": "",
+      "type": 93,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": []
+    },
+    {
+      "id": 66702,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        8477
+      ]
+    },
+    {
+      "id": 66706,
+      "name": "フェアリーズフラプ",
+      "description": "1ターンの間、自分の攻撃力が5倍、ダメージ上限値が600億、\nダメージ無効を貫通。[ロック]を解除し、[火][水][木][光][闇]|5属性|[回復]を4個ずつ生成。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 2,
+      "unk": "",
+      "params": [
+        66707,
+        66708,
+        66709,
+        130,
+        66710
+      ]
+    },
+    {
+      "id": 66707,
+      "name": "",
+      "description": "",
+      "type": 230,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1,
+        500
+      ]
+    },
+    {
+      "id": 66708,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        600,
+        1
+      ]
+    },
+    {
+      "id": 66709,
+      "name": "",
+      "description": "",
+      "type": 191,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1
+      ]
+    },
+    {
+      "id": 66710,
+      "name": "",
+      "description": "",
+      "type": 141,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        4,
+        63
+      ]
+    },
+    {
+      "id": 66715,
+      "name": "ルナティックサービス",
+      "description": "10ターンの間、超重力を無効化。\n全ドロップを強化。スキルが進化。",
+      "type": 232,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        66716,
+        66718
+      ]
+    },
+    {
+      "id": 66716,
+      "name": "ルナティックサービス",
+      "description": "10ターンの間、超重力を無効化。\n全ドロップを強化。スキルが進化。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 24,
+      "unk": "",
+      "params": [
+        66717,
+        90
+      ]
+    },
+    {
+      "id": 66717,
+      "name": "",
+      "description": "",
+      "type": 278,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        10
+      ]
+    },
+    {
+      "id": 66718,
+      "name": "ウィズダムサービス",
+      "description": "2ターンの間、ダメージ吸収と属性吸収を無効化、\n盤面が6×5マス。消せないドロップと覚醒無効を全回復。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 4,
+      "unk": "",
+      "params": [
+        66719,
+        66720,
+        66721,
+        66722,
+        66723
+      ]
+    },
+    {
+      "id": 66719,
+      "name": "",
+      "description": "",
+      "type": 173,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 66720,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": 66721,
+      "name": "",
+      "description": "",
+      "type": 196,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9999
+      ]
+    },
+    {
+      "id": 66722,
+      "name": "",
+      "description": "",
+      "type": 117,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        0,
+        0,
+        0,
+        9999
+      ]
+    },
+    {
+      "id": 66723,
+      "name": "",
+      "description": "",
+      "type": 260,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        7688
+      ]
+    },
+    {
+      "id": 66724,
+      "name": "アラウンドステップサービス",
+      "description": "9ターンの間、最大HPが1.5倍、[攻撃タイプ]の攻撃力が5倍、ダメージ\n上限値が220億。自分以外のスキルが1ターン溜まる。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 13,
+      "unk": "",
+      "params": [
+        66725,
+        66726,
+        66727,
+        66728
+      ]
+    },
+    {
+      "id": 66725,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        150
+      ]
+    },
+    {
+      "id": 66726,
+      "name": "",
+      "description": "",
+      "type": 88,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        6,
+        500
+      ]
+    },
+    {
+      "id": 66727,
+      "name": "",
+      "description": "",
+      "type": 263,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        9,
+        220,
+        0,
+        64
+      ]
+    },
+    {
+      "id": 66728,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": 66729,
+      "name": "慌ただしい接客",
+      "description": "[ロック]を解除し、盤面を[火][水][木][光][闇]|5属性|[回復]に変化。1ターンの間、最大HPと\n回復力が3倍、自分のダメージ上限値が900億。シールドを2つ破壊。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 8,
+      "unk": "",
+      "params": [
+        130,
+        66730,
+        66731,
+        66732,
+        66733,
+        66734
+      ]
+    },
+    {
+      "id": 66730,
+      "name": "",
+      "description": "",
+      "type": 71,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        -1
+      ]
+    },
+    {
+      "id": 66731,
+      "name": "",
+      "description": "",
+      "type": 237,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        300
+      ]
+    },
+    {
+      "id": 66732,
+      "name": "",
+      "description": "",
+      "type": 50,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        5,
+        300
+      ]
+    },
+    {
+      "id": 66733,
+      "name": "",
+      "description": "",
+      "type": 258,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        900,
+        1
+      ]
+    },
+    {
+      "id": 66734,
+      "name": "",
+      "description": "",
+      "type": 272,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2
+      ]
+    },
+    {
+      "id": 66735,
+      "name": "月華咲乱・ポピー",
+      "description": "3ターンの間、盤面が7×6マス、回復力が3倍。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+      "type": 116,
+      "maxLevel": 5,
+      "initialCooldown": 32,
+      "unk": "",
+      "params": [
+        66736,
+        66737,
+        66738,
+        66739
+      ]
+    },
+    {
+      "id": 66736,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        1
+      ]
+    },
+    {
+      "id": 66737,
+      "name": "",
+      "description": "",
+      "type": 50,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        5,
+        300
+      ]
+    },
+    {
+      "id": 66738,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 66739,
+      "name": "",
+      "description": "",
+      "type": 202,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        13745
+      ]
+    },
+    {
+      "id": 66740,
+      "name": "スピリチュアルソーレス",
+      "description": "5ターンの間、ダメージを40％軽減、操作時間が2倍、\nルーレットを1個生成。1ターンの間、盤面が7×6マス。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        66741,
+        66742,
+        66743,
+        66744
+      ]
+    },
+    {
+      "id": 66741,
+      "name": "",
+      "description": "",
+      "type": 3,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        40
+      ]
+    },
+    {
+      "id": 66742,
+      "name": "",
+      "description": "",
+      "type": 132,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        0,
+        200
+      ]
+    },
+    {
+      "id": 66743,
+      "name": "",
+      "description": "",
+      "type": 207,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        5,
+        100,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": 66744,
+      "name": "",
+      "description": "",
+      "type": 244,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": 66752,
+      "name": "アローンランチ",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[神タイプ追加][5色ドロップ強化][全パラメータ強化]を付与。敵の行動を3ターン遅らせる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 5,
+      "unk": "",
+      "params": [
+        66753,
+        66754
+      ]
+    },
+    {
+      "id": 66753,
+      "name": "",
+      "description": "",
+      "type": 18,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": 66754,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        84,
+        137,
+        127
+      ]
+    },
+    {
+      "id": 66755,
+      "name": "龍舌の一品",
+      "description": "^qs^スキル使用時、このアシストが消滅する。^p\n[アフタヌーンティー][5色ドロップ強化][5色攻撃強化][ガードブレイク]を付与。自分以外のスキルが2ターン溜まる。",
+      "type": 116,
+      "maxLevel": 1,
+      "initialCooldown": 4,
+      "unk": "",
+      "params": [
+        66756,
+        66757
+      ]
+    },
+    {
+      "id": 66756,
+      "name": "",
+      "description": "",
+      "type": 146,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        2,
+        2
+      ]
+    },
+    {
+      "id": 66757,
+      "name": "",
+      "description": "",
+      "type": 250,
+      "maxLevel": 0,
+      "initialCooldown": 0,
+      "unk": "",
+      "params": [
+        132,
+        137,
+        81,
+        44
+      ]
+    }
+  ],
+  "limitations": [
+    "The initial B1 capture is retained above. A later v90 capture reached B7 after 18 puzzles and 30 confirmed skills; see laterDeviceObservation for transformed forms, evolved skills, leader-swap positions and consumed assists. Corrected B7 targeting and full 15-floor completion remain unverified.",
+    "Recursive semantic equality is a public-data cross-check, not permission to auto-alias arbitrary skills; the plan and native gate still use exact IDs.",
+    "The user imported and ran the preceding v90 template on device through B6. The B7 revision product parser, GUI checks and new regression cases have not been executed."
+  ],
+  "testSuitesExecuted": false,
+  "deviceVerified": false,
+  "nativeVariantProof": {
+    "schema": "padcheaper.coral-native-variant-proof.v1",
+    "date": "2026-11-17",
+    "upstream": {
+      "repository": "Mapaler/PADDashFormation",
+      "revision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+      "files": [
+        {
+          "path": "monsters-info/official-API/ja-card.json",
+          "sha256": "bc2d9234d95c2051634e2d96484ad8a758ea7a30174313ee4311bdd0ab222d2f"
+        },
+        {
+          "path": "monsters-info/official-API/ja-skill.json",
+          "sha256": "ee633a8a3d16d978d9793e1a52d425efe8850f30ea60cac5e7319b26d5cd8b82"
+        },
+        {
+          "path": "monsters-info/official-API/parseCard.js",
+          "sha256": "023b4bf0b9fbe1f8368a68256e017984e84b70dbef4115f5e367953da1ef961a"
+        },
+        {
+          "path": "monsters-info/official-API/parseSkill.js",
+          "sha256": "5330499a18978db0778e813e886c45eccd625da27571e3cbb40e1448befb522d"
+        }
+      ]
+    },
+    "native": {
+      "target": "jp.gungho.pad-ios-23.6.1-107553",
+      "input_sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+      "database": "build/ios-address-23.6.1/23.6.1/pad.i64",
+      "method": "Read-only IDA decompilation, instruction listing and original-byte reads. No native patches or execution.",
+      "function_provenance": [
+        {
+          "va": "0x1002411cc",
+          "end": "0x1002418a0",
+          "length": 1748,
+          "original_sha256": "f44ac1ca9f5b42bd2a93c9464266f63f0f7eb6c8c2502748d6ae10a82f5e657c",
+          "first64": "ff4304d1fc6f0ba9fa670ca9f85f0da9f6570ea9f44f0fa9fd7b10a9fd030491f30303aaf40302aa887600b008b142f9080140f9a8031af8214c001150f6ff97",
+          "pseudocode_sha256": "03b3b2664c4be5872bcd1f5b09e232227ee847f78cc5c3cede02fdaf9f58936f"
+        },
+        {
+          "va": "0x1004846a0",
+          "end": "0x100484928",
+          "length": 648,
+          "original_sha256": "c55b7a844f5d8c867b5deae50e178d9147e96bfc00ac2c3cd6fd828e186a492d",
+          "first64": "ffc302d1fc6f05a9fa6706a9f85f07a9f65708a9f44f09a9fd7b0aa9fd830291f70307aaf60305aaf50304aaf80303aafa0302aaf40300aab90b40f9ff7f03a9",
+          "pseudocode_sha256": "d8fc722184d2e6ba5774c553f4ed986f356c4d82c3289bd9037906b7ea04c3c6"
+        },
+        {
+          "va": "0x1005a1588",
+          "end": "0x1005a2260",
+          "length": 3288,
+          "original_sha256": "ce17b38a89c49f4cf6df54e76e771d639729e4b4317affe45e180e91b65de9e2",
+          "first64": "ff0305d1fc6f0ea9fa670fa9f85f10a9f65711a9f44f12a9fd7b13a9fdc30491f50302aaf30301aaf40300aabf0319f80820a052a88318b8bfe318383f140039",
+          "pseudocode_sha256": "f2b76c977bf3a799a691591d0216409e71e3efee7230226e5e13d9b334446cda"
+        },
+        {
+          "va": "0x1005a2f78",
+          "end": "0x1005a3204",
+          "length": 652,
+          "original_sha256": "365db08488b7ac41cdf6e4fc661deb9af36e791ae292144e0debc576da766a9e",
+          "first64": "fc6fbca9f65701a9f44f02a9fd7b03a9fdc30091ff030dd1f40302aaf50301aaf30300aae003009121200191024c80528b042394a022019181220191024c8052",
+          "pseudocode_sha256": "1dde37001bcb0cd679a345408070f05008135bb4c67452a49237b529758e6a72"
+        },
+        {
+          "va": "0x1005c60a4",
+          "end": "0x1005cb498",
+          "length": 21492,
+          "original_sha256": "c093a16a319be057fa4b5c9a0cb73b5432cc39d125c0395c9a020dae16e06175",
+          "first64": "ffc303d1eb2b076de923086dfc6f09a9fa670aa9f85f0ba9f6570ca9f44f0da9fd7b0ea9fd830391f70304aafc0303aae21b00f9f80301aaf30300aa685a0090",
+          "pseudocode_sha256": "94adf317315805fd979ba06f0c080daaf15dbde6eea06ce31d8435b453a8c11a"
+        },
+        {
+          "va": "0x1005c4bcc",
+          "end": "0x1005c5094",
+          "length": 1224,
+          "original_sha256": "5aae44f092cce097409bd0e5fc9a3125ef07e65f84fa4acabe0e5d7f95cc4486",
+          "first64": "e923b96dfc6f01a9fa6702a9f85f03a9f65704a9f44f05a9fd7b06a9fd830191f30301aa083840f9280008cb08c542d108c107d108fd44d3e9738b52499cba72",
+          "pseudocode_sha256": "5be70ae27bcc80dc4f8c29a71a0f111cbb45fc6f8239ac6e01563337dc480f04"
+        }
+      ],
+      "key_byte_evidence": [
+        {
+          "purpose": "read protected source slot at +184",
+          "va": "0x1005a15e8",
+          "length": 12,
+          "original_bytes": "60e20291a33eff97f50300aa",
+          "sha256": "7b25e6b5f74010d8bf9722ba7dea075403487548219f36bfd0dbe65f72b78420",
+          "instructions": [
+            "0x1005a15e8: ADD             X0, X19, #0xB8",
+            "0x1005a15ec: BL              sub_100571078",
+            "0x1005a15f0: MOV             X21, X0"
+          ]
+        },
+        {
+          "purpose": "query native dungeon fixed source",
+          "va": "0x1005a1694",
+          "length": 20,
+          "original_bytes": "e2c30191e3430191e10315aacb7ef29760090034",
+          "sha256": "5879667a937fff420a57b0b1c4c5fb0370b3c1e75fdb395f4e6ca1f52f9f7139",
+          "instructions": [
+            "0x1005a1694: ADD             X2, SP, #0x130+var_C0",
+            "0x1005a1698: ADD             X3, SP, #0x130+var_E0",
+            "0x1005a169c: MOV             X1, X21",
+            "0x1005a16a0: BL              sub_1002411CC",
+            "0x1005a16a4: CBZ             W0, loc_1005A17D0"
+          ]
+        },
+        {
+          "purpose": "retain source variant across permanent transformation",
+          "va": "0x1005a1ae0",
+          "length": 92,
+          "original_bytes": "68d09b526863a872a87e289b09fd7fd308fd72930801090be863007908f09152e002088be10315aad938fe9760620491f43dff97f50300aaa0431ab8e8634079680000341555181bb5431ab808f09152e002088be10315aacd38fe97",
+          "sha256": "0d08763c466ed402c00e5ef0749f9cdae46fd838c9cb284f600dccae578a614e",
+          "instructions": [
+            "0x1005a1ae0: MOV             W8, #0x431BDE83",
+            "0x1005a1ae8: SMULL           X8, W21, W8",
+            "0x1005a1aec: LSR             X9, X8, #0x3F ; '?'",
+            "0x1005a1af0: ASR             X8, X8, #0x32 ; '2'",
+            "0x1005a1af4: ADD             W8, W8, W9",
+            "0x1005a1af8: STRH            W8, [SP,#0x30]",
+            "0x1005a1afc: MOV             W8, #(unk_101B5AF90 - 0x101B52010)",
+            "0x1005a1b00: ADD             X0, X23, X8; unk_101B5AF90 ; int",
+            "0x1005a1b04: MOV             X1, X21; char",
+            "0x1005a1b08: BL              sub_10052FE6C",
+            "0x1005a1b0c: ADD             X0, X19, #0x118",
+            "0x1005a1b10: BL              sub_1005712E0",
+            "0x1005a1b14: MOV             X21, X0",
+            "0x1005a1b18: STUR            W0, [X29,#var_5C]",
+            "0x1005a1b1c: LDRH            W8, [SP,#0x30]",
+            "0x1005a1b20: CBZ             W8, loc_1005A1B2C",
+            "0x1005a1b24: MADD            W21, W8, W24, W21",
+            "0x1005a1b28: STUR            W21, [X29,#var_5C]",
+            "0x1005a1b2c: MOV             W8, #(unk_101B5AF90 - 0x101B52010)",
+            "0x1005a1b30: ADD             X0, X23, X8; unk_101B5AF90 ; int",
+            "0x1005a1b34: MOV             X1, X21; char",
+            "0x1005a1b38: BL              sub_10052FE6C"
+          ]
+        },
+        {
+          "purpose": "exchange source/form/stage/charge protected block",
+          "va": "0x1005a2f9c",
+          "length": 48,
+          "original_bytes": "e003009121200191024c80528b042394a022019181220191024c80528704239480220191e1030091024c805283042394",
+          "sha256": "8154dfb1ebd91c33600763d7319ef526d2bd87fa66a8c601c1e7c6855e1467a5",
+          "instructions": [
+            "0x1005a2f9c: MOV             X0, SP; __dst",
+            "0x1005a2fa0: ADD             X1, X1, #0x48 ; 'H'; __src",
+            "0x1005a2fa4: MOV             W2, #0x260; __n",
+            "0x1005a2fa8: BL              _memcpy",
+            "0x1005a2fac: ADD             X0, X21, #0x48 ; 'H'; __dst",
+            "0x1005a2fb0: ADD             X1, X20, #0x48 ; 'H'; __src",
+            "0x1005a2fb4: MOV             W2, #0x260; __n",
+            "0x1005a2fb8: BL              _memcpy",
+            "0x1005a2fbc: ADD             X0, X20, #0x48 ; 'H'; __dst",
+            "0x1005a2fc0: MOV             X1, SP; __src",
+            "0x1005a2fc4: MOV             W2, #0x260; __n",
+            "0x1005a2fc8: BL              _memcpy"
+          ]
+        },
+        {
+          "purpose": "reload both exchanged members",
+          "va": "0x1005a3174",
+          "length": 32,
+          "original_bytes": "e00313aae10315aa0200801202f9ff97e00313aae10314aa02008012fef8ff97",
+          "sha256": "e300b003335d4740e61a2661c5aa4d82185f48d6e9eee6daf7ed3dcbe7f0d7d2",
+          "instructions": [
+            "0x1005a3174: MOV             X0, X19",
+            "0x1005a3178: MOV             X1, X21",
+            "0x1005a317c: MOV             W2, #0xFFFFFFFF",
+            "0x1005a3180: BL              sub_1005A1588",
+            "0x1005a3184: MOV             X0, X19",
+            "0x1005a3188: MOV             X1, X20",
+            "0x1005a318c: MOV             W2, #0xFFFFFFFF",
+            "0x1005a3190: BL              sub_1005A1588"
+          ]
+        },
+        {
+          "purpose": "type202 reads native target ID",
+          "va": "0x1005c6ff4",
+          "length": 12,
+          "original_bytes": "e81b40f9081540b908f50135",
+          "sha256": "ac3dad37c572608862592d6046d822f881555fd75a176561f000d4627b495f2a",
+          "instructions": [
+            "0x1005c6ff4: LDR             X8, [SP,#0xE0+var_B0]",
+            "0x1005c6ff8: LDR             W8, [X8,#0x14]",
+            "0x1005c6ffc: CBNZ            W8, loc_1005CAE9C"
+          ]
+        },
+        {
+          "purpose": "type202 writes permanent form +280",
+          "va": "0x1005cae9c",
+          "length": 12,
+          "original_bytes": "00630491013d00124c87fe97",
+          "sha256": "71237f6e3e83fed7ee6cb55ddf2f7d51d83ecea0bcff438fb5084b78bb007d66",
+          "instructions": [
+            "0x1005cae9c: ADD             X0, X24, #0x118",
+            "0x1005caea0: AND             W1, W8, #0xFFFF",
+            "0x1005caea4: BL              sub_10056CBD4"
+          ]
+        }
+      ]
+    },
+    "raw_card_field_indices": {
+      "catalog": 0,
+      "name": 1,
+      "active_skill": 25,
+      "leader_skill": 26
+    },
+    "raw_card_records": [
+      {
+        "catalog": 90008476,
+        "display_number": 8476,
+        "variant": 90,
+        "active_skill": 66700,
+        "leader_skill": 66703,
+        "name": "水彩幻画師・アトリ",
+        "raw_prefix_0_to_26": [
+          90008476,
+          "水彩幻画師・アトリ",
+          2,
+          1,
+          0,
+          1,
+          -1,
+          7,
+          28,
+          5,
+          99,
+          5250,
+          100,
+          5550,
+          578,
+          3481,
+          1,
+          462,
+          2786,
+          1,
+          101,
+          587,
+          1,
+          20000000,
+          2.5,
+          66700,
+          66703
+        ]
+      },
+      {
+        "catalog": 90008477,
+        "display_number": 8477,
+        "variant": 90,
+        "active_skill": 66706,
+        "leader_skill": 66711,
+        "name": "彩妖精の水彩幻画師・アトリ",
+        "raw_prefix_0_to_26": [
+          90008477,
+          "彩妖精の水彩幻画師・アトリ",
+          2,
+          1,
+          0,
+          1,
+          -1,
+          8,
+          38,
+          5,
+          99,
+          6900,
+          100,
+          7200,
+          871,
+          6318,
+          1,
+          574,
+          3634,
+          1,
+          197,
+          1172,
+          1,
+          20000000,
+          2.5,
+          66706,
+          66711
+        ]
+      },
+      {
+        "catalog": 90012725,
+        "display_number": 12625,
+        "variant": 90,
+        "active_skill": 66758,
+        "leader_skill": 0,
+        "name": "テキーラギムレットの宝杯",
+        "raw_prefix_0_to_26": [
+          90012725,
+          "テキーラギムレットの宝杯",
+          0,
+          -1,
+          0,
+          6,
+          -1,
+          7,
+          70,
+          5,
+          99,
+          11550,
+          100,
+          11850,
+          2897,
+          8691,
+          1,
+          1712,
+          5135,
+          1,
+          4,
+          12,
+          1,
+          10000000,
+          2.5,
+          66758,
+          0
+        ]
+      },
+      {
+        "catalog": 90013354,
+        "display_number": 13254,
+        "variant": 90,
+        "active_skill": 66748,
+        "leader_skill": 0,
+        "name": "初詣の絢星霊・フィリスのかるた札",
+        "raw_prefix_0_to_26": [
+          90013354,
+          "初詣の絢星霊・フィリスのかるた札",
+          3,
+          -1,
+          0,
+          1,
+          -1,
+          10,
+          100,
+          5,
+          1,
+          16500,
+          100,
+          16800,
+          11111,
+          11111,
+          1,
+          1111,
+          1111,
+          1,
+          1111,
+          1111,
+          1,
+          20000000,
+          2.5,
+          66748,
+          0
+        ]
+      },
+      {
+        "catalog": 90013719,
+        "display_number": 13619,
+        "variant": 90,
+        "active_skill": 66752,
+        "leader_skill": 37216,
+        "name": "ひとり読書の地王神・クロノスの弁当箱",
+        "raw_prefix_0_to_26": [
+          90013719,
+          "ひとり読書の地王神・クロノスの弁当箱",
+          4,
+          -1,
+          0,
+          5,
+          7,
+          8,
+          80,
+          5,
+          1,
+          13200,
+          100,
+          13500,
+          9000,
+          9000,
+          1,
+          5000,
+          5000,
+          1,
+          500,
+          500,
+          1,
+          10000000,
+          2.5,
+          66752,
+          37216
+        ]
+      },
+      {
+        "catalog": 90013844,
+        "display_number": 13744,
+        "variant": 90,
+        "active_skill": 66735,
+        "leader_skill": 62499,
+        "name": "ポピーの星光華",
+        "raw_prefix_0_to_26": [
+          90013844,
+          "ポピーの星光華",
+          0,
+          2,
+          0,
+          1,
+          -1,
+          6,
+          22,
+          5,
+          99,
+          4200,
+          100,
+          4500,
+          2118,
+          6354,
+          1,
+          479,
+          1436,
+          1,
+          88,
+          264,
+          1,
+          4000000,
+          2.5,
+          66735,
+          62499
+        ]
+      },
+      {
+        "catalog": 90013845,
+        "display_number": 13745,
+        "variant": 90,
+        "active_skill": 66740,
+        "leader_skill": 62508,
+        "name": "ポピーの慰星霊・ケイシー",
+        "raw_prefix_0_to_26": [
+          90013845,
+          "ポピーの慰星霊・ケイシー",
+          0,
+          3,
+          0,
+          1,
+          -1,
+          7,
+          32,
+          5,
+          99,
+          5850,
+          100,
+          6150,
+          2785,
+          8354,
+          1,
+          1145,
+          3436,
+          1,
+          179,
+          537,
+          1,
+          4000000,
+          2.5,
+          66740,
+          62508
+        ]
+      },
+      {
+        "catalog": 90013928,
+        "display_number": 13828,
+        "variant": 90,
+        "active_skill": 66715,
+        "leader_skill": 63196,
+        "name": "刺激的な執事とメイド・ソロモン＆メルナ",
+        "raw_prefix_0_to_26": [
+          90013928,
+          "刺激的な執事とメイド・ソロモン＆メルナ",
+          4,
+          3,
+          0,
+          7,
+          6,
+          8,
+          40,
+          5,
+          99,
+          7200,
+          100,
+          7500,
+          2044,
+          6132,
+          1,
+          1471,
+          4414,
+          1,
+          3,
+          9,
+          1,
+          5000000,
+          2.5,
+          66715,
+          63196
+        ]
+      },
+      {
+        "catalog": 90013976,
+        "display_number": 13876,
+        "variant": 90,
+        "active_skill": 66724,
+        "leader_skill": 63225,
+        "name": "駆け回るメイド・ディーナ",
+        "raw_prefix_0_to_26": [
+          90013976,
+          "駆け回るメイド・ディーナ",
+          1,
+          0,
+          0,
+          6,
+          4,
+          8,
+          40,
+          5,
+          99,
+          7200,
+          100,
+          7500,
+          2068,
+          6205,
+          1,
+          1522,
+          4565,
+          1,
+          2,
+          7,
+          1,
+          5000000,
+          2.5,
+          66724,
+          63225
+        ]
+      },
+      {
+        "catalog": 90013978,
+        "display_number": 13878,
+        "variant": 90,
+        "active_skill": 66729,
+        "leader_skill": 63247,
+        "name": "てんてこまいな執事・リクウ",
+        "raw_prefix_0_to_26": [
+          90013978,
+          "てんてこまいな執事・リクウ",
+          0,
+          2,
+          0,
+          4,
+          6,
+          8,
+          40,
+          5,
+          99,
+          7200,
+          100,
+          7500,
+          2159,
+          6478,
+          1,
+          1477,
+          4432,
+          1,
+          2,
+          5,
+          1,
+          5000000,
+          2.5,
+          66729,
+          63247
+        ]
+      },
+      {
+        "catalog": 90013979,
+        "display_number": 13879,
+        "variant": 90,
+        "active_skill": 66755,
+        "leader_skill": 37216,
+        "name": "リクウのオムレツ",
+        "raw_prefix_0_to_26": [
+          90013979,
+          "リクウのオムレツ",
+          0,
+          -1,
+          0,
+          4,
+          6,
+          9,
+          90,
+          5,
+          99,
+          14850,
+          100,
+          15150,
+          2159,
+          6478,
+          1,
+          1477,
+          4432,
+          1,
+          2,
+          5,
+          1,
+          10000000,
+          2.5,
+          66755,
+          37216
+        ]
+      },
+      {
+        "catalog": 90014217,
+        "display_number": 14117,
+        "variant": 90,
+        "active_skill": 66745,
+        "leader_skill": 0,
+        "name": "クラブ龍・クラーヴァスのトランプ",
+        "raw_prefix_0_to_26": [
+          90014217,
+          "クラブ龍・クラーヴァスのトランプ",
+          2,
+          -1,
+          0,
+          1,
+          4,
+          8,
+          80,
+          5,
+          99,
+          13200,
+          100,
+          13500,
+          2674,
+          8022,
+          1,
+          1253,
+          3759,
+          1,
+          201,
+          602,
+          1,
+          10000000,
+          2.5,
+          66745,
+          0
+        ]
+      }
+    ],
+    "raw_transform_skills": [
+      {
+        "skill_id": 66702,
+        "raw_record": [
+          "",
+          "",
+          202,
+          0,
+          0,
+          "",
+          8477
+        ]
+      },
+      {
+        "skill_id": 66739,
+        "raw_record": [
+          "",
+          "",
+          202,
+          0,
+          0,
+          "",
+          13845
+        ]
+      }
+    ],
+    "normalization": "Upstream parseSkill.js invokes Card.fixId for type202/236. Thus raw native target13845 becomes normalized display13745; raw target8477 stays8477.",
+    "permanent_transform": {
+      "dispatcher": "0x1005C60A4 case202",
+      "state_offset": 280,
+      "reload": "0x1005A1588",
+      "proof": [
+        "Type202 reads first native skill parameter and writes protected member+280, then calls reload.",
+        "Reload reads protected source slot member+184 and queries fixed source via0x1002411CC; full source is baseCatalog + variant*1000000.",
+        "Reload derives sourceVariant=fullSource/1000000, reads permanent form at member+280 and selects transformedFullCatalog=form+sourceVariant*1000000 through0x10052FE6C.",
+        "The full catalog is passed to0x1004846A0, which forwards it to member initialization0x10048144C."
+      ],
+      "outcomes": [
+        {
+          "from": 90008476,
+          "raw_form": 8477,
+          "to": 90008477,
+          "active_skill": 66706
+        },
+        {
+          "from": 90013844,
+          "raw_form": 13845,
+          "to": 90013845,
+          "active_skill": 66740
+        }
+      ]
+    },
+    "leader_swap": {
+      "dispatcher": "0x1005C60A4 case93 ->0x1005C4BCC ->0x1005A2F78",
+      "proof": [
+        "0x1005A2F78 exchanges member bytes72..679 using three memcpy calls of0x260 bytes.",
+        "This contains source slot+184, permanent form+280, authoritative skill stages+344/+360, charge+456 and use counts+488/+504.",
+        "It then reloads both members via0x1005A1588, rebuilding catalogs from their exchanged source slots. Thus Solomon keeps fixed source variant90 even when its visible slot changes."
+      ],
+      "solomon_catalog": 90013928,
+      "solomon_root": 66715,
+      "root_type": 232,
+      "stage_children": [
+        66716,
+        66718
+      ]
+    },
+    "verification_boundary": "At the time of this native investigation only the initial B1 team was device-observed. Later device evidence is recorded separately in laterDeviceObservation; the native proof itself is not a product test or full-run verification."
+  },
+  "laterDeviceObservation": {
+    "reference": "enemy-reference.json",
+    "dylibVersion": "0.5.50-orbs",
+    "observedProfileID": "coral-fixed-585607-v90",
+    "dungeon": 7801,
+    "subDungeon": 1,
+    "wave": 6,
+    "puzzlesCompleted": 18,
+    "skillsConfirmed": 30,
+    "fixedPlanConsumed": true,
+    "members": [
+      {
+        "slot": 1,
+        "number": 8477,
+        "catalogIDs": [
+          90008477,
+          90014217
+        ],
+        "skillIDs": [
+          66706,
+          66745
+        ],
+        "rootSkillIDs": [
+          66706,
+          66745
+        ],
+        "stage": [
+          0,
+          0
+        ],
+        "cachedStage": [
+          0,
+          0
+        ],
+        "activeAssistCatalogID": 14217,
+        "sourceAssistCatalogID": 14217,
+        "assistRetained": true
+      },
+      {
+        "slot": 2,
+        "number": 13876,
+        "catalogIDs": [
+          90013976,
+          0
+        ],
+        "skillIDs": [
+          66724,
+          0
+        ],
+        "rootSkillIDs": [
+          66724,
+          0
+        ],
+        "stage": [
+          0,
+          0
+        ],
+        "cachedStage": [
+          0,
+          0
+        ],
+        "activeAssistCatalogID": 0,
+        "sourceAssistCatalogID": 13719,
+        "assistRetained": false
+      },
+      {
+        "slot": 3,
+        "number": 13745,
+        "catalogIDs": [
+          90013845,
+          90012725
+        ],
+        "skillIDs": [
+          66740,
+          66758
+        ],
+        "rootSkillIDs": [
+          66740,
+          66758
+        ],
+        "stage": [
+          0,
+          0
+        ],
+        "cachedStage": [
+          0,
+          0
+        ],
+        "activeAssistCatalogID": 12725,
+        "sourceAssistCatalogID": 12725,
+        "assistRetained": true
+      },
+      {
+        "slot": 4,
+        "number": 13878,
+        "catalogIDs": [
+          90013978,
+          0
+        ],
+        "skillIDs": [
+          66729,
+          0
+        ],
+        "rootSkillIDs": [
+          66729,
+          0
+        ],
+        "stage": [
+          0,
+          0
+        ],
+        "cachedStage": [
+          0,
+          0
+        ],
+        "activeAssistCatalogID": 0,
+        "sourceAssistCatalogID": 13979,
+        "assistRetained": false
+      },
+      {
+        "slot": 5,
+        "number": 13828,
+        "catalogIDs": [
+          90013928,
+          90013354
+        ],
+        "skillIDs": [
+          66718,
+          66748
+        ],
+        "rootSkillIDs": [
+          66715,
+          66748
+        ],
+        "stage": [
+          1,
+          0
+        ],
+        "cachedStage": [
+          1,
+          0
+        ],
+        "activeAssistCatalogID": 13354,
+        "sourceAssistCatalogID": 13354,
+        "assistRetained": true
+      },
+      {
+        "slot": 6,
+        "number": 8477,
+        "catalogIDs": [
+          90008477,
+          90014217
+        ],
+        "skillIDs": [
+          66706,
+          66745
+        ],
+        "rootSkillIDs": [
+          66706,
+          66745
+        ],
+        "stage": [
+          0,
+          0
+        ],
+        "cachedStage": [
+          0,
+          0
+        ],
+        "activeAssistCatalogID": 14217,
+        "sourceAssistCatalogID": 14217,
+        "assistRetained": true
+      }
+    ],
+    "limit": "Partial progress through B1–B6; the device stopped at the old B7 target action before its skills or puzzle. This is not corrected-template, full-run, GUI or regression-suite verification."
+  }
+}

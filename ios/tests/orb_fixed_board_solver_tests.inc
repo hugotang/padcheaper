@@ -82,4 +82,49 @@ static void FixedBoardSolverTests() {
         "L-only rejects an additional match even when its required L is present");
     options.fixedBoard.mode = static_cast<PHOrbFixedBoardMode>(255);
     Check(!PHOrbEvaluateWithOptions(six,options,value), "unknown fixed puzzle policy is rejected");
+
+    // Freeze the B5 released layout with one equal-color swap. It is already
+    // feasible but cannot gain a fourth group. Extra quality search must run
+    // within the existing pass budget and retain the original valid fallback.
+    auto finish=FixedBoardFixture(7,6,{
+        2,0,3,4,1,1,2, 2,4,4,4,4,2,3, 2,4,5,3,3,3,4,
+        2,1,5,5,0,2,2, 0,1,5,3,1,3,2, 2,1,5,0,0,0,2});
+    finish.spinnerMask=UINT64_C(1)<<32; finish.spinnerColors=63;
+    finish.fixedStart=5;
+    finish.tapeMask=((UINT64_C(1)<<42)-1) & ~((UINT64_C(1)<<4)|(UINT64_C(1)<<5));
+    for (unsigned i=0;i<42;++i) finish.flags[i]=(finish.tapeMask&(UINT64_C(1)<<i)) ? PHOrbFlagTape : 0;
+    options=PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+    options.steps=12; options.beam=16; options.milliseconds=2000;
+    options.goals=Goals(PHOrbGoalColors,63,6,0); options.goals.items[options.goals.count++]={PHOrbGoalFour,32,1,0};
+    options.fixedBoard={PHOrbFixedBoardMode::FourAttack,63,true};
+    options.recoveryPasses=0; options.backtrackLimit=0;
+    std::atomic_bool cancel{false}; PHOrbRoute baseline{}, improved{};
+    Check(PHOrbSolve(finish,options,cancel,baseline)==PHOrbSolveStatus::Solved && baseline.searchPasses==1,
+        "a frozen valid B5 attack establishes a baseline route without optional passes");
+    options.recoveryPasses=1; options.backtrackLimit=2;
+    Check(PHOrbSolve(finish,options,cancel,improved)==PHOrbSolveStatus::Solved && improved.searchPasses==2 &&
+        improved.backtracks==0 && improved.goalCount==2 && improved.goalsMet && improved.hazardsSafe,
+        "a valid attack still uses its one existing quality recovery without publishing the temporary extra goal");
+    uint32_t damage=0; uint8_t contacts=0;
+    Check(PHOrbEvaluateRoute(finish,improved,options,value,damage,contacts) && value.goalsMet &&
+        value.fixedBoardSatisfied && value.firstWaveColors==63 && value.firstWaveFours==3 && value.heartFours==1 &&
+        improved.count==baseline.count && !damage && !contacts,
+        "an unsuccessful quality improvement retains the exact feasible first-wave-six and heart-four route");
+    options.fixedBoard={}; PHOrbRoute ordinary{};
+    Check(PHOrbSolve(finish,options,cancel,ordinary)==PHOrbSolveStatus::Solved && ordinary.searchPasses==1,
+        "ordinary solved six-color and heart-four search keeps its previous stopping behavior");
+
+    // The separate six-four layout reaches its exact inventory ceiling, so
+    // quality recovery must not spend another pass on an impossible seventh.
+    attack.fixedStart=1;
+    attack.tapeMask=((UINT64_C(1)<<42)-1) & ~UINT64_C(3);
+    for (unsigned i=0;i<42;++i) attack.flags[i]=(attack.tapeMask&(UINT64_C(1)<<i)) ? PHOrbFlagTape : 0;
+    options.fixedBoard={PHOrbFixedBoardMode::FourAttack,63,true};
+    PHOrbRoute ceiling{};
+    Check(PHOrbSolve(attack,options,cancel,ceiling)==PHOrbSolveStatus::Solved && ceiling.searchPasses==1 &&
+        PHOrbEvaluateRoute(attack,ceiling,options,value,damage,contacts) && value.firstWaveFours==6,
+        "a valid attack at its inventory ceiling does not schedule redundant quality recovery");
+    cancel=true;
+    Check(PHOrbSolve(finish,options,cancel,ceiling)==PHOrbSolveStatus::Cancelled && !ceiling.count,
+        "cancelled attack quality search publishes no retained or temporary-goal route");
 }

@@ -1,5 +1,34 @@
 // Included in PHOrbSession.mm's anonymous namespace. Presentation only: keep
 // search statuses and 8P skill/preparation recovery in their existing order.
+NSString *FixedConstraintFailureMessage(NSDictionary *trace) {
+    if (![trace[@"applicable"] boolValue] || [trace[@"satisfied"] boolValue]) return @"";
+    NSMutableArray<NSString *> *details=[NSMutableArray array];
+    for (NSDictionary *deficit in trace[@"deficits"]) {
+        NSString *kind=deficit[@"kind"];
+        if ([kind isEqual:@"first-colors"]) [details addObject:[NSString stringWithFormat:
+            @"固定步驟要求首批消除指定顏色；目前候選的首批缺少%@（須在全部色序成立，後續連鎖不計入此條件）",deficit[@"missingColorNames"]]];
+        else if ([kind isEqual:@"heart-four"]) [details addObject:@"固定步驟要求首批心四連；目前候選未在全部色序達成"];
+        else if ([kind isEqual:@"forbidden-fours"]) [details addObject:[NSString stringWithFormat:
+            @"固定存技步驟禁止四顆消除；目前候選含既有珠連鎖最多有 %u 組四顆消除",[deficit[@"observedMaximum"] unsignedIntValue]]];
+        else if ([kind isEqual:@"single-removal"]) [details addObject:[NSString stringWithFormat:
+            @"固定步驟只允許一組 %u 顆消除，且不得有後續連鎖；目前候選未在全部色序符合（最低首批 %u Combo、盤內 %u Combo、消 %u 顆）",
+            [deficit[@"requiredOrbs"] unsignedIntValue],[trace[@"firstWaveCombosMinimum"] unsignedIntValue],
+            [trace[@"resolvedCombosMinimum"] unsignedIntValue],[trace[@"erasedMinimum"] unsignedIntValue]]];
+        else [details addObject:@"固定步驟的精確消除條件未在全部色序成立"];
+    }
+    return [[details componentsJoinedByString:@"\n"] stringByAppendingString:@"；未開始轉珠"];
+}
+NSString *GoalsUnmetHeadline(const PHOrbEvaluation &evaluation, const PHOrbGoalSet &goals) {
+    if (evaluation.matchedGoals==goals.count) {
+        NSString *constraint=evaluation.fixedBoardSatisfied ? @"其他操作條件" : @"固定步驟的消除限制";
+        return goals.count ? [NSString stringWithFormat:
+            @"盤面目標已達成 %u／%u 項，但%@未達成；未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。",
+            evaluation.matchedGoals,goals.count,constraint] : [NSString stringWithFormat:
+            @"%@未達成；未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。",constraint];
+    }
+    return [NSString stringWithFormat:@"目標僅達成 %u／%u 項，未開放執行。本次搜尋未找到完整路徑，不代表盤面無解。",
+        evaluation.matchedGoals,goals.count];
+}
 NSString *FishingSkipReasonMessage(NSString *reason) {
     if ([reason isEqual:@"mode-not-supported"]) return @"此模式尚未支援取色";
     if ([reason isEqual:@"continuation-manual-once-required"]) return @"3 人協力・單人續玩須在目前操作窗口手動點「轉一次」";

@@ -14,22 +14,30 @@ static void PHProbeFixedPlanStorage(UIWindow *overlay) {
     NSData *data=[NSData dataWithContentsOfFile:[NSBundle.mainBundle pathForResource:@"coral-fixed-plan" ofType:@"json"]];
     NSDictionary *library=data ? importing(profiles(baseline),data,NULL) : nil;
     NSDictionary *profile=library ? named(library,library[@"selected"]) : nil;
-    PHProbeCheck(original && profile && [profile[@"fixedPlan"][@"floors"] count]==15,
-        @"Bundled Coral plan imports all fifteen floors without a formation");
+    PHProbeCheck(original && profile && [profile[@"fixedPlan"][@"floors"] count]==15 &&
+        [profile[@"id"] isEqual:@"coral-fixed-585607-v90-r2"] && [profile[@"dungeon"] isEqual:@7801] &&
+        [profile[@"floor"] isEqual:@1] &&
+        [profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0][@"actions"][0][@"skill"] isEqual:@66752] &&
+        [profile[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0][@"monster"] isEqual:@210524] &&
+        [profile[@"fixedPlan"][@"floors"][12][@"variants"][0][@"stages"][0][@"repeat"][@"until"][@"skill"] isEqual:@66718] &&
+        [[profile[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject][@"repeat"][@"maximumPuzzles"] isEqual:@2],
+        @"Bundled Coral revision imports fifteen floors, native identity and skills, B7 target and bounded B15 finish");
     if (!original || !profile) return;
     @try {
         action(@"orbsProfiles",@{@"library":library,@"settings":profile[@"settings"],@"requestID":@"coral-probe"});
         NSDictionary *saved=snapshot(), *disk=PHProbeJSON(@"config.json");
         NSDictionary *roundtrip=named(profiles(disk),library[@"selected"]);
         PHProbeCheck([saved[@"orbProfileSaveResult"][@"ok"] isEqual:@YES] &&
-            [roundtrip[@"fixedPlan"] isEqual:profile[@"fixedPlan"]] && !roundtrip[@"formation"] &&
+            [roundtrip[@"fixedPlan"] isEqual:profile[@"fixedPlan"]] &&
+            [roundtrip[@"id"] isEqual:@"coral-fixed-585607-v90-r2"] && [roundtrip[@"dungeon"] isEqual:@7801] &&
+            [roundtrip[@"floor"] isEqual:@1] && !roundtrip[@"formation"] &&
             [saved[@"formationLibrary"] isEqual:initial[@"formationLibrary"]] &&
             [saved[@"formationDraft"] isEqual:initial[@"formationDraft"]],
             @"Fixed-plan commit preserves every stage without selecting or creating a replacement team");
         NSData *exported=exporting(roundtrip,NULL);
         NSDictionary *package=exported ? [NSJSONSerialization JSONObjectWithData:exported options:0 error:NULL] : nil;
         PHProbeCheck([package[@"format"] isEqual:@"padcheaper-fixed-plan"] &&
-            [package[@"profile"][@"fixedPlan"] isEqual:profile[@"fixedPlan"]] && !importing(profiles(disk),exported,NULL),
+            [package[@"profile"] isEqual:roundtrip] && !importing(profiles(disk),exported,NULL),
             @"Fixed-plan export and duplicate rejection preserve the saved source and floor order");
         PHOrbProfileEditor *editor=[[NSClassFromString(@"PHOrbProfileEditor") alloc] initWithLibrary:profiles(disk)
             settings:roundtrip[@"settings"] formations:saved[@"formationLibrary"] context:@{} save:^NSString *(NSDictionary *a,NSDictionary *b) { return nil; }];

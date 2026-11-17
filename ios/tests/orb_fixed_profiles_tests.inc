@@ -23,6 +23,138 @@ static void FixedProfilesTests(void) {
     NSDictionary *coral=PHOrbFixedPlanFromPackage(coralPackage,NULL);
     Check(coral && [coral[@"fixedPlan"][@"floors"] count]==15 &&
         [coral[@"fixedPlan"][@"leaderSwap"] isEqual:@5],"actual Coral package imports all fifteen floors and declared swap");
+    if (coral) {
+        NSDictionary *bodySkills=@{@13828:@[@66716,@66718],@13876:@[@66724],@13744:@[@66735],
+            @13745:@[@66740],@13878:@[@66729],@8476:@[@66700],@8477:@[@66706]};
+        NSDictionary *assistSkills=@{@13876:@[@66752],@13878:@[@66755]};
+        NSDictionary *ordinarySkills=@{@66716:@63191,@66718:@63192,@66724:@63220,@66735:@62494,
+            @66740:@62502,@66729:@63241,@66700:@27820,@66706:@27827,@66752:@61754,@66755:@63251};
+        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r2"] &&
+            [coral[@"dungeon"] isEqual:@7801] && [coral[@"floor"] isEqual:@1],
+            "Coral guide-reviewed revision has a distinct ID and the observed native dungeon and sub-dungeon");
+        NSDictionary *finisher=[coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject];
+        Check([finisher[@"id"] isEqual:@"finish-with-riku"] &&
+            [finisher[@"repeat"][@"maximumPuzzles"] isEqual:@2] &&
+            [finisher[@"repeat"][@"until"][@"kind"] isEqual:@"floor_change"] &&
+            [finisher[@"actions"][2][@"when"] isEqual:@"attack_ready"] &&
+            [finisher[@"actions"][2][@"frequency"] isEqual:@"once"],
+            "B15 preserves one ready-window Riku and permits no more than two final puzzles including absorption stalls");
+        NSDictionary *b7Target=coral[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0];
+        Check([b7Target[@"kind"] isEqual:@"target"] && [b7Target[@"target"] isEqual:@"enemy"] &&
+            [b7Target[@"monster"] isEqual:@210524] && ![b7Target[@"optional"] boolValue] &&
+            [b7Target[@"frequency"] isEqual:@"once"],
+            "B7 requires the exact observed special Clammy catalog ID without truncation or wildcard");
+        for (NSUInteger floorIndex=7;floorIndex<=8;++floorIndex) {
+            NSDictionary *partTarget=coral[@"fixedPlan"][@"floors"][floorIndex][@"variants"][1][@"stages"][0][@"actions"][0];
+            Check([partTarget[@"kind"] isEqual:@"target"] && [partTarget[@"target"] isEqual:@"part"] &&
+                [partTarget[@"monster"] isEqual:@0] && ![partTarget[@"optional"] boolValue],
+                "B8 and B9 retain their required unique live part selection");
+        }
+        for (NSDictionary *member in coral[@"fixedPlan"][@"members"]) {
+            for (NSDictionary *form in member[@"forms"])
+                Check([form[@"skills"] isEqual:bodySkills[form[@"number"]]],
+                    "every shipped Coral form declares the exact reviewed native current-stage skills");
+            NSArray *expectedAssists=assistSkills[member[@"body"]] ?: @[];
+            Check([member[@"assistSkills"] isEqual:expectedAssists],
+                "only the two consumed Coral assists declare their reviewed private skills");
+        }
+        NSUInteger skillActions=0, readyConditions=0;
+        for (NSDictionary *floor in coral[@"fixedPlan"][@"floors"]) for (NSDictionary *variant in floor[@"variants"])
+            for (NSDictionary *stage in variant[@"stages"]) {
+                for (NSDictionary *action in stage[@"actions"]) if ([action[@"kind"] isEqual:@"skill"]) {
+                    ++skillActions;
+                    const BOOL assist=[action[@"source"] isEqual:@"assist"];
+                    NSArray *declared=(assist ? assistSkills : bodySkills)[action[@"monster"]];
+                    PHOrbSkillRequest request=PHOrbFixedPlanActionRequest(action);
+                    Check([declared containsObject:action[@"skill"]] && request.skill>UINT16_MAX &&
+                        request.skill==[action[@"skill"] unsignedIntValue] &&
+                        request.source==(assist ? PHOrbSkillAssist : PHOrbSkillBody),
+                        "all shipped Coral actions preserve exact private skill IDs and body or assist source");
+                    if ([action[@"monster"] isEqual:@13828]) {
+                        NSNumber *expectedSolomon=[stage[@"id"] isEqual:@"evolve-solomon"] ? @66716 : @66718;
+                        Check([action[@"skill"] isEqual:expectedSolomon],
+                            "Solomon uses its first executable stage once, then only the evolved stage");
+                    }
+                }
+                NSDictionary *until=stage[@"repeat"][@"until"];
+                if ([until[@"kind"] isEqual:@"skill_ready"]) {
+                    ++readyConditions;
+                    Check([floor[@"number"] isEqual:@13] && [until[@"slot"] isEqual:@5] &&
+                        [until[@"monster"] isEqual:@13828] && [until[@"skill"] isEqual:@66718] &&
+                        [bodySkills[until[@"monster"]] containsObject:until[@"skill"]],
+                        "B13 waits on the declared private evolved Solomon skill, not its root or ordinary ID");
+                }
+            }
+        Check(skillActions==83 && readyConditions==1,"all 83 Coral skill actions and the B13 readiness condition are audited");
+        NSMutableDictionary *oldPackage=[NSJSONSerialization JSONObjectWithData:coralData options:NSJSONReadingMutableContainers error:NULL];
+        NSMutableDictionary *oldProfile=oldPackage[@"profile"];
+        oldProfile[@"id"]=@"coral-fixed-585607"; oldProfile[@"name"]=@"珊瑚挑戰・固定 Atori・GameWith";
+        oldProfile[@"dungeon"]=@0; oldProfile[@"floor"]=@0;
+        oldProfile[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0][@"monster"]=@10524;
+        [oldProfile[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject][@"repeat"][@"maximumPuzzles"]=@8;
+        for (NSMutableDictionary *member in oldProfile[@"fixedPlan"][@"members"]) {
+            for (NSMutableDictionary *form in member[@"forms"]) {
+                NSMutableArray *skills=[NSMutableArray array];
+                for (NSNumber *skill in form[@"skills"]) [skills addObject:ordinarySkills[skill]];
+                form[@"skills"]=skills;
+            }
+            NSMutableArray *skills=[NSMutableArray array];
+            for (NSNumber *skill in member[@"assistSkills"]) [skills addObject:ordinarySkills[skill]];
+            member[@"assistSkills"]=skills;
+        }
+        for (NSDictionary *floor in oldProfile[@"fixedPlan"][@"floors"]) for (NSDictionary *variant in floor[@"variants"])
+            for (NSDictionary *stage in variant[@"stages"]) {
+                for (NSMutableDictionary *action in stage[@"actions"]) if ([action[@"kind"] isEqual:@"skill"])
+                    action[@"skill"]=ordinarySkills[action[@"skill"]];
+                NSMutableDictionary *until=stage[@"repeat"][@"until"];
+                if ([until[@"kind"] isEqual:@"skill_ready"]) until[@"skill"]=ordinarySkills[until[@"skill"]];
+            }
+        NSData *oldData=[NSJSONSerialization dataWithJSONObject:oldPackage options:0 error:NULL];
+        NSDictionary *oldLibrary=PHOrbProfilesImportingData(PHOrbDefaultProfiles(),oldData,NULL);
+        NSDictionary *oldRecord=PHOrbProfileNamed(oldLibrary,@"coral-fixed-585607");
+        NSData *oldExport=PHOrbExportProfileData(oldRecord,NULL);
+        NSMutableDictionary *v90Package=[NSJSONSerialization JSONObjectWithData:coralData options:NSJSONReadingMutableContainers error:NULL];
+        v90Package[@"profile"][@"id"]=@"coral-fixed-585607-v90";
+        v90Package[@"profile"][@"name"]=@"珊瑚挑戰・固定 Atori・專用技能 v90";
+        v90Package[@"profile"][@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0][@"monster"]=@10524;
+        [v90Package[@"profile"][@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject][@"repeat"][@"maximumPuzzles"]=@8;
+        NSDictionary *v90Library=PHOrbProfilesImportingData(oldLibrary,
+            [NSJSONSerialization dataWithJSONObject:v90Package options:0 error:NULL],NULL);
+        NSData *v90Export=PHOrbExportProfileData(PHOrbProfileNamed(v90Library,@"coral-fixed-585607-v90"),NULL);
+        NSMutableDictionary *b7Package=[NSJSONSerialization JSONObjectWithData:coralData options:NSJSONReadingMutableContainers error:NULL];
+        b7Package[@"profile"][@"id"]=@"coral-fixed-585607-v90-b7";
+        b7Package[@"profile"][@"name"]=@"珊瑚挑戰・固定 Atori・v90 B7 修正";
+        [b7Package[@"profile"][@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject][@"repeat"][@"maximumPuzzles"]=@8;
+        NSDictionary *b7Library=PHOrbProfilesImportingData(v90Library,
+            [NSJSONSerialization dataWithJSONObject:b7Package options:0 error:NULL],NULL);
+        NSData *b7Export=PHOrbExportProfileData(PHOrbProfileNamed(b7Library,@"coral-fixed-585607-v90-b7"),NULL);
+        NSDictionary *both=PHOrbProfilesImportingData(b7Library,coralData,NULL);
+        NSDictionary *reloaded=both ? [NSJSONSerialization JSONObjectWithData:
+            [NSJSONSerialization dataWithJSONObject:both options:0 error:NULL] options:0 error:NULL] : nil;
+        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r2");
+        NSData *newExport=PHOrbExportProfileData(newRecord,NULL);
+        Check(oldRecord && v90Export && b7Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==4 &&
+            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r2"] && ![reloaded[@"autoSelect"] boolValue] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607"),NULL) isEqual:oldExport] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90"),NULL) isEqual:v90Export] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-b7"),NULL) isEqual:b7Export] &&
+            [newRecord isEqual:coral] && newExport && !PHOrbProfilesImportingData(reloaded,newExport,NULL),
+            "guide revision import and JSON reload preserve all three earlier profiles and reject duplicate new IDs");
+        PHOrbSnapshot native={0}; native.valid=native.present=native.automation.valid=true;
+        native.identity.entryMode=1; native.identity.dungeon=7801; native.identity.floor=1;
+        for (unsigned i=0;i<6;++i) {
+            NSDictionary *member=coral[@"fixedPlan"][@"members"][i]; PHOrbSkillMember *live=&native.automation.members[i];
+            live->active=live->temporaryKnown=true; live->number=[member[@"body"] unsignedIntValue];
+            PHBattleCatalogIDForNumber(live->number,&live->sourceCatalogIDs[0]);
+            if (member[@"assist"]!=NSNull.null) PHBattleCatalogIDForNumber([member[@"assist"] unsignedIntValue],&live->sourceCatalogIDs[1]);
+            live->assistCatalogID=live->sourceCatalogIDs[1];
+        }
+        Check([PHOrbResolveProfile(reloaded,&native)[@"ok"] boolValue],"revised Coral profile resolves on the observed native dungeon");
+        native.identity.dungeon=7802;
+        Check(![PHOrbResolveProfile(reloaded,&native)[@"ok"] boolValue],"identical team in another dungeon cannot select the revised Coral plan");
+        native.identity.dungeon=7801; native.identity.floor=2;
+        Check(![PHOrbResolveProfile(reloaded,&native)[@"ok"] boolValue],"another sub-dungeon cannot select the revised Coral plan");
+    }
     NSMutableDictionary *package = FixedFixture(); NSString *reason = nil;
     NSDictionary *profile = PHOrbFixedPlanFromPackage(package,&reason);
     NSData *exported = PHOrbExportProfileData(profile,&reason);

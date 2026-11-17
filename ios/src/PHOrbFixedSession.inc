@@ -22,7 +22,7 @@
     }
     _fixedProfile=_activeProfile; _fixedOrigin=_fixedTeam=*state; _fixedConsumed=false;
     _fixedWave=state->wave; _fixedStageIndex=_fixedAction=_fixedPuzzles=_fixedLoopCursor=_fixedOnce=0;
-    _fixedStage=nil; _fixedVariant=nil; _fixedPending=nil; _fixedLoops=[NSMutableArray array];
+    _fixedStage=nil; _fixedVariant=nil; _fixedPending=nil; _fixedLastStop=nil; _fixedLoops=[NSMutableArray array];
     _fixedPartsGone=_fixedAcknowledged=_fixedStall=false;
     return YES;
 }
@@ -95,6 +95,68 @@
     if (_fixedPendingLoop) ++_fixedLoopCursor;
     else { if ([_fixedPending[@"frequency"] isEqual:@"once"]) _fixedOnce|=1u<<_fixedAction; ++_fixedAction; }
     _fixedPending=nil; [self waitForAutomationBoard];
+}
+- (NSString *)fixedLimitStop:(const PHOrbFixedPlanEvidence *)evidence {
+    // Called only after this tick's native fixed-plan read and an unsatisfied
+    // completion predicate. Freeze the evidence before later idle reads can
+    // change it; diagnostic observations cannot authorize an extra turn.
+    NSDictionary *repeat=_fixedStage[@"repeat"], *until=repeat[@"until"];
+    NSString *kind=until[@"kind"];
+    const NSUInteger maximum=[repeat[@"maximumPuzzles"] unsignedIntegerValue];
+    NSMutableArray *enemies=[NSMutableArray array], *hpDescriptions=[NSMutableArray array];
+    unsigned alive=0; bool bodyHPKnown=evidence->enemiesKnown;
+    for (unsigned i=0;i<std::min(unsigned(_live.fixedPlan.count),8u);++i) {
+        const auto &enemy=_live.fixedPlan.enemies[i];
+        if (enemy.flags&0x100u) continue;
+        const bool hpKnown=evidence->enemiesKnown && enemy.hpKnown;
+        const bool ratioKnown=hpKnown && enemy.maximumHP && enemy.hp<=enemy.maximumHP;
+        bodyHPKnown &= hpKnown;
+        if (hpKnown && enemy.hp) ++alive;
+        NSMutableDictionary *entry=[@{@"slot":@(i+1),@"identityKnown":@(enemy.identityKnown),
+            @"catalogID":enemy.identityKnown ? @(enemy.catalogID) : (id)NSNull.null,
+            @"hpKnown":@(hpKnown),@"hp":hpKnown ? @(enemy.hp) : (id)NSNull.null,
+            @"maximumHP":hpKnown ? @(enemy.maximumHP) : (id)NSNull.null,
+            @"alive":hpKnown ? @(enemy.hp>0) : (id)NSNull.null,@"ratioKnown":@(ratioKnown)} mutableCopy];
+        if (ratioKnown) {
+            const double percent=100.0*double(enemy.hp)/double(enemy.maximumHP);
+            entry[@"remainingPercent"]=@(percent);
+            if (enemy.hp) [hpDescriptions addObject:[NSString stringWithFormat:@"敵人 %u HP %llu／%llu（%.2f%%）",
+                i+1,(unsigned long long)enemy.hp,(unsigned long long)enemy.maximumHP,percent]];
+        } else if (hpKnown && enemy.hp) [hpDescriptions addObject:[NSString stringWithFormat:@"敵人 %u HP %llu（比例未知）",
+            i+1,(unsigned long long)enemy.hp]];
+        [enemies addObject:[entry copy]];
+    }
+    if (!enemies.count) bodyHPKnown=false;
+    NSString *condition=[kind isEqual:@"floor_change"] ?
+        (bodyHPKnown && alive ? @"敵人仍存活、尚未換層" : @"尚未確認換層") :
+        [kind isEqual:@"enemy_hp_at_most"] ? @"敵人 HP 尚未達到指定門檻" :
+        [kind isEqual:@"skill_ready"] ? @"指定技能尚未就緒" :
+        [kind isEqual:@"parts_absent"] ? @"尚未確認部位全數消失" : @"步驟完成條件尚未達成";
+    const bool effectsKnown=_live.automation.valid && evidence->enemiesKnown;
+    const unsigned uncovered=effectsKnown ? evidence->enemyEffects & ~evidence->playerBypass & 15u : 0;
+    NSMutableArray *blockers=[NSMutableArray array];
+    if (uncovered&PHOrbEnemyDamageAbsorb) [blockers addObject:@"傷害吸收"];
+    if (uncovered&PHOrbEnemyAttributeAbsorb) [blockers addObject:@"屬性吸收"];
+    if (uncovered&PHOrbEnemyDamageVoid) [blockers addObject:@"傷害無效"];
+    if (uncovered&PHOrbEnemyComboAbsorb) [blockers addObject:@"Combo 吸收"];
+    NSMutableString *message=[NSMutableString stringWithFormat:@"固定計畫 B%lu · %@ 已轉 %lu／%lu 盤，%@",
+        (unsigned long)_fixedWave+1,_fixedStage[@"id"],(unsigned long)_fixedPuzzles,(unsigned long)maximum,condition];
+    if (hpDescriptions.count) [message appendFormat:@"；%@",[hpDescriptions componentsJoinedByString:@"；"]];
+    if (blockers.count) [message appendFormat:@"；目前仍有未覆蓋的%@",[blockers componentsJoinedByString:@"／"]];
+    if (!effectsKnown) [message appendString:@"；目前吸收／無效對策狀態未知"];
+    [message appendString:@"。已達此步轉珠上限，停止固定計畫"];
+    _fixedLastStop=@{@"reason":message,@"code":@"stage-puzzle-limit",@"scope":@"fresh-native-stage-cap",
+        @"profile":_fixedProfile[@"id"] ?: @"",@"floor":@(_fixedWave+1),@"stage":_fixedStage[@"id"] ?: @"",
+        @"confirmedPuzzles":@(_fixedPuzzles),@"maximumPuzzles":@(maximum),@"until":until,
+        @"completionSatisfied":@NO,@"continuationAllowed":@NO,@"survivalKnown":@NO,
+        @"enemiesKnown":@(evidence->enemiesKnown),@"bodyHPKnown":@(bodyHPKnown),
+        @"livingBodies":bodyHPKnown ? @(alive) : (id)NSNull.null,@"enemies":[enemies copy],
+        @"effectsKnown":@(effectsKnown),@"enemyEffects":effectsKnown ? @(evidence->enemyEffects) : (id)NSNull.null,
+        @"playerBypass":effectsKnown ? @(evidence->playerBypass) : (id)NSNull.null,
+        @"uncoveredEffects":effectsKnown ? @(uncovered) : (id)NSNull.null,
+        @"uncoveredEffectNames":[blockers copy],@"readinessKnownSlots":@(evidence->readinessKnownSlots),
+        @"readySlots":@(evidence->readySlots),@"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime*1000))};
+    return message;
 }
 - (void)advanceFixedPlan {
     if (!_auto.active() || [self executing] || _phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
@@ -193,7 +255,7 @@
         [self waitForAutomationBoard]; return;
     }
     if (_fixedPuzzles>=[_fixedStage[@"repeat"][@"maximumPuzzles"] unsignedIntegerValue]) {
-        [self queueStop:@"固定計畫已達此步轉珠上限，未盲目重複"]; return;
+        [self queueStop:[self fixedLimitStop:&e]]; return;
     }
     // Activated loops remain tied to native readiness, including after haste.
     while (_fixedLoopCursor<_fixedLoops.count) {
@@ -290,6 +352,6 @@
     return @{@"profile":_fixedProfile[@"id"] ?: @"",@"floor":@(_fixedWave+1),@"variant":_fixedVariant ?: @"",
         @"stage":_fixedStage[@"id"] ?: @"",@"action":@(_fixedAction),@"confirmedPuzzles":@(_fixedPuzzles),
         @"board":_fixedStage[@"board"] ?: @{},@"repeat":_fixedStage[@"repeat"] ?: @{},
-        @"pending":_fixedPending ?: @{},@"activeLoops":_fixedLoops ?: @[],
+        @"pending":_fixedPending ?: @{},@"activeLoops":_fixedLoops ?: @[],@"lastStop":_fixedLastStop ?: @{},
         @"consumed":@(_fixedConsumed),@"receipt":@(_fixedAcknowledged),@"partsGone":@(_fixedPartsGone),@"absorbStall":@(_fixedStall)};
 }

@@ -3,7 +3,7 @@
 @interface FixedTestEngine : FakeOrbEngine {
 @public
     BOOL unknownFixed, unknownReady, ignoreTarget, swapOnTransform;
-    NSUInteger targetCalls;
+    NSUInteger targetCalls, lastTargetSlot;
 }
 @end
 @implementation FixedTestEngine
@@ -24,7 +24,7 @@
     return unavailableSkills[slot] ? PHOrbSkillUnavailable : PHOrbSkillStarted;
 }
 - (BOOL)stageFixedPlanTarget:(NSUInteger)slot expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
-    ++targetCalls; if (!ignoreTarget) live.fixedPlan.target=int8_t(slot); return YES;
+    ++targetCalls; lastTargetSlot=slot; if (!ignoreTarget) live.fixedPlan.target=int8_t(slot); return YES;
 }
 @end
 
@@ -64,7 +64,47 @@ static void AdvanceFixedToSolveOrStop(PHOrbSession *s, FixedTestEngine *e) {
     for (unsigned i=0;i<240 && ![s.snapshot[@"phase"] isEqual:@"solving"] && ![s.snapshot[@"phase"] isEqual:@"stopped"];++i)
         Tick(s,e,Frame(),0.02,0,false);
 }
+static void FixedPrivateTargetSessionTests() {
+    for (unsigned scenario=0;scenario<9;++scenario) {
+        FixedTestEngine *e=[FixedTestEngine new]; NSMutableDictionary *profile=MutableFixedSessionProfile(e);
+        NSMutableDictionary *stage=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+        NSDictionary *skill=stage[@"actions"][0];
+        stage[@"actions"]=@[@{@"kind":@"target",@"target":@"enemy",@"monster":scenario==1 ? @10524 : @210524,
+            @"optional":@NO,@"frequency":@"once"},skill];
+        auto &fixed=e->live.fixedPlan;
+        fixed.count=2; fixed.aliveMask=3;
+        fixed.enemies[1]=fixed.enemies[0];
+        fixed.enemies[0].catalogID=200038; fixed.enemies[1].catalogID=210524;
+        e->live.automation.activeEnemies=2;
+        if (scenario==2) fixed.enemies[0].catalogID=210524;
+        if (scenario==3) { fixed.enemies[1].hp=0; fixed.aliveMask=1; }
+        if (scenario==4) { fixed.enemies[1].flags=0x100u; fixed.partsMask=2; }
+        if (scenario==5) fixed.enemies[1].identityKnown=false;
+        if (scenario==6) fixed.enemies[1].hpKnown=false;
+        if (scenario==7) e->ignoreTarget=YES;
+        if (scenario==8) fixed.enemies[1].catalogID=110524;
+        PHOrbSession *s=StartFixedTest(e,profile);
+        for (unsigned i=0;i<240 && !e->targetCalls && ![s.snapshot[@"phase"] isEqual:@"stopped"];++i)
+            Tick(s,e,Frame(),0.02,0,false);
+        const bool matched=scenario==0 || scenario==7;
+        Check(e->targetCalls==(matched ? 1u : 0u) && e->skillOrder.empty(),
+            "only one living ordinary enemy with the exact private ID can stage a target before any skill");
+        if (matched) Check(e->lastTargetSlot==1,"the exact private target selects slot two beside an unrelated private enemy");
+        AdvanceFixedToSolveOrStop(s,e);
+        if (!scenario) {
+            Check(e->targetCalls==1 && fixed.target==1 && e->skillOrder.size()==1 && e->skillOrder[0]==0 &&
+                [s.snapshot[@"fixedPlanProgress"][@"action"] unsignedIntegerValue]==2,
+                "native target acknowledgement advances exactly once before the following prescribed skill");
+        } else {
+            Check([s.snapshot[@"phase"] isEqual:@"stopped"] && e->skillOrder.empty() &&
+                [s.snapshot[@"fixedPlanProgress"][@"action"] unsignedIntegerValue]==0 && e->targetCalls==(matched ? 1u : 0u),
+                "public IDs, other private variants, duplicate, dead, part, unknown and unacknowledged targets never advance");
+        }
+        [s queueStop:@"test cleanup"];
+    }
+}
 static void FixedSessionTests(void) {
+    FixedPrivateTargetSessionTests();
     for (unsigned scenario=0;scenario<6;++scenario) {
         FixedTestEngine *e=[FixedTestEngine new]; NSDictionary *profile=FixedSessionProfile(e);
         e->unknownFixed=scenario==1; e->unknownReady=scenario==2; e->unavailableSkills[0]=scenario==3;

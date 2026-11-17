@@ -3,6 +3,7 @@
 
 This only writes JSON; it does not build, run tests, or dispatch workflows.
 Skill IDs are constrained native current-stage IDs, not composite root IDs.
+The v90 IDs are pinned in the template skill-reference.json; no runtime aliasing.
 """
 import json
 from pathlib import Path
@@ -32,28 +33,28 @@ def skill(slot, monster, active, *, after=0, source='body', optional=False,
 
 
 def atori():
-    return skill(1, 8477, 27827, frequency='each', alternatives=(6,))
+    return skill(1, 8477, 66706, frequency='each', alternatives=(6,))
 
 
 def solomon(*, initial=False, optional=False, when='always'):
-    return skill(5, 13828, 63191 if initial else 63192, optional=optional, when=when)
+    return skill(5, 13828, 66716 if initial else 66718, optional=optional, when=when)
 
 
 def diena(*, loop=False):
-    return skill(2, 13876, 63220, loop=loop)
+    return skill(2, 13876, 66724, loop=loop)
 
 
 def keisy(*, loop=False):
-    return skill(3, 13745, 62502, loop=loop)
+    return skill(3, 13745, 66740, loop=loop)
 
 
 def riku():
-    return skill(4, 13878, 63241)
+    return skill(4, 13878, 66729)
 
 
 def target(part=False):
-    # Encyclopedia #10424 -> native catalog #10524, confirmed by article icon.
-    return dict(kind='target', target='part' if part else 'enemy', monster=0 if part else 10524,
+    # B7 uses the observed special Clammy catalog ID; see enemy-reference.json.
+    return dict(kind='target', target='part' if part else 'enemy', monster=0 if part else 210524,
                 optional=False, frequency='once')
 
 
@@ -85,12 +86,12 @@ def build():
         floors.append(dict(number=len(floors)+1, variants=variants))
 
     floor([
-        stage('delay-and-haste', [skill(2, 13876, 61754, source='assist', consume=True),
-                                 skill(4, 13878, 63251, source='assist', consume=True)], 'one_combo'),
+        stage('delay-and-haste', [skill(2, 13876, 66752, source='assist', consume=True),
+                                 skill(4, 13878, 66755, source='assist', consume=True)], 'one_combo'),
         stage('charge', policy='one_combo'),
-        stage('transform', [skill(5, 8476, 27820, after=8477),
-                            skill(6, 8476, 27820, after=8477),
-                            skill(3, 13744, 62494, after=13745)], 'one_combo'),
+        stage('transform', [skill(5, 8476, 66700, after=8477),
+                            skill(6, 8476, 66700, after=8477),
+                            skill(3, 13744, 66735, after=13745)], 'one_combo'),
         stage('evolve-solomon', [solomon(initial=True), atori()]),
         stage('attack-2', [atori()]), stage('attack-3', [atori()]),
         exit_stage('buff-and-finish', [atori(), diena(), atori(), solomon(), keisy()]),
@@ -118,7 +119,7 @@ def build():
            stage('super-resolve', [atori()]),
            exit_stage('cleanse-and-finish', [solomon(), atori()], maximum=2)])
     floor([stage('wait-for-solomon', [atori()], 'six_colors_no_fours', minimum=0, maximum=8,
-                 until=dict(kind='skill_ready', slot=5, monster=13828, skill=63192)),
+                 until=dict(kind='skill_ready', slot=5, monster=13828, skill=66718)),
            exit_stage('hp-buff-and-finish', [riku(), atori(), diena(loop=True), atori()])])
     floor([stage('attack', [atori()]), stage('cleanse', [solomon(), atori()]), exit_stage(maximum=20)])
     absorb = [solomon(optional=True, when='damage_absorb'), solomon(optional=True, when='attribute_absorb')]
@@ -132,20 +133,20 @@ def build():
            stage('recover-super-resolve', [atori()], l=True, recovery=True),
            stage('reach-quarter', absorb+[atori()], until=dict(kind='enemy_hp_at_most', percent=25),
                  minimum=0, maximum=24, absorb=True),
-           exit_stage('finish-with-riku', absorb+[finish_riku, atori()], maximum=8, absorb=True)])
-    members = [member(13828, [(13828, [63191, 63192])]),
-               member(13876, [(13876, [63220])], 13619, [61754]),
-               member(13744, [(13744, [62494]), (13745, [62502])]),
-               member(13878, [(13878, [63241])], 13879, [63251]),
-               member(8476, [(8476, [27820]), (8477, [27827])]),
-               member(8476, [(8476, [27820]), (8477, [27827])])]
+           exit_stage('finish-with-riku', absorb+[finish_riku, atori()], maximum=2, absorb=True)])
+    members = [member(13828, [(13828, [66716, 66718])]),
+               member(13876, [(13876, [66724])], 13619, [66752]),
+               member(13744, [(13744, [66735]), (13745, [66740])]),
+               member(13878, [(13878, [66729])], 13879, [66755]),
+               member(8476, [(8476, [66700]), (8477, [66706])]),
+               member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607', name='珊瑚挑戰・固定 Atori・GameWith',
-                             team=[m['body'] for m in members], dungeon=0, floor=0, source=SOURCE,
+                profile=dict(id='coral-fixed-585607-v90-r2', name='珊瑚挑戰・固定 Atori・v90 綜合修正',
+                             team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))
 
 
 if __name__ == '__main__':
     DEST.mkdir(parents=True, exist_ok=True)
-    (DEST / 'fixed-plan.json').write_text(json.dumps(build(), ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    (DEST / 'fixed-plan.json').write_text(json.dumps(build(), ensure_ascii=False, indent=2)+'\n', encoding='utf-8', newline='\n')

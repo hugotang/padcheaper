@@ -264,6 +264,44 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
         @"mortalPoisonErased":@(value.mortalPoisonErased),
         @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours), @"heartMatches":@(value.heartMatches)};
 }
+NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixedBoardPolicy &policy,
+    NSString *scope) {
+    // Report the already checked evaluation. These fields never authorize a
+    // route; generic colorPhases retains its separate saved-goal semantics.
+    NSString *mode=@"normal";
+    switch (policy.mode) {
+        case PHOrbFixedBoardMode::Normal: break;
+        case PHOrbFixedBoardMode::OneCombo: mode=@"one_combo"; break;
+        case PHOrbFixedBoardMode::SixColorStall: mode=@"six_colors_no_fours"; break;
+        case PHOrbFixedBoardMode::FourAttack: mode=@"six_colors_fours"; break;
+        case PHOrbFixedBoardMode::LOnly: mode=@"l_only"; break;
+    }
+    const unsigned missing=policy.firstColors & ~value.firstWaveColors & 63u;
+    const unsigned exact=policy.mode==PHOrbFixedBoardMode::OneCombo ? 3 : policy.mode==PHOrbFixedBoardMode::LOnly ? 5 : 0;
+    NSArray *colorNames=@[@"火",@"水",@"木",@"光",@"闇",@"心"];
+    NSMutableArray *missingNames=[NSMutableArray array];
+    for (unsigned c=0;c<6;++c) if (missing&(1u<<c)) [missingNames addObject:colorNames[c]];
+    NSString *missingColorNames=[missingNames componentsJoinedByString:@"／"];
+    NSMutableArray *deficits=[NSMutableArray array];
+    if (missing) [deficits addObject:@{@"kind":@"first-colors",@"missingColors":@(missing),
+        @"missingColorNames":missingColorNames}];
+    if (policy.requireHeartFour && !value.heartFours)
+        [deficits addObject:@{@"kind":@"heart-four",@"required":@1,@"observedMinimum":@(value.heartFours)}];
+    if (policy.mode==PHOrbFixedBoardMode::SixColorStall && value.resolvedFours)
+        [deficits addObject:@{@"kind":@"forbidden-fours",@"observedMaximum":@(value.resolvedFours)}];
+    if (exact && !value.fixedBoardSatisfied) [deficits addObject:@{@"kind":@"single-removal",@"requiredOrbs":@(exact)}];
+    if (!value.fixedBoardSatisfied && !deficits.count)
+        [deficits addObject:@{@"kind":@"phase-constraint"}];
+    return @{@"valid":@YES,@"applicable":@(policy.mode!=PHOrbFixedBoardMode::Normal || policy.firstColors || policy.requireHeartFour),
+        @"scope":scope ?: @"all-shared-spinner-phases",@"mode":mode,@"satisfied":@(value.fixedBoardSatisfied),
+        @"requiredFirstColors":@(policy.firstColors),@"firstColorsInEveryPhase":@(value.firstWaveColors),
+        @"missingFirstColors":@(missing),@"missingFirstColorNames":missingColorNames,
+        @"requireHeartFour":@(policy.requireHeartFour),@"firstWaveHeartFoursMinimum":@(value.heartFours),
+        @"forbidFours":@(policy.mode==PHOrbFixedBoardMode::SixColorStall),@"resolvedFoursMaximum":@(value.resolvedFours),
+        @"exactRemovalOrbs":@(exact),@"firstWaveCombosMinimum":@(value.firstWaveCombos),
+        @"resolvedCombosMinimum":@(value.combos),@"erasedMinimum":@(value.erased),
+        @"countSemantics":@"per-phase minima; separate minima need not describe the same phase",@"deficits":deficits};
+}
 NSString *SolveStatusName(PHOrbSolveStatus status) {
     switch (status) {
         case PHOrbSolveStatus::Solved: return @"solved";

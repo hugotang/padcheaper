@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "date": "2026-11-17",
+  "status": "source-fix-awaiting-build-test-and-device-verification",
+  "device": {
+    "version": "0.5.50-orbs",
+    "profileID": "coral-fixed-585607-v90",
+    "puzzlesCompleted": 17,
+    "skillsConfirmed": 29,
+    "inputFaults": 0,
+    "floor": 5,
+    "stage": "finish",
+    "confirmedStagePuzzles": 1,
+    "maximumStagePuzzles": 1,
+    "consumed": true,
+    "releaseConfirmed": true,
+    "confirmedSteps": 46,
+    "enemy": {
+      "catalogID": 302587,
+      "hp": 135342484374,
+      "maximumHP": 340000000000,
+      "effects": 6
+    },
+    "predictedRelease": {
+      "combos": 7,
+      "firstWaveCombos": 7,
+      "firstWaveColors": 63,
+      "firstWaveFours": 3,
+      "heartFours": 1,
+      "goalsMet": true,
+      "fixedBoardSatisfied": true,
+      "nativeScoreKnown": false
+    },
+    "search": {
+      "elapsedMS": 496,
+      "budgetMS": 800,
+      "searchPasses": 1,
+      "backtracks": 0,
+      "deadlineReached": false,
+      "fishingEligibility": "eligible",
+      "fishingSkipped": "ordinary-route-satisfied",
+      "nativeRemainingFrames": 810,
+      "fps": 30
+    }
+  },
+  "sourceChanges": [
+    "Retain the ordinary solution while spending existing recovery and backtrack opportunities on more first-wave fours",
+    "Try bounded solo fixed-attack quality fishing after an ordinary success using a temporary stronger four-count goal",
+    "Accept only original-contract replayed candidates with more first-wave fours and no increased thorn damage",
+    "Share one extra configured search budget across single-take colors and multi-take source cells within the existing 2000 ms solo ceiling",
+    "Freeze fresh stage-cap enemy HP and uncovered effects in diagnostic lastStop evidence"
+  ],
+  "limits": [
+    "The predicted board is not a native damage or kill receipt",
+    "No extra puzzle, skill, stage-cap increase or consumed-run restart is authorized by this fix",
+    "No native move timer, exchange limit, multiplayer scope or B3 gesture limit is increased",
+    "Quality search can miss improvements; no B5 kill or full-clear guarantee",
+    "Source and authored regression cases are unbuilt and have not run on the device"
+  ]
+}

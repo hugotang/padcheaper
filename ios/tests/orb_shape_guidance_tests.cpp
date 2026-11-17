@@ -272,8 +272,138 @@ static void FixedBoardScoreTests() {
         "policy changes invalidate the per-pass cache before comparing a released board");
 }
 
+static void FixedFirstColorGuidanceTests() {
+    // The B2 stopped candidate has six colours after a deterministic cascade,
+    // but its first removal lacks fire. Spinner phases must not hide that gap.
+    PHOrbBoard board{}; board.width=7; board.height=6;
+    const uint8_t types[]={4,2,5,3,0,2,1, 2,2,2,2,0,3,2,
+        3,4,5,2,1,3,2, 3,4,5,1,1,1,5, 3,4,5,1,1,5,3, 1,2,5,2,0,1,3};
+    std::copy(std::begin(types),std::end(types),board.types);
+    for (unsigned i=0;i<42;++i) board.tokens[i]=i+1;
+    board.spinnerMask=UINT64_C(1)<<31; board.spinnerColors=63;
+    auto goals=Goal(PHOrbGoalColors,63,6);
+    goals.items[goals.count++]={PHOrbGoalFour,32,1,0};
+    const PHOrbFixedBoardPolicy fixed{PHOrbFixedBoardMode::FourAttack,63,true};
+    const auto baseline=MakeContext(board,goals,true,false,false,{},-1,0,fixed);
+    Check(!baseline.colorRecovery && !baseline.colorGuidance && baseline.fixedColorGuidance,
+        "fixed first-colour hints do not broaden ordinary shape recovery or replace the primary beam");
+    auto recovery=baseline; recovery.colorGuidance=true;
+    const auto cells=BoardCells(board);
+    const auto exact=Evaluate(cells,baseline), guided=Evaluate(cells,recovery);
+    Check(exact.result.goalHits[0]==6 && exact.result.goalHits[1]==1 &&
+        exact.result.firstWaveColors==62 && !exact.result.fixedBoardSatisfied && !exact.result.goalsMet,
+        "captured B2 candidate meets generic goals but still fails the first-removal fire requirement");
+    Check(SameEvaluation(exact.result,guided.result) && guided.missingColors==1 &&
+        guided.weakestColor==0 && guided.colorProgress[0]<4096,
+        "fixed recovery repairs cascade-only fire without changing any exact goal or release decision");
+    for (unsigned c=1;c<6;++c) Check(guided.colorProgress[c]==4096,
+        "fixed recovery preserves the five colours already guaranteed in the first removal");
+    for (unsigned phase=0;phase<6;++phase) {
+        auto one=board; one.types[31]=PHOrbSpinnerType(&board,31,phase); one.spinnerMask=0;
+        auto context=MakeContext(one,goals,true,false,false,{},-1,0,fixed);
+        context.colorGuidance=true;
+        const auto score=Evaluate(BoardCells(one),context);
+        Check(score.missingColors==(63u & ~score.result.firstWaveColors),
+            "each spinner phase guides missing first-removal colours before their conservative intersection");
+    }
+    auto ordinary=MakeContext(board,goals); ordinary.colorGuidance=true;
+    const auto normal=Evaluate(cells,ordinary);
+    Check(!ordinary.fixedColorGuidance && !normal.missingColors && normal.result.goalsMet &&
+        normal.result.goalHits[0]==6 && normal.result.goalHits[1]==1,
+        "ordinary six-colour and shape goals continue to credit their existing deterministic cascades");
+    auto subset=goals; subset.items[0].count=5;
+    Check(!MakeContext(board,subset,true,false,false,{},-1,0,fixed).fixedColorGuidance,
+        "a subset clause is not reinterpreted as six mandatory colours by fixed recovery");
+    auto thorn=board; thorn.flags[4]=PHOrbFlagThorn;
+    Check(!MakeContext(thorn,goals,true,false,false,{},-1,0,fixed).fixedColorGuidance &&
+        !MakeContext(board,goals,true,false,false,{},31,0,fixed).fixedColorGuidance,
+        "new fixed guidance does not expand thorn movement or fishing policies");
+}
+
+static void FixedFourQualityPolicyTests() {
+    PHOrbBoard board{}; board.width=7; board.height=6;
+    const uint8_t types[]={2,0,3,4,1,1,2, 2,4,4,4,4,2,3, 2,4,5,3,3,3,4,
+        2,1,5,5,0,2,2, 0,1,5,3,1,3,2, 2,1,5,0,0,0,2};
+    std::copy(std::begin(types),std::end(types),board.types);
+    for (unsigned i=0;i<42;++i) board.tokens[i]=i+1;
+    board.spinnerMask=UINT64_C(1)<<32; board.spinnerColors=63;
+    auto goals=Goal(PHOrbGoalColors,63,6); goals.items[goals.count++]={PHOrbGoalFour,32,1,0};
+    const PHOrbFixedBoardPolicy fixed{PHOrbFixedBoardMode::FourAttack,63,true};
+    auto context=MakeContext(board,goals,true,false,false,{},-1,0,fixed);
+    const auto cells=BoardCells(board);
+    const auto original=Evaluate(cells,context);
+    Check(original.result.goalsMet && original.result.firstWaveFours==3 && FixedFourUpperBound(cells,context)==7,
+        "the B5 accepted candidate has three guaranteed fours below its seven-group phase inventory ceiling");
+    PHOrbGoalSet quality{}; unsigned focus=PHOrbMaxGoals;
+    Check(FixedFourQualityGoal(context,3,7,quality,focus) && focus==2 && quality.count==3 &&
+        quality.items[focus].kind==PHOrbGoalFour && quality.items[focus].colors==63 && quality.items[focus].count==4 &&
+        quality.items[1].colors==32 && quality.items[1].count==1 && PHOrbGoalsValid(&quality),
+        "attack exploration adds a stronger all-color four clause while preserving six colors and heart four");
+    const auto target=MakeContext(board,quality,true,false,false,{},-1,0,fixed);
+    const auto exploring=Evaluate(cells,target), restored=Evaluate(cells,context);
+    Check(!exploring.result.goalsMet && SameEvaluation(original.result,restored.result),
+        "a temporary quality goal cannot turn the previously feasible route into a rejected released candidate");
+    Node retained, rejected;
+    retained.score=original; retained.length=2;
+    rejected=retained; rejected.score.result.goalsMet=false; rejected.score.result.firstWaveFours=7;
+    Check(!Better(rejected,retained,false,false,{},true,fixed),
+        "more fours cannot replace the retained route when any original release condition fails");
+    rejected=retained; rejected.score.result.hazardsSafe=false; rejected.score.result.firstWaveFours=7;
+    Check(!Better(rejected,retained,false,false,{},true,fixed),
+        "more fours cannot replace a safe retained route with a rejected hazard policy");
+    PHOrbBoard stronger{}; stronger.width=7; stronger.height=6;
+    for (unsigned y=0;y<6;++y) for (unsigned x=0;x<7;++x) {
+        stronger.types[y*7+x]=uint8_t(x<4 ? y : (y+x-3)%6); stronger.tokens[y*7+x]=y*7+x+1;
+    }
+    Node improved=retained;
+    improved.cells=BoardCells(stronger); improved.length=PHOrbMaxSteps+1;
+    improved.score=Evaluate(improved.cells,MakeContext(stronger,goals,true,false,false,{},-1,0,fixed));
+    Check(improved.score.result.goalsMet && improved.score.result.firstWaveColors==63 &&
+        improved.score.result.firstWaveFours==6 && improved.score.result.heartFours==1 &&
+        Better(improved,retained,false,false,{},true,fixed),
+        "a real six-four layout with all original requirements can replace the shorter B5 three-four candidate");
+    auto duplicate=context; duplicate.goals.items[duplicate.goals.count++]={PHOrbGoalFour,63,2,0};
+    Check(FixedFourQualityGoal(duplicate,3,7,quality,focus) && quality.count==3 && focus==2 &&
+        quality.items[2].count==4 && PHOrbGoalsValid(&quality),
+        "an existing all-color four clause is strengthened rather than duplicated");
+    auto full=context;
+    full.goals.items[full.goals.count++]={PHOrbGoalCombo,0,1,0};
+    full.goals.items[full.goals.count++]={PHOrbGoalFour,1,1,0};
+    full.goals.items[full.goals.count++]={PHOrbGoalFour,2,1,0};
+    full.goals.items[full.goals.count++]={PHOrbGoalFour,4,1,0};
+    Check(PHOrbGoalsValid(&full.goals) && !FixedFourQualityGoal(full,3,7,quality,focus),
+        "a full goal set never overflows or discards an original condition to add quality guidance");
+    full.goals.items[5]={PHOrbGoalFour,63,1,0};
+    Check(FixedFourQualityGoal(full,3,7,quality,focus) && focus==5 && quality.count==PHOrbMaxGoals &&
+        quality.items[5].count==4 && PHOrbGoalsValid(&quality),
+        "a full goal set can still strengthen its existing all-color four clause safely");
+    Check(!FixedFourQualityGoal(context,7,7,quality,focus),
+        "quality exploration ends at the optimistic group ceiling without claiming a damage estimate");
+    context.fixedBoard.mode=PHOrbFixedBoardMode::SixColorStall;
+    Check(!FixedFourQualityGoal(context,0,7,quality,focus),
+        "attack quality exploration cannot introduce four matches into a stall stage");
+    context=MakeContext(board,goals,true,false,false,{},32,0,fixed);
+    Check(FixedFourUpperBound(cells,context)==10,
+        "one-take inventory changes retain a conservative cell-count ceiling");
+    auto locked=board; locked.flags[32]=PHOrbFlagLocked;
+    const auto lockedContext=MakeContext(locked,goals,true,false,false,{},-1,0,fixed);
+    auto staticBoard=locked; staticBoard.spinnerMask=0; staticBoard.spinnerColors=0;
+    Check(PHOrbBoardValid(&locked) && PHOrbBoardValid(&staticBoard) &&
+        FixedFourUpperBound(cells,lockedContext)==FixedFourUpperBound(cells,
+        MakeContext(staticBoard,goals,true,false,false,{},-1,0,fixed)),
+        "a locked spinner contributes its fixed color to attack capacity");
+    auto unmatchable=board; unmatchable.unmatchableColors=63;
+    Check(FixedFourUpperBound(cells,MakeContext(unmatchable,goals,true,false,false,{},-1,0,fixed))==0,
+        "unmatchable basic colors never inflate attack quality capacity");
+    auto unsupported=board; unsupported.minMatch=5;
+    context=MakeContext(unsupported,goals,true,false,false,{},-1,0,fixed);
+    Check(FixedFourUpperBound(cells,context)==0,"a minimum removal above four has no four-group capacity");
+}
+
 int main() {
     FixedBoardScoreTests();
+    FixedFirstColorGuidanceTests();
+    FixedFourQualityPolicyTests();
     AllMetScores();
     PartialAndCacheScores();
     RankingAndThornSafety();
