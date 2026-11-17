@@ -59,6 +59,12 @@
         ![self fixedTeamMatches:state]) {
         [self queueStop:@"固定計畫轉珠期間的隊員／武裝身分已改變"]; return NO;
     }
+    // Revoke a retry if coverage changes after planning, including while a
+    // gesture is held. Once release has completed, effects may legitimately
+    // expire as the game resolves the turn; that is not an input failure.
+    if (!_releaseComplete && (_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
+        _phase==PHOrbSessionPhase::Arming || _phase==PHOrbSessionPhase::Running) &&
+        ![self fixedRetryAttackAllowed:state]) return NO;
     if (_preview.fixedPlan.valid && (_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
         _phase==PHOrbSessionPhase::Arming || _phase==PHOrbSessionPhase::Running) && !_staged) {
         NSString *reason=nil;
@@ -66,6 +72,17 @@
             !PHOrbSameFixedPlan(&_preview.fixedPlan,&state->fixedPlan)) {
             [self queueStop:reason ?: @"固定計畫求路後的敵人 HP／目標已改變"]; return NO;
         }
+    }
+    return YES;
+}
+- (BOOL)fixedRetryAttackAllowed:(const PHOrbSnapshot *)state {
+    if (!_fixedPuzzles || ![_fixedStage[@"retryRequiresBypass"] boolValue]) return YES;
+    const auto &e=state->automation;
+    if (!e.valid || !e.enemiesKnown || !e.statusKnown) {
+        [self queueStop:@"固定計畫補盤的吸收／貫通效果未知，未繼續攻擊"]; return NO;
+    }
+    if (e.enemyEffects & ~e.playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid)) {
+        [self queueStop:@"固定計畫補盤仍有未覆蓋的傷害吸收／屬性吸收／傷害無效，未繼續攻擊"]; return NO;
     }
     return YES;
 }
@@ -295,14 +312,7 @@
     // This is evaluated after the current puzzle's skills have acknowledged.
     // A previous turn's two-turn bypass, or a successful six-colour search,
     // is not evidence that a retry can damage the remaining enemies.
-    if (_fixedPuzzles && [_fixedStage[@"retryRequiresBypass"] boolValue]) {
-        if (!e.enemiesKnown || !e.statusKnown) {
-            [self queueStop:@"固定計畫補盤的吸收／貫通效果未知，未繼續攻擊"]; return;
-        }
-        if (e.enemyEffects & ~e.playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid)) {
-            [self queueStop:@"固定計畫補盤仍有未覆蓋的傷害吸收／屬性吸收／傷害無效，未繼續攻擊"]; return;
-        }
-    }
+    if (![self fixedRetryAttackAllowed:&_live]) return;
     _assistRecoveryL=[_fixedStage[@"board"][@"assistRecoveryL"] boolValue];
     if (!PHOrbCanPreview(&_live)) { [self queueStop:PHOrbObstacleDescription(&_live)]; return; }
     [self beginSolve];

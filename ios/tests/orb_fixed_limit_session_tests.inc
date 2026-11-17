@@ -110,7 +110,7 @@ static void FixedLimitDiagnosticSessionTests() {
     }
     // Public native receipts, not the puzzle count alone, authorize omitting
     // a duplicate. Expired/new absorption and missing void bypass block retry.
-    for (unsigned scenario=0;scenario<11;++scenario) {
+    for (unsigned scenario=0;scenario<12;++scenario) {
         FixedTestEngine *engine=[[FixedTestEngine alloc] initWithWidth:5 height:4];
         NSMutableDictionary *profile=MutableFixedSessionProfile(engine);
         NSMutableDictionary *stage=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
@@ -146,12 +146,14 @@ static void FixedLimitDiagnosticSessionTests() {
         engine->live.phase=2; engine->live.moves=0;
         if (scenario>=3 && scenario<=5) engine->live.automation.enemyEffects=uint8_t(1u<<(scenario-3));
         if (scenario==6) engine->live.automation.statusKnown=false;
-        if (scenario==7) engine->live.automation.enemyEffects=engine->live.automation.playerBypass=
+        if (scenario==7 || scenario==11) engine->live.automation.enemyEffects=engine->live.automation.playerBypass=
             PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid;
         if (scenario==10) engine->live.automation.enemiesKnown=false;
         for (unsigned i=0;i<800;++i) {
-            Tick(session,engine,Frame());
+            Tick(session,engine,Frame(),0.02,0,scenario!=11);
             if (engine->skillOrder.size()==3) engine->unavailableSkills[0]=YES;
+            if (scenario==11 && [session.snapshot[@"phase"] isEqual:@"solving"])
+                engine->live.automation.playerBypass=0;
             if ([session.snapshot[@"phase"] isEqual:@"stopped"] || engine->stages>stages) break;
         }
         NSDictionary *snapshot=session.snapshot, *stop=snapshot[@"fixedPlanProgress"][@"lastStop"];
