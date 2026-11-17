@@ -4,6 +4,14 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-17：0.5.51-orbs 編譯測試與交付完成
+
+- [CI 167](https://github.com/hugotang/padcheaper/actions/runs/44024491484) 在來源 `e2d3f5e5f1470a497a748a6a3eebf689ade982a0` 完整通過：macOS 原生／Session 與新增固定策略／診斷／品質回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone 首次／重啟 GUI。產品測試失敗、編譯 warning/error、sanitizer error 均為 0；工具提示另列於[驗證收據](../research/verification-0.5.51.json)。
+- Windows 8P、solver/model、private guidance、public solve smoke 與 metadata 7 項測試通過；首次不合法轉轉 fixture 已修正，保留首輪失敗與成功重跑證據。295 份來源／案例的 LF 正規化 SHA-256 與 CI commit 完全一致，成功測試期間無來源變動。Windows 沒有 sanitizer runtime。
+- 已建立新的 `E:/ipa/PADCheaper-0.5.51-orbs` 與 ZIP；434 份套件雜湊、ZIP CRC／435 項及逐檔內容獨立核對通過。dylib 12,081,280 bytes，SHA-256 `14e97c312207cc57f8ede8cab64be28cf800c58fedf122fd7687e8a3f38b7214`；ZIP SHA-256 `94ecbdaab9b8c3c6369d16108536a7ade29816b15666d9a8048e48ca9d7b6bc3`。
+- B5 原盤離線對照確認完整主搜尋預算可保住六色／心四合格路線，額外 fishing 確實嘗試；三次仍為三組四消，尚未證明更高火力。CI166 因發現主搜尋預算切分問題主動取消，修正後由本次成功 CI 重驗；詳見收據的離線報告。
+- 新模板 `coral-fixed-585607-v90-r2` 需匯入並選用；已停止且 consumed 的同場不能重啟。此段取代下方本批待編譯狀態，但不表示 B2/B5/B7 真機已驗收，也不保證增加四消即可擊殺。未提高 B5 上限／新增補刀，`device_verified=false`，全程通關與 fishing 時序待裝置確認。既有交付及私人 log 不變。
+
 ## 2026-11-17：0.5.51-orbs 編譯測試開始
 
 - 使用者明確要求「編譯測試」，本輪將所有已累積珊瑚來源／模板修正一起驗證，包括 v90 技能、B7 精確目標、B15 兩盤上限、首消缺色引導與診斷、達標後四消改善及有界 fishing、固定步驟上限診斷。Windows 核心回歸與 macOS 完整原生／Session、ASan/UBSan、iPhoneOS arm64、簽章、瀏覽器及四份 iPhone GUI 均須通過，才建立新交付。

@@ -4,13 +4,13 @@
 
 ## 最新交付
 
-[0.5.50-orbs](docs/release-0.5.50.md) 已通過 [CI 165](https://github.com/hugotang/padcheaper/actions/runs/43929572460) 完整回歸、ASan/UBSan、arm64 建置／嚴格簽章、瀏覽器及四份 iPhone GUI，2026-11-17 交付新資料夾與 ZIP。修正固定隊伍專用版本讀取並補 B1 技能診斷；`device_verified=false`，B1 實際技能與原停轉是否解除仍待真機確認。
+[0.5.51-orbs](docs/release-0.5.51.md) 已通過 [CI 167](https://github.com/hugotang/padcheaper/actions/runs/44024491484) 完整回歸、ASan/UBSan、arm64 建置／嚴格簽章、瀏覽器及四份 iPhone GUI，2026-11-17 交付新資料夾與 ZIP。修正珊瑚策略與攻擊品質；`device_verified=false`，B5 擊殺及全程通關仍待真機驗證。
 
 ## 版本索引
 
 | 版本 | 說明首次提交 | 內容 |
 |---|---|---|
-| [0.5.51-orbs](docs/release-0.5.51.md) | 2026-11-17 | 珊瑚專用技能／B7 目標、首消缺色引導、攻擊四消與 fishing 品質、上限診斷；編譯驗證中 |
+| [0.5.51-orbs](docs/release-0.5.51.md) | 2026-11-17 | 珊瑚專用技能／B7 目標、首消缺色引導、攻擊四消與 fishing 品質、上限診斷；已編譯驗證交付，真機待驗證 |
 | [0.5.50-orbs](docs/release-0.5.50.md) | 2026-11-17 | 固定隊伍專用版本讀取與 B1 技能診斷；已編譯驗證交付，真機待驗證 |
 | [0.5.49-orbs](docs/release-0.5.49.md) | 2026-11-17 | 珊瑚固定隊伍逐層 Auto；已編譯驗證交付，實機待驗證 |
 | [0.5.48-orbs](docs/release-0.5.48.md) | 2026-11-15 | 普通單人荊棘取色與消 T 徽章診斷；已驗證交付 |

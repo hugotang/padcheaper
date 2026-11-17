@@ -1,6 +1,6 @@
 # 0.5.51-orbs：珊瑚固定計畫與攻擊品質修正
 
-2026-11-17 使用者要求編譯測試，目前正在驗證。目標為日服 PAD 23.6.1／107553、arm64、iOS 15.0 以上；完成結果以[開發紀錄](development.md)及交付內 `verification.json` 為準。
+2026-11-17 完成：已通過 [CI 167](https://github.com/hugotang/padcheaper/actions/runs/44024491484) 完整回歸、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone GUI；Windows 核心回歸與來源一致性、套件／ZIP 獨立核對通過。詳見[驗證收據](../research/verification-0.5.51.json)。目標為日服 PAD 23.6.1／107553、arm64、iOS 15.0 以上；真機通關仍待驗證。
 
 - 珊瑚策略更新為 `coral-fixed-585607-v90-r2`：綁定關卡 7801／1、專用 v90 技能、B7 精確目標 210524，以及 B15 最後 Riku 階段最多兩盤。
 - 固定攻擊按首消缺色引導補搜，診斷區分一般六色目標與固定首消限制，避免出現「僅達成 2／2」。

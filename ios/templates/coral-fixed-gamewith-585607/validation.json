@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "static-source-review-only",
+  "status": "build-and-regression-verified-device-pending",
   "reviewedDate": "2026-11-17",
   "profileID": "coral-fixed-585607-v90-r2",
   "planSHA256": "801535fb1c38e83bf5298b19c04e938e7271fc5748bb6ca6fec3a7dd91405f69",
@@ -55,18 +55,11 @@
     "ios/tools/generate_coral_fixed_plan.py": "79dd8b0500c71d0b88b4529c1c0a6543ed16092cb5e3f65084ffe93538f0b6b3"
   },
   "notPerformed": [
-    "Product JSON parser execution",
-    "Objective-C/Objective-C++ compilation",
-    "Test suites including the newly written regressions",
-    "ASan/UBSan",
-    "iPhoneOS build/signing",
-    "GUI checks",
-    "GitHub Actions",
-    "Version bump or delivery packaging",
-    "Corrected B7 target selection or B7–B15 device validation"
+    "Physical-device B2/B5/B7 and full-clear validation",
+    "Native damage/healing/survival and fishing timing validation"
   ],
-  "buildVerified": false,
-  "testSuitesExecuted": false,
+  "buildVerified": true,
+  "testSuitesExecuted": true,
   "deviceVerified": false,
   "historicalReceipt": "The previous static receipt is preserved in Git and immutable 0.5.49/0.5.50 deliveries. CI 165 did not execute this revised template or its new cases.",
   "deviceEvidence": {
@@ -91,14 +84,8 @@
     "nativeDamageReceiptKnown": false
   },
   "pendingVerification": [
-    "Fixed first-color search guidance",
-    "Fixed constraint diagnostics",
-    "Solved fixed-attack ordinary refinement and bounded quality fishing",
-    "Original-goal candidate selection, independent multi phases and fallback regression",
-    "Frozen stage-cap native HP/effects diagnostics",
-    "B15 two-puzzle bound and r2 import",
-    "Full native/session/ASan/UBSan/iPhoneOS/GUI regression",
-    "Real-device B2/B7 and full clear"
+    "Real-device B2/B5/B7 and full clear",
+    "Actual B5 damage improvement; offline bounded search still returns three fours"
   ],
   "sourceReview": {
     "fixedAttackQuality": true,
@@ -115,5 +102,20 @@
         "ios/tests/orb_shape_guidance_tests.cpp"
       ]
     }
+  },
+  "sourceSHA256Scope": "Build-source static snapshot before completed CI167; subsequent completion documentation is outside this captured hash set.",
+  "verification": {
+    "commit": "e2d3f5e5f1470a497a748a6a3eebf689ade982a0",
+    "ciRun": "https://github.com/hugotang/padcheaper/actions/runs/44024491484",
+    "ciNumber": 167,
+    "version": "0.5.51-orbs",
+    "receipt": "../../research/verification-0.5.51.json",
+    "fullRegression": true,
+    "asanUbsan": true,
+    "iPhoneOSArm64": true,
+    "strictSignature": true,
+    "browser": true,
+    "iPhoneGUIReports": 4,
+    "deviceVerified": false
   }
 }
