@@ -13,6 +13,9 @@
 - 手動 CI 176 在 `macos-15` 完成，對應來源 `483ff493b5601e6256277754aa19fef9083eddc9`。iPhoneOS arm64 求解器靜態庫、macOS 模型及模擬輸入的 Session 回歸全部通過。本輪交付範圍為 `solver_only`。實機傷害、手機時間預算內的選路及 B5 通關仍待驗證。[CI 176](https://github.com/hugotang/padcheaper/actions/runs/44329604218)
 - 交付 `PADCheaper-OrbSolver-0.5.55-ci176.zip`，已逐檔核對 17 個項目、九個標頭與建置 commit，以及靜態庫內四個 arm64 Mach-O 物件。ZIP 的 SHA-256 為 `a495132fff1a29c8cd1b7e3b509f58a0853ad955c44a44438a4963817c84fd6b`，`libOrbSolver.a` 為 `8a8e6bb1ca9b896a970592d7cc37ec437392cb659d40c113f5e77976a4822159`。
 
+- 在 Windows 以 `a9bc65d` 重新產生含 14,229 張卡的離線編輯器，編隊匯入與隊庫測試、32 項隊伍模型檢查、14 項地下城比對均通過。Playwright 1.64.1 使用 Edge 和模擬的原生介面，通過五種視窗大小、編輯、儲存失敗與過期回覆等檢查。
+- `0.5.55-orbs` 完整 dylib 的連結、簽章和 iOS 模擬器載入仍待驗證。珊瑚 B5 修正及 B1–B15 全程通關仍待真機紀錄。
+
 ## 2026-11-18 0.5.54 交付紀錄
 
 - `0.5.53` 的 CI 173 排隊後以零個步驟結束。`0.5.54` 的手動 CI 174 驗證來源 `9691ea52172e64af9cd2c060864deda9555a1db7`，14 個步驟及四份 iPhone GUI 報告通過。[CI 173](https://github.com/hugotang/padcheaper/actions/runs/44310146753) · [CI 174](https://github.com/hugotang/padcheaper/actions/runs/44312785220)
