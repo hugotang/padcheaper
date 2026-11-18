@@ -739,7 +739,7 @@ bool PHOrbReplay(const PHOrbBoard *board, const PHOrbRoute *route, unsigned thro
     const uint64_t blocked = PHOrbBlockedCells(board);
     if (route->fishing && (route->fishCell >= board->width * board->height ||
         !(blocked & board->spinnerMask & (UINT64_C(1) << route->fishCell)) ||
-        (board->flags[route->fishCell] & PHOrbFlagLocked) || route->fishColor >= PHOrbBasicTypes ||
+        (board->flags[route->fishCell] & (PHOrbFlagLocked | PHOrbFlagTape)) || route->fishColor >= PHOrbBasicTypes ||
         !(board->spinnerColors & (1u << route->fishColor)))) return false;
     bool fished = false;
     *result = *board;

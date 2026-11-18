@@ -91,6 +91,8 @@
         record[@"observedPhase"] = @(state->phase);
         record[@"observedMultiplayer"] = MultiplayerTrace(*state);
         const bool sameTurn = PHOrbSameTurn(&_preview, state);
+        if (sameTurn && record[@"fixedPlanBeforeMove"] && [status isEqual:@"release-check"])
+            record[@"fixedPlanBeforeRelease"]=FixedEffectTrace(*state,record[@"fixedPlanBeforeMove"][@"stage"],@"before-release");
         const bool boardRead = HasBoardObservation(*state) && sameTurn;
         record[@"observedRead"] = !state->valid || !state->present ? @"unreadable" :
             !sameTurn ? @"different-turn" : boardRead ? @"board" : @"metadata-only";
@@ -150,7 +152,10 @@
         @"observedPhase":@(state->phase), @"observedMultiplayer":MultiplayerTrace(*state),
         @"confirmedSteps":@0, @"releaseEvaluation":@{}, @"releaseConfirmed":@NO};
     NSMutableDictionary *withMechanic = [record mutableCopy];
-    withMechanic[@"assistRecovery"] = _assistTrace; record = [withMechanic copy];
+    withMechanic[@"assistRecovery"] = _assistTrace;
+    if (_auto.active() && _activeProfile[@"fixedPlan"])
+        withMechanic[@"fixedPlanBeforeMove"]=FixedEffectTrace(_preview,_fixedStage[@"id"],@"settled-before-search");
+    record = [withMechanic copy];
     if (_executionHistory.count >= 3) [_executionHistory removeObjectAtIndex:0];
     [_executionHistory addObject:record]; _recordingExecution = true;
 }
@@ -176,6 +181,7 @@
     for (unsigned i = 0; i < _route.goalCount && i < PHOrbMaxGoals; ++i) [goalHits addObject:@(_route.goalHits[i])];
     BOOL preview = (_phase == PHOrbSessionPhase::Preview);
     const bool liveReadable = _hasLive && _live.valid && _live.present && !_live.multiplayerDisabled;
+    const bool liveEffectsKnown = _hasLive && EffectMasksKnown(_live);
     const bool multiplayer = _live.multiplayer.kind != PHOrbMultiplayerNone || _live.multiplayerDisabled || (_live.present &&
         !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer));
     NSDictionary *liveLeaderPlan = multiplayer && [_goalMode isEqual:@"leaders"] ?
@@ -303,7 +309,8 @@
         @"eightTeam":EightTeamTrace(_live.eight.valid ? _live : _eightLastObserved),
         @"eightProgress":[self eightProgressTrace],
         @"fixedPlanProgress":[self fixedProgressTrace],
-        @"rules":_skillRules, @"automationLog":[_automationLog copy], @"enemyEffects":@(_live.automation.enemyEffects),
+        @"rules":_skillRules, @"automationLog":[_automationLog copy], @"liveEffectsKnown":@(liveEffectsKnown),
+        @"enemyEffects":liveEffectsKnown ? @(_live.automation.enemyEffects) : (id)NSNull.null,
         @"ruleDecisions":[_ruleDecisions copy], @"decisionTurn":@(_decisionTurn),
         @"decisionObservedTurn":@(_decisionObservedTurn),
         @"ruleTiming":@{@"observedTurn":@(_observedTurn), @"profileID":_historyTimingProfile[@"id"] ?: @"",
@@ -335,7 +342,7 @@
         @"resizeProgress":@(_live.resizeProgress), @"resizeTarget":@(_live.resizeTarget), @"lastReadIssue":_lastReadIssue,
         @"profileContext":@{@"known":@(_hasLive && _live.valid && _live.present && !_live.multiplayerDisabled),
             @"dungeon":@(_live.identity.dungeon), @"floor":@(_live.identity.floor)},
-        @"playerBypass":@(_live.automation.playerBypass), @"skillWindow":@(_live.automation.window),
+        @"playerBypass":liveEffectsKnown ? @(_live.automation.playerBypass) : (id)NSNull.null, @"skillWindow":@(_live.automation.window),
         @"enabled":@(_frame.ready && _frame.enabled), @"board":BoardJSON(_route.count ? _preview.board : _live.board), @"path":path,
         @"quality":_quality, @"searchSteps":@(_solveOptions.steps), @"searchBeam":@(_solveOptions.beam),
         @"thornComboPriority":@(_thornComboPriority),

@@ -228,6 +228,19 @@ PHOrbSolveOptions OptionsForQuality(NSString *quality) {
 }
 #include "PHOrbDiagnosticPresentation.inc"
 
+bool EffectMasksKnown(const PHOrbSnapshot &state) {
+    return state.valid && state.present && !state.multiplayerDisabled && state.automation.valid && state.automation.enemiesKnown;
+}
+
+NSDictionary *FixedEffectTrace(const PHOrbSnapshot &state, NSString *stage, NSString *scope) {
+    const bool known=EffectMasksKnown(state);
+    const auto &effects=state.automation;
+    return @{@"scope":scope,@"floor":@(state.wave+1),@"stage":stage ?: @"",@"effectsKnown":@(known),
+        @"enemyEffects":known ? @(effects.enemyEffects) : (id)NSNull.null,
+        @"playerBypass":known ? @(effects.playerBypass) : (id)NSNull.null,
+        @"uncoveredEffects":known ? @(effects.enemyEffects & ~effects.playerBypass & 15u) : (id)NSNull.null};
+}
+
 NSDictionary *FishingEvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &goals, bool independent) {
     NSMutableDictionary *trace = [EvaluationTrace(value,goals) mutableCopy];
     if (independent) trace[@"scope"] = @"target-independent-other-shared-phases";
@@ -933,10 +946,11 @@ struct EightPreparationState {
         const double wait = FishWaitSeconds(_preview);
         const double moving = std::min(TimeAvailable(_preview), fixedMS ? double(fixedMS)/1000 : ExecutionLimit + wait) - wait - TimeMargin;
         if (moving > 0) fishSteps = std::min(options.steps, unsigned(moving / StepDuration(_preview)));
-        if (dynamic != 1 || thorns || fishSteps < 2) {
-            fishCell = -1; singleEligibility = dynamic != 1 ? @"requires-one-unlocked-spinner" :
-                thorns ? (options.allowThornFishing ? @"thorn-use-multi-planner" : @"thorn-token") : @"insufficient-move-time";
-        }
+        if (dynamic != 1) singleEligibility = @"requires-one-unlocked-spinner";
+        else if (board.tapeMask & (UINT64_C(1) << fishCell)) singleEligibility = @"taped-spinner";
+        else if (thorns) singleEligibility = options.allowThornFishing ? @"thorn-use-multi-planner" : @"thorn-token";
+        else if (fishSteps < 2) singleEligibility = @"insufficient-move-time";
+        if (![singleEligibility isEqual:@"eligible"]) fishCell = -1;
     }
     NSString *const singleFishingEligibility = singleEligibility;
     const unsigned ordinaryStageMS = !solo && (multiEligible || fishCell >= 0) ?
@@ -962,9 +976,11 @@ struct EightPreparationState {
         NSMutableArray *multiAttempts = [NSMutableArray array];
         NSDictionary *multiCoverage = @{@"started":@NO,@"reason":multiEligible ? @"ordinary-route-satisfied" : multiEligibility};
         const auto start = std::chrono::steady_clock::now();
-        const auto solveAttempt = [&](const PHOrbSolveOptions &trial, PHOrbRoute &candidate, NSDictionary *details) {
+        const auto solveAttempt = [&](const PHOrbSolveOptions &trial, PHOrbRoute &candidate, NSDictionary *details,
+                                      const PHOrbRoute *attackPrefix = nullptr) {
             const auto attemptStart = std::chrono::steady_clock::now();
-            const auto status = PHOrbSolve(board, trial, *cancel, candidate);
+            const auto status = attackPrefix ? PHOrbSolveFixedAttackSuffix(board,trial,*attackPrefix,*cancel,candidate) :
+                PHOrbSolve(board,trial,*cancel,candidate);
             const auto wallElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - attemptStart).count();
             NSMutableDictionary *attempt = SearchAttemptTrace(trial, status, candidate, uint64_t(wallElapsed));
@@ -1149,57 +1165,63 @@ struct EightPreparationState {
                 retained.goalsMet && retained.hazardsSafe && retained.fixedBoardSatisfied &&
                 damage==route.thornDamage && contacts==route.thornContacts;
             const bool canImprove=baselineValid && PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,stronger);
-            attackQuality[@"reason"]=!baselineValid ? @"baseline-replay-failed" :
-                !canImprove ? @"four-bound-or-goal-capacity" : @"fishing-unavailable";
+            attackQuality[@"reason"]=!baselineValid ? @"baseline-replay-failed" : @"four-bound-or-goal-capacity";
             attackQuality[@"baselineFirstWaveFours"]=@(retained.firstWaveFours);
             attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
-            // The primary solver already improves fours through recovery and
-            // backtracks. A stronger ordinary goal gets one full extra budget
-            // when no fishing choice exists; do not restart the same search in
-            // two shorter slices and discard its frontier halfway through.
             if (canImprove) {
                 attackQuality[@"started"]=@YES; attackQuality[@"budgetMS"]=@(qualityBudget);
                 attackQuality[@"reason"]=@"no-improvement";
                 const auto qualityDeadline=qualityStart+std::chrono::milliseconds(qualityBudget);
                 PHOrbFishingPlan qualityPlan;
-                if (fishCell>=0) {
-                    auto request=options; request.goals=stronger; request.fishCell=fishCell;
+                const auto planSingleTake = [&](const PHOrbGoalSet &goals) {
+                    if (fishCell<0) return;
+                    singleNotAttempted=@"quality-budget-exhausted";
+                    if (cancel->load(std::memory_order_relaxed) || std::chrono::steady_clock::now()>=qualityDeadline) return;
+                    auto request=options; request.goals=goals; request.fishCell=fishCell;
                     qualityPlan=PHOrbPlanFishing(board,request);
-                    singleNotAttempted=qualityPlan.selectedCount ? @"quality-budget-exhausted" : @"no-quality-color";
-                }
+                    attackQuality[@"singleFishingPlan"]=FishingPlanTrace(qualityPlan,fishCell);
+                    if (!qualityPlan.selectedCount) singleNotAttempted=@"no-quality-color";
+                };
+                planSingleTake(stronger);
                 std::vector<unsigned> qualityCells;
                 if (multiEligible) for (unsigned i=0;i<board.width*board.height;++i)
                     if ((board.spinnerMask&(UINT64_C(1)<<i)) && !(board.tapeMask&(UINT64_C(1)<<i))) qualityCells.push_back(i);
-                const unsigned fishingChoices=qualityPlan.selectedCount+unsigned(qualityCells.size());
-                const unsigned choices=fishingChoices ? fishingChoices : 1;
-                attackQuality[@"ordinary"]=@(!fishingChoices);
+                attackQuality[@"ordinary"]=@NO;
                 unsigned attempted=0, multiQualityAttempts=0;
-                for (unsigned choice=0;choice<choices;++choice) {
+                for (unsigned choice=0;choice<=qualityPlan.selectedCount+qualityCells.size();++choice) {
+                    const bool ordinary=choice==0;
+                    const unsigned fishingChoices=qualityPlan.selectedCount+unsigned(qualityCells.size());
                     const auto now=std::chrono::steady_clock::now();
                     if (cancel->load(std::memory_order_relaxed) || now>=qualityDeadline) {
                         attackQuality[@"reason"]=cancel->load(std::memory_order_relaxed) ? @"cancelled" : @"deadline"; break;
                     }
                     auto trial=options;
                     if (!PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,trial.goals)) break;
-                    trial.milliseconds=unsigned(std::chrono::duration_cast<std::chrono::milliseconds>(qualityDeadline-now).count())/(choices-choice);
+                    const unsigned remainingMS=unsigned(std::chrono::duration_cast<std::chrono::milliseconds>(qualityDeadline-now).count());
+                    trial.milliseconds=ordinary ? (fishingChoices ? remainingMS-remainingMS/3 : remainingMS) :
+                        remainingMS/(fishingChoices-choice+1);
                     if (!trial.milliseconds) { attackQuality[@"reason"]=@"insufficient-slice"; break; }
-                    const bool multi=fishingChoices && choice>=qualityPlan.selectedCount;
+                    const bool multi=choice>qualityPlan.selectedCount;
                     PHOrbRoute candidate{}; PHOrbMultiFishingResult multiCandidate;
                     PHOrbSolveStatus status;
                     NSMutableDictionary *attempt;
-                    if (!fishingChoices) {
-                        // One uninterrupted stronger search, with its own
-                        // recovery/backtracks inside the shared deadline.
-                        status=solveAttempt(trial,candidate,@{@"attackQuality":@YES,@"ordinaryQuality":@YES});
+                    if (ordinary) {
+                        PHOrbRoute prefix=route;
+                        // Keep the known approach but leave at least a quarter of the gesture for a different finish.
+                        const unsigned prefixSteps=fishingChoices ? std::min(unsigned(route.count-1),trial.steps*3/4) : 0;
+                        prefix.count=uint8_t(prefixSteps+1);
+                        attackQuality[@"ordinary"]=@YES;
+                        status=solveAttempt(trial,candidate,@{@"attackQuality":@YES,@"ordinaryQuality":@YES,
+                            @"prefixSteps":@(prefixSteps)},prefixSteps ? &prefix : nullptr);
                         attempt=attempts.lastObject;
                     } else if (!multi) {
-                        trial.fishCell=fishCell; trial.fishColor=qualityPlan.candidates[choice].color; trial.steps=fishSteps;
+                        trial.fishCell=fishCell; trial.fishColor=qualityPlan.candidates[choice-1].color; trial.steps=fishSteps;
                         singleNotAttempted=@"";
                         status=solveAttempt(trial,candidate,@{@"attackQuality":@YES});
                         attempt=attempts.lastObject;
                     } else {
                         ++multiQualityAttempts;
-                        trial.fishCell=int(qualityCells[choice-qualityPlan.selectedCount]);
+                        trial.fishCell=int(qualityCells[choice-1-qualityPlan.selectedCount]);
                         status=PHOrbSolveMultiFishing(board,trial,nullptr,multiTiming,PHOrbMultiFishingMaxExchanges,
                             *cancel,multiCandidate,PHOrbMultiFishingMaxGeometryExtra);
                         candidate=ExecutableMultiFishing(multiCandidate);
@@ -1231,8 +1253,8 @@ struct EightPreparationState {
                         attempt[@"originalFirstWaveFours"]=@(checked.firstWaveFours);
                         attempt[@"originalEvaluation"]=FishingEvaluationTrace(checked,original.goals,multi);
                     }
-                    if (cancel->load(std::memory_order_relaxed) || std::chrono::steady_clock::now()>=qualityDeadline ||
-                        !valid || candidate.thornDamage>route.thornDamage || !PHOrbPreferAttackQuality(checked,retained)) continue;
+                    if (cancel->load(std::memory_order_relaxed) || !valid || candidate.thornDamage>route.thornDamage ||
+                        !PHOrbPreferAttackQuality(checked,retained)) continue;
                     // Attempt diagnostics retain the temporary search target;
                     // execution and final replay use the original full contract.
                     if (multi) {
@@ -1244,14 +1266,20 @@ struct EightPreparationState {
                     attempt[@"qualityAccepted"]=@YES;
                     attackQuality[@"selected"]=@YES; attackQuality[@"reason"]=@"improved";
                     attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
+                    if (ordinary && PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,stronger))
+                        planSingleTake(stronger);
                 }
                 attackQuality[@"attempts"]=@(attempted);
                 attackQuality[@"multiAttempts"]=@(multiQualityAttempts);
+                if (cancel->load(std::memory_order_relaxed)) attackQuality[@"reason"]=@"cancelled";
+                else if (std::chrono::steady_clock::now()>=qualityDeadline) attackQuality[@"reason"]=@"deadline";
                 attackQuality[@"endReason"]=attackQuality[@"reason"];
                 if ([attackQuality[@"selected"] boolValue]) attackQuality[@"reason"]=@"improved";
                 if (multiQualityAttempts) multiCoverage=@{@"started":@YES,@"attackQuality":@YES,
                     @"attemptedCells":@(multiQualityAttempts),@"budgetMS":@(qualityBudget),
                     @"sharedWithSingleTake":@YES,@"soloRetry":@NO,@"endReason":attackQuality[@"endReason"]};
+                else if (multiEligible) multiCoverage=@{@"started":@NO,@"attackQuality":@YES,@"attemptedCells":@0,
+                    @"reason":attackQuality[@"endReason"]};
                 attackQuality[@"wallElapsedMS"]=@(std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now()-qualityStart).count());
             }

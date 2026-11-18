@@ -144,3 +144,5 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 constexpr unsigned PHOrbMaxSearchMilliseconds = 2500, PHOrbSoloRetryMilliseconds = 2000;
 PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;
+PHOrbSolveStatus PHOrbSolveFixedAttackSuffix(const PHOrbBoard &board, PHOrbSolveOptions options,
+    const PHOrbRoute &prefix, const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;

@@ -150,7 +150,7 @@
         [kind isEqual:@"enemy_hp_at_most"] ? @"敵人 HP 尚未達到指定門檻" :
         [kind isEqual:@"skill_ready"] ? @"指定技能尚未就緒" :
         [kind isEqual:@"parts_absent"] ? @"尚未確認部位全數消失" : @"步驟完成條件尚未達成";
-    const bool effectsKnown=_live.automation.valid && evidence->enemiesKnown;
+    const bool effectsKnown=EffectMasksKnown(_live) && evidence->enemiesKnown;
     const unsigned uncovered=effectsKnown ? evidence->enemyEffects & ~evidence->playerBypass & 15u : 0;
     NSMutableArray *blockers=[NSMutableArray array];
     if (uncovered&PHOrbEnemyDamageAbsorb) [blockers addObject:@"傷害吸收"];

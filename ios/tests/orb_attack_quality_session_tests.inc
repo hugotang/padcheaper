@@ -77,9 +77,10 @@ static void AttackQualitySessionTests() {
     NSMutableDictionary *profile=MutableFixedSessionProfile(engine);
     NSMutableDictionary *stage=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
     stage[@"actions"]=@[]; stage[@"board"][@"policy"]=@"six_colors_fours";
+    profile[@"settings"][@"quality"]=@"thorough";
     auto &live=engine->live;
     std::copy(std::begin(board.types),std::end(board.types),live.board.types);
-    live.board.spinnerColors=board.spinnerColors; live.board.spinnerMask=board.spinnerMask; live.board.fixedStart=1;
+    live.board.spinnerColors=board.spinnerColors; live.board.spinnerMask=UINT64_C(1)<<6; live.board.fixedStart=1;
     live.board.tapeMask=((UINT64_C(1)<<42)-1) & ~(UINT64_C(3)|(UINT64_C(1)<<6)|(UINT64_C(1)<<41));
     for (unsigned i=0;i<42;++i) live.board.flags[i]=live.board.tapeMask&(UINT64_C(1)<<i) ? PHOrbFlagTape : 0;
     live.spinnerTurns=5; live.spinnerPeriodFrames=live.spinnerCountdown=30;
@@ -91,11 +92,21 @@ static void AttackQualitySessionTests() {
             [session.snapshot[@"phase"] isEqual:@"fault"]) break;
     }
     NSDictionary *trace=session.snapshot[@"searchTrace"], *quality=trace[@"attackQuality"];
-    Check([trace[@"status"] isEqual:@"solved"] && [quality[@"started"] boolValue] &&
-        [quality[@"attempts"] unsignedIntegerValue]>0 && ![quality[@"selected"] boolValue] &&
+    Check([trace[@"status"] isEqual:@"solved"] && [quality[@"started"] boolValue] && [quality[@"ordinary"] boolValue] &&
+        ![quality[@"selected"] boolValue] &&
         [trace[@"selectedAttemptIndex"] isEqual:@0] && ![trace[@"multiFishingSelected"] boolValue] &&
         [trace[@"goalCount"] isEqual:@2] && [trace[@"evaluation"][@"goalsMet"] boolValue] && !engine->stages,
-        "an already-solved fixed attack attempts quality fishing and keeps its complete ordinary route when no improvement exists");
+        "an eligible spinner cannot displace ordinary refinement or its complete baseline on failure");
+    NSArray *attempts=trace[@"candidateAttempts"];
+    NSMutableSet *singleColors=[NSMutableSet set];
+    for (NSDictionary *attempt in attempts) if ([attempt[@"fishingRequested"] boolValue] && ![attempt[@"multiFishing"] boolValue])
+        [singleColors addObject:attempt[@"fishColor"]];
+    Check(attempts.count==5 && [attempts[1][@"ordinaryQuality"] boolValue] && [attempts[1][@"prefixSteps"] isEqual:@1] &&
+        ![attempts[1][@"fishingRequested"] boolValue] && [attempts[1][@"budgetMS"] unsignedIntValue]>[quality[@"budgetMS"] unsignedIntValue]/2 &&
+        [quality[@"singleFishingPlan"][@"fishCell"] isEqual:@6] && [quality[@"singleFishingPlan"][@"selectedCount"] isEqual:@2] &&
+        singleColors.count==2 && [attempts[4][@"multiFishing"] boolValue] && [quality[@"multiAttempts"] isEqual:@1] &&
+        [trace[@"path"] isEqual:attempts[0][@"path"]],
+        "one-spinner quality tries the retained prefix first, then both single colors and the independent source in the shared budget");
     CheckSearchAttemptTrace(trace);
     [session queueStop:@"attack quality cleanup"];
 
@@ -122,8 +133,9 @@ static void AttackQualitySessionTests() {
         [trace[@"selectedAttemptIndex"] isEqual:@0] && [trace[@"goalCount"] isEqual:@2] &&
         [trace[@"evaluation"][@"goalsMet"] boolValue] && !engine->stages,
         "ordinary quality runs once and retains the executable original route and goals when no improvement exists");
-    NSArray *attempts=trace[@"candidateAttempts"];
+    attempts=trace[@"candidateAttempts"];
     Check(attempts.count==2 && [attempts[1][@"ordinaryQuality"] boolValue] &&
+        [attempts[1][@"prefixSteps"] isEqual:@0] &&
         [attempts[1][@"budgetMS"] unsignedIntValue]>[quality[@"budgetMS"] unsignedIntValue]/2,
         "ordinary refinement receives the unsplit extra budget rather than two repeated half-depth searches");
     CheckSearchAttemptTrace(trace);

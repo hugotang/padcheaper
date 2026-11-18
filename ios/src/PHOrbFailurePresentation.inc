@@ -40,6 +40,7 @@ NSString *FishingSkipReasonMessage(NSString *reason) {
     if ([reason isEqual:@"motion-unavailable"]) return @"轉轉珠子的移動狀態無法確認";
     if ([reason isEqual:@"insufficient-time"] || [reason isEqual:@"insufficient-move-time"]) return @"剩餘原生操作時間不足以保留取色等待及放手時間";
     if ([reason isEqual:@"requires-one-unlocked-spinner"]) return @"單次取色目前需要剛好一個未鎖定的轉轉";
+    if ([reason isEqual:@"taped-spinner"]) return @"轉轉位於禁止操作的膠帶格";
     if ([reason isEqual:@"thorn-token"]) return @"單次取色目前不支援有荊棘的盤面";
     if ([reason isEqual:@"thorn-use-multi-planner"]) return @"荊棘取色交由逐步計算傷害的連續取色搜尋處理";
     if ([reason isEqual:@"assist-multi-plan-required"]) return @"目前回復目標需要連續取色規劃";

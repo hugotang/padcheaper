@@ -436,7 +436,7 @@ bool FishingOptionsValid(const PHOrbBoard &board, int cell, unsigned color) {
     if (cell < 0) return true;
     // Range-check before shifting. Locked spinners remain fixed inventory.
     const unsigned size = unsigned(board.width) * board.height, fish = unsigned(cell);
-    if (fish >= size || !(board.spinnerMask & (Bits(1) << fish)) || (board.flags[fish] & PHOrbFlagLocked) ||
+    if (fish >= size || !(board.spinnerMask & (Bits(1) << fish)) || (board.flags[fish] & (PHOrbFlagLocked | PHOrbFlagTape)) ||
         (board.spinnerColors & ~63u) || color >= PHOrbBasicTypes || !(board.spinnerColors & (1u << color))) return false;
     for (unsigned i = 0; i < size; ++i)
         if ((board.spinnerMask & (Bits(1) << i)) && i != fish && !(board.flags[i] & PHOrbFlagLocked)) return false;
@@ -1451,13 +1451,16 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
     return true;
 }
 
-PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
-                           const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
+static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options,
+    const std::atomic_bool &cancel, PHOrbRoute &route, const PHOrbRoute *attackPrefix) noexcept {
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
         options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity) || !FixedBoardValid(options.fixedBoard)) return PHOrbSolveStatus::Invalid;
     if (!FishingOptionsValid(board, options.fishCell, options.fishColor)) return PHOrbSolveStatus::Invalid;
+    if (attackPrefix && (options.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack || options.fishCell >= 0 ||
+        attackPrefix->fishing || attackPrefix->fishingExchangeCount || attackPrefix->diagonal != options.diagonal ||
+        attackPrefix->count < 2 || attackPrefix->count > options.steps)) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
     try {
         const auto start = Clock::now(), deadline = start + std::chrono::milliseconds(options.milliseconds);
@@ -1482,7 +1485,18 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (!EnoughOrbs(initial, context)) return PHOrbSolveStatus::InsufficientOrbs;
         std::vector<Node> starts, beam, next;
         starts.reserve(size); beam.reserve(std::max(size, options.beam)); next.reserve(options.beam * (options.diagonal ? 8 : 4));
-        for (unsigned i = 0; i < size; ++i) {
+        const unsigned startDepth = attackPrefix ? unsigned(attackPrefix->count - 1) : 0;
+        if (attackPrefix) {
+            // The prefix is part of the same drag, including displaced thorns, spent HP and the previous cell.
+            Node node; PHOrbBoard replay{};
+            if (!PHOrbReplay(&board,attackPrefix,startDepth,&replay) || !PHOrbRemainingThornBudget(&board,attackPrefix,0,
+                &options.thorns,&node.thornDamage,&node.thornContacts)) return PHOrbSolveStatus::Invalid;
+            node.length = attackPrefix->count;
+            std::copy_n(attackPrefix->cells,node.length,node.path.begin());
+            std::copy_n(replay.types,size,node.cells.begin());
+            for (unsigned i = 0; i < size; ++i) node.thorns[i] = replay.flags[i] & PHOrbFlagThorn ? replay.thornDamage[i] : 0;
+            starts.push_back(node);
+        } else for (unsigned i = 0; i < size; ++i) {
             if (!PHOrbCanStartAt(&board, i)) continue;
             Node node; node.cells = initial; node.thorns = initialThorns; node.path[0] = uint8_t(i); starts.push_back(node);
         }
@@ -1526,7 +1540,8 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         const bool ordinaryShapeRecovery = context.shapeGoals && !board.spinnerMask &&
             options.fishCell < 0 && !context.activity.firstWaveOnly;
         const bool comboSearch = context.activity.firstWaveOnly && context.activity.comboPriority;
-        const bool retain = (context.shapeGoals || context.colorRecovery || comboSearch) && options.backtrackLimit && options.steps >= 12;
+        const unsigned remainingSteps = options.steps - startDepth;
+        const bool retain = (context.shapeGoals || context.colorRecovery || comboSearch) && options.backtrackLimit && remainingSteps >= 12;
         unsigned comboUpper = 0, comboCounts[PHOrbTypes] = {0};
         for (unsigned i = 0; i < size; ++i) if (!(context.unmatchable & (1u << initial[i]))) ++comboCounts[initial[i]];
         const unsigned comboGroup = std::max(context.minErase,context.minMatch);
@@ -1673,7 +1688,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 // depths. These are genuinely discarded nodes, not copies
                 // of the beam that the first pass already expanded.
                 const bool checkpoint = saveFrontiers && (!met() || comboSearch || improveFours()) && saved.size() < options.backtrackLimit &&
-                    (depth + 1 == options.steps / 4 || depth + 1 == options.steps / 2);
+                    (depth + 1 == startDepth + remainingSteps / 4 || depth + 1 == startDepth + remainingSteps / 2);
                 if (checkpoint) {
                     Frontier frontier{depth + 1, {}};
                     SelectBeam(next, beam, options.beam, depth, scoring, focus, options.thornComboPriority, &frontier.nodes);
@@ -1702,10 +1717,10 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // Diversity must not discard a route the ordinary beam can find.
             Context baseline = context; baseline.activity.comboPriority = false;
             beam = starts;
-            search(baseline, 0, primaryFocus, primaryDeadline, false);
+            search(baseline, startDepth, primaryFocus, primaryDeadline, false);
         }
         beam = starts;
-        search(context, 0, primaryFocus, primaryDeadline, retain);
+        search(context, startDepth, primaryFocus, primaryDeadline, retain);
         if (recover && (!met() || improveFours()) && !timedOut && !cancel.load(std::memory_order_relaxed)) {
             Context recovery = context;
             PHOrbGoalSet qualityGoals{}; unsigned qualityFocus = PHOrbMaxGoals;
@@ -1747,7 +1762,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
             // leave their unused time for the existing bounded backtracks.
             const auto recoveryDeadline = stableShapeRecovery || saved.empty() ? deadline : now + (deadline - now) / 2;
             beam = starts;
-            search(recovery, 0, qualityGoal ? qualityFocus : found ? best.score.focus : 0,
+            search(recovery, startDepth, qualityGoal ? qualityFocus : found ? best.score.focus : 0,
                 recoveryDeadline, false, false, false, qualityGoal);
         }
         while (!saved.empty() && (!met() || improveFours() || (comboSearch && best.score.result.firstWaveCombos < comboUpper)) &&
@@ -1801,7 +1816,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 // must still be an isolated nine-cell square in evaluation.
                 attempt.borderRepairWeight = pass ? 0 : 1;
                 beam = starts; ++squarePasses;
-                search(attempt,0,squareGoal,now + (deadline - now) / (2 - pass),false);
+                search(attempt,startDepth,squareGoal,now + (deadline - now) / (2 - pass),false);
             }
         }
         // A feasible link/Combo route can crowd out incomplete, stronger row
@@ -1831,7 +1846,7 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                 auto activity = context.activity; activity.comboPriority = true;
                 const Context rows = MakeContext(board,goals,true,options.allowPoisonWithHeartFour,options.diagonal,activity);
                 beam = starts;
-                search(rows,0,goals.count-1,passDeadline,false,false,true);
+                search(rows,startDepth,goals.count-1,passDeadline,false,false,true);
             }
         }
         // Permitting survivable thorn contacts changes beam competition even
@@ -1841,15 +1856,15 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         // Keep the selected final ordering and the unchanged survival gates.
         // Skip the duplicate pass if blocked or unaffordable thorns never
         // admitted a contact candidate into any of the preceding beams.
-        if (hadContactCandidates && !timedOut && !cancel.load(std::memory_order_relaxed) && Clock::now() < deadline) {
+        if (hadContactCandidates && !starts.front().thornContacts && !timedOut && !cancel.load(std::memory_order_relaxed) && Clock::now() < deadline) {
             beam = starts;
-            search(context, 0, PHOrbMaxGoals, deadline, false, true);
+            search(context, startDepth, PHOrbMaxGoals, deadline, false, true);
         }
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         if (!found) return PHOrbSolveStatus::NoRoute;
         // Use only the original remaining budget. An interrupted cleanup
         // leaves the searched route intact; cancellation still publishes none.
-        SimplifyIdentityCycles(board,options,context,cancel,deadline,best);
+        if (!attackPrefix) SimplifyIdentityCycles(board,options,context,cancel,deadline,best);
         if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;
         route.count = best.length;
         route.diagonal = options.diagonal;
@@ -1884,6 +1899,16 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
         if (!route.hazardsSafe) return PHOrbSolveStatus::Unsafe;
         return route.goalsMet ? PHOrbSolveStatus::Solved : PHOrbSolveStatus::GoalsUnmet;
     } catch (...) { route = {}; return PHOrbSolveStatus::Failed; }
+}
+
+PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
+    const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
+    return Solve(board,options,cancel,route,nullptr);
+}
+
+PHOrbSolveStatus PHOrbSolveFixedAttackSuffix(const PHOrbBoard &board, PHOrbSolveOptions options,
+    const PHOrbRoute &prefix, const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
+    return Solve(board,options,cancel,route,&prefix);
 }
 
 #include "PHOrbTimedFishing.inc"

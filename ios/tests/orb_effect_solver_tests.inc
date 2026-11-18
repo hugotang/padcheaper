@@ -146,6 +146,11 @@ static void OrbEffectSolverTests() {
         manual.fishing = true; manual.fishCell = 8; manual.fishColor = 0;
         Check(PHOrbReplay(&fish, &manual, 1, &replay) && replay.types[2] == 0 && replay.types[8] == fish.types[2],
             "entering swaps the held orb with the shown colour");
+        auto taped = fish; taped.tapeMask |= UINT64_C(1) << 8; taped.flags[8] |= PHOrbFlagTape;
+        PHOrbRoute rejected{};
+        Check(PHOrbBoardValid(&taped) && !PHOrbPlanFishing(taped,fishing).valid &&
+            PHOrbSolve(taped,fishing,stop,rejected) == PHOrbSolveStatus::Invalid && !rejected.count &&
+            !PHOrbReplay(&taped,&manual,1,&replay), "a single take respects tape in planning, search and replay");
         manual.count = 4; manual.cells[2] = 9; manual.cells[3] = 8;
         Check(!PHOrbReplay(&fish, &manual, 3, &replay), "a second entry would take an unknown colour and is rejected");
         manual.count = 2; manual.fishColor = 0; auto table = fish; table.spinnerColors = 6;

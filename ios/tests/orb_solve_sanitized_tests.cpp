@@ -166,6 +166,23 @@ int main() {
     const PHOrbSolveStatus cancelled = PHOrbSolve(RandomBoard(6, 5, 81), base, cancel, route);
     Check(KnownStatus(cancelled) && RouteShapeValid(RandomBoard(6, 5, 81), route, false), "pre-cancelled search");
 
+    auto suffixOptions = base;
+    suffixOptions.steps = PHOrbMaxSteps;
+    suffixOptions.fixedBoard.mode = PHOrbFixedBoardMode::FourAttack;
+    const auto suffixBoard = RandomBoard(6, 5, 81);
+    PHOrbRoute prefix{}; prefix.count = PHOrbMaxSteps;
+    const uint8_t loop[] = {0, 1, 7, 6};
+    for (unsigned step = 0; step < prefix.count; ++step) prefix.cells[step] = loop[step % 4];
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard, suffixOptions, prefix, cancel, route) == PHOrbSolveStatus::Cancelled &&
+        !route.count, "pre-cancelled suffix clears the output");
+    cancel = false;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard, suffixOptions, prefix, cancel, route) == PHOrbSolveStatus::Solved &&
+        route.count == PHOrbMaxSteps + 1 && RouteShapeValid(suffixBoard, route, false),
+        "the last suffix swap fills exactly the last legal route cell");
+    prefix.count = UINT8_MAX;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard, suffixOptions, prefix, cancel, route) == PHOrbSolveStatus::Invalid &&
+        !route.count, "an oversized prefix is rejected before reading its path");
+
     std::printf("Sanitized solve tests: %u failures\n", failures);
     return failures ? 1 : 0;
 }

@@ -159,4 +159,72 @@ static void FixedBoardSolverTests() {
         value.firstWaveFours>=3 && value.firstWaveColors==63 && value.heartFours>=1 &&
         retainedAttack.goalCount==2 && !retainedAttack.fishing && retainedAttack.count<=49,
         "fixed attack refinement preserves a feasible baseline on the actual B5 board with the original release contract");
+
+    auto novemberFinish=FixedBoardFixture(7,6,{
+        5,1,4,5,5,2,0, 3,0,4,2,2,5,4, 2,5,1,5,0,2,1,
+        3,2,4,1,1,3,0, 2,4,5,3,0,1,3, 0,0,1,1,5,3,1});
+    novemberFinish.spinnerMask=UINT64_C(1)<<8; novemberFinish.spinnerColors=63; novemberFinish.minErase=3;
+    PHOrbRoute devicePrefix{}; devicePrefix.diagonal=true;
+    const uint8_t deviceCells[]={39,33,26,32,31,25,18,10,4,12,18,24,30,29,21,22,15,16,23,30,31,32,40,39,38,37,36,35,28,21,14,22,15,7};
+    devicePrefix.count=sizeof(deviceCells);
+    std::copy(std::begin(deviceCells),std::end(deviceCells),devicePrefix.cells);
+    Check(PHOrbEvaluateRoute(novemberFinish,devicePrefix,options,value,damage,contacts) && value.goalsMet &&
+        value.fixedBoardSatisfied && value.hazardsSafe && value.firstWaveFours==4 && value.firstWaveCombos==8,
+        "0.5.52 B5 records an ordinary 33-step four-group baseline, not a failed drag");
+    options.steps=34;
+    PHOrbRoute extension{};
+    Check(PHOrbSolveFixedAttackSuffix(novemberFinish,options,devicePrefix,cancel,extension)==PHOrbSolveStatus::Solved &&
+        extension.count==35 && std::equal(std::begin(deviceCells),std::end(deviceCells),extension.cells) &&
+        PHOrbEvaluateRoute(novemberFinish,extension,options,value,damage,contacts) && value.goalsMet &&
+        value.hazardsSafe && value.firstWaveFours>=4 && !damage && !contacts,
+        "the logged ordinary drag can continue with one remaining swap without starting over or losing its contract");
+    options.steps=48;
+    auto b5Quality=options; b5Quality.goals.items[b5Quality.goals.count++]={PHOrbGoalFour,63,5,0};
+    Check(PHOrbSolveFixedAttackSuffix(novemberFinish,b5Quality,devicePrefix,cancel,extension)==PHOrbSolveStatus::Solved &&
+        extension.count>devicePrefix.count && extension.count<=options.steps+1 && !extension.fishing &&
+        std::equal(std::begin(deviceCells),std::end(deviceCells),extension.cells) &&
+        PHOrbEvaluateRoute(novemberFinish,extension,options,value,damage,contacts) && value.goalsMet &&
+        value.hazardsSafe && value.fixedBoardSatisfied && value.firstWaveColors==63 && value.heartFours>=1 &&
+        value.firstWaveFours>=5 && !damage && !contacts,
+        "the B5 witness has a legal suffix that adds a fifth first-wave four across all spinner phases");
+
+    auto suffixBoard=FixedBoardFixture(7,6,{
+        0,0,0,2,2,3,4, 1,1,1,1,0,2,3, 2,2,2,2,3,4,5,
+        3,3,3,3,4,5,0, 4,4,4,4,5,0,1, 5,5,5,5,0,1,2});
+    suffixBoard.fixedStart=7; suffixBoard.spinnerMask=UINT64_C(1)<<41; suffixBoard.spinnerColors=63;
+    suffixBoard.tapeMask=((UINT64_C(1)<<42)-1)&~((UINT64_C(1)<<6)|(UINT64_C(1)<<5)|
+        (UINT64_C(1)<<4)|(UINT64_C(1)<<3)|(UINT64_C(1)<<11));
+    for (unsigned cell=0;cell<42;++cell)
+        if (suffixBoard.tapeMask&(UINT64_C(1)<<cell)) suffixBoard.flags[cell]=PHOrbFlagTape;
+    PHOrbRoute prefix{}; prefix.count=3; prefix.diagonal=true;
+    prefix.cells[0]=6; prefix.cells[1]=5; prefix.cells[2]=4;
+    options.steps=4;
+    Check(PHOrbEvaluateRoute(suffixBoard,prefix,options,value,damage,contacts) && value.goalsMet &&
+        value.firstWaveColors==63 && value.heartFours==1 && value.firstWaveFours==5,
+        "the two-step prefix already satisfies the original fixed contract in every spinner phase");
+    auto trial=options; trial.goals.items[trial.goals.count++]={PHOrbGoalFour,63,6,0};
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,prefix,cancel,extension)==PHOrbSolveStatus::Solved && extension.count==5 &&
+        std::equal(prefix.cells,prefix.cells+prefix.count,extension.cells) && extension.cells[3]==3 && extension.cells[4]==11 &&
+        !extension.fishing && PHOrbEvaluateRoute(suffixBoard,extension,options,value,damage,contacts) &&
+        value.goalsMet && value.fixedBoardSatisfied && value.hazardsSafe && value.firstWaveFours==6 && value.heartFours==1,
+        "two more swaps improve the retained attack without another pickup, crossing a spinner or extending the four-step limit");
+    trial.steps=3;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,prefix,cancel,extension)==PHOrbSolveStatus::GoalsUnmet && extension.count==4,
+        "the suffix gets only the remaining step, not a fresh full gesture");
+    trial.steps=2;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,prefix,cancel,extension)==PHOrbSolveStatus::Invalid && !extension.count,
+        "a prefix with no steps remaining cannot start a refinement");
+    trial.steps=4;
+    auto invalid=prefix; invalid.cells[1]=41;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,invalid,cancel,extension)==PHOrbSolveStatus::Invalid && !extension.count,
+        "an invalid prefix must replay from the actual board before any continuation");
+    suffixBoard.flags[4]|=PHOrbFlagThorn; suffixBoard.thornDamage[4]=10;
+    trial.thorns={11,100,0,true};
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,prefix,cancel,extension)==PHOrbSolveStatus::Solved && extension.thornContacts==1 &&
+        extension.thornDamage==10 && PHOrbEvaluateRoute(suffixBoard,extension,trial,value,damage,contacts) &&
+        value.hazardsSafe && damage==10 && contacts==1,
+        "prefix replay carries the displaced thorn and charges its contact exactly once over the complete route");
+    trial.thorns.pendingDamage=1;
+    Check(PHOrbSolveFixedAttackSuffix(suffixBoard,trial,prefix,cancel,extension)==PHOrbSolveStatus::Invalid && !extension.count,
+        "pending damage and prefix contacts cannot exhaust HP even if the final layout has a heart four");
 }

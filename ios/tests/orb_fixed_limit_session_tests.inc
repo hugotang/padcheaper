@@ -25,7 +25,12 @@ static void FixedLimitDiagnosticSessionTests() {
         std::copy(std::begin(cells),std::end(cells),board.types);
         board.fixedStart=1; board.tapeMask=((UINT64_C(1)<<20)-1)&~UINT64_C(3);
         for (unsigned i=0;i<20;++i) board.flags[i]=(board.tapeMask&(UINT64_C(1)<<i)) ? PHOrbFlagTape : 0;
+        engine->live.automation.enemyEffects=engine->live.automation.playerBypass=PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid;
         PHOrbSession *session=StartFixedTest(engine,profile);
+        if (!scenario) {
+            Check(UntilPhase(session,engine,@"running"),"fixed effect fixture reaches the held gesture");
+            engine->live.automation.playerBypass=PHOrbEnemyDamageVoid;
+        }
         Check(UntilPhase(session,engine,@"turnWaiting"),"fixed cap fixture completes one acknowledged native puzzle");
         for (unsigned i=0;i<3;++i) Tick(session,engine,Frame());
         const NSUInteger stages=engine->stages, releases=engine->releases;
@@ -39,6 +44,7 @@ static void FixedLimitDiagnosticSessionTests() {
             part=enemy; part.flags=0x100u; part.hp=1;
         }
         if (scenario==1 || scenario==6) enemy.hpKnown=false;
+        if (scenario==1) engine->live.automation.statusKnown=false;
         if (scenario==2) engine->live.automation.enemiesKnown=false;
         engine->live.phase=2; engine->live.moves=0;
         for (unsigned i=0;i<100;++i) {
@@ -47,6 +53,15 @@ static void FixedLimitDiagnosticSessionTests() {
                 [session.snapshot[@"fixedPlanProgress"][@"stage"] isEqual:@"next"]) break;
         }
         NSDictionary *snapshot=session.snapshot, *progress=snapshot[@"fixedPlanProgress"], *stop=progress[@"lastStop"];
+        NSDictionary *execution=[snapshot[@"executionHistory"] lastObject];
+        NSDictionary *beforeMove=execution[@"fixedPlanBeforeMove"], *beforeRelease=execution[@"fixedPlanBeforeRelease"];
+        Check([beforeMove[@"scope"] isEqual:@"settled-before-search"] && [beforeMove[@"floor"] isEqual:@1] &&
+            [beforeMove[@"stage"] isEqual:@"opening"] && [beforeMove[@"effectsKnown"] boolValue] &&
+            [beforeMove[@"enemyEffects"] isEqual:@6] && [beforeMove[@"playerBypass"] isEqual:@6] &&
+            [beforeMove[@"uncoveredEffects"] isEqual:@0] && [beforeRelease[@"scope"] isEqual:@"before-release"] &&
+            [beforeRelease[@"effectsKnown"] boolValue] && [beforeRelease[@"playerBypass"] isEqual:@(scenario ? 6 : 4)] &&
+            [beforeRelease[@"uncoveredEffects"] isEqual:@(scenario ? 0 : 2)] && [execution[@"releaseConfirmed"] boolValue],
+            "execution history samples coverage at search and release even when a bypass changes during the drag");
         if (scenario==5) {
             Check([progress[@"stage"] isEqual:@"next"] && !stop.count && [snapshot[@"automatic"] boolValue],
                 "a satisfied completion predicate advances before checking the same puzzle cap");
@@ -84,10 +99,14 @@ static void FixedLimitDiagnosticSessionTests() {
                 body[@"hp"]==NSNull.null && !body[@"remainingPercent"] && stop[@"livingBodies"]==NSNull.null &&
                 ![snapshot[@"message"] containsString:@"39.81%"] && ![snapshot[@"message"] containsString:@"敵人仍存活"],
                 "unknown body HP does not become zero, a ratio or an asserted survivor");
+            if (scenario==1) Check([stop[@"effectsKnown"] boolValue] && [stop[@"uncoveredEffects"] isEqual:@4] &&
+                [snapshot[@"liveEffectsKnown"] boolValue] && [snapshot[@"playerBypass"] isEqual:@2],
+                "validated effect masks remain observable when the independent awakening-status read is unknown");
             if (scenario==2) Check(![stop[@"effectsKnown"] boolValue] && stop[@"enemyEffects"]==NSNull.null &&
                 stop[@"playerBypass"]==NSNull.null && stop[@"uncoveredEffects"]==NSNull.null &&
+                ![snapshot[@"liveEffectsKnown"] boolValue] && snapshot[@"enemyEffects"]==NSNull.null && snapshot[@"playerBypass"]==NSNull.null &&
                 [snapshot[@"message"] containsString:@"狀態未知"],
-                "unknown aggregate effect evidence is retained as unknown rather than no active effects");
+                "an incomplete effect-mask read stays unknown even after earlier snapshots had complete evidence");
             if (scenario==3) Check([stop[@"until"][@"percent"] isEqual:@10] &&
                 [snapshot[@"message"] containsString:@"HP 尚未達到指定門檻"],
                 "an unmet HP checkpoint is distinguished from a floor-change condition");

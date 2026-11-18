@@ -1067,9 +1067,11 @@ static NSDictionary *PHRuntimeSnapshot(void) {
         NSString *json = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null";
         diagnostics = [diagnostics stringByAppendingFormat:@"\nOrb %@ (row-major, zero-based path): %@", key, json];
     }
-    diagnostics = [diagnostics stringByAppendingFormat:@"\nContinuous orbs: %@ / turn %@ / moves %@ / skills %@ / skill window %@\nSkill rules: %@\nSkill log: %@\nEnemy effects: %@ / player bypass: %@",
+    diagnostics = [diagnostics stringByAppendingFormat:@"\nContinuous orbs: %@ / turn %@ / moves %@ / skills %@ / skill window %@\nSkill rules: %@\nSkill log: %@\nEnemy effects (live): %@ / player bypass (live): %@",
         orbs[@"automatic"], orbs[@"autoTurn"], orbs[@"autoMoves"], orbs[@"autoSkills"], orbs[@"skillWindow"],
-        orbs[@"rules"], [orbs[@"automationLog"] componentsJoinedByString:@"\n"], orbs[@"enemyEffects"], orbs[@"playerBypass"]];
+        orbs[@"rules"], [orbs[@"automationLog"] componentsJoinedByString:@"\n"],
+        [orbs[@"liveEffectsKnown"] boolValue] ? orbs[@"enemyEffects"] : @"unknown",
+        [orbs[@"liveEffectsKnown"] boolValue] ? orbs[@"playerBypass"] : @"unknown"];
     diagnostics = [diagnostics stringByAppendingFormat:
         @"\nSkill decisions: turn %@ / retained observed turn %@ / observed phase %@ / skill window %@ / busy %@",
         orbs[@"decisionTurn"], orbs[@"decisionObservedTurn"], orbs[@"decisionPhase"], orbs[@"decisionSkillWindow"], orbs[@"decisionSkillBusy"]];
