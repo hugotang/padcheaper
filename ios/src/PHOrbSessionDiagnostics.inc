@@ -137,6 +137,7 @@
             @"spinnerCountdown":@(_preview.spinnerCountdown),
             @"executionLimitMS":@(_fixedGestureMS ? std::min(_fixedGestureMS,unsigned(RouteExecutionLimit(_preview,_route) * 1000)) : unsigned(RouteExecutionLimit(_preview,_route) * 1000))},
         @"search":@{@"quality":_quality, @"elapsedMS":@(_route.elapsedMS), @"budgetMS":@(_solveOptions.milliseconds),
+            @"selectedBudgetMS":_searchTrace[@"selectedBudgetMS"] ?: (id)NSNull.null,
             @"thornComboPriority":@(_solveOptions.thornComboPriority),
             @"allowThornsWithHeartMatch":@(_solveOptions.allowThornsWithHeartMatch), @"allowThornFishing":@(_solveOptions.allowThornFishing), @"thorns":ThornBudgetTrace(_solveOptions),
             @"allowPoisonWithHeartFour":@(_solveOptions.allowPoisonWithHeartFour),

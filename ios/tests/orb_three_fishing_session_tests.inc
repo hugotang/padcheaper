@@ -35,6 +35,13 @@ static void ThreeFishingSessionTests() {
         Check(engine->releases == 1 && !engine->live.dragged &&
             [session.snapshot[@"lastFishingSuccess"][@"releaseConfirmed"] boolValue],
             "each allowed intent confirms both takes and one owned release");
+        if (mode >= 3) {
+            NSDictionary *search = [session.snapshot[@"executionHistory"] lastObject][@"search"];
+            Check([search[@"budgetMS"] isEqual:trace[@"initialBudgetMS"]] &&
+                [search[@"selectedBudgetMS"] isEqual:trace[@"selectedBudgetMS"]] &&
+                [search[@"selectedBudgetMS"] unsignedIntValue] < [search[@"budgetMS"] unsignedIntValue],
+                "released gesture history keeps the selected slice alongside the larger configured budget");
+        }
         const NSUInteger stages = engine->stages;
         if (mode != 1) {
             for (unsigned i = 0; i < 10; ++i) Tick(session,engine,Frame());

@@ -180,13 +180,41 @@ static void FixedBoardSolverTests() {
         "the logged ordinary drag can continue with one remaining swap without starting over or losing its contract");
     options.steps=48;
     auto b5Quality=options; b5Quality.goals.items[b5Quality.goals.count++]={PHOrbGoalFour,63,5,0};
+    devicePrefix.count=uint8_t(1+PHOrbAttackPrefixSteps(devicePrefix.count-1,options.steps));
     Check(PHOrbSolveFixedAttackSuffix(novemberFinish,b5Quality,devicePrefix,cancel,extension)==PHOrbSolveStatus::Solved &&
-        extension.count>devicePrefix.count && extension.count<=options.steps+1 && !extension.fishing &&
-        std::equal(std::begin(deviceCells),std::end(deviceCells),extension.cells) &&
+        devicePrefix.count==33 && extension.count>devicePrefix.count && extension.count<=options.steps+1 && !extension.fishing &&
+        std::equal(deviceCells,deviceCells+devicePrefix.count,extension.cells) &&
         PHOrbEvaluateRoute(novemberFinish,extension,options,value,damage,contacts) && value.goalsMet &&
         value.hazardsSafe && value.fixedBoardSatisfied && value.firstWaveColors==63 && value.heartFours>=1 &&
         value.firstWaveFours>=5 && !damage && !contacts,
         "the B5 witness has a legal suffix that adds a fifth first-wave four across all spinner phases");
+
+    auto b7Finish=FixedBoardFixture(6,5,{
+        5,1,0,1,5,4, 0,1,0,4,5,4, 2,0,5,3,1,3,
+        2,5,4,3,0,5, 1,2,3,8,2,3});
+    b7Finish.spinnerMask=UINT64_C(1)<<6; b7Finish.spinnerColors=63; b7Finish.minErase=3;
+    b7Finish.enhancement[2]=b7Finish.enhancement[3]=UINT32_C(3204448256);
+    for (unsigned cell : {6u,12u,16u,20u,24u}) b7Finish.enhancement[cell]=UINT32_C(1031127695);
+    const uint8_t b7Cells[]={16,23,22,15,10,9,2,7,13,19,24,25,20,21,22,29,23,17,10,4};
+    PHOrbRoute b7Prefix{}; b7Prefix.diagonal=true; b7Prefix.count=sizeof(b7Cells);
+    std::copy(std::begin(b7Cells),std::end(b7Cells),b7Prefix.cells);
+    PHOrbEvaluation b7Baseline{};
+    Check(PHOrbEvaluateRoute(b7Finish,b7Prefix,options,b7Baseline,damage,contacts) &&
+        b7Baseline.goalsMet && b7Baseline.hazardsSafe && b7Baseline.firstWaveFours==3 && b7Baseline.firstWaveCombos==6,
+        "the recorded B7 finish meets six colors and heart four with three first-wave fours");
+    auto b7Quality=options;
+    Check(PHOrbAttackQualityGoals(options.goals,b7Baseline.firstWaveFours,30/4,b7Quality.goals),
+        "B7 finish is eligible for a stronger ordinary attack");
+    b7Prefix.count=uint8_t(1+PHOrbAttackPrefixSteps(b7Prefix.count-1,options.steps));
+    Check(b7Prefix.count==19 && PHOrbAttackPrefixSteps(0,48)==0 && PHOrbAttackPrefixSteps(1,48)==1 &&
+        PHOrbAttackPrefixSteps(48,48)==36 && PHOrbAttackPrefixSteps(1,1)==0,
+        "a full approach can revise its last swap while one-swap starts and the gesture reserve stay bounded");
+    Check(PHOrbSolveFixedAttackSuffix(b7Finish,b7Quality,b7Prefix,cancel,extension)==PHOrbSolveStatus::Solved &&
+        extension.count>b7Prefix.count && extension.count<=options.steps+1 && !extension.fishing &&
+        std::equal(b7Cells,b7Cells+b7Prefix.count,extension.cells) &&
+        PHOrbEvaluateRoute(b7Finish,extension,options,value,damage,contacts) && PHOrbPreferAttackQuality(value,b7Baseline) &&
+        value.firstWaveColors==63 && value.heartFours>=1 && !value.mortalPoisonErased && !damage && !contacts,
+        "the B7 approach can finish with at least four guaranteed first-wave fours under its original release goals");
 
     auto suffixBoard=FixedBoardFixture(7,6,{
         0,0,0,2,2,3,4, 1,1,1,1,0,2,3, 2,2,2,2,3,4,5,

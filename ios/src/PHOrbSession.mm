@@ -1208,7 +1208,7 @@ struct EightPreparationState {
                     if (ordinary) {
                         PHOrbRoute prefix=route;
                         // Keep the known approach but leave at least a quarter of the gesture for a different finish.
-                        const unsigned prefixSteps=fishingChoices ? std::min(unsigned(route.count-1),trial.steps*3/4) : 0;
+                        const unsigned prefixSteps=fishingChoices ? PHOrbAttackPrefixSteps(route.count-1,trial.steps) : 0;
                         prefix.count=uint8_t(prefixSteps+1);
                         attackQuality[@"ordinary"]=@YES;
                         status=solveAttempt(trial,candidate,@{@"attackQuality":@YES,@"ordinaryQuality":@YES,

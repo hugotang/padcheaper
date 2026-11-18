@@ -1,4 +1,5 @@
 #include "PHOrbSolver.h"
+#include "PHOrbAttackQuality.h"
 #include "PHOrbTimedFishing.h"
 #include "PHOrbAssistFishing.h"
 #include "PHOrbMultiFishing.h"

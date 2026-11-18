@@ -2,7 +2,7 @@
 
 來源版本與功能描述以 [release.json](release.json) 為準；各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，待驗證的改動見 [開發紀錄](docs/development.md)。
 
-目前來源 **0.5.53-orbs** 適用於日服 PAD **23.6.1／107553**、arm64。珊瑚固定攻擊遇到轉轉時，可沿原路徑補搜更多四消。已選用 `v90-r3` 的策略可以沿用。建置進度與原盤實測見[開發紀錄](docs/development.md)。
+目前來源 **0.5.54-orbs** 適用於日服 PAD **23.6.1／107553**、arm64。珊瑚固定攻擊遇到轉轉時，可從原路線最後一步前分岔，補搜更多首消四連。已選用 `v90-r3` 的策略可以沿用。建置進度與 B5、B7 原盤實測見[開發紀錄](docs/development.md)。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 

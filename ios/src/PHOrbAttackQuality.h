@@ -14,6 +14,11 @@ static inline unsigned PHOrbAttackQualityBudget(bool solo, bool recovery, bool c
     return std::min(options.milliseconds,unsigned(PHOrbSoloRetryMilliseconds-elapsedMS));
 }
 
+static inline unsigned PHOrbAttackPrefixSteps(unsigned routeSteps, unsigned stepLimit) {
+    const unsigned approach = routeSteps > 1 ? routeSteps - 1 : routeSteps;
+    return std::min(approach, stepLimit * 3 / 4);
+}
+
 // This clause is a search aid only. Retained routes must be replayed using
 // the original goals; the extra clause must not escape into saved plans.
 static inline bool PHOrbAttackQualityGoals(const PHOrbGoalSet &base, unsigned fours, unsigned upper,
