@@ -46,7 +46,7 @@ jobs:
           done
           xcrun --sdk iphoneos clang++ "${flags[@]}" -std=c++17 -c ios/src/PHOrbSolver.cpp -o "$RUNNER_TEMP/PHOrbSolver.o"
           xcrun libtool -static -o "$RUNNER_TEMP/libOrbSolver.a" "$RUNNER_TEMP/PHOrbSolver.o" "${objects[@]}"
-          xcrun lipo -verify_arch arm64 "$RUNNER_TEMP/libOrbSolver.a"
+          xcrun lipo "$RUNNER_TEMP/libOrbSolver.a" -verify_arch arm64
 
       - name: Run portable solver and model regressions
         run: |
