@@ -146,3 +146,5 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
                            const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;
 PHOrbSolveStatus PHOrbSolveFixedAttackSuffix(const PHOrbBoard &board, PHOrbSolveOptions options,
     const PHOrbRoute &prefix, const std::atomic_bool &cancel, PHOrbRoute &route) noexcept;
+bool PHOrbAddsOrdinaryAttackCombo(const PHOrbBoard &board, const PHOrbRoute &baseline,
+    const PHOrbRoute &candidate) noexcept;

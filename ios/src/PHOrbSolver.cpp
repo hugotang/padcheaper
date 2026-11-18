@@ -726,7 +726,9 @@ bool ReleaseHazardsSafe(const PHOrbEvaluation &result, bool allowPoisonWithHeart
         (!result.poisonErased || (allowPoisonWithHeartFour && (!requireHeart || result.heartFours)));
 }
 
-Score EvaluateStatic(Cells cells, const Context &context) {
+using FirstWaveGroups = std::array<Bits, PHOrbMaxCells / 3>;
+
+Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *firstWaveGroups = nullptr) {
     Score score;
     auto &result = score.result;
     const unsigned width = context.width, height = context.height, size = width * height;
@@ -777,7 +779,11 @@ Score EvaluateStatic(Cells cells, const Context &context) {
             if (!wave || !context.activity.firstWaveOnly) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
             }
-            if (!wave) { ++result.firstWaveCombos; firstColors |= 1u << color; }
+            if (!wave) {
+                if (firstWaveGroups) (*firstWaveGroups)[result.firstWaveCombos] = group;
+                ++result.firstWaveCombos;
+                firstColors |= 1u << color;
+            }
             if (context.activity.firstWaveOnly && !wave && color < 6) {
                 attackContribution[color] += count + 1;
                 result.largestGroups[color] = uint8_t(std::max(unsigned(result.largestGroups[color]),count));
@@ -1909,6 +1915,69 @@ PHOrbSolveStatus PHOrbSolve(const PHOrbBoard &board, PHOrbSolveOptions options,
 PHOrbSolveStatus PHOrbSolveFixedAttackSuffix(const PHOrbBoard &board, PHOrbSolveOptions options,
     const PHOrbRoute &prefix, const std::atomic_bool &cancel, PHOrbRoute &route) noexcept {
     return Solve(board,options,cancel,route,&prefix);
+}
+
+bool PHOrbAddsOrdinaryAttackCombo(const PHOrbBoard &board, const PHOrbRoute &baseline,
+    const PHOrbRoute &candidate) noexcept {
+    if (!PHOrbBoardValid(&board) || candidate.count < 2 || candidate.count > baseline.count ||
+        candidate.diagonal != baseline.diagonal || baseline.fishing || candidate.fishing ||
+        baseline.fishingExchangeCount || candidate.fishingExchangeCount) return false;
+    try {
+        const unsigned size = board.width * board.height;
+        PHOrbBoard indexed = board, before{}, after{};
+        for (unsigned cell = 0; cell < size; ++cell) indexed.tokens[cell] = cell;
+        if (!PHOrbReplay(&indexed,&baseline,baseline.count-1,&before) ||
+            !PHOrbReplay(&indexed,&candidate,candidate.count-1,&after)) return false;
+        const auto context = MakeContext(board,{},false);
+        struct Group {
+            unsigned color;
+            Bits tokens, shape;
+            bool operator==(const Group &other) const {
+                return color == other.color && tokens == other.tokens && shape == other.shape;
+            }
+        };
+        struct Wave {
+            std::vector<Group> groups;
+            unsigned poisonErased, mortalPoisonErased;
+        };
+        const auto groupsForPhase = [&](const PHOrbBoard &layout, unsigned phase) {
+            Cells colors{};
+            for (unsigned cell = 0; cell < size; ++cell) {
+                colors[cell] = (context.dynamicSpinners & (Bits(1) << cell)) ? context.spinnerStates[phase][cell] : layout.types[cell];
+            }
+            FirstWaveGroups removed{};
+            const auto score = EvaluateStatic(colors, context, &removed).result;
+            Wave wave{{}, score.poisonErased, score.mortalPoisonErased};
+            wave.groups.reserve(score.firstWaveCombos);
+            for (unsigned index = 0; index < score.firstWaveCombos; ++index) {
+                const Bits group = removed[index];
+                const unsigned first = unsigned(__builtin_ctzll(group));
+                unsigned left = first % board.width;
+                Bits members = 0;
+                for (Bits rest = group; rest; rest &= rest - 1) {
+                    const unsigned cell = unsigned(__builtin_ctzll(rest));
+                    members |= Bits(1) << layout.tokens[cell];
+                    left = std::min(left, cell % board.width);
+                }
+                const unsigned origin = first - first % board.width + left;
+                wave.groups.push_back({colors[first], members, group >> origin});
+            }
+            return wave;
+        };
+        for (unsigned phase = 0; phase < context.variants; ++phase) {
+            const auto previous = groupsForPhase(before, phase);
+            auto next = groupsForPhase(after, phase);
+            if (previous.groups.empty() || next.groups.size() <= previous.groups.size() ||
+                next.poisonErased > previous.poisonErased || next.mortalPoisonErased > previous.mortalPoisonErased) return false;
+            for (const auto &group : previous.groups) {
+                const auto match = std::find(next.groups.begin(), next.groups.end(), group);
+                if (match == next.groups.end()) return false;
+                next.groups.erase(match);
+            }
+            if (std::any_of(next.groups.begin(), next.groups.end(), [](const Group &group) { return group.color >= PHOrbBasicTypes; })) return false;
+        }
+        return true;
+    } catch (...) { return false; }
 }
 
 #include "PHOrbTimedFishing.inc"

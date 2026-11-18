@@ -16,7 +16,7 @@ static inline unsigned PHOrbAttackQualityBudget(bool solo, bool recovery, bool c
 
 static inline unsigned PHOrbAttackPrefixSteps(unsigned routeSteps, unsigned stepLimit) {
     const unsigned approach = routeSteps > 1 ? routeSteps - 1 : routeSteps;
-    return std::min(approach, stepLimit * 3 / 4);
+    return std::min(approach, stepLimit * 2 / 3);
 }
 
 // This clause is a search aid only. Retained routes must be replayed using
@@ -38,6 +38,16 @@ static inline bool PHOrbPreferAttackQuality(const PHOrbEvaluation &candidate, co
     return candidate.goalsMet && candidate.hazardsSafe && candidate.fixedBoardSatisfied &&
         retained.goalsMet && retained.hazardsSafe && retained.fixedBoardSatisfied &&
         candidate.firstWaveFours>retained.firstWaveFours;
+}
+
+static inline bool PHOrbPreferExtraCombo(const PHOrbBoard &board, const PHOrbRoute &baseline,
+    const PHOrbEvaluation &retained, const PHOrbRoute &candidate, const PHOrbEvaluation &checked) {
+    return retained.goalsMet && retained.hazardsSafe && retained.fixedBoardSatisfied &&
+        checked.goalsMet && checked.hazardsSafe && checked.fixedBoardSatisfied &&
+        checked.firstWaveFours == retained.firstWaveFours && checked.firstWaveCombos > retained.firstWaveCombos &&
+        checked.poisonErased <= retained.poisonErased && checked.mortalPoisonErased <= retained.mortalPoisonErased &&
+        checked.heartFours >= retained.heartFours && candidate.thornDamage <= baseline.thornDamage &&
+        candidate.thornContacts <= baseline.thornContacts && PHOrbAddsOrdinaryAttackCombo(board,baseline,candidate);
 }
 
 static inline void PHOrbApplyAttackQualityEvaluation(PHOrbRoute &route, const PHOrbEvaluation &value,

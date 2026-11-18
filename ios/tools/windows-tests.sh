@@ -12,7 +12,9 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_dir"
-export PATH="/c/msys64/mingw64/bin:$PATH"
+if [[ -d /c/msys64/mingw64/bin ]]; then
+    export PATH="/c/msys64/mingw64/bin:$PATH"
+fi
 build_dir="${BUILD_DIR:-$repo_dir/build/win-tests}"
 mkdir -p "$build_dir"
 

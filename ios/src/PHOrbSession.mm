@@ -1168,6 +1168,8 @@ struct EightPreparationState {
             attackQuality[@"reason"]=!baselineValid ? @"baseline-replay-failed" : @"four-bound-or-goal-capacity";
             attackQuality[@"baselineFirstWaveFours"]=@(retained.firstWaveFours);
             attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
+            attackQuality[@"baselineFirstWaveCombos"]=@(retained.firstWaveCombos);
+            attackQuality[@"selectedFirstWaveCombos"]=@(retained.firstWaveCombos);
             if (canImprove) {
                 attackQuality[@"started"]=@YES; attackQuality[@"budgetMS"]=@(qualityBudget);
                 attackQuality[@"reason"]=@"no-improvement";
@@ -1207,7 +1209,6 @@ struct EightPreparationState {
                     NSMutableDictionary *attempt;
                     if (ordinary) {
                         PHOrbRoute prefix=route;
-                        // Keep the known approach but leave at least a quarter of the gesture for a different finish.
                         const unsigned prefixSteps=fishingChoices ? PHOrbAttackPrefixSteps(route.count-1,trial.steps) : 0;
                         prefix.count=uint8_t(prefixSteps+1);
                         attackQuality[@"ordinary"]=@YES;
@@ -1236,13 +1237,12 @@ struct EightPreparationState {
                     }
                     ++attempted;
                     attempt[@"qualityAccepted"]=@NO;
-                    // Normalize only after the stronger search has succeeded.
-                    // Multi zero-exchange routes retain their independent phase
-                    // scope and plan metadata during this original-goal replay.
                     auto original=trial; original.goals=options.goals;
                     PHOrbEvaluation checked{}; uint32_t checkedDamage=0; uint8_t checkedContacts=0;
                     bool valid=false;
-                    if (status==PHOrbSolveStatus::Solved && candidate.goalsMet && candidate.hazardsSafe) {
+                    const bool strongerSolved=status==PHOrbSolveStatus::Solved && candidate.goalsMet;
+                    const bool ordinaryPartial=ordinary && status==PHOrbSolveStatus::GoalsUnmet && PHOrbHasSearchCandidate(status,candidate);
+                    if ((strongerSolved || ordinaryPartial) && candidate.hazardsSafe) {
                         if (multi) {
                             multiCandidate.route.plan.goals=original.goals;
                             valid=PHOrbEvaluateMultiFishing(board,multiCandidate.route,original,nullptr,checked);
@@ -1253,8 +1253,9 @@ struct EightPreparationState {
                         attempt[@"originalFirstWaveFours"]=@(checked.firstWaveFours);
                         attempt[@"originalEvaluation"]=FishingEvaluationTrace(checked,original.goals,multi);
                     }
-                    if (cancel->load(std::memory_order_relaxed) || !valid || candidate.thornDamage>route.thornDamage ||
-                        !PHOrbPreferAttackQuality(checked,retained)) continue;
+                    if (cancel->load(std::memory_order_relaxed) || !valid || candidate.thornDamage>route.thornDamage) continue;
+                    const bool extraCombo=ordinary && PHOrbPreferExtraCombo(board,route,retained,candidate,checked);
+                    if (!extraCombo && !(strongerSolved && PHOrbPreferAttackQuality(checked,retained))) continue;
                     // Attempt diagnostics retain the temporary search target;
                     // execution and final replay use the original full contract.
                     if (multi) {
@@ -1266,6 +1267,8 @@ struct EightPreparationState {
                     attempt[@"qualityAccepted"]=@YES;
                     attackQuality[@"selected"]=@YES; attackQuality[@"reason"]=@"improved";
                     attackQuality[@"selectedFirstWaveFours"]=@(retained.firstWaveFours);
+                    attackQuality[@"selectedFirstWaveCombos"]=@(retained.firstWaveCombos);
+                    attackQuality[@"improvement"]=extraCombo ? @"retained-groups-extra-combo" : @"more-first-wave-fours";
                     if (ordinary && PHOrbAttackQualityGoals(options.goals,retained.firstWaveFours,upper,stronger))
                         planSingleTake(stronger);
                 }

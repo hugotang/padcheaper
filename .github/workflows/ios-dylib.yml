@@ -12,16 +12,73 @@ on:
           - macos-26
           - macos-15
           - macos-15-intel
+      solver_only:
+        description: Compile the standalone arm64 solver and run the portable model tests
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: ios-dylib-${{ github.workflow }}-${{ github.ref }}
+  group: ios-dylib-${{ github.workflow }}-${{ github.ref }}${{ inputs.solver_only && '-solver-only' || '' }}
   cancel-in-progress: true
 
 jobs:
+  solver:
+    if: ${{ inputs.solver_only }}
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Compile standalone iPhoneOS arm64 solver
+        run: |
+          set -eu
+          sdk=$(xcrun --sdk iphoneos --show-sdk-path)
+          minimum=$(python3 ios/tools/release_metadata.py minimum-ios)
+          flags=(-arch arm64 -isysroot "$sdk" "-miphoneos-version-min=$minimum" -O2 -Wall -Wextra -Werror -Iios/src)
+          objects=()
+          for model in PHOrbModel PHBattleModel PHInputModel; do
+            xcrun --sdk iphoneos clang "${flags[@]}" -std=gnu11 -c "ios/src/$model.c" -o "$RUNNER_TEMP/$model.o"
+            objects+=("$RUNNER_TEMP/$model.o")
+          done
+          xcrun --sdk iphoneos clang++ "${flags[@]}" -std=c++17 -c ios/src/PHOrbSolver.cpp -o "$RUNNER_TEMP/PHOrbSolver.o"
+          xcrun libtool -static -o "$RUNNER_TEMP/libOrbSolver.a" "$RUNNER_TEMP/PHOrbSolver.o" "${objects[@]}"
+          xcrun lipo -verify_arch arm64 "$RUNNER_TEMP/libOrbSolver.a"
+
+      - name: Run portable solver and model regressions
+        run: |
+          set -o pipefail
+          BUILD_DIR="$RUNNER_TEMP/orb-model-tests" bash ios/tools/windows-tests.sh | tee "$RUNNER_TEMP/solver-regression.log"
+
+      - name: Test the planner with simulated boards and input
+        run: |
+          set -o pipefail
+          BUILD_DIR="$RUNNER_TEMP/orb-model-tests" bash ios/tools/test-solver-session.sh | tee "$RUNNER_TEMP/session-regression.log"
+
+      - name: Collect standalone solver and test results
+        run: |
+          mkdir -p build/standalone-solver/include build/standalone-solver/pazusoba
+          cp "$RUNNER_TEMP/libOrbSolver.a" "$RUNNER_TEMP/solver-regression.log" "$RUNNER_TEMP/session-regression.log" build/standalone-solver/
+          cp ios/src/{PHOrbSolver,PHOrbAttackQuality,PHOrbSearchAttempt,PHOrbModel,PHBattleModel,PHInputModel,PHBattlePreset,PHBattlePolicy,PHBattleMemberState}.h build/standalone-solver/include/
+          cp LICENSE build/standalone-solver/
+          cp ios/third_party/pazusoba/{LICENSE,NOTICE.md} build/standalone-solver/pazusoba/
+          git rev-parse HEAD > build/standalone-solver/source-commit.txt
+          cd build/standalone-solver
+          shasum -a 256 libOrbSolver.a include/*.h LICENSE pazusoba/* *-regression.log source-commit.txt > SHA256SUMS
+
+      - name: Upload standalone archive and headers
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-OrbSolver-iOS-arm64-${{ github.run_number }}
+          path: build/standalone-solver/
+          if-no-files-found: error
+          retention-days: 30
+
   build:
+    if: ${{ !inputs.solver_only }}
     runs-on: ${{ inputs.runner || 'macos-26' }}
     # Tests take ~14 min and the GUI step may use its own 20 min limit.
     timeout-minutes: 40

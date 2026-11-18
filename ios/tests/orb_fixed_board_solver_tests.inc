@@ -207,7 +207,7 @@ static void FixedBoardSolverTests() {
         "B7 finish is eligible for a stronger ordinary attack");
     b7Prefix.count=uint8_t(1+PHOrbAttackPrefixSteps(b7Prefix.count-1,options.steps));
     Check(b7Prefix.count==19 && PHOrbAttackPrefixSteps(0,48)==0 && PHOrbAttackPrefixSteps(1,48)==1 &&
-        PHOrbAttackPrefixSteps(48,48)==36 && PHOrbAttackPrefixSteps(1,1)==0,
+        PHOrbAttackPrefixSteps(48,48)==32 && PHOrbAttackPrefixSteps(1,1)==0,
         "a full approach can revise its last swap while one-swap starts and the gesture reserve stay bounded");
     Check(PHOrbSolveFixedAttackSuffix(b7Finish,b7Quality,b7Prefix,cancel,extension)==PHOrbSolveStatus::Solved &&
         extension.count>b7Prefix.count && extension.count<=options.steps+1 && !extension.fishing &&
@@ -215,6 +215,84 @@ static void FixedBoardSolverTests() {
         PHOrbEvaluateRoute(b7Finish,extension,options,value,damage,contacts) && PHOrbPreferAttackQuality(value,b7Baseline) &&
         value.firstWaveColors==63 && value.heartFours>=1 && !value.mortalPoisonErased && !damage && !contacts,
         "the B7 approach can finish with at least four guaranteed first-wave fours under its original release goals");
+
+    auto fullB5=FixedBoardFixture(7,6,{
+        0,3,4,2,0,3,2, 1,4,5,5,0,5,4, 1,1,1,4,4,2,0,
+        1,1,0,4,4,3,5, 3,0,0,0,1,1,1, 2,1,5,0,2,5,3});
+    fullB5.spinnerMask=UINT64_C(1)<<8; fullB5.spinnerColors=63; fullB5.minErase=3;
+    for (unsigned cell : {19u,24u,31u}) fullB5.enhancement[cell]=UINT32_C(3204448256);
+    for (unsigned cell : {0u,2u,6u,8u,11u,15u,16u,28u,29u,30u,32u,35u,36u,37u,38u,39u,40u})
+        fullB5.enhancement[cell]=UINT32_C(1031127695);
+    const uint8_t finishCells[]={11,12,19,13,5,12,4,3,11,17,9,16,24,32,40,41,33,27,26,34,40,39,31,37,29,
+        36,30,22,23,17,25,24,23,30,24,25,26,20,27,34,26,25,24,23,29,28,21,15,9};
+    PHOrbRoute fullDrag{}; fullDrag.count=sizeof(finishCells); fullDrag.diagonal=true;
+    std::copy(std::begin(finishCells),std::end(finishCells),fullDrag.cells);
+    PHOrbEvaluation fullScore{};
+    Check(PHOrbEvaluateRoute(fullB5,fullDrag,options,fullScore,damage,contacts) && fullScore.goalsMet &&
+        fullScore.firstWaveFours==5 && fullScore.firstWaveCombos==7,
+        "B5 finish uses all 48 moves and guarantees five fours and seven combos");
+    auto extraGoal=options;
+    Check(PHOrbAttackQualityGoals(options.goals,5,10,extraGoal.goals),"the extra B5 search requests six fours");
+    auto approach=fullDrag; approach.count=uint8_t(1+PHOrbAttackPrefixSteps(fullDrag.count-1,options.steps));
+    auto status=PHOrbSolveFixedAttackSuffix(fullB5,extraGoal,approach,cancel,extension);
+    Check(PHOrbHasSearchCandidate(status,extension) && PHOrbEvaluateRoute(fullB5,extension,options,value,damage,contacts) &&
+        (PHOrbPreferAttackQuality(value,fullScore) || PHOrbPreferExtraCombo(fullB5,fullDrag,fullScore,extension,value)),
+        "a full-length B5 finish can improve its original contract within the gesture limit");
+    const uint8_t bonusCells[]={11,12,19,13,5,12,4,3,11,17,9,16,24,32,40,41,33,27,26,34,40,39,31,37,29,
+        36,30,22,23,17,25,24,23,30,24,23,29,28,21,15,9,3,11,12,20,13};
+    PHOrbRoute bonusPath{}; bonusPath.count=sizeof(bonusCells); bonusPath.diagonal=true;
+    std::copy(std::begin(bonusCells),std::end(bonusCells),bonusPath.cells);
+    Check(PHOrbEvaluateRoute(fullB5,bonusPath,options,value,damage,contacts) && value.firstWaveCombos==8 &&
+        PHOrbPreferExtraCombo(fullB5,fullDrag,fullScore,bonusPath,value) &&
+        !PHOrbAddsOrdinaryAttackCombo(fullB5,bonusPath,fullDrag) && !PHOrbAddsOrdinaryAttackCombo(fullB5,fullDrag,fullDrag),
+        "all six phases preserve the same seven original token groups and gain a basic-color combo");
+    PHOrbEvaluation provisional{};
+    Check(PHOrbEvaluateRoute(fullB5,bonusPath,extraGoal,provisional,damage,contacts) && !provisional.goalsMet &&
+        provisional.firstWaveFours==5 && provisional.goalHits[2]==5 && value.goalsMet && value.matchedGoals==2,
+        "the five-four candidate misses the provisional sixth four and still meets both original goals");
+    auto originalContract=bonusPath;
+    PHOrbApplyAttackQualityEvaluation(originalContract,value,options.goals);
+    Check(originalContract.goalsMet && originalContract.goalCount==2 && originalContract.goalHits[2]==0 && !provisional.goalsMet,
+        "normalization reports the original goals and preserves the provisional search outcome separately");
+    auto rejectedScore=value; ++rejectedScore.mortalPoisonErased;
+    Check(!PHOrbPreferExtraCombo(fullB5,fullDrag,fullScore,bonusPath,rejectedScore),"a combo cannot increase mortal poison exposure");
+    auto speculative=bonusPath; speculative.fishing=true;
+    Check(!PHOrbAddsOrdinaryAttackCombo(fullB5,fullDrag,speculative),"an ordinary combo tie cannot introduce a spinner take");
+    const uint8_t exchangedCells[]={11,12,19,13,5,12,4,3,11,17,9,16,24,32,40,41,33,27,26,34,40,39,31,37,29,
+        23,17,25,24,23,22,29,28,36,30,24,23,15,9,3,11,12,20,13};
+    speculative=bonusPath; speculative.count=sizeof(exchangedCells);
+    std::copy(std::begin(exchangedCells),std::end(exchangedCells),speculative.cells);
+    Check(PHOrbEvaluateRoute(fullB5,speculative,options,value,damage,contacts) && value.firstWaveCombos==8 &&
+        value.firstWaveFours==5 && !PHOrbPreferExtraCombo(fullB5,fullDrag,fullScore,speculative,value),
+        "equal counts cannot replace original matched tokens on a board with weakened orbs");
+
+    for (unsigned width : {5u, 6u, 7u}) {
+        PHOrbBoard sample{};
+        sample.width = uint8_t(width);
+        sample.height = uint8_t(width - 1);
+        const unsigned bottom = width * (sample.height - 1);
+        for (unsigned cell = 0; cell < width * sample.height; ++cell)
+            sample.types[cell] = uint8_t(1 + (cell / width + cell % width) % 2);
+        sample.types[0] = sample.types[1] = sample.types[2] = 4;
+        sample.types[bottom] = sample.types[bottom + 1] = sample.types[bottom + 3] = 0;
+        sample.types[bottom + 2] = 3;
+        sample.spinnerMask = UINT64_C(1) << (width - 1);
+        sample.spinnerColors = (1u << PHOrbTypes) - 1;
+        PHOrbRoute unchanged{}, extra{};
+        unchanged.count = 3;
+        unchanged.cells[0] = unchanged.cells[2] = uint8_t(width);
+        unchanged.cells[1] = uint8_t(width + 1);
+        extra.count = 2;
+        extra.cells[0] = uint8_t(bottom + 2);
+        extra.cells[1] = uint8_t(bottom + 3);
+        Check(PHOrbSpinnerVariants(&sample) == PHOrbTypes && PHOrbAddsOrdinaryAttackCombo(sample, unchanged, extra),
+            "every supported size and all ten possible spinner colors retain the matched tokens");
+        sample.spinnerMask = UINT64_C(1) << bottom;
+        Check(!PHOrbAddsOrdinaryAttackCombo(sample, unchanged, extra), "a gain in only the observed spinner phase is rejected");
+        sample.spinnerMask = sample.spinnerColors = 0;
+        sample.types[bottom] = sample.types[bottom + 1] = sample.types[bottom + 3] = PHOrbJammer;
+        Check(!PHOrbAddsOrdinaryAttackCombo(sample, unchanged, extra), "a new jammer match is not a basic-color combo");
+    }
 
     auto suffixBoard=FixedBoardFixture(7,6,{
         0,0,0,2,2,3,4, 1,1,1,1,0,2,3, 2,2,2,2,3,4,5,
