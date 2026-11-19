@@ -1,0 +1,274 @@
+{
+  "version": "0.5.56-orbs",
+  "commit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+  "verification_date": "2026-11-19T11:44:26.814567+00:00",
+  "sha256": "b624184674b058b8dfc3ff335e846d54b9707d454e1d969b4572e951a59d56dd",
+  "size_bytes": 12116496,
+  "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/44512518697",
+  "ci_conclusion": "success",
+  "ci_required_steps": {
+    "Set up job": "success",
+    "Checkout": "success",
+    "Show iOS SDK toolchain": "success",
+    "Validate target and run protocol tests": "success",
+    "Compile arm64 iPhoneOS dylib": "success",
+    "Verify editor save and mobile interactions": "success",
+    "Upload editor browser diagnostics": "success",
+    "Inspect Mach-O and signature": "success",
+    "Upload dylib and installation notes": "success",
+    "Verify floating GUI in iOS Simulator": "success",
+    "Upload GUI probe diagnostics": "success",
+    "Build summary": "success",
+    "Post Checkout": "success",
+    "Complete job": "success"
+  },
+  "native_tests": "passed on the same macOS CI run",
+  "editor_browser_tests": "passed",
+  "gui_reports": {
+    "overlay-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "overlay-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    },
+    "legacy-restart-probe.json": {
+      "phase": "done",
+      "success": 1,
+      "failures": []
+    }
+  },
+  "documentation_link_rewrites": {
+    "coral-plan-review-2026-11-19.md": {
+      "artifact_sha256": "52ca2592e6a46eade32a82af990e7520ba4ee6998e949b1fc4e37944ada517c0",
+      "delivery_sha256": "1dd5e9a44e62080bdc19793c43beaddf943f9b859a4be717818e8951825d77d2"
+    },
+    "diagnostics-release.md": {
+      "artifact_sha256": "bf828c22b270efd63d522168975a93ea1acfcc6ce94df0678a201c8cea016654",
+      "delivery_sha256": "0d98b4f469c84d3d21305b52f6f981cc8e5493c36798b2f9e8fdd408e1738411"
+    }
+  },
+  "device_verified": false,
+  "ci_number": "182",
+  "profile_id": "coral-fixed-585607-v90-r4",
+  "limitations": "Offline native state transitions, synthetic input, browser and simulator checks do not verify game damage, survival, cooldown continuity or a complete Coral clear. Import/select v90-r4 with 0.5.56 and start a new untouched B1. device_verified remains false.",
+  "documentation_snapshot": "Bundled development and template validation notes describe their pre-CI source state. This top-level verification.json and verification/ record the completed checks for the exact build commit.",
+  "independent_delivery_verification": {
+    "version": "0.5.56-orbs",
+    "commit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+    "ci_run": "https://github.com/hugotang/padcheaper/actions/runs/44512518697",
+    "ci_number": 182,
+    "manifestFiles": 427,
+    "zipFiles": 428,
+    "dylibSHA256": "b624184674b058b8dfc3ff335e846d54b9707d454e1d969b4572e951a59d56dd",
+    "zipSHA256": "ffa6e9ad6c7d0b1e48945d82a193af0293c41c6face0072bee35ca34687afc00",
+    "dylibBytes": 12116496,
+    "arm64MachO": true,
+    "minimumIOS": "15.0",
+    "codeSignatureCommand": true,
+    "artifactNonMarkdownFilesUnchanged": true,
+    "documentLinkRewrites": [
+      "coral-plan-review-2026-11-19.md",
+      "diagnostics-release.md"
+    ],
+    "fourGUIReportsPassed": true,
+    "archiveByteComparison": true,
+    "deviceVerified": false
+  },
+  "local_verification": {
+    "recordedAt": "2026-11-19T11:17:42.397257+00:00",
+    "commit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+    "platform": "Windows x64 / MinGW g++ / Python 3.12 / Node / Edge",
+    "commands": [
+      {
+        "command": "bash ios/tools/windows-tests.sh",
+        "exitCode": 0,
+        "scope": "8P model, solver/model, private shape guidance, public solve smoke (no sanitizer runtime)"
+      },
+      {
+        "command": [
+          "python",
+          "ios/tests/release_metadata_tests.py"
+        ],
+        "exitCode": 0
+      },
+      {
+        "command": [
+          "python",
+          "ios/tests/leader_catalog_tests.py"
+        ],
+        "exitCode": 0
+      },
+      {
+        "command": [
+          "node",
+          "ios/tests/formation_tests.js"
+        ],
+        "exitCode": 0
+      },
+      {
+        "command": [
+          "node",
+          "ios/tests/team_model_tests.js"
+        ],
+        "exitCode": 0
+      },
+      {
+        "command": [
+          "node",
+          "ios/tests/team_dungeon_tests.js"
+        ],
+        "exitCode": 0
+      },
+      {
+        "command": "node ios/tests/editor_ui_tests.js (Playwright 1.64.1 / msedge)",
+        "exitCode": 0
+      }
+    ],
+    "logSHA256": {
+      "windows-regression.log": "8b8c5ab1b7dbb7fdda5b1bcca07585b3ac19f7ea6d2c8dc3734eef7c70cbf9d6",
+      "release_metadata_tests.log": "8b85378c6541566a863a401b98d08cbdc5fd4a1c8b7684fc61a6958f2f0d7b1c",
+      "leader_catalog_tests.log": "35ca1c371788ba7c006f1b2a748486ff1b41147e88be99a0989a670e7a6c2162",
+      "formation_tests.log": "9ff498941dd1a04089d15f98bef7db293ba77bd9dae7a36e484355befa72e184",
+      "team_model_tests.log": "50843ad8611adf2a54473441e02b2c539791b77c06dff359fb5ee813557e4b7f",
+      "team_dungeon_tests.log": "d7cc898101092a0c2c4f29c5fb1c80ed460057f978fe644da5b847b8ba20ec15",
+      "editor-browser.log": "a424bc3b67258f5f1d5f7395d8ced26499ac460ac96bd572ea5f72d0d3b89fb9"
+    },
+    "sourceComparison": "source-vs-ci.json checks current LF-normalized source against the dispatched commit; native/iPhoneOS/sanitizer results remain pending CI.",
+    "deviceVerified": false
+  },
+  "delivery_tool_checks": {
+    "compiledCommit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+    "purpose": "Normalize packaged documentation links only; binary and plan unchanged",
+    "tests": 7,
+    "changedMarkdownFiles": [
+      "coral-plan-review-2026-11-19.md",
+      "diagnostics-release.md"
+    ],
+    "resolvedLinks": [
+      {
+        "file": "release-0.5.56.md",
+        "target": "coral-plan-review-2026-11-19.md"
+      },
+      {
+        "file": "release-0.5.56.md",
+        "target": "templates/coral-fixed-gamewith-585607/fixed-plan.json"
+      },
+      {
+        "file": "coral-plan-review-2026-11-19.md",
+        "target": "tools/generate_coral_fixed_plan.py"
+      },
+      {
+        "file": "coral-plan-review-2026-11-19.md",
+        "target": "development.md"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "../../coral-plan-review-2026-11-19.md"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "b5-search-reference.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "guide-comparison.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "b2-search-reference.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "enemy-reference.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "skill-reference.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "fixed-plan.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "../../tools/generate_coral_fixed_plan.py"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "strategy.reference.json"
+      },
+      {
+        "file": "templates\\coral-fixed-gamewith-585607\\README.md",
+        "target": "validation.json"
+      }
+    ],
+    "toolSources": {
+      "ios/tools/release_metadata.py": "8ad8d17316c58eebff00f5e984144908298119b1153776412c31cbe685e66c54",
+      "ios/tools/package_delivery.py": "758e7deaa07cf007f13e3f325ea90e5df7539e07ccc4bb43dda7d9bdad7cdfe9",
+      "ios/tests/release_metadata_tests.py": "aebafa1235debc815ca59d01c17d713bb1e888b5e7e8be9b3ec16b98dba93280"
+    }
+  },
+  "ci_log_review": {
+    "ci": 182,
+    "commit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+    "errorMatches": [],
+    "warningLines": [
+      "build\tUpload editor browser diagnostics\t2026-11-19T11:31:29.8122050Z (node:26465) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+      "build\tUpload editor browser diagnostics\t2026-11-19T11:31:30.7400550Z (node:26465) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+      "build\tUpload dylib and installation notes\t2026-11-19T11:31:34.0087340Z (node:26490) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+      "build\tUpload dylib and installation notes\t2026-11-19T11:31:35.5125960Z (node:26490) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+      "build\tUpload GUI probe diagnostics\t2026-11-19T11:42:14.4816880Z (node:40382) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+      "build\tUpload GUI probe diagnostics\t2026-11-19T11:42:15.5578410Z (node:40382) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.",
+      "build\tComplete job\t2026-11-19T11:42:25.7515260Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+    ],
+    "passSummaries": [
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:34.9854260Z Ran 7 tests in 0.010s",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:35.4343100Z Ran 11 tests in 0.354s",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:36.0032660Z Formation editor model/import/library/awakening-label tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:36.2747830Z Solo team model: 32 checks passed.",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:36.4993360Z Offline dungeon comparison: 14 checks passed.",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:37.5318270Z Input model tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:39.0490320Z Input reader tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:39.2201710Z Battle model tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:39.4210310Z Battle preset tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:46.1996510Z Orb rules tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:11:47.2546810Z Orb profiles tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:12:33.6401030Z Orb solver/model tests: passed (24 seeded boards; independent oracle; bounds, stale tokens, cancellation, deadline)",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:12:42.3206070Z Private shape guidance tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:13:04.9914610Z Private shape guidance tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:13:23.7073760Z Sanitized solve tests: 0 failures",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:16:30.5731500Z Orb native tests: passed (memory fixtures, input ownership, skill gates, enemy effects and restoration faults)",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:28:57.3586950Z Orb session tests: passed (preview, execute once, continuous turns, skills, cancellation and acknowledgments)",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:28:59.2759370Z Orb planning tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:29:58.4990600Z Native battle provider tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:29:59.4422990Z Formation native bridge tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:29:59.5745970Z Badge model tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:00.5052610Z Badge native-layout tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:00.6806800Z Timer policy tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:00.7627640Z 8P model tests: passed (conversion composition, charge horizon, eligibility, retained inventory)",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:01.8349220Z Battle session tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:02.6790190Z Codec tests: 0 failures",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:03.8674290Z Bundle identity and configuration tests: passed",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:04.4946740Z Save/restore state tests: 0 failures",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:05.4035710Z Deck persistence tests: 0 failures",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:06.0925930Z Unlock restoration tests: 0 failures",
+      "build\tValidate target and run protocol tests\t2026-11-19T11:30:10.4268600Z Music playback tests: 0 failures",
+      "build\tVerify editor save and mobile interactions\t2026-11-19T11:31:29.2209550Z Editor browser checks passed: mobile sizes, full recipes, edits, history, recent cards, pending/stale/failed saves, entry toggles, multiplayer gate; offline team stats, final forms, shield/recovery scenarios, awakening icons and resistance, invalid input and no native writes.",
+      "build\tVerify floating GUI in iOS Simulator\t2026-11-19T11:38:48.0849120Z Simulator overlay probe passed: target guards, floating controls, formation library, persisted entry option and input viewport",
+      "build\tVerify floating GUI in iOS Simulator\t2026-11-19T11:40:13.6947530Z Simulator overlay probe passed: target guards, floating controls, formation library, persisted entry option and input viewport",
+      "build\tVerify floating GUI in iOS Simulator\t2026-11-19T11:41:51.8946170Z Simulator overlay probe passed: target guards, floating controls, formation library, persisted entry option and input viewport",
+      "build\tVerify floating GUI in iOS Simulator\t2026-11-19T11:42:06.8848230Z Simulator overlay probe passed: target guards, floating controls, formation library, persisted entry option and input viewport"
+    ],
+    "completedGUIProbes": 4,
+    "logSHA256": "3b69098a47c277451dd45a273ff06802a199c9eb918310b912b0d83fc612ff54"
+  }
+}

@@ -17,12 +17,13 @@ import datetime
 import hashlib
 import json
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import zipfile
-from release_metadata import read_json, verify_release_snapshot
+from release_metadata import read_json, verify_release_snapshot, rewrite_artifact_links
 
 GUI_REPORTS = ['overlay-probe.json', 'overlay-restart-probe.json', 'legacy-probe.json', 'legacy-restart-probe.json']
 
@@ -92,6 +93,12 @@ def main():
         if os.path.exists(dest) or os.path.exists(dest + '.zip'):
             sys.exit(f'{dest} already exists; delivered versions are immutable')
         shutil.copytree(artifact, dest)
+        # A delivery can normalize flattened documentation links without
+        # changing the CI-built dylib, release snapshot or fixed-plan data.
+        note_hashes = {p.relative_to(dest).as_posix(): sha256(p) for p in Path(dest).rglob('*.md')}
+        rewrite_artifact_links(Path(dest), info['commit'])
+        rewritten_notes = {name: {'artifact_sha256': digest, 'delivery_sha256': sha256(os.path.join(dest, name))}
+                           for name, digest in note_hashes.items() if sha256(os.path.join(dest, name)) != digest}
         evidence = os.path.join(dest, 'verification')
         os.makedirs(evidence)
         shutil.copytree(gui, os.path.join(evidence, 'gui'))
@@ -117,6 +124,7 @@ def main():
         'native_tests': 'passed on the same macOS CI run',
         'editor_browser_tests': 'passed',
         'gui_reports': reports,
+        'documentation_link_rewrites': rewritten_notes,
         'device_verified': False,
     }
     for item in args.note:

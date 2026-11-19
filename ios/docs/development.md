@@ -4,6 +4,13 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-19 0.5.56-orbs 編譯測試與交付完成
+
+- [CI 182](https://github.com/hugotang/padcheaper/actions/runs/44512518697) 在來源 `ddb65d2da2a06ce98c1fc5b25c20ccb310004c71` 完整通過：macOS 原生／Session（含 r4 新增狀態分支及診斷案例）、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。Windows 可攜模型／求解器／公開 API smoke、版本資料 7 項、隊長目錄 11 項、編隊、隊伍模型 32 項、地下城 14 項與 Edge 編輯器檢查亦通過；Windows smoke 沒有 sanitizer runtime。
+- 本機測試完成後，已核對 328 份 LF 正規化來源／案例與送往 CI 的 commit 一致。交付文件攤平後發現產生器連結失效，修正打包連結整理並重跑 7 項 metadata 測試；兩份 Markdown 的原／新雜湊寫入 `documentation_link_rewrites`。此後改動只有交付工具、對應 Python 案例與驗證說明，未更動 iOS runtime、r4 JSON 或已編譯 dylib。
+- 新交付 `E:/ipa/PADCheaper-0.5.56-orbs` 與同名 ZIP。427 份套件雜湊、ZIP CRC／428 項及逐檔內容獨立核對通過，CI artifact 的非 Markdown 檔案全部一致。dylib 12,116,496 bytes，SHA-256 `b624184674b058b8dfc3ff335e846d54b9707d454e1d969b4572e951a59d56dd`；ZIP SHA-256 `ffa6e9ad6c7d0b1e48945d82a193af0293c41c6face0072bee35ca34687afc00`。完整收據見 [verification-0.5.56.json](../research/verification-0.5.56.json)。
+- 本段取代下方本批「未建置／未執行」狀態。更新後重新匯入並選用 `coral-fixed-585607-v90-r4`，從自行開始且未操作的新場 B1 啟動；同場 consumed 防重播保留。實機 B7 補刀、B12–B15 冷卻／傷害／耐久及完整通關仍待新 log，`device_verified=false`。
+
 ## 2026-11-19 0.5.56-orbs 編譯測試開始
 
 - 使用者明確要求「編譯測試」，本輪驗證累積的 v90-r4 parser／Session／診斷與範本修正，執行 Windows 可攜模型、macOS 原生回歸與 sanitizers、完整 iPhoneOS arm64／簽章、瀏覽器及四份 iPhone GUI。結果完成後另記；下方「未建置」是開發時的歷史狀態。

@@ -134,6 +134,13 @@ def rewrite_artifact_links(directory, commit=None):
             for source_dir in ("src", "tests"):
                 content = content.replace(f"](../{source_dir}/",
                     f"](https://github.com/hugotang/padcheaper/blob/{commit}/ios/{source_dir}/")
+        def tool_link(match):
+            target = match.group(1)
+            if (directory / "tools" / target.split("#", 1)[0]).is_file():
+                return "](tools/" + target + ")"
+            return (f"](https://github.com/hugotang/padcheaper/blob/{commit}/ios/tools/{target})"
+                    if commit else match.group(0))
+        content = re.sub(r"\]\(\.\./tools/([^)]+)\)", tool_link, content)
         notes.write_text(content, encoding="utf-8", newline="\n")
     for notes in (directory / "templates").glob("*/*.md"):
         notes.write_text(notes.read_text(encoding="utf-8").replace("](../../docs/", "](../../"),

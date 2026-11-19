@@ -2,7 +2,7 @@
 
 來源版本與功能描述以 [release.json](release.json) 為準；各版變更、驗證與交付紀錄見 [CHANGELOG](CHANGELOG.md)，待驗證的改動見 [開發紀錄](docs/development.md)。
 
-目前來源 **0.5.56-orbs** 對應日服 PAD **23.6.1／107553**、arm64。珊瑚 `v90-r4` 依原生敵人狀態控制 B7 補刀，修正 B12 提早半血處理及 B13–B15 技能銜接，並保存每盤結算後的敵人 HP／目標。更新 dylib 後須重新匯入並選用 [r4 範本](templates/coral-fixed-gamewith-585607/README.md)，在新場 B1 啟動。此來源快照正進行完整編譯測試；完成證據以交付包 `verification.json` 與[開發紀錄](docs/development.md)為準，實機通關仍待驗證。詳見 [0.5.56 說明](docs/release-0.5.56.md)。
+目前來源 **0.5.56-orbs** 對應日服 PAD **23.6.1／107553**、arm64。珊瑚 `v90-r4` 依原生敵人狀態控制 B7 補刀，修正 B12 提早半血處理及 B13–B15 技能銜接，並保存每盤結算後的敵人 HP／目標。更新 dylib 後須重新匯入並選用 [r4 範本](templates/coral-fixed-gamewith-585607/README.md)，在新場 B1 啟動。已通過 [CI 182](https://github.com/hugotang/padcheaper/actions/runs/44512518697) 完整原生回歸、ASan/UBSan、arm64／簽章、瀏覽器及四份 iPhone GUI 並交付；證據見包內 `verification.json` 與[開發紀錄](docs/development.md)，實機通關仍待驗證。詳見 [0.5.56 說明](docs/release-0.5.56.md)。
 
 `0.5.18-orbs` 支援單人 6×5／7×6／5×4、求路品質、形狀與部分隊長盤面條件，以及「開始連續轉珠」和可設定技能規則；保留記憶體讀盤、逐步預覽與「執行一次／停止」。另有隊伍／關卡策略、技能輪替、HP／異常自救、必要技能確認與預設關閉的低血心珠目標；條件未完整達成時停止轉珠。用法見 [自動轉珠](docs/auto-orbs.md)、[連續／技能規則](docs/orb-automation.md)、[策略](docs/orb-strategies.md)、[HP 自救](docs/orb-survival.md) 及 [低血心珠](docs/orb-recovery.md)。編譯與自動測試結果見 [驗證記錄](docs/development.md)，新增功能仍需真機驗收。
 

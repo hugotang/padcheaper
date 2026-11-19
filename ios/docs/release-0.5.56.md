@@ -8,4 +8,4 @@ B12 到半血便直接施放 Solomon。B13 保留 Keisy，先取得原生吸收�
 
 更新後完整關閉並重開遊戲，確認 `0.5.56-orbs`，在策略庫匯入並選用 [fixed-plan.json](../templates/coral-fixed-gamewith-585607/fixed-plan.json) 的「珊瑚挑戰・固定 Atori・v90 原生狀態分支」。新 ID `coral-fixed-585607-v90-r4` 與舊策略並存；舊策略不會自動改寫。須在自行開始的新場 B1、尚未施放技能或轉珠前啟動 Auto；已消耗且停止的同場不能重啟。
 
-本文件為建置來源快照。Windows、macOS 原生／Session、ASan/UBSan、arm64／嚴格簽章、瀏覽器與 iPhone GUI 的實際結果，以同一建置 commit 的 CI 與交付 `verification.json` 為準。實機技能冷卻、傷害、耐久與 B1–B15 全程通關未驗證，`device_verified=false`。
+[CI 182](https://github.com/hugotang/padcheaper/actions/runs/44512518697) 已通過 macOS 原生／Session、ASan/UBSan、arm64／嚴格簽章、瀏覽器與四份 iPhone GUI；Windows 可攜模型及 Edge 編輯器檢查亦通過。已交付新的版本資料夾與 ZIP，完整結果見 [驗證收據](../research/verification-0.5.56.json) 與包內 `verification.json`。包內說明保留建置時快照，完成證據由頂層收據提供。實機技能冷卻、傷害、耐久與 B1–B15 全程通關未驗證，`device_verified=false`。

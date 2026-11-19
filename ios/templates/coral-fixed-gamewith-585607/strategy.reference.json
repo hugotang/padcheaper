@@ -2,7 +2,7 @@
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
   "id": "coral-fixed-585607-v90-r4",
-  "status": "0.5.56-full-build-test-in-progress-device-verification-pending",
+  "status": "0.5.56-ci182-verified-delivered-device-pending",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",

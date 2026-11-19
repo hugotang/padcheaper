@@ -98,6 +98,8 @@ class ReleaseMetadataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             notes = root / "targets.md"
+            (root / "tools").mkdir()
+            (root / "tools/generate_coral_fixed_plan.py").write_text("# shipped tool", encoding="utf-8")
             notes.write_text("[current](../targets/pad-23.6.1.json)\n"
                              "[current battle](../targets/battle-23.6.1.json)\n"
                              "[current orbs](../targets/orbs-23.6.1.json)\n"
@@ -109,6 +111,8 @@ class ReleaseMetadataTests(unittest.TestCase):
                              "[badges](../editor/badge-catalog.json)\n"
                              "[artwork](../editor/assets/badge.png)\n"
                              "[source](../src/PHDataTarget.h)\n"
+                             "[generator](../tools/generate_coral_fixed_plan.py)\n"
+                             "[unshipped tool](../tools/release_metadata.py#main)\n"
                              "[test](../tests/orb_shape_guidance_tests.cpp)\n", encoding="utf-8")
             release.rewrite_artifact_links(root, "a" * 40)
             self.assertEqual(notes.read_text(encoding="utf-8"),
@@ -121,7 +125,12 @@ class ReleaseMetadataTests(unittest.TestCase):
                              "[badges](editor-source/badge-catalog.json)\n"
                              "[artwork](third_party/PADDashFormation/badge.png)\n"
                              f"[source](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/src/PHDataTarget.h)\n"
+                             "[generator](tools/generate_coral_fixed_plan.py)\n"
+                             f"[unshipped tool](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/tools/release_metadata.py#main)\n"
                              f"[test](https://github.com/hugotang/padcheaper/blob/{'a' * 40}/ios/tests/orb_shape_guidance_tests.cpp)\n")
+            rewritten = notes.read_bytes()
+            release.rewrite_artifact_links(root, "a" * 40)
+            self.assertEqual(notes.read_bytes(), rewritten)
 
 
 if __name__ == "__main__":

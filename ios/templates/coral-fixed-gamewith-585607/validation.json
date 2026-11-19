@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "0.5.56-local-portable-tests-passed-native-ci-pending",
+  "status": "0.5.56-ci182-verified-delivered-device-pending",
   "reviewedDate": "2026-11-19",
   "profileID": "coral-fixed-585607-v90-r4",
   "planSHA256": "7347db18e297b407cf097d57a24e2e7a73257661e848fe82313c6e12208be36e",
@@ -39,15 +39,11 @@
     "ios/templates/coral-fixed-gamewith-585607/strategy.reference.json": "de99678e8ddac4dcfb6717ba7d60e667151f11cf79b656ed8a3538a405df56a1",
     "ios/templates/coral-fixed-gamewith-585607/guide-comparison.json": "0eaec4ace3e6cfcd1f0cbba29608e3e8683936a2898d634e82de20dea1bd3a4b"
   },
-  "sourceSHA256Scope": "LF-normalized pre-CI source snapshot; native compilation, parser/Session execution and full product tests still pending. Final delivery verification.json records the tested commit.",
-  "buildVerified": false,
-  "testSuitesExecuted": false,
+  "sourceSHA256Scope": "LF-normalized source snapshot at the compiled CI commit above. Completion receipts and delivery-tool documentation normalization were updated afterward; runtime and fixed-plan JSON remain identical. The immutable package retains its pre-CI template validation snapshot and records completion in top-level verification.json.",
+  "buildVerified": true,
+  "testSuitesExecuted": true,
   "deviceVerified": false,
   "pendingVerification": [
-    "Native parser/import-export and Session suites, including r3 preservation, exact enemy conditions, held-gesture cancellation and bounded B7 progression",
-    "B12 early threshold, B13 bypass results and HP buff order, B14 mandatory Keisy and reserved Solomon, B15 required recovery",
-    "Generation/turn-bound before/after diagnostics, unknown facts and immutable history across idle reads and subsequent turns",
-    "Native regression, sanitizers, iPhoneOS build/signature and GUI probes after explicit build/test authorization",
     "New device B7 enemy event/HP timeline, survivor attack, B12-B15 skill availability, survival, damage and full clear"
   ],
   "previous": {
@@ -64,5 +60,11 @@
     "formationModel": true,
     "teamModelChecks": 32,
     "dungeonModelChecks": 14
+  },
+  "ci": {
+    "number": 182,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44512518697",
+    "commit": "ddb65d2da2a06ce98c1fc5b25c20ccb310004c71",
+    "conclusion": "success"
   }
 }
