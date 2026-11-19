@@ -255,6 +255,8 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
         @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
         @"firstWaveColors":@(value.firstWaveColors),@"firstWaveFours":@(value.firstWaveFours),
         @"resolvedFours":@(value.resolvedFours),@"fixedBoardSatisfied":@(value.fixedBoardSatisfied),
+        @"unmatchableRecoveryPredicted":@(value.unmatchableRecovered),@"recoveredColors":@(value.recoveredColors),
+        @"recoveryHeartFours":@(value.recoveryHeartFours),@"nativeUnmatchableRecoveryConfirmed":@NO,
         @"bonusTriggersFirstWaveRequired":@(goals.bonusFirstWave),
         @"activityHeuristic":@(value.activityValue), @"nativeScoreKnown":@NO,
         @"preparationReady":@(value.preparationReady),@"retainedAfterConversion":retained,
@@ -265,7 +267,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
         @"unmatchedBombs":@(value.unmatchedBombs), @"heartFours":@(value.heartFours), @"heartMatches":@(value.heartMatches)};
 }
 NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixedBoardPolicy &policy,
-    NSString *scope) {
+    const PHOrbBoard &board, NSString *scope) {
     // Report the already checked evaluation. These fields never authorize a
     // route; generic colorPhases retains its separate saved-goal semantics.
     NSString *mode=@"normal";
@@ -276,7 +278,10 @@ NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixe
         case PHOrbFixedBoardMode::FourAttack: mode=@"six_colors_fours"; break;
         case PHOrbFixedBoardMode::LOnly: mode=@"l_only"; break;
     }
-    const unsigned missing=policy.firstColors & ~value.firstWaveColors & 63u;
+    const unsigned recoveryColor=policy.unmatchableRecoveryColors ? board.unmatchableColors & 63u : 0;
+    const unsigned firstRequired=policy.firstColors & ~recoveryColor;
+    const unsigned missing=firstRequired & ~value.firstWaveColors & 63u;
+    const unsigned recoveryMissing=recoveryColor & ~value.recoveredColors;
     const unsigned exact=policy.mode==PHOrbFixedBoardMode::OneCombo ? 3 : policy.mode==PHOrbFixedBoardMode::LOnly ? 5 : 0;
     NSArray *colorNames=@[@"火",@"水",@"木",@"光",@"闇",@"心"];
     NSMutableArray *missingNames=[NSMutableArray array];
@@ -285,8 +290,10 @@ NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixe
     NSMutableArray *deficits=[NSMutableArray array];
     if (missing) [deficits addObject:@{@"kind":@"first-colors",@"missingColors":@(missing),
         @"missingColorNames":missingColorNames}];
-    if (policy.requireHeartFour && !value.heartFours)
-        [deficits addObject:@{@"kind":@"heart-four",@"required":@1,@"observedMinimum":@(value.heartFours)}];
+    if (policy.requireHeartFour && !value.heartFours && !(recoveryColor && value.recoveryHeartFours))
+        [deficits addObject:@{@"kind":recoveryColor==32 ? @"recovery-heart-four" : @"heart-four",@"required":@1,@"observedMinimum":@(value.heartFours)}];
+    if (recoveryColor && (!value.unmatchableRecovered || recoveryMissing))
+        [deficits addObject:@{@"kind":@"unmatchable-recovery",@"missingColors":@(recoveryMissing),@"firstGroupRecovers":@(value.unmatchableRecovered)}];
     if (policy.mode==PHOrbFixedBoardMode::SixColorStall && value.resolvedFours)
         [deficits addObject:@{@"kind":@"forbidden-fours",@"observedMaximum":@(value.resolvedFours)}];
     if (exact && !value.fixedBoardSatisfied) [deficits addObject:@{@"kind":@"single-removal",@"requiredOrbs":@(exact)}];
@@ -294,7 +301,10 @@ NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixe
         [deficits addObject:@{@"kind":@"phase-constraint"}];
     return @{@"valid":@YES,@"applicable":@(policy.mode!=PHOrbFixedBoardMode::Normal || policy.firstColors || policy.requireHeartFour),
         @"scope":scope ?: @"all-shared-spinner-phases",@"mode":mode,@"satisfied":@(value.fixedBoardSatisfied),
-        @"requiredFirstColors":@(policy.firstColors),@"firstColorsInEveryPhase":@(value.firstWaveColors),
+        @"requiredColors":@(policy.firstColors),@"requiredFirstColors":@(firstRequired),@"firstColorsInEveryPhase":@(value.firstWaveColors),
+        @"unmatchableRecoveryColors":@(policy.unmatchableRecoveryColors),@"requiredRecoveryColor":@(recoveryColor),
+        @"recoveredColorsInEveryPhase":@(value.recoveredColors),@"recoveryHeartFoursMinimum":@(value.recoveryHeartFours),
+        @"unmatchableRecoveryPredicted":@(value.unmatchableRecovered),
         @"missingFirstColors":@(missing),@"missingFirstColorNames":missingColorNames,
         @"requireHeartFour":@(policy.requireHeartFour),@"firstWaveHeartFoursMinimum":@(value.heartFours),
         @"forbidFours":@(policy.mode==PHOrbFixedBoardMode::SixColorStall),@"resolvedFoursMaximum":@(value.resolvedFours),

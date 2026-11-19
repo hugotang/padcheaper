@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "recordedDate": "2026-11-19",
+  "scope": "Sanitized 0.5.56 device-log facts and source review; no new build or test run",
+  "runtimeVersion": "0.5.56-orbs",
+  "profileID": "coral-fixed-585607-v90-r4",
+  "currentStop": {
+    "floor": 2,
+    "stage": "finish",
+    "action": 1,
+    "consumed": true,
+    "confirmedPuzzlesInStage": 0,
+    "completedPuzzlesInBattle": 8,
+    "confirmedSkillsInBattle": 15,
+    "inputFault": 0,
+    "policy": "six_colors_fours",
+    "requiredColors": 63,
+    "unmatchableColors": 16,
+    "unmatchableColorName": "dark",
+    "boardSize": [
+      7,
+      6
+    ],
+    "orbCountsFireWaterWoodLightDarkHeart": [
+      8,
+      8,
+      8,
+      7,
+      6,
+      5
+    ],
+    "spinnerCellZeroBased": 39,
+    "nativeMoveFrames": 810,
+    "fps": 30,
+    "ordinarySearch": {
+      "status": "insufficient-orbs",
+      "elapsedMS": 0,
+      "evaluated": 0,
+      "searchPasses": 0
+    },
+    "multiFishing": {
+      "attemptedCells": 1,
+      "inventoryStates": 8192,
+      "inventoryStateLimit": true,
+      "retainedPlans": 0,
+      "searchedPaths": 0,
+      "wallElapsedMS": 8,
+      "deadlineReached": false
+    }
+  },
+  "precedingB2Puzzle": {
+    "stage": "six-triples",
+    "enemyCatalogID": 200974,
+    "maximumHP": 330000000000,
+    "beforeHP": 330000000000,
+    "afterHP": 139369497786,
+    "confirmedSteps": 19,
+    "releaseConfirmed": true,
+    "releaseEvaluation": {
+      "scope": "all-shared-spinner-phases; replay, not actual native damage or skyfall",
+      "firstWaveColors": 63,
+      "firstWaveCombos": 7,
+      "combos": 10,
+      "firstWaveFours": 0,
+      "resolvedFours": 0,
+      "heartMatches": 1,
+      "heartFours": 0,
+      "goalsMet": true,
+      "fixedBoardSatisfied": true,
+      "hazardsSafe": true
+    }
+  },
+  "stoppedSkillObservation": [
+    {
+      "slot": 1,
+      "skill": 66706,
+      "charge": 0,
+      "bodyCooldown": 2,
+      "chargeToBody": 2
+    },
+    {
+      "slot": 2,
+      "skill": 66724,
+      "charge": 2,
+      "bodyCooldown": 9,
+      "chargeToBody": 7
+    },
+    {
+      "slot": 3,
+      "skill": 66740,
+      "charge": 2,
+      "bodyCooldown": 5,
+      "chargeToBody": 3
+    },
+    {
+      "slot": 4,
+      "skill": 66729,
+      "charge": 4,
+      "bodyCooldown": 4,
+      "chargeToBody": 0
+    },
+    {
+      "slot": 5,
+      "skill": 66718,
+      "charge": 2,
+      "bodyCooldown": 4,
+      "chargeToBody": 2
+    },
+    {
+      "slot": 6,
+      "skill": 66706,
+      "charge": 3,
+      "bodyCooldown": 2,
+      "chargeToBody": 0
+    }
+  ],
+  "guideEvidence": [
+    {
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
+      "capturedDate": "2026-11-19",
+      "htmlSHA256": "df385c50f492f859b4d474fe0609d6b00347a91bbc353642465267fbff9cae96",
+      "mechanic": "Bartholomew at HP <=50%: one random color unmatchable for one turn, 8400000 damage and eight bombs",
+      "routeExcerpt": "ルーレット利用で6色3個消しで耐久 / ※4個消しはしないよう注意 / アトリ→全力コンボ"
+    },
+    {
+      "url": "https://appmedia.jp/pazudora/80564326",
+      "capturedDate": "2026-11-19",
+      "htmlSHA256": "765e497c2d6ecfa06a56bd40a4ae991ef504881b0ca49161eed0ded6cf3172a7",
+      "mechanic": "Same HP <=50% unmatchable trigger, once",
+      "route": "For Bartholomew: six colors twice, then Keisy and six colors; a fire or wood four-match recovers unmatchable"
+    }
+  ],
+  "conclusions": [
+    "The native HP crossed 50% after a replay-valid no-four board; the following observed dark unmatchable conflicts with the fixed six-color policy.",
+    "Six dark tokens already exist. More inventory search or spinner exchanges cannot remove the solver's fixed unmatchable mask.",
+    "The log does not establish that the no-four contract was violated or identify actual random skyfall and damage components.",
+    "Solomon is two turns short. An immediate required cleanse is not available; substituting another guide's isolated floor does not establish cooldown compatibility.",
+    "Current solver evaluation does not model a qualified latent recovery clearing unmatchable during orb resolution.",
+    "This run stopped before B7 and does not validate r4's later-floor branches."
+  ],
+  "sourceCorrection": {
+    "status": "unbuilt; Session cases written but not executed",
+    "implementation": "ios/src/PHOrbFixedSession.inc",
+    "cases": "ios/tests/orb_fixed_diagnostics_session_tests.inc",
+    "behavior": "After prescribed skill acknowledgements, stop six-color fixed steps before search if a required color is unmatchable or its state is unknown. Recheck during planning and held input. Freeze the blocker in lastStop.",
+    "doesNotImplement": "Latent unmatchable recovery, a new B2 combat route, or a survival/damage guarantee",
+    "pendingVerification": "Compile and run Session/native regression on the new source; validate any future B2 recovery route on device",
+    "scope": "Historical diagnostic-only source step before the subsequent r5 recovery implementation",
+    "supersededBy": "ios/research/unmatchable-recovery-20261119.json"
+  }
+}

@@ -5,6 +5,8 @@
     BOOL unknownFixed, unknownReady, ignoreTarget, swapOnTransform;
     NSUInteger targetCalls, lastTargetSlot;
     NSUInteger bypassAfterSkillSlotPlusOne, clearUnmatchableAfterSkillSlotPlusOne;
+    BOOL unknownUnmatchable;
+    NSUInteger unmatchableReads;
 }
 @end
 @implementation FixedTestEngine
@@ -24,6 +26,14 @@
 - (BOOL)readFixedPlan:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (unknownFixed) { if (reason) *reason=@"fixture unknown fixed evidence"; return NO; }
     state->fixedPlan=live.fixedPlan; return state->fixedPlan.valid;
+}
+- (BOOL)readUnmatchableRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    ++unmatchableReads; state->unmatchableRecovery={};
+    if (unknownUnmatchable || staged || !frame.ready || !frame.enabled || live.phase!=2 ||
+        live.automation.busy || live.boardTransition || (!live.settled && !live.dragged) ||
+        live.multiplayer.kind!=PHOrbMultiplayerNone || !PHInputIsQuiet(&live.input)) return NO;
+    state->unmatchableRecovery=live.unmatchableRecovery;
+    return state->unmatchableRecovery.valid;
 }
 - (PHOrbSkillResult)fixedSkillReadiness:(NSUInteger)slot request:(PHOrbSkillRequest)request expected:(const PHOrbSnapshot *)expected
     frame:(PHBattleFrame)frame reason:(NSString **)reason {

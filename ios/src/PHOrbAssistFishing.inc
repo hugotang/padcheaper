@@ -15,7 +15,7 @@ bool MultiFishingBoardValid(const PHOrbBoard &board, int fish, bool allowThornFi
 bool MultiFishingInputValid(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState *recovery, unsigned limit) {
     if (!MultiFishingBoardValid(board,options.fishCell,options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || limit > PHOrbAssistFishingMaxExchanges ||
+        !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors) || limit > PHOrbAssistFishingMaxExchanges ||
         (board.minErase && board.minErase != 3) || board.minMatch > 5) return false;
     if (!recovery) return true;
     if (!recovery->valid || !recovery->turns || (recovery->dungeonFlags & 8u)) return false;
@@ -66,7 +66,7 @@ unsigned MultiMinimumSpinnerSupply(const PHOrbBoard &board, unsigned fish, unsig
 bool AssistFishingInputValid(const PHOrbBoard &board, const PHOrbSolveOptions &options,
     const PHOrbAssistRecoveryState &recovery, unsigned limit) {
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || limit > PHOrbAssistFishingMaxExchanges ||
+        !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors) || limit > PHOrbAssistFishingMaxExchanges ||
         !recovery.valid || !recovery.turns || (recovery.dungeonFlags & 8u) ||
         (board.minErase && board.minErase != 3) || board.minMatch > 5) return false;
     for (unsigned c = 0; c < 5; ++c)
@@ -578,7 +578,7 @@ bool PHOrbEvaluateMultiFishingBoard(const PHOrbBoard &board, unsigned fishCell,
     const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
     if (!MultiFishingBoardValid(board,int(fishCell),options.allowThornFishing) || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard)) return false;
+        !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors)) return false;
     try {
         auto context = MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,{},int(fishCell),0,options.fixedBoard);
         Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());

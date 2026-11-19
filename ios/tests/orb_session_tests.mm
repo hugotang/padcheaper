@@ -548,16 +548,19 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_fixed_diagnostics_session_tests.inc"
 #include "orb_fixed_limit_session_tests.inc"
 #include "orb_fixed_state_session_tests.inc"
+#include "orb_unmatchable_session_tests.inc"
 #include "orb_attack_quality_session_tests.inc"
 
 int main() {
     @autoreleasepool {
         FixedSessionTests();
         FixedConstraintDiagnosticSessionTests();
+        FixedUnmatchableDiagnosticSessionTests();
         FixedLimitDiagnosticSessionTests();
         FixedEnemyStateSessionTests();
         FixedEffectPreparationSessionTests();
         FixedThresholdAndLoopSessionTests();
+        UnmatchableSessionTests();
         AttackQualitySessionTests();
         ReadinessStopSessionTests();
         if (failures) return 1;

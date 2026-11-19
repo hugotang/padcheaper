@@ -25,6 +25,7 @@ static vm_prot_t dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
 static unsigned changeContinuationDuringRead;
 static bool changeContinuationDuringCoordinateRead;
 static unsigned observationMutation;
+static bool observationUnmatchableMutation, changeUnmatchableDuringCoordinateRead;
 static unsigned enemyActionMutation;
 static unsigned enemyDispatchMutation;
 static bool rejectEnemyDispatchRead;
@@ -138,7 +139,8 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
         enemyActionMutation = 0;
         Store<int32_t>(reinterpret_cast<uint8_t *>(address + PHOrbEnemyActionsRowsOffset + 63 * 8), 8);
     }
-    if (observationMutation && observationMutation != 6 && address == Impl + PHOrbObservationAssistVoidOffset) {
+    if (observationMutation && observationMutation != 6 && address == Impl +
+        (observationUnmatchableMutation ? PHOrbUnmatchableDurationOffset : PHOrbObservationAssistVoidOffset)) {
         const unsigned mutation = observationMutation; observationMutation = 0;
         if (mutation == 1) Store<uint16_t>(reinterpret_cast<uint8_t *>(address), 7);
         if (mutation == 2) reinterpret_cast<uint8_t *>(Header + PHBattleEntryHashRVA)[0] = 2;
@@ -153,6 +155,10 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (changeAssistDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
         changeAssistDuringCoordinateRead = false;
         Store<uint16_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbObservationAssistVoidOffset), 7);
+    }
+    if (changeUnmatchableDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
+        changeUnmatchableDuringCoordinateRead = false;
+        Store<uint16_t>(reinterpret_cast<uint8_t *>(Impl + PHOrbUnmatchableDurationOffset), 2);
     }
     if (changeComboDuringCoordinateRead && address == Header + PHOrbTransformEnabledRVA) {
         changeComboDuringCoordinateRead = false;
@@ -288,6 +294,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
     observationMutation = enemyActionMutation = 0;
+    observationUnmatchableMutation = changeUnmatchableDuringCoordinateRead = false;
     enemyDispatchMutation = 0; rejectEnemyDispatchRead = false;
     enemyDamageMutation = 0; rejectEnemyDamageRead = false;
     changeAssistDuringCoordinateRead = false;
@@ -311,6 +318,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     for (const auto &guard : PHOrbTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbObservationTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbAssistRecoveryTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
+    for (const auto &guard : PHOrbUnmatchableRecoveryTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbEnemyComboTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbEnemyPartsTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
     for (const auto &guard : PHOrbComboBonusTextGuards) std::memcpy(reinterpret_cast<void *>(Header + guard.rva), guard.bytes, 64);
@@ -373,6 +381,7 @@ static void ReadIssueNativeTests() {
 #include "orb_skill_native_tests.inc"
 #include "orb_member_state_native_tests.inc"
 #include "orb_assist_native_tests.inc"
+#include "orb_unmatchable_native_tests.inc"
 #include "orb_enemy_combo_native_tests.inc"
 #include "orb_enemy_parts_native_tests.inc"
 #include "orb_enemy_threat_native_tests.inc"
@@ -533,6 +542,7 @@ int main() {
         SkillNativeTests();
         SharedMemberStateNativeTests();
         AssistNativeTests();
+        UnmatchableNativeTests();
         EnemyComboNativeTests();
         EnemyPartsNativeTests();
         EnemyThreatNativeTests();

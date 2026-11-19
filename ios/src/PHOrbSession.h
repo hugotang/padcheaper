@@ -44,6 +44,7 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
 // Fresh action-specific capture, including during the same owned drag.
 // An enabled policy requires this method; the optional observation is not used.
 - (BOOL)readAssistRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
+- (BOOL)readUnmatchableRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Required by single-player continuous enemy countermeasures, never borrowed
 // from observeEnemyActions or the optional battle observation cache.
 - (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason;

@@ -168,6 +168,12 @@ def generate(manifest):
         'PHOrbObservationAddedAwakeningRVA', 'PHOrbObservationBaseAwakeningRVA',
         'PHOrbObservationAwakeningCountRVA', 'PHOrbObservationAttributeRVA',
         'PHOrbObservationAssistVoidRVA', 'PHOrbObservationEquipRVA', 'PHOrbObservationGrantsRVA'}
+    unmatchable_recovery_guards = {
+        f'PHOrbUnmatchableRecovery{group}{i}RVA'
+        for group, count in {'TPA': 3, 'Provider': 1, 'Apply': 1, 'Duration': 9,
+                             'MatchGate': 1, 'Progress': 3, 'Group': 7, 'Entry': 2, 'Dispatch': 5}.items()
+        for i in range(1, count + 1)
+    }
     assist_recovery_guards = {
         'PHOrbAssistRecoveryShapeL1RVA',
         'PHOrbAssistRecoveryShapeL2RVA',
@@ -354,7 +360,7 @@ def generate(manifest):
         'Unmatchable', 'UnmatchableRandom', 'DelayParams', 'DelayTargets', 'DelayApply')}
     dungeon_dump_guards = {'PHOrbDungeonDump' + name + 'RVA' for name in (
         'Count', 'LoadCount', 'LoadStride', 'ParseEntry', 'SpawnWave', 'SpawnEntry', 'SpawnCatalog', 'SpawnLevel', 'SpawnBinding')}
-    required |= observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards
+    required |= observation_guards | assist_recovery_guards | unmatchable_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards
     if {g['name'] for g in manifest['guards']} != required or len(manifest['guards']) != len(required):
         raise ValueError('Incomplete orb guards')
     multiplayer_fields = {
@@ -459,7 +465,7 @@ def generate(manifest):
     lines += ['typedef struct { uintptr_t rva; uint8_t bytes[64]; } PHOrbTextGuard;',
               'static const PHOrbTextGuard PHOrbTextGuards[] = {']
     for guard in manifest['guards']:
-        if guard['name'] in observation_guards | assist_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards:
+        if guard['name'] in observation_guards | assist_recovery_guards | unmatchable_recovery_guards | enemy_action_guards | enemy_selector_guards | enemy_dispatch_guards | enemy_damage_guards | enemy_combo_guards | combo_bonus_guards | enemy_parts_guards | enemy_threat_guards | dungeon_dump_guards:
             continue
         lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbTextGuardCount = sizeof(PHOrbTextGuards) / sizeof(PHOrbTextGuards[0]);']
@@ -478,6 +484,11 @@ def generate(manifest):
         if guard['name'] in assist_recovery_guards:
             lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
     lines += ['};', 'static const size_t PHOrbAssistRecoveryTextGuardCount = sizeof(PHOrbAssistRecoveryTextGuards) / sizeof(PHOrbAssistRecoveryTextGuards[0]);']
+    lines.append('static const PHOrbTextGuard PHOrbUnmatchableRecoveryTextGuards[] = {')
+    for guard in manifest['guards']:
+        if guard['name'] in unmatchable_recovery_guards:
+            lines.append('    {0x%xu, {%s}},' % (int(guard['rva'], 0), ', '.join(f'0x{x:02x}' for x in bytes.fromhex(guard['bytes']))))
+    lines.append('};')
     lines.append('static const PHOrbTextGuard PHOrbEnemyActionsTextGuards[] = {')
     for guard in manifest['guards']:
         if guard['name'] in enemy_action_guards:

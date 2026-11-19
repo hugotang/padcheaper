@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reviewedDate": "2026-11-19",
-  "status": "source-revised-not-built-or-tested",
+  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
   "sources": [
     {
       "name": "GameWith",
@@ -48,7 +48,7 @@
     "explicitFirstRemovalOnlyRequirementFound": false,
     "guideRequirement": "六色與攻擊時的心四連；攻略未區分首消、既有珠落下連鎖與隨機天降。",
     "codeFinding": "固定計畫 firstColors=63 額外要求首消六色，比攻略文字嚴格。",
-    "decision": "保留現有保守條件；改善求路導引與停止診斷，不以攻略未提及為由取消原生隊長或心四連限制。"
+    "decision": "Default first-removal contract is retained. Only the explicit B2 one-color/one-turn latent branch may credit the blocked color (and its heart four if applicable) in an existing-orb cascade after the first qualifying fire/wood four. Other five colors stay first-removal; no skyfall prediction or hazard-healing exception."
   },
   "floorDifferences": [
     {
@@ -57,7 +57,7 @@
     },
     {
       "floor": 2,
-      "summary": "GameWith 六色無四連存一回後攻擊；新雙 log 均已走過本層。"
+      "summary": "GameWith 六色無四連存一回後 Atori 攻擊；0.5.56 新 log 於半血闇不可消停止。r5 以 AppMedia 火／木四連機制補上唯一受限回復分支，未增加回合。"
     },
     {
       "floor": 3,
@@ -113,25 +113,27 @@
     }
   ],
   "decisions": [
+    "B2: r5 explicitly opts into fresh latent41/TPA evidence for one basic unmatchable color/turn on enemy 200974. Require a first native-order isolated fire/wood four, then the blocked color in an existing-orb cascade; other five colors remain first-removal. Ordinary shared spinner phases only; no fishing, extra skills or extra puzzles. After-turn clear is required but is not attributed solely to the latent.",
     "B7: up to two original attacks with exact native enemy roster; one additional board only for dead 200038 and living 210524 at <=50% HP. Fresh coverage and unchanged enemy/target evidence are required. Full clear can advance directly.",
     "B12: check native body HP <=50% before each of the two remaining attack boards, proceeding directly to Solomon if the threshold was reached early.",
     "B13: hold the Keisy loop until B14; restore uncovered absorption with an actual Solomon cast and native bypass result; finish with Atori, Diena, Riku, Atori in one board.",
     "B14: hold Keisy on the first board, require its native-ready resize on the second, then reserve native-ready Solomon before finishing. This follows AppMedia rather than spending Solomon on B14 resize.",
-    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No simulated latent unmatchable recovery is claimed; the final Riku stage remains bounded to two boards including stalls.",
+    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No B15 multi-color latent recovery is enabled; the final Riku stage remains bounded to two boards including stalls.",
     "Execution history freezes separate native enemy identity/HP/alive/target evidence before search, before release and after the settled acknowledged turn. Generation, turn and battle identity bind the result; cached observations never authorize actions.",
-    "New schema keys require the next build containing this source. Delivered 0.5.55 does not accept r4; imported older profiles are never changed automatically.",
+    "r5 unmatchableRecovery needs a new build; delivered 0.5.56/r4 does not implement it.",
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "buildVerified": false,
-  "testSuitesExecuted": false,
+  "testSuitesExecuted": true,
   "deviceVerified": false,
   "limitations": [
     "攻略是策略依據；沒有驗證原生傷害、回復、存活或全程通關。",
     "11-19 雙 log 各為 20 盤／33 技，停在 B7；第二份 completed=41 是累計。新來源尚無裝置紀錄。",
     "只產生資料並作來源／格式審查；已撰寫案例尚未執行，沒有編譯、CI 或打包。",
-    "B7 cached action 及 HP 快照支持復活調查，但不足以證明實際事件順序。"
+    "B7 cached action 及 HP 快照支持復活調查，但不足以證明實際事件順序。",
+    "r5 native timing, queue assumptions, original B2 search within device budget, post-turn clear and full clear remain unverified; native/Session/solver/GUI cases have been written but not run."
   ],
-  "profileID": "coral-fixed-585607-v90-r4",
+  "profileID": "coral-fixed-585607-v90-r5",
   "previousSourceSnapshots": [
     {
       "name": "GameWith",
@@ -161,6 +163,11 @@
   ],
   "implementedTemplateChanges": [
     {
+      "floor": 2,
+      "summary": "B2: r5 explicitly opts into fresh latent41/TPA evidence for one basic unmatchable color/turn on enemy 200974. Require a first native-order isolated fire/wood four, then the blocked color in an existing-orb cascade; other five colors remain first-removal. Ordinary shared spinner phases only; no fishing, extra skills or extra puzzles. After-turn clear is required but is not attributed solely to the latent.",
+      "deviceVerified": false
+    },
+    {
       "floor": 7,
       "summary": "兩站仍列兩次攻擊，GameWith 指定 Clammy；r4 額外只依精確原生死亡／半血狀態允許一盤補刀，未推定復活時序。"
     },
@@ -180,5 +187,6 @@
       "floor": 15,
       "summary": "GameWith 新增火／木四連解不可消；求路器未模擬此潛覺時序。r4 採 AppMedia 開場 Solomon＋Riku，確認解除不可消才轉珠；最後 Riku 上限兩盤。"
     }
-  ]
+  ],
+  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence."
 }

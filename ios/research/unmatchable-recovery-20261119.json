@@ -1,0 +1,413 @@
+{
+  "schema": 1,
+  "date": "2026-11-19",
+  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
+  "profileID": "coral-fixed-585607-v90-r5",
+  "target": "jp.gungho.pad-ios-23.6.1-107553",
+  "nativeInput": {
+    "version": "23.6.1",
+    "build": 107553,
+    "uuid": "38A9F704-C562-3BDD-B510-2112DAC084B0",
+    "sha256": "3ac8c5647e67694b5a3e68cf7049d3860f82f029a7e67f96477e9e2a3f490fd6",
+    "analysis": "IDA original bytes and pseudocode/disassembly; no database/binary edits or native invocation"
+  },
+  "functions": [
+    {
+      "va": "0x1005a0928",
+      "end": "0x1005a0a38",
+      "sha256": "2a9dba8c68f728aee239943b46b32e6b9e97c706f64fe33efb44251a18b2e7ad"
+    },
+    {
+      "va": "0x10004562c",
+      "end": "0x1000456e4",
+      "sha256": "42d859b8b5bd823f3400db7b4166d739a6958969c16d3ec9a649c851fa9653df"
+    },
+    {
+      "va": "0x1005a0194",
+      "end": "0x1005a0500",
+      "sha256": "824288466f586ac82d2c21ed702c39de664f008e8044e11472d89ca52db9427a"
+    },
+    {
+      "va": "0x1005ac76c",
+      "end": "0x1005ae2a0",
+      "sha256": "baef18ceb7c6715705c8b521c54e804c861283228a0b7f8c7bb98a6e7d639cb0"
+    },
+    {
+      "va": "0x1005cdcc4",
+      "end": "0x1005cdef8",
+      "sha256": "2444f93c01051d5a3a1365f73ca001465d3bda43da353430ef2c94e33ce694e2"
+    },
+    {
+      "va": "0x1005fc954",
+      "end": "0x100602258",
+      "sha256": "840fb55aa687924e7ec96c6ab69a57251ccf7865eb7a3010d30b6f82ac83b431"
+    },
+    {
+      "va": "0x100603df4",
+      "end": "0x100604810",
+      "sha256": "241b8370ff70f6288076d27c01105f04a89fafd47afcad088f2502e5cdae650b"
+    },
+    {
+      "va": "0x100602258",
+      "end": "0x100602e78",
+      "sha256": "4b58234d9818bec7fa282fcd6ec89c60c449580ca030d1a95389f4cb49cf836d"
+    },
+    {
+      "va": "0x100605cd4",
+      "end": "0x10060645c",
+      "sha256": "ea088fde7beada615a5b95a76e377f48965c8c355b7483f6aa302e1e0323f355"
+    }
+  ],
+  "policyGuardCount": 32,
+  "policyGuards": [
+    {
+      "name": "PHOrbUnmatchableRecoveryTPA1RVA",
+      "va": "0x1005a0194",
+      "length": 64,
+      "sha256": "24b549fa735870f2f683398d704ae71f51483841e39f7744f92008a60e3c1822"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryTPA2RVA",
+      "va": "0x1005a01d4",
+      "length": 64,
+      "sha256": "11687f83952a4f73ffefc9c1f57f84b8126a454edee5f949fe65054244e70813"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryTPA3RVA",
+      "va": "0x1005a0214",
+      "length": 64,
+      "sha256": "f8620f9d0cd47688c2c7948821a158db25f14a5b1e6312db834ae08e4042593b"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryProvider1RVA",
+      "va": "0x1005ac820",
+      "length": 64,
+      "sha256": "897b6702eac3546b75a262807c335c9e31b26d30412477e30c0696b8cdb7d59f"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryApply1RVA",
+      "va": "0x1005ae1dc",
+      "length": 64,
+      "sha256": "9d50855656f0cd40476a598989940b9a935bddc3baafe3cada8361c434b79e8d"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration1RVA",
+      "va": "0x1005cdcc4",
+      "length": 64,
+      "sha256": "427af95462a64d236f4589277a5cafe9c6ad52ea4b14c94cb48e8f1ddd75df82"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration2RVA",
+      "va": "0x1005cdd04",
+      "length": 64,
+      "sha256": "aa1c1bc6cc85a99d388e7adbe62ed879c4c2dc8af13603f5ae88528e0444efef"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration3RVA",
+      "va": "0x1005cdd44",
+      "length": 64,
+      "sha256": "0e4b9ffd121f5ca0db728c4bfe816d0b6849da8f89197226a192eaf669ec62cc"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration4RVA",
+      "va": "0x1005cdd84",
+      "length": 64,
+      "sha256": "40de4f0ba547aff66c71419101447772b769e1823bd834a43f675982757adb50"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration5RVA",
+      "va": "0x1005cddc4",
+      "length": 64,
+      "sha256": "746db381f271bc54113e2c330d1fc8f6a494e9919a2f18f157caac8328c20f91"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration6RVA",
+      "va": "0x1005cde04",
+      "length": 64,
+      "sha256": "195cb121409b516c8d4370daf0c02ab59ba5d12ac340316325ae3cb56b2a4283"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration7RVA",
+      "va": "0x1005cde44",
+      "length": 64,
+      "sha256": "89b3f4e842a1b665ee3fa5b568827ae2cc6ac5fbdcef35b0f737188a737849f4"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration8RVA",
+      "va": "0x1005cde84",
+      "length": 64,
+      "sha256": "035ada4fc9dffec4c3c9f01b64ec9e22e81744a81b3b983d59d0f36b5159720a"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDuration9RVA",
+      "va": "0x1005cdec4",
+      "length": 64,
+      "sha256": "113a37129b30ca80c35bbc1118f341f95605535b1aed7b7b4f53954053ce1a3f"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryMatchGate1RVA",
+      "va": "0x1005fd80c",
+      "length": 64,
+      "sha256": "51e8973586ce305dff8efd7092d05ee4397d902deec8f5f824cecc10edc5a7d9"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryProgress1RVA",
+      "va": "0x100604010",
+      "length": 64,
+      "sha256": "02356a61ba083657298d67e2f2044a744d0d4df437eaca0ec9f5fa86ad35a53d"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryProgress2RVA",
+      "va": "0x100604050",
+      "length": 64,
+      "sha256": "ceb6de3093ebb9de15e6045d655ffeed803eff4f45ab7b7574f84abd4b137551"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryProgress3RVA",
+      "va": "0x100604090",
+      "length": 64,
+      "sha256": "1e5364496a975c1b8a001b7bf4aa0266309adb9b858e4888f58311b4b78ede1a"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup1RVA",
+      "va": "0x1005adbc8",
+      "length": 64,
+      "sha256": "bc548062d5fc843b4de6e49feb77188b128be7daa9ff4767aa0076d969a2afb7"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup2RVA",
+      "va": "0x1005adc08",
+      "length": 64,
+      "sha256": "2e6aab2a16193485131cd318f22c166a762999ec2bc287132c3f495677b0fcac"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup3RVA",
+      "va": "0x1005adc48",
+      "length": 64,
+      "sha256": "6ca1351e5512a68a4aff294c940fe91bba3e6bdfeda89bb6c23472bbba18a61d"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup4RVA",
+      "va": "0x1005adc88",
+      "length": 64,
+      "sha256": "3158470dd703d3df93713126d6dec3dcdedd0f39d2f7636dec8df0a56f0dcfb5"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup5RVA",
+      "va": "0x1005adcc8",
+      "length": 64,
+      "sha256": "91397af805c89250a469947d521319f3702dd9665e5ffff3dec896e912dfc28b"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup6RVA",
+      "va": "0x1005add08",
+      "length": 64,
+      "sha256": "600fefa22aebce084aee44b1138f2a9035c17cf69474d14325d52a2f2a9f3b60"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryGroup7RVA",
+      "va": "0x1005add48",
+      "length": 64,
+      "sha256": "f61f2b1fd12618d9bf14c02dc276ceb979d57a8dac52a32c89f293f565f2c146"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryEntry1RVA",
+      "va": "0x100605cd4",
+      "length": 64,
+      "sha256": "f2cea21700c3bc438239e9e0810d0bbde43847d07d6901d3558140da3392e5d1"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryEntry2RVA",
+      "va": "0x100605d14",
+      "length": 64,
+      "sha256": "61923c6c53a19ad81926c94b414350af1b9bd85e9e885886839242a9e2889246"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDispatch1RVA",
+      "va": "0x100602650",
+      "length": 64,
+      "sha256": "eabad644ae1794eefe36c30ed9c681337cfb35893b03994003215a1f19166352"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDispatch2RVA",
+      "va": "0x100602690",
+      "length": 64,
+      "sha256": "2348793916617645c8eb48362281bbbdcbee7302cb4680b6c3ffe59c5707e7d6"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDispatch3RVA",
+      "va": "0x1006026d0",
+      "length": 64,
+      "sha256": "34ef8e344ea6bee9b795967858e88c57171d5492dd35913167294427b0409c3b"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDispatch4RVA",
+      "va": "0x100602710",
+      "length": 64,
+      "sha256": "ba81318989ff0b7363395314302fcd13ca1dc672e9234f20dee4bd3321a84769"
+    },
+    {
+      "name": "PHOrbUnmatchableRecoveryDispatch5RVA",
+      "va": "0x100602750",
+      "length": 64,
+      "sha256": "38fc9d80c0ec6ea8f8dbfe737e1666f8738f8708bed3b2069b071b230babf7d8"
+    }
+  ],
+  "guardManifest": "ios/targets/orbs-23.6.1.json",
+  "guardManifestSHA256": "daf967cddc110b13c06890cc69b02a1a26017b596b9bb14181393ffaf90a7eb3",
+  "nativeFacts": {
+    "latent": 41,
+    "awakening": 27,
+    "plusAwakening": 96,
+    "plusWeight": 2,
+    "unmatchableTurnsOffset": "0xb47d4",
+    "unmatchableColorsOffset": "0xb47d8",
+    "protectedColorSalt": "0x6a875a8b",
+    "durationBits": 10,
+    "freshFlag": "0x400",
+    "recovery": "sum of eligible effective TPA counts per actual four group, duplicate member attributes removed",
+    "timing": "consumer during removal animation, before later gravity matching; blocked color remains blocked in first match pass"
+  },
+  "implementedScope": "B2: r5 explicitly opts into fresh latent41/TPA evidence for one basic unmatchable color/turn on enemy 200974. Require a first native-order isolated fire/wood four, then the blocked color in an existing-orb cascade; other five colors remain first-removal. Ordinary shared spinner phases only; no fishing, extra skills or extra puzzles. After-turn clear is required but is not attributed solely to the latent.",
+  "limits": [
+    "Single-player only; B2 exact unique living ordinary enemy 200974.",
+    "First actual group in bottom-up, left-to-right native scan must be an isolated eligible fire/wood exact four.",
+    "Empty native action queue before input; no guarantee for arbitrary mixed-effect queue capacity.",
+    "One basic color and one turn; no special, thorn, nail or Combo orbs; normal three-orb match rules.",
+    "No fishing or first-wave-only bonus contracts; old policies remain fail-closed.",
+    "No skyfall, damage, healing, survival or latent-only amount guarantee; post-turn observation can include a normal expiry or enemy reapplication."
+  ],
+  "planSHA256": "97f0150538fb6589f3fa8a0be25123452fb25ef7f0ae844526fc713032bb0aa3",
+  "buildVerified": false,
+  "testSuitesExecuted": true,
+  "deviceVerified": false,
+  "pendingVerification": [
+    "Native, Session, solver, profiles and GUI regression execution",
+    "ASan/UBSan and iPhoneOS build/signature",
+    "Actual B2 board search within device budget",
+    "Device timing, clear receipt, damage and full clear"
+  ],
+  "staticReview": {
+    "jsonFiles": 7,
+    "sourceDelimiterFiles": 27,
+    "pythonASTFiles": 2,
+    "markdownLinks": 213,
+    "nativePolicyGuards": 32,
+    "allManifestOverlappingBytesAgree": true,
+    "overlappingBytesChecked": 2756,
+    "generatedHeaderAndPlanMatch": true,
+    "onlyB2PolicyAndProfileIdentityChanged": true,
+    "cAndCppSyntaxOnly": true,
+    "gitDiffCheck": true,
+    "logDirectoriesIgnored": true,
+    "workflowManualOnly": true,
+    "newDocsInBuildManifest": true,
+    "productTestsRun": false,
+    "objcCompilerInvoked": false,
+    "buildOrPackageRun": false
+  },
+  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence.",
+  "recordedBoardProbe": {
+    "source": "ios/research/coral_b2_unmatchable_probe.cpp",
+    "platform": "Windows x64 / MinGW GCC 15.2 -O2",
+    "conditions": "Recorded 42-cell board, dark blocked, spinner39 with all six phases; conditional on native fire/wood eligibility mask5. No native calls, skyfall or device timing.",
+    "results": [
+      {
+        "budgetMS": 800,
+        "trial": 0,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 800,
+        "evaluated": 62863,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      },
+      {
+        "budgetMS": 800,
+        "trial": 1,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 800,
+        "evaluated": 61910,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      },
+      {
+        "budgetMS": 800,
+        "trial": 2,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 800,
+        "evaluated": 64777,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      },
+      {
+        "budgetMS": 2000,
+        "trial": 0,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 2000,
+        "evaluated": 97395,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      },
+      {
+        "budgetMS": 2000,
+        "trial": 1,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 2000,
+        "evaluated": 99404,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      },
+      {
+        "budgetMS": 2000,
+        "trial": 2,
+        "status": 0,
+        "solved": true,
+        "replayed": true,
+        "steps": 47,
+        "elapsedMS": 2000,
+        "evaluated": 101615,
+        "firstColors": 47,
+        "recoveredColors": 16,
+        "firstFours": 3,
+        "firstCombos": 6,
+        "combos": 7,
+        "deviceVerified": false
+      }
+    ]
+  }
+}

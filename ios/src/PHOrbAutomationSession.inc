@@ -253,6 +253,8 @@
     // still gets an unthrottled read after native coordinate conversion.
     if (_preview.assistRecovery.valid && ((_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview)) &&
         (_now < _assistCheckedAt || _now - _assistCheckedAt >= 0.25) && ![self validateAssistRecovery:state]) return NO;
+    if (_preview.unmatchableRecovery.valid && ((_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview)) &&
+        (_now < _unmatchableCheckedAt || _now - _unmatchableCheckedAt >= 0.25) && ![self validateUnmatchableRecovery:state]) return NO;
     if (_preview.enemyCombo.valid && ((_phase == PHOrbSessionPhase::Solving) || (_phase == PHOrbSessionPhase::Preview)) &&
         (_now < _enemyComboCheckedAt || _now - _enemyComboCheckedAt >= 0.25) && ![self validateEnemyCombo:state]) return NO;
     if (!state->boardTransition && state->phase == 2 &&

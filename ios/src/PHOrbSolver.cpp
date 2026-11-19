@@ -31,9 +31,18 @@ bool ActivityValid(const PHOrbBoard &board, const PHOrbActivityObjective &a) {
         if (board.types[i] >= 6 || (board.flags[i] & (PHOrbFlagLocked | PHOrbFlagThorn | PHOrbFlagCombo))) return false;
     return true;
 }
-bool FixedBoardValid(const PHOrbFixedBoardPolicy &policy) {
+bool FixedBoardValid(const PHOrbBoard &board, const PHOrbFixedBoardPolicy &policy) {
+    if (policy.unmatchableRecoveryColors) {
+        const unsigned mask = board.unmatchableColors;
+        if (!mask || (mask & (mask - 1)) || mask > 32 || (policy.unmatchableRecoveryColors & mask) ||
+            (board.spinnerColors & ~63u) || (board.minErase && board.minErase != 3) || board.minMatch > 3) return false;
+        for (unsigned i=0;i<unsigned(board.width)*board.height;++i)
+            if (board.types[i] >= 6 || (board.flags[i] & (PHOrbFlagThorn | PHOrbFlagNail | PHOrbFlagCombo))) return false;
+    }
     return unsigned(policy.mode) <= unsigned(PHOrbFixedBoardMode::LOnly) &&
-        policy.firstColors <= 63;
+        policy.firstColors <= 63 && !(policy.unmatchableRecoveryColors & ~5u) &&
+        (!policy.unmatchableRecoveryColors || (policy.mode == PHOrbFixedBoardMode::FourAttack &&
+            policy.firstColors == 63 && policy.requireHeartFour));
 }
 unsigned Count(Bits bits) { return unsigned(__builtin_popcountll(bits)); }
 const char *ColorRecoveryReason(const PHOrbBoard &board, const PHOrbGoalSet &goals,
@@ -316,7 +325,7 @@ using Inventory = std::array<unsigned, PHOrbTypes>;
 unsigned ComboCapacity(const Inventory &inventory, const Context &context) {
     unsigned result = 0, minimum = std::max(context.minErase, context.minMatch);
     for (unsigned c = 0; c < PHOrbTypes; ++c)
-        if (!(context.unmatchable & (1u << c))) result += inventory[c] / minimum;
+        if (context.fixedBoard.unmatchableRecoveryColors || !(context.unmatchable & (1u << c))) result += inventory[c] / minimum;
     return result;
 }
 
@@ -370,7 +379,8 @@ PHOrbInventoryIssue CheckInventory(const Inventory &inventory, const Context &co
             return fail(PHOrbInventoryKind::MatchRule, g, 0, std::max(context.minErase, context.minMatch), goal.length);
         unsigned possible = 0, needed = std::max({Needed(goal, context.width, context.height), context.minErase, context.minMatch});
         for (unsigned c = 0; c < PHOrbTypes; ++c)
-            if (!(context.unmatchable & (1u << c)) && (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
+            if ((context.fixedBoard.unmatchableRecoveryColors || !(context.unmatchable & (1u << c))) &&
+                (goal.kind == PHOrbGoalCombo || (goal.colors & (1u << c))))
                 possible += goal.kind == PHOrbGoalColors ? unsigned(inventory[c] >= needed) : inventory[c] / needed;
         if (possible < goal.count) return fail(PHOrbInventoryKind::GoalCapacity, g, 0, goal.count, possible);
     }
@@ -737,6 +747,10 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     std::array<Bits, PHOrbMaxGoals> used{};
     std::array<ShapeHints, PHOrbMaxGoals> hints{};
     unsigned matchedColors = 0, firstColors = 0, resolvedCombos = 0;
+    unsigned unmatchable = context.unmatchable;
+    const bool recovery = context.fixedBoard.unmatchableRecoveryColors != 0;
+    unsigned firstNativeGroup = size;
+    bool firstGroupRecovers = false;
     unsigned attackContribution[6]{};
     for (unsigned i = 0; i < size; ++i) {
         colors[cells[i]] |= Bits(1) << i;
@@ -749,7 +763,7 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     for (unsigned wave = 0; wave < size / 3; ++wave) {
         Bits marked = 0;
         for (unsigned c = 0; c < PHOrbTypes; ++c) {
-            if (context.unmatchable & (1u << c)) continue;
+            if (unmatchable & (1u << c)) continue;
             Bits matches = MarkedRuns(waveColors[c], context);
             if (context.minMatch > context.minErase) {
                 Bits pending = matches; matches = 0;
@@ -771,6 +785,26 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
             while (frontier) { frontier = Neighbours(frontier, context) & pending & waveColors[color] & ~group; group |= frontier; }
             pending &= ~group;
             const unsigned count = Count(group);
+            if (recovery && !wave) {
+                // Native scan is bottom row first, then left-to-right. Credit
+                // only its FIRST actual group, before later queue allocations.
+                Bits component = group, edge = group;
+                while (edge) { edge = Neighbours(edge,context) & waveColors[color] & ~component; component |= edge; }
+                unsigned order = size; Bits members = component;
+                while (members) {
+                    const unsigned cell = unsigned(__builtin_ctzll(members)); members &= members - 1;
+                    order = std::min(order,(height - 1 - cell / width) * width + cell % width);
+                }
+                if (order < firstNativeGroup) {
+                    firstNativeGroup = order;
+                    firstGroupRecovers = component == group && count == 4 &&
+                        (context.fixedBoard.unmatchableRecoveryColors & (1u << color));
+                }
+            }
+            if (wave && result.unmatchableRecovered && (context.unmatchable & (1u << color))) {
+                result.recoveredColors |= uint8_t(1u << color);
+                if (color == 5 && count == 4) ++result.recoveryHeartFours;
+            }
             ++resolvedCombos;
             if (color < PHOrbBasicTypes && count == 4) {
                 ++result.resolvedFours;
@@ -808,14 +842,20 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
                 const auto &goal = context.goals.items[g];
                 if (wave && (context.activity.firstWaveOnly || context.goals.bonusFirstWave)) continue;
                 if (!(goal.colors & (1u << color))) continue;
-                bool hit = goal.kind == PHOrbGoalMatch ? count >= goal.length :
+                const bool recoveredFour = wave && result.unmatchableRecovered && goal.kind == PHOrbGoalFour &&
+                    (context.unmatchable & (1u << color)) && count == 4;
+                bool hit = recoveredFour || (goal.kind == PHOrbGoalMatch ? count >= goal.length :
                     goal.kind == PHOrbGoalExact ? !wave && count == goal.length :
-                    !wave && ShapeGoal(goal.kind) && ShapeMatches(group, goal, context.patterns[g]);
+                    !wave && ShapeGoal(goal.kind) && ShapeMatches(group, goal, context.patterns[g]));
                 // Native column-awakening activation requires a single-column
                 // removed group. The ordinary goal also permits side branches.
                 if (context.goals.bonusFirstWave && goal.kind == PHOrbGoalColumn && count != height) hit = false;
                 if (hit) { ++result.goalHits[g]; if (!wave) used[g] |= group; }
             }
+        }
+        if (recovery && !wave && firstGroupRecovers && Count(context.unmatchable & 63u) == 1) {
+            unmatchable = 0;
+            result.unmatchableRecovered = true;
         }
         // Activity goals credit first removal only. Retain hypothetical
         // deterministic cascades for conservative poison/bomb safety.
@@ -889,8 +929,9 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     // have been aggregated. A first-phase colour is not a guaranteed match.
     if (context.variants == 1) ColorGuidance(score, colors, context);
     result.fixedBoardSatisfied =
-        (result.firstWaveColors & context.fixedBoard.firstColors) == context.fixedBoard.firstColors &&
-        (!context.fixedBoard.requireHeartFour || result.heartFours > 0);
+        ((result.firstWaveColors | result.recoveredColors) & context.fixedBoard.firstColors) == context.fixedBoard.firstColors &&
+        (!context.fixedBoard.requireHeartFour || result.heartFours > 0 || result.recoveryHeartFours > 0) &&
+        (!recovery || result.unmatchableRecovered);
     if (context.fixedBoard.mode == PHOrbFixedBoardMode::OneCombo)
         result.fixedBoardSatisfied &= result.firstWaveCombos == 1 && resolvedCombos == 1 && result.erased == 3;
     if (context.fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall)
@@ -905,6 +946,8 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     } else {
         score.fixedProgress = 512u * Count(result.firstWaveColors & context.fixedBoard.firstColors) +
             (context.fixedBoard.requireHeartFour && result.heartFours ? 512u : 0u);
+        if (recovery) score.fixedProgress += (result.unmatchableRecovered ? 1024u : 0u) +
+            512u * Count(result.recoveredColors) + (result.recoveryHeartFours ? 512u : 0u);
         if (context.fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall)
             score.fixedProgress = score.fixedProgress > 256u * result.resolvedFours ?
                 score.fixedProgress - 256u * result.resolvedFours : 0;
@@ -966,6 +1009,9 @@ Score Evaluate(Cells cells, const Context &context) {
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
         a.firstWaveColors &= b.firstWaveColors;
+        a.recoveredColors &= b.recoveredColors;
+        a.recoveryHeartFours = std::min(a.recoveryHeartFours,b.recoveryHeartFours);
+        a.unmatchableRecovered &= b.unmatchableRecovered;
         a.firstWaveFours = std::min(a.firstWaveFours,b.firstWaveFours);
         a.resolvedFours = std::max(a.resolvedFours,b.resolvedFours);
         a.fixedBoardSatisfied &= b.fixedBoardSatisfied;
@@ -1029,6 +1075,8 @@ bool SameCycleEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
         a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
         a.firstWaveColors == b.firstWaveColors && a.firstWaveFours == b.firstWaveFours &&
         a.resolvedFours == b.resolvedFours && a.fixedBoardSatisfied == b.fixedBoardSatisfied &&
+        a.recoveredColors == b.recoveredColors && a.recoveryHeartFours == b.recoveryHeartFours &&
+        a.unmatchableRecovered == b.unmatchableRecovered &&
         same(a.rowGroups,b.rowGroups) && same(a.linkGroups,b.linkGroups) && same(a.largestGroups,b.largestGroups) &&
         a.activityValue == b.activityValue && same(a.retainedAfterConversion,b.retainedAfterConversion) &&
         a.preparationReady == b.preparationReady && a.poisonErased == b.poisonErased &&
@@ -1372,17 +1420,18 @@ PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbGo
 
 PHOrbInventoryIssue PHOrbInspectInventory(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept {
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) ||
+        !FixedBoardValid(board,options.fixedBoard) || (options.fixedBoard.unmatchableRecoveryColors && options.fishCell>=0) ||
         !FishingOptionsValid(board, options.fishCell, options.fishColor)) return {PHOrbInventoryKind::Invalid};
     try {
         Cells cells{};
         std::copy(board.types, board.types + board.width * board.height, cells.begin());
         return InspectInventory(cells, MakeContext(board, options.goals, false, false, false, {},
-            options.fishCell, options.fishColor)).issue;
+            options.fishCell, options.fishColor, options.fixedBoard)).issue;
     } catch (...) { return {PHOrbInventoryKind::Invalid}; }
 }
 
 PHOrbFishingPlan PHOrbPlanFishing(const PHOrbBoard &board, const PHOrbSolveOptions &options) noexcept {
-    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || options.fishCell < 0) return {};
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || options.fishCell < 0 || options.fixedBoard.unmatchableRecoveryColors) return {};
     const unsigned table = board.spinnerColors & 63u;
     if (!table || !FishingOptionsValid(board, options.fishCell, unsigned(__builtin_ctz(table)))) return {};
     try {
@@ -1436,7 +1485,8 @@ bool PHOrbEvaluate(const PHOrbBoard &board, const PHOrbGoalSet &goals, PHOrbEval
 
 bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &options, PHOrbEvaluation &result) noexcept {
     result = {};
-    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !ActivityValid(board,options.activity) || !FixedBoardValid(options.fixedBoard)) return false;
+    if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !ActivityValid(board,options.activity) || !FixedBoardValid(board,options.fixedBoard) ||
+        (options.fixedBoard.unmatchableRecoveryColors && (options.activity.firstWaveOnly || options.goals.bonusFirstWave || options.fishCell>=0))) return false;
     try {
         Cells cells{}; std::copy(board.types,board.types + board.width * board.height,cells.begin());
         result = Evaluate(cells,MakeContext(board,options.goals,false,options.allowPoisonWithHeartFour,options.diagonal,options.activity,-1,0,options.fixedBoard)).result;
@@ -1447,6 +1497,7 @@ bool PHOrbEvaluateWithOptions(const PHOrbBoard &board, const PHOrbSolveOptions &
 bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const PHOrbSolveOptions &options,
                         PHOrbEvaluation &result, uint32_t &thornDamage, uint8_t &thornContacts) noexcept {
     result = {}; thornDamage = 0; thornContacts = 0;
+    if (options.fixedBoard.unmatchableRecoveryColors && (route.fishing || route.fishingExchangeCount)) return false;
     PHOrbBoard replay{};
     if (!route.count || route.diagonal != options.diagonal || !PHOrbReplay(&board, &route, route.count - 1, &replay) ||
         !(route.fishingExchangeCount ? PHOrbEvaluateMultiFishingBoard(replay,route.fishCell,options,result) :
@@ -1462,8 +1513,10 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
     route = {};
     if (!PHOrbBoardValid(&board) || !PHOrbGoalsValid(&options.goals) || !options.steps || options.steps > PHOrbMaxSteps ||
         !options.beam || options.beam > 512 || !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds ||
-        options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity) || !FixedBoardValid(options.fixedBoard)) return PHOrbSolveStatus::Invalid;
+        options.recoveryPasses > 1 || options.backtrackLimit > 2 || !ActivityValid(board,options.activity) || !FixedBoardValid(board,options.fixedBoard)) return PHOrbSolveStatus::Invalid;
     if (!FishingOptionsValid(board, options.fishCell, options.fishColor)) return PHOrbSolveStatus::Invalid;
+    if (options.fixedBoard.unmatchableRecoveryColors &&
+        (options.fishCell>=0 || options.activity.firstWaveOnly || options.goals.bonusFirstWave)) return PHOrbSolveStatus::Invalid;
     if (attackPrefix && (options.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack || options.fishCell >= 0 ||
         attackPrefix->fishing || attackPrefix->fishingExchangeCount || attackPrefix->diagonal != options.diagonal ||
         attackPrefix->count < 2 || attackPrefix->count > options.steps)) return PHOrbSolveStatus::Invalid;

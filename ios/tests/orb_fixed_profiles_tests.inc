@@ -29,7 +29,7 @@ static void FixedProfilesTests(void) {
         NSDictionary *assistSkills=@{@13876:@[@66752],@13878:@[@66755]};
         NSDictionary *ordinarySkills=@{@66716:@63191,@66718:@63192,@66724:@63220,@66735:@62494,
             @66740:@62502,@66729:@63241,@66700:@27820,@66706:@27827,@66752:@61754,@66755:@63251};
-        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r4"] &&
+        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r5"] &&
             [coral[@"dungeon"] isEqual:@7801] && [coral[@"floor"] isEqual:@1],
             "Coral guide-reviewed revision has a distinct ID and the observed native dungeon and sub-dungeon");
         NSDictionary *finisher=[coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject];
@@ -41,6 +41,12 @@ static void FixedProfilesTests(void) {
             "B15 preserves one ready-window Riku and permits no more than two final puzzles including absorption stalls");
         NSDictionary *opener=[coral[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"] lastObject];
         NSDictionary *plainExit=[coral[@"fixedPlan"][@"floors"][1][@"variants"][0][@"stages"] lastObject];
+        NSUInteger recoveryStages=0;
+        for (NSDictionary *floor in coral[@"fixedPlan"][@"floors"]) for (NSDictionary *variant in floor[@"variants"])
+            for (NSDictionary *stage in variant[@"stages"]) recoveryStages+=[stage[@"board"][@"unmatchableRecovery"] boolValue];
+        Check(recoveryStages==1 && [plainExit[@"board"][@"unmatchableRecovery"] isEqual:@YES] &&
+            [plainExit[@"actions"] count]==1 && [plainExit[@"actions"][0][@"skill"] isEqual:@66706],
+            "r5 enables latent recovery only on B2 finish without inserting another skill or turn");
         Check([opener[@"id"] isEqual:@"buff-and-finish"] && [opener[@"repeat"][@"maximumPuzzles"] isEqual:@2] &&
             !opener[@"actions"][0][@"optionalAfterFirst"] && [opener[@"actions"][2][@"optionalAfterFirst"] isEqual:@YES] &&
             ![opener[@"actions"][0][@"optional"] boolValue] && !opener[@"actions"][1][@"optionalAfterFirst"] &&
@@ -180,19 +186,24 @@ static void FixedProfilesTests(void) {
         NSDictionary *priorLibrary=PHOrbProfilesImportingData(b7Library,
             [NSJSONSerialization dataWithJSONObject:priorPackage options:0 error:NULL],NULL);
         NSData *priorExport=PHOrbExportProfileData(PHOrbProfileNamed(priorLibrary,@"coral-fixed-585607-v90-r3"),NULL);
-        NSDictionary *both=PHOrbProfilesImportingData(priorLibrary,coralData,NULL);
+        NSMutableDictionary *r4Package=FixedFixture(); r4Package[@"profile"][@"id"]=@"coral-fixed-585607-v90-r4";
+        NSDictionary *r4Library=PHOrbProfilesImportingData(priorLibrary,
+            [NSJSONSerialization dataWithJSONObject:r4Package options:0 error:NULL],NULL);
+        NSData *r4Export=PHOrbExportProfileData(PHOrbProfileNamed(r4Library,@"coral-fixed-585607-v90-r4"),NULL);
+        NSDictionary *both=PHOrbProfilesImportingData(r4Library,coralData,NULL);
         NSDictionary *reloaded=both ? [NSJSONSerialization JSONObjectWithData:
             [NSJSONSerialization dataWithJSONObject:both options:0 error:NULL] options:0 error:NULL] : nil;
-        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r4");
+        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r5");
         NSData *newExport=PHOrbExportProfileData(newRecord,NULL);
-        Check(oldRecord && v90Export && b7Export && priorExport && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==5 &&
-            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r4"] && ![reloaded[@"autoSelect"] boolValue] &&
+        Check(oldRecord && v90Export && b7Export && priorExport && r4Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==6 &&
+            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r5"] && ![reloaded[@"autoSelect"] boolValue] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607"),NULL) isEqual:oldExport] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90"),NULL) isEqual:v90Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-b7"),NULL) isEqual:b7Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r3"),NULL) isEqual:priorExport] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r4"),NULL) isEqual:r4Export] &&
             [newRecord isEqual:coral] && newExport && !PHOrbProfilesImportingData(reloaded,newExport,NULL),
-            "r4 import and JSON reload preserve all earlier records including the r3 ID and reject duplicate new IDs");
+            "r5 import and JSON reload preserve all earlier records including r4 and reject duplicate new IDs");
         PHOrbSnapshot native={0}; native.valid=native.present=native.automation.valid=true;
         native.identity.entryMode=1; native.identity.dungeon=7801; native.identity.floor=1;
         for (unsigned i=0;i<6;++i) {
@@ -209,6 +220,24 @@ static void FixedProfilesTests(void) {
         Check(![PHOrbResolveProfile(reloaded,&native)[@"ok"] boolValue],"another sub-dungeon cannot select the revised Coral plan");
     }
     NSMutableDictionary *package = FixedFixture(); NSString *reason = nil;
+    for (unsigned mutation=0;mutation<8;++mutation) {
+        NSMutableDictionary *scoped=FixedFixture(), *plan=scoped[@"profile"][@"fixedPlan"];
+        NSMutableDictionary *floor=[plan[@"floors"][0] mutableCopy]; floor[@"number"]=@2;
+        // Deep-copy stages so a B2 edit cannot also change B1.
+        floor=[NSJSONSerialization JSONObjectWithData:[NSJSONSerialization dataWithJSONObject:floor options:0 error:NULL]
+            options:NSJSONReadingMutableContainers error:NULL];
+        [plan[@"floors"] addObject:floor];
+        NSMutableDictionary *stage=floor[@"variants"][0][@"stages"][0], *board=stage[@"board"];
+        board[@"assistRecoveryL"]=@NO; board[@"unmatchableRecovery"]=mutation==1 ? (id)@1 : (id)@YES;
+        if (mutation==2) board[@"policy"]=@"six_colors_no_fours";
+        if (mutation==3) board[@"assistRecoveryL"]=@YES;
+        if (mutation==4) board[@"lColors"]=@5;
+        if (mutation==5) stage[@"absorbStall"]=@YES;
+        if (mutation==6) plan[@"floors"][0][@"variants"][0][@"stages"][0][@"board"][@"unmatchableRecovery"]=@YES;
+        if (mutation==7) board[@"unmatchableRecovery"]=@"true";
+        Check((PHOrbFixedPlanFromPackage(scoped,NULL)!=nil)==(mutation==0),
+            "unmatchable recovery requires a strict Boolean, B2 four attack and no assist-L or stall contract");
+    }
     NSDictionary *profile = PHOrbFixedPlanFromPackage(package,&reason);
     NSData *exported = PHOrbExportProfileData(profile,&reason);
     NSDictionary *library = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),exported,&reason);

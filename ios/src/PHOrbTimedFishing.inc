@@ -221,7 +221,7 @@ PHOrbTimedFishingRoute TimedRoute(const TimedFishingNode &node, const PHOrbTimed
 PHOrbTimedFishingInventory PHOrbInspectTimedFishing(const PHOrbBoard &board,
     const PHOrbSolveOptions &options, unsigned maxExchanges) noexcept {
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard)) return {};
+        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors)) return {};
     try { return TimedInventoryPlans(board, options, maxExchanges); }
     catch (...) { return {}; }
 }
@@ -269,7 +269,7 @@ bool PHOrbEvaluateTimedFishing(const PHOrbBoard &board, const PHOrbTimedFishingR
     result = {};
     PHOrbBoard replay;
     if (options.fishCell != route.fishCell || options.diagonal != route.diagonal || !PHOrbGoalsValid(&options.goals) ||
-        !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) || !PHOrbReplayTimedFishing(board,route,route.count - 1,replay)) return false;
+        !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors) || !PHOrbReplayTimedFishing(board,route,route.count - 1,replay)) return false;
     try {
         auto context = TimedFishingContext(board,options,false);
         context.variants = 0; context.dynamicSpinners = Bits(1) << route.fishCell;
@@ -302,7 +302,7 @@ PHOrbSolveStatus PHOrbSolveTimedFishing(const PHOrbBoard &board, const PHOrbSolv
     unsigned maxExchanges, const std::atomic_bool &cancel, PHOrbTimedFishingRoute &route) noexcept {
     route = {};
     if (!TimedFishingBoardValid(board, options.fishCell) || !PHOrbGoalsValid(&options.goals) ||
-        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || !FixedBoardValid(options.fixedBoard) ||
+        maxExchanges > PHOrbTimedFishingMaxExchanges || !TimedFishingActivitySupported(options.activity) || (!FixedBoardValid(board,options.fixedBoard) || options.fixedBoard.unmatchableRecoveryColors) ||
         !options.steps || options.steps > PHOrbMaxSteps || !options.beam || options.beam > 512 ||
         !options.milliseconds || options.milliseconds > PHOrbMaxSearchMilliseconds) return PHOrbSolveStatus::Invalid;
     if (cancel.load(std::memory_order_relaxed)) return PHOrbSolveStatus::Cancelled;

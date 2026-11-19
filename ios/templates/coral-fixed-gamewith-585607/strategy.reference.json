@@ -1,8 +1,8 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607-v90-r4",
-  "status": "0.5.56-ci182-verified-delivered-device-pending",
+  "id": "coral-fixed-585607-v90-r5",
+  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -36,7 +36,8 @@
     "enemyReference": "enemy-reference.json",
     "guideComparison": "guide-comparison.json",
     "b2SearchReference": "b2-search-reference.json",
-    "latestReview": "../../docs/coral-plan-review-2026-11-19.md"
+    "latestReview": "../../docs/coral-plan-review-2026-11-19.md",
+    "unmatchableRecovery": "../../docs/unmatchable-recovery.md"
   },
   "counts": {
     "floors": 15,
@@ -148,14 +149,18 @@
     }
   ],
   "decisions": [
+    "B2: r5 explicitly opts into fresh latent41/TPA evidence for one basic unmatchable color/turn on enemy 200974. Require a first native-order isolated fire/wood four, then the blocked color in an existing-orb cascade; other five colors remain first-removal. Ordinary shared spinner phases only; no fishing, extra skills or extra puzzles. After-turn clear is required but is not attributed solely to the latent.",
     "B7: up to two original attacks with exact native enemy roster; one additional board only for dead 200038 and living 210524 at <=50% HP. Fresh coverage and unchanged enemy/target evidence are required. Full clear can advance directly.",
     "B12: check native body HP <=50% before each of the two remaining attack boards, proceeding directly to Solomon if the threshold was reached early.",
     "B13: hold the Keisy loop until B14; restore uncovered absorption with an actual Solomon cast and native bypass result; finish with Atori, Diena, Riku, Atori in one board.",
     "B14: hold Keisy on the first board, require its native-ready resize on the second, then reserve native-ready Solomon before finishing. This follows AppMedia rather than spending Solomon on B14 resize.",
-    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No simulated latent unmatchable recovery is claimed; the final Riku stage remains bounded to two boards including stalls.",
+    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No B15 multi-color latent recovery is enabled; the final Riku stage remains bounded to two boards including stalls.",
     "Execution history freezes separate native enemy identity/HP/alive/target evidence before search, before release and after the settled acknowledged turn. Generation, turn and battle identity bind the result; cached observations never authorize actions.",
-    "New schema keys require 0.5.56 or later. Version 0.5.55 does not accept r4; imported older profiles are never changed automatically.",
+    "The B2 unmatchableRecovery key requires the next build containing r5 support. Delivered 0.5.56 accepts r4 only; older imported profiles remain unchanged.",
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
-  "deviceVerified": false
+  "deviceVerified": false,
+  "buildVerified": false,
+  "testSuitesExecuted": true,
+  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence."
 }

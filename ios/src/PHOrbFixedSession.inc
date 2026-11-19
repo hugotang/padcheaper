@@ -24,6 +24,7 @@
     _fixedWave=state->wave; _fixedStageIndex=_fixedAction=_fixedPuzzles=_fixedLoopCursor=_fixedOnce=0;
     _fixedPuzzleSkills=0;
     _fixedStage=nil; _fixedVariant=nil; _fixedPending=nil; _fixedLastStop=nil; _fixedLoops=[NSMutableArray array];
+    _unmatchableTrace=@{};
     _fixedPartsGone=_fixedAcknowledged=_fixedStall=false;
     return YES;
 }
@@ -86,6 +87,39 @@
 }
 - (BOOL)fixedBoardConditionsAllowed:(const PHOrbSnapshot *)state {
     if (![self fixedRetryAttackAllowed:state]) return NO;
+    // Run after the prescribed skills have acknowledged, so a real cleanse can
+    // still repair the board. Only the explicit B2 policy may predict a latent
+    // recovery; it separately captures providers before solving and input.
+    NSString *policy=_fixedStall ? @"six_colors_no_fours" : _fixedStage[@"board"][@"policy"];
+    const unsigned blocked=state->board.unmatchableColors & 63u;
+    const bool recovery=blocked && [self unmatchableBoardSupported:state];
+    if ([policy hasPrefix:@"six_colors"] && (!state->unmatchableKnown || (blocked && !recovery))) {
+        NSArray *colorNames=@[@"火",@"水",@"木",@"光",@"闇",@"心"];
+        NSMutableArray *names=[NSMutableArray array];
+        for (unsigned c=0;c<6;++c) if (blocked&(1u<<c)) [names addObject:colorNames[c]];
+        NSString *colors=[names componentsJoinedByString:@"／"];
+        NSString *detail=state->unmatchableKnown ? [NSString stringWithFormat:
+            @"%@目前不可消，與首消六色要求衝突。轉轉取色無法解除不可消；此步不符合已支援的四連潛覺回復條件，已停止，請手動處理本場",colors] :
+            @"不可消狀態尚未確認，無法檢查首消六色要求，已停止固定計畫";
+        NSString *message=[NSString stringWithFormat:@"固定計畫 B%lu · %@：%@",
+            (unsigned long)_fixedWave+1,_fixedStage[@"id"],detail];
+        NSMutableDictionary *stop=[FixedEffectTrace(*state,_fixedStage[@"id"],@"fixed-board-preconditions") mutableCopy];
+        [stop addEntriesFromDictionary:@{@"reason":message,
+            @"code":state->unmatchableKnown ? @"required-colors-unmatchable" : @"unmatchable-state-unknown",
+            @"profile":_fixedProfile[@"id"] ?: @"",@"policy":policy,@"requiredFirstColors":@63,
+            @"unmatchableKnown":@(state->unmatchableKnown),
+            @"unmatchableColors":state->unmatchableKnown ? @(state->board.unmatchableColors) : (id)NSNull.null,
+            @"unmatchableTurns":state->unmatchableKnown ? @(state->unmatchableTurns) : (id)NSNull.null,
+            @"blockedColors":state->unmatchableKnown ? @(blocked) : (id)NSNull.null,
+            @"blockedColorNames":state->unmatchableKnown ? colors : (id)NSNull.null,
+            @"latentUnmatchableRecoverySupported":@(recovery),@"recoveryRequested":@([self fixedUnmatchableRecoveryEnabled]),@"action":@(_fixedAction),
+            @"confirmedPuzzles":@(_fixedPuzzles),@"pending":_fixedPending ?: @{},
+            @"sessionPhase":SessionPhaseText(_phase),@"autoTurn":@(_auto.turn),@"autoSkills":@(_auto.skills),
+            @"consumed":@(_fixedConsumed),@"continuationAllowed":@NO,@"survivalKnown":@NO,
+            @"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime*1000))}];
+        _fixedLastStop=[stop copy];
+        [self queueStop:message]; return NO;
+    }
     PHOrbFixedPlanEvidence e=[self fixedEvidence:state];
     // Effects are independently captured native fields; they remain available
     // during a staged input frame when another fixed-plan read is forbidden.
@@ -203,7 +237,8 @@
     return message;
 }
 - (void)recordFixedStop {
-    // The stage-cap stop already froze richer native evidence for this message.
+    // A specific stage-cap or board-precondition stop may already have frozen
+    // richer native evidence for this message.
     NSString *known=_fixedLastStop[@"reason"];
     if (known.length && [_message hasPrefix:known]) return;
     _fixedLastStop=@{@"reason":_message ?: @"",@"code":@"stopped",@"scope":@"session-stop",
@@ -271,6 +306,7 @@
     if (puzzle) {
         if (![self confirmAssistRecoveryResult:&_live]) return;
         [self recordFixedTurnResult:&_live];
+        if (![self confirmUnmatchableRecoveryResult:&_live]) return;
         _fixedTeam=_live;
         ++_auto.turn; ++_fixedPuzzles; _fixedAction=_fixedLoopCursor=_fixedPuzzleSkills=0;
         [self waitForAutomationBoard]; return;
@@ -417,9 +453,12 @@
         [policy isEqual:@"six_colors_fours"] ? PHOrbFixedBoardMode::FourAttack : [policy isEqual:@"l_only"] ? PHOrbFixedBoardMode::LOnly : PHOrbFixedBoardMode::Normal;
     p.firstColors=[policy hasPrefix:@"six_colors"] ? 63 : 0;
     p.requireHeartFour=[policy isEqual:@"six_colors_fours"];
+    if ([self fixedUnmatchableRecoveryEnabled] && _preview.unmatchableRecovery.valid)
+        p.unmatchableRecoveryColors=[_unmatchableTrace[@"eligibleColors"] unsignedIntValue];
     NSMutableArray *goals=[NSMutableArray array];
     if (p.firstColors) [goals addObject:@{@"kind":@"colors",@"colors":@63,@"count":@6,@"length":@0}];
     if (p.requireHeartFour) [goals addObject:@{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
+    if (p.unmatchableRecoveryColors) [goals addObject:@{@"kind":@"four",@"colors":@(p.unmatchableRecoveryColors),@"count":@1,@"length":@0}];
     if (board[@"lColors"] && !_fixedStall) [goals addObject:@{@"kind":@"l",@"colors":board[@"lColors"],@"count":@1,@"length":@0}];
     return @{@"available":@YES,@"goals":goals,@"message":[NSString stringWithFormat:@"固定計畫 B%lu · %@ · %@",(unsigned long)_fixedWave+1,_fixedStage[@"id"],policy],
         @"warning":@"",@"leaders":@[]};

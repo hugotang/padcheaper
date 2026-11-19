@@ -183,6 +183,7 @@ static void ShapeTests() {
 }
 
 #include "orb_fixed_board_solver_tests.inc"
+#include "orb_unmatchable_solver_tests.inc"
 #include "orb_effect_solver_tests.inc"
 #include "orb_inventory_solver_tests.inc"
 #include "orb_timed_fishing_tests.inc"
@@ -220,6 +221,7 @@ static void ShapeTests() {
 
 int main() {
     FixedBoardSolverTests();
+    UnmatchableSolverTests();
     SessionStateModelTests();
     InventoryDiagnosticTests();
     FishingInventoryTests();

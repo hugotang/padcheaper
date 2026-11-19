@@ -9,25 +9,42 @@ bool CheckAssistRecoveryCode(uintptr_t header) {
     return true;
 }
 
+bool CheckUnmatchableRecoveryCode(uintptr_t header) {
+    if (!CheckAssistRecoveryCode(header) || !PHOrbUnmatchableRecoveryTextGuards[0].rva) return false;
+    for (const auto &guard : PHOrbUnmatchableRecoveryTextGuards) {
+        uint8_t bytes[64];
+        if (!PHAddressIsGuestCode(header + guard.rva, reinterpret_cast<const mach_header_64 *>(header)) ||
+            !PHReadMemory(header + guard.rva, bytes, sizeof(bytes)) || std::memcmp(bytes, guard.bytes, sizeof(bytes))) return false;
+    }
+    return true;
+}
+
 bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t key2,
-    PHOrbAssistRecoveryState &out) {
+    PHOrbAssistRecoveryState &out, bool unmatchable = false) {
     std::memset(&out, 0, sizeof(out));
     const uintptr_t impl = state.identity.impl;
     uint16_t duration = 0; uint32_t queueCount = 0, dispatchMode = 0; uintptr_t queue = 0;
     ObservationTables tables{}; PHBattleDungeonMemberRules rules{};
-    if (!PHReadU16(impl + PHOrbObservationAssistVoidOffset, &duration) || !PHReadBattleDungeonMemberRules(state.identity.impl, rules) ||
+    if (!PHReadU16(impl + (unmatchable ? PHOrbUnmatchableDurationOffset : PHOrbObservationAssistVoidOffset), &duration) || !PHReadBattleDungeonMemberRules(state.identity.impl, rules) ||
         !PHReadU32(impl + PHOrbAssistRecoveryDispatchOffset, &dispatchMode) || dispatchMode == 525190 ||
         !PHReadU32(impl + PHOrbAssistRecoveryQueueCountOffset, &queueCount) || queueCount != 0 ||
         !PHReadPointer(impl + PHOrbAssistRecoveryQueueOffset, &queue) || queue ||
         !ReadObservationCatalog(state.identity.header, tables) || !state.automation.statusKnown) return false;
     const int turns = int16_t(uint16_t(duration << 6)) / 64;
     if (turns < 0) return false;
+    if (unmatchable) {
+        uint32_t colors = 0;
+        if (!state.unmatchableKnown || turns != state.unmatchableTurns ||
+            !Decode(impl + PHOrbUnmatchableColorsOffset, key1, key2, 0x6a875a8bu, colors) ||
+            (turns ? colors : 0) != state.board.unmatchableColors) return false;
+    }
+    const auto weight = unmatchable ? ObservationTPAWeight : ObservationLWeight;
     out.turns = uint16_t(turns); out.fresh = (duration & 0x400u) != 0; out.dungeonFlags = rules.flags;
     uint8_t dynamic[24]{};
     const bool grantsKnown = PHReadMemory(impl + PHOrbObservationAwakeningGrantsOffset, dynamic, sizeof(dynamic));
     bool dynamicL = false;
     for (unsigned group = 0; grantsKnown && group < 2; ++group)
-        for (unsigned i = 0; i < 6; ++i) dynamicL |= ObservationLWeight(dynamic[group * 12 + 4 + i]) != 0;
+        for (unsigned i = 0; i < 6; ++i) dynamicL |= weight(dynamic[group * 12 + 4 + i]) != 0;
     for (unsigned slot = 0; slot < 6; ++slot) {
         const auto &member = state.automation.members[slot];
         const uintptr_t address = impl + PHBattleMemberOffset + slot * PHBattleMemberStride;
@@ -47,11 +64,11 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
         uintptr_t parameter = 0, actual = 0, profile = 0; uint32_t id = 0;
         const bool cardKnown = PHReadU32(address + PHBattleCatalogIDOffset, &id) && ObservationCard(tables, id, parameter) &&
             PHReadPointer(address + PHBattleCardParamOffset, &actual) && actual == parameter;
-        if (!PHReadPointer(address + PHOrbObservationProfileOffset, &profile) || !ObservationLatents(profile, out.latents[slot]))
+        if (!PHReadPointer(address + PHOrbObservationProfileOffset, &profile) || !ObservationLatents(profile, out.latents[slot], unmatchable ? 41 : 48))
             block |= PHOrbLUnknownLatents;
         else if (!out.latents[slot]) block |= PHOrbLNoLatent;
         unsigned count = 0;
-        if (!cardKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count) || !grantsKnown)
+        if (!cardKnown || !ObservationAwakenings(address, parameter, profile, tables, member, key1, key2, count, weight) || !grantsKnown)
             block |= PHOrbLUnknownAwakenings;
         else if (dynamicL) block |= PHOrbLDynamicAwakenings;
         else if (!count) block |= PHOrbLNoAwakening;
@@ -69,8 +86,9 @@ bool CollectAssistRecovery(const PHOrbSnapshot &state, uint32_t key1, uint32_t k
     return true;
 }
 
-bool ReadAssistRecoveryFields(PHOrbSnapshot &state) {
-    state.assistRecovery = {};
+bool ReadAssistRecoveryFields(PHOrbSnapshot &state, bool unmatchable = false) {
+    auto &result = unmatchable ? state.unmatchableRecovery : state.assistRecovery;
+    result = {};
     if (!state.valid || !state.present || !state.automation.valid || state.automation.busy ||
         state.phase != 2 || state.boardTransition || (!state.settled && !state.dragged) || !PHInputIsQuiet(&state.input) ||
         state.multiplayerDisabled || state.multiplayer.kind != PHOrbMultiplayerNone || state.identity.sourceMode != 0 ||
@@ -86,9 +104,9 @@ bool ReadAssistRecoveryFields(PHOrbSnapshot &state) {
         !PHReadU32(header + PHBattleKey1RVA, &key1) || !PHReadU32(header + PHBattleKey2RVA, &key2) ||
         !ReadObservationCatalog(header, tables) ||
         !ReadAutomationFields(first) || first.automation.busy || !PHOrbSameAutomationExceptWindow(&state, &first) ||
-        !CollectAssistRecovery(first, key1, key2, first.assistRecovery) ||
+        !CollectAssistRecovery(first, key1, key2, first.assistRecovery, unmatchable) ||
         !ReadAutomationFields(second) || second.automation.busy || !PHOrbSameAutomation(&first, &second) ||
-        !CollectAssistRecovery(second, key1, key2, second.assistRecovery) ||
+        !CollectAssistRecovery(second, key1, key2, second.assistRecovery, unmatchable) ||
         !PHOrbSameAssistRecovery(&first.assistRecovery, &second.assistRecovery) ||
         !ReadObservationCatalog(header, lastTables) || tables.catalog != lastTables.catalog ||
         tables.catalogCount != lastTables.catalogCount || tables.catalogRecords != lastTables.catalogRecords ||
@@ -99,6 +117,6 @@ bool ReadAssistRecoveryFields(PHOrbSnapshot &state) {
         !Decode(impl + PHBattleWaveOffset, key1, key2, 0x766cfc6du, wave) || wave != state.wave ||
         !PHReadU32(impl + PHOrbMoveSerialOffset, &moves) || moves != state.moves ||
         !PHReadPointer(impl + PHBattleDragPointerOffset, &dragged) || dragged != state.dragged) return false;
-    state.assistRecovery = first.assistRecovery;
+    result = first.assistRecovery;
     return true;
 }

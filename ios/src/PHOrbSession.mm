@@ -418,9 +418,9 @@ struct EightPreparationState {
     NSString *_message, *_quality, *_goalMode;
     bool _thornComboPriority, _allowThornsWithHeartMatch, _allowThornFishing, _allowPoisonWithHeartFour, _diagonal, _assistRecoveryL;
     bool _assistAwaitingResult;
-    double _assistCheckedAt, _enemyComboCheckedAt;
+    double _assistCheckedAt, _enemyComboCheckedAt, _unmatchableCheckedAt;
     PHOrbSnapshot _assistReleased;
-    NSDictionary *_assistTrace;
+    NSDictionary *_assistTrace, *_unmatchableTrace;
     NSArray *_manualGoals;
     NSArray *_skillRules, *_historyRules, *_decisionRules;
     NSMutableArray *_automationLog;
@@ -521,13 +521,14 @@ struct EightPreparationState {
         _openingLog = [NSMutableArray array];
         _searchTrace = @{}; _lastFailedSearch = @{}; _lastFishingSuccess = @{}; _lastAssistRecoverySuccess = @{};
         _executionHistory = [NSMutableArray array];
-        _assistTrace = @{};
+        _assistTrace = @{}; _unmatchableTrace = @{};
         _lastReadIssue = @{};
         _liveReadReason = @""; _onceReadinessHistory = [NSMutableArray array];
     }
     return self;
 }
 #include "PHOrbDungeonSession.inc"
+#include "PHOrbUnmatchableSession.inc"
 #include "PHOrbFixedSession.inc"
 - (void)refreshBattleObservation:(BOOL)read active:(BOOL)active time:(NSTimeInterval)time {
     if (!read || !_frame.ready || !_frame.enabled || _live.identity.player != _frame.player ||
@@ -750,6 +751,8 @@ struct EightPreparationState {
     [self clearRoute];
     _readQueued = false; _preview = _live;
     _preview.assistRecovery = {};
+    _preview.unmatchableRecovery = {};
+    _unmatchableTrace = @{};
     if (!_auto.eight()) _preview.enemyCombo = {};
     PHOrbSolveOptions options = OptionsForQuality(_quality);
     options.thorns = _preview.thorns;
@@ -790,6 +793,10 @@ struct EightPreparationState {
         @{@"available":@YES, @"goals":[_goalMode isEqual:@"manual"] ? _manualGoals : @[],
           @"message":PHOrbGoalsDescription([_goalMode isEqual:@"manual"] ? _manualGoals : @[]), @"warning":@"", @"leaders":@[]};
     if (_auto.active() && _activeProfile[@"fixedPlan"]) {
+        if (![self prepareUnmatchableRecovery:&_preview]) {
+            _goalPlan=@{@"available":@NO,@"goals":@[],@"message":_message ?: @"不可消回復資料未確認"};
+            [self recordPlanningStatus:@"unmatchable-recovery-unavailable" reason:_message]; return;
+        }
         _goalPlan = [self fixedBoardPlan:&options];
     } else if (_auto.eight()) {
         _goalPlan = [self planEightBoard:&_preview options:&options];
@@ -857,6 +864,12 @@ struct EightPreparationState {
     const double available = TimeAvailable(_live);
     options.goals.comboFirstWave = [_goalPlan[@"enemyComboFirstWave"] boolValue];
     options.goals.bonusFirstWave = [_goalPlan[@"enemyComboBonusFirstWave"] boolValue];
+    if (options.fixedBoard.unmatchableRecoveryColors && options.goals.bonusFirstWave) {
+        _solveOptions=options;
+        NSMutableDictionary *plan=[_goalPlan mutableCopy]; plan[@"available"]=@NO; _goalPlan=[plan copy];
+        [self queueStop:@"不可消回復的後續連鎖尚未支援本盤所需的首批 Combo 加算條件，未開始轉珠"];
+        [self recordPlanningStatus:@"unmatchable-recovery-bonus-unsupported" reason:_message]; return;
+    }
     const bool multiplayer = !PHBattleIsSinglePlayer(_live.identity.entryMode, _live.identity.multiplayer);
     double remaining = available;
     if (multiplayer) {
@@ -940,8 +953,9 @@ struct EightPreparationState {
         multiBaseOptions.goals.comboFirstWave = options.goals.comboFirstWave;
         multiBaseOptions.goals.bonusFirstWave = options.goals.bonusFirstWave;
     }
-    NSString *const fishingEligibility = FishingEligibilityReason(_preview,boundFishingOnce,_auto.active());
-    NSString *const multiEligibility = multiGoalsValid ?
+    NSString *const fishingEligibility = options.fixedBoard.unmatchableRecoveryColors ? @"unmatchable-recovery-ordinary-only" :
+        FishingEligibilityReason(_preview,boundFishingOnce,_auto.active());
+    NSString *const multiEligibility = options.fixedBoard.unmatchableRecoveryColors ? fishingEligibility : multiGoalsValid ?
         MultiFishingEligibilityReason(_preview,boundFishingOnce,_auto.active(),options.allowThornFishing) : @"invalid-goals";
     const bool multiEligible = [multiEligibility isEqual:@"eligible"];
     PHOrbTimedFishingTiming multiTiming = MultiFishingTiming(_preview);
@@ -1459,7 +1473,7 @@ struct EightPreparationState {
             trace[@"predictedBoard"] = BoardTrace(replay);
             trace[@"colorPhases"] = ColorPhaseTrace(replay,checkedOptions,selectedMulti ? int(route.fishCell) : -1);
             trace[@"evaluation"] = FishingEvaluationTrace(evaluation,checkedOptions.goals,selectedMulti);
-            trace[@"fixedConstraints"] = FixedConstraintTrace(evaluation,checkedOptions.fixedBoard,trace[@"evaluation"][@"scope"]);
+            trace[@"fixedConstraints"] = FixedConstraintTrace(evaluation,checkedOptions.fixedBoard,board,trace[@"evaluation"][@"scope"]);
             session->_searchTrace = [trace copy];
             session->_route = route; session->_phase = PHOrbSessionPhase::Preview; session->_previewAt = session->_now;
             trace[@"fishing"] = @(route.fishing); trace[@"fishCell"] = @(route.fishCell); trace[@"fishColor"] = @(route.fishColor);
@@ -1604,7 +1618,7 @@ struct EightPreparationState {
         // Fall through to the existing owned-orb release path when needed.
     }
     if (_auto.active() && !_auto.eight() && ((_phase == PHOrbSessionPhase::Arming) || (_phase == PHOrbSessionPhase::Running)) &&
-        (![self validateAssistRecovery:&current] || ![self validateEnemyCombo:&current])) {
+        (![self validateAssistRecovery:&current] || ![self validateUnmatchableRecovery:&current] || ![self validateEnemyCombo:&current])) {
         // A failure revokes holds, while retaining the existing owned release.
         if (_phase != PHOrbSessionPhase::Releasing) return;
     }

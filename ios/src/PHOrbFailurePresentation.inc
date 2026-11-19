@@ -8,6 +8,8 @@ NSString *FixedConstraintFailureMessage(NSDictionary *trace) {
         if ([kind isEqual:@"first-colors"]) [details addObject:[NSString stringWithFormat:
             @"固定步驟要求首批消除指定顏色；目前候選的首批缺少%@（須在全部色序成立，後續連鎖不計入此條件）",deficit[@"missingColorNames"]]];
         else if ([kind isEqual:@"heart-four"]) [details addObject:@"固定步驟要求首批心四連；目前候選未在全部色序達成"];
+        else if ([kind isEqual:@"recovery-heart-four"]) [details addObject:@"心珠不可消解除後，須以既有珠的確定連鎖消出心四連；目前候選未在全部色序達成"];
+        else if ([kind isEqual:@"unmatchable-recovery"]) [details addObject:@"須先以合資格的火／木四連解除不可消，再由既有珠連鎖補齊受阻顏色；目前候選未在全部色序達成"];
         else if ([kind isEqual:@"forbidden-fours"]) [details addObject:[NSString stringWithFormat:
             @"固定存技步驟禁止四顆消除；目前候選含既有珠連鎖最多有 %u 組四顆消除",[deficit[@"observedMaximum"] unsignedIntValue]]];
         else if ([kind isEqual:@"single-removal"]) [details addObject:[NSString stringWithFormat:
@@ -44,6 +46,7 @@ NSString *FishingSkipReasonMessage(NSString *reason) {
     if ([reason isEqual:@"thorn-token"]) return @"單次取色目前不支援有荊棘的盤面";
     if ([reason isEqual:@"thorn-use-multi-planner"]) return @"荊棘取色交由逐步計算傷害的連續取色搜尋處理";
     if ([reason isEqual:@"assist-multi-plan-required"]) return @"目前回復目標需要連續取色規劃";
+    if ([reason isEqual:@"unmatchable-recovery-ordinary-only"]) return @"不可消潛覺回復目前只支援普通求路，取色等待尚未驗證";
     if ([reason isEqual:@"invalid-goals"]) return @"連續取色目標未通過解析";
     return @"";
 }

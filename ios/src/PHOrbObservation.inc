@@ -89,8 +89,9 @@ bool ObservationSkill(const ObservationTables &tables, uintptr_t parameter, uint
 }
 
 unsigned ObservationLWeight(unsigned awakening) { return awakening == 60 ? 1 : awakening == 108 ? 2 : 0; }
+unsigned ObservationTPAWeight(unsigned awakening) { return awakening == 27 ? 1 : awakening == 96 ? 2 : 0; }
 
-bool ObservationLatents(uintptr_t profile, uint8_t &count) {
+bool ObservationLatents(uintptr_t profile, uint8_t &count, unsigned wanted = 48) {
     count = 0;
     if (!profile) return true;
     uint64_t encoded = 0;
@@ -102,7 +103,7 @@ bool ObservationLatents(uintptr_t profile, uint8_t &count) {
     for (unsigned i = 0; i < entries; ++i) {
         const unsigned latent = unsigned(remaining & 127u);
         if (latent > 52) return false; // Unknown IDs are not evidence of no recovery latent.
-        count += latent == 48;
+        count += latent == wanted;
         // The native decoder skips occupied slots but iterates the encoded
         // entry count. Repeated six-slot bits are not six separate latents.
         const unsigned cost = latent < 12 ? 1 :

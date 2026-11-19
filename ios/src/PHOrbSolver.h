@@ -24,6 +24,9 @@ struct PHOrbFixedBoardPolicy {
     PHOrbFixedBoardMode mode = PHOrbFixedBoardMode::Normal;
     uint8_t firstColors = 0; // Required basic-color mask in the first removal.
     bool requireHeartFour = false;
+    // Fresh native latent41/TPA evidence authorizes these fire/wood providers.
+    // Only one blocked colour/turn, recovered by the first native-order group.
+    uint8_t unmatchableRecoveryColors = 0;
 };
 
 struct PHOrbSolveOptions {

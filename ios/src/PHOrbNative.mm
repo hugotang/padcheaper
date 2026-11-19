@@ -630,6 +630,17 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     return YES;
 }
+- (BOOL)readUnmatchableRecovery:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (!state) return NO;
+    state->unmatchableRecovery = {};
+    if (!NSThread.isMainThread || _staged || _multiplayerDisabled || !frame.ready || !frame.enabled ||
+        !state->identity.header || frame.header != state->identity.header || _verifiedHeader != state->identity.header ||
+        !CheckUnmatchableRecoveryCode(state->identity.header) || !ReadAssistRecoveryFields(*state,true)) {
+        if (reason) *reason = @"不可消回復：原生潛覺／二體攻擊提供者或前後一致性未確認";
+        return NO;
+    }
+    return YES;
+}
 - (BOOL)readEnemyCombo:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (!state) return NO;
     state->enemyCombo = {};
@@ -1003,7 +1014,7 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
     }
     // Revalidate the policy evidence after coordinate conversion, at the
     // last boundary before input. Cleanup releases remain possible on failure.
-    if (down && (expected->assistRecovery.valid || expected->enemyCombo.valid || expected->fixedPlan.valid)) {
+    if (down && (expected->assistRecovery.valid || expected->unmatchableRecovery.valid || expected->enemyCombo.valid || expected->fixedPlan.valid)) {
         PHOrbSnapshot final{};
         NSString *finalReason = nil;
         const bool eight = multiplayer && _eightAuto && expected->eight.valid && PHOrbSameEightMatch(&_eightMatch,expected);
@@ -1023,6 +1034,12 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         }
         if (expected->assistRecovery.valid && !PHOrbSameAssistRecovery(&expected->assistRecovery, &final.assistRecovery)) {
             if (reason) *reason = @"武裝無效、有效 L 或提供隊員已改變，未繼續輸入";
+            return NO;
+        }
+        if (expected->unmatchableRecovery.valid &&
+            (![self readUnmatchableRecovery:&final frame:frame reason:&finalReason] ||
+             !PHOrbSameAssistRecovery(&expected->unmatchableRecovery,&final.unmatchableRecovery))) {
+            if (reason) *reason = finalReason ?: @"不可消回復：輸入前提供者或效果已改變";
             return NO;
         }
         if (expected->enemyCombo.valid && !eight && ![self readEnemyCombo:&final frame:frame reason:&finalReason]) {

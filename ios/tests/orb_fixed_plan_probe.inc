@@ -15,9 +15,10 @@ static void PHProbeFixedPlanStorage(UIWindow *overlay) {
     NSDictionary *library=data ? importing(profiles(baseline),data,NULL) : nil;
     NSDictionary *profile=library ? named(library,library[@"selected"]) : nil;
     PHProbeCheck(original && profile && [profile[@"fixedPlan"][@"floors"] count]==15 &&
-        [profile[@"id"] isEqual:@"coral-fixed-585607-v90-r4"] && [profile[@"dungeon"] isEqual:@7801] &&
+        [profile[@"id"] isEqual:@"coral-fixed-585607-v90-r5"] && [profile[@"dungeon"] isEqual:@7801] &&
         [profile[@"floor"] isEqual:@1] &&
         [profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0][@"actions"][0][@"skill"] isEqual:@66752] &&
+        [profile[@"fixedPlan"][@"floors"][1][@"variants"][0][@"stages"][1][@"board"][@"unmatchableRecovery"] isEqual:@YES] &&
         [profile[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0][@"monster"] isEqual:@210524] &&
         [profile[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][1][@"requireEnemyState"][1][@"maximumPercent"] isEqual:@50] &&
         [profile[@"fixedPlan"][@"floors"][12][@"variants"][0][@"stages"][0][@"repeat"][@"until"][@"skill"] isEqual:@66740] &&
@@ -32,7 +33,7 @@ static void PHProbeFixedPlanStorage(UIWindow *overlay) {
         NSDictionary *roundtrip=named(profiles(disk),library[@"selected"]);
         PHProbeCheck([saved[@"orbProfileSaveResult"][@"ok"] isEqual:@YES] &&
             [roundtrip[@"fixedPlan"] isEqual:profile[@"fixedPlan"]] &&
-            [roundtrip[@"id"] isEqual:@"coral-fixed-585607-v90-r4"] && [roundtrip[@"dungeon"] isEqual:@7801] &&
+            [roundtrip[@"id"] isEqual:@"coral-fixed-585607-v90-r5"] && [roundtrip[@"dungeon"] isEqual:@7801] &&
             [roundtrip[@"floor"] isEqual:@1] && !roundtrip[@"formation"] &&
             [saved[@"formationLibrary"] isEqual:initial[@"formationLibrary"]] &&
             [saved[@"formationDraft"] isEqual:initial[@"formationDraft"]],

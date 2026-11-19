@@ -68,8 +68,10 @@ def target(part=False):
 
 def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
           minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False, retry_bypass=False,
-          enemies=None, clear=(), hold=()):
+          enemies=None, clear=(), hold=(), unmatchable=False):
     board = dict(policy=policy, assistRecoveryL=recovery, maxGestureMS=ms)
+    if unmatchable:
+        board['unmatchableRecovery'] = True
     if l:
         board['lColors'] = 13  # Fire, wood, light: verified guide and recovery carriers.
     if isinstance(until, str):
@@ -116,7 +118,7 @@ def build():
         exit_stage('buff-and-finish', [atori(), diena(), atori(True), solomon(), keisy()],
                    maximum=2, retry_bypass=True),
     ])
-    floor([stage('six-triples', policy='six_colors_no_fours'), exit_stage()])
+    floor([stage('six-triples', policy='six_colors_no_fours'), exit_stage(unmatchable=True)])
     floor([stage('survive-first-hit', [riku(), atori()]),
            exit_stage('expert-multicolor', policy='six_colors', ms=4500)])
     floor([stage('clear-absorption', [solomon(), keisy(), atori()]), exit_stage()])
@@ -180,7 +182,7 @@ def build():
                member(8476, [(8476, [66700]), (8477, [66706])]),
                member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607-v90-r4', name='珊瑚挑戰・固定 Atori・v90 原生狀態分支',
+                profile=dict(id='coral-fixed-585607-v90-r5', name='珊瑚挑戰・固定 Atori・v90 B2 不可消回復',
                              team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))

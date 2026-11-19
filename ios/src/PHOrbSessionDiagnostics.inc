@@ -30,6 +30,7 @@
 
 - (void)rememberFailedSearch {
     if (![@[@"planning-blocked", @"assist-unavailable", @"enemy-counter-unavailable", @"window-closed",
+        @"unmatchable-recovery-unavailable", @"unmatchable-recovery-bonus-unsupported",
         @"insufficient-orbs", @"incompatible-goals", @"goals-unmet", @"unsafe", @"no-route", @"invalid", @"failed",
         @"replay-failed"] containsObject:_searchTrace[@"status"]]) return;
     // Diagnostic evidence only. Later successful searches and config reloads
@@ -48,8 +49,10 @@
     trace[@"goalsKnown"] = @(goalsKnown); trace[@"goals"] = PHOrbGoalsJSON(&goals);
     trace[@"goalCount"] = @(goals.count);
     const bool fishingOnce = _oneShot && _oneShotBound && PHOrbSameTurn(&_oneShotOrigin,&_preview);
-    trace[@"fishingEligibilityReason"] = FishingEligibilityReason(_preview,fishingOnce,_auto.active());
-    trace[@"multiFishingEligibilityReason"] = MultiFishingEligibilityReason(_preview,fishingOnce,_auto.active());
+    trace[@"fishingEligibilityReason"] = _solveOptions.fixedBoard.unmatchableRecoveryColors ? @"unmatchable-recovery-ordinary-only" :
+        FishingEligibilityReason(_preview,fishingOnce,_auto.active());
+    trace[@"multiFishingEligibilityReason"] = _solveOptions.fixedBoard.unmatchableRecoveryColors ? @"unmatchable-recovery-ordinary-only" :
+        MultiFishingEligibilityReason(_preview,fishingOnce,_auto.active());
     trace[@"fishingNotAttemptedReason"] = [status isEqual:@"searching"] ? @"search-pending" : @"planning-blocked";
     trace[@"soloRetrySkipped"] = PHBattleIsSinglePlayer(_preview.identity.entryMode,_preview.identity.multiplayer) ?
         @"search-not-completed" : @"not-single-player";
@@ -77,6 +80,7 @@
             _activeProfile[@"activity"][@"floors"][_preview.wave][@"attack"] ?: @{} : @{},
         @"preparationPlan":_eightPrep.active ? _eightPrep.plan ?: @{} : @{}};
     trace[@"assistRecovery"] = _assistTrace;
+    trace[@"unmatchableRecovery"] = _unmatchableTrace;
     trace[@"assistRecoveryL"] = _goalPlan[@"assistRecoveryActive"] ?: @NO;
     trace[@"assistRecoveryInventory"] = _goalPlan[@"assistRecoveryInventory"] ?: @[];
     trace[@"assistRecoveryBlocker"] = _goalPlan[@"assistRecoveryBlocker"] ?: @"";
@@ -154,6 +158,7 @@
         @"confirmedSteps":@0, @"releaseEvaluation":@{}, @"releaseConfirmed":@NO};
     NSMutableDictionary *withMechanic = [record mutableCopy];
     withMechanic[@"assistRecovery"] = _assistTrace;
+    withMechanic[@"unmatchableRecovery"] = _unmatchableTrace;
     if (_auto.active() && _activeProfile[@"fixedPlan"])
         withMechanic[@"fixedPlanBeforeMove"]=FixedEffectTrace(_preview,_fixedStage[@"id"],@"settled-before-search");
     record = [withMechanic copy];
@@ -367,7 +372,7 @@
         @"allowThornsWithHeartMatch":@(_allowThornsWithHeartMatch), @"allowThornFishing":@(_allowThornFishing),
         @"allowPoisonWithHeartFour":@(_allowPoisonWithHeartFour),
         @"diagonal":@(_diagonal), @"routeDiagonal":@(_route.diagonal),
-        @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace,
+        @"assistRecoveryL":@(_assistRecoveryL), @"assistRecoveryTrace":_assistTrace, @"unmatchableRecoveryTrace":_unmatchableTrace,
         @"assistRecoveryStatus":_goalPlan[@"assistRecoveryMessage"] ?: @"",
         @"enemyCounterStatus":_goalPlan[@"enemyCounterMessage"] ?: @"",
         @"recovery":_recovery, @"recoveryActive":_goalPlan[@"recoveryActive"] ?: @NO,

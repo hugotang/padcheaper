@@ -41,6 +41,8 @@ typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t firstWaveCombos;
     uint8_t firstWaveColors, firstWaveFours, resolvedFours;
+    uint8_t recoveredColors, recoveryHeartFours;
+    bool unmatchableRecovered; // Predicted, never a native receipt.
     bool fixedBoardSatisfied; // All exact phase-specific fixed-stage constraints.
     uint8_t rowGroups[6], linkGroups[6], largestGroups[6]; // Activity-only first removal; not native score receipts.
     int32_t activityValue; // Configured search heuristic, never a predicted match score.
@@ -377,6 +379,9 @@ typedef struct {
     PHOrbMultiplayerState multiplayer;
     PHOrbBattleObservation observation;
     PHOrbAssistRecoveryState assistRecovery;
+    // Same provider layout; awakenings are effective TPA (27/96), latents 41.
+    // Used only by explicitly opted-in single-player fixed-board recovery.
+    PHOrbAssistRecoveryState unmatchableRecovery;
     PHOrbEnemyComboState enemyCombo;
     PHOrbFixedPlanState fixedPlan;
     PHOrbEightState eight;

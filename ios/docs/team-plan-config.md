@@ -36,7 +36,9 @@
 
 效果名稱為 `damage_absorb/attribute_absorb/damage_void/awoken_bind/member_bind/skill_seal/unmatchable/assist_void/spinner`。`effects_clear` 與技能的效果條件都承認已確認的原生全隊 bypass，不重複處理已覆蓋的吸收／無效。來源網址不授權任何操作；流程只執行通過格式與原生核對的宣告。
 
-0.5.56 來源新增以下原生狀態約束，缺省不改既有計畫；含新欄位的 r4 需 0.5.56 或更新引擎，0.5.55 不支援。建置／測試結果見交付 `verification.json`：
+下一版來源新增 `board.unmatchableRecovery` 嚴格布林開關（r5，**未建置／未執行測試，0.5.56 不支援**）。只允許 B2 的 `six_colors_fours`，不能與 `assistRecoveryL`、`lColors` 或 `absorbStall` 混用。執行時還須確認巴索羅繆 `200974`、單色一回合不可消、普通珠盤面及新鮮潛覺／TPA 提供者。求路只允許原生第一組火／木四連回復後的既有珠連鎖補色；此分支不支援 fishing、荊棘／釘珠／Combo 珠／特殊珠或首批加算 Combo 契約。詳見[不可消回復](unmatchable-recovery.md)。
+
+0.5.56 來源新增以下原生狀態約束，缺省不改既有計畫；含以下欄位的 r4 需 0.5.56 或更新引擎，0.5.55 不支援。建置／測試結果見交付 `verification.json`：
 
 - 階段 `requireEnemyState`：1–8 項完整本體名單，每項 `{monster, alive?, maximumPercent?}`。`monster` 是大於 0 的精確 catalog ID，不能重複；`alive` 必須是真正 Boolean，`maximumPercent:1–100` 只可與 `alive:true` 一起使用。包含死亡本體，不容許省略、額外敵人、重複 ID 或部位。每項都需新鮮身分、HP 及有效最大 HP，不能以未知當作死亡。每次技能／目標動作及求路輸入仍核對；規劃後的任何 HP／選取變動會撤銷原路徑。
 - `until.kind: "enemy_state_or_floor_change"` 搭配 `enemies` 同上：同層需符合完整名單及血線；已確認下一層也可完成此攻擊階段，不會誤判為準備階段提前換層。末階段仍必須是 `floor_change`；其他準備階段原有的提前換層停止規則不變。

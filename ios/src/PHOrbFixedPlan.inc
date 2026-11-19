@@ -166,9 +166,13 @@ BOOL PHOrbFixedPlanValid(id plan) {
                     if (!declared) return NO;
                 }
                 NSDictionary *board = stage[@"board"];
-                if (![board isKindOfClass:NSDictionary.class] || !KeysWithOptional(board,@[@"policy",@"assistRecoveryL",@"maxGestureMS"],@[@"lColors"]) ||
+                if (![board isKindOfClass:NSDictionary.class] || !KeysWithOptional(board,@[@"policy",@"assistRecoveryL",@"maxGestureMS"],@[@"lColors",@"unmatchableRecovery"]) ||
                     ![@[@"one_combo",@"six_colors_no_fours",@"six_colors_fours",@"six_colors",@"l_only"] containsObject:board[@"policy"]] ||
                     !PHOrbProfileIsBoolean(board[@"assistRecoveryL"]) || !Integer(board[@"maxGestureMS"],4500)) return NO;
+                if (board[@"unmatchableRecovery"] && (!PHOrbProfileIsBoolean(board[@"unmatchableRecovery"]) ||
+                    ![board[@"policy"] isEqual:@"six_colors_fours"] || [board[@"assistRecoveryL"] boolValue] ||
+                    board[@"lColors"] || [stage[@"absorbStall"] boolValue] ||
+                    [floor[@"number"] unsignedIntValue]!=2)) return NO;
                 if (([board[@"policy"] isEqual:@"l_only"] && !board[@"lColors"]) ||
                     (board[@"lColors"] && (!Integer(board[@"lColors"],31) || ![board[@"lColors"] unsignedIntValue])) ||
                     (board[@"lColors"] && [@[@"one_combo",@"six_colors_no_fours"] containsObject:board[@"policy"]])) return NO;

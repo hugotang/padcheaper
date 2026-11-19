@@ -3,8 +3,8 @@
   "schema": 1,
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "profile": {
-    "id": "coral-fixed-585607-v90-r4",
-    "name": "珊瑚挑戰・固定 Atori・v90 原生狀態分支",
+    "id": "coral-fixed-585607-v90-r5",
+    "name": "珊瑚挑戰・固定 Atori・v90 B2 不可消回復",
     "team": [
       13828,
       13876,
@@ -474,7 +474,8 @@
                   "board": {
                     "policy": "six_colors_fours",
                     "assistRecoveryL": false,
-                    "maxGestureMS": 0
+                    "maxGestureMS": 0,
+                    "unmatchableRecovery": true
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
