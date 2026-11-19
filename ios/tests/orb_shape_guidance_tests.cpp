@@ -20,6 +20,8 @@ static bool SameEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
     return a.combos == b.combos && a.erased == b.erased && SameArray(a.goalHits, b.goalHits) &&
         a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
         a.firstWaveColors == b.firstWaveColors && a.firstWaveFours == b.firstWaveFours &&
+        a.firstWaveFourColors == b.firstWaveFourColors && a.recoveredColors == b.recoveredColors &&
+        a.recoveryHeartFours == b.recoveryHeartFours && a.unmatchableRecovered == b.unmatchableRecovered &&
         a.resolvedFours == b.resolvedFours && a.fixedBoardSatisfied == b.fixedBoardSatisfied &&
         SameArray(a.rowGroups, b.rowGroups) && SameArray(a.linkGroups, b.linkGroups) &&
         SameArray(a.largestGroups, b.largestGroups) && a.activityValue == b.activityValue &&

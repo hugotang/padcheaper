@@ -27,6 +27,9 @@ struct PHOrbFixedBoardPolicy {
     // Fresh native latent41/TPA evidence authorizes these fire/wood providers.
     // Only one blocked colour/turn, recovered by the first native-order group.
     uint8_t unmatchableRecoveryColors = 0;
+    // Explicit burst contract: one first-removal four in EACH basic colour.
+    // A total of six fours, or six colours plus only a heart four, is not enough.
+    bool requireSixColorFours = false;
 };
 
 struct PHOrbSolveOptions {

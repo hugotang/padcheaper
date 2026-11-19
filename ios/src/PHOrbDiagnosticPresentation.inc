@@ -254,6 +254,7 @@ NSDictionary *EvaluationTrace(const PHOrbEvaluation &value, const PHOrbGoalSet &
     return @{@"valid":@YES, @"scope":@"all-shared-spinner-phases", @"goalsMet":@(value.goalsMet), @"goalHits":hits, @"combos":@(value.combos),
         @"firstWaveCombos":@(value.firstWaveCombos), @"comboFirstWaveRequired":@(goals.comboFirstWave),
         @"firstWaveColors":@(value.firstWaveColors),@"firstWaveFours":@(value.firstWaveFours),
+        @"firstWaveFourColors":@(value.firstWaveFourColors),
         @"resolvedFours":@(value.resolvedFours),@"fixedBoardSatisfied":@(value.fixedBoardSatisfied),
         @"unmatchableRecoveryPredicted":@(value.unmatchableRecovered),@"recoveredColors":@(value.recoveredColors),
         @"recoveryHeartFours":@(value.recoveryHeartFours),@"nativeUnmatchableRecoveryConfirmed":@NO,
@@ -287,7 +288,13 @@ NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixe
     NSMutableArray *missingNames=[NSMutableArray array];
     for (unsigned c=0;c<6;++c) if (missing&(1u<<c)) [missingNames addObject:colorNames[c]];
     NSString *missingColorNames=[missingNames componentsJoinedByString:@"／"];
+    const unsigned missingFours=policy.requireSixColorFours ? 63u & ~value.firstWaveFourColors : 0;
+    NSMutableArray *missingFourNames=[NSMutableArray array];
+    for (unsigned c=0;c<6;++c) if (missingFours&(1u<<c)) [missingFourNames addObject:colorNames[c]];
+    NSString *missingFourColorNames=[missingFourNames componentsJoinedByString:@"／"];
     NSMutableArray *deficits=[NSMutableArray array];
+    if (missingFours) [deficits addObject:@{@"kind":@"six-color-fours",@"missingColors":@(missingFours),
+        @"missingColorNames":missingFourColorNames,@"observedMinimum":@(value.firstWaveFours)}];
     if (missing) [deficits addObject:@{@"kind":@"first-colors",@"missingColors":@(missing),
         @"missingColorNames":missingColorNames}];
     if (policy.requireHeartFour && !value.heartFours && !(recoveryColor && value.recoveryHeartFours))
@@ -307,6 +314,8 @@ NSDictionary *FixedConstraintTrace(const PHOrbEvaluation &value, const PHOrbFixe
         @"unmatchableRecoveryPredicted":@(value.unmatchableRecovered),
         @"missingFirstColors":@(missing),@"missingFirstColorNames":missingColorNames,
         @"requireHeartFour":@(policy.requireHeartFour),@"firstWaveHeartFoursMinimum":@(value.heartFours),
+        @"requireSixColorFours":@(policy.requireSixColorFours),@"firstWaveFourColorsInEveryPhase":@(value.firstWaveFourColors),
+        @"missingFirstFourColors":@(missingFours),@"missingFirstFourColorNames":missingFourColorNames,
         @"forbidFours":@(policy.mode==PHOrbFixedBoardMode::SixColorStall),@"resolvedFoursMaximum":@(value.resolvedFours),
         @"exactRemovalOrbs":@(exact),@"firstWaveCombosMinimum":@(value.firstWaveCombos),
         @"resolvedCombosMinimum":@(value.combos),@"erasedMinimum":@(value.erased),

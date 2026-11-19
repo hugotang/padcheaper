@@ -41,6 +41,8 @@ bool FixedBoardValid(const PHOrbBoard &board, const PHOrbFixedBoardPolicy &polic
     }
     return unsigned(policy.mode) <= unsigned(PHOrbFixedBoardMode::LOnly) &&
         policy.firstColors <= 63 && !(policy.unmatchableRecoveryColors & ~5u) &&
+        (!policy.requireSixColorFours || (policy.mode == PHOrbFixedBoardMode::FourAttack &&
+            policy.firstColors == 63 && policy.requireHeartFour && !policy.unmatchableRecoveryColors)) &&
         (!policy.unmatchableRecoveryColors || (policy.mode == PHOrbFixedBoardMode::FourAttack &&
             policy.firstColors == 63 && policy.requireHeartFour));
 }
@@ -808,7 +810,7 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
             ++resolvedCombos;
             if (color < PHOrbBasicTypes && count == 4) {
                 ++result.resolvedFours;
-                if (!wave) ++result.firstWaveFours;
+                if (!wave) { ++result.firstWaveFours; result.firstWaveFourColors |= uint8_t(1u << color); }
             }
             if (!wave || !context.activity.firstWaveOnly) {
                 ++result.combos; result.erased += uint8_t(count); matchedColors |= 1u << color;
@@ -931,6 +933,7 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     result.fixedBoardSatisfied =
         ((result.firstWaveColors | result.recoveredColors) & context.fixedBoard.firstColors) == context.fixedBoard.firstColors &&
         (!context.fixedBoard.requireHeartFour || result.heartFours > 0 || result.recoveryHeartFours > 0) &&
+        (!context.fixedBoard.requireSixColorFours || result.firstWaveFourColors == 63) &&
         (!recovery || result.unmatchableRecovered);
     if (context.fixedBoard.mode == PHOrbFixedBoardMode::OneCombo)
         result.fixedBoardSatisfied &= result.firstWaveCombos == 1 && resolvedCombos == 1 && result.erased == 3;
@@ -946,6 +949,7 @@ Score EvaluateStatic(Cells cells, const Context &context, FirstWaveGroups *first
     } else {
         score.fixedProgress = 512u * Count(result.firstWaveColors & context.fixedBoard.firstColors) +
             (context.fixedBoard.requireHeartFour && result.heartFours ? 512u : 0u);
+        if (context.fixedBoard.requireSixColorFours) score.fixedProgress += 512u * Count(result.firstWaveFourColors);
         if (recovery) score.fixedProgress += (result.unmatchableRecovered ? 1024u : 0u) +
             512u * Count(result.recoveredColors) + (result.recoveryHeartFours ? 512u : 0u);
         if (context.fixedBoard.mode == PHOrbFixedBoardMode::SixColorStall)
@@ -1009,6 +1013,7 @@ Score Evaluate(Cells cells, const Context &context) {
         a.combos = std::min(a.combos, b.combos); a.erased = std::min(a.erased, b.erased);
         a.firstWaveCombos = std::min(a.firstWaveCombos,b.firstWaveCombos);
         a.firstWaveColors &= b.firstWaveColors;
+        a.firstWaveFourColors &= b.firstWaveFourColors;
         a.recoveredColors &= b.recoveredColors;
         a.recoveryHeartFours = std::min(a.recoveryHeartFours,b.recoveryHeartFours);
         a.unmatchableRecovered &= b.unmatchableRecovered;
@@ -1074,6 +1079,7 @@ bool SameCycleEvaluation(const PHOrbEvaluation &a, const PHOrbEvaluation &b) {
     return a.combos == b.combos && a.erased == b.erased && same(a.goalHits,b.goalHits) &&
         a.matchedGoals == b.matchedGoals && a.firstWaveCombos == b.firstWaveCombos &&
         a.firstWaveColors == b.firstWaveColors && a.firstWaveFours == b.firstWaveFours &&
+        a.firstWaveFourColors == b.firstWaveFourColors &&
         a.resolvedFours == b.resolvedFours && a.fixedBoardSatisfied == b.fixedBoardSatisfied &&
         a.recoveredColors == b.recoveredColors && a.recoveryHeartFours == b.recoveryHeartFours &&
         a.unmatchableRecovered == b.unmatchableRecovered &&

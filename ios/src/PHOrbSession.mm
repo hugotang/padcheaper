@@ -246,12 +246,16 @@ NSDictionary *FixedEffectTrace(const PHOrbSnapshot &state, NSString *stage, NSSt
             @"part":@((enemy.flags&0x100u)!=0),@"hpKnown":@(enemy.hpKnown),
             @"hp":enemy.hpKnown ? @(enemy.hp) : (id)NSNull.null,
             @"maximumHPKnown":@(maximumKnown),@"maximumHP":maximumKnown ? @(enemy.maximumHP) : (id)NSNull.null,
+            @"attributeAbsorbKnown":@(enemy.attributeAbsorbKnown),
+            @"attributeAbsorbColors":enemy.attributeAbsorbKnown ? @(enemy.attributeAbsorbColors) : (id)NSNull.null,
+            @"attributeAbsorbTurns":enemy.attributeAbsorbKnown ? @(enemy.attributeAbsorbTurns) : (id)NSNull.null,
             @"alive":enemy.hpKnown ? @(enemy.hp>0) : (id)NSNull.null}];
     }
     const bool targetKnown=enemiesKnown && fixed.targetKnown;
     return @{@"scope":scope,@"floor":@(state.wave+1),@"stage":stage ?: @"",@"effectsKnown":@(known),
         @"enemiesKnown":@(enemiesKnown),@"enemies":[enemies copy],@"targetKnown":@(targetKnown),
         @"targetSlot":targetKnown ? @(fixed.target<0 ? 0 : fixed.target+1) : (id)NSNull.null,
+        @"targetSlotSemantics":@"one-based; 0 means no explicit target",
         @"enemyEffects":known ? @(effects.enemyEffects) : (id)NSNull.null,
         @"playerBypass":known ? @(effects.playerBypass) : (id)NSNull.null,
         @"uncoveredEffects":known ? @(effects.enemyEffects & ~effects.playerBypass & 15u) : (id)NSNull.null};

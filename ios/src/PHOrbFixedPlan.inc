@@ -45,8 +45,14 @@ static BOOL FixedActionValid(id action, NSArray *members) {
     if (![action isKindOfClass:NSDictionary.class] ||
         !PHOrbProfileIsBoolean(action[@"optional"]) ||
         ![@[@"once",@"each"] containsObject:action[@"frequency"]]) return NO;
-    if ([action[@"kind"] isEqual:@"target"]) return Keys(action,@[@"kind",@"target",@"monster",@"optional",@"frequency"]) &&
-        ![action[@"optional"] boolValue] && [@[@"part",@"enemy"] containsObject:action[@"target"]] && Integer(action[@"monster"],INT32_MAX);
+    if ([action[@"kind"] isEqual:@"target"]) {
+        if ([action[@"target"] isEqual:@"attribute_absorb"]) return
+            Keys(action,@[@"kind",@"target",@"monster",@"color",@"optional",@"frequency"]) &&
+            ![action[@"optional"] boolValue] && Integer(action[@"monster"],0) &&
+            Integer(action[@"color"],4);
+        return Keys(action,@[@"kind",@"target",@"monster",@"optional",@"frequency"]) &&
+            ![action[@"optional"] boolValue] && [@[@"part",@"enemy"] containsObject:action[@"target"]] && Integer(action[@"monster"],INT32_MAX);
+    }
     if (![action[@"kind"] isEqual:@"skill"] ||
         !KeysWithOptional(action,@[@"kind",@"slot",@"source",@"monster",@"skill",@"afterMonster",@"optional",@"frequency",@"when"],@[@"alternatives",@"consumeAssist",@"loop",@"optionalAfterFirst",@"requireReady"]) ||
         !Integer(action[@"slot"],6) || ![action[@"slot"] unsignedIntValue] ||
@@ -166,9 +172,12 @@ BOOL PHOrbFixedPlanValid(id plan) {
                     if (!declared) return NO;
                 }
                 NSDictionary *board = stage[@"board"];
-                if (![board isKindOfClass:NSDictionary.class] || !KeysWithOptional(board,@[@"policy",@"assistRecoveryL",@"maxGestureMS"],@[@"lColors",@"unmatchableRecovery"]) ||
+                if (![board isKindOfClass:NSDictionary.class] || !KeysWithOptional(board,@[@"policy",@"assistRecoveryL",@"maxGestureMS"],@[@"lColors",@"unmatchableRecovery",@"requireSixColorFours"]) ||
                     ![@[@"one_combo",@"six_colors_no_fours",@"six_colors_fours",@"six_colors",@"l_only"] containsObject:board[@"policy"]] ||
                     !PHOrbProfileIsBoolean(board[@"assistRecoveryL"]) || !Integer(board[@"maxGestureMS"],4500)) return NO;
+                if (board[@"requireSixColorFours"] && (!PHOrbProfileIsBoolean(board[@"requireSixColorFours"]) ||
+                    ![board[@"policy"] isEqual:@"six_colors_fours"] || [board[@"assistRecoveryL"] boolValue] ||
+                    board[@"lColors"] || [board[@"unmatchableRecovery"] boolValue] || [stage[@"absorbStall"] boolValue])) return NO;
                 if (board[@"unmatchableRecovery"] && (!PHOrbProfileIsBoolean(board[@"unmatchableRecovery"]) ||
                     ![board[@"policy"] isEqual:@"six_colors_fours"] || [board[@"assistRecoveryL"] boolValue] ||
                     board[@"lColors"] || [stage[@"absorbStall"] boolValue] ||
@@ -179,6 +188,7 @@ BOOL PHOrbFixedPlanValid(id plan) {
                 NSMutableArray *required = [NSMutableArray array];
                 for (NSDictionary *action in stage[@"actions"]) {
                     if (++totalActions > 1024 || !FixedActionValid(action,plan[@"members"])) return NO;
+                    if ([action[@"target"] isEqual:@"attribute_absorb"] && !stage[@"requireEnemyState"]) return NO;
                     if ([action[@"optionalAfterFirst"] boolValue]) {
                         BOOL prior = NO;
                         for (NSDictionary *a in required) prior |= PHOrbFixedPlanSameSkill(a,action);
@@ -271,6 +281,31 @@ PHOrbFixedPlanMatch PHOrbFixedPlanActionCondition(NSDictionary *action, const PH
     if ([action[@"when"] isEqual:@"attack_ready"]) return !evidence || !evidence->enemiesKnown ? PHOrbFixedPlanUnknown :
         (evidence->enemyEffects & ~evidence->playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb)) ? PHOrbFixedPlanNo : PHOrbFixedPlanYes;
     return FixedEffectPresent(action[@"when"],evidence,YES);
+}
+PHOrbFixedPlanMatch PHOrbFixedPlanAbsorbTarget(NSDictionary *action, const PHOrbFixedPlanState *state, NSInteger *slot) {
+    if (slot) *slot=-1;
+    if (!slot || ![action[@"target"] isEqual:@"attribute_absorb"] || !Integer(action[@"color"],4) ||
+        !state || !state->valid || !state->targetKnown || !state->count || state->count>8 ||
+        state->target < -1 || state->target >= (int)state->count) return PHOrbFixedPlanUnknown;
+    const unsigned color=1u<<[action[@"color"] unsignedIntValue];
+    unsigned candidates=0, alive=0;
+    // Inspect every body before deciding absence. Bypass does not remove the
+    // enemy's absorption colour and must not disable the guide's target rule.
+    for (unsigned i=0;i<state->count;++i) {
+        const PHOrbFixedPlanEnemy *e=&state->enemies[i];
+        if (!e->identityKnown || !e->hpKnown || (e->flags&0x100u)) return PHOrbFixedPlanUnknown;
+        if (!e->hp) continue;
+        alive|=1u<<i;
+        if (!e->attributeAbsorbKnown || e->attributeAbsorbColors>31) return PHOrbFixedPlanUnknown;
+        if (e->attributeAbsorbTurns && (e->attributeAbsorbColors&color)) candidates|=1u<<i;
+    }
+    if (alive!=state->aliveMask) return PHOrbFixedPlanUnknown;
+    if (!candidates) return PHOrbFixedPlanNo;
+    // Equivalent candidates: retain a matching selection, otherwise use the
+    // first native slot. Never guess the absorption colour from a monster ID.
+    if (state->target>=0 && (candidates&(1u<<state->target))) *slot=state->target;
+    else for (unsigned i=0;i<state->count;++i) if (candidates&(1u<<i)) { *slot=(NSInteger)i; break; }
+    return PHOrbFixedPlanYes;
 }
 PHOrbFixedPlanMatch PHOrbFixedPlanEnemyState(NSArray *enemies, const PHOrbFixedPlanEvidence *e) {
     if (!FixedEnemyStateValid(enemies) || !e || !e->enemiesKnown || !e->enemyCount || e->enemyCount>8) return PHOrbFixedPlanUnknown;

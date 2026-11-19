@@ -74,6 +74,7 @@
             [self queueStop:reason ?: @"固定計畫求路後的敵人 HP／目標已改變"]; return NO;
         }
         if (![self fixedEnemyStateAllowed:state]) return NO;
+        if (![self fixedAbsorbTargetAllowed:state]) return NO;
     }
     return YES;
 }
@@ -82,6 +83,17 @@
     PHOrbFixedPlanEvidence e=[self fixedEvidence:state];
     if (state->wave!=_fixedWave || PHOrbFixedPlanEnemyState(_fixedStage[@"requireEnemyState"],&e)!=PHOrbFixedPlanYes) {
         [self queueStop:@"固定計畫所需敵人身分／存活／HP 狀態未確認，未繼續行動"]; return NO;
+    }
+    return YES;
+}
+- (BOOL)fixedAbsorbTargetAllowed:(const PHOrbSnapshot *)state {
+    for (NSDictionary *action in _fixedStage[@"actions"]) if ([action[@"target"] isEqual:@"attribute_absorb"]) {
+        NSInteger slot=-1;
+        const auto match=PHOrbFixedPlanAbsorbTarget(action,&state->fixedPlan,&slot);
+        const unsigned alive=state->fixedPlan.aliveMask;
+        if (match==PHOrbFixedPlanUnknown || (match==PHOrbFixedPlanYes && (alive&(alive-1)) && state->fixedPlan.target!=slot)) {
+            [self queueStop:@"固定計畫的吸收顏色／優先目標已改變或未知，未繼續轉珠"]; return NO;
+        }
     }
     return YES;
 }
@@ -220,7 +232,7 @@
     NSMutableString *message=[NSMutableString stringWithFormat:@"固定計畫 B%lu · %@ 已轉 %lu／%lu 盤，%@",
         (unsigned long)_fixedWave+1,_fixedStage[@"id"],(unsigned long)_fixedPuzzles,(unsigned long)maximum,condition];
     if (hpDescriptions.count) [message appendFormat:@"；%@",[hpDescriptions componentsJoinedByString:@"；"]];
-    if (blockers.count) [message appendFormat:@"；目前仍有未覆蓋的%@",[blockers componentsJoinedByString:@"／"]];
+    if (blockers.count) [message appendFormat:@"；回合結束後目前仍有未覆蓋的%@（不代表上一盤出手時未覆蓋）",[blockers componentsJoinedByString:@"／"]];
     if (!effectsKnown) [message appendString:@"；目前吸收／無效對策狀態未知"];
     [message appendString:@"。已達此步轉珠上限，停止固定計畫"];
     _fixedLastStop=@{@"reason":message,@"code":@"stage-puzzle-limit",@"scope":@"fresh-native-stage-cap",
@@ -301,6 +313,12 @@
         if (!_live.fixedPlan.targetKnown || _live.fixedPlan.target!=int(_fixedSlot)) {
             [self queueStop:@"固定計畫指定敵人未獲原生確認；未繼續攻擊"]; return;
         }
+        if ([_fixedPending[@"target"] isEqual:@"attribute_absorb"]) {
+            NSInteger slot=-1;
+            if (PHOrbFixedPlanAbsorbTarget(_fixedPending,&_live.fixedPlan,&slot)!=PHOrbFixedPlanYes || slot!=NSInteger(_fixedSlot)) {
+                [self queueStop:@"固定計畫目標回覆時的吸收顏色已改變，未繼續行動"]; return;
+            }
+        }
         [self finishFixedAction]; return;
     }
     if (puzzle) {
@@ -380,6 +398,7 @@
     // A previous turn's two-turn bypass, or a successful six-colour search,
     // is not evidence that a retry can damage the remaining enemies.
     if (![self fixedBoardConditionsAllowed:&_live]) return;
+    if (![self fixedAbsorbTargetAllowed:&_live]) return;
     _assistRecoveryL=[_fixedStage[@"board"][@"assistRecoveryL"] boolValue];
     if (!PHOrbCanPreview(&_live)) { [self queueStop:PHOrbObstacleDescription(&_live)]; return; }
     [self beginSolve];
@@ -397,8 +416,15 @@
         [self queueStop:@"固定計畫行動前條件已改變"]; return;
     }
     if ([_fixedPending[@"kind"] isEqual:@"target"]) {
-        int chosen=-1; unsigned id=[_fixedPending[@"monster"] unsignedIntValue];
-        for (unsigned i=0;i<state->fixedPlan.count;++i) {
+        NSInteger chosen=-1; unsigned id=[_fixedPending[@"monster"] unsignedIntValue];
+        if ([_fixedPending[@"target"] isEqual:@"attribute_absorb"]) {
+            const auto match=PHOrbFixedPlanAbsorbTarget(_fixedPending,&state->fixedPlan,&chosen);
+            if (match==PHOrbFixedPlanUnknown) { [self queueStop:@"固定計畫敵人的吸收顏色未知，未略過指定目標"]; return; }
+            // Known absence is the guide's explicit conditional branch. With
+            // one living body there is no target tap window or alternative hit.
+            const unsigned alive=state->fixedPlan.aliveMask;
+            if (match==PHOrbFixedPlanNo || !(alive&(alive-1))) { [self finishFixedAction]; return; }
+        } else for (unsigned i=0;i<state->fixedPlan.count;++i) {
             const auto &n=state->fixedPlan.enemies[i];
             if (!n.identityKnown || !n.hpKnown || !n.hp || bool(n.flags&0x100u)!=[_fixedPending[@"target"] isEqual:@"part"] || (id && n.catalogID!=id)) continue;
             if (chosen>=0) { [self queueStop:@"指定目標不唯一，未任意選敵人"]; return; }
@@ -453,11 +479,16 @@
         [policy isEqual:@"six_colors_fours"] ? PHOrbFixedBoardMode::FourAttack : [policy isEqual:@"l_only"] ? PHOrbFixedBoardMode::LOnly : PHOrbFixedBoardMode::Normal;
     p.firstColors=[policy hasPrefix:@"six_colors"] ? 63 : 0;
     p.requireHeartFour=[policy isEqual:@"six_colors_fours"];
+    p.requireSixColorFours=!_fixedStall && [board[@"requireSixColorFours"] boolValue];
     if ([self fixedUnmatchableRecoveryEnabled] && _preview.unmatchableRecovery.valid)
         p.unmatchableRecoveryColors=[_unmatchableTrace[@"eligibleColors"] unsignedIntValue];
     NSMutableArray *goals=[NSMutableArray array];
-    if (p.firstColors) [goals addObject:@{@"kind":@"colors",@"colors":@63,@"count":@6,@"length":@0}];
-    if (p.requireHeartFour) [goals addObject:@{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
+    if (p.requireSixColorFours) {
+        for (unsigned c=0;c<6;++c) [goals addObject:@{@"kind":@"four",@"colors":@(1u<<c),@"count":@1,@"length":@0}];
+    } else {
+        if (p.firstColors) [goals addObject:@{@"kind":@"colors",@"colors":@63,@"count":@6,@"length":@0}];
+        if (p.requireHeartFour) [goals addObject:@{@"kind":@"four",@"colors":@32,@"count":@1,@"length":@0}];
+    }
     if (p.unmatchableRecoveryColors) [goals addObject:@{@"kind":@"four",@"colors":@(p.unmatchableRecoveryColors),@"count":@1,@"length":@0}];
     if (board[@"lColors"] && !_fixedStall) [goals addObject:@{@"kind":@"l",@"colors":board[@"lColors"],@"count":@1,@"length":@0}];
     return @{@"available":@YES,@"goals":goals,@"message":[NSString stringWithFormat:@"固定計畫 B%lu · %@ · %@",(unsigned long)_fixedWave+1,_fixedStage[@"id"],policy],

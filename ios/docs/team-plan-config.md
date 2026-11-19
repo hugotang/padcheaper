@@ -28,7 +28,11 @@
 
 目標動作為 `{kind:"target", target:"part"|"enemy", monster, optional:false, frequency}`，`monster` 是敵方精確 catalog ID，0 不限。必須唯一對應存活目標；普通敵人核對圖鑑記錄指標，部位核對原生模式、HP 與存活擁有者。點選使用單幀輸入並還原，之後回讀原生選取才前進；缺席或有多個候選均停止，不支援 optional target。
 
+r6 待建置來源另支援 `{kind:"target", target:"attribute_absorb", monster:0, color:0–4, optional:false, frequency}`，只可用於有完整 `requireEnemyState` 名單的階段。逐個新鮮本體核對吸收顏色，**已知全部不符**才略過；未知即停止，不使用診斷快取或敵人屬性推測。有多個符合者時保留當前符合的指定，否則採原生順序第一個；只有一個存活本體時不點目標。點選需原生回覆，求路後變更撤銷路線。`color:2` 是木色索引，不是遮罩 2。0.5.57 不支援。
+
 `board` 為 `{policy, assistRecoveryL, maxGestureMS}`。政策為 `one_combo`（精確一組三顆，含確定連鎖仍只有一組）、`six_colors_no_fours`（首消六色，含確定連鎖不得有四顆組）、`six_colors_fours`（首消六色及心四連，優先有效四顆組）、`six_colors`；另有 `l_only`（只消一組五顆 L），此時必須加 `lColors` 攻擊色遮罩。攻擊政策也可加 `lColors`。`maxGestureMS` 為 0–4500；0 使用一般操作時限，非零限制求路長度、取色等待與實際拖珠，不修改遊戲計時。武裝無效需要 L 時使用原生回復證據；盤面政策不保證傷害、回復量、耐久或隨機天降。
+
+r6 待建置來源的 `board.requireSixColorFours` 必須是真正 Boolean，只允許 `six_colors_fours`，不能與 L 回復、`lColors`、不可消回復或 `absorbStall` 混用。為 true 時要求每個相關相位的首批六色各一組四顆；普通、單次及連續取色的搜尋和重播都要遵守。總數六組不等於六個不同色，後續落下不補足首批四顆。缺省保留舊契約，0.5.57 不接受新欄位。
 
 階段可加 `absorbStall: true`。執行已宣告的可選解吸收技能後，如果吸收仍未被我方效果覆蓋，該盤改用六色無四顆存技；條件仍需新鮮原生證據。收尾增傷可用 `when: "attack_ready"`，避免存技時提早耗用。
 

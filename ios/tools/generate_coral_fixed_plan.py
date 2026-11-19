@@ -66,12 +66,20 @@ def target(part=False):
                 optional=False, frequency='once')
 
 
+def target_wood_absorb():
+    # Random absorption belongs to a live enemy, not its native attribute/ID.
+    return dict(kind='target', target='attribute_absorb', monster=0, color=2,
+                optional=False, frequency='each')
+
+
 def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
           minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False, retry_bypass=False,
-          enemies=None, clear=(), hold=(), unmatchable=False):
+          enemies=None, clear=(), hold=(), unmatchable=False, six_fours=False):
     board = dict(policy=policy, assistRecoveryL=recovery, maxGestureMS=ms)
     if unmatchable:
         board['unmatchableRecovery'] = True
+    if six_fours:
+        board['requireSixColorFours'] = True
     if l:
         board['lColors'] = 13  # Fire, wood, light: verified guide and recovery carriers.
     if isinstance(until, str):
@@ -121,7 +129,11 @@ def build():
     floor([stage('six-triples', policy='six_colors_no_fours'), exit_stage(unmatchable=True)])
     floor([stage('survive-first-hit', [riku(), atori()]),
            exit_stage('expert-multicolor', policy='six_colors', ms=4500)])
-    floor([stage('clear-absorption', [solomon(), keisy(), atori()]), exit_stage()])
+    b4_roster = [dict(monster=n) for n in (202575, 202578, 202576)]
+    b4_clear = ('damage_absorb', 'attribute_absorb', 'damage_void')
+    floor([stage('clear-absorption', [target_wood_absorb(), solomon(), keisy(), atori(), target_wood_absorb()],
+                 enemies=b4_roster, clear=b4_clear, six_fours=True),
+           exit_stage(actions=[atori(), target_wood_absorb()], enemies=b4_roster, clear=b4_clear, six_fours=True)])
     floor([stage('delay-1', [atori()]), stage('delay-2', [atori()]),
            stage('buff-without-fours', [solomon(), diena(), keisy(), atori()], 'six_colors_no_fours'),
            exit_stage()])
@@ -182,7 +194,7 @@ def build():
                member(8476, [(8476, [66700]), (8477, [66706])]),
                member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607-v90-r5', name='珊瑚挑戰・固定 Atori・v90 B2 不可消回復',
+                profile=dict(id='coral-fixed-585607-v90-r6', name='珊瑚挑戰・固定 Atori・v90 B4 六色四消',
                              team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))

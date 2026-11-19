@@ -1,13 +1,13 @@
 // Keep the released layout fixed with one movable equal-colour pair. The
 // assertions concern Session rejection/diagnostics, not a beam-search result.
 static void FixedConstraintDiagnosticSessionTests() {
-    for (unsigned scenario=0;scenario<5;++scenario) {
+    for (unsigned scenario=0;scenario<6;++scenario) {
         const bool wide=scenario!=3;
         FixedTestEngine *engine=[[FixedTestEngine alloc] initWithWidth:(wide ? 7 : 5) height:(wide ? 6 : 4)];
         NSMutableDictionary *profile=MutableFixedSessionProfile(engine);
         NSMutableDictionary *stage=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
         stage[@"actions"]=@[];
-        stage[@"board"][@"policy"]=scenario<2 || scenario==4 ? @"six_colors_fours" : scenario==2 ? @"six_colors_no_fours" : @"one_combo";
+        stage[@"board"][@"policy"]=scenario<2 || scenario>=4 ? @"six_colors_fours" : scenario==2 ? @"six_colors_no_fours" : @"one_combo";
         auto &board=engine->live.board;
         if (!scenario) {
             // Sanitized released layout from the B2 report: fire joins only
@@ -30,6 +30,12 @@ static void FixedConstraintDiagnosticSessionTests() {
         } else if (scenario==3) {
             const uint8_t layout[]={0,0,0,0,2, 1,2,3,4,5, 2,3,4,5,1, 3,4,5,1,2};
             std::copy(std::begin(layout),std::end(layout),board.types);
+        } else if (scenario==5) {
+            // Exact released B4 finish: six colours, heart four, three fours.
+            const uint8_t layout[]={0,5,0,3,4,5,2,3,1,5,3,4,2,0,0,1,4,2,4,5,3,
+                0,1,0,2,0,5,2,0,1,4,2,1,5,2,3,3,3,2,1,5,4};
+            std::copy(std::begin(layout),std::end(layout),board.types);
+            stage[@"board"][@"requireSixColorFours"]=@YES;
         } else {
             // Every colour has enough inventory, but the only legal equal-
             // colour exchange leaves a layout with no matched group at all.
@@ -37,9 +43,10 @@ static void FixedConstraintDiagnosticSessionTests() {
                 board.types[y*7+x]=uint8_t((x+y)%6);
             board.types[1]=board.types[0];
         }
-        const unsigned first=scenario==0 ? 7 : 0, size=board.width*board.height;
+        const unsigned first=scenario==0 ? 7 : scenario==5 ? 15 : 0, size=board.width*board.height;
+        const unsigned second=first+(scenario==5 ? 7 : 1);
         board.fixedStart=uint8_t(first+1);
-        board.tapeMask=((UINT64_C(1)<<size)-1) & ~((UINT64_C(1)<<first)|(UINT64_C(1)<<(first+1)));
+        board.tapeMask=((UINT64_C(1)<<size)-1) & ~((UINT64_C(1)<<first)|(UINT64_C(1)<<second));
         for (unsigned i=0;i<size;++i) board.flags[i]=board.tapeMask&(UINT64_C(1)<<i) ? PHOrbFlagTape : 0;
         PHOrbSession *session=StartFixedTest(engine,profile);
         for (unsigned i=0;i<4000;++i) {
@@ -76,6 +83,10 @@ static void FixedConstraintDiagnosticSessionTests() {
             [fixed[@"deficits"][0][@"missingColorNames"] isEqual:@"火／水／木／光／闇／心"] &&
             [message containsString:@"首批缺少火／水／木／光／闇／心"] && ![message containsString:@"首批缺少任意珠色"],
             "all six missing first-removal colours are listed explicitly instead of the generic any-colour label");
+        if (scenario==5) Check([fixed[@"requireSixColorFours"] boolValue] &&
+            [fixed[@"missingFirstFourColors"] unsignedIntValue] &&
+            [message containsString:@"首批六色各一組四顆"] && [trace[@"evaluation"][@"firstWaveFours"] isEqual:@3],
+            "Session refuses a weak B4 attack and names its missing four colours before staging input");
         [session queueStop:@"fixed diagnostic cleanup"];
     }
 }

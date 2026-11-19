@@ -3,8 +3,8 @@
   "schema": 1,
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "profile": {
-    "id": "coral-fixed-585607-v90-r5",
-    "name": "珊瑚挑戰・固定 Atori・v90 B2 不可消回復",
+    "id": "coral-fixed-585607-v90-r6",
+    "name": "珊瑚挑戰・固定 Atori・v90 B4 六色四消",
     "team": [
       13828,
       13876,
@@ -582,6 +582,14 @@
                   "id": "clear-absorption",
                   "actions": [
                     {
+                      "kind": "target",
+                      "target": "attribute_absorb",
+                      "monster": 0,
+                      "color": 2,
+                      "optional": false,
+                      "frequency": "each"
+                    },
+                    {
                       "kind": "skill",
                       "slot": 5,
                       "source": "body",
@@ -616,12 +624,21 @@
                       "alternatives": [
                         6
                       ]
+                    },
+                    {
+                      "kind": "target",
+                      "target": "attribute_absorb",
+                      "monster": 0,
+                      "color": 2,
+                      "optional": false,
+                      "frequency": "each"
                     }
                   ],
                   "board": {
                     "policy": "six_colors_fours",
                     "assistRecoveryL": false,
-                    "maxGestureMS": 0
+                    "maxGestureMS": 0,
+                    "requireSixColorFours": true
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
@@ -629,7 +646,23 @@
                     "until": {
                       "kind": "puzzles"
                     }
-                  }
+                  },
+                  "requireEnemyState": [
+                    {
+                      "monster": 202575
+                    },
+                    {
+                      "monster": 202578
+                    },
+                    {
+                      "monster": 202576
+                    }
+                  ],
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ]
                 },
                 {
                   "id": "finish",
@@ -647,12 +680,21 @@
                       "alternatives": [
                         6
                       ]
+                    },
+                    {
+                      "kind": "target",
+                      "target": "attribute_absorb",
+                      "monster": 0,
+                      "color": 2,
+                      "optional": false,
+                      "frequency": "each"
                     }
                   ],
                   "board": {
                     "policy": "six_colors_fours",
                     "assistRecoveryL": false,
-                    "maxGestureMS": 0
+                    "maxGestureMS": 0,
+                    "requireSixColorFours": true
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
@@ -660,7 +702,23 @@
                     "until": {
                       "kind": "floor_change"
                     }
-                  }
+                  },
+                  "requireEnemyState": [
+                    {
+                      "monster": 202575
+                    },
+                    {
+                      "monster": 202578
+                    },
+                    {
+                      "monster": 202576
+                    }
+                  ],
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ]
                 }
               ]
             }

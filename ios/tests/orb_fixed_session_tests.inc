@@ -122,8 +122,57 @@ static void FixedPrivateTargetSessionTests() {
         [s queueStop:@"test cleanup"];
     }
 }
+static void FixedAbsorptionTargetSessionTests() {
+    for (unsigned scenario=0;scenario<13;++scenario) {
+        FixedTestEngine *e=[FixedTestEngine new]; NSMutableDictionary *p=MutableFixedSessionProfile(e);
+        NSMutableDictionary *s=p[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+        NSDictionary *target=@{@"kind":@"target",@"target":@"attribute_absorb",@"monster":@0,@"color":@2,
+            @"optional":@NO,@"frequency":@"each"};
+        s[@"requireEnemyState"]=@[@{@"monster":@42},@{@"monster":@43}];
+        s[@"actions"]=@[target,s[@"actions"][0]];
+        auto &f=e->live.fixedPlan;
+        f.count=2; f.aliveMask=3; f.enemies[1]=f.enemies[0]; f.enemies[1].catalogID=43;
+        for (unsigned i=0;i<2;++i) {
+            f.enemies[i].attributeAbsorbKnown=true; f.enemies[i].attributeAbsorbTurns=10;
+            f.enemies[i].attributeAbsorbColors=i ? 4 : 1;
+        }
+        e->live.automation.activeEnemies=2; e->live.automation.enemyEffects=PHOrbEnemyAttributeAbsorb;
+        e->live.automation.playerBypass=PHOrbEnemyAttributeAbsorb;
+        if (scenario==1) f.enemies[1].attributeAbsorbColors=1; // Known absence, not unknown.
+        if (scenario==2) f.enemies[0].attributeAbsorbKnown=false;
+        if (scenario==3) f.target=1; // Already selected, no toggle tap.
+        if (scenario==4 || scenario==5) f.enemies[0].attributeAbsorbColors=4;
+        if (scenario==4) f.target=1; // Both match: retain the selected one.
+        if (scenario==6) { f.enemies[1].hp=0; f.enemies[1].attributeAbsorbKnown=false; f.aliveMask=1; e->live.automation.activeEnemies=1; }
+        if (scenario==7) e->ignoreTarget=YES;
+        if (scenario==9) f.enemies[1].catalogID=44; // Extra/different roster.
+        if (scenario==12) { f.enemies[0].hp=0; f.aliveMask=2; e->live.automation.activeEnemies=1; }
+        PHOrbSession *session=StartFixedTest(e,p);
+        for (unsigned i=0;i<240 && !e->targetCalls && ![session.snapshot[@"phase"] isEqual:@"solving"] &&
+            ![session.snapshot[@"phase"] isEqual:@"stopped"];++i) Tick(session,e,Frame(),0.02,0,false);
+        if (scenario==8) f.enemies[1].attributeAbsorbColors=1; // Changed before acknowledgement.
+        AdvanceFixedToSolveOrStop(session,e);
+        const bool rejected=scenario==2 || scenario==7 || scenario==8 || scenario==9;
+        const unsigned taps=scenario==0 || scenario==5 || scenario==7 || scenario==8 || scenario==10 || scenario==11 ? 1 : 0;
+        Check(e->targetCalls==taps && e->skillOrder.size()==(rejected ? 0u : 1u),
+            "fresh conditional target checks run before skills; unknown, changed, mismatched and missing acknowledgements never advance");
+        if (taps) Check(e->lastTargetSlot==(scenario==5 ? 0u : 1u),
+            "wood absorption is selected by current colour, even while bypassed, with deterministic equivalent-target handling");
+        if (rejected) Check([session.snapshot[@"phase"] isEqual:@"stopped"],"failed target evidence stops the fixed plan");
+        if (scenario==10 || scenario==11) {
+            Check([session.snapshot[@"phase"] isEqual:@"solving"] && !e->stages,"target fixture reaches planning before input");
+            if (scenario==10) f.enemies[1].attributeAbsorbColors=1;
+            else f.target=0;
+            Tick(session,e,Frame(),0.02,0,false);
+            Check([session.snapshot[@"phase"] isEqual:@"stopped"] && !e->stages,
+                "changed per-enemy absorption or target revokes the planned attack even if aggregate bypass still matches");
+        }
+        [session queueStop:@"absorption target test cleanup"];
+    }
+}
 static void FixedSessionTests(void) {
     FixedPrivateTargetSessionTests();
+    FixedAbsorptionTargetSessionTests();
     for (unsigned scenario=0;scenario<6;++scenario) {
         FixedTestEngine *e=[FixedTestEngine new]; NSDictionary *profile=FixedSessionProfile(e);
         e->unknownFixed=scenario==1; e->unknownReady=scenario==2; e->unavailableSkills[0]=scenario==3;

@@ -54,6 +54,20 @@ static void FixedBoardSolverTests() {
     Check(PHOrbEvaluateWithOptions(attack,options,value) && value.goalsMet &&
         value.firstWaveFours == 6 && value.heartFours == 1,
         "attack counts six exact four groups without requiring a separate saved goal for each color");
+    options.fixedBoard.requireSixColorFours=true;
+    Check(PHOrbEvaluateWithOptions(attack,options,value) && value.goalsMet && value.firstWaveFourColors==63,
+        "the explicit burst contract accepts one guaranteed first-wave four of each basic colour");
+    auto duplicateFour=attack;
+    for (unsigned x=0;x<4;++x) duplicateFour.types[14+x]=0;
+    for (unsigned y=0;y<3;++y) duplicateFour.types[y*7+6]=2;
+    Check(PHOrbEvaluateWithOptions(duplicateFour,options,value) && value.firstWaveColors==63 &&
+        value.firstWaveFours==6 && !(value.firstWaveFourColors&4) && !value.goalsMet,
+        "six total fours and six colours still fail when wood is only a triple and fire supplies the extra four");
+    auto phaseFour=attack; phaseFour.spinnerMask=UINT64_C(1)<<3; phaseFour.spinnerColors=63;
+    Check(PHOrbEvaluateWithOptions(phaseFour,options,value) && !value.goalsMet &&
+        !(value.firstWaveFourColors&1) && !value.fixedBoardSatisfied,
+        "a fire four in only one spinner phase does not authorize a six-colour burst");
+    options.fixedBoard.requireSixColorFours=false;
     Check(PHOrbEvaluateWithOptions(six,options,value) && !value.goalsMet && value.firstWaveColors == 63,
         "attack keeps the heart-four requirement on reduced boards instead of silently using three hearts");
     options.fixedBoard = {PHOrbFixedBoardMode::Normal,63,false};
@@ -82,6 +96,30 @@ static void FixedBoardSolverTests() {
         "L-only rejects an additional match even when its required L is present");
     options.fixedBoard.mode = static_cast<PHOrbFixedBoardMode>(255);
     Check(!PHOrbEvaluateWithOptions(six,options,value), "unknown fixed puzzle policy is rejected");
+
+    // Device 0.5.57 B4, sanitized original boards and submitted paths. These
+    // independently reproduce the weak attacks, not a future search result.
+    const unsigned b4Boards[2][42]={
+        {1,5,3,3,1,2,4,4,2,4,5,1,5,5,4,5,4,3,1,0,5,4,3,3,3,1,2,1,5,2,0,0,1,3,4,5,3,0,4,0,4,1},
+        {0,1,5,0,4,5,2,3,5,3,2,3,4,0,0,0,1,4,4,2,5,0,1,0,2,0,2,3,1,4,3,2,5,5,2,3,2,3,1,5,1,4}};
+    const uint8_t b4Paths[2][44]={
+        {26,19,18,11,12,13,20,19,26,33,34,41,40,33,32,39,40,41,34,33,26,25,24,23,22,29,28,21,14,15,22,29,28,21,22},
+        {36,37,30,29,22,15,16,17,10,11,12,19,20,27,26,33,32,31,30,29,28,21,22,29,30,31,32,39,40,33,32,39,38,31,24,17,10,9,8,1,2,3,10,17}};
+    for (unsigned i=0;i<2;++i) {
+        PHOrbBoard b{}; b.width=7; b.height=6; b.spinnerMask=UINT64_C(1)<<7; b.spinnerColors=63;
+        for (unsigned c=0;c<42;++c) { b.types[c]=uint8_t(b4Boards[i][c]); b.tokens[c]=c+1; }
+        PHOrbRoute r{}; r.count=i ? 44 : 35; std::copy_n(b4Paths[i],r.count,r.cells);
+        auto burst=PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
+        burst.fixedBoard={PHOrbFixedBoardMode::FourAttack,63,true};
+        burst.goals=Goals(PHOrbGoalColors,63,6,0); burst.goals.items[burst.goals.count++]={PHOrbGoalFour,32,1,0};
+        uint32_t d=0; uint8_t n=0;
+        Check(PHOrbEvaluateRoute(b,r,burst,value,d,n) && value.goalsMet && value.firstWaveFours==i+2,
+            "both B4 device routes meet the old six-colour and heart-four contract despite only two or three fours");
+        burst.fixedBoard.requireSixColorFours=true;
+        Check(PHOrbEvaluateRoute(b,r,burst,value,d,n) && !value.goalsMet && !value.fixedBoardSatisfied &&
+            value.firstWaveFourColors!=63,
+            "neither recorded weak B4 route can be executed under the new burst contract even with legacy goals");
+    }
 
     // Freeze the B5 released layout with one equal-color swap. It is already
     // feasible but cannot gain a fourth group. Extra quality search must run

@@ -7,6 +7,9 @@ NSString *FixedConstraintFailureMessage(NSDictionary *trace) {
         NSString *kind=deficit[@"kind"];
         if ([kind isEqual:@"first-colors"]) [details addObject:[NSString stringWithFormat:
             @"固定步驟要求首批消除指定顏色；目前候選的首批缺少%@（須在全部色序成立，後續連鎖不計入此條件）",deficit[@"missingColorNames"]]];
+        else if ([kind isEqual:@"six-color-fours"]) [details addObject:[NSString stringWithFormat:
+            @"固定攻擊要求首批六色各一組四顆；目前候選至少 %u 組四顆，%@尚未在全部色序達成四顆消除",
+            [deficit[@"observedMinimum"] unsignedIntValue],deficit[@"missingColorNames"]]];
         else if ([kind isEqual:@"heart-four"]) [details addObject:@"固定步驟要求首批心四連；目前候選未在全部色序達成"];
         else if ([kind isEqual:@"recovery-heart-four"]) [details addObject:@"心珠不可消解除後，須以既有珠的確定連鎖消出心四連；目前候選未在全部色序達成"];
         else if ([kind isEqual:@"unmatchable-recovery"]) [details addObject:@"須先以合資格的火／木四連解除不可消，再由既有珠連鎖補齊受阻顏色；目前候選未在全部色序達成"];

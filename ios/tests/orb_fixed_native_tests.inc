@@ -136,13 +136,28 @@ static void FixedNativeTests() {
     FixedNativeFixture(); auto engine=[FixtureSkillEngine new]; PHOrbSnapshot state{}; NSString *reason=nil;
     Check([engine readAutomation:&state frame:Frame() reason:&reason] &&
         [engine readFixedPlan:&state frame:Frame() reason:&reason] && state.fixedPlan.targetAllowed &&
-        state.fixedPlan.enemies[0].hp==100 && state.fixedPlan.enemies[0].maximumHP==1000,
+        state.fixedPlan.enemies[0].hp==100 && state.fixedPlan.enemies[0].maximumHP==1000 &&
+        state.fixedPlan.enemies[0].attributeAbsorbKnown && !state.fixedPlan.enemies[0].attributeAbsorbColors,
         "fixed evidence uses fresh protected enemy HP and native target window");
     const auto before=realInput;
     Check([engine stageFixedPlanTarget:1 expected:&state frame:Frame() reason:&reason] && GlobalInput()!=Input,
         "target request stages only the leased input bank");
     Check([engine finishInput:&reason] && GlobalInput()==Input && realInput==before,
         "target input restores real manager without changing UIKit touches");
+    for (unsigned change=0;change<3;++change) {
+        FixedNativeFixture(); engine=[FixtureSkillEngine new];
+        const uintptr_t enemy=Impl+PHOrbEnemyOffset+PHOrbEnemyStride;
+        Protected(enemy+2192,10,0x6a875a8b); Protected(enemy+2176,4,0x6a875a8b);
+        Check([engine readAutomation:&state frame:Frame() reason:nil] && [engine readFixedPlan:&state frame:Frame() reason:nil] &&
+            state.fixedPlan.enemies[1].attributeAbsorbKnown && state.fixedPlan.enemies[1].attributeAbsorbColors==4 &&
+            state.fixedPlan.enemies[1].attributeAbsorbTurns==10,
+            "fresh fixed evidence captures the protected per-enemy absorption mask and duration");
+        if (change==0) Protected(enemy+2176,1,0x6a875a8b);
+        if (change==1) Protected(enemy+2192,9,0x6a875a8b);
+        if (change==2) Put<uint32_t>(enemy+2176,0);
+        Check(![engine stageFixedPlanTarget:1 expected:&state frame:Frame() reason:nil] && GlobalInput()==Input,
+            "changed absorption colour, duration or protected read cannot issue a stale target tap");
+    }
     for (unsigned scenario=0;scenario<6;++scenario) {
         FixedNativeFixture(); engine=[FixtureSkillEngine new];
         Check([engine readAutomation:&state frame:Frame() reason:nil] && [engine readFixedPlan:&state frame:Frame() reason:nil],"fresh fixed fixture");

@@ -52,6 +52,13 @@ bool ReadFixedFields(PHOrbSnapshot &state) {
                 !e.maximumHP || e.hp>e.maximumHP) return false;
         }
         e.hpKnown=true;
+        uint32_t absorbTurns=0, absorbColors=0;
+        // Same protected fields as the native effect reader, captured twice
+        // with this action's exact enemy identity, never the diagnostic cache.
+        if (e.hp && (!SmallProtected(a+2192,k1,k2,UINT16_MAX,absorbTurns) ||
+            (int16_t(absorbTurns)>0 && !SmallProtected(a+2176,k1,k2,UINT16_MAX,absorbColors)))) return false;
+        e.attributeAbsorbTurns=int16_t(absorbTurns)>0 ? uint16_t(absorbTurns) : 0;
+        e.attributeAbsorbColors=uint16_t(absorbColors&31u); e.attributeAbsorbKnown=true;
         if (e.hp) { out.aliveMask|=1u<<i; ++living; }
         e.targetX=Load<float>(life+360); e.targetY=Load<float>(life+364);
         e.targetWidth=Load<int16_t>(life+324); e.targetHeight=Load<int16_t>(life+326);

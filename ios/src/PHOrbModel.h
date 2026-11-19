@@ -40,7 +40,7 @@ typedef struct {
 typedef struct {
     uint8_t combos, erased, goalHits[PHOrbMaxGoals], matchedGoals;
     uint8_t firstWaveCombos;
-    uint8_t firstWaveColors, firstWaveFours, resolvedFours;
+    uint8_t firstWaveColors, firstWaveFours, resolvedFours, firstWaveFourColors;
     uint8_t recoveredColors, recoveryHeartFours;
     bool unmatchableRecovered; // Predicted, never a native receipt.
     bool fixedBoardSatisfied; // All exact phase-specific fixed-stage constraints.
@@ -158,8 +158,9 @@ typedef struct {
     float targetX, targetY;
     int16_t targetWidth, targetHeight, targetMaximumY, targetBlockMode;
     uint16_t flags, targetBlockTurns;
+    uint16_t attributeAbsorbTurns, attributeAbsorbColors;
     uint8_t effects, active;
-    bool hpKnown, identityKnown, targetable;
+    bool hpKnown, identityKnown, targetable, attributeAbsorbKnown;
 } PHOrbFixedPlanEnemy;
 typedef struct {
     PHOrbFixedPlanEnemy enemies[8];

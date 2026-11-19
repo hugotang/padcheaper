@@ -32,6 +32,10 @@ FOUNDATION_EXPORT BOOL PHOrbFixedPlanActionMatchesTeam(NSDictionary *action, con
 FOUNDATION_EXPORT BOOL PHOrbFixedPlanSameSkill(NSDictionary *a, NSDictionary *b);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanActionCondition(NSDictionary *action,
     const PHOrbFixedPlanEvidence *evidence);
+// Conditional native target: No means every live body was checked and none
+// absorbs the colour. Unknown is never treated as absence. slot is zero-based.
+FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanAbsorbTarget(NSDictionary *action,
+    const PHOrbFixedPlanState *state, NSInteger *slot);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanEnemyState(NSArray *enemies,
     const PHOrbFixedPlanEvidence *evidence);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary *repeat,

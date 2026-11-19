@@ -1,8 +1,8 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607-v90-r5",
-  "status": "0.5.57-ci184-verified-delivered-device-pending",
+  "id": "coral-fixed-585607-v90-r6",
+  "status": "0.5.58-build-testing-b4-search-acceptance-failed-not-delivered",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -37,12 +37,13 @@
     "guideComparison": "guide-comparison.json",
     "b2SearchReference": "b2-search-reference.json",
     "latestReview": "../../docs/coral-plan-review-2026-11-19.md",
-    "unmatchableRecovery": "../../docs/unmatchable-recovery.md"
+    "unmatchableRecovery": "../../docs/unmatchable-recovery.md",
+    "b4Review": "../../docs/coral-b4-2026-11-19.md"
   },
   "counts": {
     "floors": 15,
     "stagesIncludingBranches": 50,
-    "actionsIncludingBranches": 91,
+    "actionsIncludingBranches": 94,
     "skillActions": 87
   },
   "members": [
@@ -160,13 +161,27 @@
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "deviceVerified": false,
-  "buildVerified": true,
-  "testSuitesExecuted": true,
-  "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified.",
-  "ci": {
-    "number": 184,
-    "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
-    "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
-    "conclusion": "success"
-  }
+  "buildVerified": false,
+  "testSuitesExecuted": false,
+  "verificationScope": "Windows portable regression passed; recorded B4 ordinary search acceptance failed. Full macOS/iPhoneOS/GUI results pending the manual CI. No delivery.",
+  "previousDelivery": {
+    "profileID": "coral-fixed-585607-v90-r5",
+    "ci": {
+      "number": 184,
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
+      "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
+      "conclusion": "success"
+    },
+    "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified.",
+    "receipt": "../../research/verification-0.5.57.json"
+  },
+  "b4Revision": {
+    "reference": "../../research/coral-b4-20261119.json",
+    "review": "../../docs/coral-b4-2026-11-19.md",
+    "requiredSixColourFours": true,
+    "woodAbsorbTarget": "fresh per-enemy colour, known absence only",
+    "skillOrderAndPuzzleCapsUnchanged": true
+  },
+  "b4SearchAcceptancePassed": false,
+  "delivered": false
 }

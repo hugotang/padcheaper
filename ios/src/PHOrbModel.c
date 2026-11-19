@@ -591,6 +591,8 @@ bool PHOrbSameFixedPlan(const PHOrbFixedPlanState *a, const PHOrbFixedPlanState 
         const PHOrbFixedPlanEnemy *x=&a->enemies[i], *y=&b->enemies[i];
         if (x->hp!=y->hp || x->maximumHP!=y->maximumHP || x->parameter!=y->parameter ||
             x->catalogID!=y->catalogID || x->hpKnown!=y->hpKnown || x->identityKnown!=y->identityKnown ||
+            x->attributeAbsorbKnown!=y->attributeAbsorbKnown || x->attributeAbsorbTurns!=y->attributeAbsorbTurns ||
+            x->attributeAbsorbColors!=y->attributeAbsorbColors ||
             x->flags!=y->flags || memcmp(&x->part,&y->part,sizeof(x->part))) return false;
     }
     return true;

@@ -98,6 +98,27 @@ done
 # Report actual conditional search results; no solution is a measured limit,
 # not a successful route. The probe fails for invalid API or replay results.
 "$build_dir/orb-timed-fishing-probe" | tee "$build_dir/orb-timed-fishing-probe.log"
+# B4 acceptance is reported separately from API/test success. Exit 2 means
+# the bounded search did not solve every recorded board; retain that failure
+# while continuing compiler/native/UI diagnostics. Never call it a passing
+# route check or use the CI conclusion as permission for a repaired release.
+"$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
+    ios/research/coral_b4_six_fours_probe.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
+    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/coral-b4-probe"
+for mode in ordinary single multi; do
+    args=()
+    if [ "$mode" != ordinary ]; then args=("--$mode"); fi
+    probe_status=0
+    "$build_dir/coral-b4-probe" "${args[@]}" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
+    cat "$build_dir/coral-b4-$mode.jsonl"
+    if [ "$probe_status" -eq 2 ]; then
+        echo "B4 route acceptance NOT PASSED ($mode); delivery remains withheld."
+    elif [ "$probe_status" -ne 0 ]; then
+        exit "$probe_status"
+    else
+        echo "B4 recorded route acceptance passed ($mode); device remains unverified."
+    fi
+done
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -fobjc-arc -fblocks -fexceptions \
     -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-const-variable -Iios/src -Iios/generated \
     ios/tests/orb_native_tests.mm "$build_dir/PHOrbModel.o" "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
