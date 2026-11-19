@@ -106,10 +106,13 @@ done
     ios/research/coral_b4_six_fours_probe.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
     "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/coral-b4-probe"
 for mode in ordinary single multi; do
-    args=()
-    if [ "$mode" != ordinary ]; then args=("--$mode"); fi
     probe_status=0
-    "$build_dir/coral-b4-probe" "${args[@]}" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
+    # macOS Bash 3.2 treats an empty array expansion as unset under set -u.
+    if [ "$mode" = ordinary ]; then
+        "$build_dir/coral-b4-probe" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
+    else
+        "$build_dir/coral-b4-probe" "--$mode" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
+    fi
     cat "$build_dir/coral-b4-$mode.jsonl"
     if [ "$probe_status" -eq 2 ]; then
         echo "B4 route acceptance NOT PASSED ($mode); delivery remains withheld."

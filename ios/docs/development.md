@@ -6,6 +6,7 @@
 - 曾測試稀缺色優先、共用形狀提示、供珠去重、整體布局及分段補搜，仍未通過兩張原盤。這些實驗未納入 runtime；保留原 r6 契約與診斷修正。單次／連續撈珠另以相同來源重測，結果將收入研究收據。
 - runtime 候選升為 `0.5.58-orbs`，接續完整原生／Session、sanitizer、iPhoneOS／簽章、瀏覽器及四份 iPhone GUI。此段為 CI 前快照，不能推定上述檢查已通過。
 - **B4 功能驗收失敗，不建立正式 E:/ipa 交付。** r6 目前是防止弱攻擊的修正，尚非已驗證的 B4 解法；原盤搜尋、真機傷害／目標、B5 冷卻銜接及全程通關仍未解決。
+- [CI 185](https://github.com/hugotang/padcheaper/actions/runs/44549231794) 的 schema／solver／ASan/UBSan 通過；新增探針腳本在 macOS Bash 3.2 的 `set -u` 空陣列展開失敗。改用明確無參數／有參數分支後重派完整 CI；尚未到達的原生／Session／iPhoneOS／GUI 不列為通過。
 
 2026-10-28，使用者要求先累積功能，等明確說「編譯測試」才一起建置與驗證。iOS GitHub Actions 已改為只有 `workflow_dispatch`；推送與 PR 不自動建置。
 
