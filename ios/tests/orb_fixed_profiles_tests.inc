@@ -29,7 +29,7 @@ static void FixedProfilesTests(void) {
         NSDictionary *assistSkills=@{@13876:@[@66752],@13878:@[@66755]};
         NSDictionary *ordinarySkills=@{@66716:@63191,@66718:@63192,@66724:@63220,@66735:@62494,
             @66740:@62502,@66729:@63241,@66700:@27820,@66706:@27827,@66752:@61754,@66755:@63251};
-        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r3"] &&
+        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r4"] &&
             [coral[@"dungeon"] isEqual:@7801] && [coral[@"floor"] isEqual:@1],
             "Coral guide-reviewed revision has a distinct ID and the observed native dungeon and sub-dungeon");
         NSDictionary *finisher=[coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject];
@@ -58,6 +58,36 @@ static void FixedProfilesTests(void) {
             [b7Target[@"monster"] isEqual:@210524] && ![b7Target[@"optional"] boolValue] &&
             [b7Target[@"frequency"] isEqual:@"once"],
             "B7 requires the exact observed special Clammy catalog ID without truncation or wildcard");
+        NSArray *b7=coral[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"];
+        Check([b7[0][@"repeat"][@"maximumPuzzles"] isEqual:@2] &&
+            [b7[0][@"repeat"][@"until"][@"kind"] isEqual:@"enemy_state_or_floor_change"] &&
+            [[b7[0][@"actions"] lastObject] isEqual:b7Target] &&
+            [b7[1][@"repeat"][@"maximumPuzzles"] isEqual:@1] &&
+            [b7[1][@"requireEnemyState"] isEqual:b7[0][@"repeat"][@"until"][@"enemies"]] &&
+            [b7[1][@"requireEffectsClear"] isEqual:@[@"damage_absorb",@"attribute_absorb",@"damage_void"]],
+            "B7 rechecks its target after skills and adds one guarded survivor board after at most two original attacks");
+        NSArray *b12=coral[@"fixedPlan"][@"floors"][11][@"variants"][0][@"stages"];
+        Check([b12[2][@"repeat"][@"minimumPuzzles"] isEqual:@0] &&
+            [b12[2][@"repeat"][@"until"] isEqual:@{@"kind":@"enemy_hp_at_most",@"percent":@50}] &&
+            [b12[3][@"actions"][0][@"skill"] isEqual:@66718],
+            "B12 observes the 50-percent checkpoint before issuing another attack, then casts Solomon");
+        NSArray *b13=coral[@"fixedPlan"][@"floors"][12][@"variants"][0][@"stages"];
+        Check([b13[1][@"repeat"][@"until"][@"kind"] isEqual:@"effects_clear"] &&
+            [b13[1][@"actions"][0][@"skill"] isEqual:@66718] &&
+            [b13[1][@"actions"][0][@"when"] isEqual:@"damage_absorb"] &&
+            [[b13[2][@"actions"] valueForKey:@"skill"] isEqual:@[@66706,@66724,@66729,@66706]],
+            "B13 restores expired bypass and applies Diena before Riku's one-turn HP buff");
+        for (NSDictionary *s in b13) Check([s[@"holdLoops"] isEqual:@[@3]],"B13 reserves Keisy through preparation and finishing");
+        NSArray *b14=coral[@"fixedPlan"][@"floors"][13][@"variants"][0][@"stages"];
+        Check([b14[0][@"holdLoops"] isEqual:@[@3]] && [b14[1][@"actions"][0][@"skill"] isEqual:@66740] &&
+            [b14[1][@"actions"][0][@"requireReady"] isEqual:@YES] &&
+            [b14[2][@"repeat"][@"until"][@"skill"] isEqual:@66718],
+            "B14 requires Keisy's resize and reserves native-ready Solomon for the B15 opening");
+        NSDictionary *b15=coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"][0];
+        Check([[b15[@"actions"] valueForKey:@"skill"] isEqual:@[@66718,@66729,@66706]] &&
+            [b15[@"actions"][0][@"when"] isEqual:@"unmatchable"] && ![b15[@"actions"][0][@"optional"] boolValue] &&
+            [b15[@"requireEffectsClear"] isEqual:@[@"unmatchable"]],
+            "B15 clears unmatchable with required Solomon and verifies the native result before a six-color board");
         for (NSUInteger floorIndex=7;floorIndex<=8;++floorIndex) {
             NSDictionary *partTarget=coral[@"fixedPlan"][@"floors"][floorIndex][@"variants"][1][@"stages"][0][@"actions"][0];
             Check([partTarget[@"kind"] isEqual:@"target"] && [partTarget[@"target"] isEqual:@"part"] &&
@@ -93,13 +123,14 @@ static void FixedProfilesTests(void) {
                 NSDictionary *until=stage[@"repeat"][@"until"];
                 if ([until[@"kind"] isEqual:@"skill_ready"]) {
                     ++readyConditions;
-                    Check([floor[@"number"] isEqual:@13] && [until[@"slot"] isEqual:@5] &&
-                        [until[@"monster"] isEqual:@13828] && [until[@"skill"] isEqual:@66718] &&
+                    const BOOL keisy=[floor[@"number"] isEqual:@13];
+                    Check((keisy || [floor[@"number"] isEqual:@14]) && [until[@"slot"] isEqual:(keisy ? @3 : @5)] &&
+                        [until[@"monster"] isEqual:(keisy ? @13745 : @13828)] && [until[@"skill"] isEqual:(keisy ? @66740 : @66718)] &&
                         [bodySkills[until[@"monster"]] containsObject:until[@"skill"]],
-                        "B13 waits on the declared private evolved Solomon skill, not its root or ordinary ID");
+                        "B13 reserves exact private Keisy and B14 reserves evolved Solomon using native readiness");
                 }
             }
-        Check(skillActions==83 && readyConditions==1,"all 83 Coral skill actions and the B13 readiness condition are audited");
+        Check(skillActions==87 && readyConditions==2,"all 87 Coral skill actions and both readiness conditions are audited");
         NSMutableDictionary *oldPackage=[NSJSONSerialization JSONObjectWithData:coralData options:NSJSONReadingMutableContainers error:NULL];
         NSMutableDictionary *oldProfile=oldPackage[@"profile"];
         oldProfile[@"id"]=@"coral-fixed-585607"; oldProfile[@"name"]=@"珊瑚挑戰・固定 Atori・GameWith";
@@ -142,18 +173,26 @@ static void FixedProfilesTests(void) {
         NSDictionary *b7Library=PHOrbProfilesImportingData(v90Library,
             [NSJSONSerialization dataWithJSONObject:b7Package options:0 error:NULL],NULL);
         NSData *b7Export=PHOrbExportProfileData(PHOrbProfileNamed(b7Library,@"coral-fixed-585607-v90-b7"),NULL);
-        NSDictionary *both=PHOrbProfilesImportingData(b7Library,coralData,NULL);
+        // A deliberately different stored record under the immediately prior
+        // ID detects accidental migrations as well as exact-ID overwrites.
+        NSMutableDictionary *priorPackage=FixedFixture();
+        priorPackage[@"profile"][@"id"]=@"coral-fixed-585607-v90-r3";
+        NSDictionary *priorLibrary=PHOrbProfilesImportingData(b7Library,
+            [NSJSONSerialization dataWithJSONObject:priorPackage options:0 error:NULL],NULL);
+        NSData *priorExport=PHOrbExportProfileData(PHOrbProfileNamed(priorLibrary,@"coral-fixed-585607-v90-r3"),NULL);
+        NSDictionary *both=PHOrbProfilesImportingData(priorLibrary,coralData,NULL);
         NSDictionary *reloaded=both ? [NSJSONSerialization JSONObjectWithData:
             [NSJSONSerialization dataWithJSONObject:both options:0 error:NULL] options:0 error:NULL] : nil;
-        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r3");
+        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r4");
         NSData *newExport=PHOrbExportProfileData(newRecord,NULL);
-        Check(oldRecord && v90Export && b7Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==4 &&
-            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r3"] && ![reloaded[@"autoSelect"] boolValue] &&
+        Check(oldRecord && v90Export && b7Export && priorExport && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==5 &&
+            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r4"] && ![reloaded[@"autoSelect"] boolValue] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607"),NULL) isEqual:oldExport] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90"),NULL) isEqual:v90Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-b7"),NULL) isEqual:b7Export] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r3"),NULL) isEqual:priorExport] &&
             [newRecord isEqual:coral] && newExport && !PHOrbProfilesImportingData(reloaded,newExport,NULL),
-            "guide revision import and JSON reload preserve all three earlier profiles and reject duplicate new IDs");
+            "r4 import and JSON reload preserve all earlier records including the r3 ID and reject duplicate new IDs");
         PHOrbSnapshot native={0}; native.valid=native.present=native.automation.valid=true;
         native.identity.entryMode=1; native.identity.dungeon=7801; native.identity.floor=1;
         for (unsigned i=0;i<6;++i) {
@@ -206,6 +245,33 @@ static void FixedProfilesTests(void) {
     optionalTarget[@"profile"][@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0][@"actions"]=
         @[@{@"kind":@"target",@"target":@"part",@"monster":@0,@"optional":@YES,@"frequency":@"once"}];
     Check(!PHOrbFixedPlanFromPackage(optionalTarget,NULL),"unsupported optional targets cannot silently skip a required enemy selection");
+    for (unsigned mutation=0;mutation<17;++mutation) {
+        NSMutableDictionary *guarded=FixedFixture();
+        NSMutableDictionary *stage=guarded[@"profile"][@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+        NSMutableDictionary *enemy=[@{@"monster":@210524,@"alive":@YES,@"maximumPercent":@50} mutableCopy];
+        stage[@"requireEnemyState"]=@[enemy]; stage[@"requireEffectsClear"]=@[@"unmatchable"]; stage[@"holdLoops"]=@[@3];
+        if (mutation==1) enemy[@"alive"]=@1;
+        if (mutation==2) enemy[@"maximumPercent"]=@0;
+        if (mutation==3) enemy[@"maximumPercent"]=@101;
+        if (mutation==4) [enemy removeObjectForKey:@"alive"];
+        if (mutation==5) enemy[@"monster"]=@0;
+        if (mutation==6) enemy[@"cachedAction"]=@90746;
+        if (mutation==7) stage[@"requireEnemyState"]=@[enemy,enemy];
+        if (mutation==8) stage[@"requireEnemyState"]=@[];
+        if (mutation==9) stage[@"requireEffectsClear"]=@[@"unknown"];
+        if (mutation==10) stage[@"requireEffectsClear"]=@[@"unmatchable",@"unmatchable"];
+        if (mutation==11) stage[@"holdLoops"]=@[@0];
+        if (mutation==12) stage[@"holdLoops"]=@[@3,@3];
+        if (mutation==13) stage[@"holdLoops"]=@[@7];
+        if (mutation>=14) {
+            NSMutableDictionary *action=stage[@"actions"][0];
+            action[@"afterMonster"]=@0; action[@"loop"]=@YES; action[@"requireReady"]=mutation==14 ? (id)@1 : (id)@YES;
+            if (mutation==15) action[@"optional"]=@YES;
+            if (mutation==16) action[@"loop"]=@NO;
+        }
+        Check((PHOrbFixedPlanFromPackage(guarded,NULL)!=nil)==(mutation==0),
+            "state and effect guards, held loops and mandatory loop casts reject ambiguous or unsupported declarations");
+    }
     for (NSString *mutation in @[@"unknown-key",@"source",@"skill",@"form",@"gesture",@"repeat",@"missing-floor",@"mixed-variants",@"boolean",@"profile-team",@"rules",@"no-last-exit"]) {
         NSMutableDictionary *bad = FixedFixture(), *p = bad[@"profile"], *plan = p[@"fixedPlan"];
         NSMutableDictionary *stage = plan[@"floors"][0][@"variants"][0][@"stages"][0], *action = stage[@"actions"][0];
@@ -274,4 +340,34 @@ static void FixedProfilesTests(void) {
     Check(PHOrbFixedPlanActionCondition(attack,&evidence)==PHOrbFixedPlanNo,"absorption stall preserves final Riku skill");
     evidence.playerBypass=PHOrbEnemyAttributeAbsorb;
     Check(PHOrbFixedPlanActionCondition(attack,&evidence)==PHOrbFixedPlanYes,"fresh bypass permits final attack buff");
+    NSArray *survivor=@[@{@"monster":@200038,@"alive":@NO},@{@"monster":@210524,@"alive":@YES,@"maximumPercent":@50}];
+    PHOrbFixedPlanEvidence pair={0}; pair.enemiesKnown=true; pair.enemyCount=2;
+    pair.identityKnownMask=pair.hpKnownMask=pair.bodyMask=3; pair.aliveMask=2;
+    pair.enemyIDs[0]=200038; pair.enemyIDs[1]=210524;
+    pair.enemyMaximumHP[0]=pair.enemyMaximumHP[1]=UINT64_C(360000000000);
+    pair.enemyHP[1]=UINT64_C(180000000000);
+    Check(PHOrbFixedPlanEnemyState(survivor,&pair)==PHOrbFixedPlanYes,"the observed dead Awaryn and half-HP Clammy meet the exact survivor condition");
+    for (unsigned mutation=0;mutation<10;++mutation) {
+        PHOrbFixedPlanEvidence changed=pair;
+        if (mutation==0) changed.enemyHP[0]=1;
+        if (mutation==1) ++changed.enemyHP[1];
+        if (mutation==2) changed.enemyHP[1]=0;
+        if (mutation==3) changed.enemyIDs[1]=10524;
+        if (mutation==4) changed.enemyIDs[0]=210524;
+        if (mutation==5) changed.identityKnownMask=1;
+        if (mutation==6) changed.hpKnownMask=1;
+        if (mutation==7) changed.enemyCount=3;
+        if (mutation==8) changed.bodyMask=1;
+        if (mutation==9) changed.enemyMaximumHP[1]=0;
+        Check(PHOrbFixedPlanEnemyState(survivor,&changed)!=PHOrbFixedPlanYes,
+            "alive partner, wrong HP/ID, duplicate, unknown, extra enemy or part never authorizes the survivor finisher");
+    }
+    repeat=@{@"minimumPuzzles":@1,@"maximumPuzzles":@2,@"until":@{@"kind":@"enemy_state_or_floor_change",@"enemies":survivor}};
+    Check(PHOrbFixedPlanRepeatSatisfied(repeat,0,0,&pair)==PHOrbFixedPlanNo &&
+        PHOrbFixedPlanRepeatSatisfied(repeat,2,0,&pair)==PHOrbFixedPlanYes,
+        "survivor transition needs a confirmed puzzle and remains valid exactly at the original two-board cap");
+    pair.wave=1;
+    Check(PHOrbFixedPlanRepeatSatisfied(repeat,1,0,&pair)==PHOrbFixedPlanYes,"a full clear exits the guarded attack phase without a survivor board");
+    pair.wave=2;
+    Check(PHOrbFixedPlanRepeatSatisfied(repeat,1,0,&pair)==PHOrbFixedPlanNo,"a skipped floor cannot satisfy a state-or-floor predicate");
 }

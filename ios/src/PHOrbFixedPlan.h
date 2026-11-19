@@ -7,6 +7,8 @@
 typedef struct {
     uint32_t wave;
     uint64_t enemyHP[8], enemyMaximumHP[8];
+    uint32_t enemyIDs[8];
+    uint8_t enemyCount, identityKnownMask, bodyMask;
     uint8_t aliveMask, hpKnownMask;
     uint8_t enemyEffects, playerBypass, playerEffects, partsMask;
     uint16_t assistVoidTurns, unmatchableTurns, spinnerTurns;
@@ -29,6 +31,8 @@ FOUNDATION_EXPORT BOOL PHOrbFixedPlanActionMatchesTeam(NSDictionary *action, con
 // Equality of the declared effect source, not permission to substitute a skill.
 FOUNDATION_EXPORT BOOL PHOrbFixedPlanSameSkill(NSDictionary *a, NSDictionary *b);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanActionCondition(NSDictionary *action,
+    const PHOrbFixedPlanEvidence *evidence);
+FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanEnemyState(NSArray *enemies,
     const PHOrbFixedPlanEvidence *evidence);
 FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary *repeat,
     NSUInteger confirmedPuzzles, NSUInteger floorWave, const PHOrbFixedPlanEvidence *evidence);

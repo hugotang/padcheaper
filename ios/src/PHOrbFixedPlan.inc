@@ -3,6 +3,26 @@ static NSArray *FixedEffects(void) {
     return @[@"damage_absorb",@"attribute_absorb",@"damage_void",@"awoken_bind",@"member_bind",@"skill_seal",
         @"unmatchable",@"assist_void",@"spinner"];
 }
+static BOOL FixedEffectListValid(id effects) {
+    if (![effects isKindOfClass:NSArray.class] || ![effects count] || [effects count]>FixedEffects().count) return NO;
+    NSSet *set=[NSSet setWithArray:effects];
+    return set.count==[effects count] && [set isSubsetOfSet:[NSSet setWithArray:FixedEffects()]];
+}
+static BOOL FixedEnemyStateValid(id enemies) {
+    if (![enemies isKindOfClass:NSArray.class] || ![enemies count] || [enemies count]>8) return NO;
+    NSMutableSet *seen=[NSMutableSet set];
+    for (NSDictionary *enemy in enemies) {
+        if (![enemy isKindOfClass:NSDictionary.class] ||
+            !KeysWithOptional(enemy,@[@"monster"],@[@"alive",@"maximumPercent"]) ||
+            !Integer(enemy[@"monster"],INT32_MAX) || ![enemy[@"monster"] unsignedIntValue] ||
+            [seen containsObject:enemy[@"monster"]] ||
+            (enemy[@"alive"] && !PHOrbProfileIsBoolean(enemy[@"alive"])) ||
+            (enemy[@"maximumPercent"] && (!Integer(enemy[@"maximumPercent"],100) ||
+                ![enemy[@"maximumPercent"] unsignedIntValue] || ![enemy[@"alive"] boolValue]))) return NO;
+        [seen addObject:enemy[@"monster"]];
+    }
+    return YES;
+}
 static BOOL FixedNumber(id value, BOOL empty) {
     uint16_t catalog = 0;
     return Integer(value,UINT16_MAX) && (empty && ![value unsignedIntValue] ? YES :
@@ -28,7 +48,7 @@ static BOOL FixedActionValid(id action, NSArray *members) {
     if ([action[@"kind"] isEqual:@"target"]) return Keys(action,@[@"kind",@"target",@"monster",@"optional",@"frequency"]) &&
         ![action[@"optional"] boolValue] && [@[@"part",@"enemy"] containsObject:action[@"target"]] && Integer(action[@"monster"],INT32_MAX);
     if (![action[@"kind"] isEqual:@"skill"] ||
-        !KeysWithOptional(action,@[@"kind",@"slot",@"source",@"monster",@"skill",@"afterMonster",@"optional",@"frequency",@"when"],@[@"alternatives",@"consumeAssist",@"loop",@"optionalAfterFirst"]) ||
+        !KeysWithOptional(action,@[@"kind",@"slot",@"source",@"monster",@"skill",@"afterMonster",@"optional",@"frequency",@"when"],@[@"alternatives",@"consumeAssist",@"loop",@"optionalAfterFirst",@"requireReady"]) ||
         !Integer(action[@"slot"],6) || ![action[@"slot"] unsignedIntValue] ||
         ![@[@"body",@"assist"] containsObject:action[@"source"]] ||
         !FixedNumber(action[@"monster"],NO) || !FixedNumber(action[@"afterMonster"],YES) ||
@@ -36,6 +56,8 @@ static BOOL FixedActionValid(id action, NSArray *members) {
         !([@[@"always",@"attack_ready"] containsObject:action[@"when"]] || [FixedEffects() containsObject:action[@"when"]])) return NO;
     if ((action[@"consumeAssist"] && (!PHOrbProfileIsBoolean(action[@"consumeAssist"]) || ![action[@"source"] isEqual:@"assist"])) ||
         (action[@"loop"] && (!PHOrbProfileIsBoolean(action[@"loop"]) || ![action[@"source"] isEqual:@"body"] || [action[@"afterMonster"] unsignedIntValue]))) return NO;
+    if (action[@"requireReady"] && (!PHOrbProfileIsBoolean(action[@"requireReady"]) ||
+        ![action[@"loop"] boolValue] || [action[@"optional"] boolValue])) return NO;
     // Only duplicate, non-transforming body actions may declare a retry skip.
     // The stage validator and runtime also require an earlier required action
     // and a fresh native acknowledgement in this very puzzle.
@@ -66,11 +88,8 @@ static BOOL FixedUntilValid(id until) {
         Integer(until[@"skill"],0x1ffff) && [until[@"skill"] unsignedIntValue];
     if ([kind isEqual:@"enemy_hp_at_most"]) return Keys(until,@[@"kind",@"percent"]) &&
         Integer(until[@"percent"],100) && [until[@"percent"] unsignedIntValue];
-    if (![kind isEqual:@"effects_clear"] || !Keys(until,@[@"kind",@"effects"]) ||
-        ![until[@"effects"] isKindOfClass:NSArray.class] || ![until[@"effects"] count] ||
-        [until[@"effects"] count] > FixedEffects().count) return NO;
-    NSSet *set = [NSSet setWithArray:until[@"effects"]];
-    return set.count == [until[@"effects"] count] && [set isSubsetOfSet:[NSSet setWithArray:FixedEffects()]];
+    if ([kind isEqual:@"enemy_state_or_floor_change"]) return Keys(until,@[@"kind",@"enemies"]) && FixedEnemyStateValid(until[@"enemies"]);
+    return [kind isEqual:@"effects_clear"] && Keys(until,@[@"kind",@"effects"]) && FixedEffectListValid(until[@"effects"]);
 }
 static BOOL FixedRepeatValid(id repeat) {
     return [repeat isKindOfClass:NSDictionary.class] && Keys(repeat,@[@"minimumPuzzles",@"maximumPuzzles",@"until"]) &&
@@ -120,11 +139,19 @@ BOOL PHOrbFixedPlanValid(id plan) {
             NSUInteger stageIndex = 0;
             for (NSDictionary *stage in variant[@"stages"]) {
                 if (++totalStages > 256 || ![stage isKindOfClass:NSDictionary.class] ||
-                    !KeysWithOptional(stage,@[@"id",@"actions",@"board",@"repeat"],@[@"absorbStall",@"retryRequiresBypass"]) ||
+                    !KeysWithOptional(stage,@[@"id",@"actions",@"board",@"repeat"],@[@"absorbStall",@"retryRequiresBypass",@"requireEnemyState",@"requireEffectsClear",@"holdLoops"]) ||
                     (stage[@"absorbStall"] && !PHOrbProfileIsBoolean(stage[@"absorbStall"])) || !Identifier(stage[@"id"],NO) ||
                     [stageIDs containsObject:stage[@"id"]] || ![stage[@"actions"] isKindOfClass:NSArray.class] ||
                     [stage[@"actions"] count] > 24 || !FixedRepeatValid(stage[@"repeat"])) return NO;
                 [stageIDs addObject:stage[@"id"]];
+                if ((stage[@"requireEnemyState"] && !FixedEnemyStateValid(stage[@"requireEnemyState"])) ||
+                    (stage[@"requireEffectsClear"] && !FixedEffectListValid(stage[@"requireEffectsClear"]))) return NO;
+                if (stage[@"holdLoops"]) {
+                    NSArray *slots=stage[@"holdLoops"];
+                    if (![slots isKindOfClass:NSArray.class] || !slots.count || slots.count>6 ||
+                        [NSSet setWithArray:slots].count!=slots.count) return NO;
+                    for (id slot in slots) if (!Integer(slot,6) || ![slot unsignedIntValue]) return NO;
+                }
                 NSDictionary *until = stage[@"repeat"][@"until"];
                 if (stage[@"retryRequiresBypass"] && (!PHOrbProfileIsBoolean(stage[@"retryRequiresBypass"]) ||
                     ![until[@"kind"] isEqual:@"floor_change"] ||
@@ -241,6 +268,35 @@ PHOrbFixedPlanMatch PHOrbFixedPlanActionCondition(NSDictionary *action, const PH
         (evidence->enemyEffects & ~evidence->playerBypass & (PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb)) ? PHOrbFixedPlanNo : PHOrbFixedPlanYes;
     return FixedEffectPresent(action[@"when"],evidence,YES);
 }
+PHOrbFixedPlanMatch PHOrbFixedPlanEnemyState(NSArray *enemies, const PHOrbFixedPlanEvidence *e) {
+    if (!FixedEnemyStateValid(enemies) || !e || !e->enemiesKnown || !e->enemyCount || e->enemyCount>8) return PHOrbFixedPlanUnknown;
+    const unsigned mask=(1u<<e->enemyCount)-1u;
+    if ((e->identityKnownMask&mask)!=mask || (e->hpKnownMask&mask)!=mask) return PHOrbFixedPlanUnknown;
+    // This is an exact roster of bodies, including the dead. An extra enemy,
+    // a part, or a duplicate ID must never stand in for a missing identity.
+    if (e->enemyCount!=enemies.count || e->bodyMask!=mask) return PHOrbFixedPlanNo;
+    unsigned matched=0; BOOL satisfied=YES;
+    for (unsigned i=0;i<e->enemyCount;++i) {
+        if (!e->enemyMaximumHP[i] || e->enemyHP[i]>e->enemyMaximumHP[i]) return PHOrbFixedPlanUnknown;
+        NSUInteger index=0;
+        for (NSDictionary *enemy in enemies) {
+            if ([enemy[@"monster"] unsignedIntValue]==e->enemyIDs[i]) {
+                if (matched&(1u<<index)) return PHOrbFixedPlanNo;
+                matched|=1u<<index;
+                if (enemy[@"alive"]) satisfied &= (e->enemyHP[i]>0)==[enemy[@"alive"] boolValue];
+                if (enemy[@"maximumPercent"]) {
+                    const uint64_t max=e->enemyMaximumHP[i];
+                    const unsigned percent=[enemy[@"maximumPercent"] unsignedIntValue];
+                    satisfied &= e->enemyHP[i]<=max/100u*percent+max%100u*percent/100u;
+                }
+                break;
+            }
+            ++index;
+        }
+        if (index==enemies.count) return PHOrbFixedPlanNo;
+    }
+    return satisfied && matched==mask ? PHOrbFixedPlanYes : PHOrbFixedPlanNo;
+}
 PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary *repeat, NSUInteger puzzles, NSUInteger floorWave,
     const PHOrbFixedPlanEvidence *e) {
     if (!FixedRepeatValid(repeat) || !e) return PHOrbFixedPlanUnknown;
@@ -248,6 +304,8 @@ PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary *repeat, NSUInteg
     NSDictionary *until = repeat[@"until"]; NSString *kind = until[@"kind"];
     if ([kind isEqual:@"puzzles"]) return PHOrbFixedPlanYes;
     if ([kind isEqual:@"floor_change"]) return e->wave != floorWave ? PHOrbFixedPlanYes : PHOrbFixedPlanNo;
+    if ([kind isEqual:@"enemy_state_or_floor_change"]) return e->wave==floorWave ?
+        PHOrbFixedPlanEnemyState(until[@"enemies"],e) : e->wave==floorWave+1 ? PHOrbFixedPlanYes : PHOrbFixedPlanNo;
     if ([kind isEqual:@"parts_absent"]) return !e->partsKnown ? PHOrbFixedPlanUnknown : e->partsMask ? PHOrbFixedPlanNo : PHOrbFixedPlanYes;
     if ([kind isEqual:@"skill_ready"]) {
         const unsigned mask = 1u << ([until[@"slot"] unsignedIntValue]-1);

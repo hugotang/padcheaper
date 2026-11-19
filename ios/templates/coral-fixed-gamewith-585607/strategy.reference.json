@@ -1,23 +1,32 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607-v90-r3",
-  "status": "template-revision-pending-build-and-device-verification",
+  "id": "coral-fixed-585607-v90-r4",
+  "status": "0.5.56-full-build-test-in-progress-device-verification-pending",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
     "section": "珊瑚チャレンジ(固定チーム)の立ち回り / おすすめの立ち回り",
-    "articleUpdated": "2026-11-16 21:50",
-    "reviewedDate": "2026-11-17",
-    "snapshotSHA256": "de435568d54d5b3111b145772ac4a63265fba9f61a26961b7977009e7bdb070e",
-    "fixedSectionSHA256": "9cfff87a0e28489c66c8537dbf5f8b901a49c5b2306a89ad9d315de564e61024",
-    "snapshotNote": "Original template investigation snapshot; the later B7 evidence snapshot is recorded separately in enemy-reference.json.",
+    "articleUpdated": "2026-11-19T10:32:03+09:00",
+    "reviewedDate": "2026-11-19",
+    "snapshotSHA256": "df385c50f492f859b4d474fe0609d6b00347a91bbc353642465267fbff9cae96",
+    "snapshotNote": "Latest full HTML captured in ignored build/coral-log-review-20261119/. The original section hash remains in originalSnapshot.",
     "catalogSource": "https://github.com/Mapaler/PADDashFormation",
     "catalogRevision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
     "cardSHA256": "55c80d2711a9effc3455cc28e163151b9ff3ce4de4d283e72634693be979ffe8",
     "skillSHA256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7",
     "privateSkillRevision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
-    "privateSkillSHA256": "cb47e1c292eb9abd721986ee46f9ddf9a58d1606917b3cf275ad39d34cdc134c"
+    "privateSkillSHA256": "cb47e1c292eb9abd721986ee46f9ddf9a58d1606917b3cf275ad39d34cdc134c",
+    "originalSnapshot": {
+      "articleUpdated": "2026-11-16 21:50",
+      "reviewedDate": "2026-11-17",
+      "snapshotSHA256": "de435568d54d5b3111b145772ac4a63265fba9f61a26961b7977009e7bdb070e",
+      "fixedSectionSHA256": "9cfff87a0e28489c66c8537dbf5f8b901a49c5b2306a89ad9d315de564e61024",
+      "snapshotNote": "Original template investigation snapshot; the later B7 evidence snapshot is recorded separately in enemy-reference.json."
+    },
+    "supplementalURL": "https://appmedia.jp/pazudora/80564326",
+    "supplementalUpdated": "2026-11-18T19:13:54+09:00",
+    "supplementalSHA256": "765e497c2d6ecfa06a56bd40a4ae991ef504881b0ca49161eed0ded6cf3172a7"
   },
   "files": {
     "plan": "fixed-plan.json",
@@ -26,12 +35,14 @@
     "skillReference": "skill-reference.json",
     "enemyReference": "enemy-reference.json",
     "guideComparison": "guide-comparison.json",
-    "b2SearchReference": "b2-search-reference.json"
+    "b2SearchReference": "b2-search-reference.json",
+    "latestReview": "../../docs/coral-plan-review-2026-11-19.md"
   },
   "counts": {
     "floors": 15,
-    "stagesIncludingBranches": 49,
-    "actionsIncludingBranches": 86
+    "stagesIncludingBranches": 50,
+    "actionsIncludingBranches": 91,
+    "skillActions": 87
   },
   "members": [
     {
@@ -137,23 +148,14 @@
     }
   ],
   "decisions": [
-    "Unspecified uncast assists bind observed B1 native sources; no invented assist IDs.",
-    "Dungeon 7801 / subDungeon (profile floor) 1 are directly captured by the 0.5.50 battleObservation identity; this is separate from wave zero / B1.",
-    "Leader swap: original slot 5 moves to slot 1; later Atori choices are positions 1 and 6.",
-    "B7 Clammy uses exact native catalog 210524 observed at slot 2. Ordinary 10524 has the same public card name but is not accepted as an alias. See enemy-reference.json.",
-    "B8/B9 choose their part branch once; every original part must be observed broken before leaving.",
-    "B3 caps the complete gesture at 4500ms or the existing shorter limit.",
-    "B13 queries current Solomon readiness; B15 uses body HP thresholds and preserves final Riku during absorption stall.",
-    "A stopped fixed run that issued an action cannot resume in the same battle.",
-    "All skill declarations, actions and B13 readiness use exact v90 IDs; no automatic alias or relaxed native gate.",
-    "New profile ID coral-fixed-585607-v90-r2 permits side-by-side import with the original, v90 and v90-b7 revisions; imported profiles are not updated automatically.",
-    "The v90 device run completed 18 puzzles and confirmed 30 skills through B1–B6, with transformed Atori/Keisy, evolved Solomon in slot 5 and both opening assists consumed. Corrected B7 selection and B7–B15 remain unverified.",
-    "GameWith remains the complete skill/cooldown route; AppMedia is a cross-check, not interchangeable floor instructions. See guide-comparison.json.",
-    "B15 finish-with-riku is bounded to two total puzzles including absorption stalls; this is not a damage or survival guarantee.",
-    "Both guides lack an explicit first-removal-only six-color requirement. The existing conservative fixed policy is retained pending native cascade/effect evidence; source changes align search guidance and explain exact fixed-stage failures.",
-    "The latest v90-b7 run stopped at B2 after 8 puzzles and 15 skills; cumulative completed 26 includes the prior run and is not corrected B7 verification.",
-    "v90-r3: only B1 buff-and-finish adds one retry. Fresh native absorption/void coverage is required after skills; the first Atori stays mandatory and only its duplicate may be omitted after a same-puzzle native acknowledgement. B5/B10/B13 stay at one exit puzzle. Requires 0.5.52 or later.",
-    "No B1 target was added: the log shows the untargeted GameWith order already killed the combo-absorb enemy and left the void enemy at 21% before the Solomon turn; AppMedia targeting belongs to its different timeline."
+    "B7: up to two original attacks with exact native enemy roster; one additional board only for dead 200038 and living 210524 at <=50% HP. Fresh coverage and unchanged enemy/target evidence are required. Full clear can advance directly.",
+    "B12: check native body HP <=50% before each of the two remaining attack boards, proceeding directly to Solomon if the threshold was reached early.",
+    "B13: hold the Keisy loop until B14; restore uncovered absorption with an actual Solomon cast and native bypass result; finish with Atori, Diena, Riku, Atori in one board.",
+    "B14: hold Keisy on the first board, require its native-ready resize on the second, then reserve native-ready Solomon before finishing. This follows AppMedia rather than spending Solomon on B14 resize.",
+    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No simulated latent unmatchable recovery is claimed; the final Riku stage remains bounded to two boards including stalls.",
+    "Execution history freezes separate native enemy identity/HP/alive/target evidence before search, before release and after the settled acknowledged turn. Generation, turn and battle identity bind the result; cached observations never authorize actions.",
+    "New schema keys require 0.5.56 or later. Version 0.5.55 does not accept r4; imported older profiles are never changed automatically.",
+    "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "deviceVerified": false
 }

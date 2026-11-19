@@ -3,8 +3,8 @@
   "schema": 1,
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "profile": {
-    "id": "coral-fixed-585607-v90-r3",
-    "name": "珊瑚挑戰・固定 Atori・v90 受控補盤",
+    "id": "coral-fixed-585607-v90-r4",
+    "name": "珊瑚挑戰・固定 Atori・v90 原生狀態分支",
     "team": [
       13828,
       13876,
@@ -913,6 +913,13 @@
                       "alternatives": [
                         6
                       ]
+                    },
+                    {
+                      "kind": "target",
+                      "target": "enemy",
+                      "monster": 210524,
+                      "optional": false,
+                      "frequency": "once"
                     }
                   ],
                   "board": {
@@ -922,14 +929,38 @@
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
-                    "maximumPuzzles": 1,
+                    "maximumPuzzles": 2,
                     "until": {
-                      "kind": "puzzles"
+                      "kind": "enemy_state_or_floor_change",
+                      "enemies": [
+                        {
+                          "monster": 200038,
+                          "alive": false
+                        },
+                        {
+                          "monster": 210524,
+                          "alive": true,
+                          "maximumPercent": 50
+                        }
+                      ]
                     }
-                  }
+                  },
+                  "requireEnemyState": [
+                    {
+                      "monster": 200038
+                    },
+                    {
+                      "monster": 210524
+                    }
+                  ],
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ]
                 },
                 {
-                  "id": "finish",
+                  "id": "finish-clammy",
                   "actions": [
                     {
                       "kind": "skill",
@@ -957,7 +988,23 @@
                     "until": {
                       "kind": "floor_change"
                     }
-                  }
+                  },
+                  "requireEnemyState": [
+                    {
+                      "monster": 200038,
+                      "alive": false
+                    },
+                    {
+                      "monster": 210524,
+                      "alive": true,
+                      "maximumPercent": 50
+                    }
+                  ],
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ]
                 }
               ]
             }
@@ -1622,7 +1669,7 @@
                   }
                 },
                 {
-                  "id": "attack",
+                  "id": "reach-super-resolve",
                   "actions": [
                     {
                       "kind": "skill",
@@ -1645,41 +1692,11 @@
                     "maxGestureMS": 0
                   },
                   "repeat": {
-                    "minimumPuzzles": 1,
-                    "maximumPuzzles": 1,
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 2,
                     "until": {
-                      "kind": "puzzles"
-                    }
-                  }
-                },
-                {
-                  "id": "super-resolve",
-                  "actions": [
-                    {
-                      "kind": "skill",
-                      "slot": 1,
-                      "source": "body",
-                      "monster": 8477,
-                      "skill": 66706,
-                      "afterMonster": 0,
-                      "optional": false,
-                      "frequency": "each",
-                      "when": "always",
-                      "alternatives": [
-                        6
-                      ]
-                    }
-                  ],
-                  "board": {
-                    "policy": "six_colors_fours",
-                    "assistRecoveryL": false,
-                    "maxGestureMS": 0
-                  },
-                  "repeat": {
-                    "minimumPuzzles": 1,
-                    "maximumPuzzles": 1,
-                    "until": {
-                      "kind": "puzzles"
+                      "kind": "enemy_hp_at_most",
+                      "percent": 50
                     }
                   }
                 },
@@ -1736,7 +1753,7 @@
               "kind": "any",
               "stages": [
                 {
-                  "id": "wait-for-solomon",
+                  "id": "reserve-keisy",
                   "actions": [
                     {
                       "kind": "skill",
@@ -1763,26 +1780,78 @@
                     "maximumPuzzles": 8,
                     "until": {
                       "kind": "skill_ready",
-                      "slot": 5,
-                      "monster": 13828,
-                      "skill": 66718
+                      "slot": 3,
+                      "monster": 13745,
+                      "skill": 66740
                     }
-                  }
+                  },
+                  "holdLoops": [
+                    3
+                  ]
+                },
+                {
+                  "id": "restore-bypass",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 66718,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "damage_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 66718,
+                      "afterMonster": 0,
+                      "optional": true,
+                      "frequency": "each",
+                      "when": "attribute_absorb"
+                    },
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 66706,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_no_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 8,
+                    "until": {
+                      "kind": "effects_clear",
+                      "effects": [
+                        "damage_absorb",
+                        "attribute_absorb"
+                      ]
+                    }
+                  },
+                  "holdLoops": [
+                    3
+                  ]
                 },
                 {
                   "id": "hp-buff-and-finish",
                   "actions": [
-                    {
-                      "kind": "skill",
-                      "slot": 4,
-                      "source": "body",
-                      "monster": 13878,
-                      "skill": 66729,
-                      "afterMonster": 0,
-                      "optional": false,
-                      "frequency": "once",
-                      "when": "always"
-                    },
                     {
                       "kind": "skill",
                       "slot": 1,
@@ -1811,6 +1880,17 @@
                     },
                     {
                       "kind": "skill",
+                      "slot": 4,
+                      "source": "body",
+                      "monster": 13878,
+                      "skill": 66729,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "always"
+                    },
+                    {
+                      "kind": "skill",
                       "slot": 1,
                       "source": "body",
                       "monster": 8477,
@@ -1835,7 +1915,15 @@
                     "until": {
                       "kind": "floor_change"
                     }
-                  }
+                  },
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ],
+                  "holdLoops": [
+                    3
+                  ]
                 }
               ]
             }
@@ -1876,21 +1964,26 @@
                     "until": {
                       "kind": "puzzles"
                     }
-                  }
+                  },
+                  "holdLoops": [
+                    3
+                  ]
                 },
                 {
-                  "id": "cleanse",
+                  "id": "resize-with-keisy",
                   "actions": [
                     {
                       "kind": "skill",
-                      "slot": 5,
+                      "slot": 3,
                       "source": "body",
-                      "monster": 13828,
-                      "skill": 66718,
+                      "monster": 13745,
+                      "skill": 66740,
                       "afterMonster": 0,
                       "optional": false,
                       "frequency": "once",
-                      "when": "always"
+                      "when": "always",
+                      "loop": true,
+                      "requireReady": true
                     },
                     {
                       "kind": "skill",
@@ -1917,6 +2010,40 @@
                     "maximumPuzzles": 1,
                     "until": {
                       "kind": "puzzles"
+                    }
+                  }
+                },
+                {
+                  "id": "reserve-solomon",
+                  "actions": [
+                    {
+                      "kind": "skill",
+                      "slot": 1,
+                      "source": "body",
+                      "monster": 8477,
+                      "skill": 66706,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "each",
+                      "when": "always",
+                      "alternatives": [
+                        6
+                      ]
+                    }
+                  ],
+                  "board": {
+                    "policy": "six_colors_no_fours",
+                    "assistRecoveryL": false,
+                    "maxGestureMS": 0
+                  },
+                  "repeat": {
+                    "minimumPuzzles": 0,
+                    "maximumPuzzles": 8,
+                    "until": {
+                      "kind": "skill_ready",
+                      "slot": 5,
+                      "monster": 13828,
+                      "skill": 66718
                     }
                   }
                 },
@@ -1966,6 +2093,17 @@
                   "actions": [
                     {
                       "kind": "skill",
+                      "slot": 5,
+                      "source": "body",
+                      "monster": 13828,
+                      "skill": 66718,
+                      "afterMonster": 0,
+                      "optional": false,
+                      "frequency": "once",
+                      "when": "unmatchable"
+                    },
+                    {
+                      "kind": "skill",
                       "slot": 4,
                       "source": "body",
                       "monster": 13878,
@@ -2001,7 +2139,10 @@
                     "until": {
                       "kind": "puzzles"
                     }
-                  }
+                  },
+                  "requireEffectsClear": [
+                    "unmatchable"
+                  ]
                 },
                 {
                   "id": "reach-half",

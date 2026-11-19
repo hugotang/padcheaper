@@ -4,13 +4,22 @@
 @public
     BOOL unknownFixed, unknownReady, ignoreTarget, swapOnTransform;
     NSUInteger targetCalls, lastTargetSlot;
+    NSUInteger bypassAfterSkillSlotPlusOne, clearUnmatchableAfterSkillSlotPlusOne;
 }
 @end
 @implementation FixedTestEngine
 - (void)nativeInputFrame {
     const bool swap=swapOnTransform && skillFrames==1 && activeSkill==4 && transformAfterSkill[4];
+    const unsigned uses=live.automation.skillUses;
     [super nativeInputFrame];
     if (swap) std::swap(live.automation.members[0],live.automation.members[4]);
+    if (live.automation.skillUses==uses+1) {
+        if (bypassAfterSkillSlotPlusOne==activeSkill+1)
+            live.automation.playerBypass=PHOrbEnemyDamageAbsorb|PHOrbEnemyAttributeAbsorb|PHOrbEnemyDamageVoid;
+        if (clearUnmatchableAfterSkillSlotPlusOne==activeSkill+1) {
+            live.unmatchableTurns=0; live.board.unmatchableColors=0;
+        }
+    }
 }
 - (BOOL)readFixedPlan:(PHOrbSnapshot *)state frame:(PHBattleFrame)frame reason:(NSString **)reason {
     if (unknownFixed) { if (reason) *reason=@"fixture unknown fixed evidence"; return NO; }

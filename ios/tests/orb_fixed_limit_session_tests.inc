@@ -55,6 +55,17 @@ static void FixedLimitDiagnosticSessionTests() {
         NSDictionary *snapshot=session.snapshot, *progress=snapshot[@"fixedPlanProgress"], *stop=progress[@"lastStop"];
         NSDictionary *execution=[snapshot[@"executionHistory"] lastObject];
         NSDictionary *beforeMove=execution[@"fixedPlanBeforeMove"], *beforeRelease=execution[@"fixedPlanBeforeRelease"];
+        NSDictionary *afterTurn=execution[@"fixedPlanAfterTurn"];
+        Check([beforeMove[@"enemies"][0][@"hp"] isEqual:@1000] &&
+            [beforeRelease[@"enemies"][0][@"hp"] isEqual:@1000] &&
+            [afterTurn[@"scope"] isEqual:@"settled-after-turn"] && [afterTurn[@"stage"] isEqual:@"opening"] &&
+            [afterTurn[@"targetKnown"] boolValue] && [afterTurn[@"targetSlot"] isEqual:@0] &&
+            [NSJSONSerialization isValidJSONObject:afterTurn],
+            "one released puzzle retains independent before-search, before-release and settled-after-turn enemy evidence");
+        if (scenario==1 || scenario==6) Check(afterTurn[@"enemies"][0][@"hp"]==NSNull.null,
+            "unknown native result HP is retained as unknown rather than borrowing a preceding observation");
+        else Check([afterTurn[@"enemies"][0][@"hp"] unsignedLongLongValue]==UINT64_C(135342484374),
+            "the settled result records fresh 64-bit remaining HP rather than the search snapshot");
         Check([beforeMove[@"scope"] isEqual:@"settled-before-search"] && [beforeMove[@"floor"] isEqual:@1] &&
             [beforeMove[@"stage"] isEqual:@"opening"] && [beforeMove[@"effectsKnown"] boolValue] &&
             [beforeMove[@"enemyEffects"] isEqual:@6] && [beforeMove[@"playerBypass"] isEqual:@6] &&
@@ -119,6 +130,8 @@ static void FixedLimitDiagnosticSessionTests() {
             for (unsigned i=0;i<15;++i) Tick(session,engine,Frame());
             Check([session.snapshot[@"fixedPlanProgress"][@"lastStop"] isEqual:stop],
                 "later idle reads cannot rewrite the native evidence captured at the stage cap");
+            Check([[session.snapshot[@"executionHistory"] lastObject][@"fixedPlanAfterTurn"] isEqual:afterTurn],
+                "later idle reads cannot rewrite the released puzzle's settled enemy result");
             [session queueAutomatic];
             for (unsigned i=0;i<30;++i) Tick(session,engine,Frame());
             Check([session.snapshot[@"phase"] isEqual:@"stopped"] && engine->stages==stages &&

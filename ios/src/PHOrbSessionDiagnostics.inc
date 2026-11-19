@@ -160,6 +160,23 @@
     if (_executionHistory.count >= 3) [_executionHistory removeObjectAtIndex:0];
     [_executionHistory addObject:record]; _recordingExecution = true;
 }
+- (void)recordFixedTurnResult:(const PHOrbSnapshot *)state {
+    // Only the settled native acknowledgement of this released puzzle can
+    // finish its record. Idle reads, a stopped/restarted run and later turns
+    // cannot fill or overwrite a historical result.
+    NSDictionary *last=_executionHistory.lastObject;
+    if (!state || _phase!=PHOrbSessionPhase::TurnWaiting || !_auto.sawResolve ||
+        !state->valid || !state->settled || state->phase!=2 || state->moves || !state->fixedPlan.valid ||
+        !PHBattleSameIdentity(&_preview.identity,&state->identity) ||
+        state->wave<_preview.wave || state->wave>_preview.wave+1 ||
+        !last[@"fixedPlanBeforeMove"] || last[@"fixedPlanAfterTurn"] ||
+        ![last[@"releaseConfirmed"] boolValue] || ![last[@"status"] isEqual:@"released"] ||
+        ![last[@"generation"] isEqual:@(_generation)] || ![last[@"turn"] isEqual:@(_auto.turn)] ||
+        ![last[@"wave"] isEqual:@(_preview.wave)]) return;
+    NSMutableDictionary *record=[last mutableCopy];
+    record[@"fixedPlanAfterTurn"]=FixedEffectTrace(*state,last[@"fixedPlanBeforeMove"][@"stage"],@"settled-after-turn");
+    _executionHistory[_executionHistory.count-1]=[record copy];
+}
 - (NSDictionary *)snapshot {
     NSMutableArray *path = [NSMutableArray array], *goalHits = [NSMutableArray array];
     NSMutableArray *ruleUses = [NSMutableArray array], *groupUses = [NSMutableArray array];

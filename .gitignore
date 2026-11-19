@@ -1,21 +1,50 @@
+# Build outputs and generated files
 build/
 .build/
+cmake-build-*/
 DerivedData/
-__pycache__/
-*.pyc
+ios/generated/
+*.o
+*.a
+*.dSYM/
 *.dylib
+*.so
 *.ipa
+*.apk
+*.aab
+
+# Local device logs and diagnostic exports (all file types)
+/log/
+/logs/
+*.log
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+
+# JavaScript dependencies used by editor/browser tooling
+node_modules/
+
+# Android build caches and machine-specific configuration
+android/.gradle/
+android/**/.cxx/
+android/**/.externalNativeBuild/
+android/local.properties
+
+# Xcode user-specific state
+xcuserdata/
+*.xcuserstate
+
+# Local reverse-engineering databases
 *.i64
 *.idb
+
+# Signing credentials and provisioning profiles
 *.p12
 *.mobileprovision
-*.log
+
+# Operating-system metadata
 .DS_Store
 Thumbs.db
-ios/generated/
-android/.gradle/
-android/.cxx/
-android/**/.cxx/
-android/local.properties
-*.apk
-*.so
+Desktop.ini

@@ -64,13 +64,35 @@
     // expire as the game resolves the turn; that is not an input failure.
     if ((_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
         _phase==PHOrbSessionPhase::Arming || _phase==PHOrbSessionPhase::Running) &&
-        ![self fixedRetryAttackAllowed:state]) return NO;
+        ![self fixedBoardConditionsAllowed:state]) return NO;
     if (_preview.fixedPlan.valid && (_phase==PHOrbSessionPhase::Solving || _phase==PHOrbSessionPhase::Preview ||
         _phase==PHOrbSessionPhase::Arming || _phase==PHOrbSessionPhase::Running) && !_staged) {
         NSString *reason=nil;
         if (![_engine readFixedPlan:state frame:_frame reason:&reason] ||
             !PHOrbSameFixedPlan(&_preview.fixedPlan,&state->fixedPlan)) {
             [self queueStop:reason ?: @"固定計畫求路後的敵人 HP／目標已改變"]; return NO;
+        }
+        if (![self fixedEnemyStateAllowed:state]) return NO;
+    }
+    return YES;
+}
+- (BOOL)fixedEnemyStateAllowed:(const PHOrbSnapshot *)state {
+    if (!_fixedStage[@"requireEnemyState"]) return YES;
+    PHOrbFixedPlanEvidence e=[self fixedEvidence:state];
+    if (state->wave!=_fixedWave || PHOrbFixedPlanEnemyState(_fixedStage[@"requireEnemyState"],&e)!=PHOrbFixedPlanYes) {
+        [self queueStop:@"固定計畫所需敵人身分／存活／HP 狀態未確認，未繼續行動"]; return NO;
+    }
+    return YES;
+}
+- (BOOL)fixedBoardConditionsAllowed:(const PHOrbSnapshot *)state {
+    if (![self fixedRetryAttackAllowed:state]) return NO;
+    PHOrbFixedPlanEvidence e=[self fixedEvidence:state];
+    // Effects are independently captured native fields; they remain available
+    // during a staged input frame when another fixed-plan read is forbidden.
+    e.enemiesKnown=EffectMasksKnown(*state);
+    for (NSString *effect in _fixedStage[@"requireEffectsClear"]) {
+        if (PHOrbFixedPlanActionCondition(@{@"kind":@"skill",@"when":effect},&e)!=PHOrbFixedPlanNo) {
+            [self queueStop:[NSString stringWithFormat:@"固定計畫轉珠前所需效果 %@ 尚未解除／覆蓋或讀取未知",effect]]; return NO;
         }
     }
     return YES;
@@ -95,9 +117,13 @@
     e.assistVoidKnown=state->assistRecovery.valid; e.assistVoidTurns=state->assistRecovery.turns;
     e.unmatchableKnown=state->unmatchableKnown; e.unmatchableTurns=state->unmatchableTurns;
     e.spinnerKnown=state->valid; e.spinnerTurns=state->spinnerTurns;
-    for (unsigned i=0;i<state->fixedPlan.count;++i) {
+    e.enemyCount=state->fixedPlan.count;
+    for (unsigned i=0;i<std::min(unsigned(state->fixedPlan.count),8u);++i) {
         const auto &n=state->fixedPlan.enemies[i];
+        e.enemyIDs[i]=n.catalogID;
+        if (n.identityKnown) e.identityKnownMask|=1u<<i;
         if (n.flags&0x100u) continue; // Boss thresholds refer to the body, never its parts.
+        e.bodyMask|=1u<<i;
         if (n.hp) e.aliveMask|=1u<<i;
         if (n.hpKnown) e.hpKnownMask|=1u<<i;
         e.enemyHP[i]=n.hp; e.enemyMaximumHP[i]=n.maximumHP;
@@ -226,6 +252,7 @@
         if (!_fixedPendingLoop) _fixedPuzzleSkills|=1u<<_fixedAction;
         if ([_fixedPending[@"loop"] boolValue]) {
             NSMutableDictionary *loop=[_fixedPending mutableCopy]; loop[@"optional"]=@YES; loop[@"frequency"]=@"each";
+            [loop removeObjectForKey:@"requireReady"];
             if (![_fixedLoops containsObject:loop]) [_fixedLoops addObject:[loop copy]];
         }
         ++_auto.skills; [self logAutomation:[NSString stringWithFormat:@"固定計畫 B%lu · %@：位置 %lu 技能 %@ 已確認",
@@ -243,12 +270,13 @@
     }
     if (puzzle) {
         if (![self confirmAssistRecoveryResult:&_live]) return;
+        [self recordFixedTurnResult:&_live];
         _fixedTeam=_live;
         ++_auto.turn; ++_fixedPuzzles; _fixedAction=_fixedLoopCursor=_fixedPuzzleSkills=0;
         [self waitForAutomationBoard]; return;
     }
     if (_live.wave!=_fixedWave || !_fixedStage) {
-        if (_fixedStage && ![_fixedStage[@"repeat"][@"until"][@"kind"] isEqual:@"floor_change"]) {
+        if (_fixedStage && ![@[@"floor_change",@"enemy_state_or_floor_change"] containsObject:_fixedStage[@"repeat"][@"until"][@"kind"]]) {
             [self queueStop:@"固定計畫在準備步驟提前換層，未省略餘下技能"]; return;
         }
         if (_fixedStage && [_fixedVariant isEqual:@"parts"] && !_fixedPartsGone) {
@@ -262,6 +290,7 @@
     }
     // Capture predicates after selecting the stage, including its first tick.
     BOOL assistFact=[_fixedStage[@"repeat"][@"until"][@"effects"] containsObject:@"assist_void"];
+    assistFact |= [_fixedStage[@"requireEffectsClear"] containsObject:@"assist_void"];
     for (NSDictionary *a in _fixedStage[@"actions"]) assistFact |= [a[@"when"] isEqual:@"assist_void"];
     for (NSDictionary *a in _fixedLoops) assistFact |= [a[@"when"] isEqual:@"assist_void"];
     if (assistFact && ![self captureAssistRecovery:&_live]) return;
@@ -289,9 +318,11 @@
     if (_fixedPuzzles>=[_fixedStage[@"repeat"][@"maximumPuzzles"] unsignedIntegerValue]) {
         [self queueStop:[self fixedLimitStop:&e]]; return;
     }
+    if (![self fixedEnemyStateAllowed:&_live]) return;
     // Activated loops remain tied to native readiness, including after haste.
     while (_fixedLoopCursor<_fixedLoops.count) {
         NSDictionary *loop=_fixedLoops[_fixedLoopCursor]; bool explicitStep=false;
+        if ([_fixedStage[@"holdLoops"] containsObject:loop[@"slot"]]) { ++_fixedLoopCursor; continue; }
         for (NSDictionary *a in _fixedStage[@"actions"]) if ([a[@"kind"] isEqual:@"skill"] && [a[@"slot"] isEqual:loop[@"slot"]]) explicitStep=true;
         if (explicitStep) { ++_fixedLoopCursor; continue; }
         PHOrbFixedPlanMatch condition=PHOrbFixedPlanActionCondition(loop,&e);
@@ -312,7 +343,7 @@
     // This is evaluated after the current puzzle's skills have acknowledged.
     // A previous turn's two-turn bypass, or a successful six-colour search,
     // is not evidence that a retry can damage the remaining enemies.
-    if (![self fixedRetryAttackAllowed:&_live]) return;
+    if (![self fixedBoardConditionsAllowed:&_live]) return;
     _assistRecoveryL=[_fixedStage[@"board"][@"assistRecoveryL"] boolValue];
     if (!PHOrbCanPreview(&_live)) { [self queueStop:PHOrbObstacleDescription(&_live)]; return; }
     [self beginSolve];
@@ -324,6 +355,7 @@
         [self queueStop:reason ?: @"固定計畫行動前狀態已改變"]; return;
     }
     if ([_fixedPending[@"when"] isEqual:@"assist_void"] && ![self captureAssistRecovery:state]) return;
+    if (![self fixedEnemyStateAllowed:state]) return;
     PHOrbFixedPlanEvidence e=[self fixedEvidence:state];
     if (PHOrbFixedPlanActionCondition(_fixedPending,&e)!=PHOrbFixedPlanYes) {
         [self queueStop:@"固定計畫行動前條件已改變"]; return;
@@ -373,7 +405,9 @@
             if ((_fixedPuzzleSkills&(1u<<i)) && PHOrbFixedPlanSameSkill(_fixedStage[@"actions"][i],_fixedPending)) retrySkip=YES;
     if (retrySkip) [self logAutomation:[NSString stringWithFormat:@"固定計畫 B%lu · %@：補盤時技能 %@ 未就緒，略過",
         (unsigned long)_fixedWave+1,_fixedStage[@"id"],_fixedPending[@"skill"]]];
-    if ([_fixedPending[@"optional"] boolValue] || loopActive || retrySkip) { [self finishFixedAction]; return; }
+    if ([_fixedPending[@"optional"] boolValue] || (loopActive && ![_fixedPending[@"requireReady"] boolValue]) || retrySkip) {
+        [self finishFixedAction]; return;
+    }
     [self queueStop:reason ?: @"固定計畫必要技能尚未就緒，未轉珠"]; return;
 }
 - (NSDictionary *)fixedBoardPlan:(PHOrbSolveOptions *)options {

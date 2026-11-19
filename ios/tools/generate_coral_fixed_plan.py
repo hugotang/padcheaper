@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Author the Coral fixed-team plan from GameWith 585607 (2026-11-16).
+"""Author Coral's GameWith backbone and AppMedia B14/B15 skill route (2026-11-19).
 
 This only writes JSON; it does not build, run tests, or dispatch workflows.
 Skill IDs are constrained native current-stage IDs, not composite root IDs.
@@ -49,8 +49,11 @@ def diena(*, loop=False):
     return skill(2, 13876, 66724, loop=loop)
 
 
-def keisy(*, loop=False):
-    return skill(3, 13745, 66740, loop=loop)
+def keisy(*, loop=False, required=False):
+    a = skill(3, 13745, 66740, loop=loop)
+    if required:
+        a['requireReady'] = True
+    return a
 
 
 def riku():
@@ -64,7 +67,8 @@ def target(part=False):
 
 
 def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
-          minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False, retry_bypass=False):
+          minimum=1, maximum=None, l=False, recovery=False, ms=0, absorb=False, retry_bypass=False,
+          enemies=None, clear=(), hold=()):
     board = dict(policy=policy, assistRecoveryL=recovery, maxGestureMS=ms)
     if l:
         board['lColors'] = 13  # Fire, wood, light: verified guide and recovery carriers.
@@ -77,6 +81,12 @@ def stage(name, actions=(), policy='six_colors_fours', *, until='puzzles',
         result['absorbStall'] = True
     if retry_bypass:
         result['retryRequiresBypass'] = True
+    if enemies is not None:
+        result['requireEnemyState'] = enemies
+    if clear:
+        result['requireEffectsClear'] = list(clear)
+    if hold:
+        result['holdLoops'] = list(hold)
     return result
 
 
@@ -114,7 +124,14 @@ def build():
            stage('buff-without-fours', [solomon(), diena(), keisy(), atori()], 'six_colors_no_fours'),
            exit_stage()])
     floor([exit_stage()])
-    floor([stage('target-clammy', [target(), solomon(), atori()]), exit_stage()])
+    pair = [dict(monster=200038), dict(monster=210524)]
+    survivor = [dict(monster=200038, alive=False), dict(monster=210524, alive=True, maximumPercent=50)]
+    covered = ('damage_absorb', 'attribute_absorb', 'damage_void')
+    # Native facts authorize one follow-up, never a cached enemy action or a
+    # guessed resurrection. Recheck targeting after the first board's skills.
+    floor([stage('target-clammy', [target(), solomon(), atori(), target()], maximum=2,
+                 until=dict(kind='enemy_state_or_floor_change', enemies=survivor), enemies=pair, clear=covered),
+           exit_stage('finish-clammy', enemies=survivor, clear=covered)])
     floor(ordinary=[exit_stage('marine-snow', [keisy(loop=True), riku(), atori()])],
           parts=[stage('target-and-recover', [target(True), atori()], l=True, recovery=True),
                  stage('part-damage', [atori()]), exit_stage('break-part', [riku(), atori()])])
@@ -125,19 +142,31 @@ def build():
     floor([stage('super-resolve', [riku(), atori()]),
            stage('cleanse', [solomon(), atori()]), exit_stage()])
     floor([stage('recover-assists', policy='l_only', l=True, recovery=True),
-           stage('break-shields', [riku(), atori()]), stage('attack', [atori()]),
-           stage('super-resolve', [atori()]),
+           stage('break-shields', [riku(), atori()]),
+           stage('reach-super-resolve', [atori()], minimum=0, maximum=2,
+                 until=dict(kind='enemy_hp_at_most', percent=50)),
            exit_stage('cleanse-and-finish', [solomon(), atori()], maximum=2)])
-    floor([stage('wait-for-solomon', [atori()], 'six_colors_no_fours', minimum=0, maximum=8,
-                 until=dict(kind='skill_ready', slot=5, monster=13828, skill=66718)),
-           exit_stage('hp-buff-and-finish', [riku(), atori(), diena(loop=True), atori()])])
-    floor([stage('attack', [atori()]), stage('cleanse', [solomon(), atori()]), exit_stage(maximum=20)])
     absorb = [solomon(optional=True, when='damage_absorb'), solomon(optional=True, when='attribute_absorb')]
     for a in absorb:
         a['frequency'] = 'each'
+    # Reserve Keisy for B14's 5x4 change, then restore absorption bypass only
+    # when it is actually uncovered. A native skill receipt alone is not enough:
+    # the effects_clear predicate must observe its resulting bypass.
+    floor([stage('reserve-keisy', [atori()], 'six_colors_no_fours', minimum=0, maximum=8, hold=(3,),
+                 until=dict(kind='skill_ready', slot=3, monster=13745, skill=66740)),
+           stage('restore-bypass', absorb+[atori()], 'six_colors_no_fours', minimum=0, maximum=8, hold=(3,),
+                 until=dict(kind='effects_clear', effects=['damage_absorb', 'attribute_absorb'])),
+           exit_stage('hp-buff-and-finish', [atori(), diena(loop=True), riku(), atori()], hold=(3,), clear=covered)])
+    # AppMedia's Keisy resize preserves Solomon for B15. The explicit resize
+    # cannot be skipped merely because Keisy's optional loop is already active.
+    floor([stage('attack', [atori()], hold=(3,)),
+           stage('resize-with-keisy', [keisy(loop=True, required=True), atori()]),
+           stage('reserve-solomon', [atori()], 'six_colors_no_fours', minimum=0, maximum=8,
+                 until=dict(kind='skill_ready', slot=5, monster=13828, skill=66718)),
+           exit_stage(maximum=20)])
     finish_riku = riku()
     finish_riku['when'] = 'attack_ready'
-    floor([stage('survive-first-hit', [riku(), atori()]),
+    floor([stage('survive-first-hit', [solomon(when='unmatchable'), riku(), atori()], clear=('unmatchable',)),
            stage('reach-half', absorb+[atori()], until=dict(kind='enemy_hp_at_most', percent=50),
                  minimum=0, maximum=24, absorb=True),
            stage('recover-super-resolve', [atori()], l=True, recovery=True),
@@ -151,7 +180,7 @@ def build():
                member(8476, [(8476, [66700]), (8477, [66706])]),
                member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607-v90-r3', name='珊瑚挑戰・固定 Atori・v90 受控補盤',
+                profile=dict(id='coral-fixed-585607-v90-r4', name='珊瑚挑戰・固定 Atori・v90 原生狀態分支',
                              team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))

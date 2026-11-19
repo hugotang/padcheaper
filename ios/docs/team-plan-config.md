@@ -24,6 +24,8 @@
 
 可選 `alternatives: [位置]` 依序探查同形態、同技能的備選施放者，只用第一個原生就緒者。`consumeAssist: true` 只用於武裝，須確認消耗後才前進。`loop: true` 只用於不變身的本體技能；首次確認施放後，每盤依原生就緒狀態嘗試，明列同位置動作的階段會接管該次施放。沒有推算冷卻，也不強制滿蓄武裝代替本體。
 
+2026-11-19 待建置來源新增 `requireReady: true`：只允許 `loop: true` 且 `optional: false` 的技能動作，表示這次明列施放必要，不能因先前已啟用循環而略過未就緒技能。後續自動循環仍為原生就緒時才嘗試。階段可用 `holdLoops: [1–6 的位置]` 暫停指定位置的已啟用循環，保留給後續明列動作；不取消該階段明列的技能，不推算冷卻或授權施放。陣列不可為空或重複。
+
 目標動作為 `{kind:"target", target:"part"|"enemy", monster, optional:false, frequency}`，`monster` 是敵方精確 catalog ID，0 不限。必須唯一對應存活目標；普通敵人核對圖鑑記錄指標，部位核對原生模式、HP 與存活擁有者。點選使用單幀輸入並還原，之後回讀原生選取才前進；缺席或有多個候選均停止，不支援 optional target。
 
 `board` 為 `{policy, assistRecoveryL, maxGestureMS}`。政策為 `one_combo`（精確一組三顆，含確定連鎖仍只有一組）、`six_colors_no_fours`（首消六色，含確定連鎖不得有四顆組）、`six_colors_fours`（首消六色及心四連，優先有效四顆組）、`six_colors`；另有 `l_only`（只消一組五顆 L），此時必須加 `lColors` 攻擊色遮罩。攻擊政策也可加 `lColors`。`maxGestureMS` 為 0–4500；0 使用一般操作時限，非零限制求路長度、取色等待與實際拖珠，不修改遊戲計時。武裝無效需要 L 時使用原生回復證據；盤面政策不保證傷害、回復量、耐久或隨機天降。
@@ -33,6 +35,14 @@
 `repeat` 為 `{minimumPuzzles, maximumPuzzles, until}`。上限 1–999，且不得小於下限。只在觀察到原生轉珠結算與下一個穩定回合後增加盤數。`until.kind` 可為 `puzzles`、`floor_change`、`parts_absent`、`enemy_hp_at_most`（加 `percent:1–100`）、`effects_clear`（加 `effects` 字串陣列）或 `skill_ready`（加 `slot/monster/skill`，查詢原生本體技能就緒狀態）。`puzzles` 下限至少 1；其他原生條件可為 0。HP 門檻只看普通本體，排除部位。最後階段須以 `floor_change` 結束；準備階段提前換層、部位分支離層前未觀察到全部部位破壞、未知證據或達盤數上限仍未滿足均停止。原生結果頁結束本場。
 
 效果名稱為 `damage_absorb/attribute_absorb/damage_void/awoken_bind/member_bind/skill_seal/unmatchable/assist_void/spinner`。`effects_clear` 與技能的效果條件都承認已確認的原生全隊 bypass，不重複處理已覆蓋的吸收／無效。來源網址不授權任何操作；流程只執行通過格式與原生核對的宣告。
+
+0.5.56 來源新增以下原生狀態約束，缺省不改既有計畫；含新欄位的 r4 需 0.5.56 或更新引擎，0.5.55 不支援。建置／測試結果見交付 `verification.json`：
+
+- 階段 `requireEnemyState`：1–8 項完整本體名單，每項 `{monster, alive?, maximumPercent?}`。`monster` 是大於 0 的精確 catalog ID，不能重複；`alive` 必須是真正 Boolean，`maximumPercent:1–100` 只可與 `alive:true` 一起使用。包含死亡本體，不容許省略、額外敵人、重複 ID 或部位。每項都需新鮮身分、HP 及有效最大 HP，不能以未知當作死亡。每次技能／目標動作及求路輸入仍核對；規劃後的任何 HP／選取變動會撤銷原路徑。
+- `until.kind: "enemy_state_or_floor_change"` 搭配 `enemies` 同上：同層需符合完整名單及血線；已確認下一層也可完成此攻擊階段，不會誤判為準備階段提前換層。末階段仍必須是 `floor_change`；其他準備階段原有的提前換層停止規則不變。
+- 階段 `requireEffectsClear`：不重複且非空的上述效果名稱陣列。允許本階段先施放對策，全部動作完成後、求路與持珠期間都需確認效果已解除或由原生 bypass 覆蓋；未知或未解除便停止。不能以技能完成回覆代替效果讀數。效果在已放手的原生結算中正常消失，不倒推為上一盤輸入失敗。
+
+固定計畫診斷的 `executionHistory.fixedPlanBeforeMove`、`fixedPlanBeforeRelease` 保存各自時點的效果及敵人 HP／目標；`fixedPlanAfterTurn` 僅在同一盤原生放手且下一個穩定操作回合確認後寫入，依 generation、turn、戰鬥身分綁定且不重寫。尚未收到結算、停止或直接到結果頁時可以沒有該欄位。這些匯出診斷不會被讀回作為動作授權。
 
 `format: "padcheaper-team-plan"`、`schema: 1`、`target: "jp.gungho.pad-ios-23.6.0-106878"`。單份 UI 匯入上限 128 KiB，策略庫 64 份。未識別欄位、動作、版本、格式或錯誤數值拒絕整份匯入；相同 ID 不覆蓋，需先整理原策略或改用另一 ID。
 

@@ -1,22 +1,20 @@
 {
   "schema": 1,
-  "reviewedDate": "2026-11-17",
-  "status": "guide-and-source-review-only; implementation-pending-build-and-tests",
+  "reviewedDate": "2026-11-19",
+  "status": "source-revised-not-built-or-tested",
   "sources": [
     {
       "name": "GameWith",
       "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607#Kote",
-      "articleModified": "2026-11-17T10:30:19+09:00",
-      "htmlSHA256": "d60bcb06c8a9e346ce2613caed24a74c96a76b964f1ed3a8501fb4005dd4a3ac",
-      "fixedSectionSHA256": "48f6cbe8b5ea6c4972e3b3b81e4d91e57de86023b5c3684fde6a9d501b5c0b9e",
+      "articleModified": "2026-11-19T10:32:03+09:00",
+      "htmlSHA256": "df385c50f492f859b4d474fe0609d6b00347a91bbc353642465267fbff9cae96",
       "anchor": "Kote"
     },
     {
       "name": "AppMedia",
       "url": "https://appmedia.jp/pazudora/80564326#party",
-      "articleModified": "2026-11-16T20:09:26+09:00",
-      "htmlSHA256": "f9f092595df96e90ca927615fb43744d9311d09eee2d2f7fd1ed784ce4719572",
-      "fixedSectionSHA256": "5196bf3bfc7294cbd184870723dfa9bae94f4df14823ea76a0674406a954fc05",
+      "articleModified": "2026-11-18T19:13:54+09:00",
+      "htmlSHA256": "765e497c2d6ecfa06a56bd40a4ae991ef504881b0ca49161eed0ded6cf3172a7",
       "anchor": "party"
     }
   ],
@@ -59,7 +57,7 @@
     },
     {
       "floor": 2,
-      "summary": "AppMedia 分敵人並帶 Keisy；GameWith 六色無四連存一回後攻擊。最新 log 停在本層求路，沒有新戰鬥失敗證據。"
+      "summary": "GameWith 六色無四連存一回後攻擊；新雙 log 均已走過本層。"
     },
     {
       "floor": 3,
@@ -79,7 +77,7 @@
     },
     {
       "floor": 7,
-      "summary": "兩站均兩次攻擊；GameWith 指定 Clammy，已採真機精確目標 210524。"
+      "summary": "兩站仍列兩次攻擊，GameWith 指定 Clammy；r4 額外只依精確原生死亡／半血狀態允許一盤補刀，未推定復活時序。"
     },
     {
       "floor": 8,
@@ -99,42 +97,88 @@
     },
     {
       "floor": 12,
-      "summary": "GameWith 先單 L，再拆盾；AppMedia 立即 L 含六色攻擊並較早開始 Diena 循環，冷卻路線不同。"
+      "summary": "最新版 GameWith 明示可能提早超根性，r4 破盾後每盤讀本體 HP≤50% 即進 Solomon。"
     },
     {
       "floor": 13,
-      "summary": "GameWith 保留 Solomon 至下一層；AppMedia 本層用 Solomon、為下一層準備 Keisy。"
+      "summary": "最新版 GameWith 改為 Atori→Diena→Riku→Atori，bypass 過期須實際施放 Solomon；r4 另為 AppMedia 的 B14 銜接保留 Keisy。"
     },
     {
       "floor": 14,
-      "summary": "5×4 後 Atori 會缺心；目前 GameWith 第二回 Solomon 已涵蓋 AppMedia 所說 Keisy 或 Solomon 補救。"
+      "summary": "r4 使用 AppMedia 的第二盤 Keisy 擴盤，避免消耗 B15 開場必要的 Solomon；後段明確查詢 Solomon 就緒後才收尾。"
     },
     {
       "floor": 15,
-      "summary": "先前最後 Riku 階段最大八盤缺乏攻略支持；採 AppMedia 明確兩回內完成，收緊為兩盤。"
+      "summary": "GameWith 新增火／木四連解不可消；求路器未模擬此潛覺時序。r4 採 AppMedia 開場 Solomon＋Riku，確認解除不可消才轉珠；最後 Riku 上限兩盤。"
     }
   ],
   "decisions": [
-    "新增 v90-r2 版本，保留 GameWith 全程技能時間線。",
-    "B15 最後 Riku 階段最大盤數由八改二；這是停止上限，不是傷害或通關保證。",
-    "B8/B10 不直接增加攻擊次數，須另行核對吸收、技能冷卻及防護效果。",
-    "首消六色門檻本次保留；來源已調整補搜引導與固定條件診斷，尚待編譯測試。",
-    "v90-r3：只在 B1 收尾增加有新鮮吸收／貫通檢查的第二盤，每盤第一個 Atori 必須成功；其他樓層上限保持 r2，未加入 B1 指定目標。"
+    "B7: up to two original attacks with exact native enemy roster; one additional board only for dead 200038 and living 210524 at <=50% HP. Fresh coverage and unchanged enemy/target evidence are required. Full clear can advance directly.",
+    "B12: check native body HP <=50% before each of the two remaining attack boards, proceeding directly to Solomon if the threshold was reached early.",
+    "B13: hold the Keisy loop until B14; restore uncovered absorption with an actual Solomon cast and native bypass result; finish with Atori, Diena, Riku, Atori in one board.",
+    "B14: hold Keisy on the first board, require its native-ready resize on the second, then reserve native-ready Solomon before finishing. This follows AppMedia rather than spending Solomon on B14 resize.",
+    "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No simulated latent unmatchable recovery is claimed; the final Riku stage remains bounded to two boards including stalls.",
+    "Execution history freezes separate native enemy identity/HP/alive/target evidence before search, before release and after the settled acknowledged turn. Generation, turn and battle identity bind the result; cached observations never authorize actions.",
+    "New schema keys require the next build containing this source. Delivered 0.5.55 does not accept r4; imported older profiles are never changed automatically.",
+    "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "buildVerified": false,
   "testSuitesExecuted": false,
   "deviceVerified": false,
   "limitations": [
-    "攻略提供策略依據，沒有驗證原生操作時序、傷害、回復或通關。",
-    "最新 log 本場 moves=8、skills=15；completed=26 為累積數，不是本場進度。",
-    "本審查沒有執行產品程式或測試；資料與來源改動不代表新版已編譯或真機通過。"
+    "攻略是策略依據；沒有驗證原生傷害、回復、存活或全程通關。",
+    "11-19 雙 log 各為 20 盤／33 技，停在 B7；第二份 completed=41 是累計。新來源尚無裝置紀錄。",
+    "只產生資料並作來源／格式審查；已撰寫案例尚未執行，沒有編譯、CI 或打包。",
+    "B7 cached action 及 HP 快照支持復活調查，但不足以證明實際事件順序。"
   ],
-  "profileID": "coral-fixed-585607-v90-r3",
-  "implementedTemplateChange": {
-    "floor": 15,
-    "stage": "finish-with-riku",
-    "maximumPuzzlesBefore": 8,
-    "maximumPuzzlesAfter": 2,
-    "includesAbsorptionStalls": true
-  }
+  "profileID": "coral-fixed-585607-v90-r4",
+  "previousSourceSnapshots": [
+    {
+      "name": "GameWith",
+      "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607#Kote",
+      "articleModified": "2026-11-17T10:30:19+09:00",
+      "htmlSHA256": "d60bcb06c8a9e346ce2613caed24a74c96a76b964f1ed3a8501fb4005dd4a3ac",
+      "fixedSectionSHA256": "48f6cbe8b5ea6c4972e3b3b81e4d91e57de86023b5c3684fde6a9d501b5c0b9e",
+      "anchor": "Kote"
+    },
+    {
+      "name": "AppMedia",
+      "url": "https://appmedia.jp/pazudora/80564326#party",
+      "articleModified": "2026-11-16T20:09:26+09:00",
+      "htmlSHA256": "f9f092595df96e90ca927615fb43744d9311d09eee2d2f7fd1ed784ce4719572",
+      "fixedSectionSHA256": "5196bf3bfc7294cbd184870723dfa9bae94f4df14823ea76a0674406a954fc05",
+      "anchor": "party"
+    }
+  ],
+  "historicalTemplateChanges": [
+    {
+      "floor": 15,
+      "stage": "finish-with-riku",
+      "maximumPuzzlesBefore": 8,
+      "maximumPuzzlesAfter": 2,
+      "includesAbsorptionStalls": true
+    }
+  ],
+  "implementedTemplateChanges": [
+    {
+      "floor": 7,
+      "summary": "兩站仍列兩次攻擊，GameWith 指定 Clammy；r4 額外只依精確原生死亡／半血狀態允許一盤補刀，未推定復活時序。"
+    },
+    {
+      "floor": 12,
+      "summary": "最新版 GameWith 明示可能提早超根性，r4 破盾後每盤讀本體 HP≤50% 即進 Solomon。"
+    },
+    {
+      "floor": 13,
+      "summary": "最新版 GameWith 改為 Atori→Diena→Riku→Atori，bypass 過期須實際施放 Solomon；r4 另為 AppMedia 的 B14 銜接保留 Keisy。"
+    },
+    {
+      "floor": 14,
+      "summary": "r4 使用 AppMedia 的第二盤 Keisy 擴盤，避免消耗 B15 開場必要的 Solomon；後段明確查詢 Solomon 就緒後才收尾。"
+    },
+    {
+      "floor": 15,
+      "summary": "GameWith 新增火／木四連解不可消；求路器未模擬此潛覺時序。r4 採 AppMedia 開場 Solomon＋Riku，確認解除不可消才轉珠；最後 Riku 上限兩盤。"
+    }
+  ]
 }

@@ -235,7 +235,23 @@ bool EffectMasksKnown(const PHOrbSnapshot &state) {
 NSDictionary *FixedEffectTrace(const PHOrbSnapshot &state, NSString *stage, NSString *scope) {
     const bool known=EffectMasksKnown(state);
     const auto &effects=state.automation;
+    const auto &fixed=state.fixedPlan;
+    const bool enemiesKnown=state.valid && state.present && fixed.valid && fixed.count<=8;
+    NSMutableArray *enemies=[NSMutableArray array];
+    for (unsigned i=0;enemiesKnown && i<fixed.count;++i) {
+        const auto &enemy=fixed.enemies[i];
+        const bool maximumKnown=enemy.hpKnown && !(enemy.flags&0x100u) && enemy.maximumHP;
+        [enemies addObject:@{@"slot":@(i+1),@"identityKnown":@(enemy.identityKnown),
+            @"catalogID":enemy.identityKnown ? @(enemy.catalogID) : (id)NSNull.null,
+            @"part":@((enemy.flags&0x100u)!=0),@"hpKnown":@(enemy.hpKnown),
+            @"hp":enemy.hpKnown ? @(enemy.hp) : (id)NSNull.null,
+            @"maximumHPKnown":@(maximumKnown),@"maximumHP":maximumKnown ? @(enemy.maximumHP) : (id)NSNull.null,
+            @"alive":enemy.hpKnown ? @(enemy.hp>0) : (id)NSNull.null}];
+    }
+    const bool targetKnown=enemiesKnown && fixed.targetKnown;
     return @{@"scope":scope,@"floor":@(state.wave+1),@"stage":stage ?: @"",@"effectsKnown":@(known),
+        @"enemiesKnown":@(enemiesKnown),@"enemies":[enemies copy],@"targetKnown":@(targetKnown),
+        @"targetSlot":targetKnown ? @(fixed.target<0 ? 0 : fixed.target+1) : (id)NSNull.null,
         @"enemyEffects":known ? @(effects.enemyEffects) : (id)NSNull.null,
         @"playerBypass":known ? @(effects.playerBypass) : (id)NSNull.null,
         @"uncoveredEffects":known ? @(effects.enemyEffects & ~effects.playerBypass & 15u) : (id)NSNull.null};

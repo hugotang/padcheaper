@@ -1,5 +1,7 @@
 # 珊瑚チャレンジ【固定チーム】Atori plan
 
+2026-11-19 **v90-r4（0.5.56-orbs，完整編譯測試中）**：依雙 log 的新鮮敵人狀態新增 B7 一盤有條件補刀；B12 支援提早半血、B13 修正吸收處理及 HP 技序，B14–B15 採 Keisy 擴盤並保留 Solomon 解開場不可消的銜接方式。新增每盤前後敵人 HP／目標診斷。**需要 0.5.56 或更新引擎；0.5.55 不接受新欄位，僅匯入 JSON 不會更新引擎。完成證據見交付包 verification.json。** 詳見[11-19 審查與實作](../../docs/coral-plan-review-2026-11-19.md)。下列按日期記錄的驗證只適用各自版本。
+
 2026-11-17 v90-r3（0.5.52-orbs，待本輪編譯測試）：只新增 B1 收尾第二盤，技能完成後必須確認目前吸收／無效都已覆蓋；第一個 Atori 每盤仍必要，第二個未就緒時只有同一盤已確認相同技能才可略過。B5／B10／B13 及其他原一盤收尾保持一盤，B12／B14／B15 原上限不變。此版保留所有固定停止原因；無 fishing 選項時用一次完整額外預算補搜四消。新欄位需要 0.5.52 或更新版本，0.5.51 會拒絕匯入。下方歷史驗證只適用其標示版本，補盤效果檢查不代表傷害或存活已驗證。
 
 2026-11-17 驗證完成：以下來源修正已納入 **0.5.51-orbs**，通過 [CI 167](https://github.com/hugotang/padcheaper/actions/runs/44024491484) 完整回歸、ASan/UBSan、iPhoneOS／簽章、瀏覽器與四份 iPhone GUI。此段更新下方各次開發時的「待編譯」狀態；真機通關仍待驗證。B5 原盤離線三次仍只有三組四消，尚未證明擊殺火力提升。已交付套件保留建置時文件快照，完成證據見包內 `verification.json`。
@@ -8,17 +10,17 @@
 
 2026-11-17 綜合修正：最新使用 `v90-b7` 的新場完成 8 次轉珠、15 次技能，停在 B2 收尾求路；累計 26 次包含上一場，並未在新場驗證 B7。候選在確定連鎖後有六色＋心四連，但首消缺火，被目前固定政策拒絕。來源已補首消缺色引導及獨立的固定條件診斷；這兩項**須下次編譯測試後的新 dylib 才生效**，尚不能宣稱本盤已找到解。
 
-對照 [GameWith](https://xn--0ck4aw2h.gamewith.jp/article/show/585607#Kote) 與 [AppMedia](https://appmedia.jp/pazudora/80564326#party)，本版另將 B15 最後 Riku 階段由最多 8 盤收緊為 **最多 2 盤**，包括該階段內的吸收存技；到上限仍未離層即停止，不保證兩盤傷害足夠。兩站的開場、B3 與 B13 冷卻路線不同，保留 GameWith 的完整時序。逐層差異與引用見 [guide-comparison.json](guide-comparison.json)，最新日誌摘要見 [b2-search-reference.json](b2-search-reference.json)。
+11-17 對照 [GameWith](https://xn--0ck4aw2h.gamewith.jp/article/show/585607#Kote) 與 [AppMedia](https://appmedia.jp/pazudora/80564326#party)，已將 B15 最後 Riku 階段由最多 8 盤收緊為 **最多 2 盤**，包括該階段內的吸收存技；r4 保留此上限，不保證兩盤傷害足夠。開場與 B3 仍沿用 GameWith；r4 將 B13 的保留技能與 B14–B15 一起調整，不單獨交換一層。逐層差異與引用見 [guide-comparison.json](guide-comparison.json)，舊 B2 日誌摘要見 [b2-search-reference.json](b2-search-reference.json)。
 
 2026-11-17 B7 範本修正：上一版 v90 策略的真機 log 已完成 18 次轉珠、確認 30 次技能，走過 B1～B6。B7 因模板指定普通 Clammy `10524`，但實際敵人為專用版本 `210524` 而停止；本版將目標改為精確的 `210524`，保留存活、唯一目標及原生選取回覆檢查。依據見 [enemy-reference.json](enemy-reference.json)。修正後的 B7 目標點選、產品解析／回歸及完整通關仍待驗證；先前 CI 不驗證這次 JSON 改動。
 
 本版保留前次 B1 修正的 v90 專用技能與關卡 `7801／1` 綁定。原範本武裝 `61754` 與真機 `66752` 不符；技能資料對照與限制見 [skill-reference.json](skill-reference.json)。
 
-[攻略來源](https://xn--0ck4aw2h.gamewith.jp/article/show/585607)，按 2026-11-16 的固定隊伍段落整理。
+[主要攻略來源](https://xn--0ck4aw2h.gamewith.jp/article/show/585607)，按 2026-11-19 固定隊伍段落更新；B14–B15 的技能銜接採上述 AppMedia 路線。
 
-目前匯入檔：[fixed-plan.json](fixed-plan.json)，需 **0.5.52 或更新版本**。舊版請使用其交付包內的範本；匯入 JSON 不會更新 dylib 引擎。
+目前範本：[fixed-plan.json](fixed-plan.json)，**須搭配完成建置測試的 0.5.56 或更新引擎使用**。舊版請使用其交付包內的範本；匯入 JSON 不會更新 dylib 引擎。
 
-在策略庫匯入後，選用 **「珊瑚挑戰・固定 Atori・v90 受控補盤」**（ID `coral-fixed-585607-v90-r3`，需 0.5.52 或更新 dylib；0.5.51 請繼續用包內的 `v90-r2`）。新 ID 可與原版、v90、v90-b7 和 v90-r2 策略並存，舊策略不會自動更新；請確保選中新版。在之後由使用者自行開始的新場 B1、尚未施放技能或轉珠時，手動開始 Auto。
+之後在相容引擎的策略庫匯入並選用 **「珊瑚挑戰・固定 Atori・v90 原生狀態分支」**（ID `coral-fixed-585607-v90-r4`）。新 ID 可與原版及 v90、v90-b7、v90-r2、v90-r3 並存，舊策略不會自動更新。在使用者自行開始的新場 B1、尚未施放技能或轉珠時，手動開始 Auto。
 
 先前 B7 與最新 B2 場次均已有原生行動，`consumed=true`；匯入新模板不會解除同場防重播，不能從停止點恢復固定 Auto。目前這場需手動完成。
 
@@ -48,25 +50,25 @@ Solomon 的專用進化根 ID 是 `66715`，第一／後續階段是 `66716／66
 | B4 | Solomon→Keisy→Atori 攻擊；Atori 攻擊。 |
 | B5 | Atori 攻擊兩回；Solomon→Diena→Keisy→Atori→六色無四顆；Atori 攻擊。 |
 | B6 | Atori 攻擊。 |
-| B7 | 指定 Clammy（圖鑑 #10424／本關原生 #210524）→Solomon→Atori 攻擊；Atori 攻擊。 |
+| B7 | 完整核對原生敵人 `200038/210524`；指定 Clammy→Solomon→Atori→確認目標，最多兩盤原攻擊。只有 Awaryn 已死、Clammy 存活且 HP≤50% 才接最多一盤 Atori 補刀；兩敵全清可直接換層。每盤核對吸收／無效覆蓋。 |
 | B8 一般 | Keisy→Riku→Atori 攻擊；開始 Keisy 原生就緒循環。 |
 | B8 亂入 | 指定唯一存活部位→Atori→六色、心四連及 L；Atori 攻擊；Riku→Atori 攻擊。離層前需觀察部位破壞。 |
 | B9 一般 | Keisy→Atori 攻擊；Atori 攻擊；開始／延續 Keisy 循環。 |
 | B9 亂入 | 指定部位→Atori→六色、心四連及 L；Atori 攻擊三回。離層前需觀察部位破壞。 |
 | B10 | Atori→Diena→Atori 攻擊。 |
 | B11 | Riku→Atori 攻擊；Solomon→Atori 攻擊；Atori 攻擊。 |
-| B12 | 只消一組 L；Riku→Atori 攻擊破盾；Atori 攻擊兩回；Solomon→Atori 攻擊，至多再一盤 Atori。 |
-| B13 | 若 Solomon 尚未就緒，Atori 六色無四顆存技；就緒後 Riku→Atori→Diena→Atori 攻擊，開始 Diena 循環。 |
-| B14 | Atori 攻擊；Solomon→Atori 攻擊；Atori 攻擊直到離層（有上限）。 |
-| B15 | Riku→Atori 攻擊；攻擊至本體 HP≤50%；Atori→L、六色及心四連；攻擊至本體 HP≤25%；Riku→Atori 收尾，最後階段最多 2 盤。吸收未被我方效果覆蓋時，嘗試已就緒的 Solomon，否則以六色無四顆存技；最後階段的存技也計入 2 盤上限。 |
+| B12 | 只消一組 L；Riku→Atori 破盾；依原生本體 HP 攻擊至≤50%，最多兩盤，已達標便直接 Solomon→Atori，至多再一盤 Atori。 |
+| B13 | 暫停 Keisy 循環，六色無四顆等其原生就緒（0–8 盤）；吸收未覆蓋時，嘗試 Solomon，未就緒則六色無四顆存技（0–8 盤），效果確認後接 Atori→Diena→Riku→Atori 一盤收尾，啟用 Diena 循環。 |
+| B14 | 首盤保留 Keisy、Atori 攻擊；第二盤必要 Keisy→Atori；六色無四顆等 Solomon 原生就緒（0–8 盤）；Atori 攻擊直到離層（收尾最多 20 盤）。 |
+| B15 | 不可消存在時必要 Solomon 淨化，Riku→Atori，確認不可消解除才轉珠；攻擊至本體 HP≤50%；Atori→L、六色及心四連；攻擊至本體 HP≤25%；Riku→Atori 收尾，最後階段最多 2 盤。吸收未覆蓋時嘗試已就緒 Solomon，否則六色無四顆存技；最後階段的存技也計入 2 盤上限。 |
 
-B8／B9 分支只在進層時選定，部位破壞後不會中途切成一般分支。B12 最後的兩盤共用同一個「Solomon 只施放一次」步驟。B13 永遠查詢 Solomon 的當前就緒狀態，不從 B12 的耗用回合數推算。
+B8／B9 分支只在進層時選定，部位破壞後不會中途切成一般分支。B12 最後的兩盤共用同一個「Solomon 只施放一次」步驟。B13–B15 依原生效果及技能就緒回覆銜接，不由先前盤數推算。B14 必要 Keisy 不會因已啟用循環而略過；B15 未確認解除不可消便不求六色路徑。
 
 ## 尚待驗證
 
-- B2 首消缺色搜尋引導與固定條件診斷尚未編譯／執行案例；新增來源不能當作新版求路已成功。兩份攻略的傷害與冷卻差異尚不足以支持直接增加 B8／B10 攻擊回數。
-- B1～B6 的推進、變身／交換後位置、後續技能及武裝消耗已有本次 log 證據；B7 以後的技能循環、盤面政策和完整通關仍待驗證。
-- 修正後 B7 敵人目標點選座標、下一幀選取回覆，以及 B8／B9 部位死亡到換層之間能否取得明確破壞回覆。
+- r4 的 schema／Session 案例已撰寫但未執行；解析、狀態撤銷、同場防重播、逐盤紀錄及 iPhoneOS 建置待明確「編譯測試」。兩份攻略的傷害與冷卻差異尚不足以支持直接增加 B8／B10 攻擊回數。
+- 新雙 log 已走過 B1～B6 並完成 B7 兩盤，但沒有驗證 r4 的狀態補刀、B12 提早門檻、B13–B15 冷卻路線或全程通關。
+- B7 逐盤原生 HP／目標時間線與疑似復活語義，及 B8／B9 部位死亡到換層之間的明確破壞回覆。
 - 所有樓層傷害與回血能否符合攻略；本 plan 沒有傷害／回復模擬器。
 - B3 五秒條件、帶轉轉的六色／L／四顆路線品質與真機幀率。
 
