@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reviewedDate": "2026-11-19",
-  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
+  "status": "0.5.57-ci184-verified-delivered-device-pending",
   "sources": [
     {
       "name": "GameWith",
@@ -123,7 +123,7 @@
     "r5 unmatchableRecovery requires 0.5.57 or later; delivered 0.5.56/r4 does not implement it.",
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
   "deviceVerified": false,
   "limitations": [
@@ -188,5 +188,11 @@
       "summary": "GameWith 新增火／木四連解不可消；求路器未模擬此潛覺時序。r4 採 AppMedia 開場 Solomon＋Riku，確認解除不可消才轉珠；最後 Riku 上限兩盤。"
     }
   ],
-  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence."
+  "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified.",
+  "ci": {
+    "number": 184,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
+    "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
+    "conclusion": "success"
+  }
 }

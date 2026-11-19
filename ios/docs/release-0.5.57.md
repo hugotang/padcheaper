@@ -6,4 +6,4 @@
 
 安裝後完整關閉並重開遊戲，確認版本 `0.5.57-orbs`，再匯入並選用 [fixed-plan.json](../templates/coral-fixed-gamewith-585607/fixed-plan.json) 的「珊瑚挑戰・固定 Atori・v90 B2 不可消回復」。舊策略不會自動更新。請在自行開始的新場 B1、尚未施放技能或轉珠前啟動 Auto；已消耗且停止的同場不能重啟。
 
-本文件是建置前快照：Windows 可攜回歸已通過；完整 macOS 原生／Session、ASan/UBSan、iPhoneOS arm64／簽章、瀏覽器與四份 iPhone GUI 的完成結果由交付包頂層 `verification.json` 及 `verification/` 記錄。真機回復時序、手機搜尋預算、傷害、耐久與全程通關仍未驗證，`device_verified=false`。
+Windows 可攜回歸已通過；[CI 184](https://github.com/hugotang/padcheaper/actions/runs/44531845996) 完整 macOS 原生／Session、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone GUI 通過並交付。結果見 [驗證收據](../research/verification-0.5.57.json) 及交付包頂層 `verification.json`／`verification/`；包內文件保留建置前快照。真機回復時序、手機搜尋預算、傷害、耐久與全程通關仍未驗證，`device_verified=false`。

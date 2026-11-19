@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "0.5.57-local-tests-passed-full-ci-pending",
+  "status": "0.5.57-ci184-verified-delivered-device-pending",
   "reviewedDate": "2026-11-19",
   "profileID": "coral-fixed-585607-v90-r5",
   "planSHA256": "97f0150538fb6589f3fa8a0be25123452fb25ef7f0ae844526fc713032bb0aa3",
@@ -10,7 +10,7 @@
     "actionsIncludingBranches": 91,
     "skillActions": 87
   },
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
   "deviceVerified": false,
   "staticChecks": {
@@ -34,14 +34,12 @@
     "compiler": "MinGW GCC; C11/C++17 -fsyntax-only -Wall -Wextra -Werror",
     "scope": "Earlier pre-test source review, retained as historical evidence"
   },
-  "sourceSHA256Scope": "LF-normalized pre-CI 0.5.57 source snapshot, excluding validation.json itself; previousDelivered preserves historical CI182 only. Bundled verification.json supplies exact build completion evidence.",
+  "sourceSHA256Scope": "LF-normalized source snapshot at the compiled CI commit. Completion documentation was updated afterward; runtime and fixed-plan data are unchanged. Immutable package contains pre-CI notes; its top-level verification.json records final results.",
   "nativeResearch": "../../research/unmatchable-recovery-20261119.json",
   "pendingVerification": [
-    "Native, Session, solver, profiles and GUI regression execution",
-    "ASan/UBSan and iPhoneOS build/signature",
-    "Actual B2 board search within device budget",
-    "Device timing, clear receipt, damage and full clear",
-    "B7 survivor branch, B12-B15 skill/cooldown/survival route and full device clear"
+    "Device B2 latent timing and clear receipt, mobile search budget, damage and survival",
+    "B7 survivor branch, B12-B15 cooldown route and complete device clear",
+    "Arbitrary mixed native effect queue capacity"
   ],
   "previousDelivered": {
     "schema": 1,
@@ -180,5 +178,12 @@
       "commit": "2b9295f363ea61eed117f20d9f913040fc43a978",
       "result": "Native and portable/sanitizer passed; Session test compile failed on -Wauto-var-id. Explicit dictionary type fixed; full re-run pending."
     }
-  ]
+  ],
+  "ci": {
+    "number": 184,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
+    "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
+    "conclusion": "success"
+  },
+  "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified."
 }

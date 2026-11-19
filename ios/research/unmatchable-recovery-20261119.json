@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "date": "2026-11-19",
-  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
+  "status": "0.5.57-ci184-verified-delivered-device-pending",
   "profileID": "coral-fixed-585607-v90-r5",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "nativeInput": {
@@ -278,14 +278,13 @@
     "No skyfall, damage, healing, survival or latent-only amount guarantee; post-turn observation can include a normal expiry or enemy reapplication."
   ],
   "planSHA256": "97f0150538fb6589f3fa8a0be25123452fb25ef7f0ae844526fc713032bb0aa3",
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
   "deviceVerified": false,
   "pendingVerification": [
-    "Native, Session, solver, profiles and GUI regression execution",
-    "ASan/UBSan and iPhoneOS build/signature",
-    "Actual B2 board search within device budget",
-    "Device timing, clear receipt, damage and full clear"
+    "Device B2 latent timing and clear receipt, mobile search budget, damage and survival",
+    "B7 survivor branch, B12-B15 cooldown route and complete device clear",
+    "Arbitrary mixed native effect queue capacity"
   ],
   "staticReview": {
     "jsonFiles": 7,
@@ -306,7 +305,7 @@
     "objcCompilerInvoked": false,
     "buildOrPackageRun": false
   },
-  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence.",
+  "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified.",
   "recordedBoardProbe": {
     "source": "ios/research/coral_b2_unmatchable_probe.cpp",
     "platform": "Windows x64 / MinGW GCC 15.2 -O2",
@@ -409,5 +408,11 @@
         "deviceVerified": false
       }
     ]
+  },
+  "ci": {
+    "number": 184,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
+    "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
+    "conclusion": "success"
   }
 }

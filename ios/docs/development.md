@@ -4,6 +4,13 @@
 
 一般開發先修改程式、補測試案例並檢查差異、語法與設定格式。收到編譯測試指示後，再執行測試、iPhoneOS 編譯、模擬器檢查及打包；若失敗則修正後重跑需要的項目。交付檔必須來自通過檢查的同一 commit。
 
+## 2026-11-19 0.5.57-orbs 編譯測試與交付完成
+
+- [CI 184](https://github.com/hugotang/padcheaper/actions/runs/44531845996) 在來源 `3d1077eeb5c19f27743be60f6f770831fabde739` 完整通過：原生記憶體／輸入、Session（含 B2 新案例）、schema、solver、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器及四份 iPhone 首次／重啟 GUI。先前 CI183 的 Session 案例型別警告已修正。Windows 可攜模型、版本資料、隊伍／地城及 Edge 編輯器亦通過；MinGW smoke 未使用 sanitizer。
+- B2 原盤以六個共用轉轉相位、48 步／beam512，800ms 與 2000ms 各三次均找到並重播通過 47 步路線，最低首消五色、三組四連、6 Combo，後續闇珠消除共 7 Combo。這仍以新鮮原生火／木資格為前提，不是手機預算或回復時序的驗證。
+- 已交付新的 `E:/ipa/PADCheaper-0.5.57-orbs` 與同名 ZIP，獨立核對 431 項套件雜湊、432 項 ZIP CRC／逐檔內容及 artifact 一致性。dylib 12,134,688 bytes，SHA-256 `c52c446d5643039050b52416d0e09a3cdd18b8cc57d94acb12965af803167f21`；ZIP SHA-256 `2b6c5c65e851a8e46acfa09d829a3db06b2dc5532d13c486db1d2fa2e22128a5`。詳見 [驗證收據](../research/verification-0.5.57.json)。
+- 本段更新下方歷史待驗狀態；immutable 交付保留建置時說明快照，完成證據由頂層 `verification.json` 提供。更新引擎後匯入並選用 `coral-fixed-585607-v90-r5`，從自行開始且未操作的新場 B1 啟動；已消耗且停止的同場不可重啟。裝置回復時序、傷害、耐久與全程通關未驗證，`device_verified=false`。
+
 ## 2026-11-19 0.5.57 編譯測試已獲授權
 
 - 使用者明確要求「編譯測試」，開始驗證本批 r5 來源。Windows 可攜 solver/model、8P、形狀引導與公開求解器 smoke 已執行通過；MinGW smoke 未使用 sanitizer。

@@ -1,10 +1,10 @@
 # PADCheaper iOS 版本紀錄
 
-## 0.5.57-orbs（2026-11-19，完整編譯測試中）
+## 0.5.57-orbs（2026-11-19，CI 184 通過並交付）
 
 - 珊瑚 v90-r5 的 B2 收尾以獨立原生潛覺／二體攻擊來源支援單色一回合不可消回復；第一組須為合資格火／木四顆，其餘五色首消，受阻色在既有珠落下後消除。此分支停用 fishing，技能及盤數不增加。
 - 求路、持珠與最終輸入邊界持續核對來源；結算後須觀察不可消清除才前進。回復預測、清除觀察與無法證明的潛覺單獨回復量分開記錄。
-- Windows 回歸及 Edge 編輯器通過；B2 原盤在 800／2000ms 各三次均取得 47 步合格路線。完整 CI 結果以交付 `verification.json` 為準；真機時序、傷害及全程通關未驗證。詳見 [版本說明](docs/release-0.5.57.md)。
+- Windows 回歸及 Edge 編輯器通過；B2 原盤在 800／2000ms 各三次均取得 47 步合格路線。[CI 184](https://github.com/hugotang/padcheaper/actions/runs/44531845996) 完整回歸、ASan/UBSan、iPhoneOS／簽章、瀏覽器及四份 GUI 通過並交付，證據見 `verification.json`；真機時序、傷害及全程通關未驗證。詳見 [版本說明](docs/release-0.5.57.md)。
 
 ## 0.5.56-orbs（2026-11-19，CI 182 通過並交付）
 
@@ -38,7 +38,7 @@
 
 ## 最新交付
 
-[0.5.56-orbs](docs/release-0.5.56.md) 已通過 [CI 182](https://github.com/hugotang/padcheaper/actions/runs/44512518697) 完整回歸、ASan/UBSan、arm64 建置／嚴格簽章、瀏覽器及四份 iPhone GUI，2026-11-19 交付新資料夾與 ZIP。包含珊瑚 v90-r4 狀態分支、後段技能銜接與逐盤診斷；`device_verified=false`，全程通關仍待真機驗證。
+[0.5.57-orbs](docs/release-0.5.57.md) 已通過 [CI 184](https://github.com/hugotang/padcheaper/actions/runs/44531845996) 完整回歸、ASan/UBSan、arm64 建置／嚴格簽章、瀏覽器及四份 iPhone GUI，2026-11-19 交付新資料夾與 ZIP。包含珊瑚 v90-r5 的 B2 不可消回復、原生來源覆核與結算診斷；`device_verified=false`，實機回復時序、傷害與全程通關仍待驗證。
 
 ## 版本索引
 

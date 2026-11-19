@@ -2,7 +2,7 @@
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
   "id": "coral-fixed-585607-v90-r5",
-  "status": "0.5.57-local-portable-tests-passed-full-ci-pending",
+  "status": "0.5.57-ci184-verified-delivered-device-pending",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -160,7 +160,13 @@
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "deviceVerified": false,
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
-  "verificationScope": "Windows portable solver/model, 8P, private shape guidance and public API smoke passed; macOS/native/Session, sanitizers, iPhoneOS and GUI pending. See delivery verification.json for final exact-commit evidence."
+  "verificationScope": "Full exact-commit CI passed: native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI probes. Windows portable checks and recorded B2 probe passed. Device timing/damage/clear remain unverified.",
+  "ci": {
+    "number": 184,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44531845996",
+    "commit": "3d1077eeb5c19f27743be60f6f770831fabde739",
+    "conclusion": "success"
+  }
 }
