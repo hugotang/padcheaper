@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "reviewedDate": "2026-11-19",
-  "status": "0.5.58-build-testing-b4-search-acceptance-failed-not-delivered",
+  "status": "0.5.58-ci186-build-verified-b4-search-failed-not-delivered",
   "sources": [
     {
       "name": "GameWith",
@@ -123,8 +123,8 @@
     "r5 unmatchableRecovery requires 0.5.57 or later; delivered 0.5.56/r4 does not implement it.",
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
-  "buildVerified": false,
-  "testSuitesExecuted": false,
+  "buildVerified": true,
+  "testSuitesExecuted": true,
   "deviceVerified": false,
   "limitations": [
     "攻略是策略依據；沒有驗證原生傷害、回復、存活或全程通關。",
@@ -188,7 +188,7 @@
       "summary": "GameWith 新增火／木四連解不可消；求路器未模擬此潛覺時序。r4 採 AppMedia 開場 Solomon＋Riku，確認解除不可消才轉珠；最後 Riku 上限兩盤。"
     }
   ],
-  "verificationScope": "Windows portable regression passed; recorded B4 ordinary search acceptance failed. Full macOS/iPhoneOS/GUI results pending the manual CI. No delivery.",
+  "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. Windows local checks passed. B4 route acceptance FAILED on both platforms; no delivery. Device behavior unverified.",
   "previousDelivery": {
     "profileID": "coral-fixed-585607-v90-r5",
     "ci": {
@@ -208,5 +208,15 @@
     "skillOrderAndPuzzleCapsUnchanged": true
   },
   "b4SearchAcceptancePassed": false,
-  "delivered": false
+  "delivered": false,
+  "ci": {
+    "number": 186,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
+    "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb",
+    "conclusion": "success"
+  },
+  "pendingVerification": [
+    "B4 six-color-four route search acceptance on recorded and additional boards",
+    "Device target/damage, B5 cooldown continuity and a complete Coral clear"
+  ]
 }

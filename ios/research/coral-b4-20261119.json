@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "date": "2026-11-19",
-  "status": "0.5.58-candidate-b4-search-acceptance-failed-full-ci-pending",
+  "status": "0.5.58-ci186-build-verified-b4-search-failed-not-delivered",
   "sourceLogSHA256": "eda95afbb2d35ffa323136aaa22bdc47214a4295c550139700032e2126f4644a",
   "runtimeVersion": "0.5.57-orbs",
   "observedProfileID": "coral-fixed-585607-v90-r5",
@@ -1163,13 +1163,26 @@
     "r6 fixes authorization of weak B4 attacks; it does not prove B4 damage, subsequent cooldowns or a full clear."
   ],
   "verification": {
-    "sourceSyntaxOnly": true,
+    "sourceSyntaxOnly": false,
     "productTestsRun": true,
     "newRouteSearchRun": true,
-    "buildVerified": false,
+    "buildVerified": true,
     "deviceVerified": false,
     "b4SearchAcceptancePassed": false,
-    "delivered": false
+    "delivered": false,
+    "testSuitesExecuted": true,
+    "ci": {
+      "number": 186,
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
+      "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb"
+    },
+    "receipt": "verification-0.5.58.json",
+    "independentFirstWaveOracle": {
+      "routes": 36,
+      "phases": 216,
+      "matches": true,
+      "solutions": 0
+    }
   },
   "recordedBoardProbe": {
     "source": "coral_b4_six_fours_probe.cpp",

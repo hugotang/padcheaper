@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "0.5.58-build-testing-b4-search-acceptance-failed-not-delivered",
+  "status": "0.5.58-ci186-build-verified-b4-search-failed-not-delivered",
   "reviewedDate": "2026-11-19",
   "profileID": "coral-fixed-585607-v90-r6",
   "planSHA256": "6ebae3bc17ff23d33aeed1c037c6f2d7fef6afe0df576c53cbe9b996e6610f0e",
@@ -10,15 +10,14 @@
     "actionsIncludingBranches": 94,
     "skillActions": 87
   },
-  "buildVerified": false,
-  "testSuitesExecuted": false,
+  "buildVerified": true,
+  "testSuitesExecuted": true,
   "deviceVerified": false,
-  "verificationScope": "Windows portable regression passed; recorded B4 ordinary search acceptance failed. Full macOS/iPhoneOS/GUI results pending the manual CI. No delivery.",
+  "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. Windows local checks passed. B4 route acceptance FAILED on both platforms; no delivery. Device behavior unverified.",
   "evidence": "../../research/coral-b4-20261119.json",
   "pendingVerification": [
-    "Full macOS native/Session/solver/schema/sanitizer/iPhoneOS/signature/browser/GUI checks",
-    "B4 six-color-four search acceptance: both recorded boards still fail",
-    "Device B4 target/damage, B5 cooldown continuity and full clear"
+    "B4 six-color-four route search acceptance on recorded and additional boards",
+    "Device target/damage, B5 cooldown continuity and a complete Coral clear"
   ],
   "previousDelivered": {
     "schema": 1,
@@ -224,9 +223,10 @@
     "productTestsRun": false,
     "newRouteSearchRun": false,
     "objcCompilerInvoked": false,
-    "buildOrPackageRun": false
+    "buildOrPackageRun": false,
+    "scope": "Historical source-only checks before this build/test request; current completed checks are recorded above and in verification-0.5.58.json."
   },
-  "sourceSHA256Scope": "LF-normalized source snapshot before manual CI; Windows regression passed; B4 search acceptance FAILED, macOS pending.",
+  "sourceSHA256Scope": "LF-normalized source snapshot tested by the CI commit; completion documentation updated afterward. No delivered package.",
   "sourceSHA256": {
     "ios/src/PHOrbDiagnosticPresentation.inc": "70aa3fc4a288fb120dbb37e9928dccd58320d6753846a59dab18dd874ecf0b8d",
     "ios/src/PHOrbFailurePresentation.inc": "c52d59e33190f82d13356917ffd39c7b0377f3ebeaf654f12ba727d965ca9093",
@@ -270,5 +270,11 @@
     "formation": true,
     "edgeEditor": true,
     "sanitizers": false
+  },
+  "ci": {
+    "number": 186,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
+    "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb",
+    "conclusion": "success"
   }
 }

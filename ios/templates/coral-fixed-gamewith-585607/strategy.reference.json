@@ -2,7 +2,7 @@
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
   "id": "coral-fixed-585607-v90-r6",
-  "status": "0.5.58-build-testing-b4-search-acceptance-failed-not-delivered",
+  "status": "0.5.58-ci186-build-verified-b4-search-failed-not-delivered",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -161,9 +161,9 @@
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "deviceVerified": false,
-  "buildVerified": false,
-  "testSuitesExecuted": false,
-  "verificationScope": "Windows portable regression passed; recorded B4 ordinary search acceptance failed. Full macOS/iPhoneOS/GUI results pending the manual CI. No delivery.",
+  "buildVerified": true,
+  "testSuitesExecuted": true,
+  "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. Windows local checks passed. B4 route acceptance FAILED on both platforms; no delivery. Device behavior unverified.",
   "previousDelivery": {
     "profileID": "coral-fixed-585607-v90-r5",
     "ci": {
@@ -183,5 +183,15 @@
     "skillOrderAndPuzzleCapsUnchanged": true
   },
   "b4SearchAcceptancePassed": false,
-  "delivered": false
+  "delivered": false,
+  "ci": {
+    "number": 186,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
+    "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb",
+    "conclusion": "success"
+  },
+  "pendingVerification": [
+    "B4 six-color-four route search acceptance on recorded and additional boards",
+    "Device target/damage, B5 cooldown continuity and a complete Coral clear"
+  ]
 }

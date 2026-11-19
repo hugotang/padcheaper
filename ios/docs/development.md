@@ -1,5 +1,13 @@
 # 分批開發與待驗證清單
 
+## 2026-11-19 0.5.58 編譯回歸完成；B4 原盤驗收未過，未交付
+
+- [CI 186](https://github.com/hugotang/padcheaper/actions/runs/44551918880) 在來源 `1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb` 完整通過原生／Session、schema／solver、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone 首次／重啟 GUI。CI185 的 Bash 空陣列問題已修正；它未到達的項目不曾列為通過。
+- 本機 Windows 模型與求解器、版本資料 7 項、隊長目錄 11 項、隊伍模型 32 項、地城 14 項、編隊及 Edge 編輯器通過。Windows smoke 沒有 sanitizer；sanitizer 由本次 macOS CI 執行。
+- **B4 功能驗收仍失敗**：Windows 原盤普通 12、單次取色 24、連續取色 12 次全部未取得六色四消；macOS 本次 48 次中 0 次合格。探針 exit 2 被明確標示為驗收失敗，CI 繼續檢查編譯與原生程式，沒有把搜尋失敗改成成功。獨立 Python 核對 36 條路線／216 色相的首消計數均相符。
+- CI 候選 dylib `12,134,912` bytes，SHA-256 `177b08162188459cda59dff938dfef30e6acb664c94f6ce8452b4043f28a7724`；已核對來源 commit、r6 plan、iPhoneOS／arm64／iOS15 metadata、簽章及四份 GUI 收據。詳見 [驗證紀錄](../research/verification-0.5.58.json)。**未建立 E:/ipa 的新資料夾或 ZIP，最新正式交付仍為 0.5.57。**
+- r6 的契約／目標／診斷修正可以阻止弱攻擊，但仍未解決有界步數與時間內的搜尋。下一步需先讓兩張原盤及其他盤面取得合格路線，再驗證真機 B4 目標／傷害、B5 技能銜接與全程通關；`device_verified=false`。下方為此次建置前及失敗 CI 的歷史紀錄。
+
 ## 2026-11-19 0.5.58 編譯測試：B4 搜尋驗收未通過
 
 - 使用者明確要求「編譯測試」。一般 Windows solver/model、8P、形狀引導及公開 API smoke 已通過；兩張實際 B4 原盤以 beam512、48 步、800／2000ms 各三次均未找到六色四消。無解候選不會被視為成功攻擊；庫存足夠不代表限定步數／預算下能找到路線。
