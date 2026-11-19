@@ -10,6 +10,7 @@
 - Windows 以新 log 的 42 格 B2 原盤、轉轉39及六個共用色相、48 步／beam512 搜尋：800ms 與 2000ms 各三次，全部找到並重播通過 47 步路線，最少首消五色／三組四顆／6 Combo，後續既有珠消除闇色後共 7 Combo。這以原生核准火／木提供者為前提；不代表手機預算、回復時序或傷害已驗證。版本資料、目錄、隊伍／地城模型及 Edge 編輯器亦通過。
 - runtime 升為 `0.5.57-orbs`，須搭配 `coral-fixed-585607-v90-r5`。本段為建置前快照：macOS 原生／Session、ASan/UBSan、iPhoneOS／簽章、瀏覽器及四份 GUI 仍待本次手動 CI。完成結果將記於交付包頂層 `verification.json`，不能由下方歷史成功推定。
 - 新版交付使用獨立資料夾與 ZIP。裝置時序、搜尋預算、傷害、耐久及全程通關仍待實機資料。
+- [CI 183](https://github.com/hugotang/padcheaper/actions/runs/44530860692) 的可攜／sanitizer 及原生記憶體／輸入案例通過；Session 案例編譯被 `-Wauto-var-id` 擋下。將新增案例的字典變數改成明確 `NSMutableDictionary *`，並更新入口版本說明；完整 CI 重新驗證後才交付。
 
 ## 2026-11-19 珊瑚 v90-r5：B2 不可消潛覺回復（來源修改，未建置）
 

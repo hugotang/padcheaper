@@ -1,6 +1,6 @@
 static PHOrbSession *StartB2RecoveryTest(FixedTestEngine *e, unsigned failure=0) {
     auto profile=MutableFixedSessionProfile(e);
-    auto first=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
+    NSMutableDictionary *first=profile[@"fixedPlan"][@"floors"][0][@"variants"][0][@"stages"][0];
     first[@"actions"]=@[]; first[@"board"][@"policy"]=@"six_colors_fours";
     NSDictionary *finish=@{@"id":@"finish",@"actions":@[],
         @"board":@{@"policy":@"six_colors_fours",@"assistRecoveryL":@NO,@"maxGestureMS":@0,@"unmatchableRecovery":@YES},

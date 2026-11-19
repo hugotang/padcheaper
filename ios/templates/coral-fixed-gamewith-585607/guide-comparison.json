@@ -120,7 +120,7 @@
     "B14: hold Keisy on the first board, require its native-ready resize on the second, then reserve native-ready Solomon before finishing. This follows AppMedia rather than spending Solomon on B14 resize.",
     "B15: require Solomon for active unmatchable, confirm its removal before planning, then use Riku and Atori. No B15 multi-color latent recovery is enabled; the final Riku stage remains bounded to two boards including stalls.",
     "Execution history freezes separate native enemy identity/HP/alive/target evidence before search, before release and after the settled acknowledged turn. Generation, turn and battle identity bind the result; cached observations never authorize actions.",
-    "r5 unmatchableRecovery needs a new build; delivered 0.5.56/r4 does not implement it.",
+    "r5 unmatchableRecovery requires 0.5.57 or later; delivered 0.5.56/r4 does not implement it.",
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "buildVerified": false,

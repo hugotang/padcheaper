@@ -123,9 +123,11 @@
     }
   },
   "sourceSHA256": {
+    "ios/CHANGELOG.md": "c3e352848d7b4f22ca29fefd66e78fa8837d960d0306b625b837e11318d70820",
+    "ios/README.md": "bafa4d5c3b05b3c067860e5e4033e0edb7f7c90ac2e4f5ebad5f2394e0c03885",
     "ios/build.sh": "962f90778336b9dc9329cbbf272d132278b6018857095a3284e2fd4d9b54d5d7",
-    "ios/docs/coral-plan-review-2026-11-19.md": "d93ee721c07031d527fae65a53679615691dbeeedab133c360c2b7d7844a9ba3",
-    "ios/docs/development.md": "f9fded3d50ea09effa636240f3b80e90451616cca25e34598b4a15a8f8b471e3",
+    "ios/docs/coral-plan-review-2026-11-19.md": "366cccfbea02bdc76fe370696e47e2a9217dcebb163c0404879462f6750e2b7e",
+    "ios/docs/development.md": "74e2bb47270b4064a23698fa39caddf6b368755bc897819f0d2c2d9a294a6962",
     "ios/docs/release-0.5.57.md": "dd33454b4175a0011a95eff1edfb680d291550f1562db3d0c42716495ce82b47",
     "ios/docs/team-plan-config.md": "b1770f592295a71b54901c8bc5ac4e8eebeb568558aff46a1008e2fa087a521a",
     "ios/docs/unmatchable-recovery.md": "b324605e103d822f0b53f1062e384e5032ce9721ab50604eaa0aa1e003e9a31b",
@@ -153,8 +155,8 @@
     "ios/targets/orbs-23.6.1.json": "daf967cddc110b13c06890cc69b02a1a26017b596b9bb14181393ffaf90a7eb3",
     "ios/templates/coral-fixed-gamewith-585607/README.md": "39de6e06695e5605e289a3a85633fafcf78fca88b849a658a93712c81f77d03d",
     "ios/templates/coral-fixed-gamewith-585607/fixed-plan.json": "97f0150538fb6589f3fa8a0be25123452fb25ef7f0ae844526fc713032bb0aa3",
-    "ios/templates/coral-fixed-gamewith-585607/guide-comparison.json": "ebac9270cbece400e4274f6c48ae4602267795adf945a30531a7b801f1869af7",
-    "ios/templates/coral-fixed-gamewith-585607/strategy.reference.json": "d2a14773dc27b7594eab32a472cc8d55159ff6c8a3a8be92cc1a5bea9201050c",
+    "ios/templates/coral-fixed-gamewith-585607/guide-comparison.json": "b2daed81c73bd02a5af040f5b1f21a25a4a5ee8e6af7690c5b1df11d79c38c29",
+    "ios/templates/coral-fixed-gamewith-585607/strategy.reference.json": "bc3bb9b166aa615109176cc6d4a8d6c70711209de89e617dbe2f51c531fd313a",
     "ios/tests/orb_fixed_diagnostics_session_tests.inc": "343733e0857206427b63b732c0bdda7a096ac87518bf2af3f5b3e3a92ce71e63",
     "ios/tests/orb_fixed_plan_probe.inc": "7ff64560784c454de5e6c72682912b262f50dd20d05c4761f00a25466184907f",
     "ios/tests/orb_fixed_profiles_tests.inc": "86ba2754756a8cf482b158bae3d1c1f2fa32ab91694cba83334f42084a712190",
@@ -163,12 +165,20 @@
     "ios/tests/orb_session_tests.mm": "742c6bc1e4adcf0e79d73ec56a750681842abe96786ad684ce72a7b0b7f01c5d",
     "ios/tests/orb_solver_tests.cpp": "842e0e4a019780fa0879e2f279a52dbcd1a6dfad27aa3a3911926bd6dc20cd30",
     "ios/tests/orb_unmatchable_native_tests.inc": "c20e2314b6c00d04e043740642f488c9c013ba4df314b1487e24bf088a831c4f",
-    "ios/tests/orb_unmatchable_session_tests.inc": "39754d8c692b9b572a746eba5da0f71c156157d7887bcf81a14688b5f46d36f9",
+    "ios/tests/orb_unmatchable_session_tests.inc": "e153dc594c8c3638b0278dc298d520a972f871bd11c4515ebee224138d41bae7",
     "ios/tests/orb_unmatchable_solver_tests.inc": "ce1dcdb834a9c3f54723e1fddd690529586c60ca306692cc2c2fb8e8f27ac256",
     "ios/tools/generate_coral_fixed_plan.py": "a756bcd00a9069b26c0dd6bd6c819aec7ddbc76cda43a2bcf1ea3e25e837d485",
     "ios/tools/generate_orbs.py": "d0822df9a4cb6ced8cb41e6a4613a23f39b0bd7699b523039cce981be8777cac"
   },
   "generatedOrbHeaderSHA256": "6b707e1fe6f9ce7b2ab2f2e0227dcecbe492a238eec96294eeae8eafe787ac38",
   "testScope": "Windows portable C/C++, Python metadata/catalog, JS formation/team/dungeon and Edge editor passed. Native/Session, sanitizers, iPhoneOS and simulator pending.",
-  "generatedHeaderSHA256": "6b707e1fe6f9ce7b2ab2f2e0227dcecbe492a238eec96294eeae8eafe787ac38"
+  "generatedHeaderSHA256": "6b707e1fe6f9ce7b2ab2f2e0227dcecbe492a238eec96294eeae8eafe787ac38",
+  "ciAttempts": [
+    {
+      "number": 183,
+      "run": "https://github.com/hugotang/padcheaper/actions/runs/44530860692",
+      "commit": "2b9295f363ea61eed117f20d9f913040fc43a978",
+      "result": "Native and portable/sanitizer passed; Session test compile failed on -Wauto-var-id. Explicit dictionary type fixed; full re-run pending."
+    }
+  ]
 }
