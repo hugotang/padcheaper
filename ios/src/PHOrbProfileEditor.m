@@ -159,6 +159,20 @@
         [choices addObject:action];
     }
     choose.menu = [UIMenu menuWithTitle:@"選擇要編輯及使用的策略" children:choices]; [selection addArrangedSubview:choose];
+    if (record[@"fixedPlan"]) {
+        UILabel *identity=[self label:[NSString stringWithFormat:@"計畫 ID：%@",record[@"id"]]];
+        identity.font=[UIFont systemFontOfSize:13];
+        identity.accessibilityIdentifier=@"padcheaper.orbsFixedPlanID";
+        [selection addArrangedSubview:identity];
+        NSDictionary *preflight=PHOrbFixedPlanPreflight(record);
+        if (preflight.count) {
+            UILabel *status=[self label:preflight[@"message"]];
+            status.font=[UIFont systemFontOfSize:13];
+            status.textColor=[preflight[@"allowed"] boolValue] ? UIColor.secondaryLabelColor : UIColor.systemRedColor;
+            status.accessibilityIdentifier=@"padcheaper.orbsFixedPlanPreflight";
+            [selection addArrangedSubview:status];
+        }
+    }
     if (record[@"activity"]) {
         NSDictionary *guide = record[@"activity"][@"guide"];
         UISwitch *guideSwitch = [UISwitch new]; guideSwitch.on = PHOrbEightGuideEnabled(record[@"activity"]);

@@ -26,6 +26,15 @@
     _fixedStage=nil; _fixedVariant=nil; _fixedPending=nil; _fixedLastStop=nil; _fixedLoops=[NSMutableArray array];
     _unmatchableTrace=@{};
     _fixedPartsGone=_fixedAcknowledged=_fixedStall=false;
+    _fixedPreflight=PHOrbFixedPlanPreflight(_fixedProfile);
+    if (_fixedPreflight.count && ![_fixedPreflight[@"allowed"] boolValue]) {
+        NSString *message=_fixedPreflight[@"message"];
+        _fixedLastStop=@{@"reason":message,@"code":@"plan-update-required",@"scope":@"before-first-action",
+            @"profile":_fixedProfile[@"id"],@"floor":@1,@"stage":@"",@"consumed":@NO,
+            @"confirmedPuzzles":@0,@"action":@0,@"preflight":_fixedPreflight,
+            @"capturedUptimeMS":@(uint64_t(NSProcessInfo.processInfo.systemUptime*1000))};
+        [self queueStop:message]; return NO;
+    }
     return YES;
 }
 - (BOOL)fixedTeamMatches:(const PHOrbSnapshot *)state {
@@ -502,5 +511,6 @@
         @"stage":_fixedStage[@"id"] ?: @"",@"action":@(_fixedAction),@"confirmedPuzzles":@(_fixedPuzzles),
         @"board":_fixedStage[@"board"] ?: @{},@"repeat":_fixedStage[@"repeat"] ?: @{},
         @"pending":_fixedPending ?: @{},@"activeLoops":_fixedLoops ?: @[],@"lastStop":_fixedLastStop ?: @{},
+        @"preflight":_fixedPreflight ?: @{},
         @"consumed":@(_fixedConsumed),@"receipt":@(_fixedAcknowledged),@"partsGone":@(_fixedPartsGone),@"absorbStall":@(_fixedStall)};
 }

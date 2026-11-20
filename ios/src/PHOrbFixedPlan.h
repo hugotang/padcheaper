@@ -43,3 +43,7 @@ FOUNDATION_EXPORT PHOrbFixedPlanMatch PHOrbFixedPlanRepeatSatisfied(NSDictionary
 FOUNDATION_EXPORT NSDictionary *PHOrbFixedPlanFromPackage(id package, NSString **reason);
 FOUNDATION_EXPORT NSDictionary *PHOrbFixedPlanPackageFromProfile(NSDictionary *profile);
 FOUNDATION_EXPORT NSString *PHOrbFixedPlanDescription(NSDictionary *profile);
+// Startup-only content check on a validated profile (or nil). Old data remains
+// importable/exportable; passing this check is not search or damage evidence.
+// Empty means not applicable. Never migrates, selects or rewrites a profile.
+FOUNDATION_EXPORT NSDictionary *PHOrbFixedPlanPreflight(NSDictionary *profile);

@@ -439,7 +439,7 @@ struct EightPreparationState {
     NSDictionary *_goalPlan, *_recovery;
     NSDictionary *_profileLibrary, *_activeProfile;
     NSDictionary *_openingProfile;
-    NSDictionary *_fixedProfile, *_fixedStage, *_fixedPending, *_fixedLastStop;
+    NSDictionary *_fixedProfile, *_fixedStage, *_fixedPending, *_fixedLastStop, *_fixedPreflight;
     NSString *_fixedVariant;
     NSMutableArray<NSDictionary *> *_fixedLoops;
     PHOrbSnapshot _fixedOrigin, _fixedTeam, _fixedBefore;

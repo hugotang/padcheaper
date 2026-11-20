@@ -70,4 +70,5 @@ if [ -n "${BASELINE:-}" ]; then
     fi
 fi
 
+BUILD_DIR="$build_dir" bash ios/tools/test-coral-b4.sh
 BUILD_DIR="$build_dir" bash ios/tools/test-coral-b5.sh

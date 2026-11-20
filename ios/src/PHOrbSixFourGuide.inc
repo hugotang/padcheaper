@@ -1,3 +1,4 @@
+#include "PHOrbSixFourTransport.inc"
 // Search-only guidance for six first-removal fours. A swap changes at most
 // two colour masks, so cache each colour's template work independently. This
 // is never a release evaluator: every proposed winner goes through Evaluate
@@ -111,15 +112,37 @@ bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &option
     std::vector<SixFourGuideNode> beam, next;
     beam.reserve(std::max(size,options.beam)); next.reserve(options.beam*(options.diagonal ? 8u:4u));
     VisitedSet visited(options.beam*(options.diagonal ? 8u:4u));
+    std::array<unsigned,PHOrbBasicTypes> inventory{};
+    for (unsigned i=0;i<size;++i) if (!(context.dynamicSpinners&(Bits(1)<<i))) ++inventory[board.types[i]];
+    unsigned rare=0;
+    for (unsigned c=1;c<PHOrbBasicTypes;++c) if (inventory[c]<inventory[rare]) rare=c;
+    bool transportEligible=!options.diagonal && inventory[rare]==4;
+    // A stationary orb on tape/locked spinner needs a different target set.
+    // Preserve the ordinary template passes for those boards.
+    for (unsigned i=0;i<size;++i)
+        if (board.types[i]==rare && (context.blocked&(Bits(1)<<i)) &&
+            !(context.dynamicSpinners&(Bits(1)<<i))) transportEligible=false;
+    SixFourTransport transport(context,rare);
     for (unsigned pass=0;pass<48 && !interrupted();++pass) {
-        ++passes; ++guidePasses; guide.pass(pass);
+        // Keep the first ordinary opportunities and the full diagonal policy.
+        // Orthogonal four-orb supply then alternates held/non-held transport
+        // lanes. Other inventories get two rare-colour passes before resuming
+        // ordinary guidance. All setup and exploration share this deadline.
+        const bool transportPass=transportEligible && pass>=2;
+        const bool rarePass=!options.diagonal && inventory[rare]>4 && (pass==2 || pass==3);
+        const unsigned hintPass=transportPass ? (pass-2)/2 : rarePass ? pass-2 :
+            !options.diagonal && inventory[rare]>4 && pass>=4 ? pass-2 : pass;
+        const bool held=transportPass && !(pass&1);
+        if (transportPass && !transport.build(held,cancel,deadline)) break;
+        ++passes; ++guidePasses; guide.pass(hintPass);
         SixFourGuideNode initial;
         std::copy_n(board.types,size,initial.cells.begin());
         for (unsigned i=0;i<size;++i) if (!(context.dynamicSpinners&(Bits(1)<<i)))
             initial.colors[initial.cells[i]]|=Bits(1)<<i;
         for (unsigned c=0;c<PHOrbBasicTypes;++c) guide.color(initial,c);
         beam.clear();
-        for (unsigned i=0;i<size;++i) if (PHOrbCanStartAt(&board,i)) {
+        for (unsigned i=0;i<size;++i) if (PHOrbCanStartAt(&board,i) &&
+            (!transportPass || (board.types[i]==rare)==held)) {
             auto node=initial; node.path[0]=uint8_t(i); guide.total(node); beam.push_back(node);
         }
         SixFourGuideNode partial=initial;
@@ -151,6 +174,12 @@ bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &option
                             best=candidate; found=true; return true;
                         }
                     }
+                    if (transportPass) {
+                        const unsigned cost=transport.cost(child.colors[rare],cell,held);
+                        if (cost>options.steps-depth-1) continue;
+                        const unsigned penalty=cost*(held ? 60u : 20u)+(held ? 0u : child.values[rare]);
+                        child.score-=std::min(child.score,penalty);
+                    } else if (rarePass) child.score+=4*child.values[rare];
                     next.push_back(child);
                 }
             }
@@ -159,8 +188,15 @@ bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &option
             std::sort(next.begin(),next.end(),order);
             const size_t keep=std::min(next.size(),size_t(options.beam));
             beam.clear(); std::unordered_set<uint64_t> layouts;
+            std::array<unsigned,PHOrbMaxCells> endpoints{};
             std::vector<bool> selected(next.size());
             for (size_t i=0;i<next.size() && beam.size()<keep;++i) {
+                if (transportPass || rarePass) {
+                    if (endpoints[next[i].path[depth+1]]++<std::max(1u,options.beam/32)) {
+                        beam.push_back(next[i]); selected[i]=true;
+                    }
+                    continue;
+                }
                 uint64_t key=next[i].path[0];
                 for (auto tag:next[i].layouts) { key^=tag; key*=UINT64_C(1099511628211); }
                 key^=next[i].path[depth+1]/context.width;

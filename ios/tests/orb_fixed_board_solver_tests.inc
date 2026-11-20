@@ -1,5 +1,6 @@
 // Fixed-plan board contracts: independent layouts, strict first removal and
 // cascade constraints. Cases are authored here; execution awaits build/test.
+#include "../research/coral_b4_fixtures.h"
 static PHOrbBoard FixedBoardFixture(unsigned width, unsigned height, std::initializer_list<unsigned> cells) {
     PHOrbBoard board{}; board.width = uint8_t(width); board.height = uint8_t(height);
     unsigned i = 0;
@@ -97,28 +98,22 @@ static void FixedBoardSolverTests() {
     options.fixedBoard.mode = static_cast<PHOrbFixedBoardMode>(255);
     Check(!PHOrbEvaluateWithOptions(six,options,value), "unknown fixed puzzle policy is rejected");
 
-    // Device 0.5.57 B4, sanitized original boards and submitted paths. These
+    // Device 0.5.57 and 0.5.59 B4, original boards and submitted paths. These
     // independently reproduce the weak attacks, not a future search result.
-    const unsigned b4Boards[2][42]={
-        {1,5,3,3,1,2,4,4,2,4,5,1,5,5,4,5,4,3,1,0,5,4,3,3,3,1,2,1,5,2,0,0,1,3,4,5,3,0,4,0,4,1},
-        {0,1,5,0,4,5,2,3,5,3,2,3,4,0,0,0,1,4,4,2,5,0,1,0,2,0,2,3,1,4,3,2,5,5,2,3,2,3,1,5,1,4}};
-    const uint8_t b4Paths[2][44]={
-        {26,19,18,11,12,13,20,19,26,33,34,41,40,33,32,39,40,41,34,33,26,25,24,23,22,29,28,21,14,15,22,29,28,21,22},
-        {36,37,30,29,22,15,16,17,10,11,12,19,20,27,26,33,32,31,30,29,28,21,22,29,30,31,32,39,40,33,32,39,38,31,24,17,10,9,8,1,2,3,10,17}};
-    for (unsigned i=0;i<2;++i) {
-        PHOrbBoard b{}; b.width=7; b.height=6; b.spinnerMask=UINT64_C(1)<<7; b.spinnerColors=63;
-        for (unsigned c=0;c<42;++c) { b.types[c]=uint8_t(b4Boards[i][c]); b.tokens[c]=c+1; }
-        PHOrbRoute r{}; r.count=i ? 44 : 35; std::copy_n(b4Paths[i],r.count,r.cells);
+    for (const auto &fixture : CoralB4Cases) {
+        const auto b=CoralB4Board(fixture);
+        PHOrbRoute r{}; r.count=fixture.pathCount; std::copy_n(fixture.path,r.count,r.cells);
         auto burst=PHOrbOptionsForQuality(PHOrbSearchQuality::Thorough);
         burst.fixedBoard={PHOrbFixedBoardMode::FourAttack,63,true};
         burst.goals=Goals(PHOrbGoalColors,63,6,0); burst.goals.items[burst.goals.count++]={PHOrbGoalFour,32,1,0};
         uint32_t d=0; uint8_t n=0;
-        Check(PHOrbEvaluateRoute(b,r,burst,value,d,n) && value.goalsMet && value.firstWaveFours==i+2,
-            "both B4 device routes meet the old six-colour and heart-four contract despite only two or three fours");
+        Check(PHOrbEvaluateRoute(b,r,burst,value,d,n) && value.goalsMet && value.hazardsSafe &&
+            value.firstWaveFours==fixture.firstFours && value.firstWaveCombos==fixture.firstCombos,
+            "all four B4 device routes meet the old six-colour/heart-four contract despite only two to four fours");
         burst.fixedBoard.requireSixColorFours=true;
         Check(PHOrbEvaluateRoute(b,r,burst,value,d,n) && !value.goalsMet && !value.fixedBoardSatisfied &&
             value.firstWaveFourColors!=63,
-            "neither recorded weak B4 route can be executed under the new burst contract even with legacy goals");
+            "no recorded weak B4 route can be executed under the burst contract even with legacy goals");
     }
 
     // Freeze the B5 released layout with one equal-color swap. It is already

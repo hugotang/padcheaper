@@ -152,8 +152,14 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // hints. A swap updates only its two colours. Stable template hints, distinct
 // donor costs and layout diversity guide exploration; a winner still requires
 // full original shared-phase evaluation and normal route replay. No recorded
-// boards or precomputed paths are used. The general beam gets two thirds of
-// the remaining time, followed by at most two segment-repair rounds. Different
+// boards or precomputed paths are used.
+// Orthogonal passes also reserve endpoint diversity and, for exactly four
+// fixed orbs of the rarest colour, use a relaxed continuous-drag distance
+// table. Held-colour and other-colour starts have separate tables; construction
+// is bounded, cancellable and charged to the original deadline. Other colours
+// are interchangeable only in this hint. Full phase evaluation stays exact.
+// The general beam gets two thirds of the remaining time, followed by at most
+// two segment-repair rounds. Different
 // missing-colour sets supply seeds; each edit joins the original endpoints and
 // replays its suffix. Tape/spinners remain closed, steps stay bounded, and all
 // original phase/release conditions still apply. No thorn/special-orb recovery

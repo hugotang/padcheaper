@@ -107,24 +107,22 @@ fi
 # Report actual conditional search results; no solution is a measured limit,
 # not a successful route. The probe fails for invalid API or replay results.
 "$build_dir/orb-timed-fishing-probe" | tee "$build_dir/orb-timed-fishing-probe.log"
-# B4 acceptance is reported separately from API/test success. Exit 2 means
-# the bounded search did not solve every recorded board; retain that failure
-# while continuing compiler/native/UI diagnostics. Never call it a passing
-# route check or use the CI conclusion as permission for a repaired release.
-"$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
-    ios/research/coral_b4_six_fours_probe.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
-    "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/coral-b4-probe"
-for mode in ordinary single multi; do
+# B4 ordinary search is a release gate. Retain an acceptance miss until the
+# remaining diagnostics finish, then fail before the dylib build.
+coral_b4_status=0
+BUILD_DIR="$build_dir" CORAL_SOLVER_OBJECT="$build_dir/PHOrbSolver.o" \
+    CORAL_CXX="$(xcrun --sdk macosx --find clang++)" bash ios/tools/test-coral-b4.sh || coral_b4_status=$?
+if [ "$coral_b4_status" -ne 0 ] && [ "$coral_b4_status" -ne 2 ]; then
+    exit "$coral_b4_status"
+fi
+# Conditional fishing remains diagnostic; ordinary acceptance must succeed
+# without fishing, clock changes or extra turns.
+for mode in single multi; do
     probe_status=0
-    # macOS Bash 3.2 treats an empty array expansion as unset under set -u.
-    if [ "$mode" = ordinary ]; then
-        "$build_dir/coral-b4-probe" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
-    else
-        "$build_dir/coral-b4-probe" "--$mode" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
-    fi
+    "$build_dir/coral-b4-probe" "--$mode" > "$build_dir/coral-b4-$mode.jsonl" || probe_status=$?
     cat "$build_dir/coral-b4-$mode.jsonl"
     if [ "$probe_status" -eq 2 ]; then
-        echo "B4 route acceptance NOT PASSED ($mode); delivery remains withheld."
+        echo "B4 conditional fishing not solved ($mode); this is not ordinary search acceptance."
     elif [ "$probe_status" -ne 0 ]; then
         exit "$probe_status"
     else
@@ -220,4 +218,5 @@ done
 
 # The early acceptance probe may have missed a route; retain that failure
 # after every native/Session result without permitting build/package.
+if [ "$coral_b4_status" -ne 0 ]; then exit "$coral_b4_status"; fi
 exit "$coral_b5_status"

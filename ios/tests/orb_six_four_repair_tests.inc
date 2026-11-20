@@ -1,6 +1,8 @@
 // Private repair geometry checks. These do not claim that bounded search can
 // solve the recorded B5 corpus; the separate acceptance probe measures that.
+#include "orb_six_four_transport_tests.inc"
 static void SixFourRepairTests() {
+    SixFourTransportTests();
     PHOrbBoard board{}; board.width=7; board.height=6; board.minErase=3;
     for (unsigned y=0;y<6;++y) for (unsigned x=0;x<7;++x) {
         const unsigned i=y*7+x;

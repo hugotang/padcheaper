@@ -5,6 +5,7 @@
 // stays in orb_solver_tests.cpp at normal optimisation.
 #include "PHOrbSolver.h"
 #include "../research/coral_b5_fixtures.h"
+#include "../research/coral_b4_fixtures.h"
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
@@ -66,6 +67,13 @@ static PHOrbGoal Goal(PHOrbGoalKind kind, uint8_t colors, uint8_t count, uint8_t
 }
 
 int main() {
+    for (unsigned i : {0u,2u}) {
+        auto options=CoralB4Options(); options.milliseconds=800;
+        const auto board=CoralB4Board(CoralB4Cases[i]);
+        Run("four-orb transport tables",board,options);
+        options.milliseconds=5;
+        Run("transport shared deadline",board,options);
+    }
     for (const auto &fixture : CoralB5Cases) {
         auto options=CoralB5Options(fixture); options.milliseconds=80;
         const auto board=CoralB5Board(fixture);

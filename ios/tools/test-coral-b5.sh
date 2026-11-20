@@ -23,6 +23,7 @@ cat "$test_dir/coral-b5-acceptance.jsonl"
 if [ "$probe_status" -eq 2 ]; then
     echo "B5 recorded route acceptance NOT PASSED; this is not a repaired release."
 elif [ "$probe_status" -eq 0 ]; then
+    python3 ios/tools/verify_coral_first_waves.py --floor 5 "$test_dir/coral-b5-acceptance.jsonl"
     echo "B5 recorded route acceptance passed; mobile budget, damage and clear remain unverified."
 else
     echo "B5 probe failed API/replay validation."

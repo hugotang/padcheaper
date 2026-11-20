@@ -1,4 +1,40 @@
 // Schema and pure policy cases only; running these awaits explicit build/test.
+#include "orb_coral_preflight_fixture.inc"
+static void CoralPreflightProfilesTests(void) {
+    for (unsigned revision=5;revision<=7;++revision) {
+        NSMutableDictionary *profile=CoralPreflightProfile(revision);
+        NSData *before=PHOrbExportProfileData(profile,NULL);
+        NSDictionary *library=PHOrbProfilesImportingData(PHOrbDefaultProfiles(),before,NULL);
+        NSDictionary *saved=PHOrbProfileNamed(library,profile[@"id"]);
+        NSDictionary *check=PHOrbFixedPlanPreflight(saved);
+        Check(before && saved && check.count && [check[@"allowed"] boolValue]==(revision==7) &&
+            [check[@"profile"] isEqual:profile[@"id"]] && [NSJSONSerialization isValidJSONObject:check] &&
+            [before isEqual:PHOrbExportProfileData(saved,NULL)],
+            "old Coral plans remain importable and unchanged but cannot silently omit burst requirements at startup");
+        if (revision<7) Check([check[@"missing"] count]>0 && [check[@"message"] containsString:@"r7"] &&
+            [PHOrbFixedPlanDescription(saved) containsString:@"無法開始 Auto"],
+            "the description explains the missing content and exact replacement without declaring gameplay fixed");
+    }
+    for (unsigned mutation=0;mutation<8;++mutation) {
+        NSMutableDictionary *profile=CoralPreflightProfile(mutation<2 ? 5 : 7);
+        NSMutableDictionary *b4=profile[@"fixedPlan"][@"floors"][3][@"variants"][0][@"stages"][1];
+        if (!mutation) profile[@"id"]=@"coral-fixed-585607-v90-r7";
+        if (mutation==1) { profile[@"id"]=@"my-copy"; profile[@"name"]=@"自訂名稱"; profile[@"source"]=@"copied"; }
+        if (mutation==2) [b4[@"board"] removeObjectForKey:@"requireSixColorFours"];
+        if (mutation==3) b4[@"requireEffectsClear"]=@[@"damage_void"];
+        if (mutation==4) b4[@"requireEnemyState"][0][@"monster"]=@202577;
+        if (mutation==5) [b4[@"actions"] removeLastObject];
+        if (mutation==6) profile[@"fixedPlan"][@"floors"][4][@"variants"][0][@"stages"][3][@"id"]=@"other-finish";
+        if (mutation==7) profile[@"id"]=@"reviewed-custom-copy";
+        NSDictionary *library=PHOrbProfilesImportingData(PHOrbDefaultProfiles(),PHOrbExportProfileData(profile,NULL),NULL);
+        NSDictionary *check=PHOrbFixedPlanPreflight(PHOrbProfileNamed(library,profile[@"id"]));
+        Check(library && check.count && [check[@"allowed"] boolValue]==(mutation==7),
+            "startup checks actual burst, coverage, roster and target policies even under a copied or misleading revision ID");
+    }
+    NSMutableDictionary *other=CoralPreflightProfile(5); other[@"dungeon"]=@7802;
+    Check(!PHOrbFixedPlanPreflight(other).count && !PHOrbFixedPlanPreflight(nil).count,
+        "the Coral content check does not change unrelated dungeon policies or an empty selection");
+}
 static NSMutableDictionary *FixedFixture(void) {
     NSMutableArray *members = [NSMutableArray array];
     for (unsigned i = 0; i < 6; ++i) [members addObject:@{@"body":@100,@"assist":@0,
@@ -18,6 +54,7 @@ static NSMutableDictionary *FixedFixture(void) {
     return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:NULL];
 }
 static void FixedProfilesTests(void) {
+    CoralPreflightProfilesTests();
     NSData *coralData=[NSData dataWithContentsOfFile:@"ios/templates/coral-fixed-gamewith-585607/fixed-plan.json"];
     NSDictionary *coralPackage=coralData ? [NSJSONSerialization JSONObjectWithData:coralData options:0 error:NULL] : nil;
     NSDictionary *coral=PHOrbFixedPlanFromPackage(coralPackage,NULL);

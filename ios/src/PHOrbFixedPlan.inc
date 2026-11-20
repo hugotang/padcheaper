@@ -387,10 +387,58 @@ NSDictionary *PHOrbFixedPlanPackageFromProfile(NSDictionary *profile) {
     if (!profile[@"fixedPlan"] || !PHOrbProfilesValid(@{@"schema":@1,@"selected":@"",@"autoSelect":@NO,@"profiles":@[profile]})) return nil;
     return @{@"format":@"padcheaper-fixed-plan",@"schema":@1,@"target":@(PHTargetID),@"profile":profile};
 }
+NSDictionary *PHOrbFixedPlanPreflight(NSDictionary *profile) {
+    // Callers supply a schema-validated profile (or nil).
+    // Identify the actual native dungeon/team binding, not a user-editable
+    // title or revision suffix. Copies retain the same requirements. Other
+    // dungeons and generic fixed plans keep their explicit board contracts.
+    if (!profile[@"fixedPlan"] || ![profile[@"dungeon"] isEqual:@7801] || ![profile[@"floor"] isEqual:@1] ||
+        ![profile[@"team"] isEqual:@[@13828,@13876,@13744,@13878,@8476,@8476]]) return @{};
+    NSArray *floors=profile[@"fixedPlan"][@"floors"];
+    NSMutableArray *missing=[NSMutableArray array];
+    NSSet *effects=[NSSet setWithArray:@[@"damage_absorb",@"attribute_absorb",@"damage_void"]];
+    NSSet *roster=[NSSet setWithArray:@[@202575,@202578,@202576]];
+    for (NSNumber *number in @[@4,@5]) {
+        const NSUInteger index=number.unsignedIntegerValue-1;
+        NSArray *variants=index<floors.count ? floors[index][@"variants"] : @[];
+        NSArray *required=number.unsignedIntValue==4 ? @[@"clear-absorption",@"finish"] : @[@"finish"];
+        if (!variants.count) [missing addObject:[NSString stringWithFormat:@"B%@ 步驟",number]];
+        for (NSDictionary *variant in variants) for (NSString *identifier in required) {
+            NSDictionary *stage=nil;
+            for (NSDictionary *candidate in variant[@"stages"])
+                if ([candidate[@"id"] isEqual:identifier]) { stage=candidate; break; }
+            NSString *label=[NSString stringWithFormat:@"B%@ %@",number,identifier];
+            if (!stage) { [missing addObject:[label stringByAppendingString:@" 步驟"]]; continue; }
+            NSDictionary *board=stage[@"board"];
+            if (![board[@"policy"] isEqual:@"six_colors_fours"] ||
+                !PHOrbProfileIsBoolean(board[@"requireSixColorFours"]) || ![board[@"requireSixColorFours"] boolValue])
+                [missing addObject:[label stringByAppendingString:@" 六色各四消"]];
+            if (![effects isSubsetOfSet:[NSSet setWithArray:stage[@"requireEffectsClear"] ?: @[]]])
+                [missing addObject:[label stringByAppendingString:@" 吸收／無效覆蓋檢查"]];
+            if (number.unsignedIntValue!=4) continue;
+            NSArray *enemies=stage[@"requireEnemyState"] ?: @[];
+            if (enemies.count!=3 || ![[NSSet setWithArray:[enemies valueForKey:@"monster"]] isEqual:roster])
+                [missing addObject:[label stringByAppendingString:@" 敵人名單檢查"]];
+            NSDictionary *target=[stage[@"actions"] lastObject];
+            if (![target[@"kind"] isEqual:@"target"] || ![target[@"target"] isEqual:@"attribute_absorb"] ||
+                ![target[@"color"] isEqual:@2])
+                [missing addObject:[label stringByAppendingString:@" 技能後木吸收目標檢查"]];
+        }
+    }
+    NSString *reference=@"coral-fixed-585607-v90-r7";
+    NSString *message=missing.count ? [NSString stringWithFormat:
+        @"珊瑚計畫 %@ 缺少：%@，無法開始 Auto。請在策略庫匯入並選用 %@。更新程式不會自動更新已儲存的計畫。",
+        profile[@"id"], [missing componentsJoinedByString:@"、"], reference] :
+        @"此計畫已包含 B4／B5 六色各四消及效果覆蓋條件；實機傷害與通關仍待驗證。";
+    return @{@"scope":@"coral-b4-b5-startup-content",@"profile":profile[@"id"] ?: @"",
+        @"referenceProfile":reference,@"allowed":@(missing.count==0),@"missing":[missing copy],@"message":message};
+}
 NSString *PHOrbFixedPlanDescription(NSDictionary *profile) {
     if (!profile[@"fixedPlan"] || !PHOrbFixedPlanValid(profile[@"fixedPlan"])) return @"固定隊伍計畫無效";
     NSMutableArray *lines = [NSMutableArray arrayWithObjects:profile[@"name"] ?: @"固定隊伍計畫",
         @"單人原生固定隊伍；不套隊、不入場、不重打。每層依序確認技能及轉珠後才推進。",nil];
+    NSDictionary *preflight=PHOrbFixedPlanPreflight(profile);
+    if (preflight.count) [lines addObject:preflight[@"message"]];
     for (NSDictionary *floor in profile[@"fixedPlan"][@"floors"]) for (NSDictionary *variant in floor[@"variants"])
         for (NSDictionary *stage in variant[@"stages"]) [lines addObject:[NSString stringWithFormat:@"B%@ · %@ · %@：%@，至少 %@ 盤，上限 %@ 盤",
             floor[@"number"],variant[@"kind"],stage[@"id"],stage[@"board"][@"policy"],stage[@"repeat"][@"minimumPuzzles"],stage[@"repeat"][@"maximumPuzzles"]]];

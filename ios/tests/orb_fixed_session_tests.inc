@@ -1,5 +1,6 @@
 // Fixed-plan state-machine fixtures. Written separately from the real solver
 // contracts so native acknowledgement/identity behavior is observable.
+#include "orb_coral_preflight_fixture.inc"
 @interface FixedTestEngine : FakeOrbEngine {
 @public
     BOOL unknownFixed, unknownReady, ignoreTarget, swapOnTransform;
@@ -82,6 +83,56 @@ static NSMutableDictionary *MutableFixedSessionProfile(FixedTestEngine *engine) 
 static void AdvanceFixedToSolveOrStop(PHOrbSession *s, FixedTestEngine *e) {
     for (unsigned i=0;i<240 && ![s.snapshot[@"phase"] isEqual:@"solving"] && ![s.snapshot[@"phase"] isEqual:@"stopped"];++i)
         Tick(s,e,Frame(),0.02,0,false);
+}
+static void CoralPreflightSessionTests() {
+    for (unsigned automatic=0;automatic<2;++automatic) {
+        FixedTestEngine *e=[FixedTestEngine new]; FixedSessionProfile(e);
+        NSDictionary *old=CoralPreflightProfile(5), *current=CoralPreflightProfile(7);
+        e->live.identity.dungeon=7801; e->live.identity.floor=1;
+        for (unsigned i=0;i<6;++i) {
+            NSDictionary *member=old[@"fixedPlan"][@"members"][i]; auto &native=e->live.automation.members[i];
+            native.number=native.identityNumber=[member[@"body"] unsignedIntValue];
+            PHBattleCatalogIDForNumber(native.number,&native.sourceCatalogIDs[0]);
+            native.sourceCatalogIDs[1]=native.assistCatalogID=0; native.assistState=0;
+            if (member[@"assist"]!=NSNull.null && [member[@"assist"] unsignedIntValue]) {
+                PHBattleCatalogIDForNumber([member[@"assist"] unsignedIntValue],&native.sourceCatalogIDs[1]);
+                native.assistCatalogID=native.sourceCatalogIDs[1]; native.assistState=172;
+            }
+        }
+        e->chosenSource[1]=PHOrbSkillAssist; e->chosenSkill[1]=66752;
+        PHOrbSession *s=[[PHOrbSession alloc] initWithEngine:e];
+        NSDictionary *library=@{@"schema":@1,@"selected":old[@"id"],@"autoSelect":@(automatic),@"profiles":@[old]};
+        Check([s configureProfiles:library],"an outdated Coral plan stays loadable for review and export");
+        Tick(s,e,Frame()); [s queueAutomatic]; AdvanceFixedToSolveOrStop(s,e);
+        NSDictionary *snapshot=s.snapshot, *progress=snapshot[@"fixedPlanProgress"], *stop=progress[@"lastStop"];
+        Check([snapshot[@"phase"] isEqual:@"stopped"] && [stop[@"code"] isEqual:@"plan-update-required"] &&
+            [stop[@"scope"] isEqual:@"before-first-action"] && [progress[@"profile"] isEqual:old[@"id"]] &&
+            [stop[@"reason"] isEqual:snapshot[@"message"]] && ![progress[@"consumed"] boolValue] &&
+            ![progress[@"preflight"][@"allowed"] boolValue] && ![snapshot[@"searchTrace"] count] &&
+            e->skillOrder.empty() && !e->targetCalls && !e->stages && !e->releases,
+            "explicit and automatically matched old Coral plans stop before any skill, target, solver or gesture");
+        for (unsigned i=0;i<12;++i) Tick(s,e,Frame());
+        Check([s.snapshot[@"fixedPlanProgress"][@"lastStop"] isEqual:stop],
+            "idle reads preserve the startup refusal and its selected profile content");
+        Check([s configureProfiles:@{@"schema":@1,@"selected":current[@"id"],@"autoSelect":@NO,@"profiles":@[old,current]}],
+            "the user can select a corrected plan without altering the saved old record");
+        [s queueAutomatic];
+        for (unsigned i=0;i<180 && e->skillOrder.empty() && ![s.snapshot[@"phase"] isEqual:@"stopped"];++i)
+            Tick(s,e,Frame(),0.02,0,false);
+        Check(e->skillOrder.size()==1 && e->skillOrder[0]==1 &&
+            [s.snapshot[@"fixedPlanProgress"][@"preflight"][@"allowed"] boolValue] &&
+            [s.snapshot[@"fixedPlanProgress"][@"consumed"] boolValue],
+            "correcting an untouched B1 plan permits only the original first prescribed skill");
+        [s queueStop:@"preflight consumed fixture"];
+        NSDictionary *consumedStop=s.snapshot[@"fixedPlanProgress"][@"lastStop"];
+        [s configureProfiles:library]; [s queueAutomatic];
+        for (unsigned i=0;i<30;++i) Tick(s,e,Frame());
+        Check(e->skillOrder.size()==1 && !e->targetCalls && !e->stages &&
+            [s.snapshot[@"message"] containsString:@"已有執行紀錄"] &&
+            [s.snapshot[@"fixedPlanProgress"][@"lastStop"] isEqual:consumedStop],
+            "switching back to an old plan never replaces a consumed-run refusal with a restartable preflight");
+        [s queueStop:@"preflight cleanup"];
+    }
 }
 static void FixedPrivateTargetSessionTests() {
     for (unsigned scenario=0;scenario<9;++scenario) {
@@ -171,6 +222,7 @@ static void FixedAbsorptionTargetSessionTests() {
     }
 }
 static void FixedSessionTests(void) {
+    CoralPreflightSessionTests();
     FixedPrivateTargetSessionTests();
     FixedAbsorptionTargetSessionTests();
     for (unsigned scenario=0;scenario<6;++scenario) {

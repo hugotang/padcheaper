@@ -56,6 +56,21 @@ static void PHProbeFixedPlanStorage(UIWindow *overlay) {
         UILabel *summary=(UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsFixedPlanSummary");
         PHProbeCheck([summary.text containsString:@"B15"] && PHProbeFind(editor.view,@"padcheaper.orbsFixedPlanExport"),
             @"Fixed plan editor shows the final floor and exposes its dedicated export");
+        UILabel *planID=(UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsFixedPlanID");
+        UILabel *preflight=(UILabel *)PHProbeFind(editor.view,@"padcheaper.orbsFixedPlanPreflight");
+        PHProbeCheck([planID.text containsString:roundtrip[@"id"]] && [preflight.text containsString:@"仍待驗證"],
+            @"The selected plan ID and remaining gameplay verification are visible without expanding details");
+        NSMutableDictionary *stalePackage=[NSJSONSerialization JSONObjectWithData:exported options:NSJSONReadingMutableContainers error:NULL];
+        NSMutableDictionary *stale=stalePackage[@"profile"];
+        [stale[@"fixedPlan"][@"floors"][3][@"variants"][0][@"stages"][0][@"board"] removeObjectForKey:@"requireSixColorFours"];
+        PHOrbProfileEditor *staleEditor=[[NSClassFromString(@"PHOrbProfileEditor") alloc]
+            initWithLibrary:@{@"schema":@1,@"selected":stale[@"id"],@"autoSelect":@NO,@"profiles":@[stale]}
+            settings:stale[@"settings"] formations:saved[@"formationLibrary"] context:@{}
+            save:^NSString *(NSDictionary *a,NSDictionary *b) { return nil; }];
+        [staleEditor loadViewIfNeeded];
+        UILabel *staleStatus=(UILabel *)PHProbeFind(staleEditor.view,@"padcheaper.orbsFixedPlanPreflight");
+        PHProbeCheck([staleStatus.text containsString:@"無法開始 Auto"] && [staleStatus.text containsString:@"B4 clear-absorption"],
+            @"Even a profile named r7 visibly reports missing burst content before starting Auto");
         NSDictionary *before=[[editor valueForKey:@"selected"] copy];
         [(UIButton *)PHProbeFind(editor.view,@"padcheaper.orbsProfileAnyTeam") sendActionsForControlEvents:UIControlEventTouchUpInside];
         PHProbeCheck([before isEqual:[editor valueForKey:@"selected"]],@"Fixed plan cannot discard its six-member binding in the editor");
