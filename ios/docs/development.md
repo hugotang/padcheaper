@@ -1,5 +1,12 @@
 # 分批開發與待驗證清單
 
+## 2026-11-20 0.5.59 編譯測試完成：B5 兩平台 24/24，B4 尚未完整通過
+
+- [CI 188](https://github.com/hugotang/padcheaper/actions/runs/44671512108) 在來源 `c08eb628f35d51b543d35a635231687fb0af4d30` 完整通過原生／Session、schema／solver、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone 首次／重啟 GUI。Windows 可攜回歸、私有快取／改寫／取消案例、版本資料、目錄、編隊／隊伍／地城與 Edge 編輯器亦通過；Windows smoke 無 sanitizer。
+- B5 四份歷史原盤於 Windows 及 macOS 各 24/24 次搜尋成功，全部在原 48 步、800/2000ms 預算下找到並重播六色各四消。Windows 首輪只有 6/24 的失敗也保留於收據。獨立 Python 分別核對兩平台各 24 條路線／144 色相，首消計數全部一致。
+- **B4 仍未完整通過**：Windows、macOS 的第二張普通搜尋各 6/6，第一張普通搜尋及單次／連續取色仍失敗。CI 的編譯／回歸成功不代表 B4 或完整 plan 修好，沒有建立 E:/ipa 新資料夾或 ZIP，最新正式交付仍為 0.5.57。
+- CI 候選 dylib `12,171,632` bytes，SHA-256 `bf0920fa20cb6579ef5aeabb070c9caa15ebe05dee590791d23f0604d51a2dd6`。核對來源 commit、r7 plan、iPhoneOS／arm64／iOS15 metadata、簽章及四份 GUI 收據；完整證據見 [verification-0.5.59.json](../research/verification-0.5.59.json)。真機 B5 傷害、手機預算、B6→B7 冷卻及全程通關仍未驗證，`device_verified=false`。
+
 ## 2026-11-20 0.5.59 編譯測試中：B5 原盤 24/24，B4 仍未完整通過
 
 - [CI 187](https://github.com/hugotang/padcheaper/actions/runs/44669188727) 原生／Session、schema／solver、ASan/UBSan 及其他模型回歸已通過；最後 B5 探針編譯缺少 macOS SDK root，`string.h` 找不到。補上 `xcrun --sdk macosx --show-sdk-path` 的 `-isysroot`，重派完整 CI。該失敗 CI 尚未執行 B5 探針、iPhoneOS 建置、瀏覽器或 GUI，這些不列為通過。

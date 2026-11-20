@@ -1,7 +1,8 @@
 {
   "schema": 1,
   "date": "2026-11-20",
-  "status": "authored-fixtures-and-source-review; search-not-run",
+  "status": "0.5.59-ci188-b5-search-24-of-24-windows-and-macos; device-unverified",
+  "verificationReceipt": "verification-0.5.59.json",
   "profile": "coral-fixed-585607-v90-r7",
   "deviceVerified": false,
   "cases": [
@@ -126,7 +127,7 @@
   "limits": [
     "Historical routes are failure evidence, not acceptable witnesses for the new contract.",
     "0.5.52 retains colour/path geometry only; unrecorded enhancement and blind-turn fields use zero.",
-    "No replay/search/test or new dylib build was run for this revision.",
+    "B5 offline search/replay passed 24/24 per platform and CI 188 built the candidate; B4 remains incomplete and device behavior is unverified.",
     "Six colour fours are a puzzle contract, not a damage or kill guarantee."
   ]
 }

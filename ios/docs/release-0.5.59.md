@@ -4,7 +4,7 @@
 
 搜尋先用逐色快取與不同布局候選找六色四消，交換只更新兩色。找到候選仍通過全部轉轉色相、固定起點、膠帶／轉轉阻擋及合法路線重播。若未找到，再用剩餘原預算的一般搜尋與路線區段改寫，沒有增加步數或預存原盤答案。新診斷分別列出引導與改寫的輪數、候選數。
 
-Windows 四份 B5 歷史原盤，800／2000ms、48 步各三次，已 24/24 通過；最新 0.5.58 原盤得到 42 步六色四消。原區段改寫首輪僅 6/24，已保留失敗證據。一般可攜回歸、私有引導／改寫、API smoke 通過；macOS 原生／Session、ASan/UBSan、iPhoneOS／簽章、瀏覽器及四份 iPhone GUI 待本次手動 CI。
+Windows 四份 B5 歷史原盤，800／2000ms、48 步各三次，已 24/24 通過；最新 0.5.58 原盤得到 42 步六色四消。原區段改寫首輪僅 6/24，已保留失敗證據。一般可攜回歸、私有引導／改寫、API smoke 通過；[CI 188](https://github.com/hugotang/padcheaper/actions/runs/44671512108) 在 `c08eb628f35d51b543d35a635231687fb0af4d30` 完整通過 macOS 原生／Session、ASan/UBSan、iPhoneOS／簽章、瀏覽器及四份 iPhone GUI，macOS B5 同樣 24/24。完整證據見 [verification-0.5.59.json](../research/verification-0.5.59.json)。
 
 **B4 第一張原盤仍未通過；第二張普通搜尋 6/6 通過。因此本版是編譯驗證候選，沒有建立 E:/ipa 正式交付，不代表整份 plan 已修好。** 最新正式交付仍為 0.5.57。真機 B5 傷害、手機預算、B6→B7 冷卻與全程通關仍未驗證，`device_verified=false`。
 

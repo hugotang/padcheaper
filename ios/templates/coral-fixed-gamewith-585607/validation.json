@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "0.5.59-local-b5-search-passed-b4-incomplete-ci-pending",
+  "status": "0.5.59-ci188-build-verified-b5-passed-b4-incomplete-not-delivered",
   "reviewedDate": "2026-11-20",
   "profileID": "coral-fixed-585607-v90-r7",
   "planSHA256": "d6a8ce83327a53d616e7b1a372b9e4277a20a58755d511767d0fe02923efa2a8",
@@ -10,15 +10,14 @@
     "actionsIncludingBranches": 94,
     "skillActions": 87
   },
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
   "deviceVerified": false,
-  "verificationScope": "Windows portable/model, private guidance/repair and API smoke passed; B5 24/24 passed, B4 ordinary second board 6/6 and first board 0/6. macOS native/Session, sanitizers, iPhoneOS/signature and GUI pending this build. No device or full-plan validation.",
+  "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. B5 24/24 on Windows and macOS; independent 144-phase first-wave oracle per platform. B4 first board and fishing acceptance still fail; no delivery or device validation.",
   "evidence": "../../research/coral-b5-20261120.json",
   "pendingVerification": [
     "B4 first recorded board search acceptance",
-    "macOS native/Session, ASan/UBSan, iPhoneOS/signature and four iPhone GUI",
-    "Device B5 damage, B6/B7 cooldown continuity and full clear"
+    "Device B5 damage, mobile timing, B6/B7 cooldown continuity and full clear"
   ],
   "previousCandidate": {
     "schema": 1,
@@ -324,5 +323,12 @@
   },
   "b5SearchAcceptancePassed": true,
   "b4SearchAcceptancePassed": false,
-  "delivered": false
+  "delivered": false,
+  "ci": {
+    "number": 188,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44671512108",
+    "commit": "c08eb628f35d51b543d35a635231687fb0af4d30",
+    "conclusion": "success"
+  },
+  "verificationReceipt": "../../research/verification-0.5.59.json"
 }
