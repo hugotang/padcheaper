@@ -73,12 +73,14 @@ static void BundledDataCompatibilityTests(void) {
 }
 #include "orb_assist_profiles_tests.inc"
 #include "orb_himmel_plan_tests.inc"
+#include "orb_magnard_profile_tests.inc"
 #include "orb_fixed_profiles_tests.inc"
 int main(void) {
     @autoreleasepool {
         PlanTests();
         AssistProfileTests();
         HimmelPlanTests();
+        MagnardProfileTests();
         SharingTests();
         FixedProfilesTests();
         BundledDataCompatibilityTests();

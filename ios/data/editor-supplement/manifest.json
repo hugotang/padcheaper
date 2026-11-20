@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "https://sanbon.me/api/search",
+  "retrievedOn": "2026-11-20",
+  "request": {
+    "region": "jp",
+    "language": "ja",
+    "root": {
+      "type": "group",
+      "state": {
+        "conditions": [],
+        "andOr": "and",
+        "isRoot": true
+      },
+      "options": {
+        "active": true,
+        "reverse": false
+      }
+    },
+    "sort": [
+      {
+        "type": "num",
+        "state": {},
+        "options": {
+          "active": true,
+          "reverse": false
+        }
+      }
+    ],
+    "page": 1
+  },
+  "file": "latest-jp.json",
+  "sha256": "1130d916cbd3e71e372174b1bb795f482ca5c53b14da882d610c5afd43c4ed92",
+  "baseMaxNumber": 14337,
+  "newestNumber": 14442,
+  "expectedSupplementCount": 89
+}

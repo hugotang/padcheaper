@@ -19,6 +19,12 @@ static NSMutableDictionary *Team(void) {
 int main(void) {
     @autoreleasepool {
         PHBattleLoadout values[6]; uint8_t mask = 0;
+        NSData *magnardData = [NSData dataWithContentsOfFile:@"ios/templates/magnard-gamewith-589197/formation.json"];
+        NSDictionary *magnard = magnardData ? [NSJSONSerialization JSONObjectWithData:magnardData options:0 error:NULL] : nil;
+        Check(PHFormationReadTeam(magnard,values,NULL) && values[0].bodyNumber == 14359 &&
+            values[1].bodyNumber == 14407 && values[1].assistNumber == 14409 && values[1].assistSkillLevel == 1 &&
+            values[1].latentCount == 1 && values[1].superAwakening == 138 && values[5].assistNumber == 14291,
+            "Magnard six-slot template parses with base forms, sync awakenings and SLv1 weapons before any native apply");
         NSMutableDictionary *team = Team();
         Check(PHFormationReadApply(@{@"team":team, @"mask":@63}, values, &mask, NULL) && mask == 63,
               "all six native loadouts parse before any queue submission");

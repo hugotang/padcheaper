@@ -1,12 +1,13 @@
 {
   "schema": 1,
-  "dylib_version": "0.5.60-orbs",
+  "dylib_version": "0.5.61-orbs",
   "minimum_ios": "15.0",
   "architecture": "arm64",
   "platform": "iPhoneOS",
   "signing": "ad-hoc; use the existing Dopamine rootless injection setup, or re-sign in LiveContainer",
   "mode": "diagnostic by default; experimental writes opt in",
   "summary_features": {
+    "日服新角色圖鑑與マグナード編隊": "catalog_20261120",
     "珊瑚 B4 攻擊條件與目標": "coral_b4_burst",
     "珊瑚 B2 不可消回復": "coral_b2_unmatchable",
     "固定停止原因與受控補盤": "fixed_retry_safety",
@@ -166,6 +167,7 @@
     "coral_fixed_data": "Coral v90-r7 preserves B5 Solomon recharge, every skill and puzzle limit, and strict B4/B5 finish requirements. Startup checks actual dungeon/team-bound plan content before any native action; old saved plans remain exportable and are not silently migrated. Windows B4 and B5 each passed 24/24; full current CI pending. Import and select r7 with 0.5.60 or later; native damage, mobile timing and full clear unverified.",
     "fixed_retry_safety": "Bound fixed-run stops retain their reason. Existing B1 retry requires same-board native skill receipts and fresh bypass; B7 state guard checks the exact full enemy roster and only permits the declared half-HP survivor branch. requireEffectsClear runs after skills and during planning/held input; held loops cannot skip a requireReady explicit resize. Turn-bound enemy HP/identity/target diagnostics freeze on native settlement. No damage or survival guarantee; device verification pending.",
     "coral_b2_unmatchable": "Coral v90-r5 B2 finish only: single-player exact enemy 200974, one basic color blocked for one turn, ordinary orbs and matching. Fresh read-only latent 41, effective TPA 27/96 and current attributes authorize an isolated qualifying fire/wood four as the first native-order group. Existing-orb cascades must then match the recovered color; the other five colors remain first-wave required. Recovered heart fours never count as first-wave healing. Every spinner phase must pass; fishing and unsupported effects stop. Providers/effects are rechecked through native input and the settled turn must show a clear. No extra skill or turn, no consumed-run replay, no latent-only receipt attribution. Device timing, search performance, damage and full clear remain unverified.",
-    "coral_b4_burst": "Coral r7 B4 keeps six first-removal colour fours in every spinner phase, exact roster, fresh bypass and conditional wood-absorb targeting. Orthogonal search adds continuous-drag transport tables for exactly-four supply and endpoint diversity, within the original 48 steps and deadline. Windows four-board B4 acceptance passed 24/24 with independent phase replay; device damage and clear unverified."
+    "coral_b4_burst": "Coral r7 B4 keeps six first-removal colour fours in every spinner phase, exact roster, fresh bypass and conditional wood-absorb targeting. Orthogonal search adds continuous-drag transport tables for exactly-four supply and endpoint diversity, within the original 48 steps and deadline. Windows four-board B4 acceptance passed 24/24 with independent phase replay; device damage and clear unverified.",
+    "catalog_20261120": "Japanese editor/team catalogs refresh to pinned upstream 4b7f486 and add all 89 published SANBON forms #14354-14442; 154 added records and 14383 total; names, levels, skills, awakenings, assist eligibility and transforms available offline; missing native IDs, curves and leader parameters remain unknown, so supplemental skills are display-only and team HP/recovery/shield calculations are incomplete; Magnard six-slot formation/share plus manual-seven-step post-opening profile included; no automatic opening or device-clear claim"
   }
 }

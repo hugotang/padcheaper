@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from editor_supplement import load_supplement, team_row, display_facts
 
 
 def generate(directory, revision, editor):
@@ -17,7 +18,10 @@ def generate(directory, revision, editor):
             or editor["skill_sha256"] != digests[1]):
         raise ValueError("Team and editor catalogs must use identical pinned inputs")
     cards, skills = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
-    rows, records, active_records = [], {}, {}
+    supplement, provenance = load_supplement()
+    assert editor.get("supplement") == provenance, "Team and editor supplements differ"
+    supplement = {card["num"]: card for card in supplement}
+    rows, records, active_records, public_facts = [], {}, {}, {}
 
     def active_children(skill):
         if skill["type"] in (116, 118, 232, 233):
@@ -57,6 +61,11 @@ def generate(directory, revision, editor):
                 collect(child, (*ancestors, index))
 
     for row in editor["cards"]:
+        if row[0] >= len(cards) or not cards[row[0]] or not cards[row[0]].get("enabled"):
+            card = supplement[row[0]]
+            rows.append(team_row(card))
+            public_facts[str(row[0])] = display_facts(card)
+            continue
         card = cards[row[0]]
         assert card["id"] == row[0] and card["enabled"]
         curves = [[card[key][k] for k in ("min", "max", "scale")]
@@ -72,7 +81,7 @@ def generate(directory, revision, editor):
     assert all(target in ids for row in rows for target in row[8])
     return dict(schema=1, source=editor["source"], revision=revision,
                 region="ja", numbering="encyclopedia", card_sha256=digests[0],
-                skill_sha256=digests[1], cards=rows,
+                skill_sha256=digests[1], supplement=provenance, publicFacts=public_facts, cards=rows,
                 skills=[records[i] for i in sorted(records)],
                 activeSkills=[active_records[i] for i in sorted(active_records)])
 

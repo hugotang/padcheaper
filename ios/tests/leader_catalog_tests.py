@@ -51,9 +51,9 @@ class LeaderCatalogTests(unittest.TestCase):
         merged = module.merge_fixed_profiles(base, facts)
         self.assertEqual(base, original_base)
         self.assertEqual(facts, original_facts)
-        self.assertEqual(len(facts["cards"]), 117)
-        self.assertEqual(len(facts["skills"]), 325)
-        self.assertEqual(len(merged["skills"]), len(base["skills"]) + 113)
+        self.assertEqual(len(facts["cards"]), 120)
+        self.assertEqual(len(facts["skills"]), 336)
+        self.assertEqual(len(merged["skills"]), len(base["skills"]) + 116)
         for key, profile in base["skills"].items():
             self.assertEqual(merged["skills"][key], profile)
         self.assertEqual(merged["skills"]["35997"]["goals"], [module.goal("combo", count=6)])

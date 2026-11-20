@@ -21,7 +21,7 @@ assert (badge_catalog["sprite"]["width"], badge_catalog["sprite"]["height"],
         badge_catalog["sprite"]["cellWidth"], badge_catalog["sprite"]["cellHeight"]) == (408, 9196, 102, 76)
 assert team_catalog["schema"] == 1
 assert [r[0] for r in team_catalog["cards"]] == [r[0] for r in catalog["cards"]]
-for key in ("revision", "card_sha256", "skill_sha256", "region", "numbering"):
+for key in ("revision", "card_sha256", "skill_sha256", "region", "numbering", "supplement"):
     assert team_catalog[key] == catalog[key], f"Team catalog mismatch: {key}"
 html = (root / "editor.html").read_text(encoding="utf-8")
 for marker, text in [

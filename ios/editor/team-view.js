@@ -120,6 +120,13 @@
         if(m.id) {
           col.append(portrait(m.id),element('div','member-number','#'+m.id));
           col.title=m.name;
+          if(m.card.publicFacts) {
+            const publicData=m.card.publicFacts,stats=publicData.stats,detail=element('details','skill-description');
+            detail.append(element('summary','','公開角色資料'),element('p','quiet','Lv.'+stats.level+' 基礎 HP '+stats.baseline.hp+
+              '／攻擊 '+stats.baseline.attack+'／回復 '+stats.baseline.recovery+'（未計入隊伍試算）'));
+            for(const skill of publicData.leader)detail.append(element('p','quiet',skill.name+'：'+skill.description));
+            col.append(detail);
+          }
           col.append(element('div','member-stat','HP\n'+number(result.known?m.hp:null)),element('div','member-stat','回復\n'+number(result.known?m.rcv:null)));
           for(const [label,ids,latent] of [['本體',m.bodyAwakenings,false],['超／同步',m.extraAwakenings,false],['武裝',m.assistAwakenings,false],['潛覺',m.latents,true]]) {
             col.append(element('span','source-label',label));const list=element('div','awakening-list compact');

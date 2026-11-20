@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "checkedOn": "2026-11-20",
+  "status": "desktop-formation-and-editor-passed-native-build-pending",
+  "method": "Pinned public source inventory and hashes; production JavaScript formation/model/browser tests executed. Objective-C profile/parser/session, iPhoneOS build and simulator verification pending manual CI.",
+  "staticChecksPassed": true,
+  "checks": [
+    "UTF-8 JSON without duplicate keys; existing ordinary profile keys, target, identifier and 128 KiB limit",
+    "Six guide body and assist icon IDs, seven opening icons, transformed forms, sync awakening 138 and latent 48/41 mapping",
+    "Sixteen public SANBON card responses pinned by SHA256; source names, cooldowns, awakenings and skill descriptions match the reference",
+    "Ten body-only rules with explicit transformed actors; cleanse-before-supply order, independent bypass predicates and shared two-turn Magnard scheduling",
+    "Three separate first-wave straight-four goals; conditional assist L recovery and strict poison policy",
+    "Reference-only opening charge arithmetic from article SB19 and listed haste ends at [2,2,6,4,9,0]; this is not native evidence",
+    "Nineteen existing local documentation links resolved; build shell syntax checked; added test include resolves and two Objective-C files have balanced lexical delimiters"
+  ],
+  "results": {
+    "files": [
+      {
+        "file": "formation.json",
+        "bytes": 3242,
+        "sha256": "324808d2680b847dd6913f6123e5b5a0115f77d08ef0e8b0a0691625f0811ece"
+      },
+      {
+        "file": "formation-share.txt",
+        "bytes": 1004,
+        "sha256": "eebe9c2007611390756c78c20463f5cda6819d763f469eb2e320467bfdc5006c"
+      },
+      {
+        "file": "post-opening.json",
+        "bytes": 7119,
+        "sha256": "91e5638e70c4bed04e866918461343ecd032dea6a389b7e187ccf78dd9bc717e"
+      },
+      {
+        "file": "strategy.reference.json",
+        "bytes": 31472,
+        "sha256": "9043a107440ee64f9dc2b7a23c1ce3ef0406fdc1ee4fb5690a6376eb94252e6f"
+      },
+      {
+        "file": "README.md",
+        "bytes": 8782,
+        "sha256": "6b795acb114c2dd36988df2fa0696e90ed8f159e0d17c9ac5d2ca5d014844970"
+      }
+    ],
+    "rotationRules": 10,
+    "boardGoals": 3,
+    "cardFacts": 16,
+    "sourceTestCasesWritten": true,
+    "desktopFormationTestsPassed": true,
+    "desktopBrowserTestsPassed": true
+  },
+  "incompleteFeatures": [
+    "Automatic seven-step opening requires unavailable exact native skill IDs",
+    "Ordinary search does not maximize fire/water/heart four-group count beyond the three required groups",
+    "Supplemental card HP/recovery/shield calculations lack full numeric and leader parameters"
+  ],
+  "pendingVerification": [
+    "Production profile import/export and rule timing cases in orb_magnard_profile_tests.inc",
+    "Session manual-opening handoff, shared Magnard group cooldown/stop-resume, cleanse-before-supply and required-rule failure behavior",
+    "Native conditional skills and skyfall effects, overcharged assists, status residuals and L recovery",
+    "Fire/water/heart first-wave four search on actual boards, damage, healing and survival",
+    "Authorized 0.5.61 iPhoneOS compilation, full CI and device verification"
+  ],
+  "nativeParserExecuted": false,
+  "sessionTestsExecuted": false,
+  "runtimeSuitesRun": true,
+  "solverExecuted": false,
+  "compiled": false,
+  "ciDispatched": false,
+  "packaged": false,
+  "deviceVerified": false
+}

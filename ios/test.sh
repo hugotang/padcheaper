@@ -15,7 +15,9 @@ python3 ios/tools/generate_editor.py
 python3 ios/tools/generate_leaders.py
 python3 ios/tests/release_metadata_tests.py
 python3 ios/tests/leader_catalog_tests.py
+python3 ios/tests/editor_supplement_tests.py
 node ios/tests/formation_tests.js
+node ios/tests/catalog_update_tests.js
 node ios/tests/team_model_tests.js
 node ios/tests/team_dungeon_tests.js
 

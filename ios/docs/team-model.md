@@ -69,7 +69,7 @@ HP 技能提高上限而不補血；基礎滿血 409,219 開 HP ×3 後，起始
 
 ## 資料與實作依據
 
-卡片數值和隊長技能事實取自 [PADDashFormation 固定版本](https://github.com/Mapaler/PADDashFormation/tree/b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f)，14,229 張卡、24,823 筆隊長記錄，與既有編隊圖鑑共用同一來源雜湊。提取器只讀 JSON，不執行上游計算程式。圖示原始 PNG 與授權見 [NOTICE](../editor/assets/NOTICE.md) 及 [GPL-3.0](../editor/assets/PADDashFormation-LICENSE)。
+完整數值與技能事實取自 [PADDashFormation 固定版本](https://github.com/Mapaler/PADDashFormation/tree/4b7f486ed3d98c4088e95c3ac64c4a29886db6b9)，14,294 張卡、24,892 筆隊長記錄。另用 2026-11-20 SANBON 公開日服查詢補上 #14354–14442 共 89 筆，編隊圖鑑合共 14,383 筆；兩份目錄共用來源及補充資料雜湊。補充卡可查找、編隊、選變身與讀技能原文，但沒有推算缺失的原生技能 ID、成長曲線或隊長參數；隊伍包含這些本體／武裝時，總 HP、回復、盾與耐久試算標示未完整。來源見 [補充清單](../data/editor-supplement/manifest.json)。提取器只讀 JSON，不執行上游計算程式。圖示原始 PNG 與授權見 [NOTICE](../editor/assets/NOTICE.md) 及 [GPL-3.0](../editor/assets/PADDashFormation-LICENSE)。
 
 獨立模型位於 `ios/editor/team-model.js`；不接觸遊戲程序。PAD 23.6.0／106878 原生靜態分析核對了以下公式：
 

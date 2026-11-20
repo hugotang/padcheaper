@@ -1,0 +1,1207 @@
+{
+  "format": "padcheaper-template-reference",
+  "schemaVersion": 1,
+  "status": "reference-not-executable",
+  "id": "magnard-gw589197-post-opening-first-r1",
+  "source": {
+    "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/589197#basic",
+    "retrievedDate": "2026-11-20",
+    "articleUpdated": "2026-11-20T19:10:11+09:00",
+    "snapshotSHA256": "e9f558d48e904c6165831ff242a88de0ed7fbff59c0c809e1e6bd8a66bb94073",
+    "section": "おすすめテンプレパーティ",
+    "cardFactsSource": "https://sanbon.me",
+    "cardFactsRequest": {
+      "url": "https://sanbon.me/api/team-builder-monster",
+      "method": "POST",
+      "body": {
+        "region": "jp",
+        "num": "each listed number",
+        "language": "ja"
+      }
+    }
+  },
+  "files": {
+    "executableProfile": "post-opening.json",
+    "instructions": "README.md",
+    "executableFormation": "formation.json",
+    "formationShare": "formation-share.txt"
+  },
+  "articleFacts": {
+    "bodyNumbers": [
+      14359,
+      14407,
+      14422,
+      14389,
+      14383,
+      14359
+    ],
+    "transformedBodyNumbers": [
+      14360,
+      14408,
+      14423,
+      14390,
+      14384,
+      14360
+    ],
+    "assistNumbers": [
+      14394,
+      14409,
+      13682,
+      12968,
+      14394,
+      14291
+    ],
+    "bodyLevels": [
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
+    ],
+    "assistSkillLevels": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "syncAwakening": {
+      "siteIcon": "k146.png",
+      "name": "アシスト共鳴",
+      "nativeId": 138
+    },
+    "latents": [
+      [],
+      [
+        48
+      ],
+      [],
+      [
+        41
+      ],
+      [],
+      []
+    ],
+    "badgeChoices": [
+      "2体攻撃強化",
+      "火水同時攻撃"
+    ],
+    "superAltitudeAlternative": {
+      "slot": 3,
+      "assist": 14424,
+      "source": "https://xn--0ck4aw2h.gamewith.jp/article/show/589089"
+    },
+    "openingIconNumbers": [
+      14383,
+      14359,
+      14422,
+      14389,
+      14407,
+      14360,
+      14359
+    ],
+    "boardInstruction": "リップルを使用しドロップ供給→火水回復4個消しを組めるだけ組む"
+  },
+  "manualOpening": [
+    {
+      "order": 1,
+      "slot": 5,
+      "monster": 14383,
+      "afterMonster": 14384,
+      "action": "transform",
+      "hasteOtherSlots": 1,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 2,
+      "slot": 1,
+      "monster": 14359,
+      "afterMonster": 14360,
+      "action": "transform",
+      "hasteOtherSlots": 2,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 3,
+      "slot": 3,
+      "monster": 14422,
+      "afterMonster": 14423,
+      "action": "transform",
+      "hasteOtherSlots": 1,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 4,
+      "slot": 4,
+      "monster": 14389,
+      "afterMonster": 14390,
+      "action": "transform",
+      "hasteOtherSlots": 2,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 5,
+      "slot": 2,
+      "monster": 14407,
+      "afterMonster": 14408,
+      "action": "transform",
+      "hasteOtherSlots": 2,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 6,
+      "slot": 1,
+      "monster": 14360,
+      "afterMonster": 0,
+      "action": "body-skill",
+      "hasteOtherSlots": 0,
+      "source": "body",
+      "nativeSkillId": null
+    },
+    {
+      "order": 7,
+      "slot": 6,
+      "monster": 14359,
+      "afterMonster": 14360,
+      "action": "transform",
+      "hasteOtherSlots": 2,
+      "source": "body",
+      "nativeSkillId": null
+    }
+  ],
+  "openingSlotChoice": "Use slot 1 for the first Magnard transform and subsequent body skill; slot 6 transforms last. The article does not label the two identical base icons by slot.",
+  "entryConditions": [
+    "Single-player; exact transformed team in the listed positions.",
+    "All seven manual steps completed in the listed order; no puzzle has been played.",
+    "Slot 1 Magnard body skill was used at step 6; slot 6 only transformed at step 7.",
+    "All six assists retained; slot 2 has latent 48; no intervening skill use or unobserved turn."
+  ],
+  "formationReference": {
+    "schema": 1,
+    "title": "マグナード｜GameWith 589197 推薦隊",
+    "badge": 100,
+    "slots": [
+      {
+        "body": {
+          "id": 14359,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 6,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 14394,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14407,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 5,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            48
+          ]
+        },
+        "assist": {
+          "id": 14409,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14422,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 5,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 13682,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14389,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 6,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": [
+            41
+          ]
+        },
+        "assist": {
+          "id": 12968,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14383,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 6,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 14394,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      },
+      {
+        "body": {
+          "id": 14359,
+          "level": 99,
+          "skill": 5,
+          "awakenings": 6,
+          "plus": [
+            297,
+            297,
+            297
+          ],
+          "superAwakening": 138,
+          "latents": []
+        },
+        "assist": {
+          "id": 14291,
+          "level": 99,
+          "skill": 1,
+          "awakenings": 8,
+          "plus": [
+            99,
+            99,
+            99
+          ],
+          "superAwakening": 0,
+          "latents": []
+        }
+      }
+    ]
+  },
+  "formationReferenceExecutable": false,
+  "assumptions": [
+    "Body skill level 5, all normal awakenings, body plus [297,297,297], assist level 99 and plus [99,99,99] are template choices; the team article does not specify them.",
+    "Only the two latents actually shown in the article are copied; remaining slots are empty.",
+    "Badge 100 maps to 2体攻撃強化 in the existing badge catalog. Select it manually in-game; no native badge write is performed."
+  ],
+  "compatibility": {
+    "existingProfileSchema": true,
+    "nativeSkillIdsAvailable": false,
+    "bodySkillSelection": "skill:0 is the existing ordinary-rule wildcard, bound to the exact transformed number and body source; native availability and source checks still apply.",
+    "embeddedCatalogRevision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+    "embeddedCatalogMaxNumber": 14442,
+    "checkedUpstreamRevision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
+    "checkedUpstreamMaxNumber": 14337,
+    "fullAutomaticOpeningAvailable": false,
+    "formationEditorSupportsTeam": true,
+    "supplementSource": "https://sanbon.me/api/search",
+    "supplementDate": "2026-11-20"
+  },
+  "limitations": [
+    "Ordinary four goals require one straight first-wave fire, water and heart four each. Remaining ranking is combo-first, not a maximum-TPA objective.",
+    "Conditional skill effect doubling and durations are not simulated or asserted by this profile; their uptime depends on native fire/water skyfall and cooldown.",
+    "Chianti restores only five turns and does not clear member bind after transforming. A successful skill acknowledgement is not proof that all statuses cleared.",
+    "Ordinary profile matching does not bind the six assist IDs or check that the manual opening took place.",
+    "Max-HP and move-time debuffs have no dedicated ordinary-rule trigger; scheduled loops do not guarantee immediate replacement.",
+    "Volken latent 41 is formation intent only; the Coral-only B2 unmatchable-recovery engine is not enabled for this team.",
+    "All runtime imports, scheduling, solving, skill effects and device behavior remain untested for this new profile."
+  ],
+  "cardFacts": [
+    {
+      "number": 12968,
+      "url": "https://sanbon.me/jp/monster/12968",
+      "responseSHA256": "5824a2e39a71848fac073c458f0aefb4ee69fc095d40fcad5bce494933d67bd9",
+      "name": "ロザリンのパンプキンバケット",
+      "attributes": [
+        0,
+        4,
+        -1
+      ],
+      "types": [
+        6,
+        7
+      ],
+      "awakenings": [
+        49,
+        56,
+        61,
+        96,
+        99,
+        103,
+        54,
+        53
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 20,
+        "atMaximumLevel": 20,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "ビューティフルキャンディ",
+          "description": "消せないドロップと覚醒無効を全回復。2ターンの間、\n最大HPが2.5倍。自分以外のスキルが3ターン溜まる。",
+          "cool_initial": 20,
+          "cool_max": 20,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 13682,
+      "url": "https://sanbon.me/jp/monster/13682",
+      "responseSHA256": "2b1a4ad8eb2609805fd0bba4c25e8d113ce987dacd2a81c27a8193da54d421cd",
+      "name": "銀時の着物",
+      "attributes": [
+        1,
+        3,
+        -1
+      ],
+      "types": [
+        6,
+        2
+      ],
+      "awakenings": [
+        49,
+        56,
+        61,
+        96,
+        53,
+        1,
+        1,
+        1
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 15,
+        "atMaximumLevel": 15,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "なるようになれだァァァ!!",
+          "description": "[ロック]を解除し、盤面を[水][光][回復]に変化。4ターンの間、\nダメージ無効を貫通。自分以外のスキルが2ターン溜まる。",
+          "cool_initial": 15,
+          "cool_max": 15,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14291,
+      "url": "https://sanbon.me/jp/monster/14291",
+      "responseSHA256": "f791b818108fef08e3240b485a0205570ea7b8cb58b6dff9cf6632263367d3cb",
+      "name": "ニケウサハナのポーチ",
+      "attributes": [
+        1,
+        -1,
+        -1
+      ],
+      "types": [
+        6,
+        5
+      ],
+      "awakenings": [
+        49,
+        92,
+        56,
+        21,
+        43,
+        96,
+        55,
+        131
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 13,
+        "atMaximumLevel": 13,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "ニケウサハナのえがお",
+          "description": "5ターンの間、盤面が7×6マス、ダメージ無効を貫通。\n[ロック]を解除し、盤面を[水][木][光][回復]に変化。",
+          "cool_initial": 13,
+          "cool_max": 13,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14359,
+      "url": "https://sanbon.me/jp/monster/14359",
+      "responseSHA256": "85d19f863eb4e45e33476efee0394a50996cbeede4f7777729e2c6ef28e438d5",
+      "name": "氷とマグマの精霊術師・マグナード",
+      "attributes": [
+        1,
+        0,
+        -1
+      ],
+      "types": [
+        6,
+        2
+      ],
+      "awakenings": [
+        52,
+        146,
+        136,
+        148,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 24,
+        "atMaximumLevel": 20,
+        "maximumSkillLevel": 5
+      },
+      "activeSkills": [
+        {
+          "name": "精霊召喚・グラシエス＆アルドル",
+          "description": "[ロック]を解除し、[火][水][回復]を10個ずつ生成。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+          "cool_initial": 24,
+          "cool_max": 20,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14360,
+      "url": "https://sanbon.me/jp/monster/14360",
+      "responseSHA256": "d6be81ade3a40a9366234b42b65f0923c36d7388daaf80f1bdf764f6472c2919",
+      "name": "氷とマグマの大精霊との契約・マグナード",
+      "attributes": [
+        1,
+        0,
+        1
+      ],
+      "types": [
+        6,
+        2
+      ],
+      "awakenings": [
+        52,
+        146,
+        136,
+        148,
+        133,
+        133,
+        96,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 4,
+        "atMaximumLevel": 4,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "アイシクルイラプション",
+          "description": "2ターンの間、最大HPが2倍、リーダーと助っ人の\nダメージ上限値が450億、[火][水]が少し落ちやすくなる。",
+          "cool_initial": 4,
+          "cool_max": 4,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14383,
+      "url": "https://sanbon.me/jp/monster/14383",
+      "responseSHA256": "3f1bdcb7d4f839988add05d7dfab930d170f5ba6cb6da72ee1fc5460dc0c0680",
+      "name": "水元素の錬金術師・リップル",
+      "attributes": [
+        1,
+        0,
+        -1
+      ],
+      "types": [
+        6
+      ],
+      "awakenings": [
+        52,
+        145,
+        28,
+        96,
+        131,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 19,
+        "atMaximumLevel": 15,
+        "maximumSkillLevel": 5
+      },
+      "activeSkills": [
+        {
+          "name": "錬成召喚・ウンディーネ",
+          "description": "[ロック]を解除し、左端1列を[水]に、右端1列を[火]に変化。\n自分以外のスキルが1ターン溜まる。最終段階に変身。",
+          "cool_initial": 19,
+          "cool_max": 15,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14384,
+      "url": "https://sanbon.me/jp/monster/14384",
+      "responseSHA256": "45a193472bd923edf2ba8a5572ad914cfd2b559f3ce89871ee4202b045c5c7cf",
+      "name": "水の大精霊の助勢・リップル",
+      "attributes": [
+        1,
+        0,
+        1
+      ],
+      "types": [
+        6
+      ],
+      "awakenings": [
+        52,
+        147,
+        28,
+        133,
+        133,
+        96,
+        96,
+        131,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 1,
+        "atMaximumLevel": 1,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "ブレイジングアクア",
+          "description": "[ロック]を解除し、[火][水][回復]を4個ずつ生成。1ターンの間、\n自分のダメージ上限値が250億。^qs^[火目覚め]発動中、HPを25％回復。^p",
+          "cool_initial": 1,
+          "cool_max": 1,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14389,
+      "url": "https://sanbon.me/jp/monster/14389",
+      "responseSHA256": "829a970f7d3848a021307d4fcebbcc59bb9ff1cb884aef388792ea5275247a5f",
+      "name": "溶岩の精霊術師・ヴォルケン",
+      "attributes": [
+        0,
+        1,
+        -1
+      ],
+      "types": [
+        6,
+        4
+      ],
+      "awakenings": [
+        52,
+        146,
+        69,
+        136,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 24,
+        "atMaximumLevel": 20,
+        "maximumSkillLevel": 5
+      },
+      "activeSkills": [
+        {
+          "name": "精霊召喚・マグナコル",
+          "description": "4ターンの間、自分のダメージ上限値が400億。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+          "cool_initial": 24,
+          "cool_max": 20,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14390,
+      "url": "https://sanbon.me/jp/monster/14390",
+      "responseSHA256": "e4fefd8867292c2b16101bdb0e2fd471d17d36632900a6762bf41d2684039ddb",
+      "name": "溶岩精霊との契約・ヴォルケン",
+      "attributes": [
+        0,
+        1,
+        0
+      ],
+      "types": [
+        6,
+        4
+      ],
+      "awakenings": [
+        52,
+        146,
+        69,
+        136,
+        133,
+        133,
+        96,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 4,
+        "atMaximumLevel": 4,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "ウルトラボルケーノ",
+          "description": "2ターンの間、ダメージ吸収と属性吸収を無効化、ダメージ無効を\n貫通、自分のダメージ上限値が300億。^qs^[水目覚め]発動中、効果が2倍。^p",
+          "cool_initial": 4,
+          "cool_max": 4,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14394,
+      "url": "https://sanbon.me/jp/monster/14394",
+      "responseSHA256": "2e78090e16e1a6dc462780663fb866efb1594e3d179d8e9c4c6e27875c47cbd1",
+      "name": "深海精霊・エイビス",
+      "attributes": [
+        1,
+        2,
+        -1
+      ],
+      "types": [
+        6,
+        7
+      ],
+      "awakenings": [
+        49,
+        56,
+        21,
+        107,
+        28,
+        46,
+        46,
+        131
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 14,
+        "atMaximumLevel": 14,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "スピリット・ディープストリーム",
+          "description": "敵の残りHPが30％減少。10ターンの間、HPを40％回復。\n[ロック]を解除し、盤面を[水][木][回復]に変化。全ドロップを強化。",
+          "cool_initial": 14,
+          "cool_max": 14,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14407,
+      "url": "https://sanbon.me/jp/monster/14407",
+      "responseSHA256": "93117cad9ffe1b61d40f1251c82fef9a4cc2136656d04835ade5fe400a3a44f5",
+      "name": "氷菓の錬金術師・キャンティ",
+      "attributes": [
+        1,
+        3,
+        -1
+      ],
+      "types": [
+        1
+      ],
+      "awakenings": [
+        52,
+        147,
+        136,
+        108,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 24,
+        "atMaximumLevel": 20,
+        "maximumSkillLevel": 5
+      },
+      "activeSkills": [
+        {
+          "name": "錬成召喚・ソルベ",
+          "description": "消せないドロップ、バインド、覚醒無効を全回復。\n自分以外のスキルが2ターン溜まる。最終段階に変身。",
+          "cool_initial": 24,
+          "cool_max": 20,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14408,
+      "url": "https://sanbon.me/jp/monster/14408",
+      "responseSHA256": "a4c46e13ea7266013e208ea062fdd7fd6692cec00bc76f449aaab056f7defe7f",
+      "name": "氷菓の精霊の助勢・キャンティ",
+      "attributes": [
+        1,
+        3,
+        1
+      ],
+      "types": [
+        1
+      ],
+      "awakenings": [
+        52,
+        147,
+        136,
+        150,
+        111,
+        111,
+        108,
+        108,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 2,
+        "atMaximumLevel": 2,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "クラッシュアイス",
+          "description": "消せないドロップと覚醒無効を5ターン回復。\n全ドロップを破壊。シールドを1つ破壊。",
+          "cool_initial": 2,
+          "cool_max": 2,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14409,
+      "url": "https://sanbon.me/jp/monster/14409",
+      "responseSHA256": "beed5fd87a3c07f79e134301105375faac2d06b995ec810a0ca2372670e30952",
+      "name": "氷菓の精霊・ソルベ",
+      "attributes": [
+        1,
+        3,
+        -1
+      ],
+      "types": [
+        1
+      ],
+      "awakenings": [
+        49,
+        56,
+        108,
+        68,
+        100,
+        101,
+        102,
+        103
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 15,
+        "atMaximumLevel": 5,
+        "maximumSkillLevel": 11
+      },
+      "activeSkills": [
+        {
+          "name": "アルケミー・アイススライス",
+          "description": "[ロック]を解除し、L字型に[水]を2つ生成。2ターンの間、自分の\nダメージ上限値が500億、ダメージ吸収と属性吸収を無効化。",
+          "cool_initial": 15,
+          "cool_max": 5,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14422,
+      "url": "https://sanbon.me/jp/monster/14422",
+      "responseSHA256": "508631a1ef3446f21ff19da30a41837e0b6a9204f97e3ae90336767f3951495e",
+      "name": "雪兎の精霊術師・ラピア",
+      "attributes": [
+        1,
+        0,
+        -1
+      ],
+      "types": [
+        3,
+        2
+      ],
+      "awakenings": [
+        52,
+        145,
+        136,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 26,
+        "atMaximumLevel": 22,
+        "maximumSkillLevel": 5
+      },
+      "activeSkills": [
+        {
+          "name": "精霊召喚・ククルス",
+          "description": "1ターンの間、受けるダメージを無効化。\n自分以外のスキルが1ターン溜まる。最終段階に変身。",
+          "cool_initial": 26,
+          "cool_max": 22,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14423,
+      "url": "https://sanbon.me/jp/monster/14423",
+      "responseSHA256": "7b72f5699b7ac1a220f822f7fee041dbd8479249ed53f83aa40d667756e3c94f",
+      "name": "雪兎の精霊との契約・ラピア",
+      "attributes": [
+        1,
+        0,
+        1
+      ],
+      "types": [
+        3,
+        2
+      ],
+      "awakenings": [
+        52,
+        147,
+        136,
+        104,
+        104,
+        133,
+        133,
+        96,
+        63
+      ],
+      "syncAwakening": 138,
+      "assistable": false,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 6,
+        "atMaximumLevel": 6,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "アバランチブラスト",
+          "description": "3ターンの間、受けるダメージを22％軽減、操作時間が1.1倍、\n自分のダメージ上限値が250億。^qs^[火目覚め]発動中、効果が2倍。^p",
+          "cool_initial": 6,
+          "cool_max": 6,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    },
+    {
+      "number": 14424,
+      "url": "https://sanbon.me/jp/monster/14424",
+      "responseSHA256": "a58d046837a9a878e398d235f1a5dcfdd6d23e2f64b76737f0f09c49d42bda5d",
+      "name": "雪兎の精霊・ククルス",
+      "attributes": [
+        1,
+        0,
+        -1
+      ],
+      "types": [
+        3,
+        2
+      ],
+      "awakenings": [
+        49,
+        56,
+        43,
+        96,
+        70,
+        46,
+        104,
+        3
+      ],
+      "syncAwakening": 0,
+      "assistable": true,
+      "latentExtendable": true,
+      "skillCooldown": {
+        "atLevelOne": 20,
+        "atMaximumLevel": 20,
+        "maximumSkillLevel": 1
+      },
+      "activeSkills": [
+        {
+          "name": "スピリット・スノープレス",
+          "description": "3ターンの間、受けるダメージを激減、ダメージ無効を\n貫通。[釘ドロップ]を10個生成。自分以外のスキルが2ターン溜まる。",
+          "cool_initial": 20,
+          "cool_max": 20,
+          "decoration": {
+            "show_only_cool_max": false,
+            "next": false,
+            "return": false
+          },
+          "details": []
+        }
+      ],
+      "nativeSkillId": null
+    }
+  ],
+  "openingArithmeticReference": {
+    "method": "Article initial SB 19 plus listed haste, resetting each used slot to zero. Uncapped arithmetic only; native charge, transformation and conditional effects are unverified.",
+    "initialSkillBoosts": 19,
+    "steps": [
+      {
+        "step": 1,
+        "slot": 5,
+        "cooldown": 15,
+        "uncappedChargeBefore": 19
+      },
+      {
+        "step": 2,
+        "slot": 1,
+        "cooldown": 20,
+        "uncappedChargeBefore": 20
+      },
+      {
+        "step": 3,
+        "slot": 3,
+        "cooldown": 22,
+        "uncappedChargeBefore": 22
+      },
+      {
+        "step": 4,
+        "slot": 4,
+        "cooldown": 20,
+        "uncappedChargeBefore": 23
+      },
+      {
+        "step": 5,
+        "slot": 2,
+        "cooldown": 20,
+        "uncappedChargeBefore": 25
+      },
+      {
+        "step": 6,
+        "slot": 1,
+        "cooldown": 4,
+        "uncappedChargeBefore": 5
+      },
+      {
+        "step": 7,
+        "slot": 6,
+        "cooldown": 20,
+        "uncappedChargeBefore": 27
+      }
+    ],
+    "uncappedChargeAfter": [
+      2,
+      2,
+      6,
+      4,
+      9,
+      0
+    ]
+  }
+}

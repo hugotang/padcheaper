@@ -118,6 +118,7 @@ def rewrite_artifact_links(directory, commit=None):
                          ("](../README.md", "](README.md"), ("](../CHANGELOG.md", "](CHANGELOG.md"),
                          ("](../editor/assets/", "](third_party/PADDashFormation/"),
                          ("](../editor/", "](editor-source/"),
+                         ("](../data/editor-supplement/", "](data/editor-supplement/"),
                          ("](../.github/workflows/ios-dylib.yml)",
                           "](https://github.com/hugotang/padcheaper/actions/workflows/ios-dylib.yml)")):
             content = content.replace(old, new)

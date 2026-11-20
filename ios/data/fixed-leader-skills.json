@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "https://github.com/Mapaler/PADDashFormation",
-  "revision": "b6c56dc1a67c3d72767e3d6a1ba3ffa373d2895f",
+  "revision": "4b7f486ed3d98c4088e95c3ac64c4a29886db6b9",
   "region": "ja",
   "numbering": "native-catalog",
-  "raw_card_sha256": "cadd53b19f4d03ea219de1c1002e6c5a5d1bb26cb41a86d934a142e65f435f82",
-  "skill_sha256": "0b3b21a617725c527bbe0cbd365589540388566ad4575fa4d9d857df45521ea7",
+  "raw_card_sha256": "bc2d9234d95c2051634e2d96484ad8a758ea7a30174313ee4311bdd0ab222d2f",
+  "skill_sha256": "cb47e1c292eb9abd721986ee46f9ddf9a58d1606917b3cf275ad39d34cdc134c",
   "cards": [
     {
       "catalog_id": 1000098,
@@ -46,6 +46,11 @@
       "catalog_id": 1001298,
       "name": "献身の巫女神・クシナダヒメ",
       "skill": 23441
+    },
+    {
+      "catalog_id": 1001645,
+      "name": "絶世の紅龍喚士・ソニア",
+      "skill": 39687
     },
     {
       "catalog_id": 1001730,
@@ -591,6 +596,16 @@
       "catalog_id": 20003788,
       "name": "破神機・ラグナロク＝ドラゴン",
       "skill": 44708
+    },
+    {
+      "catalog_id": 90008476,
+      "name": "水彩幻画師・アトリ",
+      "skill": 66703
+    },
+    {
+      "catalog_id": 90008477,
+      "name": "彩妖精の水彩幻画師・アトリ",
+      "skill": 66711
     }
   ],
   "skills": [
@@ -1802,6 +1817,38 @@
         34,
         0,
         5500
+      ]
+    },
+    {
+      "id": 39687,
+      "type": 138,
+      "params": [
+        39688,
+        39689,
+        39690
+      ]
+    },
+    {
+      "id": 39688,
+      "type": 177,
+      "params": []
+    },
+    {
+      "id": 39689,
+      "type": 182,
+      "params": [
+        17,
+        6,
+        1000
+      ]
+    },
+    {
+      "id": 39690,
+      "type": 219,
+      "params": [
+        17,
+        12,
+        1
       ]
     },
     {
@@ -3493,6 +3540,76 @@
         700,
         100,
         10
+      ]
+    },
+    {
+      "id": 66703,
+      "type": 138,
+      "params": [
+        66704,
+        66705
+      ]
+    },
+    {
+      "id": 66704,
+      "type": 170,
+      "params": [
+        31,
+        4,
+        100,
+        50
+      ]
+    },
+    {
+      "id": 66705,
+      "type": 235,
+      "params": [
+        1023,
+        0,
+        4,
+        160
+      ]
+    },
+    {
+      "id": 66711,
+      "type": 138,
+      "params": [
+        66712,
+        66713,
+        66714
+      ]
+    },
+    {
+      "id": 66712,
+      "type": 194,
+      "params": [
+        63,
+        6,
+        0,
+        2
+      ]
+    },
+    {
+      "id": 66713,
+      "type": 170,
+      "params": [
+        63,
+        6,
+        100,
+        83
+      ]
+    },
+    {
+      "id": 66714,
+      "type": 235,
+      "params": [
+        1023,
+        0,
+        4,
+        300,
+        0,
+        0,
+        900000
       ]
     }
   ]

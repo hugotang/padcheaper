@@ -5,6 +5,15 @@
   function createModel(facts) {
     const skills=new Map((facts.activeSkills||[]).map(r=>[r[0],{id:r[0],type:r[1],p:r[2],maxLevel:r[3],cooldown:r[4],name:r[5],description:r[6]}]));
     function describe(card,loadout,slot,kind,transformed=false) {
+      if(card?.publicFacts) {
+        const published=card.publicFacts,cd=published.cooldown;
+        const level=transformed?1:loadout.skill||cd?.maximumSkillLevel||1;
+        return published.active.map((s,stage)=>({key:slot+':'+kind+':'+stage,slot,kind,stage,stages:published.active.length,cycles:false,
+          cardId:card.id,cardName:card.name,id:null,name:s.name,description:s.description,level,
+          cooldown:stage===0&&cd?Math.max(0,cd.atLevelOne-level+1):s.cool_initial,
+          minimumCooldown:s.cool_max,cooldownNote:kind==='assist'?'武裝 CD；實際需另加本體 CD':'',
+          effects:[],notes:['技能原文供參考，效果尚未支援試算'],issues:[],selectable:false}));
+      }
       const rootSkill=skills.get(card?.active||0);if(!rootSkill)return [];
       const evolution=[232,233].includes(rootSkill.type),stageIDs=evolution?rootSkill.p:[rootSkill.id];
       return stageIDs.map((id,stage)=>{

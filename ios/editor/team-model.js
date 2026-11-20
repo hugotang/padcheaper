@@ -53,10 +53,12 @@
   function createModel(editor,facts,formation) {
     if(facts.schema!==1 || facts.region!=='ja' || facts.numbering!=='encyclopedia') throw new Error('隊伍資料格式不符');
     for(const k of ['revision','card_sha256','skill_sha256']) if(editor[k]!==facts[k]) throw new Error('隊伍與圖鑑資料版本不符');
+    if(JSON.stringify(editor.supplement)!==JSON.stringify(facts.supplement))throw new Error('隊伍與補充圖鑑資料版本不符');
     const cards=new Map(facts.cards.map(r=>{
       const e=formation.cards.get(r[0]);
       if(!e) throw new Error('缺少圖鑑資料 #'+r[0]);
-      return [r[0],{...e,types:r[1],baseMax:r[2],limit:r[3],curves:r.slice(4,7),leader:r[7],to:r[8],rarity:r[9],collab:r[10],active:r[11]||0}];
+      return [r[0],{...e,types:r[1],baseMax:r[2],limit:r[3],curves:r.slice(4,7),leader:r[7],to:r[8],rarity:r[9],collab:r[10],active:r[11]||0,
+        publicFacts:facts.publicFacts?.[r[0]]}];
     }));
     const skillModel=skillModule.createModel(facts);
     const skills=new Map(facts.skills.map(r=>[r[0],{id:r[0],type:r[1],p:r[2]}]));
@@ -116,6 +118,7 @@
         if(a>=91&&a<=95)attrs[1]=a-91;
       }
       const stats=[0,1,2].map(i=>{
+        if(card.publicFacts || assist?.publicFacts)return null;
         const base=baseStat(card,level,i),voice=round(f32(f32(base*count(awakenings,63))*f32(.1)));
         const latentRates=[{1:.015,12:.03,28:.045,43:.1},{2:.01,12:.02,29:.03,44:.08},{3:.1,12:.2,30:.3,45:.35}][i];
         const latent=round(f32(base*input.latents.reduce((n,l)=>f32(n+f32(latentRates[l]||0)),0)));
@@ -143,6 +146,9 @@
     function evaluate(team,value={}) {
       team=formation.normalize(team);const c=context(value),members=team.slots.map((s,i)=>member(s,i,c));
       const issues=[],notes=[],rules=[];
+      const publicCards=[...new Set(members.flatMap(m=>[m.id,team.slots[m.slot].assist.id]))]
+        .filter(id=>cards.get(id)?.publicFacts);
+      if(publicCards.length)issues.push('新角色可編隊及查看技能原文；HP／回復／減傷試算資料尚未完整（'+publicCards.map(id=>'#'+id).join('、')+'）');
       const skillOptions=members.filter(m=>m.id&&m.known!==false).flatMap(m=>[
         ...skillModel.describe(m.card,team.slots[m.slot].body,m.slot,'body',m.transformed),
         ...skillModel.describe(cards.get(team.slots[m.slot].assist.id),team.slots[m.slot].assist,m.slot,'assist')]);

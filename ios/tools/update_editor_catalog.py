@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from editor_supplement import load_supplement, editor_row
 
 parser = argparse.ArgumentParser()
 parser.add_argument("directory", type=Path)
@@ -29,9 +30,13 @@ for card in cards:
                  card.get("superAwakenings", []), card.get("syncAwakening", 0),
                  bool(card.get("canAssist")), 8 if card.get("is8Latent") else 6,
                  " ".join(card.get("altName", []))[:400]])
+supplement, provenance = load_supplement()
+ids = {row[0] for row in rows}
+rows.extend(editor_row(card) for card in supplement if card["num"] not in ids)
+rows.sort(key=lambda row: row[0])
 output = {"source": "https://github.com/Mapaler/PADDashFormation", "revision": args.revision,
           "region": "ja", "numbering": "encyclopedia", "card_sha256": hashlib.sha256(cards_path.read_bytes()).hexdigest(),
-          "skill_sha256": hashlib.sha256(skills_path.read_bytes()).hexdigest(), "cards": rows}
+          "skill_sha256": hashlib.sha256(skills_path.read_bytes()).hexdigest(), "supplement": provenance, "cards": rows}
 path = Path("ios/editor/catalog.json")
 path.parent.mkdir(parents=True, exist_ok=True)
 path.write_text(json.dumps(output, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")

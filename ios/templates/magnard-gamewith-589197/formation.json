@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "title": "マグナード｜GameWith 589197 推薦隊",
+  "badge": 100,
+  "slots": [
+    {
+      "body": {
+        "id": 14359,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 6,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 14394,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14407,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 5,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": [
+          48
+        ]
+      },
+      "assist": {
+        "id": 14409,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14422,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 5,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 13682,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14389,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 6,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": [
+          41
+        ]
+      },
+      "assist": {
+        "id": 12968,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14383,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 6,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 14394,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    },
+    {
+      "body": {
+        "id": 14359,
+        "level": 99,
+        "skill": 5,
+        "awakenings": 6,
+        "plus": [
+          297,
+          297,
+          297
+        ],
+        "superAwakening": 138,
+        "latents": []
+      },
+      "assist": {
+        "id": 14291,
+        "level": 99,
+        "skill": 1,
+        "awakenings": 8,
+        "plus": [
+          99,
+          99,
+          99
+        ],
+        "superAwakening": 0,
+        "latents": []
+      }
+    }
+  ]
+}
