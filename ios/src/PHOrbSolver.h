@@ -147,10 +147,12 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // After ordinary thorn-free single-square goals fail, up to two extra beams
 // use distinct-donor and filled-template guidance in the original remaining
 // deadline. squareRecoveryPasses is included in searchPasses, not backtracks.
-// Strict six-colour-four ordinary attacks first reserve up to two thirds of
-// the same deadline for at most 48 beams using cached per-colour template
-// hints. A swap updates only its two colours. Stable template hints, distinct
-// donor costs and layout diversity guide exploration; a winner still requires
+// Strict six-colour-four ordinary attacks first use at most 48 beams of
+// cached per-colour template hints, normally within two thirds of the same
+// deadline. Orthogonal exactly-four transport may use the whole original
+// budget, including table construction, without extending that deadline.
+// A swap updates only its two colours. Stable templates, distinct donor
+// costs and layout diversity guide exploration; a winner still requires
 // full original shared-phase evaluation and normal route replay. No recorded
 // boards or precomputed paths are used.
 // Orthogonal passes also reserve endpoint diversity and, for exactly four
@@ -159,8 +161,8 @@ bool PHOrbEvaluateRoute(const PHOrbBoard &board, const PHOrbRoute &route, const 
 // is bounded, cancellable and charged to the original deadline. Other colours
 // are interchangeable only in this hint. Full phase evaluation stays exact.
 // The general beam gets two thirds of the remaining time, followed by at most
-// two segment-repair rounds. Different
-// missing-colour sets supply seeds; each edit joins the original endpoints and
+// two segment-repair rounds. Different missing-colour sets supply seeds;
+// each edit joins the original endpoints and
 // replays its suffix. Tape/spinners remain closed, steps stay bounded, and all
 // original phase/release conditions still apply. No thorn/special-orb recovery
 // or fishing enters this repair. A missed search remains GoalsUnmet.

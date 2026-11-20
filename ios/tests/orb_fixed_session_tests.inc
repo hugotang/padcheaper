@@ -101,7 +101,7 @@ static void CoralPreflightSessionTests() {
         }
         e->chosenSource[1]=PHOrbSkillAssist; e->chosenSkill[1]=66752;
         PHOrbSession *s=[[PHOrbSession alloc] initWithEngine:e];
-        NSDictionary *library=@{@"schema":@1,@"selected":old[@"id"],@"autoSelect":@(automatic),@"profiles":@[old]};
+        NSDictionary *library=@{@"schema":@1,@"selected":old[@"id"],@"autoSelect":@(automatic!=0),@"profiles":@[old]};
         Check([s configureProfiles:library],"an outdated Coral plan stays loadable for review and export");
         Tick(s,e,Frame()); [s queueAutomatic]; AdvanceFixedToSolveOrStop(s,e);
         NSDictionary *snapshot=s.snapshot, *progress=snapshot[@"fixedPlanProgress"], *stop=progress[@"lastStop"];

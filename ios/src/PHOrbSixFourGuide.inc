@@ -103,7 +103,7 @@ public:
 };
 
 bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &options, const Context &context,
-    const std::atomic_bool &cancel, Clock::time_point deadline, Node &best, bool &found,
+    const std::atomic_bool &cancel, Clock::time_point start, Clock::time_point deadline, Node &best, bool &found,
     unsigned &evaluated, unsigned &exploredDepth, unsigned &passes, unsigned &guidePasses,
     unsigned &guideCandidates, EvaluationCache &cache) {
     SixFourGuide guide(context);
@@ -122,6 +122,12 @@ bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &option
     for (unsigned i=0;i<size;++i)
         if (board.types[i]==rare && (context.blocked&(Bits(1)<<i)) &&
             !(context.dynamicSpinners&(Bits(1)<<i))) transportEligible=false;
+    // The distance table is part of this same search budget. For scarce
+    // orthogonal supply, do not abandon a productive focus cycle at 2/3 of
+    // the budget merely to repeat independent-donor hints in the fallback.
+    // Other boards retain their previous reservation. Completed unsuccessful
+    // passes still leave any unused time to the general search and repair.
+    if (!transportEligible) deadline=start+(deadline-start)*2/3;
     SixFourTransport transport(context,rare);
     for (unsigned pass=0;pass<48 && !interrupted();++pass) {
         // Keep the first ordinary opportunities and the full diagonal policy.

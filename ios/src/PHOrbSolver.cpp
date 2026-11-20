@@ -1792,7 +1792,7 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
         }
         bool guidedSolution = false;
         if (sixFourRepair && !(board.spinnerColors & ~63u)) {
-            guidedSolution = SearchSixFourGuide(board,options,context,cancel,start + (deadline-start)*2/3,
+            guidedSolution = SearchSixFourGuide(board,options,context,cancel,start,deadline,
                 best,found,evaluated,exploredDepth,passes,sixFourGuidePasses,sixFourGuideCandidates,evaluationCache);
         }
         if (!guidedSolution) {
