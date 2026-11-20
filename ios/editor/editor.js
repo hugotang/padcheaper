@@ -260,7 +260,7 @@
   function openEditor(slot,kind) {
     guarded(()=>{readFields();selected={slot,kind};resetFields();render();$('editor-dialog').hidden=false;
       $('main').inert=true;$('main').setAttribute('aria-hidden','true');document.body.classList.add('editing');
-      $('editor-content').scrollTop=0;$('editor-done').focus({preventScroll:true});});
+      $('editor-content').scrollTop=0;resizeEditor();$('editor-done').focus({preventScroll:true});});
   }
   function closeEditor() {
     guarded(()=>{readFields();render();$('latent-picker').open=false;$('editor-dialog').hidden=true;$('main').inert=false;$('main').removeAttribute('aria-hidden');document.body.classList.remove('editing');
@@ -414,14 +414,28 @@
       else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
     }
   });
+  let editorViewportFrame=0;
   function resizeEditor() {
     if(!window.visualViewport||Math.abs(visualViewport.scale-1)>.01)return;
     // iOS can pan the visual viewport while focusing an input. Height alone
     // leaves the fixed header above the visible area during that pan.
-    document.documentElement.style.setProperty('--editor-height',visualViewport.height+'px');
-    document.documentElement.style.setProperty('--editor-top',visualViewport.offsetTop+'px');
+    const style=document.documentElement.style;
+    for(const [key,value] of [['--editor-height',visualViewport.height+'px'],['--editor-top',visualViewport.offsetTop+'px']])
+      if(style.getPropertyValue(key)!==value)style.setProperty(key,value);
   }
+  function followEditorViewport() {
+    editorViewportFrame=0;resizeEditor();
+    // WKWebView may finish its native keyboard pan after the last viewport
+    // event. Sample during editing too, without moving focus or scroll state.
+    if(!$('editor-dialog').hidden&&$('editor-dialog').contains(document.activeElement)&&
+       document.activeElement.matches('input,select,textarea'))
+      editorViewportFrame=requestAnimationFrame(followEditorViewport);
+  }
+  $('editor-dialog').addEventListener('focusin',()=>{
+    resizeEditor();if(!editorViewportFrame)editorViewportFrame=requestAnimationFrame(followEditorViewport);
+  });
   window.visualViewport?.addEventListener('resize',resizeEditor);
-  window.visualViewport?.addEventListener('scroll',resizeEditor);resizeEditor();
+  window.visualViewport?.addEventListener('scroll',resizeEditor);
+  window.addEventListener('resize',resizeEditor);window.addEventListener('scroll',resizeEditor);resizeEditor();
   resetFields();render();bridge('ready');
 })();

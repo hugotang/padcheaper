@@ -118,6 +118,22 @@ const {pathToFileURL}=require('node:url');
   return visible;
  });
  assert.equal(pan,true,'editor navigation follows the visual viewport when the keyboard pans it');
+ await page.locator('#search').focus();
+ // Native keyboard animation can update the viewport after its final event.
+ // Observe visible controls, not just a CSS variable or an event callback.
+ await page.evaluate(()=>{
+  Object.defineProperty(visualViewport,'offsetTop',{configurable:true,value:35});
+  Object.defineProperty(visualViewport,'height',{configurable:true,value:390});
+ });
+ await page.waitForFunction(()=>{
+  const vv=visualViewport;
+  return ['editor-done','kind-body','kind-assist','previous-slot','next-slot','search'].every(id=>{
+   const el=document.getElementById(id),r=el.getBoundingClientRect();
+   return r.top>=vv.offsetTop&&r.bottom<=vv.offsetTop+vv.height&&el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));
+  });
+ },null,{timeout:2000});
+ await page.evaluate(()=>{delete visualViewport.offsetTop;delete visualViewport.height;});
+ await page.waitForFunction(()=>document.getElementById('editor-dialog').getBoundingClientRect().top===0);
  await page.setViewportSize({width:390,height:390});
  await page.locator('#search').focus();
  const keyboardControls=await page.evaluate(()=>['editor-done','kind-body','kind-assist','previous-slot','next-slot','search'].map(id=>{
