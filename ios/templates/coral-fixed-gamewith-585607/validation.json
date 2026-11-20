@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "0.5.60-local-b4-b5-passed-ci-pending",
+  "status": "0.5.60-ci-build-verified-b4-b5-passed-delivered",
   "reviewedDate": "2026-11-20",
   "profileID": "coral-fixed-585607-v90-r7",
   "planSHA256": "d6a8ce83327a53d616e7b1a372b9e4277a20a58755d511767d0fe02923efa2a8",
@@ -10,13 +10,12 @@
     "actionsIncludingBranches": 94,
     "skillActions": 87
   },
-  "buildVerified": false,
+  "buildVerified": true,
   "testSuitesExecuted": true,
   "deviceVerified": false,
-  "verificationScope": "Windows B4 24/24 and B5 24/24; independent 288-phase oracle; portable/model/private/API smoke passed. Current native/Session, ASan/UBSan, iPhoneOS/signature and GUI CI pending. No device validation.",
+  "verificationScope": "Exact-source full macOS CI and four iPhone GUI passed; Windows and macOS B4/B5 each 24/24; independent 96 routes/576 phases in total. Native mobile timing, damage, cooldown and full clear unverified.",
   "evidence": "../../research/coral-b5-20261120.json",
   "pendingVerification": [
-    "Current macOS native/Session, ASan/UBSan, iPhoneOS/signature and four GUI probes",
     "Device B4/B5 damage, mobile timing, B6/B7 cooldown and full clear"
   ],
   "previousCandidate": {
@@ -323,7 +322,7 @@
   },
   "b5SearchAcceptancePassed": true,
   "b4SearchAcceptancePassed": true,
-  "delivered": false,
+  "delivered": true,
   "verificationReceipt": "../../research/verification-0.5.60.json",
   "previous059Verification": {
     "status": "0.5.59-ci188-build-verified-b5-passed-b4-incomplete-not-delivered",
@@ -338,6 +337,28 @@
       "url": "https://github.com/hugotang/padcheaper/actions/runs/44671512108",
       "commit": "c08eb628f35d51b543d35a635231687fb0af4d30",
       "conclusion": "success"
+    }
+  },
+  "ci": {
+    "number": 191,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44690242863",
+    "conclusion": "success",
+    "steps": {
+      "Set up job": "success",
+      "Checkout": "success",
+      "Show iOS SDK toolchain": "success",
+      "Validate target and run protocol tests": "success",
+      "Compile arm64 iPhoneOS dylib": "success",
+      "Preserve Coral search acceptance results": "success",
+      "Verify editor save and mobile interactions": "success",
+      "Upload editor browser diagnostics": "success",
+      "Inspect Mach-O and signature": "success",
+      "Upload dylib and installation notes": "success",
+      "Verify floating GUI in iOS Simulator": "success",
+      "Upload GUI probe diagnostics": "success",
+      "Build summary": "success",
+      "Post Checkout": "success",
+      "Complete job": "success"
     }
   }
 }

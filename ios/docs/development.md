@@ -1,5 +1,12 @@
 # 分批開發與待驗證清單
 
+## 2026-11-20 0.5.60 編譯測試與交付完成：B4／B5 兩平台各 24/24
+
+- [CI 191](https://github.com/hugotang/padcheaper/actions/runs/44690242863) 在來源 `71a0e32e14bee22682f1a523803312186cf166f7` 完整通過原生／Session、schema／solver、ASan/UBSan、iPhoneOS arm64／嚴格簽章、瀏覽器與四份 iPhone 首次／重啟 GUI。舊計畫開場拒絕、未操作 B1 換 r7 可開始，以及 consumed 同場防重播案例均通過。CI189 在完成前因搜尋排程改善主動取消；CI190 的分段截止及布林測試資料失敗已修正，兩者不列為成功。
+- Windows 與 macOS 各自 B4 四盤 24/24、B5 四盤 24/24 成功，仍是原 48 步、800/2000ms；獨立 Python 各核對 48 路線／288 色相，共 96 路線／576 色相。普通搜尋無須取色或追加回合；條件式 fishing 的未成功結果另保留，不混作普通驗收。
+- 已建立新的 `E:\ipa\PADCheaper-0.5.60-orbs` 與 ZIP，核對 440 項套件雜湊、441 項 ZIP CRC／逐檔內容及 CI artifact 一致性。dylib 12,170,928 bytes，SHA-256 `ee85b9bb1a5249df4000fef20709eec8022541b9c8527a07d6412b7d43b635d9`；ZIP SHA-256 `9cf0c2eee9df4fd7cc2436cca2d8935a121ccebed09f8ee08d69ad00fb2ed24b`。完整證據見 [verification-0.5.60.json](../research/verification-0.5.60.json)。
+- 更新引擎後匯入並選用 `coral-fixed-585607-v90-r7`，從自行開始且未操作的新場 B1 啟動；已消耗且停止的同場不可重啟。這次確認搜尋、編譯與模擬測試，手機原生時間、B4／B5 擊殺、B6→B7 冷卻及全程通關仍待真機，`device_verified=false`。交付內文件保留建置時快照，完成狀態以頂層 `verification.json` 為準。
+
 ## 2026-11-20 0.5.60 CI190 失敗後修正，待重驗
 
 - [CI190](https://github.com/hugotang/padcheaper/actions/runs/44688754463) 的 schema／Profiles、solver、原生及 ASan/UBSan 通過；B5 24/24。B4 22/24，0.5.59 首盤的兩次 800ms 在引導的 533ms 分段截止時未完成，2000ms 案例找到解只需 583–649ms。改讓恰好四顆可搬運稀有色的引導使用原 800/2000ms 整體預算，建表仍計入、取消仍有效；其餘盤面保留原分段。
