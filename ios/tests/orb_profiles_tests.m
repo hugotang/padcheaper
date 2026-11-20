@@ -81,6 +81,7 @@ int main(void) {
         AssistProfileTests();
         HimmelPlanTests();
         MagnardProfileTests();
+        MagnardFullPlanTests();
         SharingTests();
         FixedProfilesTests();
         BundledDataCompatibilityTests();

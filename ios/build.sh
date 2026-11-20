@@ -105,6 +105,7 @@ cp ios/docs/orb-thorn-fishing-2026-11-15.md ios/docs/orb-combo-badge-2026-11-15.
 cp ios/docs/release-0.5.48.md "$build_dir/"
 cp ios/docs/release-0.5.60.md "$build_dir/"
 cp ios/docs/team-plan-config.md "$build_dir/team-plan-config.md"
+cp ios/docs/magnard-start-2026-11-20.md "$build_dir/"
 cp ios/docs/coral-plan-review-2026-11-19.md "$build_dir/"
 mkdir -p "$build_dir/templates"
 cp -R ios/templates/ishida-uryu-gamewith-574233 "$build_dir/templates/"

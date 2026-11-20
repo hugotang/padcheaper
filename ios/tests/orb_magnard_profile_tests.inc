@@ -77,3 +77,72 @@ static void MagnardProfileTests(void) {
             "confirmed native team bypass suppresses the corresponding required rescue");
     }
 }
+
+static void MagnardFullPlanTests(void) {
+    NSString *directory = @"ios/templates/magnard-gamewith-589197/";
+    NSData *data = [NSData dataWithContentsOfFile:[directory stringByAppendingString:@"team-plan.json"]];
+    NSDictionary *plan = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSDictionary *profile = PHOrbProfileFromPlan(plan,NULL);
+    Check(profile && PHOrbProfileNeedsOpeningReceipts(profile) && [profile[@"opening"] count] == 7 &&
+        [profile[@"team"] isEqual:@[@14359,@14407,@14422,@14389,@14383,@14359]],
+        "Magnard full plan starts with the base team and requires all seven opening receipts");
+    if (!profile) return;
+    NSString *reason = @"previous import failure";
+    NSDictionary *imported = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),data,&reason);
+    Check([imported[@"profiles"][0] isEqual:profile] && !reason &&
+        [imported[@"selected"] isEqual:profile[@"id"]],
+        "the UI data import accepts the complete Magnard plan and clears any previous failure reason");
+    Check([PHOrbProfileFromPlan(PHOrbPlanFromProfile(profile),NULL) isEqual:profile],
+        "native body binding survives complete-plan import/export without becoming a wildcard");
+    NSData *legacyData = [NSData dataWithContentsOfFile:[directory stringByAppendingString:@"post-opening.json"]];
+    NSDictionary *legacy = PHOrbProfilesImportingData(PHOrbDefaultProfiles(),legacyData,NULL);
+    NSDictionary *library = PHOrbProfilesImportingPlan(legacy,plan,NULL);
+    Check([library[@"profiles"] count] == 2 && [library[@"selected"] isEqual:profile[@"id"]] &&
+        [profile[@"settings"] isEqual:legacy[@"profiles"][0][@"settings"]],
+        "full plan has a new ID and preserves the reviewed post-opening rotation and board goals");
+    NSArray *slots = @[@5,@1,@3,@4,@2,@1,@6];
+    NSArray *skills = @[@67052,@67000,@67034,@67016,@67069,@0,@67000];
+    for (NSUInteger i = 0; i < 7; ++i) {
+        NSDictionary *step = profile[@"opening"][i];
+        Check([step[@"slot"] isEqual:slots[i]] && [step[@"skill"] isEqual:skills[i]] &&
+            [step[@"source"] isEqual:@"body"] && [step[@"bindBodySkill"] boolValue] == (i == 5) &&
+            ![step[@"consumeAssist"] boolValue] && ![step[@"puzzleAfter"] boolValue],
+            "opening uses the observed transform IDs, explicitly binds only step six, and has no intervening puzzle or assist");
+    }
+    for (NSDictionary *changes in @[@{@"bindBodySkill":@NO}, @{@"bindBodySkill":@1},
+        @{@"bindBodySkill":@"true"}, @{@"skill":@67000}, @{@"source":@"assist"},
+        @{@"source":@"body_or_assist"}, @{@"afterMonster":@14360}, @{@"consumeAssist":@YES}]) {
+        NSMutableDictionary *bad = [plan mutableCopy]; NSMutableArray *opening = [plan[@"opening"] mutableCopy];
+        NSMutableDictionary *step = [opening[5] mutableCopy]; [step addEntriesFromDictionary:changes];
+        opening[5] = step; bad[@"opening"] = opening;
+        Check(!PHOrbProfileFromPlan(bad,&reason) && [reason containsString:@"開場第 6 步"],
+            "invalid native binding is rejected with the sixth opening step identified");
+    }
+    for (NSDictionary *changes in @[@{@"schema":@2}, @{@"target":@"foreign"}, @{@"formation":NSNull.null}]) {
+        NSMutableDictionary *invalid = [plan mutableCopy]; [invalid addEntriesFromDictionary:changes];
+        NSData *encoded = [NSJSONSerialization dataWithJSONObject:invalid options:0 error:NULL];
+        Check(!PHOrbProfilesImportingData(PHOrbDefaultProfiles(),encoded,&reason) &&
+            [reason containsString:[changes.allKeys firstObject]],
+            "file import identifies schema, game target or formation independently");
+    }
+    NSMutableDictionary *bad = [plan mutableCopy]; NSMutableArray *opening = [plan[@"opening"] mutableCopy];
+    NSMutableDictionary *step = [opening[0] mutableCopy]; step[@"skill"] = @0; opening[0] = step; bad[@"opening"] = opening;
+    Check(!PHOrbProfileFromPlan(bad,NULL), "ordinary opening steps still require an explicit nonzero native skill ID");
+    PHOrbSnapshot state = {0}; state.valid = state.present = state.automation.valid = true;
+    for (unsigned i = 0; i < 6; ++i) {
+        state.automation.members[i].active = true;
+        state.automation.members[i].number = [profile[@"team"][i] unsignedIntValue];
+        PHBattleCatalogIDForNumber([profile[@"formation"][@"slots"][i][@"assist"][@"id"] unsignedIntValue],
+            &state.automation.members[i].assistCatalogID);
+    }
+    Check([PHOrbResolveProfile(library,&state)[@"ok"] boolValue], "full Magnard plan resolves before the first transform");
+    for (NSUInteger i = 0; i < 7; ++i) {
+        NSDictionary *current = profile[@"opening"][i];
+        if ([current[@"afterMonster"] unsignedIntValue])
+            state.automation.members[[current[@"slot"] unsignedIntValue]-1].number = [current[@"afterMonster"] unsignedIntValue];
+        Check(PHOrbProfileMatchesOpeningTeam(profile,&state,i+1) && !PHOrbProfileManualOpeningProgress(profile,&state) &&
+            ![PHOrbResolveProfile(library,&state)[@"ok"] boolValue],
+            "observed forms match an explicit receipt cursor but cannot infer completion or skip the non-transform sixth step");
+    }
+    Check([PHOrbResolveProfile(legacy,&state)[@"ok"] boolValue], "the separately selected manual-opening profile retains its existing behavior");
+}

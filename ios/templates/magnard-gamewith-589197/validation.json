@@ -1,95 +1,172 @@
 {
   "schema": 1,
   "checkedOn": "2026-11-20",
-  "status": "0.5.61-ci-build-verified-delivered-device-pending",
-  "method": "Exact-source full macOS CI plus Windows production JavaScript/browser tests; template parser/import/export, formation/share/save, timing predicates and unknown-data gates passed. Device effects and full manual-opening Session handoff remain unverified.",
+  "status": "0.5.62-build-verification-in-progress",
+  "method": "Authorized full build and test run in progress. Static source checks and historical 0.5.61 evidence do not establish current runtime validation. Final same-source results will be captured in the delivery verification.json.",
+  "newProfileID": "magnard-gw589197-full-r1",
+  "minimumRuntime": "0.5.62-orbs; 0.5.61 is unsupported.",
   "staticChecksPassed": true,
-  "checks": [
-    "UTF-8 JSON without duplicate keys; existing ordinary profile keys, target, identifier and 128 KiB limit",
-    "Six guide body and assist icon IDs, seven opening icons, transformed forms, sync awakening 138 and latent 48/41 mapping",
-    "Sixteen public SANBON card responses pinned by SHA256; source names, cooldowns, awakenings and skill descriptions match the reference",
-    "Ten body-only rules with explicit transformed actors; cleanse-before-supply order, independent bypass predicates and shared two-turn Magnard scheduling",
-    "Three separate first-wave straight-four goals; conditional assist L recovery and strict poison policy",
-    "Reference-only opening charge arithmetic from article SB19 and listed haste ends at [2,2,6,4,9,0]; this is not native evidence",
-    "Nineteen existing local documentation links resolved; build shell syntax checked; added test include resolves and two Objective-C files have balanced lexical delimiters"
+  "staticChecksPending": false,
+  "sourceTestCasesWritten": true,
+  "nativeParserExecuted": false,
+  "sessionTestsExecuted": false,
+  "runtimeSuitesRun": false,
+  "solverExecuted": false,
+  "compiled": false,
+  "ciDispatched": false,
+  "packaged": false,
+  "deviceVerified": false,
+  "pendingVerification": [
+    "Profile import/export and strict explicit native-body binding validation; existing complete plans retain compatibility",
+    "Fresh native root/stage/actor/window/table checks, source/ID enforcement, code guards and changed-read rejection",
+    "Seven ordered opening receipts, stop/resume including unrecorded manual skill/puzzle rejection, no form-only inference, no unconfirmed replay, turn-three/turn-five handoff",
+    "iPhoneOS build/signature and existing native, Session, sanitizer and UI suites under the current explicit build authorization",
+    "Device native skill IDs/effects, transformation and haste timing, cooldowns, conditional loops and actual dungeon survival"
   ],
-  "results": {
-    "files": [
-      {
-        "file": "formation.json",
-        "bytes": 3063,
-        "sha256": "03b39129b7640fce54f1fbc463fdc103c47835f75c223e66bf10c74be7f30d67"
-      },
-      {
-        "file": "formation-share.txt",
-        "bytes": 1004,
-        "sha256": "eebe9c2007611390756c78c20463f5cda6819d763f469eb2e320467bfdc5006c"
-      },
-      {
-        "file": "post-opening.json",
-        "bytes": 6835,
-        "sha256": "c18a923bf6e678fb9312486b5fceee3691efda937e459768e722959db77d4cdb"
-      },
-      {
-        "file": "strategy.reference.json",
-        "bytes": 30265,
-        "sha256": "d51eb993bd935983d7565c5051cf63255f9db721a2747b3f79875ff21d121acb"
-      },
-      {
-        "file": "README.md",
-        "bytes": 8782,
-        "sha256": "6b795acb114c2dd36988df2fa0696e90ed8f159e0d17c9ac5d2ca5d014844970"
-      }
-    ],
-    "rotationRules": 10,
-    "boardGoals": 3,
-    "cardFacts": 16,
-    "sourceTestCasesWritten": true,
-    "desktopFormationTestsPassed": true,
-    "desktopBrowserTestsPassed": true,
-    "fileHashScope": "Repository source bytes with LF; packaged README links are rewritten at build time."
-  },
   "incompleteFeatures": [
-    "Automatic seven-step opening requires unavailable exact native skill IDs",
     "Ordinary search does not maximize fire/water/heart four-group count beyond the three required groups",
     "Supplemental card HP/recovery/shield calculations lack full numeric and leader parameters"
   ],
-  "pendingVerification": [
-    "Session manual-opening handoff, shared Magnard group cooldown/stop-resume, cleanse-before-supply and required-rule failure behavior",
-    "Native conditional skills and skyfall effects, overcharged assists, status residuals and L recovery",
-    "Fire/water/heart first-wave four search on actual boards, damage, healing and survival"
-  ],
-  "nativeParserExecuted": true,
-  "sessionTestsExecuted": true,
-  "runtimeSuitesRun": true,
-  "solverExecuted": true,
-  "compiled": true,
-  "ciDispatched": true,
-  "packaged": true,
-  "deviceVerified": false,
-  "ci": {
-    "number": 195,
-    "attempt": 1,
-    "url": "https://github.com/hugotang/padcheaper/actions/runs/44739078074",
-    "conclusion": "success",
-    "steps": {
-      "Set up job": "success",
-      "Checkout": "success",
-      "Show iOS SDK toolchain": "success",
-      "Validate target and run protocol tests": "success",
-      "Compile arm64 iPhoneOS dylib": "success",
-      "Preserve Coral search acceptance results": "success",
-      "Verify editor save and mobile interactions": "success",
-      "Upload editor browser diagnostics": "success",
-      "Inspect Mach-O and signature": "success",
-      "Upload dylib and installation notes": "success",
-      "Verify floating GUI in iOS Simulator": "success",
-      "Upload GUI probe diagnostics": "success",
-      "Build summary": "success",
-      "Post Checkout": "success",
-      "Complete job": "success"
+  "lastVerifiedDelivery": {
+    "schema": 1,
+    "checkedOn": "2026-11-20",
+    "status": "0.5.61-ci-build-verified-delivered-device-pending",
+    "method": "Exact-source full macOS CI plus Windows production JavaScript/browser tests; template parser/import/export, formation/share/save, timing predicates and unknown-data gates passed. Device effects and full manual-opening Session handoff remain unverified.",
+    "staticChecksPassed": true,
+    "checks": [
+      "UTF-8 JSON without duplicate keys; existing ordinary profile keys, target, identifier and 128 KiB limit",
+      "Six guide body and assist icon IDs, seven opening icons, transformed forms, sync awakening 138 and latent 48/41 mapping",
+      "Sixteen public SANBON card responses pinned by SHA256; source names, cooldowns, awakenings and skill descriptions match the reference",
+      "Ten body-only rules with explicit transformed actors; cleanse-before-supply order, independent bypass predicates and shared two-turn Magnard scheduling",
+      "Three separate first-wave straight-four goals; conditional assist L recovery and strict poison policy",
+      "Reference-only opening charge arithmetic from article SB19 and listed haste ends at [2,2,6,4,9,0]; this is not native evidence",
+      "Nineteen existing local documentation links resolved; build shell syntax checked; added test include resolves and two Objective-C files have balanced lexical delimiters"
+    ],
+    "results": {
+      "files": [
+        {
+          "file": "formation.json",
+          "bytes": 3063,
+          "sha256": "03b39129b7640fce54f1fbc463fdc103c47835f75c223e66bf10c74be7f30d67"
+        },
+        {
+          "file": "formation-share.txt",
+          "bytes": 1004,
+          "sha256": "eebe9c2007611390756c78c20463f5cda6819d763f469eb2e320467bfdc5006c"
+        },
+        {
+          "file": "post-opening.json",
+          "bytes": 6835,
+          "sha256": "c18a923bf6e678fb9312486b5fceee3691efda937e459768e722959db77d4cdb"
+        },
+        {
+          "file": "strategy.reference.json",
+          "bytes": 30265,
+          "sha256": "d51eb993bd935983d7565c5051cf63255f9db721a2747b3f79875ff21d121acb"
+        },
+        {
+          "file": "README.md",
+          "bytes": 8782,
+          "sha256": "6b795acb114c2dd36988df2fa0696e90ed8f159e0d17c9ac5d2ca5d014844970"
+        }
+      ],
+      "rotationRules": 10,
+      "boardGoals": 3,
+      "cardFacts": 16,
+      "sourceTestCasesWritten": true,
+      "desktopFormationTestsPassed": true,
+      "desktopBrowserTestsPassed": true,
+      "fileHashScope": "Repository source bytes with LF; packaged README links are rewritten at build time."
     },
-    "logSHA256": "ed9a57d8ffefa2204c068fdab3d376550dea5215df673927a2ee85b447adac3b"
+    "incompleteFeatures": [
+      "Automatic seven-step opening requires unavailable exact native skill IDs",
+      "Ordinary search does not maximize fire/water/heart four-group count beyond the three required groups",
+      "Supplemental card HP/recovery/shield calculations lack full numeric and leader parameters"
+    ],
+    "pendingVerification": [
+      "Session manual-opening handoff, shared Magnard group cooldown/stop-resume, cleanse-before-supply and required-rule failure behavior",
+      "Native conditional skills and skyfall effects, overcharged assists, status residuals and L recovery",
+      "Fire/water/heart first-wave four search on actual boards, damage, healing and survival"
+    ],
+    "nativeParserExecuted": true,
+    "sessionTestsExecuted": true,
+    "runtimeSuitesRun": true,
+    "solverExecuted": true,
+    "compiled": true,
+    "ciDispatched": true,
+    "packaged": true,
+    "deviceVerified": false,
+    "ci": {
+      "number": 195,
+      "attempt": 1,
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/44739078074",
+      "conclusion": "success",
+      "steps": {
+        "Set up job": "success",
+        "Checkout": "success",
+        "Show iOS SDK toolchain": "success",
+        "Validate target and run protocol tests": "success",
+        "Compile arm64 iPhoneOS dylib": "success",
+        "Preserve Coral search acceptance results": "success",
+        "Verify editor save and mobile interactions": "success",
+        "Upload editor browser diagnostics": "success",
+        "Inspect Mach-O and signature": "success",
+        "Upload dylib and installation notes": "success",
+        "Verify floating GUI in iOS Simulator": "success",
+        "Upload GUI probe diagnostics": "success",
+        "Build summary": "success",
+        "Post Checkout": "success",
+        "Complete job": "success"
+      },
+      "logSHA256": "ed9a57d8ffefa2204c068fdab3d376550dea5215df673927a2ee85b447adac3b"
+    },
+    "commit": "b90e0f3202ea258cfe67a9d94f1784f9cee15179"
   },
-  "commit": "b90e0f3202ea258cfe67a9d94f1784f9cee15179"
+  "staticChecks": {
+    "jsonFiles": 5,
+    "templateOpeningSteps": 7,
+    "observedFixedSkillSteps": 6,
+    "explicitNativeBindingSteps": [
+      6
+    ],
+    "endingTeamMatchesLegacy": true,
+    "formationAndRotationUnchanged": true,
+    "lexicallyBalancedSourceFiles": 15,
+    "documentationLinks": 10,
+    "newIncludesResolved": true,
+    "workflow": "manual workflow_dispatch only",
+    "diffCheck": "passed",
+    "shellSyntax": "bash -n ios/build.sh passed",
+    "objectiveCCompilerInvoked": false,
+    "productCodeExecuted": false,
+    "testsExecuted": false,
+    "receiptCursorSourceReviewed": true,
+    "importDiagnosticSourceReviewed": true
+  },
+  "sourceFiles": [
+    {
+      "file": "formation-share.txt",
+      "sha256": "eebe9c2007611390756c78c20463f5cda6819d763f469eb2e320467bfdc5006c"
+    },
+    {
+      "file": "formation.json",
+      "sha256": "03b39129b7640fce54f1fbc463fdc103c47835f75c223e66bf10c74be7f30d67"
+    },
+    {
+      "file": "post-opening.json",
+      "sha256": "c18a923bf6e678fb9312486b5fceee3691efda937e459768e722959db77d4cdb"
+    },
+    {
+      "file": "README.md",
+      "sha256": "00ee2e30229e75f21780ffcf68f20e53a0239e4c27bf20d53eead30d2bc930cc"
+    },
+    {
+      "file": "strategy.reference.json",
+      "sha256": "a748f8f696b6c950552171cf2cf6853b8aaab11794278649c45b98643110481a"
+    },
+    {
+      "file": "team-plan.json",
+      "sha256": "190ee9015aaaa72bd464e91272cb624d1469a21b5704dda0e604610a2bd10163"
+    }
+  ]
 }

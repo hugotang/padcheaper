@@ -449,6 +449,7 @@ struct EightPreparationState {
     bool _fixedConsumed, _fixedAcknowledged, _fixedPendingLoop, _fixedPartsGone, _fixedStall;
     NSMutableArray<NSDictionary *> *_openingLog;
     NSUInteger _openingStep;
+    uint32_t _openingBoundSkill;
     uint8_t _temporaryMask;
     bool _openingInFlight, _openingAcknowledged, _openingStarted, _openingPuzzlePending, _openingManual;
     PHOrbSnapshot _openingBefore;

@@ -522,6 +522,7 @@ static void UntilDragging(PHOrbSession *session, FakeOrbEngine *engine) {
 #include "orb_lifecycle_session_tests.inc"
 #include "orb_color_condition_session_tests.inc"
 #include "orb_plan_session_tests.inc"
+#include "orb_magnard_session_tests.inc"
 #include "orb_uryu_startup_session_tests.inc"
 #include "orb_skill_window_session_tests.inc"
 #include "orb_diagonal_session_tests.inc"
@@ -888,6 +889,7 @@ int main() {
         AutoLifecycleSessionTests();
         ColorConditionSessionTests();
         PlanSessionTests();
+        MagnardOpeningSessionTests();
         UryuStartupSessionTests();
         ExecutionTraceSessionTests();
         EightSessionTests();

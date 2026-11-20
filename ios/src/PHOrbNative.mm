@@ -354,6 +354,7 @@ bool Read(PHOrbSnapshot &state, PHBattleFrame frame, NSString **reason,
 #include "PHOrbSkillChoice.inc"
 #include "PHOrbSkillDiagnostics.inc"
 #include "PHOrbObservation.inc"
+#include "PHOrbOpeningSkill.inc"
 #include "PHOrbEnemyActions.inc"
 #include "PHOrbDungeonDump.inc"
 #include "PHOrbAssistRecovery.inc"
@@ -650,6 +651,31 @@ bool RawPoint(uintptr_t header, float x, float y, float *raw) {
         if (reason) *reason = @"敵人對策：Combo 吸收資料或前後一致性未確認，已停止";
         return NO;
     }
+    return YES;
+}
+- (BOOL)readOpeningBodySkill:(NSUInteger)slot skill:(uint32_t *)skill
+    expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason {
+    if (skill) *skill = 0;
+    if (reason) *reason = @"開場本體技能的角色、階段或原生資料未確認；未施放";
+    if (!skill || !expected || slot >= 6 || !NSThread.isMainThread || _staged || _multiplayerDisabled ||
+        !frame.ready || !frame.enabled || !frame.header || frame.header != expected->identity.header) return NO;
+    PHOrbSnapshot live{};
+    if (![self readAutomation:&live frame:frame reason:reason] || !live.valid || !live.present || !live.automation.valid ||
+        live.multiplayerDisabled || live.multiplayer.kind != PHOrbMultiplayerNone || live.identity.sourceMode != 0 ||
+        !PHBattleIsSinglePlayer(live.identity.entryMode, live.identity.multiplayer) ||
+        !PHOrbSameAutomation(expected, &live) || live.phase != 2 || !live.settled || live.boardTransition ||
+        !live.automation.window || live.automation.busy || live.dragged || !PHInputIsQuiet(&live.input) ||
+        _verifiedHeader != frame.header || !CheckCode(frame.header, reason) || !CheckObservationCode(frame.header)) return NO;
+    OpeningBodySkillBinding first{}, second{};
+    if (!ReadOpeningBodySkillBinding(live, unsigned(slot), first)) return NO;
+    PHOrbSnapshot after{};
+    if (![self readAutomation:&after frame:frame reason:reason] || !PHOrbSameAutomation(&live, &after) ||
+        after.multiplayerDisabled || after.multiplayer.kind != PHOrbMultiplayerNone || after.identity.sourceMode != 0 ||
+        !PHBattleIsSinglePlayer(after.identity.entryMode, after.identity.multiplayer) ||
+        !after.automation.window || after.automation.busy || after.boardTransition || after.dragged || !after.settled ||
+        !PHInputIsQuiet(&after.input) || !ReadOpeningBodySkillBinding(after, unsigned(slot), second) || !(first == second)) return NO;
+    *skill = first.skill;
+    if (reason) *reason = nil;
     return YES;
 }
 - (BOOL)nativeCanUseGame:(uintptr_t)game member:(uintptr_t)member selector:(int)selector header:(uintptr_t)header {

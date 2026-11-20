@@ -360,7 +360,7 @@
         @"activeProfile":_activeProfile,
         @"opening":@{@"profile":_openingProfile[@"id"] ?: @"", @"completed":@(_openingStep),
             @"count":@([_openingProfile[@"opening"] count]), @"inFlight":@(_openingInFlight),
-            @"puzzlePending":@(_openingPuzzlePending), @"steps":[_openingLog copy]},
+            @"puzzlePending":@(_openingPuzzlePending), @"boundBodySkill":@(_openingBoundSkill), @"steps":[_openingLog copy]},
         @"searchTrace":_searchTrace, @"lastFailedSearch":_lastFailedSearch, @"executionHistory":[_executionHistory copy],
         @"lastFishingSuccess":_lastFishingSuccess ?: @{},
         @"lastAssistRecoverySuccess":_lastAssistRecoverySuccess ?: @{},

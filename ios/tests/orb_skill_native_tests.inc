@@ -406,6 +406,7 @@ static void TemporarySkillNativeTests() {
 }
 #include "orb_skill_choice_tests.inc"
 #include "orb_observation_native_tests.inc"
+#include "orb_opening_binding_native_tests.inc"
 #include "orb_assist_charge_native_tests.inc"
 #include "orb_enemy_action_native_tests.inc"
 #include "orb_enemy_selector_native_tests.inc"
@@ -414,6 +415,7 @@ static void TemporarySkillNativeTests() {
 
 static void SkillNativeTests() {
     ObservationNativeTests();
+    OpeningBindingNativeTests();
     EnemyActionNativeTests();
     EnemySelectorNativeTests();
     EnemyDispatchNativeTests();

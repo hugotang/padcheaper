@@ -24,6 +24,9 @@ FOUNDATION_EXPORT NSDictionary *PHOrbProfileUpdatingFormation(NSDictionary *prof
 FOUNDATION_EXPORT NSDictionary *PHOrbFormationsSelectingProfile(NSDictionary *formations, NSDictionary *profile);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *state, NSUInteger completed);
 FOUNDATION_EXPORT BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *state);
+// Native-bound opening steps require retained receipts for the whole opening;
+// visible transformed forms alone cannot prove an intervening body skill ran.
+FOUNDATION_EXPORT BOOL PHOrbProfileNeedsOpeningReceipts(NSDictionary *profile);
 // First opening cursor k > 0 whose step k carries an afterMonster form that the
 // current team already shows (a manual transform), or 0 when none applies.
 FOUNDATION_EXPORT NSUInteger PHOrbProfileManualOpeningProgress(NSDictionary *profile, const PHOrbSnapshot *state);

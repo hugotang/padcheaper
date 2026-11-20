@@ -31,6 +31,12 @@ typedef NS_ENUM(NSInteger, PHOrbSkillResult) {
     expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 - (BOOL)finishInput:(NSString **)reason;
 @optional
+// Fresh, read-only binding for an explicitly declared opening body step.
+// Returns a nonzero ordinary root skill only at native stage/cache zero, in
+// the same single-player actor/window. The caller must still useSkill with
+// that exact ID; neither this read nor optional battle diagnostics authorize a cast.
+- (BOOL)readOpeningBodySkill:(NSUInteger)slot skill:(uint32_t *)skill
+    expected:(const PHOrbSnapshot *)expected frame:(PHBattleFrame)frame reason:(NSString **)reason;
 // Native readiness/source validation, without starting a skill. Started means
 // ready here; unavailable is definite, rejected is unknown and must stop.
 - (PHOrbSkillResult)fixedSkillReadiness:(NSUInteger)slot request:(PHOrbSkillRequest)request

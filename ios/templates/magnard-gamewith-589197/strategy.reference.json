@@ -24,7 +24,8 @@
     "executableProfile": "post-opening.json",
     "instructions": "README.md",
     "executableFormation": "formation.json",
-    "formationShare": "formation-share.txt"
+    "formationShare": "formation-share.txt",
+    "executableFullPlan": "team-plan.json"
   },
   "articleFacts": {
     "bodyNumbers": [
@@ -113,7 +114,7 @@
       "action": "transform",
       "hasteOtherSlots": 1,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67052
     },
     {
       "order": 2,
@@ -123,7 +124,7 @@
       "action": "transform",
       "hasteOtherSlots": 2,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67000
     },
     {
       "order": 3,
@@ -133,7 +134,7 @@
       "action": "transform",
       "hasteOtherSlots": 1,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67034
     },
     {
       "order": 4,
@@ -143,7 +144,7 @@
       "action": "transform",
       "hasteOtherSlots": 2,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67016
     },
     {
       "order": 5,
@@ -153,7 +154,7 @@
       "action": "transform",
       "hasteOtherSlots": 2,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67069
     },
     {
       "order": 6,
@@ -173,7 +174,7 @@
       "action": "transform",
       "hasteOtherSlots": 2,
       "source": "body",
-      "nativeSkillId": null
+      "nativeSkillId": 67000
     }
   ],
   "openingSlotChoice": "Use slot 1 for the first Magnard transform and subsequent body skill; slot 6 transforms last. The article does not label the two identical base icons by slot.",
@@ -379,7 +380,10 @@
     "fullAutomaticOpeningAvailable": false,
     "formationEditorSupportsTeam": true,
     "supplementSource": "https://sanbon.me/api/search",
-    "supplementDate": "2026-11-20"
+    "supplementDate": "2026-11-20",
+    "fullAutomaticOpeningSourceAvailable": true,
+    "fullAutomaticOpeningRequires": "Runtime 0.5.62 or later with bindBodySkill support; build verification is in progress. 0.5.61 rejects the new full plan.",
+    "nativeSkillIdsAvailableScope": "Five base-form IDs observed in the 0.5.61 device log; the transformed Magnard ID is read and bound at execution, never guessed."
   },
   "limitations": [
     "Ordinary four goals require one straight first-wave fire, water and heart four each. Remaining ranking is combo-first, not a maximum-TPA objective.",
@@ -388,7 +392,7 @@
     "Ordinary profile matching does not bind the six assist IDs or check that the manual opening took place.",
     "Max-HP and move-time debuffs have no dedicated ordinary-rule trigger; scheduled loops do not guarantee immediate replacement.",
     "Volken latent 41 is formation intent only; the Coral-only B2 unmatchable-recovery engine is not enabled for this team.",
-    "All runtime imports, scheduling, solving, skill effects and device behavior remain untested for this new profile."
+    "Full automatic-opening source and its native binding, parser and Session cases are not yet built or executed. Prior 0.5.61 validation applies only to the delivered manual-opening profile and formation; native effects and device behavior remain unverified."
   ],
   "cardFacts": [
     {
@@ -1203,5 +1207,23 @@
       9,
       0
     ]
+  },
+  "openingNativeEvidence": {
+    "runtime": "0.5.61-orbs",
+    "target": "jp.gungho.pad-ios-23.6.1-107553",
+    "attachment": "e6504474-664a-4457-b9cf-4e4e8294c423/Pasted text.txt",
+    "sha256": "e575f07b82eab69cd4d474f1042d5d7bea14125db9f94774b73f741c0fb5fa91",
+    "line": 269,
+    "field": "Orb battleObservation.members[].skillIDs[0] (equal to rootSkillIDs[0])",
+    "observedBaseSkillIDs": {
+      "14359": 67000,
+      "14407": 67069,
+      "14422": 67034,
+      "14389": 67016,
+      "14383": 67052
+    },
+    "automaticPlan": "magnard-gw589197-full-r1",
+    "nativeBindingStep": 6,
+    "executedOrVerifiedEffects": false
   }
 }

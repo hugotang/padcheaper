@@ -151,11 +151,15 @@ static BOOL Matches(NSDictionary *record, const PHOrbSnapshot *state) {
     return YES;
 }
 
-BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
+static BOOL OpeningValidWithReason(id opening, NSDictionary *formation, NSString **reason) {
+    if (reason) *reason = @"開場 opening 必須是最多 24 步的陣列，且編隊資料須有效；未匯入";
     if (![opening isKindOfClass:NSArray.class] || [opening count] > 24 || !PHFormationReadTeam(formation, NULL, NULL)) return NO;
+    if (reason) *reason = @"編隊 formation 含缺少或不支援的欄位；未匯入";
     if (!KeysWithOptional(formation, @[@"schema", @"title", @"slots"], @[@"badge"])) return NO;
     NSMutableArray *bodies = [NSMutableArray array], *assists = [NSMutableArray array];
     for (NSDictionary *slot in formation[@"slots"]) {
+        if (reason) *reason = [NSString stringWithFormat:@"編隊第 %lu 格的本體、武裝欄位或角色編號無效；未匯入",
+            (unsigned long)bodies.count + 1];
         if (!Keys(slot, @[@"body", @"assist"]) || ![slot[@"body"][@"id"] unsignedIntValue]) return NO;
         for (NSString *kind in @[@"body", @"assist"]) {
             NSDictionary *card = slot[kind]; uint16_t catalogID = 0;
@@ -167,16 +171,29 @@ BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
     }
     NSUInteger index = 0;
     for (id step in opening) {
+        if (reason) *reason = [NSString stringWithFormat:@"開場第 %lu 步含缺少或不支援的欄位，或欄位型別／數值無效；未匯入",
+            (unsigned long)index + 1];
         if (!KeysWithOptional(step, @[@"slot", @"source", @"monster", @"assist", @"skill", @"afterMonster"],
-                @[@"consumeAssist", @"puzzleAfter"]) ||
+                @[@"consumeAssist", @"puzzleAfter", @"bindBodySkill"]) ||
             !Integer(step[@"slot"], 6) || ![step[@"slot"] unsignedIntValue] ||
             ![step[@"source"] isKindOfClass:NSString.class] || ![@[@"body", @"assist"] containsObject:step[@"source"]] ||
             !Integer(step[@"monster"], UINT16_MAX) || !Integer(step[@"assist"], UINT16_MAX) ||
-            !Integer(step[@"skill"], 0x1ffff) || ![step[@"skill"] unsignedIntValue] || !Integer(step[@"afterMonster"], UINT16_MAX) ||
+            !Integer(step[@"skill"], 0x1ffff) || !Integer(step[@"afterMonster"], UINT16_MAX) ||
+            (step[@"bindBodySkill"] && !PHOrbProfileIsBoolean(step[@"bindBodySkill"])) ||
             (step[@"consumeAssist"] && !PHOrbProfileIsBoolean(step[@"consumeAssist"])) ||
             (step[@"puzzleAfter"] && !PHOrbProfileIsBoolean(step[@"puzzleAfter"]))) return NO;
+        const BOOL bindBody = [step[@"bindBodySkill"] boolValue];
+        if (reason) *reason = [NSString stringWithFormat:bindBody ?
+            @"開場第 %lu 步 bindBodySkill 只允許本體來源、skill 0、afterMonster 0，且不能消耗武裝；未匯入" :
+            @"開場第 %lu 步必須提供非零技能 ID；若要讀取並綁定本體技能，須明確設定 bindBodySkill: true；未匯入",
+            (unsigned long)index + 1];
+        if (bindBody ? ([step[@"skill"] unsignedIntValue] || ![step[@"source"] isEqual:@"body"] ||
+                [step[@"afterMonster"] unsignedIntValue] || [step[@"consumeAssist"] boolValue]) :
+                ![step[@"skill"] unsignedIntValue]) return NO;
         NSUInteger slot = [step[@"slot"] unsignedIntegerValue] - 1;
         uint16_t catalogID = 0;
+        if (reason) *reason = [NSString stringWithFormat:@"開場第 %lu 步的角色／武裝與前一步結果不符，或變身／消耗武裝／轉珠順序無效；未匯入",
+            (unsigned long)index + 1];
         if (![step[@"monster"] isEqual:bodies[slot]] ||
             ![step[@"assist"] isEqual:assists[slot]] ||
             ([step[@"source"] isEqual:@"assist"] && ![step[@"assist"] unsignedIntValue]) ||
@@ -187,7 +204,12 @@ BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
         if ([step[@"consumeAssist"] boolValue]) assists[slot] = @0;
         ++index;
     }
+    if (reason) *reason = nil;
     return YES;
+}
+
+BOOL PHOrbOpeningValid(id opening, NSDictionary *formation) {
+    return OpeningValidWithReason(opening, formation, NULL);
 }
 
 static uint8_t OpeningConsumedAssists(NSDictionary *profile, NSUInteger completed) {
@@ -234,9 +256,15 @@ BOOL PHOrbProfileMatchesOpeningTeam(NSDictionary *profile, const PHOrbSnapshot *
     return YES;
 }
 
+BOOL PHOrbProfileNeedsOpeningReceipts(NSDictionary *profile) {
+    for (NSDictionary *step in profile[@"opening"])
+        if ([step[@"bindBodySkill"] boolValue]) return YES;
+    return NO;
+}
+
 NSUInteger PHOrbProfileManualOpeningProgress(NSDictionary *profile, const PHOrbSnapshot *state) {
     NSArray *opening = profile[@"opening"];
-    if (!profile[@"formation"] || ![opening isKindOfClass:NSArray.class]) return 0;
+    if (!profile[@"formation"] || ![opening isKindOfClass:NSArray.class] || PHOrbProfileNeedsOpeningReceipts(profile)) return 0;
     for (NSUInteger k = 1; k <= opening.count; ++k)
         if ([opening[k - 1][@"afterMonster"] unsignedIntValue] && PHOrbProfileMatchesOpeningTeam(profile, state, k)) return k;
     return 0;
@@ -263,14 +291,22 @@ BOOL PHOrbProfileMatchesRunningTeam(NSDictionary *profile, const PHOrbSnapshot *
 }
 
 NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
-    if (reason) *reason = @"整包設定格式、版本、隊伍或開場步驟無效；未匯入";
+    if (reason) *reason = @"整包設定必須是完整 team-plan JSON，且不得缺少或加入不支援的頂層欄位；未匯入";
     if (![plan isKindOfClass:NSDictionary.class] || !Keys(plan, @[@"format", @"schema", @"target", @"id", @"name", @"formation",
-            @"opening", @"rotation", @"board", @"dungeon", @"floor", @"source"]) ||
-        ![plan[@"format"] isEqual:@"padcheaper-team-plan"] || !Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1] ||
-        !PHDataTargetIsSupported(plan[@"target"]) ||
-        !PHFormationReadTeam(plan[@"formation"], NULL, NULL) || !PHOrbOpeningValid(plan[@"opening"], plan[@"formation"]) ||
-        !KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
+            @"opening", @"rotation", @"board", @"dungeon", @"floor", @"source"])) return nil;
+    if (reason) *reason = @"整包格式 format 必須為 padcheaper-team-plan；未匯入";
+    if (![plan[@"format"] isEqual:@"padcheaper-team-plan"]) return nil;
+    if (reason) *reason = @"整包 schema 只支援整數 1；未匯入";
+    if (!Integer(plan[@"schema"], 1) || ![plan[@"schema"] isEqual:@1]) return nil;
+    if (reason) *reason = [NSString stringWithFormat:@"設定的遊戲版本 target 不受支援：%@；未匯入", plan[@"target"]];
+    if (!PHDataTargetIsSupported(plan[@"target"])) return nil;
+    if (reason) *reason = @"編隊 formation 格式或數值無效，須包含六格本體與武裝資料；未匯入";
+    if (!PHFormationReadTeam(plan[@"formation"], NULL, NULL) ||
+        !OpeningValidWithReason(plan[@"opening"], plan[@"formation"], reason)) return nil;
+    if (reason) *reason = @"盤面 board 含缺少或不支援的欄位；未匯入";
+    if (!KeysWithOptional(plan[@"board"], @[@"quality", @"mode", @"goals", @"recovery"],
             @[@"thornComboPriority", @"allowThornsWithHeartMatch", @"allowThornFishing", @"allowPoisonWithHeartFour", @"diagonal", @"assistRecoveryL"])) return nil;
+    if (reason) *reason = @"盤面目標或循環技能 rotation 的條件／數值無效；未匯入";
     NSMutableDictionary *settings = [plan[@"board"] mutableCopy]; settings[@"rules"] = plan[@"rotation"];
     NSDictionary *canonical = PHOrbCanonicalSettings(settings);
     if (!canonical) return nil;
@@ -278,6 +314,7 @@ NSDictionary *PHOrbProfileFromPlan(id plan, NSString **reason) {
     for (NSDictionary *slot in plan[@"formation"][@"slots"]) [team addObject:slot[@"body"][@"id"]];
     NSDictionary *profile = @{@"id":plan[@"id"], @"name":plan[@"name"], @"team":team, @"dungeon":plan[@"dungeon"],
         @"floor":plan[@"floor"], @"settings":canonical, @"formation":plan[@"formation"], @"opening":plan[@"opening"], @"source":plan[@"source"]};
+    if (reason) *reason = @"策略 ID、名稱、關卡、來源說明或隊伍資料無效；未匯入";
     if (!PHOrbProfilesValid(@{@"schema":@1, @"selected":@"", @"autoSelect":@NO, @"profiles":@[profile]})) return nil;
     NSData *data = [NSJSONSerialization dataWithJSONObject:profile options:0 error:NULL];
     if (reason) *reason = nil;
@@ -399,11 +436,14 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     [lines addObject:@"\n開場（依序完成）："];
     NSUInteger index = 0;
     for (NSDictionary *step in profile[@"opening"]) [lines addObject:[NSString stringWithFormat:@"%lu. 位置 %@ %@技能 %@%@%@%@",
-        (unsigned long)++index, step[@"slot"], [step[@"source"] isEqual:@"body"] ? @"本體" : @"武裝", step[@"skill"],
+        (unsigned long)++index, step[@"slot"], [step[@"source"] isEqual:@"body"] ? @"本體" : @"武裝",
+        [step[@"bindBodySkill"] boolValue] ? @"（核對角色後讀取並綁定）" : step[@"skill"],
         [step[@"afterMonster"] unsignedIntValue] ? [NSString stringWithFormat:@" → #%@", step[@"afterMonster"]] : @"",
         [step[@"consumeAssist"] boolValue] ? @" · 確認武裝消耗" : @"",
         [step[@"puzzleAfter"] boolValue] ? @" · 先轉此盤再接循環" : @""]];
     if (!index) [lines addObject:@"沒有開場步驟，開始後使用循環規則"];
+    if (PHOrbProfileNeedsOpeningReceipts(profile))
+        [lines addObject:@"須從首層未操作的隊伍開始；停止後只依本場已確認的開場紀錄接續，不推測手動進度"];
     [lines addObject:@"\n循環（依優先順序）："];
     for (NSDictionary *rule in profile[@"settings"][@"rules"]) [lines addObject:PHOrbSkillRuleDescription(rule)];
     [lines addObject:[NSString stringWithFormat:@"\n盤面目標：%@\n求路品質：%@", PHOrbGoalsDescription(profile[@"settings"][@"goals"]), profile[@"settings"][@"quality"]]];
@@ -424,6 +464,30 @@ NSString *PHOrbPlanDescription(NSDictionary *plan) {
     return [lines componentsJoinedByString:@"\n"];
 }
 
+static NSString *ProfileMismatchMessage(NSDictionary *record, const PHOrbSnapshot *state) {
+    NSMutableArray<NSString *> *details = [NSMutableArray array];
+    unsigned dungeon = [record[@"dungeon"] unsignedIntValue], floor = [record[@"floor"] unsignedIntValue];
+    if (dungeon && dungeon != state->identity.dungeon)
+        [details addObject:[NSString stringWithFormat:@"地下城目前 %u，策略要求 %u", (unsigned)state->identity.dungeon, dungeon]];
+    if (floor && floor != state->identity.floor)
+        [details addObject:[NSString stringWithFormat:@"子關卡目前 %u，策略要求 %u", (unsigned)state->identity.floor, floor]];
+    // Full plans have opening/transform/assist matching of their own. Their
+    // entry team is not necessarily the expected current form.
+    BOOL ordinary = !record[@"activity"] && !record[@"fixedPlan"] && !record[@"formation"];
+    if (ordinary) for (NSUInteger i = 0; i < 6; ++i) {
+        unsigned expected = [record[@"team"][i] unsignedIntValue];
+        if (!expected) continue;
+        const PHOrbSkillMember *member = &state->automation.members[i];
+        if (!member->active)
+            [details addObject:[NSString stringWithFormat:@"位置 %lu 未讀到有效隊員，策略要求 #%u", (unsigned long)i + 1, expected]];
+        else if (member->number != expected)
+            [details addObject:[NSString stringWithFormat:@"位置 %lu 目前 #%u，策略要求 #%u", (unsigned long)i + 1,
+                (unsigned)member->number, expected]];
+    }
+    NSString *context = details.count ? [NSString stringWithFormat:@"：%@", [details componentsJoinedByString:@"；"]] : @"";
+    return [NSString stringWithFormat:@"策略「%@」與目前隊伍或關卡不符%@；請核對隊伍形態及策略的開場條件後再開始", record[@"name"], context];
+}
+
 NSDictionary *PHOrbResolveProfile(NSDictionary *library, const PHOrbSnapshot *state) {
     if (!PHOrbProfilesValid(library) || !state || !state->valid || !state->present || !state->automation.valid ||
         state->multiplayerDisabled || !PHBattleIsSinglePlayer(state->identity.entryMode, state->identity.multiplayer) ||
@@ -431,8 +495,7 @@ NSDictionary *PHOrbResolveProfile(NSDictionary *library, const PHOrbSnapshot *st
     if (![library[@"autoSelect"] boolValue]) {
         NSDictionary *record = PHOrbProfileNamed(library, library[@"selected"]);
         if (!record) return @{@"ok":@YES, @"profile":@{}, @"message":@"通用設定"};
-        if (!Matches(record, state)) return @{@"ok":@NO, @"message":[NSString stringWithFormat:
-            @"策略「%@」與目前隊伍或關卡不符；請選擇相符策略後再開始", record[@"name"]]};
+        if (!Matches(record, state)) return @{@"ok":@NO, @"message":ProfileMismatchMessage(record, state)};
         return @{@"ok":@YES, @"profile":record, @"message":record[@"name"]};
     }
     NSDictionary *best = nil; NSUInteger bestScore = 0, ties = 0;

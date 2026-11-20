@@ -25,6 +25,7 @@ static vm_prot_t dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
 static unsigned changeContinuationDuringRead;
 static bool changeContinuationDuringCoordinateRead;
 static unsigned observationMutation;
+static uintptr_t changeOpeningRootOnRead;
 static bool observationUnmatchableMutation, changeUnmatchableDuringCoordinateRead;
 static unsigned enemyActionMutation;
 static unsigned enemyDispatchMutation;
@@ -75,6 +76,10 @@ BOOL PHReadMemory(uintptr_t address, void *output, size_t length) {
     if (rejectEnemyDamageRead && address == Impl + PHOrbEnemyDamageImmediateOffset) return NO;
     if (!PHMemoryHasProtection(address, length, VM_PROT_READ, 0)) return NO;
     std::memcpy(output, reinterpret_cast<void *>(address), length);
+    if (changeOpeningRootOnRead && address == changeOpeningRootOnRead && length == sizeof(uint32_t)) {
+        changeOpeningRootOnRead = 0;
+        ++*reinterpret_cast<uint32_t *>(address);
+    }
     if (changeComboBonusDuringRead && address == Impl + PHOrbComboBonusBadgeOffset && length == 28) {
         const unsigned mutation = changeComboBonusDuringRead; changeComboBonusDuringRead = 0;
         if (mutation == 1) Store<uint16_t>(reinterpret_cast<uint8_t *>(address + 22),3);
@@ -293,7 +298,7 @@ static void Reset(unsigned width = 6, unsigned height = 5) {
     rejectBattleProtection = false;
     implMappedBytes = implBytes.size(); dialogProtection = VM_PROT_READ | VM_PROT_WRITE;
     changeContinuationDuringRead = 0; changeContinuationDuringCoordinateRead = false;
-    observationMutation = enemyActionMutation = 0;
+    observationMutation = enemyActionMutation = 0; changeOpeningRootOnRead = 0;
     observationUnmatchableMutation = changeUnmatchableDuringCoordinateRead = false;
     enemyDispatchMutation = 0; rejectEnemyDispatchRead = false;
     enemyDamageMutation = 0; rejectEnemyDamageRead = false;

@@ -6,6 +6,18 @@
     std::fill(std::begin(_ruleLastUseTurns), std::end(_ruleLastUseTurns), 0);
     std::fill(std::begin(_groupLastUseTurns), std::end(_groupLastUseTurns), 0);
 }
+- (BOOL)openingReceiptsMatch:(const PHOrbSnapshot *)state {
+    if (!PHOrbProfileNeedsOpeningReceipts(_openingProfile) || _openingInFlight ||
+        _openingStep == [_openingProfile[@"opening"] count]) return YES;
+    NSUInteger uses = 0, wave = 0;
+    if (_openingStep) {
+        NSDictionary *last = _openingLog.lastObject;
+        if (_openingLog.count != _openingStep || ![last[@"status"] isEqual:@"confirmed"] ||
+            !last[@"usesAfter"] || !last[@"waveAfter"]) return NO;
+        uses = [last[@"usesAfter"] unsignedIntegerValue]; wave = [last[@"waveAfter"] unsignedIntegerValue];
+    }
+    return state->automation.skillUses == uses && state->wave == wave && !state->moves && _observedTurn <= 1;
+}
 - (PHOrbRuleMatch)triggerRule:(NSUInteger)index state:(const PHOrbSnapshot *)state reason:(NSString **)reason {
     NSDictionary *rule = _skillRules[index];
     const NSUInteger group = [rule[@"group"] unsignedIntegerValue];
@@ -70,7 +82,7 @@
 - (void)observeRuleHistory:(const PHOrbSnapshot *)state read:(BOOL)read {
     if (!read) { _historyPuzzleStarted = false; return; }
     if (!state->present) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingManual = false;
+        _openingProfile = nil; _openingStep = 0; _openingBoundSkill = 0; _temporaryMask = 0; _openingManual = false;
         _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyBound = _historyResolve = false; [_onceRules removeAllObjects];
@@ -87,7 +99,7 @@
         _historyPuzzleStarted = false; return;
     }
     if (!_historyBound || !PHBattleSameIdentity(&_historyIdentity, &state->identity)) {
-        _openingProfile = nil; _openingStep = 0; _temporaryMask = 0; _openingManual = false;
+        _openingProfile = nil; _openingStep = 0; _openingBoundSkill = 0; _temporaryMask = 0; _openingManual = false;
         _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
         [_openingLog removeAllObjects];
         _historyIdentity = state->identity; _historyBound = true; _historyResolve = false;
@@ -165,6 +177,10 @@
         }
         if (![resolved[@"ok"] boolValue]) { [self queueStop:resolved[@"message"]]; return NO; }
         _activeProfile = resolved[@"profile"];
+        if (PHOrbProfileNeedsOpeningReceipts(_activeProfile) &&
+            ![_engine respondsToSelector:@selector(readOpeningBodySkill:skill:expected:frame:reason:)]) {
+            [self queueStop:@"目前引擎不支援此計畫的原生本體技能綁定，未開始開場"]; return NO;
+        }
         if (_activeProfile[@"fixedPlan"] && ![self bindFixedPlan:state]) return NO;
         if (_activeProfile[@"formation"]) {
             if (!resume && _openingInFlight) {
@@ -183,7 +199,7 @@
                     (state->wave || state->moves || state->phase != 2 || state->automation.skillUses)) {
                     [self queueStop:@"開場只可在首層、尚未轉珠及施放技能時開始；中途加入請使用不含開場的策略"]; return NO;
                 }
-                _openingProfile = _activeProfile; _openingStep = 0; _openingManual = false;
+                _openingProfile = _activeProfile; _openingStep = 0; _openingBoundSkill = 0; _openingManual = false;
                 _openingInFlight = _openingAcknowledged = _openingStarted = _openingPuzzlePending = false;
                 [_openingLog removeAllObjects];
                 if (manualStep) [self adoptOpeningFrom:manualStep];
@@ -193,6 +209,9 @@
             if (!_openingInFlight && !(openingDone ? PHOrbProfileMatchesRunningTeam(_openingProfile, state) :
                 PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep))) {
                 [self queueStop:@"目前本體／武裝與已確認的開場進度不符，未重播技能"]; return NO;
+            }
+            if (![self openingReceiptsMatch:state]) {
+                [self queueStop:@"已確認的開場進度之外出現技能或轉珠操作，不能推測接續；未重播技能"]; return NO;
             }
             if (_openingInFlight && !_openingStarted) {
                 [self queueStop:@"前一次開場技能啟動結果不明，本場不能重試或跳過此步；請手動完成本場"]; return NO;
@@ -271,6 +290,7 @@
 // longer matches the team. Advance only to the first later step whose own
 // afterMonster form is now visible; steps without form evidence stay pending.
 - (BOOL)adoptManualOpeningProgress:(const PHOrbSnapshot *)state {
+    if (PHOrbProfileNeedsOpeningReceipts(_openingProfile)) return NO;
     NSArray *opening = _openingProfile[@"opening"];
     if (_openingStep >= opening.count || PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep) ||
         state->automation.skillUses <= _openingBefore.automation.skillUses) return NO;
@@ -287,7 +307,7 @@
     for (NSUInteger i = from; i < k; ++i)
         [_openingLog addObject:@{@"step":@(i + 1), @"slot":opening[i][@"slot"], @"source":opening[i][@"source"],
             @"skill":opening[i][@"skill"], @"status":@"manual"}];
-    _openingStep = k; _openingManual = true;
+    _openingStep = k; _openingBoundSkill = 0; _openingManual = true;
     [self logAutomation:[NSString stringWithFormat:@"偵測到手動完成開場第 %lu–%lu 步（形態已變更），從第 %lu 步接續；之後未就緒的開場技能改為略過",
         (unsigned long)from + 1, (unsigned long)k, (unsigned long)k + 1]];
     if (k == opening.count && [opening[k - 1][@"puzzleAfter"] boolValue]) _openingPuzzlePending = true;
@@ -300,8 +320,9 @@
         !PHOrbProfileMatchesOpeningTeam(_openingProfile, state, _openingStep + 1)) return NO;
     NSMutableDictionary *record = [_openingLog.lastObject mutableCopy]; record[@"status"] = @"confirmed";
     record[@"usesAfter"] = @(state->automation.skillUses);
+    if (PHOrbProfileNeedsOpeningReceipts(_openingProfile)) record[@"waveAfter"] = @(state->wave);
     _openingLog[_openingLog.count - 1] = [record copy];
-    ++_openingStep; _openingInFlight = false;
+    ++_openingStep; _openingBoundSkill = 0; _openingInFlight = false;
     if (_openingStep == [_openingProfile[@"opening"] count] &&
         [_openingProfile[@"opening"][_openingStep - 1][@"puzzleAfter"] boolValue]) {
         _openingPuzzlePending = true;
@@ -390,6 +411,9 @@
             [self queueStop:@"隊伍形態或武裝與本次流程不符，已停止"]; return;
         }
         if (_openingStep < [_activeProfile[@"opening"] count]) {
+            if (![self openingReceiptsMatch:&_live]) {
+                [self queueStop:@"已確認的開場進度之外出現技能或轉珠操作，未執行下一步"]; return;
+            }
             _openingBefore = _live; _phase = PHOrbSessionPhase::OpeningArming;
             _message = [NSString stringWithFormat:@"開場 %lu／%lu：準備使用位置 %@ %@技能",
                 (unsigned long)_openingStep + 1, (unsigned long)[_activeProfile[@"opening"] count],
@@ -527,7 +551,20 @@
             !PHOrbProfileMatchesOpeningTeam(_activeProfile, &current, _openingStep)) {
             [self queueStop:@"開場施放前盤面、隊員或武裝已改變，未施放"]; return;
         }
-        PHOrbSkillResult result = [_engine useSkill:slot request:PHOrbRequestForRule(step)
+        PHOrbSkillRequest request = PHOrbRequestForRule(step);
+        const BOOL bindBody = [step[@"bindBodySkill"] boolValue];
+        if (bindBody) {
+            uint32_t skill = 0;
+            if (![_engine respondsToSelector:@selector(readOpeningBodySkill:skill:expected:frame:reason:)] ||
+                ![_engine readOpeningBodySkill:slot skill:&skill expected:&_openingBefore frame:frame reason:&reason] ||
+                !skill || skill >= 0x20000 || request.source != PHOrbSkillBody ||
+                (_openingBoundSkill && _openingBoundSkill != skill)) {
+                [self queueStop:reason ?: @"開場已綁定的本體技能無法確認或已改變；未施放或跳步"]; return;
+            }
+            _openingBoundSkill = skill;
+            request.skill = skill;
+        }
+        PHOrbSkillResult result = [_engine useSkill:slot request:request
             expected:&_openingBefore frame:frame reason:&reason];
         if (result == PHOrbSkillWindowClosed) {
             [self deferSkillWindow:reason ?: @"技能窗口尚未開放；開場此步未施放"];
@@ -550,10 +587,12 @@
                 (unsigned long)_openingStep + 1, reason ?: @"遊戲判定技能不可用"]]; return;
         }
         _openingInFlight = true; _openingAcknowledged = false; _openingStarted = result == PHOrbSkillStarted;
-        [_openingLog addObject:@{@"step":@(_openingStep + 1), @"slot":step[@"slot"], @"source":step[@"source"],
-            @"skill":step[@"skill"], @"usesBefore":@(_openingBefore.automation.skillUses),
+        NSMutableDictionary *openingRecord = [@{@"step":@(_openingStep + 1), @"slot":step[@"slot"], @"source":step[@"source"],
+            @"skill":@(request.skill), @"usesBefore":@(_openingBefore.automation.skillUses),
             @"consumeAssist":@([step[@"consumeAssist"] boolValue]), @"puzzleAfter":@([step[@"puzzleAfter"] boolValue]),
-            @"status":result == PHOrbSkillStarted ? @"started" : @"uncertain"}];
+            @"status":result == PHOrbSkillStarted ? @"started" : @"uncertain"} mutableCopy];
+        if (bindBody) openingRecord[@"skillBinding"] = @"native-body";
+        [_openingLog addObject:[openingRecord copy]];
         if (result != PHOrbSkillStarted) {
             [self queueStop:reason ?: @"開場啟動未確認；保留此步，不會重複施放"]; return;
         }
