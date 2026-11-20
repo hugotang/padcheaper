@@ -53,9 +53,12 @@ def load_supplement(manifest_path=DEFAULT_MANIFEST):
             assert all(isinstance(s["name"], str) and isinstance(s["description"], str) for s in skills)
         cards.append(card)
     assert len(cards) == manifest["expectedSupplementCount"]
+    # Git checks out LF on macOS and may use CRLF on Windows. The manifest's
+    # semantics, plus the independently hash-checked response bytes, bind data.
+    canonical_manifest = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
     return sorted(cards, key=lambda c: c["num"]), {
         "source": manifest["source"], "retrievedOn": manifest["retrievedOn"],
-        "sha256": hashlib.sha256(manifest_bytes + raw).hexdigest(),
+        "sha256": hashlib.sha256(canonical_manifest + raw).hexdigest(),
         "newestNumber": manifest["newestNumber"], "records": len(cards),
     }
 

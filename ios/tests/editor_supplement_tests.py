@@ -19,6 +19,18 @@ class SupplementTests(unittest.TestCase):
     def test_rejects_corruption(self):
         self.check_rejected(lambda source, manifest: source["mons"].pop(), rehash=False)
 
+    def test_manifest_newlines_preserve_provenance(self):
+        expected = load_supplement()
+        text = DEFAULT_MANIFEST.read_text(encoding="utf-8")
+        manifest = json.loads(text)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / manifest["file"]).write_bytes((DEFAULT_MANIFEST.parent / manifest["file"]).read_bytes())
+            for newline in ("\n", "\r\n"):
+                path = root / "manifest.json"
+                path.write_text(text, encoding="utf-8", newline=newline)
+                self.assertEqual(load_supplement(path), expected)
+
     def test_rejects_incomplete_inventory(self):
         self.check_rejected(lambda source, manifest: source["mons"].pop(0))
 

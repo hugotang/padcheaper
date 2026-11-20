@@ -17,8 +17,8 @@
     "files": [
       {
         "file": "formation.json",
-        "bytes": 3242,
-        "sha256": "324808d2680b847dd6913f6123e5b5a0115f77d08ef0e8b0a0691625f0811ece"
+        "bytes": 3063,
+        "sha256": "03b39129b7640fce54f1fbc463fdc103c47835f75c223e66bf10c74be7f30d67"
       },
       {
         "file": "formation-share.txt",
@@ -27,13 +27,13 @@
       },
       {
         "file": "post-opening.json",
-        "bytes": 7119,
-        "sha256": "91e5638e70c4bed04e866918461343ecd032dea6a389b7e187ccf78dd9bc717e"
+        "bytes": 6835,
+        "sha256": "c18a923bf6e678fb9312486b5fceee3691efda937e459768e722959db77d4cdb"
       },
       {
         "file": "strategy.reference.json",
-        "bytes": 31472,
-        "sha256": "9043a107440ee64f9dc2b7a23c1ce3ef0406fdc1ee4fb5690a6376eb94252e6f"
+        "bytes": 30265,
+        "sha256": "d51eb993bd935983d7565c5051cf63255f9db721a2747b3f79875ff21d121acb"
       },
       {
         "file": "README.md",

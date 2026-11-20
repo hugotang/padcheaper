@@ -95,7 +95,7 @@ def main():
     editor = json.loads(Path("ios/editor/catalog.json").read_text(encoding="utf-8"))
     result = generate(args.directory, args.revision, editor)
     args.output.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n",
-                           encoding="utf-8")
+                           encoding="utf-8", newline="\n")
     print(f"Solo facts: {len(result['cards'])} cards, {len(result['skills'])} leader records, {len(result['activeSkills'])} active records")
 
 

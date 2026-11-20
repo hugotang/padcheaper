@@ -39,5 +39,5 @@ output = {"source": "https://github.com/Mapaler/PADDashFormation", "revision": a
           "skill_sha256": hashlib.sha256(skills_path.read_bytes()).hexdigest(), "supplement": provenance, "cards": rows}
 path = Path("ios/editor/catalog.json")
 path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text(json.dumps(output, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+path.write_text(json.dumps(output, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8", newline="\n")
 print(f"Saved {len(rows)} card records to {path}")
