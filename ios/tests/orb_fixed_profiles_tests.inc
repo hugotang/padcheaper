@@ -29,7 +29,7 @@ static void FixedProfilesTests(void) {
         NSDictionary *assistSkills=@{@13876:@[@66752],@13878:@[@66755]};
         NSDictionary *ordinarySkills=@{@66716:@63191,@66718:@63192,@66724:@63220,@66735:@62494,
             @66740:@62502,@66729:@63241,@66700:@27820,@66706:@27827,@66752:@61754,@66755:@63251};
-        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r6"] &&
+        Check([coral[@"id"] isEqual:@"coral-fixed-585607-v90-r7"] &&
             [coral[@"dungeon"] isEqual:@7801] && [coral[@"floor"] isEqual:@1],
             "Coral guide-reviewed revision has a distinct ID and the observed native dungeon and sub-dungeon");
         NSDictionary *finisher=[coral[@"fixedPlan"][@"floors"][14][@"variants"][0][@"stages"] lastObject];
@@ -60,6 +60,16 @@ static void FixedProfilesTests(void) {
             for (NSDictionary *a in exit[@"actions"]) Check(!a[@"optionalAfterFirst"],"these floors keep required Atori actions");
         }
         NSDictionary *b7Target=coral[@"fixedPlan"][@"floors"][6][@"variants"][0][@"stages"][0][@"actions"][0];
+        NSArray *b5=coral[@"fixedPlan"][@"floors"][4][@"variants"][0][@"stages"];
+        Check([b5 count]==4 && [b5[2][@"id"] isEqual:@"buff-without-fours"] &&
+            [b5[2][@"board"][@"policy"] isEqual:@"six_colors_no_fours"] &&
+            ![b5[2][@"board"][@"requireSixColorFours"] boolValue] &&
+            [[b5[2][@"actions"] valueForKey:@"skill"] isEqual:@[@66718,@66724,@66740,@66706]] &&
+            [b5[3][@"board"][@"requireSixColorFours"] isEqual:@YES] &&
+            [b5[3][@"requireEffectsClear"] isEqual:@[@"damage_absorb",@"attribute_absorb",@"damage_void"]] &&
+            [b5[3][@"actions"] count]==1 && [b5[3][@"actions"][0][@"skill"] isEqual:@66706] &&
+            [b5[3][@"repeat"][@"maximumPuzzles"] isEqual:@1],
+            "B5 preserves the Solomon/Diena recharge stall but requires six colour fours and live coverage on its only finisher");
         NSArray *b4=coral[@"fixedPlan"][@"floors"][3][@"variants"][0][@"stages"];
         for (NSDictionary *s in b4) Check([s[@"board"][@"requireSixColorFours"] isEqual:@YES] &&
             [s[@"requireEnemyState"] isEqual:@[@{@"monster":@202575},@{@"monster":@202578},@{@"monster":@202576}]] &&
@@ -202,21 +212,26 @@ static void FixedProfilesTests(void) {
         NSDictionary *r5Library=PHOrbProfilesImportingData(r4Library,
             [NSJSONSerialization dataWithJSONObject:r5Package options:0 error:NULL],NULL);
         NSData *r5Export=PHOrbExportProfileData(PHOrbProfileNamed(r5Library,@"coral-fixed-585607-v90-r5"),NULL);
-        NSDictionary *both=PHOrbProfilesImportingData(r5Library,coralData,NULL);
+        NSMutableDictionary *r6Package=FixedFixture(); r6Package[@"profile"][@"id"]=@"coral-fixed-585607-v90-r6";
+        NSDictionary *r6Library=PHOrbProfilesImportingData(r5Library,
+            [NSJSONSerialization dataWithJSONObject:r6Package options:0 error:NULL],NULL);
+        NSData *r6Export=PHOrbExportProfileData(PHOrbProfileNamed(r6Library,@"coral-fixed-585607-v90-r6"),NULL);
+        NSDictionary *both=PHOrbProfilesImportingData(r6Library,coralData,NULL);
         NSDictionary *reloaded=both ? [NSJSONSerialization JSONObjectWithData:
             [NSJSONSerialization dataWithJSONObject:both options:0 error:NULL] options:0 error:NULL] : nil;
-        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r6");
+        NSDictionary *newRecord=PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r7");
         NSData *newExport=PHOrbExportProfileData(newRecord,NULL);
-        Check(oldRecord && v90Export && b7Export && priorExport && r4Export && r5Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==7 &&
-            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r6"] && ![reloaded[@"autoSelect"] boolValue] &&
+        Check(oldRecord && v90Export && b7Export && priorExport && r4Export && r5Export && r6Export && reloaded && PHOrbProfilesValid(reloaded) && [reloaded[@"profiles"] count]==8 &&
+            [reloaded[@"selected"] isEqual:@"coral-fixed-585607-v90-r7"] && ![reloaded[@"autoSelect"] boolValue] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607"),NULL) isEqual:oldExport] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90"),NULL) isEqual:v90Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-b7"),NULL) isEqual:b7Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r3"),NULL) isEqual:priorExport] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r4"),NULL) isEqual:r4Export] &&
             [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r5"),NULL) isEqual:r5Export] &&
+            [PHOrbExportProfileData(PHOrbProfileNamed(reloaded,@"coral-fixed-585607-v90-r6"),NULL) isEqual:r6Export] &&
             [newRecord isEqual:coral] && newExport && !PHOrbProfilesImportingData(reloaded,newExport,NULL),
-            "r6 import and JSON reload preserve all earlier records including r5 and reject duplicate new IDs");
+            "r7 import and JSON reload preserve all earlier records including r6 and reject duplicate new IDs");
         PHOrbSnapshot native={0}; native.valid=native.present=native.automation.valid=true;
         native.identity.entryMode=1; native.identity.dungeon=7801; native.identity.floor=1;
         for (unsigned i=0;i<6;++i) {

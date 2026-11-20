@@ -1,8 +1,8 @@
 {
   "format": "padcheaper-template-reference",
   "schemaVersion": 1,
-  "id": "coral-fixed-585607-v90-r6",
-  "status": "0.5.58-ci186-build-verified-b4-search-failed-not-delivered",
+  "id": "coral-fixed-585607-v90-r7",
+  "status": "0.5.59-local-b5-search-passed-b4-incomplete-ci-pending",
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "source": {
     "url": "https://xn--0ck4aw2h.gamewith.jp/article/show/585607",
@@ -38,7 +38,9 @@
     "b2SearchReference": "b2-search-reference.json",
     "latestReview": "../../docs/coral-plan-review-2026-11-19.md",
     "unmatchableRecovery": "../../docs/unmatchable-recovery.md",
-    "b4Review": "../../docs/coral-b4-2026-11-19.md"
+    "b4Review": "../../docs/coral-b4-2026-11-19.md",
+    "b5Review": "../../docs/coral-b5-2026-11-20.md",
+    "b5FailureCorpus": "../../research/coral-b5-20261120.json"
   },
   "counts": {
     "floors": 15,
@@ -151,6 +153,7 @@
   ],
   "decisions": [
     "B2: r5 explicitly opts into fresh latent41/TPA evidence for one basic unmatchable color/turn on enemy 200974. Require a first native-order isolated fire/wood four, then the blocked color in an existing-orb cascade; other five colors remain first-removal. Ordinary shared spinner phases only; no fishing, extra skills or extra puzzles. After-turn clear is required but is not attributed solely to the latent.",
+    "B5 r7 preserves the deliberate six-colour/no-four recharge board and all skill/puzzle limits; only finish requires six first-removal colour fours and fresh absorption/void coverage. Cached per-colour guidance and bounded segment repair passed Windows B5 acceptance 24/24; B4 first board still fails; full CI pending.",
     "B7: up to two original attacks with exact native enemy roster; one additional board only for dead 200038 and living 210524 at <=50% HP. Fresh coverage and unchanged enemy/target evidence are required. Full clear can advance directly.",
     "B12: check native body HP <=50% before each of the two remaining attack boards, proceeding directly to Solomon if the threshold was reached early.",
     "B13: hold the Keisy loop until B14; restore uncovered absorption with an actual Solomon cast and native bypass result; finish with Atori, Diena, Riku, Atori in one board.",
@@ -161,9 +164,9 @@
     "Single-player, exact native skills, native receipts, bounded gestures and the consumed-run restart restriction remain in force. Damage, survival, cooldown continuity and full device clear are not verified."
   ],
   "deviceVerified": false,
-  "buildVerified": true,
+  "buildVerified": false,
   "testSuitesExecuted": true,
-  "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. Windows local checks passed. B4 route acceptance FAILED on both platforms; no delivery. Device behavior unverified.",
+  "verificationScope": "Windows portable/model, private guidance/repair and API smoke passed; B5 24/24 passed, B4 ordinary second board 6/6 and first board 0/6. macOS native/Session, sanitizers, iPhoneOS/signature and GUI pending this build. No device or full-plan validation.",
   "previousDelivery": {
     "profileID": "coral-fixed-585607-v90-r5",
     "ci": {
@@ -184,14 +187,39 @@
   },
   "b4SearchAcceptancePassed": false,
   "delivered": false,
-  "ci": {
-    "number": 186,
-    "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
-    "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb",
-    "conclusion": "success"
-  },
   "pendingVerification": [
-    "B4 six-color-four route search acceptance on recorded and additional boards",
-    "Device target/damage, B5 cooldown continuity and a complete Coral clear"
-  ]
+    "B4 first recorded board search acceptance",
+    "macOS native/Session, ASan/UBSan, iPhoneOS/signature and four iPhone GUI",
+    "Device B5 damage, B6/B7 cooldown continuity and full clear"
+  ],
+  "b5Revision": {
+    "date": "2026-11-20",
+    "preservesCooldownStall": true,
+    "finisherRequiresSixColorFours": true,
+    "effects": [
+      "damage_absorb",
+      "attribute_absorb",
+      "damage_void"
+    ],
+    "maximumFinisherPuzzles": 1,
+    "search": "cached per-colour template guidance followed by bounded whole-route repair; original deadline and exact release checks",
+    "testsRun": true,
+    "deviceVerified": false
+  },
+  "previousCandidate": {
+    "profileID": "coral-fixed-585607-v90-r6",
+    "ci": {
+      "number": 186,
+      "url": "https://github.com/hugotang/padcheaper/actions/runs/44551918880",
+      "commit": "1c4003ecff14bbdb331a29ba7a2178e6d6dfb7bb",
+      "conclusion": "success"
+    },
+    "buildVerified": true,
+    "testSuitesExecuted": true,
+    "verificationScope": "Exact-commit full macOS native/Session, solver/schema, ASan/UBSan, iPhoneOS/signature, browser and four iPhone GUI passed. Windows local checks passed. B4 route acceptance FAILED on both platforms; no delivery. Device behavior unverified.",
+    "b4SearchAcceptancePassed": false,
+    "delivered": false,
+    "receipt": "../../research/verification-0.5.58.json"
+  },
+  "b5SearchAcceptancePassed": true
 }

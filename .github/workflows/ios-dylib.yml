@@ -58,6 +58,15 @@ jobs:
           set -o pipefail
           BUILD_DIR="$RUNNER_TEMP/orb-model-tests" bash ios/tools/test-solver-session.sh | tee "$RUNNER_TEMP/session-regression.log"
 
+      - name: Preserve Coral search acceptance results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-Coral-solver-acceptance-${{ github.run_number }}
+          path: ${{ runner.temp }}/orb-model-tests/coral-*.jsonl
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Collect standalone solver and test results
         run: |
           mkdir -p build/standalone-solver/include build/standalone-solver/pazusoba
@@ -100,6 +109,15 @@ jobs:
 
       - name: Compile arm64 iPhoneOS dylib
         run: bash ios/build.sh
+
+      - name: Preserve Coral search acceptance results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PADCheaper-Coral-acceptance-${{ github.run_number }}
+          path: build/ios-tests/coral-*.jsonl
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Verify editor save and mobile interactions
         run: |

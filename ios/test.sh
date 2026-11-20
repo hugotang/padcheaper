@@ -208,3 +208,8 @@ done
     ios/tests/music_tests.mm "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" \
     -lc++ -framework Foundation -o "$build_dir/music-tests"
 "$build_dir/music-tests"
+
+# Run after native/Session regressions so a search miss retains those results,
+# but fail this test step before the workflow can build/package a new dylib.
+BUILD_DIR="$build_dir" CORAL_SOLVER_OBJECT="$build_dir/PHOrbSolver.o" \
+    CORAL_CXX="$(xcrun --sdk macosx --find clang++)" bash ios/tools/test-coral-b5.sh

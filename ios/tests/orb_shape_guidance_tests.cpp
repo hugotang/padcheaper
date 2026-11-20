@@ -402,7 +402,10 @@ static void FixedFourQualityPolicyTests() {
     Check(FixedFourUpperBound(cells,context)==0,"a minimum removal above four has no four-group capacity");
 }
 
+#include "orb_six_four_repair_tests.inc"
+
 int main() {
+    SixFourRepairTests();
     FixedBoardScoreTests();
     FixedFirstColorGuidanceTests();
     FixedFourQualityPolicyTests();

@@ -1403,6 +1403,8 @@ void SelectBeam(std::vector<Node> &next, std::vector<Node> &beam, unsigned limit
     }
     beam.swap(next);
 }
+#include "PHOrbSixFourRepair.inc"
+#include "PHOrbSixFourGuide.inc"
 }
 
 PHOrbSolveOptions PHOrbOptionsForQuality(PHOrbSearchQuality quality) noexcept {
@@ -1591,6 +1593,11 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
         Node best;
         bool found = false, timedOut = false, hadContactCandidates = false;
         unsigned evaluated = 0, passes = 0, backtracks = 0, exploredDepth = 0, squarePasses = 0;
+        unsigned sixFourRepairPasses = 0, sixFourRepairCandidates = 0;
+        unsigned sixFourGuidePasses = 0, sixFourGuideCandidates = 0;
+        const bool sixFourRepair = !attackPrefix && SixFourRepairEligible(board,options);
+        SixFourSeeds repairSeeds(sixFourRepair);
+        bool collectRepairSeeds = sixFourRepair;
         EvaluationCache evaluationCache(UseEvaluationCache(context));
         // A beam holds at most max(beam, starts, saved frontier) parents.
         VisitedSet visited(size_t(std::max<unsigned>({options.beam, size, 128u})) * (options.diagonal ? 8 : 4));
@@ -1615,13 +1622,11 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
         bool stableShapeRecovery = context.variants > 1 && context.shapeGoals > 1;
         for (unsigned g = 0; g < options.goals.count; ++g)
             if (ShapeGoal(options.goals.items[g].kind) && !context.hasStableLayouts[g]) stableShapeRecovery = false;
-        // Ordinary colours and fixed attacks keep the baseline's full opportunity. A completed
-        // beam often leaves most of its time unused (the five-colour log used
-        // 113 of 800 ms); only that remainder is spent on different guidance.
-        // A fixed attack's first feasible six-colour route can arrive after
-        // the old two-thirds slice. Do not sacrifice it for optional quality.
-        const auto primaryDeadline = recover && !context.colorRecovery &&
-            context.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack ? start + (deadline - start) * 2 / 3 : deadline;
+        // Non-strict fixed attacks keep their full primary opportunity.
+        // Strict six-four attacks first use cached colour-template beams;
+        // the general beam and segment repair share the remaining deadline.
+        const auto primaryDeadline = sixFourRepair || (recover && !context.colorRecovery &&
+            context.fixedBoard.mode != PHOrbFixedBoardMode::FourAttack) ? start + (deadline - start) * 2 / 3 : deadline;
         const auto colorFocus = [&](const Context &scoring) {
             if (!found || !scoring.colorGuidance) return unsigned(PHOrbBasicTypes);
             Score hints = best.score;
@@ -1741,6 +1746,7 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
                             }
                             best = child; found = true;
                         }
+                        if (collectRepairSeeds) repairSeeds.offer(child,context);
                         if (activityRows || qualityGoal || scoring.alternateShapeHints) child.score = guidedScore;
                         if (heartPending) child.score.result.hazardsSafe =
                             ReleaseHazardsSafe(child.score.result, options.allowPoisonWithHeartFour, false);
@@ -1784,9 +1790,24 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
             beam = starts;
             search(baseline, startDepth, primaryFocus, primaryDeadline, false);
         }
-        beam = starts;
-        search(context, startDepth, primaryFocus, primaryDeadline, retain);
-        if (recover && (!met() || improveFours()) && !timedOut && !cancel.load(std::memory_order_relaxed)) {
+        bool guidedSolution = false;
+        if (sixFourRepair && !(board.spinnerColors & ~63u)) {
+            guidedSolution = SearchSixFourGuide(board,options,context,cancel,start + (deadline-start)*2/3,
+                best,found,evaluated,exploredDepth,passes,sixFourGuidePasses,sixFourGuideCandidates,evaluationCache);
+        }
+        if (!guidedSolution) {
+            beam = starts;
+            const auto now = Clock::now();
+            const auto mainDeadline = sixFourRepair ? now + (deadline-now)*2/3 : primaryDeadline;
+            search(context, startDepth, primaryFocus, mainDeadline, retain);
+        }
+        collectRepairSeeds = false;
+        if (sixFourRepair && found && !met() && !timedOut) {
+            RepairSixFours(options,context,repairSeeds,cancel,deadline,best,evaluationCache,
+                evaluated,exploredDepth,passes,sixFourRepairPasses,sixFourRepairCandidates);
+            timedOut = Clock::now() >= deadline;
+        }
+        if (!guidedSolution && recover && (!met() || improveFours()) && !timedOut && !cancel.load(std::memory_order_relaxed)) {
             Context recovery = context;
             PHOrbGoalSet qualityGoals{}; unsigned qualityFocus = PHOrbMaxGoals;
             const bool qualityGoal = improveFours() && FixedFourQualityGoal(context,
@@ -1953,6 +1974,10 @@ static PHOrbSolveStatus Solve(const PHOrbBoard &board, PHOrbSolveOptions options
         route.elapsedMS = uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(finished - start).count());
         route.searchPasses = uint8_t(passes); route.backtracks = uint8_t(backtracks); route.exploredDepth = uint8_t(exploredDepth);
         route.squareRecoveryPasses = uint8_t(squarePasses);
+        route.sixFourRepairPasses = uint8_t(sixFourRepairPasses);
+        route.sixFourRepairCandidates = sixFourRepairCandidates;
+        route.sixFourGuidePasses = uint8_t(sixFourGuidePasses);
+        route.sixFourGuideCandidates = sixFourGuideCandidates;
         PHOrbBoard replay{};
         const bool replayed = PHOrbReplay(&board, &route, route.count - 1, &replay);
         // A route that never entered keeps the board colour in the spinner.

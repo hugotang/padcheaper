@@ -3,8 +3,8 @@
   "schema": 1,
   "target": "jp.gungho.pad-ios-23.6.1-107553",
   "profile": {
-    "id": "coral-fixed-585607-v90-r6",
-    "name": "珊瑚挑戰・固定 Atori・v90 B4 六色四消",
+    "id": "coral-fixed-585607-v90-r7",
+    "name": "珊瑚挑戰・固定 Atori・v90 B4／B5 六色四消",
     "team": [
       13828,
       13876,
@@ -877,7 +877,8 @@
                   "board": {
                     "policy": "six_colors_fours",
                     "assistRecoveryL": false,
-                    "maxGestureMS": 0
+                    "maxGestureMS": 0,
+                    "requireSixColorFours": true
                   },
                   "repeat": {
                     "minimumPuzzles": 1,
@@ -885,7 +886,12 @@
                     "until": {
                       "kind": "floor_change"
                     }
-                  }
+                  },
+                  "requireEffectsClear": [
+                    "damage_absorb",
+                    "attribute_absorb",
+                    "damage_void"
+                  ]
                 }
               ]
             }

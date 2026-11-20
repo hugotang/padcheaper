@@ -136,7 +136,10 @@ def build():
            exit_stage(actions=[atori(), target_wood_absorb()], enemies=b4_roster, clear=b4_clear, six_fours=True)])
     floor([stage('delay-1', [atori()]), stage('delay-2', [atori()]),
            stage('buff-without-fours', [solomon(), diena(), keisy(), atori()], 'six_colors_no_fours'),
-           exit_stage()])
+           # Keep the deliberate stall: Diena's haste + both B5 boards + B6
+           # recharge CD4 Solomon for B7. The last bypass turn needs a burst,
+           # not the legacy six-colours/heart-four optional-quality fallback.
+           exit_stage(six_fours=True, clear=b4_clear)])
     floor([exit_stage()])
     pair = [dict(monster=200038), dict(monster=210524)]
     survivor = [dict(monster=200038, alive=False), dict(monster=210524, alive=True, maximumPercent=50)]
@@ -194,7 +197,7 @@ def build():
                member(8476, [(8476, [66700]), (8477, [66706])]),
                member(8476, [(8476, [66700]), (8477, [66706])])]
     return dict(format='padcheaper-fixed-plan', schema=1, target='jp.gungho.pad-ios-23.6.1-107553',
-                profile=dict(id='coral-fixed-585607-v90-r6', name='珊瑚挑戰・固定 Atori・v90 B4 六色四消',
+                profile=dict(id='coral-fixed-585607-v90-r7', name='珊瑚挑戰・固定 Atori・v90 B4／B5 六色四消',
                              team=[m['body'] for m in members], dungeon=7801, floor=1, source=SOURCE,
                              settings=dict(quality='thorough', mode='combo', goals=[], rules=[], assistRecoveryL=False),
                              fixedPlan=dict(schema=1, members=members, leaderSwap=5, floors=floors)))

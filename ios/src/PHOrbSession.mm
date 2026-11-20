@@ -279,6 +279,10 @@ NSMutableDictionary *SearchAttemptTrace(const PHOrbSolveOptions &options, PHOrbS
         @"fishingRequested":@(options.fishCell >= 0), @"fishing":@(route.fishing),
         @"searchPasses":@(route.searchPasses), @"backtracks":@(route.backtracks),
         @"squareRecoveryPasses":@(route.squareRecoveryPasses),
+        @"sixFourRepairPasses":@(route.sixFourRepairPasses),
+        @"sixFourRepairCandidates":@(route.sixFourRepairCandidates),
+        @"sixFourGuidePasses":@(route.sixFourGuidePasses),
+        @"sixFourGuideCandidates":@(route.sixFourGuideCandidates),
         @"exploredDepth":@(route.exploredDepth), @"stepLimit":@(options.steps), @"beam":@(options.beam)} mutableCopy];
     if (options.fishCell >= 0) {
         trace[@"fishCell"] = @(options.fishCell); trace[@"fishColor"] = @(options.fishColor);
@@ -1424,6 +1428,10 @@ struct EightPreparationState {
             trace[@"evaluationCalls"] = @(route.evaluationCalls); trace[@"evaluationCacheHits"] = @(route.evaluationCacheHits);
             trace[@"searchPasses"] = @(route.searchPasses); trace[@"backtracks"] = @(route.backtracks);
             trace[@"squareRecoveryPasses"] = @(route.squareRecoveryPasses);
+            trace[@"sixFourRepairPasses"] = @(route.sixFourRepairPasses);
+            trace[@"sixFourRepairCandidates"] = @(route.sixFourRepairCandidates);
+            trace[@"sixFourGuidePasses"] = @(route.sixFourGuidePasses);
+            trace[@"sixFourGuideCandidates"] = @(route.sixFourGuideCandidates);
             trace[@"exploredDepth"] = @(route.exploredDepth);
             trace[@"status"] = SolveStatusName(result);
             NSString *failureMessage = MultiFishingFailureMessage(SolveFailureMessage(result, board,

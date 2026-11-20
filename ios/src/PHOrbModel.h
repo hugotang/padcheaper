@@ -422,6 +422,10 @@ typedef struct {
     bool allowThornFishing;
     PHOrbFishingExchange fishingExchanges[PHOrbRouteMaxFishingExchanges];
     uint8_t squareRecoveryPasses; // Subset of searchPasses, at most two; same deadline.
+    uint8_t sixFourRepairPasses; // Subset of searchPasses; full-gesture segment repair, at most two.
+    uint32_t sixFourRepairCandidates; // Entire resulting layouts evaluated under the original contract.
+    uint8_t sixFourGuidePasses; // Subset of searchPasses; cached per-colour template beams, at most 48.
+    uint32_t sixFourGuideCandidates; // Search hints only; winners require full original phase evaluation.
 } PHOrbRoute;
 
 bool PHOrbDimensionsSupported(unsigned width, unsigned height);

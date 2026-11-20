@@ -219,7 +219,10 @@ static void ShapeTests() {
 #include "enemy_damage_model_tests.inc"
 #include "enemy_threat_model_tests.inc"
 
+#include "orb_coral_b5_solver_tests.inc"
+
 int main() {
+    CoralB5FailureCorpusTests();
     FixedBoardSolverTests();
     UnmatchableSolverTests();
     SessionStateModelTests();

@@ -54,7 +54,7 @@ if [ -n "${BASELINE:-}" ]; then
     # The solver includes PHOrb*.inc/.h and the tests include their own .inc
     # files; one file from the baseline would mix two revisions.
     baseline_dir="$(mktemp -d "$build_dir/baseline.XXXXXX")"
-    git archive "$BASELINE" ios/src ios/tests | tar -x -C "$baseline_dir"
+    git archive "$BASELINE" ios/src ios/tests ios/research | tar -x -C "$baseline_dir"
     solver_tests "$baseline_dir/ios" "$build_dir/solver-baseline"
     echo "Route summary differences versus $BASELINE (timing lines are expected to differ):"
     summary_status=0
@@ -69,3 +69,5 @@ if [ -n "${BASELINE:-}" ]; then
         exit "$summary_status"
     fi
 fi
+
+BUILD_DIR="$build_dir" bash ios/tools/test-coral-b5.sh

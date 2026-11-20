@@ -4,6 +4,7 @@
 // in-bounds adjacent routes, cancellation) and never route quality; quality
 // stays in orb_solver_tests.cpp at normal optimisation.
 #include "PHOrbSolver.h"
+#include "../research/coral_b5_fixtures.h"
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
@@ -65,6 +66,14 @@ static PHOrbGoal Goal(PHOrbGoalKind kind, uint8_t colors, uint8_t count, uint8_t
 }
 
 int main() {
+    for (const auto &fixture : CoralB5Cases) {
+        auto options=CoralB5Options(fixture); options.milliseconds=80;
+        const auto board=CoralB5Board(fixture);
+        Run("strict six-four cached guide",board,options);
+        auto restricted=board; restricted.fixedStart=1;
+        restricted.tapeMask=UINT64_C(1)<<6; restricted.flags[6]|=PHOrbFlagTape;
+        Run("strict six-four guide restricted",restricted,options);
+    }
     // Small budgets keep the sanitized run short; every search still enters
     // beam selection, recovery passes and frontier bookkeeping.
     PHOrbSolveOptions base = PHOrbOptionsForQuality(PHOrbSearchQuality::Fast);
