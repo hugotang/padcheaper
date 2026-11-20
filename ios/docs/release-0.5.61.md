@@ -10,4 +10,4 @@
 
 另修正編隊搜尋框聚焦時，鍵盤動畫延後更新可視範圍，造成返回按鈕短暫越界的情況；輸入期間同步實際範圍，保留雙指縮放與原有焦點／捲動。
 
-本機編隊／隊伍模型／地城、圖鑑完整性及瀏覽器檢查已通過。完整 macOS 原生／Session、sanitizer、iPhoneOS arm64／簽章與四份 iPhone GUI 由本次手動 CI 驗證；最終結果見 [開發紀錄](development.md) 及交付包 `verification.json`。珊瑚新回報的荊棘盤搜尋問題仍未修正，本版不作此項修復宣稱。
+本機編隊／隊伍模型／地城、圖鑑完整性及瀏覽器檢查已通過。[CI 195](https://github.com/hugotang/padcheaper/actions/runs/44739078074) 在 `b90e0f3202ea258cfe67a9d94f1784f9cee15179` 完整通過 macOS 原生／Session、sanitizer、iPhoneOS arm64／簽章與四份 iPhone GUI，已交付新版本資料夾與 ZIP；完整證據見 [開發紀錄](development.md) 及交付包 `verification.json`。珊瑚新回報的荊棘盤搜尋問題仍未修正，本版不作此項修復宣稱。

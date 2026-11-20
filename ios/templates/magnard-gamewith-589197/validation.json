@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "checkedOn": "2026-11-20",
-  "status": "desktop-formation-and-editor-passed-native-build-pending",
-  "method": "Pinned public source inventory and hashes; production JavaScript formation/model/browser tests executed. Objective-C profile/parser/session, iPhoneOS build and simulator verification pending manual CI.",
+  "status": "0.5.61-ci-build-verified-delivered-device-pending",
+  "method": "Exact-source full macOS CI plus Windows production JavaScript/browser tests; template parser/import/export, formation/share/save, timing predicates and unknown-data gates passed. Device effects and full manual-opening Session handoff remain unverified.",
   "staticChecksPassed": true,
   "checks": [
     "UTF-8 JSON without duplicate keys; existing ordinary profile keys, target, identifier and 128 KiB limit",
@@ -46,7 +46,8 @@
     "cardFacts": 16,
     "sourceTestCasesWritten": true,
     "desktopFormationTestsPassed": true,
-    "desktopBrowserTestsPassed": true
+    "desktopBrowserTestsPassed": true,
+    "fileHashScope": "Repository source bytes with LF; packaged README links are rewritten at build time."
   },
   "incompleteFeatures": [
     "Automatic seven-step opening requires unavailable exact native skill IDs",
@@ -54,18 +55,41 @@
     "Supplemental card HP/recovery/shield calculations lack full numeric and leader parameters"
   ],
   "pendingVerification": [
-    "Production profile import/export and rule timing cases in orb_magnard_profile_tests.inc",
     "Session manual-opening handoff, shared Magnard group cooldown/stop-resume, cleanse-before-supply and required-rule failure behavior",
     "Native conditional skills and skyfall effects, overcharged assists, status residuals and L recovery",
-    "Fire/water/heart first-wave four search on actual boards, damage, healing and survival",
-    "Authorized 0.5.61 iPhoneOS compilation, full CI and device verification"
+    "Fire/water/heart first-wave four search on actual boards, damage, healing and survival"
   ],
-  "nativeParserExecuted": false,
-  "sessionTestsExecuted": false,
+  "nativeParserExecuted": true,
+  "sessionTestsExecuted": true,
   "runtimeSuitesRun": true,
-  "solverExecuted": false,
-  "compiled": false,
-  "ciDispatched": false,
-  "packaged": false,
-  "deviceVerified": false
+  "solverExecuted": true,
+  "compiled": true,
+  "ciDispatched": true,
+  "packaged": true,
+  "deviceVerified": false,
+  "ci": {
+    "number": 195,
+    "attempt": 1,
+    "url": "https://github.com/hugotang/padcheaper/actions/runs/44739078074",
+    "conclusion": "success",
+    "steps": {
+      "Set up job": "success",
+      "Checkout": "success",
+      "Show iOS SDK toolchain": "success",
+      "Validate target and run protocol tests": "success",
+      "Compile arm64 iPhoneOS dylib": "success",
+      "Preserve Coral search acceptance results": "success",
+      "Verify editor save and mobile interactions": "success",
+      "Upload editor browser diagnostics": "success",
+      "Inspect Mach-O and signature": "success",
+      "Upload dylib and installation notes": "success",
+      "Verify floating GUI in iOS Simulator": "success",
+      "Upload GUI probe diagnostics": "success",
+      "Build summary": "success",
+      "Post Checkout": "success",
+      "Complete job": "success"
+    },
+    "logSHA256": "ed9a57d8ffefa2204c068fdab3d376550dea5215df673927a2ee85b447adac3b"
+  },
+  "commit": "b90e0f3202ea258cfe67a9d94f1784f9cee15179"
 }
