@@ -125,14 +125,20 @@ bool SearchSixFourGuide(const PHOrbBoard &board, const PHOrbSolveOptions &option
     SixFourTransport transport(context,rare);
     for (unsigned pass=0;pass<48 && !interrupted();++pass) {
         // Keep the first ordinary opportunities and the full diagonal policy.
-        // Orthogonal four-orb supply then alternates held/non-held transport
-        // lanes. Other inventories get two rare-colour passes before resuming
+        // Orthogonal four-orb supply tries a complete colour-focus cycle in
+        // the small held-colour table before building the larger other-colour
+        // table. Later passes alternate the two lanes. Other inventories get
+        // two rare-colour passes before resuming
         // ordinary guidance. All setup and exploration share this deadline.
         const bool transportPass=transportEligible && pass>=2;
         const bool rarePass=!options.diagonal && inventory[rare]>4 && (pass==2 || pass==3);
-        const unsigned hintPass=transportPass ? (pass-2)/2 : rarePass ? pass-2 :
+        constexpr unsigned cycle=2*(PHOrbBasicTypes+1);
+        const unsigned transportPassIndex=pass>=2 ? pass-2 : 0;
+        const unsigned hintPass=transportPass ? transportPassIndex<2*cycle ? transportPassIndex%cycle :
+            cycle+(transportPassIndex-2*cycle)/2 : rarePass ? pass-2 :
             !options.diagonal && inventory[rare]>4 && pass>=4 ? pass-2 : pass;
-        const bool held=transportPass && !(pass&1);
+        const bool held=transportPass && (transportPassIndex<cycle ||
+            (transportPassIndex>=2*cycle && !(transportPassIndex&1)));
         if (transportPass && !transport.build(held,cancel,deadline)) break;
         ++passes; ++guidePasses; guide.pass(hintPass);
         SixFourGuideNode initial;
