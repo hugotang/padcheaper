@@ -8,7 +8,13 @@ cd "$repo_dir"
 test_dir="${BUILD_DIR:?Run the solver tests with BUILD_DIR first}"
 solver_object="${CORAL_SOLVER_OBJECT:-$test_dir/solver.o}"
 compiler="${CORAL_CXX:-g++}"
-"$compiler" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
+flags=(-std=c++17 -O2 -Wall -Wextra -Werror -Iios/src)
+# An absolute xcrun compiler path does not supply the active SDK include
+# root. Keep the array nonempty for macOS's Bash 3.2 under set -u.
+if [ "$(uname -s)" = Darwin ]; then
+    flags+=(-isysroot "$(xcrun --sdk macosx --show-sdk-path)")
+fi
+"$compiler" "${flags[@]}" \
     ios/research/coral_b5_six_fours_probe.cpp "$solver_object" "$test_dir/PHOrbModel.o" \
     "$test_dir/PHBattleModel.o" "$test_dir/PHInputModel.o" -o "$test_dir/coral-b5-probe"
 probe_status=0

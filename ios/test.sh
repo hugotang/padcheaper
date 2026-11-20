@@ -92,6 +92,15 @@ done
     "$build_dir/PHOrbModel.sanitized.o" "$build_dir/PHBattleModel.sanitized.o" \
     "$build_dir/PHInputModel.sanitized.o" -lc++ -o "$build_dir/orb-solve-sanitized-tests"
 "$build_dir/orb-solve-sanitized-tests"
+# Compile and run B5 early so toolchain/API failures surface immediately.
+# Preserve a search miss while the native/Session suites run, then fail the
+# whole test step at the end. A failed acceptance still cannot build a dylib.
+coral_b5_status=0
+BUILD_DIR="$build_dir" CORAL_SOLVER_OBJECT="$build_dir/PHOrbSolver.o" \
+    CORAL_CXX="$(xcrun --sdk macosx --find clang++)" bash ios/tools/test-coral-b5.sh || coral_b5_status=$?
+if [ "$coral_b5_status" -ne 0 ] && [ "$coral_b5_status" -ne 2 ]; then
+    exit "$coral_b5_status"
+fi
 "$clang_path" -isysroot "$sdk_path" -std=c++17 -O2 -Wall -Wextra -Werror -Iios/src \
     ios/research/orb_timed_fishing_probe.cpp "$build_dir/PHOrbSolver.o" "$build_dir/PHOrbModel.o" \
     "$build_dir/PHBattleModel.o" "$build_dir/PHInputModel.o" -lc++ -o "$build_dir/orb-timed-fishing-probe"
@@ -209,7 +218,6 @@ done
     -lc++ -framework Foundation -o "$build_dir/music-tests"
 "$build_dir/music-tests"
 
-# Run after native/Session regressions so a search miss retains those results,
-# but fail this test step before the workflow can build/package a new dylib.
-BUILD_DIR="$build_dir" CORAL_SOLVER_OBJECT="$build_dir/PHOrbSolver.o" \
-    CORAL_CXX="$(xcrun --sdk macosx --find clang++)" bash ios/tools/test-coral-b5.sh
+# The early acceptance probe may have missed a route; retain that failure
+# after every native/Session result without permitting build/package.
+exit "$coral_b5_status"

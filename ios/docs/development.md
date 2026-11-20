@@ -2,6 +2,7 @@
 
 ## 2026-11-20 0.5.59 編譯測試中：B5 原盤 24/24，B4 仍未完整通過
 
+- [CI 187](https://github.com/hugotang/padcheaper/actions/runs/44669188727) 原生／Session、schema／solver、ASan/UBSan 及其他模型回歸已通過；最後 B5 探針編譯缺少 macOS SDK root，`string.h` 找不到。補上 `xcrun --sdk macosx --show-sdk-path` 的 `-isysroot`，重派完整 CI。該失敗 CI 尚未執行 B5 探針、iPhoneOS 建置、瀏覽器或 GUI，這些不列為通過。
 - 使用者已明確要求編譯測試。第一輪區段改寫只有 6/24 次 B5 搜尋成功；此結果未列為修復。新增只用於嚴格普通六色四消的逐色快取引導，交換只更新兩色、不同布局保留候選，所有解仍以原有完整色相與路線重播驗證。
 - 最終 Windows 可攜回歸、私有引導／改寫幾何、公開 API smoke 已通過；四份 B5 原盤在 800/2000ms、48 步各三次全部通過（24/24），最新 0.5.58 原盤取得 42 步六色四消。Windows smoke 沒有 sanitizer；macOS ASan/UBSan 尚待本次 CI。
 - B4 第二張原盤普通搜尋 6/6 通過，第一張仍 0/6；單次／連續取色另行記錄。不能以 B5 成功宣稱完整 plan 已修復，**不建立正式 E:/ipa 交付**。
